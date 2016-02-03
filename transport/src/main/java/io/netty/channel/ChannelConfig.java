@@ -255,7 +255,7 @@ public interface ChannelConfig {
     ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 
     /**
-     * Set the {@link WriteBufferWaterMark} which is used for set the high and low 
+     * Set the {@link WriteBufferWaterMark} which is used for set the high and low
      * water mark of the write buffer.
      */
 	ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);

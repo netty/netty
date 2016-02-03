@@ -46,7 +46,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
     private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOREAD_UPDATER;
-    
+
     private static final int DEFAULT_WRITEBUFFER_HIGH_WATERMARK = 64 * 1024;
     private static final int DEFAULT_WRITEBUFFER_LOW_WATERMARK = 32 * 1024;
 
@@ -364,7 +364,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         this.writeBufferWaterMark.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
- 
+
     @Override
     public int getWriteBufferLowWaterMark() {
         return writeBufferWaterMark.getWriteBufferLowWaterMark();
@@ -385,14 +385,14 @@ public class DefaultChannelConfig implements ChannelConfig {
         this.writeBufferWaterMark.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
     }
-    
-    
+
+
     @Override
     public ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
         this.writeBufferWaterMark = writeBufferWaterMark;
         return this;
     }
-    
+
     @Override
     public WriteBufferWaterMark getWriteBufferWaterMark() {
     	return this.writeBufferWaterMark;
