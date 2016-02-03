@@ -52,6 +52,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
+import static io.netty.handler.ssl.OpenSsl.memoryAddress;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
 import static javax.net.ssl.SSLEngineResult.Status.*;
@@ -1233,14 +1234,6 @@ public final class OpenSslEngine extends SSLEngine {
         // if SSL_do_handshake returns > 0 or sslError == SSL.SSL_ERROR_NAME it means the handshake was finished.
         session.handshakeFinished();
         return FINISHED;
-    }
-
-    private static long memoryAddress(ByteBuf buf) {
-        if (buf.hasMemoryAddress()) {
-            return buf.memoryAddress();
-        } else {
-            return Buffer.address(buf.nioBuffer());
-        }
     }
 
     private SSLEngineResult.Status getEngineStatus() {

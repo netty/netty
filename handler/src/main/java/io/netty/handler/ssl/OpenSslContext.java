@@ -544,7 +544,7 @@ public abstract class OpenSslContext extends SslContext {
     private static long newBIO(ByteBuf buffer) throws Exception {
         long bio = SSL.newMemBIO();
         int readable = buffer.readableBytes();
-        if (SSL.writeToBIO(bio, buffer.memoryAddress(), readable) != readable) {
+        if (SSL.writeToBIO(bio, OpenSsl.memoryAddress(buffer), readable) != readable) {
             SSL.freeBIO(bio);
             throw new IllegalStateException("Could not write data to memory BIO");
         }
