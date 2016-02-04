@@ -504,7 +504,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
 
         @Override
         public ChannelFuture deregister(ChannelPromise promise) {
-            return ctx.deregister();
+            return ctx.deregister(promise);
         }
 
         @Override
