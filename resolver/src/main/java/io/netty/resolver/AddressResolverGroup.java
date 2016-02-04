@@ -73,7 +73,9 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
                 executor.terminationFuture().addListener(new FutureListener<Object>() {
                     @Override
                     public void operationComplete(Future<Object> future) throws Exception {
-                        resolvers.remove(executor);
+                        synchronized (resolvers) {
+                            resolvers.remove(executor);
+                        }
                         newResolver.close();
                     }
                 });
