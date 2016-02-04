@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -42,6 +43,8 @@ public final class HostsFileParser {
     private static final String WINDOWS_DEFAULT_SYSTEM_ROOT = "C:\\Windows";
     private static final String WINDOWS_HOSTS_FILE_RELATIVE_PATH = "\\system32\\drivers\\etc\\hosts";
     private static final String X_PLATFORMS_HOSTS_FILE_PATH = "/etc/hosts";
+
+    private static final Pattern WHITESPACES = Pattern.compile("[ \t]+");
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(HostsFileParser.class);
 
@@ -126,7 +129,7 @@ public final class HostsFileParser {
 
                 // split
                 List<String> lineParts = new ArrayList<String>();
-                for (String s: line.split("[ \t]+")) {
+                for (String s: WHITESPACES.split(line)) {
                     if (!s.isEmpty()) {
                         lineParts.add(s);
                     }
@@ -145,21 +148,23 @@ public final class HostsFileParser {
                     continue;
                 }
 
-                InetAddress inetAddress = InetAddress.getByAddress(ipBytes);
-
                 // loop over hostname and aliases
                 for (int i = 1; i < lineParts.size(); i ++) {
                     String hostname = lineParts.get(i);
                     if (!entries.containsKey(hostname)) {
                         // trying to map a host to multiple IPs is wrong
                         // only the first entry is honored
-                        entries.put(hostname, inetAddress);
+                        entries.put(hostname, InetAddress.getByAddress(hostname, ipBytes));
                     }
                 }
             }
             return entries;
         } finally {
-            buff.close();
+            try {
+                buff.close();
+            } catch (IOException e) {
+                logger.warn("Failed to close a reader", e);
+            }
         }
     }
 
