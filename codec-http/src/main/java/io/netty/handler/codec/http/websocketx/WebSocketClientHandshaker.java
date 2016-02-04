@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.StringUtil;
 
 import java.net.URI;
@@ -243,7 +244,7 @@ public abstract class WebSocketClientHandshaker {
 
         setHandshakeComplete();
 
-        ChannelPipeline p = channel.pipeline();
+        final ChannelPipeline p = channel.pipeline();
         // Remove decompressor from pipeline if its in use
         HttpContentDecompressor decompressor = p.get(HttpContentDecompressor.class);
         if (decompressor != null) {
@@ -263,13 +264,38 @@ public abstract class WebSocketClientHandshaker {
                 throw new IllegalStateException("ChannelPipeline does not contain " +
                         "a HttpRequestEncoder or HttpClientCodec");
             }
-            p.replace(ctx.name(), "ws-decoder", newWebsocketDecoder());
+            final HttpClientCodec codec =  (HttpClientCodec) ctx.handler();
+            // Remove the encoder part of the codec as the user may start writing frames after this method returns.
+            codec.removeOutboundHandler();
+
+            p.addAfter(ctx.name(), "ws-decoder", newWebsocketDecoder());
+
+            // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
+            // WebSocketFrame messages.
+            // See https://github.com/netty/netty/issues/4533
+            channel.eventLoop().execute(new OneTimeTask() {
+                @Override
+                public void run() {
+                    p.remove(codec);
+                }
+            });
         } else {
             if (p.get(HttpRequestEncoder.class) != null) {
+                // Remove the encoder part of the codec as the user may start writing frames after this method returns.
                 p.remove(HttpRequestEncoder.class);
             }
-            p.replace(ctx.name(),
-                    "ws-decoder", newWebsocketDecoder());
+            final ChannelHandlerContext context = ctx;
+            p.addAfter(context.name(), "ws-decoder", newWebsocketDecoder());
+
+            // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
+            // WebSocketFrame messages.
+            // See https://github.com/netty/netty/issues/4533
+            channel.eventLoop().execute(new OneTimeTask() {
+                @Override
+                public void run() {
+                    p.remove(context.handler());
+                }
+            });
         }
     }
 
