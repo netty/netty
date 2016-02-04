@@ -321,4 +321,70 @@ public class CombinedChannelDuplexHandlerTest {
         channel.pipeline().close();
         channel.pipeline().deregister();
     }
+
+    @Test(timeout = 3000)
+    public void testPromisesPassed() {
+        ChannelOutboundHandler outboundHandler = new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
+                             ChannelPromise promise) throws Exception {
+                promise.setSuccess();
+            }
+
+            @Override
+            public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
+                                SocketAddress localAddress, ChannelPromise promise) throws Exception {
+                promise.setSuccess();
+            }
+
+            @Override
+            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+                promise.setSuccess();
+            }
+
+            @Override
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+                promise.setSuccess();
+            }
+
+            @Override
+            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+                promise.setSuccess();
+            }
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                promise.setSuccess();
+            }
+        };
+        EmbeddedChannel ch = new EmbeddedChannel(outboundHandler,
+                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
+                        new ChannelInboundHandlerAdapter(), new ChannelOutboundHandlerAdapter()));
+        ChannelPipeline pipeline = ch.pipeline();
+
+        ChannelPromise promise = ch.newPromise();
+        pipeline.connect(null, null, promise);
+        promise.syncUninterruptibly();
+
+        promise = ch.newPromise();
+        pipeline.bind(null, promise);
+        promise.syncUninterruptibly();
+
+        promise = ch.newPromise();
+        pipeline.close(promise);
+        promise.syncUninterruptibly();
+
+        promise = ch.newPromise();
+        pipeline.disconnect(promise);
+        promise.syncUninterruptibly();
+
+        promise = ch.newPromise();
+        pipeline.write("test", promise);
+        promise.syncUninterruptibly();
+
+        promise = ch.newPromise();
+        pipeline.deregister(promise);
+        promise.syncUninterruptibly();
+        ch.finish();
+    }
 }
