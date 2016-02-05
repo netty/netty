@@ -94,6 +94,17 @@ public final class HttpClientCodec
         this.failOnMissingResponse = failOnMissingResponse;
     }
 
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpClientCodec(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
+            boolean validateHeaders, int initialBufferSize) {
+        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize),
+             new Encoder());
+        this.failOnMissingResponse = failOnMissingResponse;
+    }
+
     private final class Encoder extends HttpRequestEncoder {
 
         @Override
@@ -118,6 +129,11 @@ public final class HttpClientCodec
     private final class Decoder extends HttpResponseDecoder {
         Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
             super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders);
+        }
+
+        Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
+                int initialBufferSize) {
+            super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize);
         }
 
         @Override

@@ -50,4 +50,14 @@ public final class HttpServerCodec
         super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders),
                 new HttpResponseEncoder());
     }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
+                           int initialBufferSize) {
+        super(
+          new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize),
+          new HttpResponseEncoder());
+    }
 }
