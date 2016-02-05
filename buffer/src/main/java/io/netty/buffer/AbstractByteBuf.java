@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -857,6 +858,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readBytes(FileChannel out, long position, int length)
+            throws IOException {
+        checkReadableBytes(length);
+        int readBytes = getBytes(readerIndex, out, position, length);
+        readerIndex += readBytes;
+        return readBytes;
+    }
+
+    @Override
     public ByteBuf readBytes(OutputStream out, int length) throws IOException {
         checkReadableBytes(length);
         getBytes(readerIndex, out, length);
@@ -1043,6 +1053,17 @@ public abstract class AbstractByteBuf extends ByteBuf {
         ensureAccessible();
         ensureWritable(length);
         int writtenBytes = setBytes(writerIndex, in, length);
+        if (writtenBytes > 0) {
+            writerIndex += writtenBytes;
+        }
+        return writtenBytes;
+    }
+
+    @Override
+    public int writeBytes(FileChannel in, long position, int length) throws IOException {
+        ensureAccessible();
+        ensureWritable(length);
+        int writtenBytes = setBytes(writerIndex, in, position, length);
         if (writtenBytes > 0) {
             writerIndex += writtenBytes;
         }

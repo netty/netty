@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -229,6 +230,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) {
+        reject();
+        return 0;
+    }
+
+    @Override
+    public int getBytes(int index, FileChannel out, long position, int length) {
         reject();
         return 0;
     }
@@ -558,6 +565,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readBytes(FileChannel out, long position, int length) {
+        reject();
+        return 0;
+    }
+
+    @Override
     public ByteBuf readBytes(int length) {
         checkReadableBytes(length);
         return buffer.readBytes(length);
@@ -762,6 +775,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) {
+        reject();
+        return 0;
+    }
+
+    @Override
+    public int setBytes(int index, FileChannel in, long position, int length) {
         reject();
         return 0;
     }
@@ -991,6 +1010,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public int writeBytes(ScatteringByteChannel in, int length) {
+        reject();
+        return 0;
+    }
+
+    @Override
+    public int writeBytes(FileChannel in, long position, int length) {
         reject();
         return 0;
     }

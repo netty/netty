@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
@@ -202,9 +203,20 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public int setBytes(int index, FileChannel in, long position, int length) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
         return buffer.getBytes(index, out, length);
+    }
+
+    @Override
+    public int getBytes(int index, FileChannel out, long position, int length)
+            throws IOException {
+        return buffer.getBytes(index, out, position, length);
     }
 
     @Override

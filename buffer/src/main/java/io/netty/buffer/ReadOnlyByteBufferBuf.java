@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
@@ -282,6 +283,18 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public int getBytes(int index, FileChannel out, long position, int length) throws IOException {
+        ensureAccessible();
+        if (length == 0) {
+            return 0;
+        }
+
+        ByteBuffer tmpBuf = internalNioBuffer();
+        tmpBuf.clear().position(index).limit(index + length);
+        return out.write(tmpBuf, position);
+    }
+
+    @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         throw new ReadOnlyBufferException();
     }
@@ -303,6 +316,11 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
         throw new ReadOnlyBufferException();
     }
 

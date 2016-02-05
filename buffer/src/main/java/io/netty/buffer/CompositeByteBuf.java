@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.util.ArrayList;
@@ -878,6 +879,24 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     @Override
+    public int getBytes(int index, FileChannel out, long position, int length)
+            throws IOException {
+        int count = nioBufferCount();
+        if (count == 1) {
+            return out.write(internalNioBuffer(index, length), position);
+        } else {
+            long writtenBytes = 0;
+            for (ByteBuffer buf : nioBuffers(index, length)) {
+                writtenBytes += out.write(buf, position + writtenBytes);
+            }
+            if (writtenBytes > Integer.MAX_VALUE) {
+                return Integer.MAX_VALUE;
+            }
+            return (int) writtenBytes;
+        }
+    }
+
+    @Override
     public CompositeByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
         checkIndex(index, length);
         if (length == 0) {
@@ -1130,6 +1149,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             ByteBuf s = c.buf;
             int adjustment = c.offset;
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
+            if (localLength == 0) {
+                // Skip empty buffer
+                i++;
+                continue;
+            }
             int localReadBytes = s.setBytes(index - adjustment, in, localLength);
             if (localReadBytes < 0) {
                 if (readBytes == 0) {
@@ -1168,7 +1192,60 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             ByteBuf s = c.buf;
             int adjustment = c.offset;
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
+            if (localLength == 0) {
+                // Skip empty buffer
+                i++;
+                continue;
+            }
             int localReadBytes = s.setBytes(index - adjustment, in, localLength);
+
+            if (localReadBytes == 0) {
+                break;
+            }
+
+            if (localReadBytes < 0) {
+                if (readBytes == 0) {
+                    return -1;
+                } else {
+                    break;
+                }
+            }
+
+            if (localReadBytes == localLength) {
+                index += localLength;
+                length -= localLength;
+                readBytes += localLength;
+                i ++;
+            } else {
+                index += localReadBytes;
+                length -= localReadBytes;
+                readBytes += localReadBytes;
+            }
+        } while (length > 0);
+
+        return readBytes;
+    }
+
+    @Override
+    public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
+        checkIndex(index, length);
+        if (length == 0) {
+            return in.read(EMPTY_NIO_BUFFER, position);
+        }
+
+        int i = toComponentIndex(index);
+        int readBytes = 0;
+        do {
+            Component c = components.get(i);
+            ByteBuf s = c.buf;
+            int adjustment = c.offset;
+            int localLength = Math.min(length, s.capacity() - (index - adjustment));
+            if (localLength == 0) {
+                // Skip empty buffer
+                i++;
+                continue;
+            }
+            int localReadBytes = s.setBytes(index - adjustment, in, position + readBytes, localLength);
 
             if (localReadBytes == 0) {
                 break;

@@ -27,10 +27,13 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
@@ -2892,6 +2895,89 @@ public abstract class AbstractByteBufTest {
             // expected
         }
         assertEquals(0, readOnlyDst.position());
+    }
+
+    @Test
+    public void testReadBytesAndWriteBytesWithFileChannel() throws IOException {
+        File file = File.createTempFile("file-channel", ".tmp");
+        RandomAccessFile randomAccessFile = null;
+        try {
+            randomAccessFile = new RandomAccessFile(file, "rw");
+            FileChannel channel = randomAccessFile.getChannel();
+            // channelPosition should never be changed
+            long channelPosition = channel.position();
+
+            byte[] bytes = {'a', 'b', 'c', 'd'};
+            int len = bytes.length;
+            ByteBuf buffer = releaseLater(newBuffer(len));
+            buffer.resetReaderIndex();
+            buffer.resetWriterIndex();
+            buffer.writeBytes(bytes);
+
+            int oldReaderIndex = buffer.readerIndex();
+            assertEquals(len, buffer.readBytes(channel, 10, len));
+            assertEquals(oldReaderIndex + len, buffer.readerIndex());
+            assertEquals(channelPosition, channel.position());
+
+            ByteBuf buffer2 = releaseLater(newBuffer(len));
+            buffer2.resetReaderIndex();
+            buffer2.resetWriterIndex();
+            int oldWriterIndex = buffer2.writerIndex();
+            assertEquals(len, buffer2.writeBytes(channel, 10, len));
+            assertEquals(channelPosition, channel.position());
+            assertEquals(oldWriterIndex + len, buffer2.writerIndex());
+            assertEquals('a', buffer2.getByte(0));
+            assertEquals('b', buffer2.getByte(1));
+            assertEquals('c', buffer2.getByte(2));
+            assertEquals('d', buffer2.getByte(3));
+        } finally {
+            if (randomAccessFile != null) {
+                randomAccessFile.close();
+            }
+            file.delete();
+        }
+    }
+
+    @Test
+    public void testGetBytesAndSetBytesWithFileChannel() throws IOException {
+        File file = File.createTempFile("file-channel", ".tmp");
+        RandomAccessFile randomAccessFile = null;
+        try {
+            randomAccessFile = new RandomAccessFile(file, "rw");
+            FileChannel channel = randomAccessFile.getChannel();
+            // channelPosition should never be changed
+            long channelPosition = channel.position();
+
+            byte[] bytes = {'a', 'b', 'c', 'd'};
+            int len = bytes.length;
+            ByteBuf buffer = releaseLater(newBuffer(len));
+            buffer.resetReaderIndex();
+            buffer.resetWriterIndex();
+            buffer.writeBytes(bytes);
+
+            int oldReaderIndex = buffer.readerIndex();
+            assertEquals(len, buffer.getBytes(oldReaderIndex, channel, 10, len));
+            assertEquals(oldReaderIndex, buffer.readerIndex());
+            assertEquals(channelPosition, channel.position());
+
+            ByteBuf buffer2 = releaseLater(newBuffer(len));
+            buffer2.resetReaderIndex();
+            buffer2.resetWriterIndex();
+            int oldWriterIndex = buffer2.writerIndex();
+            assertEquals(buffer2.setBytes(oldWriterIndex, channel, 10, len), len);
+            assertEquals(channelPosition, channel.position());
+
+            assertEquals(oldWriterIndex, buffer2.writerIndex());
+            assertEquals('a', buffer2.getByte(oldWriterIndex));
+            assertEquals('b', buffer2.getByte(oldWriterIndex + 1));
+            assertEquals('c', buffer2.getByte(oldWriterIndex + 2));
+            assertEquals('d', buffer2.getByte(oldWriterIndex + 3));
+        } finally {
+            if (randomAccessFile != null) {
+                randomAccessFile.close();
+            }
+            file.delete();
+        }
     }
 
     private void testRefCnt0(final boolean parameter) throws Exception {
