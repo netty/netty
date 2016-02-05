@@ -196,7 +196,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
-    <jetty.alpnAgent.version>1.0.0.Final</jetty.alpnAgent.version>
+    <jetty.alpnAgent.version>1.0.1.Final</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>${settings.localRepository}/kr/motd/javaagent/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.common>
       -server
