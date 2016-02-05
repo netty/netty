@@ -947,11 +947,15 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
     Dl_info dlinfo;
     jint status = 0;
-    if (!dladdr((void*) JNI_OnLoad, &dlinfo)) {
+    // We need to use an address of a function that is uniquely part of this library, so choose a static
+    // function. See https://github.com/netty/netty/issues/4840.
+    if (!dladdr((void*) parsePackagePrefix, &dlinfo)) {
+        fprintf(stderr, "FATAL: transport-native-epoll JNI call to dladdr failed!\n");
         return JNI_ERR;
     }
     char* packagePrefix = parsePackagePrefix(dlinfo.dli_fname, &status);
     if (status == JNI_ERR) {
+        fprintf(stderr, "FATAL: transport-native-epoll JNI encountered unexpected dlinfo.dli_fname: %s\n", dlinfo.dli_fname);
         return JNI_ERR;
     }
 
