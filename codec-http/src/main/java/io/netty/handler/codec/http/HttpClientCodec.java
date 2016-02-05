@@ -89,6 +89,17 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
     }
 
     /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpClientCodec(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
+            boolean validateHeaders, int initialBufferSize) {
+        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize),
+             new Encoder());
+        this.failOnMissingResponse = failOnMissingResponse;
+    }
+
+    /**
      * Prepares to upgrade to another protocol from HTTP. Disables the {@link Encoder}.
      */
     @Override
@@ -146,6 +157,11 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
     private final class Decoder extends HttpResponseDecoder {
         Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
             super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders);
+        }
+
+        Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
+                int initialBufferSize) {
+            super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize);
         }
 
         @Override
