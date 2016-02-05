@@ -75,6 +75,12 @@
       </properties>
     </profile>
     <profile>
+      <id>noUnsafe</id>
+      <properties>
+        <argLine.noUnsafe>-Dio.netty.noUnsafe</argLine.noUnsafe>
+      </properties>
+    </profile>
+    <profile>
       <id>coverage</id>
       <properties>
         <argLine.coverage>${jacoco.argLine}</argLine.coverage>
@@ -211,6 +217,7 @@
     <!-- Default to ALPN. See forcenpn profile to force NPN -->
     <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}=${jetty.alpnAgent.option}</argLine.alpnAgent>
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
+    <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
     <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
@@ -740,7 +747,7 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>${argLine.common} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage}</argLine>
+          <argLine>${argLine.common} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe}</argLine>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
