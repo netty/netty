@@ -162,7 +162,12 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, 128);
+    }
 
+    protected HttpObjectDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
         if (maxInitialLineLength <= 0) {
             throw new IllegalArgumentException(
                     "maxInitialLineLength must be a positive integer: " +
@@ -178,12 +183,12 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     "maxChunkSize must be a positive integer: " +
                     maxChunkSize);
         }
+        AppendableCharSequence seq = new AppendableCharSequence(initialBufferSize);
+        lineParser = new LineParser(seq, maxInitialLineLength);
+        headerParser = new HeaderParser(seq, maxHeaderSize);
         this.maxChunkSize = maxChunkSize;
         this.chunkedSupported = chunkedSupported;
         this.validateHeaders = validateHeaders;
-        AppendableCharSequence seq = new AppendableCharSequence(128);
-        lineParser = new LineParser(seq, maxInitialLineLength);
-        headerParser = new HeaderParser(seq, maxHeaderSize);
     }
 
     @Override
