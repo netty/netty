@@ -126,15 +126,12 @@ public final class Base64 {
         int e = 0;
         int len2 = len - 2;
         int lineLength = 0;
-        for (; d < len2; e += 4) {
+        for (; d < len2; d += 3, e += 4) {
             encode3to4(src, d + off, 3, dest, e, dialect);
 
             lineLength += 4;
-            d += 3;
 
-            if (breakLines && lineLength == MAX_LINE_LENGTH
-                    // Only add NEW_LINE if we not ended directly on the MAX_LINE_LENGTH
-                    && d < len2) {
+            if (breakLines && lineLength == MAX_LINE_LENGTH) {
                 dest.setByte(e + 4, NEW_LINE);
                 e ++;
                 lineLength = 0;
@@ -145,6 +142,11 @@ public final class Base64 {
             encode3to4(src, d + off, len - d, dest, e, dialect);
             e += 4;
         } // end if: some padding needed
+
+        // Remove last byte if it's a newline
+        if (e > 1 && dest.getByte(e - 1) == NEW_LINE) {
+            e--;
+        }
 
         return dest.slice(0, e);
     }
