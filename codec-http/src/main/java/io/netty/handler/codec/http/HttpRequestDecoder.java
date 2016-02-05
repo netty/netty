@@ -75,6 +75,12 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
         super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true, validateHeaders);
     }
 
+    public HttpRequestDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
+            int initialBufferSize) {
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true, validateHeaders, initialBufferSize);
+    }
+
     @Override
     protected HttpMessage createMessage(String[] initialLine) throws Exception {
         return new DefaultHttpRequest(
