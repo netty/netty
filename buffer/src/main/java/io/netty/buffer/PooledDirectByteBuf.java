@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
@@ -234,9 +235,34 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
+    public int getBytes(int index, FileChannel out, long position, int length) throws IOException {
+        return getBytes(index, out, position, length, false);
+    }
+
+    private int getBytes(int index, FileChannel out, long position, int length, boolean internal) throws IOException {
+        checkIndex(index, length);
+        if (length == 0) {
+            return 0;
+        }
+
+        ByteBuffer tmpBuf = internal ? internalNioBuffer() : memory.duplicate();
+        index = idx(index);
+        tmpBuf.clear().position(index).limit(index + length);
+        return out.write(tmpBuf, position);
+    }
+
+    @Override
     public int readBytes(GatheringByteChannel out, int length) throws IOException {
         checkReadableBytes(length);
         int readBytes = getBytes(readerIndex, out, length, true);
+        readerIndex += readBytes;
+        return readBytes;
+    }
+
+    @Override
+    public int readBytes(FileChannel out, long position, int length) throws IOException {
+        checkReadableBytes(length);
+        int readBytes = getBytes(readerIndex, out, position, length, true);
         readerIndex += readBytes;
         return readBytes;
     }
@@ -355,6 +381,19 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         tmpBuf.clear().position(index).limit(index + length);
         try {
             return in.read(tmpBuf);
+        } catch (ClosedChannelException ignored) {
+            return -1;
+        }
+    }
+
+    @Override
+    public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
+        checkIndex(index, length);
+        ByteBuffer tmpBuf = internalNioBuffer();
+        index = idx(index);
+        tmpBuf.clear().position(index).limit(index + length);
+        try {
+            return in.read(tmpBuf, position);
         } catch (ClosedChannelException ignored) {
             return -1;
         }

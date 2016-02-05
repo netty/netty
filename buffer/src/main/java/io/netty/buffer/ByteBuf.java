@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -881,6 +882,26 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract int getBytes(int index, GatheringByteChannel out, int length) throws IOException;
 
     /**
+     * Transfers this buffer's data starting at the specified absolute {@code index}
+     * to the specified channel starting at the given file position.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer. This method does not modify the channel's position.
+     *
+     * @param position the file position at which the transfer is to begin
+     * @param length the maximum number of bytes to transfer
+     *
+     * @return the actual number of bytes written out to the specified channel
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + length} is greater than
+     *            {@code this.capacity}
+     * @throws IOException
+     *         if the specified channel threw an exception during I/O
+     */
+    public abstract int getBytes(int index, FileChannel out, long position, int length) throws IOException;
+
+    /**
      * Sets the specified boolean at the specified absolute {@code index} in this
      * buffer.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
@@ -1178,7 +1199,27 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @throws IOException
      *         if the specified channel threw an exception during I/O
      */
-    public abstract int  setBytes(int index, ScatteringByteChannel in, int length) throws IOException;
+    public abstract int setBytes(int index, ScatteringByteChannel in, int length) throws IOException;
+
+    /**
+     * Transfers the content of the specified source channel starting at the given file position
+     * to this buffer starting at the specified absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer. This method does not modify the channel's position.
+     *
+     * @param position the file position at which the transfer is to begin
+     * @param length the maximum number of bytes to transfer
+     *
+     * @return the actual number of bytes read in from the specified channel.
+     *         {@code -1} if the specified channel is closed.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + length} is greater than {@code this.capacity}
+     * @throws IOException
+     *         if the specified channel threw an exception during I/O
+     */
+    public abstract int setBytes(int index, FileChannel in, long position, int length) throws IOException;
 
     /**
      * Fills this buffer with <tt>NUL (0x00)</tt> starting at the specified
@@ -1524,7 +1565,24 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @throws IOException
      *         if the specified channel threw an exception during I/O
      */
-    public abstract int  readBytes(GatheringByteChannel out, int length) throws IOException;
+    public abstract int readBytes(GatheringByteChannel out, int length) throws IOException;
+
+    /**
+     * Transfers this buffer's data starting at the current {@code readerIndex}
+     * to the specified channel starting at the given file position.
+     * This method does not modify the channel's position.
+     *
+     * @param position the file position at which the transfer is to begin
+     * @param length the maximum number of bytes to transfer
+     *
+     * @return the actual number of bytes written out to the specified channel
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code length} is greater than {@code this.readableBytes}
+     * @throws IOException
+     *         if the specified channel threw an exception during I/O
+     */
+    public abstract int readBytes(FileChannel out, long position, int length) throws IOException;
 
     /**
      * Increases the current {@code readerIndex} by the specified
@@ -1783,7 +1841,25 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @throws IOException
      *         if the specified channel threw an exception during I/O
      */
-    public abstract int  writeBytes(ScatteringByteChannel in, int length) throws IOException;
+    public abstract int writeBytes(ScatteringByteChannel in, int length) throws IOException;
+
+    /**
+     * Transfers the content of the specified channel starting at the given file position
+     * to this buffer starting at the current {@code writerIndex} and increases the
+     * {@code writerIndex} by the number of the transferred bytes.
+     * This method does not modify the channel's position.
+     *
+     * @param position the file position at which the transfer is to begin
+     * @param length the maximum number of bytes to transfer
+     *
+     * @return the actual number of bytes read in from the specified channel
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code length} is greater than {@code this.writableBytes}
+     * @throws IOException
+     *         if the specified channel threw an exception during I/O
+     */
+    public abstract int writeBytes(FileChannel in, long position, int length) throws IOException;
 
     /**
      * Fills this buffer with <tt>NUL (0x00)</tt> starting at the current

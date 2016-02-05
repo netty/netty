@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
@@ -279,6 +280,12 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public int getBytes(int index, FileChannel out, long position, int length) throws IOException {
+        checkIndex0(index, length);
+        return buffer.getBytes(idx(index), out, position, length);
+    }
+
+    @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
         checkIndex0(index, length);
         return buffer.setBytes(idx(index), in, length);
@@ -288,6 +295,12 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         checkIndex0(index, length);
         return buffer.setBytes(idx(index), in, length);
+    }
+
+    @Override
+    public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
+        checkIndex0(index, length);
+        return buffer.setBytes(idx(index), in, position, length);
     }
 
     @Override

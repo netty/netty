@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -375,6 +376,12 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public int getBytes(int index, FileChannel out, long position, int length) {
+        checkIndex(index, length);
+        return 0;
+    }
+
+    @Override
     public ByteBuf setBoolean(int index, boolean value) {
         throw new IndexOutOfBoundsException();
     }
@@ -477,6 +484,12 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) {
+        checkIndex(index, length);
+        return 0;
+    }
+
+    @Override
+    public int setBytes(int index, FileChannel in, long position, int length) {
         checkIndex(index, length);
         return 0;
     }
@@ -638,6 +651,12 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readBytes(FileChannel out, long position, int length) {
+        checkLength(length);
+        return 0;
+    }
+
+    @Override
     public ByteBuf skipBytes(int length) {
         return checkLength(length);
     }
@@ -745,6 +764,12 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public int writeBytes(ScatteringByteChannel in, int length) {
+        checkLength(length);
+        return 0;
+    }
+
+    @Override
+    public int writeBytes(FileChannel in, long position, int length) {
         checkLength(length);
         return 0;
     }
