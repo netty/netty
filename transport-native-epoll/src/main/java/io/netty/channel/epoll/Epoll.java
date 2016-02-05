@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.util.internal.PlatformDependent;
 
 /**
  * Tells if <a href="http://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is supported.
@@ -53,7 +54,8 @@ public final class Epoll {
         if (cause != null) {
             UNAVAILABILITY_CAUSE = cause;
         } else {
-            UNAVAILABILITY_CAUSE = null;
+            UNAVAILABILITY_CAUSE = PlatformDependent.hasUnsafe() ? null :
+                    new IllegalStateException("sun.misc.Unsafe not available");
         }
     }
 
