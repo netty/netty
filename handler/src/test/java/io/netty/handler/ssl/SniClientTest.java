@@ -35,24 +35,24 @@ import org.junit.Test;
 
 public class SniClientTest {
 
-    @Test
+    @Test(timeout = 5000)
     public void testSniClientJdkSslServerJdkSsl() throws Exception {
         testSniClient(SslProvider.JDK, SslProvider.JDK);
     }
 
-    @Test
+    @Test(timeout = 5000)
     public void testSniClientOpenSslServerOpenSsl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
         testSniClient(SslProvider.OPENSSL, SslProvider.OPENSSL);
     }
 
-    @Test
+    @Test(timeout = 5000)
     public void testSniClientJdkSslServerOpenSsl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
         testSniClient(SslProvider.JDK, SslProvider.OPENSSL);
     }
 
-    @Test
+    @Test(timeout = 5000)
     public void testSniClientOpenSslServerJdkSsl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
         testSniClient(SslProvider.OPENSSL, SslProvider.JDK);
@@ -93,10 +93,10 @@ public class SniClientTest {
             Assert.assertEquals(sniHost, promise.syncUninterruptibly().getNow());
         } finally {
             if (cc != null) {
-                cc.close();
+                cc.close().syncUninterruptibly();
             }
             if (sc != null) {
-                sc.close();
+                sc.close().syncUninterruptibly();
             }
             group.shutdownGracefully();
         }
