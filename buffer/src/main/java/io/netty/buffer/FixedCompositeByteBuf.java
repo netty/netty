@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.util.Collections;
@@ -184,6 +185,11 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    public int setBytes(int index, FileChannel in, long position, int length) {
         throw new ReadOnlyBufferException();
     }
 
@@ -462,6 +468,25 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
             return out.write(internalNioBuffer(index, length));
         } else {
             long writtenBytes = out.write(nioBuffers(index, length));
+            if (writtenBytes > Integer.MAX_VALUE) {
+                return Integer.MAX_VALUE;
+            } else {
+                return (int) writtenBytes;
+            }
+        }
+    }
+
+    @Override
+    public int getBytes(int index, FileChannel out, long position, int length)
+            throws IOException {
+        int count = nioBufferCount();
+        if (count == 1) {
+            return out.write(internalNioBuffer(index, length), position);
+        } else {
+            long writtenBytes = 0;
+            for (ByteBuffer buf : nioBuffers(index, length)) {
+                writtenBytes += out.write(buf, position + writtenBytes);
+            }
             if (writtenBytes > Integer.MAX_VALUE) {
                 return Integer.MAX_VALUE;
             } else {

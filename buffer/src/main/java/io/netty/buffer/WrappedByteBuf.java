@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -351,6 +352,11 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public int getBytes(int index, FileChannel out, long position, int length) throws IOException {
+        return buf.getBytes(index, out, position, length);
+    }
+
+    @Override
     public ByteBuf setBoolean(int index, boolean value) {
         buf.setBoolean(index, value);
         return this;
@@ -472,6 +478,11 @@ class WrappedByteBuf extends ByteBuf {
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         return buf.setBytes(index, in, length);
+    }
+
+    @Override
+    public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
+        return buf.setBytes(index, in, position, length);
     }
 
     @Override
@@ -638,6 +649,11 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public int readBytes(FileChannel out, long position, int length) throws IOException {
+        return buf.readBytes(out, position, length);
+    }
+
+    @Override
     public ByteBuf skipBytes(int length) {
         buf.skipBytes(length);
         return this;
@@ -765,6 +781,11 @@ class WrappedByteBuf extends ByteBuf {
     @Override
     public int writeBytes(ScatteringByteChannel in, int length) throws IOException {
         return buf.writeBytes(in, length);
+    }
+
+    @Override
+    public int writeBytes(FileChannel in, long position, int length) throws IOException {
+        return buf.writeBytes(in, position, length);
     }
 
     @Override
