@@ -322,6 +322,61 @@ public class StringUtilTest {
     }
 
     @Test
+    public void testUnescapeCsv() {
+        assertEquals("", unescapeCsv(""));
+        assertEquals("\"", unescapeCsv("\"\"\"\""));
+        assertEquals("\"\"", unescapeCsv("\"\"\"\"\"\""));
+        assertEquals("\"\"\"", unescapeCsv("\"\"\"\"\"\"\"\""));
+        assertEquals("\"netty\"", unescapeCsv("\"\"\"netty\"\"\""));
+        assertEquals("netty", unescapeCsv("netty"));
+        assertEquals("netty", unescapeCsv("\"netty\""));
+        assertEquals("\r", unescapeCsv("\"\r\""));
+        assertEquals("\n", unescapeCsv("\"\n\""));
+        assertEquals("hello,netty", unescapeCsv("\"hello,netty\""));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void unescapeCsvWithSingleQuote() {
+        unescapeCsv("\"");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void unescapeCsvWithOddQuote() {
+        unescapeCsv("\"\"\"");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void unescapeCsvWithCRAndWithoutQuote() {
+        unescapeCsv("\r");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void unescapeCsvWithLFAndWithoutQuote() {
+        unescapeCsv("\n");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void unescapeCsvWithCommaAndWithoutQuote() {
+        unescapeCsv(",");
+    }
+
+    @Test
+    public void escapeCsvAndUnEscapeCsv() {
+        assertEscapeCsvAndUnEscapeCsv("");
+        assertEscapeCsvAndUnEscapeCsv("netty");
+        assertEscapeCsvAndUnEscapeCsv("hello,netty");
+        assertEscapeCsvAndUnEscapeCsv("hello,\"netty\"");
+        assertEscapeCsvAndUnEscapeCsv("\"");
+        assertEscapeCsvAndUnEscapeCsv(",");
+        assertEscapeCsvAndUnEscapeCsv("\r");
+        assertEscapeCsvAndUnEscapeCsv("\n");
+    }
+
+    private void assertEscapeCsvAndUnEscapeCsv(String value) {
+        assertEquals(value, unescapeCsv(StringUtil.escapeCsv(value)));
+    }
+
+    @Test
     public void testSimpleClassName() throws Exception {
         testSimpleClassName(String.class);
     }
