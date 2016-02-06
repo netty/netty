@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -269,11 +270,12 @@ public class Http2ConnectionHandlerTest {
         verify(decoder, atLeastOnce()).decodeFrame(eq(ctx), any(ByteBuf.class), Matchers.<List<Object>>any());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void channelInactiveShouldCloseStreams() throws Exception {
         handler = newHandler();
         handler.channelInactive(ctx);
-        verify(stream).close();
+        verify(connection).close(any(Promise.class));
     }
 
     @Test
