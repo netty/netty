@@ -103,7 +103,7 @@ public final class CorsConfigBuilder {
      *
      * @return {@link CorsConfigBuilder} to support method chaining.
      */
-    CorsConfigBuilder allowNullOrigin() {
+    public CorsConfigBuilder allowNullOrigin() {
         allowNullOrigin = true;
         return this;
     }
