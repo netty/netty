@@ -16,6 +16,8 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 /**
  * Manager for the state of an HTTP/2 connection with the remote end-point.
@@ -291,6 +293,16 @@ public interface Http2Connection {
      */
     interface PropertyKey {
     }
+
+    /**
+     * Close this connection. No more new streams can be created after this point and
+     * all streams that exists (active or otherwise) will be closed and removed.
+     * <p>Note if iterating active streams via {@link #forEachActiveStream(Http2StreamVisitor)} and an exception is
+     * thrown it is necessary to call this method again to ensure the close completes.
+     * @param promise Will be completed when all streams have been removed, and listeners have been notified.
+     * @return A future that will be completed when all streams have been removed, and listeners have been notified.
+     */
+    Future<Void> close(Promise<Void> promise);
 
     /**
      * Creates a new key that is unique within this {@link Http2Connection}.

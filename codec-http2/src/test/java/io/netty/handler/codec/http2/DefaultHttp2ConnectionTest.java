@@ -15,6 +15,33 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.handler.codec.http2.Http2Connection.Endpoint;
+import io.netty.handler.codec.http2.Http2Stream.State;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static org.junit.Assert.assertEquals;
@@ -35,25 +62,6 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.Http2Connection.Endpoint;
-import io.netty.handler.codec.http2.Http2Stream.State;
-import io.netty.util.internal.PlatformDependent;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-
 /**
  * Tests for {@link DefaultHttp2Connection}.
  */
@@ -63,12 +71,23 @@ public class DefaultHttp2ConnectionTest {
 
     private DefaultHttp2Connection server;
     private DefaultHttp2Connection client;
+    private static DefaultEventLoopGroup group;
 
     @Mock
     private Http2Connection.Listener clientListener;
 
     @Mock
     private Http2Connection.Listener clientListener2;
+
+    @BeforeClass
+    public static void beforeClass() {
+        group = new DefaultEventLoopGroup(2);
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        group.shutdownGracefully();
+    }
 
     @Before
     public void setup() {
@@ -82,6 +101,110 @@ public class DefaultHttp2ConnectionTest {
     @Test
     public void getStreamWithoutStreamShouldReturnNull() {
         assertNull(server.stream(100));
+    }
+
+    @Test
+    public void removeAllStreamsWithEmptyStreams() throws InterruptedException {
+        testRemoveAllStreams();
+    }
+
+    @Test
+    public void removeAllStreamsWithJustOneLocalStream() throws InterruptedException, Http2Exception {
+        client.local().createStream(3, false);
+        testRemoveAllStreams();
+    }
+
+    @Test
+    public void removeAllStreamsWithJustOneRemoveStream() throws InterruptedException, Http2Exception {
+        client.remote().createStream(2, false);
+        testRemoveAllStreams();
+    }
+
+    @Test
+    public void removeAllStreamsWithManyActiveStreams() throws InterruptedException, Http2Exception {
+        Endpoint<Http2RemoteFlowController> remote = client.remote();
+        Endpoint<Http2LocalFlowController> local = client.local();
+        for (int c = 3, s = 2; c < 5000; c += 2, s += 2) {
+            local.createStream(c, false);
+            remote.createStream(s, false);
+        }
+        testRemoveAllStreams();
+    }
+
+    @Test
+    public void removeAllStreamsWithNonActiveStreams() throws InterruptedException, Http2Exception {
+        client.local().createIdleStream(3);
+        client.remote().createIdleStream(2);
+        testRemoveAllStreams();
+    }
+
+    @Test
+    public void removeAllStreamsWithNonActiveAndActiveStreams() throws InterruptedException, Http2Exception {
+        client.local().createIdleStream(3);
+        client.remote().createIdleStream(2);
+        client.local().createStream(5, false);
+        client.remote().createStream(4, true);
+        testRemoveAllStreams();
+    }
+
+    @Test
+    public void removeAllStreamsWhileIteratingActiveStreams() throws InterruptedException, Http2Exception {
+        final Endpoint<Http2RemoteFlowController> remote = client.remote();
+        final Endpoint<Http2LocalFlowController> local = client.local();
+        for (int c = 3, s = 2; c < 5000; c += 2, s += 2) {
+            local.createStream(c, false);
+            remote.createStream(s, false);
+        }
+        final Promise<Void> promise = group.next().newPromise();
+        final CountDownLatch latch = new CountDownLatch(client.numActiveStreams());
+        client.forEachActiveStream(new Http2StreamVisitor() {
+            @Override
+            public boolean visit(Http2Stream stream) throws Http2Exception {
+                client.close(promise).addListener(new FutureListener<Void>() {
+                    @Override
+                    public void operationComplete(Future<Void> future) throws Exception {
+                        assertTrue(promise.isDone());
+                        latch.countDown();
+                    }
+                });
+                return true;
+            }
+        });
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void removeAllStreamsWhileIteratingActiveStreamsAndExceptionOccurs()
+            throws InterruptedException, Http2Exception {
+        final Endpoint<Http2RemoteFlowController> remote = client.remote();
+        final Endpoint<Http2LocalFlowController> local = client.local();
+        for (int c = 3, s = 2; c < 5000; c += 2, s += 2) {
+            local.createStream(c, false);
+            remote.createStream(s, false);
+        }
+        final Promise<Void> promise = group.next().newPromise();
+        final CountDownLatch latch = new CountDownLatch(1);
+        try {
+            client.forEachActiveStream(new Http2StreamVisitor() {
+                @Override
+                public boolean visit(Http2Stream stream) throws Http2Exception {
+                    // This close call is basically a noop, because the following statement will throw an exception.
+                    client.close(promise);
+                    // Do an invalid operation while iterating.
+                    remote.createStream(3, false);
+                    return true;
+                }
+            });
+        } catch (Http2Exception ignored) {
+            client.close(promise).addListener(new FutureListener<Void>() {
+                @Override
+                public void operationComplete(Future<Void> future) throws Exception {
+                    assertTrue(promise.isDone());
+                    latch.countDown();
+                }
+            });
+        }
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
     }
 
     @Test
@@ -1105,6 +1228,19 @@ public class DefaultHttp2ConnectionTest {
         } finally {
             client.removeListener(clientListener2);
         }
+    }
+
+    private void testRemoveAllStreams() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final Promise<Void> promise = group.next().newPromise();
+        client.close(promise).addListener(new FutureListener<Void>() {
+            @Override
+            public void operationComplete(Future<Void> future) throws Exception {
+                assertTrue(promise.isDone());
+                latch.countDown();
+            }
+        });
+        assertTrue(latch.await(2, TimeUnit.SECONDS));
     }
 
     private void incrementAndGetStreamShouldRespectOverflow(Endpoint<?> endpoint, int streamId) throws Http2Exception {
