@@ -175,18 +175,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             encoder().close();
             decoder().close();
 
-            final Http2Connection connection = connection();
-            // Check if there are streams to avoid the overhead of creating the ChannelFuture.
-            if (connection.numActiveStreams() > 0) {
-                final ChannelFuture future = ctx.newSucceededFuture();
-                connection.forEachActiveStream(new Http2StreamVisitor() {
-                    @Override
-                    public boolean visit(Http2Stream stream) throws Http2Exception {
-                        closeStream(stream, future);
-                        return true;
-                    }
-                });
-            }
+            // We need to remove all streams (not just the active ones).
+            // See https://github.com/netty/netty/issues/4838.
+            connection().close(ctx.voidPromise());
         }
 
         /**

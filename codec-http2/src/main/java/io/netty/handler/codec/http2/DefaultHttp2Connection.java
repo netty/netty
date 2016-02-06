@@ -15,28 +15,16 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
-import static io.netty.handler.codec.http2.Http2Exception.closedStreamError;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Exception.streamError;
-import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
-import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
-import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
-import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
-import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
-import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
-import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.collection.IntCollections;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.collection.IntObjectMap.PrimitiveEntry;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -51,6 +39,25 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
+import static io.netty.handler.codec.http2.Http2Exception.closedStreamError;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
+import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
+import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
+import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
+import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 
 /**
@@ -80,6 +87,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      */
     final List<Listener> listeners = new ArrayList<Listener>(4);
     final ActiveStreams activeStreams;
+    Promise<Void> closePromise;
 
     /**
      * Creates a new connection with the given settings.
@@ -94,6 +102,71 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         // Add the connection stream to the map.
         streamMap.put(connectionStream.id(), connectionStream);
+    }
+
+    /**
+     * Determine if {@link #close(Promise)} has been called and no more streams are allowed to be created.
+     */
+    final boolean isClosed() {
+        return closePromise != null;
+    }
+
+    @Override
+    public Future<Void> close(final Promise<Void> promise) {
+        checkNotNull(promise, "promise");
+        // Since we allow this method to be called multiple times, we must make sure that all the promises are notified
+        // when all streams are removed and the close operation completes.
+        if (closePromise != null) {
+            if (closePromise == promise) {
+                // Do nothing
+            } else if ((promise instanceof ChannelPromise) && ((ChannelPromise) closePromise).isVoid()) {
+                closePromise = promise;
+            } else {
+                closePromise.addListener(new FutureListener<Void>() {
+                    @Override
+                    public void operationComplete(Future<Void> future) throws Exception {
+                        if (future.isSuccess()) {
+                            promise.trySuccess(null);
+                        } else if (future.isCancelled()) {
+                            promise.cancel(false);
+                        } else {
+                            promise.tryFailure(future.cause());
+                        }
+                    }
+                });
+            }
+        } else {
+            closePromise = promise;
+        }
+        if (isStreamMapEmpty()) {
+            promise.trySuccess(null);
+            return promise;
+        }
+        Iterator<PrimitiveEntry<Http2Stream>> itr = streamMap.entries().iterator();
+        // We must take care while iterating the streamMap as to not modify while iterating in case there are other code
+        // paths iterating over the active streams.
+        if (activeStreams.allowModifications()) {
+            while (itr.hasNext()) {
+                Http2Stream stream = itr.next().value();
+                if (stream.id() != CONNECTION_STREAM_ID) {
+                    // If modifications of the activeStream map is allowed, then a stream close operation will also
+                    // modify the streamMap. We must prevent concurrent modifications to the streamMap, so use the
+                    // iterator to remove the current stream.
+                    itr.remove();
+                    stream.close();
+                }
+            }
+        } else {
+            while (itr.hasNext()) {
+                Http2Stream stream = itr.next().value();
+                if (stream.id() != CONNECTION_STREAM_ID) {
+                    // We are not allowed to make modifications, so the close calls will be executed after this
+                    // iteration completes.
+                    stream.close();
+                }
+            }
+        }
+        return closePromise;
     }
 
     @Override
@@ -209,6 +282,13 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     /**
+     * Determine if {@link #streamMap} only contains the connection stream.
+     */
+    private boolean isStreamMapEmpty() {
+        return streamMap.size() == 1;
+    }
+
+    /**
      * Closed streams may stay in the priority tree if they have dependents that are in prioritizable states.
      * When a stream is requested to be removed we can only actually remove that stream when there are no more
      * prioritizable children.
@@ -220,7 +300,6 @@ public class DefaultHttp2Connection implements Http2Connection {
     void removeStream(DefaultStream stream) {
         // [1] Check if this stream can be removed because it has no prioritizable descendants.
         if (stream.parent().removeChild(stream)) {
-            // Remove it from the map and priority tree.
             streamMap.remove(stream.id());
 
             for (int i = 0; i < listeners.size(); i++) {
@@ -229,6 +308,10 @@ public class DefaultHttp2Connection implements Http2Connection {
                 } catch (RuntimeException e) {
                     logger.error("Caught RuntimeException from listener onStreamRemoved.", e);
                 }
+            }
+
+            if (closePromise != null && isStreamMapEmpty()) {
+                closePromise.trySuccess(null);
             }
         }
     }
@@ -604,17 +687,16 @@ public class DefaultHttp2Connection implements Http2Connection {
                 // path is updated with the correct child.prioritizableForTree() value. Note that the removal operation
                 // may not be successful and may return null. This is because when an exclusive dependency is processed
                 // the children are removed in a previous recursive call but the child's parent link is updated here.
-                if (oldParent != null && oldParent.children.remove(child.id()) != null) {
-                    if (!child.isDescendantOf(oldParent)) {
-                        oldParent.decrementPrioritizableForTree(child.prioritizableForTree());
-                        if (oldParent.prioritizableForTree() == 0) {
-                            // There are a few risks with immediately removing nodes from the priority tree:
-                            // 1. We are removing nodes while we are potentially shifting the tree. There are no
-                            // concrete cases known but is risky because it could invalidate the data structure.
-                            // 2. We are notifying listeners of the removal while the tree is in flux. Currently the
-                            // codec listeners make no assumptions about priority tree structure when being notified.
-                            removeStream(oldParent);
-                        }
+                if (oldParent != null && oldParent.children.remove(child.id()) != null &&
+                        !child.isDescendantOf(oldParent)) {
+                    oldParent.decrementPrioritizableForTree(child.prioritizableForTree());
+                    if (oldParent.prioritizableForTree() == 0) {
+                        // There are a few risks with immediately removing nodes from the priority tree:
+                        // 1. We are removing nodes while we are potentially shifting the tree. There are no
+                        // concrete cases known but is risky because it could invalidate the data structure.
+                        // 2. We are notifying listeners of the removal while the tree is in flux. Currently the
+                        // codec listeners make no assumptions about priority tree structure when being notified.
+                        removeStream(oldParent);
                     }
                 }
 
@@ -1040,6 +1122,10 @@ public class DefaultHttp2Connection implements Http2Connection {
             if ((state.localSideOpen() || state.remoteSideOpen()) && !canOpenStream()) {
                 throw connectionError(REFUSED_STREAM, "Maximum active streams violated for this endpoint.");
             }
+            if (isClosed()) {
+                throw connectionError(INTERNAL_ERROR, "Attempted to create stream id %d after connection was closed",
+                                      streamId);
+            }
         }
 
         private boolean isLocal() {
@@ -1066,7 +1152,6 @@ public class DefaultHttp2Connection implements Http2Connection {
      * active streams in order to prevent modification while iterating.
      */
     private final class ActiveStreams {
-
         private final List<Listener> listeners;
         private final Queue<Event> pendingEvents = new ArrayDeque<Event>(4);
         private final Set<Http2Stream> streams = new LinkedHashSet<Http2Stream>();
@@ -1157,7 +1242,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             removeStream(stream);
         }
 
-        private boolean allowModifications() {
+        boolean allowModifications() {
             return pendingIterations == 0;
         }
     }
