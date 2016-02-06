@@ -388,6 +388,67 @@ public final class StringUtil {
     }
 
     /**
+     * Unescapes the specified escaped CSV field, if necessary according to
+     * <a href="https://tools.ietf.org/html/rfc4180#section-2">RFC-4180</a>.
+     *
+     * @param value The escaped CSV field which will be unescaped according to
+     *              <a href="https://tools.ietf.org/html/rfc4180#section-2">RFC-4180</a>
+     * @return {@link CharSequence} the unescaped value if necessary, or the value unchanged
+     */
+    public static CharSequence unescapeCsv(CharSequence value) {
+        int length = checkNotNull(value, "value").length();
+        if (length == 0) {
+            return value;
+        }
+        int last = length - 1;
+        boolean quoted = isDoubleQuote(value.charAt(0)) && isDoubleQuote(value.charAt(last)) && length != 1;
+        if (!quoted) {
+            validateCsvFormat(value);
+            return value;
+        }
+        StringBuilder unescaped = InternalThreadLocalMap.get().stringBuilder();
+        for (int i = 1; i < last; i++) {
+            char current = value.charAt(i);
+            if (current == DOUBLE_QUOTE) {
+                if (isDoubleQuote(value.charAt(i + 1)) && (i + 1) != last) {
+                    // Followed by a double-quote but not the last character
+                    // Just skip the next double-quote
+                    i++;
+                } else {
+                    // Not followed by a double-quote or the following double-quote is the last character
+                    throw newInvalidEscapedCsvFieldException(value, i);
+                }
+            }
+            unescaped.append(current);
+        }
+        return unescaped.toString();
+    }
+
+    /**
+     * Validate if {@code value} is a valid csv field without double-quotes.
+     *
+     * @throws IllegalArgumentException if {@code value} needs to be encoded with double-quotes.
+     */
+    private static void validateCsvFormat(CharSequence value) {
+        int length = value.length();
+        for (int i = 0; i < length; i++) {
+            switch (value.charAt(i)) {
+                case DOUBLE_QUOTE:
+                case LINE_FEED:
+                case CARRIAGE_RETURN:
+                case COMMA:
+                    // If value contains any special character, it should be enclosed with double-quotes
+                    throw newInvalidEscapedCsvFieldException(value, i);
+                default:
+            }
+        }
+    }
+
+    private static IllegalArgumentException newInvalidEscapedCsvFieldException(CharSequence value, int index) {
+        return new IllegalArgumentException("invalid escaped CSV field: " + value + " index: " + index);
+    }
+
+    /**
      * Get the length of a string, {@code null} input is considered {@code 0} length.
      */
     public static int length(String s) {
