@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,50 +15,45 @@
  */
 package io.netty.channel;
 
-public class WriteBufferWaterMark {
+public final class WriteBufferWaterMark {
 
-    private int writeBufferLowWaterMark;
-    private int writeBufferHighWaterMark;
+    private static final int DEFAULT_WRITEBUFFER_LOW_WATERMARK = 32 * 1024;
+    private static final int DEFAULT_WRITEBUFFER_HIGH_WATERMARK = 64 * 1024;
+
+    private final int writeBufferLowWaterMark;
+    private final int writeBufferHighWaterMark;
+
+    public WriteBufferWaterMark() {
+        this(DEFAULT_WRITEBUFFER_LOW_WATERMARK, DEFAULT_WRITEBUFFER_HIGH_WATERMARK);
+    }
 
     public WriteBufferWaterMark(int writeBufferLowWaterMark, int writeBufferHighWaterMark) {
         super();
         if (writeBufferLowWaterMark < 0) {
-            throw new IllegalArgumentException(
-                    "writeBufferLowWaterMark must be >= 0");
+            throw new IllegalArgumentException("writeBufferLowWaterMark must be >= 0");
         }
         if (writeBufferHighWaterMark < writeBufferLowWaterMark) {
-            throw new IllegalArgumentException(
-                    "writeBufferHighWaterMark cannot be less than " +
-                            "writeBufferLowWaterMark (" + writeBufferLowWaterMark + "): " +
-                            writeBufferHighWaterMark);
+            throw new IllegalArgumentException("writeBufferHighWaterMark cannot be less than " + "writeBufferLowWaterMark (" + writeBufferLowWaterMark + "): " + writeBufferHighWaterMark);
         }
         this.writeBufferLowWaterMark = writeBufferLowWaterMark;
         this.writeBufferHighWaterMark = writeBufferHighWaterMark;
     }
 
-    public int getWriteBufferHighWaterMark() {
-        return writeBufferHighWaterMark;
-    }
-
-    public int getWriteBufferLowWaterMark() {
+    public int writeBufferLowWaterMark() {
         return writeBufferLowWaterMark;
     }
 
-    public void setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        this.writeBufferHighWaterMark = writeBufferHighWaterMark;
-    }
-
-    public void setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        this.writeBufferLowWaterMark = writeBufferLowWaterMark;
+    public int writeBufferHighWaterMark() {
+        return writeBufferHighWaterMark;
     }
 
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
-        builder.append("WriteBufferWaterMark [writeBufferHighWaterMark=");
-        builder.append(writeBufferHighWaterMark);
-        builder.append(", writeBufferLowWaterMark=");
+        builder.append("WriteBufferWaterMark [writeBufferLowWaterMark=");
         builder.append(writeBufferLowWaterMark);
+        builder.append(", writeBufferHighWaterMark=");
+        builder.append(writeBufferHighWaterMark);
         builder.append("]");
         return builder.toString();
     }

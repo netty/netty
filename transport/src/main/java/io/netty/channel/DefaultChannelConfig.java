@@ -47,12 +47,9 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOREAD_UPDATER;
 
-    private static final int DEFAULT_WRITEBUFFER_HIGH_WATERMARK = 64 * 1024;
-    private static final int DEFAULT_WRITEBUFFER_LOW_WATERMARK = 32 * 1024;
-
     static {
         AtomicIntegerFieldUpdater<DefaultChannelConfig> autoReadUpdater =
-                PlatformDependent.newAtomicIntegerFieldUpdater(DefaultChannelConfig.class, "autoRead");
+            PlatformDependent.newAtomicIntegerFieldUpdater(DefaultChannelConfig.class, "autoRead");
         if (autoReadUpdater == null) {
             autoReadUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultChannelConfig.class, "autoRead");
         }
@@ -70,8 +67,8 @@ public class DefaultChannelConfig implements ChannelConfig {
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
-    private volatile WriteBufferWaterMark writeBufferWaterMark =
-            new WriteBufferWaterMark(DEFAULT_WRITEBUFFER_LOW_WATERMARK, DEFAULT_WRITEBUFFER_HIGH_WATERMARK);
+    private volatile int writeBufferHighWaterMark = 64 * 1024;
+    private volatile int writeBufferLowWaterMark = 32 * 1024;
 
     public DefaultChannelConfig(Channel channel) {
         this(channel, new AdaptiveRecvByteBufAllocator());
@@ -89,7 +86,7 @@ public class DefaultChannelConfig implements ChannelConfig {
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
                 ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
-                WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR);
+                WRITE_BUFFER_LOW_WATER_MARK, MESSAGE_SIZE_ESTIMATOR);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -153,9 +150,6 @@ public class DefaultChannelConfig implements ChannelConfig {
         }
         if (option == WRITE_BUFFER_LOW_WATER_MARK) {
             return (T) Integer.valueOf(getWriteBufferLowWaterMark());
-        }
-        if (option == WRITE_BUFFER_WATER_MARK) {
-            return (T) getWriteBufferWaterMark();
         }
         if (option == MESSAGE_SIZE_ESTIMATOR) {
             return (T) getMessageSizeEstimator();
@@ -347,10 +341,11 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public int getWriteBufferHighWaterMark() {
-        return writeBufferWaterMark.getWriteBufferHighWaterMark();
+        return writeBufferHighWaterMark;
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         if (writeBufferHighWaterMark < getWriteBufferLowWaterMark()) {
             throw new IllegalArgumentException(
@@ -362,16 +357,17 @@ public class DefaultChannelConfig implements ChannelConfig {
             throw new IllegalArgumentException(
                     "writeBufferHighWaterMark must be >= 0");
         }
-        this.writeBufferWaterMark.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        this.writeBufferHighWaterMark = writeBufferHighWaterMark;
         return this;
     }
 
     @Override
     public int getWriteBufferLowWaterMark() {
-        return writeBufferWaterMark.getWriteBufferLowWaterMark();
+        return writeBufferLowWaterMark;
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         if (writeBufferLowWaterMark > getWriteBufferHighWaterMark()) {
             throw new IllegalArgumentException(
@@ -383,19 +379,16 @@ public class DefaultChannelConfig implements ChannelConfig {
             throw new IllegalArgumentException(
                     "writeBufferLowWaterMark must be >= 0");
         }
-        this.writeBufferWaterMark.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        this.writeBufferLowWaterMark = writeBufferLowWaterMark;
         return this;
     }
-
+    
     @Override
     public ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        this.writeBufferWaterMark = writeBufferWaterMark;
+        this.writeBufferLowWaterMark = writeBufferWaterMark.writeBufferLowWaterMark();
+        this.writeBufferHighWaterMark = writeBufferWaterMark.writeBufferHighWaterMark();
+        
         return this;
-    }
-
-    @Override
-    public WriteBufferWaterMark getWriteBufferWaterMark() {
-        return this.writeBufferWaterMark;
     }
 
     @Override
@@ -411,4 +404,5 @@ public class DefaultChannelConfig implements ChannelConfig {
         msgSizeEstimator = estimator;
         return this;
     }
+
 }
