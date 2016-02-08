@@ -29,8 +29,11 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.AbstractEventExecutor;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -40,10 +43,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
@@ -606,6 +612,415 @@ public class DefaultChannelPipelineTest {
         channel.deregister();
         assertTrue(channelLatch.await(2, TimeUnit.SECONDS));
         assertTrue(handlerLatch.await(2, TimeUnit.SECONDS));
+    }
+
+    @Test(timeout = 3000)
+    public void testAddHandlerBeforeRegisteredThenRemove() {
+        final EventLoop loop = group.next();
+
+        CheckEventExecutorHandler handler = new CheckEventExecutorHandler(loop);
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        pipeline.addFirst(handler);
+        assertFalse(handler.addedPromise.isDone());
+        group.register(pipeline.channel());
+        handler.addedPromise.syncUninterruptibly();
+        pipeline.remove(handler);
+        handler.removedPromise.syncUninterruptibly();
+    }
+
+    @Test(timeout = 3000)
+    public void testAddHandlerBeforeRegisteredThenReplace() throws Exception {
+        final EventLoop loop = group.next();
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        CheckEventExecutorHandler handler = new CheckEventExecutorHandler(loop);
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        pipeline.addFirst(handler);
+        assertFalse(handler.addedPromise.isDone());
+        group.register(pipeline.channel());
+        handler.addedPromise.syncUninterruptibly();
+        pipeline.replace(handler, null, new ChannelHandlerAdapter() {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                latch.countDown();
+            }
+        });
+        handler.removedPromise.syncUninterruptibly();
+        latch.await();
+    }
+
+    @Test
+    public void testAddRemoveHandlerNotRegistered() throws Throwable {
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        ChannelHandler handler = new ErrorChannelHandler(error);
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        pipeline.addFirst(handler);
+        pipeline.remove(handler);
+
+        Throwable cause = error.get();
+        if (cause != null) {
+            throw cause;
+        }
+    }
+
+    @Test
+    public void testAddReplaceHandlerNotRegistered() throws Throwable {
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        ChannelHandler handler = new ErrorChannelHandler(error);
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        pipeline.addFirst(handler);
+        pipeline.replace(handler, null, new ErrorChannelHandler(error));
+
+        Throwable cause = error.get();
+        if (cause != null) {
+            throw cause;
+        }
+    }
+
+    @Test(timeout = 3000)
+    public void testHandlerAddedAndRemovedCalledInCorrectOrder() throws Throwable {
+        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
+        final EventExecutorGroup group2 = new DefaultEventExecutorGroup(1);
+
+        try {
+            BlockingQueue<CheckOrderHandler> addedQueue = new LinkedBlockingQueue<CheckOrderHandler>();
+            BlockingQueue<CheckOrderHandler> removedQueue = new LinkedBlockingQueue<CheckOrderHandler>();
+
+            CheckOrderHandler handler1 = new CheckOrderHandler(addedQueue, removedQueue);
+            CheckOrderHandler handler2 = new CheckOrderHandler(addedQueue, removedQueue);
+            CheckOrderHandler handler3 = new CheckOrderHandler(addedQueue, removedQueue);
+            CheckOrderHandler handler4 = new CheckOrderHandler(addedQueue, removedQueue);
+
+            ChannelPipeline pipeline = new LocalChannel().pipeline();
+            pipeline.addLast(handler1);
+            group.register(pipeline.channel()).syncUninterruptibly();
+            pipeline.addLast(group1, handler2);
+            pipeline.addLast(group2, handler3);
+            pipeline.addLast(handler4);
+
+            assertTrue(removedQueue.isEmpty());
+            pipeline.channel().close().syncUninterruptibly();
+            assertHandler(handler1, addedQueue.take());
+            assertHandler(handler2, addedQueue.take());
+            assertHandler(handler3, addedQueue.take());
+            assertHandler(handler4, addedQueue.take());
+            assertTrue(addedQueue.isEmpty());
+
+            assertHandler(handler4, removedQueue.take());
+            assertHandler(handler3, removedQueue.take());
+            assertHandler(handler2, removedQueue.take());
+            assertHandler(handler1, removedQueue.take());
+            assertTrue(removedQueue.isEmpty());
+        } finally {
+            group1.shutdownGracefully();
+            group2.shutdownGracefully();
+        }
+    }
+
+    @Test(timeout = 3000)
+    public void testHandlerAddedExceptionFromChildHandlerIsPropegated() {
+        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
+        try {
+            final Promise<Void> promise = group1.next().newPromise();
+            final AtomicBoolean handlerAdded = new AtomicBoolean();
+            final Exception exception = new RuntimeException();
+            ChannelPipeline pipeline = new LocalChannel().pipeline();
+            pipeline.addLast(new ChannelHandlerAdapter() {
+                @Override
+                public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                    handlerAdded.set(true);
+                    throw exception;
+                }
+            });
+            pipeline.addLast(group1, new CheckExceptionHandler(exception, promise));
+            assertFalse(handlerAdded.get());
+            group.register(pipeline.channel());
+            promise.syncUninterruptibly();
+        } finally {
+            group1.shutdownGracefully();
+        }
+    }
+
+    @Test(timeout = 3000)
+    public void testHandlerRemovedExceptionFromChildHandlerIsPropegated() {
+        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
+        try {
+            final Promise<Void> promise = group1.next().newPromise();
+            String handlerName = "foo";
+            final Exception exception = new RuntimeException();
+            ChannelPipeline pipeline = new LocalChannel().pipeline();
+            pipeline.addLast(handlerName, new ChannelHandlerAdapter() {
+                @Override
+                public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+                    throw exception;
+                }
+            });
+            pipeline.addLast(group1, new CheckExceptionHandler(exception, promise));
+            group.register(pipeline.channel()).syncUninterruptibly();
+            pipeline.remove(handlerName);
+            promise.syncUninterruptibly();
+        } finally {
+            group1.shutdownGracefully();
+        }
+    }
+
+    @Test(timeout = 3000)
+    public void testHandlerAddedThrowsAndRemovedThrowsException() {
+        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
+        try {
+            final Promise<Void> promise = group1.next().newPromise();
+            final Exception exceptionAdded = new RuntimeException();
+            final Exception exceptionRemoved = new RuntimeException();
+            String handlerName = "foo";
+            ChannelPipeline pipeline = new LocalChannel().pipeline();
+            pipeline.addLast(handlerName, new ChannelHandlerAdapter() {
+                @Override
+                public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                    throw exceptionAdded;
+                }
+
+                @Override
+                public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+                    throw exceptionRemoved;
+                }
+            });
+            pipeline.addLast(group1, new CheckExceptionHandler(exceptionAdded, promise));
+            group.register(pipeline.channel()).syncUninterruptibly();
+            assertNull(pipeline.context(handlerName));
+            promise.syncUninterruptibly();
+        } finally {
+            group1.shutdownGracefully();
+        }
+    }
+
+    @Test(timeout = 3000)
+    public void testHandlerAddBlocksUntilHandlerAddedCalled() {
+        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
+        try {
+            final Promise<Void> promise = group1.next().newPromise();
+            ChannelPipeline pipeline = new LocalChannel().pipeline();
+            group.register(pipeline.channel()).syncUninterruptibly();
+
+            pipeline.addLast(new ChannelHandlerAdapter() {
+                @Override
+                public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                    final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
+                    ctx.pipeline().addLast(group1, new ChannelHandlerAdapter() {
+                        @Override
+                        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                            handlerAddedCalled.set(true);
+                        }
+                    });
+                    if (handlerAddedCalled.get()) {
+                        promise.setSuccess(null);
+                    } else {
+                        promise.setFailure(new AssertionError("handlerAdded(...) was not called yet"));
+                    }
+                }
+            });
+
+            promise.syncUninterruptibly();
+        } finally {
+            group1.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testAddRemoveHandlerCalledOnceRegistered() throws Throwable {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        CallbackCheckHandler handler = new CallbackCheckHandler();
+
+        pipeline.addFirst(handler);
+        pipeline.remove(handler);
+
+        assertFalse(handler.addedHandler.get());
+        assertFalse(handler.removedHandler.get());
+
+        group.register(pipeline.channel()).syncUninterruptibly();
+        Throwable cause = handler.error.get();
+        if (cause != null) {
+            throw cause;
+        }
+
+        assertTrue(handler.addedHandler.get());
+        assertTrue(handler.removedHandler.get());
+    }
+
+    @Test
+    public void testAddReplaceHandlerCalledOnceRegistered() throws Throwable {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        CallbackCheckHandler handler = new CallbackCheckHandler();
+        CallbackCheckHandler handler2 = new CallbackCheckHandler();
+
+        pipeline.addFirst(handler);
+        pipeline.replace(handler, null, handler2);
+
+        assertFalse(handler.addedHandler.get());
+        assertFalse(handler.removedHandler.get());
+        assertFalse(handler2.addedHandler.get());
+        assertFalse(handler2.removedHandler.get());
+
+        group.register(pipeline.channel()).syncUninterruptibly();
+        Throwable cause = handler.error.get();
+        if (cause != null) {
+            throw cause;
+        }
+
+        assertTrue(handler.addedHandler.get());
+        assertTrue(handler.removedHandler.get());
+
+        Throwable cause2 = handler2.error.get();
+        if (cause2 != null) {
+            throw cause2;
+        }
+
+        assertTrue(handler2.addedHandler.get());
+        assertFalse(handler2.removedHandler.get());
+        pipeline.remove(handler2);
+        assertTrue(handler2.removedHandler.get());
+    }
+
+    private static final class CallbackCheckHandler extends ChannelHandlerAdapter {
+        final AtomicBoolean addedHandler = new AtomicBoolean();
+        final AtomicBoolean removedHandler = new AtomicBoolean();
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            if (!addedHandler.compareAndSet(false, true)) {
+                error.set(new AssertionError("handlerAdded(...) called multiple times: " + ctx.name()));
+            } else if (removedHandler.get()) {
+                error.set(new AssertionError("handlerRemoved(...) called before handlerAdded(...): " + ctx.name()));
+            }
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            if (!removedHandler.compareAndSet(false, true)) {
+                error.set(new AssertionError("handlerRemoved(...) called multiple times: " + ctx.name()));
+            } else if (!addedHandler.get()) {
+                error.set(new AssertionError("handlerRemoved(...) called before handlerAdded(...): " + ctx.name()));
+            }
+        }
+    }
+
+    private static final class CheckExceptionHandler extends ChannelInboundHandlerAdapter {
+        private final Throwable expected;
+        private final Promise<Void> promise;
+
+        CheckExceptionHandler(Throwable expected, Promise<Void> promise) {
+            this.expected = expected;
+            this.promise = promise;
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            if (cause instanceof ChannelPipelineException && cause.getCause() == expected) {
+                promise.setSuccess(null);
+            } else {
+                promise.setFailure(new AssertionError("cause not the expected instance"));
+            }
+        }
+    }
+
+    private static void assertHandler(CheckOrderHandler expected, CheckOrderHandler actual) throws Throwable {
+        assertSame(expected, actual);
+        actual.checkError();
+    }
+
+    private static final class CheckOrderHandler extends ChannelHandlerAdapter {
+        private final Queue<CheckOrderHandler> addedQueue;
+        private final Queue<CheckOrderHandler> removedQueue;
+        private final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+
+        CheckOrderHandler(Queue<CheckOrderHandler> addedQueue, Queue<CheckOrderHandler> removedQueue) {
+            this.addedQueue = addedQueue;
+            this.removedQueue = removedQueue;
+        }
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            addedQueue.add(this);
+            checkExecutor(ctx);
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            removedQueue.add(this);
+            checkExecutor(ctx);
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            error.set(cause);
+        }
+
+        void checkError() throws Throwable {
+            Throwable cause = error.get();
+            if (cause != null) {
+                throw cause;
+            }
+        }
+
+        private void checkExecutor(ChannelHandlerContext ctx) {
+            if (!ctx.executor().inEventLoop()) {
+                error.set(new AssertionError());
+            }
+        }
+    }
+
+    private static final class CheckEventExecutorHandler extends ChannelHandlerAdapter {
+        final EventExecutor executor;
+        final Promise<Void> addedPromise;
+        final Promise<Void> removedPromise;
+
+        CheckEventExecutorHandler(EventExecutor executor) {
+            this.executor = executor;
+            addedPromise = executor.newPromise();
+            removedPromise = executor.newPromise();
+        }
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            assertExecutor(ctx, addedPromise);
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            assertExecutor(ctx, removedPromise);
+        }
+
+        private void assertExecutor(ChannelHandlerContext ctx, Promise<Void> promise) {
+            final boolean same;
+            try {
+                same = executor == ctx.executor();
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+                return;
+            }
+            if (same) {
+                promise.setSuccess(null);
+            } else {
+                promise.setFailure(new AssertionError("EventExecutor not the same"));
+            }
+        }
+    }
+    private static final class ErrorChannelHandler extends ChannelHandlerAdapter {
+        private final AtomicReference<Throwable> error;
+
+        ErrorChannelHandler(AtomicReference<Throwable> error) {
+            this.error = error;
+        }
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            error.set(new AssertionError());
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            error.set(new AssertionError());
+        }
     }
 
     private static int next(AbstractChannelHandlerContext ctx) {
