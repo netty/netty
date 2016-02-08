@@ -975,5 +975,5 @@ void JNI_OnUnload(JavaVM* vm, void* reserved) {
         // Something is wrong but nothing we can do about this :(
         return;
     }
-    return netty_epoll_native_JNI_OnUnLoad(env);
+    netty_epoll_native_JNI_OnUnLoad(env);
 }
