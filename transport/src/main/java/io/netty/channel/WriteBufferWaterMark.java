@@ -28,7 +28,6 @@ public final class WriteBufferWaterMark {
     }
 
     public WriteBufferWaterMark(int writeBufferLowWaterMark, int writeBufferHighWaterMark) {
-        super();
         if (writeBufferLowWaterMark < 0) {
             throw new IllegalArgumentException("writeBufferLowWaterMark must be >= 0");
         }
@@ -42,11 +41,11 @@ public final class WriteBufferWaterMark {
         this.writeBufferHighWaterMark = writeBufferHighWaterMark;
     }
 
-    public int writeBufferLowWaterMark() {
+    public int lowWaterMark() {
         return writeBufferLowWaterMark;
     }
 
-    public int writeBufferHighWaterMark() {
+    public int highWaterMark() {
         return writeBufferHighWaterMark;
     }
 
