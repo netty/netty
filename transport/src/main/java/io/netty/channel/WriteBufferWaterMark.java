@@ -36,7 +36,8 @@ public final class WriteBufferWaterMark {
             throw new IllegalArgumentException(
                     "writeBufferHighWaterMark cannot be less than " +
                             "writeBufferLowWaterMark (" + writeBufferLowWaterMark + "): " +
-                            writeBufferHighWaterMark);        }
+                            writeBufferHighWaterMark);
+        }
         this.writeBufferLowWaterMark = writeBufferLowWaterMark;
         this.writeBufferHighWaterMark = writeBufferHighWaterMark;
     }
