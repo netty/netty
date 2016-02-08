@@ -20,7 +20,6 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
@@ -35,22 +34,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private boolean handlerRemoved;
-
-    /**
-     * This is set to {@code true} once the {@link ChannelHandler#handlerAdded(ChannelHandlerContext) method was called.
-     * We need to keep track of this This will set to true once the
-     * {@link ChannelHandler#handlerAdded(ChannelHandlerContext)} method was called. We need to keep track of this
-     * to ensure we will never call another {@link ChannelHandler} method before handlerAdded(...) was called
-     * to guard againstordering issues. {@link ChannelHandler#handlerAdded(ChannelHandlerContext)} MUST be the first
-     * method that is called for handler when it becomes a part of the {@link ChannelPipeline} in all cases. Not doing
-     * so may lead to unexpected side-effects as {@link ChannelHandler} implementationsmay need to do initialization
-     * steps before a  {@link ChannelHandler} can be used.
-     *
-     * See <a href="https://github.com/netty/netty/issues/4705">#4705</a>
-     *
-     * No need to mark volatile as this will be made visible as next/prev is volatile.
-     */
-    private boolean handlerAdded;
 
     final ChannelHandlerInvoker invoker;
     private ChannelFuture succeededFuture;
@@ -344,285 +327,83 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     final void invokeChannelRegistered() {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeChannelRegistered(this);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeChannelRegistered(AbstractChannelHandlerContext.this);
-                }
-            });
-        }
+        invoker().invokeChannelRegistered(this);
     }
 
     final void invokeChannelUnregistered() {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeChannelUnregistered(this);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeChannelUnregistered(AbstractChannelHandlerContext.this);
-                }
-            });
-        }
+        invoker().invokeChannelUnregistered(this);
     }
 
     final void invokeChannelActive() {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeChannelActive(this);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeChannelActive(AbstractChannelHandlerContext.this);
-                }
-            });
-        }
+        invoker().invokeChannelActive(this);
     }
 
     final void invokeChannelInactive() {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeChannelInactive(this);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeChannelInactive(AbstractChannelHandlerContext.this);
-                }
-            });
-        }
+        invoker().invokeChannelInactive(this);
     }
 
     final void invokeExceptionCaught(final Throwable cause) {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeExceptionCaught(this, cause);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeExceptionCaught(AbstractChannelHandlerContext.this, cause);
-                }
-            });
-        }
+        invoker().invokeExceptionCaught(this, cause);
     }
 
     final void invokeUserEventTriggered(final Object event) {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeUserEventTriggered(this, event);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeUserEventTriggered(AbstractChannelHandlerContext.this, event);
-                }
-            });
-        }
+        invoker().invokeUserEventTriggered(this, event);
     }
 
     final void invokeChannelRead(final Object msg) {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeChannelRead(this, msg);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeChannelRead(AbstractChannelHandlerContext.this, msg);
-                }
-            });
-        }
+        invoker().invokeChannelRead(this, msg);
     }
 
     final void invokeChannelReadComplete() {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeChannelReadComplete(this);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeChannelReadComplete(AbstractChannelHandlerContext.this);
-                }
-            });
-        }
+        invoker().invokeChannelReadComplete(this);
     }
 
     final void invokeChannelWritabilityChanged() {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeChannelWritabilityChanged(this);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeChannelWritabilityChanged(AbstractChannelHandlerContext.this);
-                }
-            });
-        }
+        invoker().invokeChannelWritabilityChanged(this);
     }
 
     final void invokeBind(final SocketAddress localAddress, final ChannelPromise promise) {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeBind(this, localAddress, promise);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeBind(AbstractChannelHandlerContext.this, localAddress, promise);
-                }
-            });
-        }
+        invoker().invokeBind(this, localAddress, promise);
     }
 
     final void invokeConnect(final SocketAddress remoteAddress,
                               final SocketAddress localAddress, final ChannelPromise promise) {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeConnect(this, remoteAddress, localAddress, promise);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeConnect(AbstractChannelHandlerContext.this, remoteAddress, localAddress, promise);
-                }
-            });
-        }
+        invoker().invokeConnect(this, remoteAddress, localAddress, promise);
     }
 
     final void invokeDisconnect(final ChannelPromise promise) {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeDisconnect(this, promise);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeDisconnect(AbstractChannelHandlerContext.this, promise);
-                }
-            });
-        }
+        invoker().invokeDisconnect(this, promise);
     }
 
     final void invokeClose(final ChannelPromise promise) {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeClose(this, promise);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeClose(AbstractChannelHandlerContext.this, promise);
-                }
-            });
-        }
+        invoker().invokeClose(this, promise);
     }
 
     final void invokeDeregister(final ChannelPromise promise) {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeDeregister(this, promise);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeDeregister(AbstractChannelHandlerContext.this, promise);
-                }
-            });
-        }
+        invoker().invokeDeregister(this, promise);
     }
 
     final void invokeRead() {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeRead(this);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeRead(AbstractChannelHandlerContext.this);
-                }
-            });
-        }
+        invoker().invokeRead(this);
     }
 
     final void invokeWrite(final Object msg, final ChannelPromise promise) {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeWrite(this, msg, promise);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeWrite(AbstractChannelHandlerContext.this, msg, promise);
-                }
-            });
-        }
+        invoker().invokeWrite(this, msg, promise);
     }
 
     final void invokeFlush() {
-        final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeFlush(this);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeFlush(AbstractChannelHandlerContext.this);
-                }
-            });
-        }
+        invoker().invokeFlush(this);
     }
 
     final void invokeWriteAndFlush(final Object msg, final ChannelPromise promise) {
         final ChannelHandlerInvoker invoker = invoker();
-        if (handlerAdded) {
-            invoker.invokeWrite(this, msg, promise);
-            invoker.invokeFlush(this);
-        } else {
-            invoker.executor().execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    assert handlerAdded;
-                    invoker.invokeWrite(AbstractChannelHandlerContext.this, msg, promise);
-                    invoker.invokeFlush(AbstractChannelHandlerContext.this);
-                }
-            });
-        }
+        invoker.invokeWrite(this, msg, promise);
+        invoker.invokeFlush(this);
     }
 
     @Override
     public ChannelHandlerInvoker invoker() {
         return invoker == null ? channel().unsafe().invoker() : invoker;
-    }
-
-    final void setHandlerAddedCalled() {
-        handlerAdded = true;
     }
 
     @Override
