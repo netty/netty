@@ -217,9 +217,6 @@ public interface ChannelConfig {
      */
     int getWriteBufferHighWaterMark();
 
-    
-    
-    
     /**
      * @deprecated Use {@link #setWriteBufferWaterMark(WriteBufferWaterMark)}
      * <p>
