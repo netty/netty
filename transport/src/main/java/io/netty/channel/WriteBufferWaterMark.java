@@ -33,8 +33,10 @@ public final class WriteBufferWaterMark {
             throw new IllegalArgumentException("writeBufferLowWaterMark must be >= 0");
         }
         if (writeBufferHighWaterMark < writeBufferLowWaterMark) {
-            throw new IllegalArgumentException("writeBufferHighWaterMark cannot be less than " + "writeBufferLowWaterMark (" + writeBufferLowWaterMark + "): " + writeBufferHighWaterMark);
-        }
+            throw new IllegalArgumentException(
+                    "writeBufferHighWaterMark cannot be less than " +
+                            "writeBufferLowWaterMark (" + writeBufferLowWaterMark + "): " +
+                            writeBufferHighWaterMark);        }
         this.writeBufferLowWaterMark = writeBufferLowWaterMark;
         this.writeBufferHighWaterMark = writeBufferHighWaterMark;
     }
