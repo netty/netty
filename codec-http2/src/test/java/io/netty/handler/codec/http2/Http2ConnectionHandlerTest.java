@@ -43,6 +43,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
+import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -319,6 +320,15 @@ public class Http2ConnectionHandlerTest {
         // will return the stream). We should still write a RST_STREAM frame in this scenario.
         handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise);
         verify(frameWriter).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(ChannelPromise.class));
+    }
+
+    @Test
+    public void writeRstOnIdleStreamShouldNotWriteButStillSucceed() throws Exception {
+        handler = newHandler();
+        when(stream.state()).thenReturn(IDLE);
+        handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise);
+        verify(frameWriter, never()).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(ChannelPromise.class));
+        verify(stream).close();
     }
 
     @SuppressWarnings("unchecked")
