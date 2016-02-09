@@ -617,9 +617,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         final ChannelFuture future;
-        if (stream.state() == IDLE || connection().local().created(stream)) {
-            // The other endpoint doesn't know about the stream yet, so we can't actually send
-            // the RST_STREAM frame. The HTTP/2 spec also disallows sending RST_STREAM for IDLE streams.
+        if (stream.state() == IDLE) {
+            // We cannot write RST_STREAM frames on IDLE streams https://tools.ietf.org/html/rfc7540#section-6.4.
             future = promise.setSuccess();
         } else {
             future = frameWriter().writeRstStream(ctx, streamId, errorCode, promise);
@@ -629,17 +628,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // from resulting in multiple reset frames being sent.
         stream.resetSent();
 
-        future.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    closeStream(stream, promise);
-                } else {
-                    // The connection will be closed and so no need to change the resetSent flag to false.
-                    onConnectionError(ctx, future.cause(), null);
+        if (future.isDone()) {
+            processRstStreamWriteResult(ctx, stream, future);
+        } else {
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    processRstStreamWriteResult(ctx, stream, future);
                 }
-            }
-        });
+            });
+        }
 
         return future;
     }
@@ -688,10 +686,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // If this connection is closing and the graceful shutdown has completed, close the connection
         // once this operation completes.
         if (closeListener != null && isGracefulShutdownComplete()) {
-            ChannelFutureListener closeListener = Http2ConnectionHandler.this.closeListener;
+            ChannelFutureListener closeListener = this.closeListener;
             // This method could be called multiple times
             // and we don't want to notify the closeListener multiple times.
-            Http2ConnectionHandler.this.closeListener = null;
+            this.closeListener = null;
             try {
                 closeListener.operationComplete(future);
             } catch (Exception e) {
@@ -715,6 +713,15 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
         int lastKnownStream = connection().remote().lastStreamCreated();
         return goAway(ctx, lastKnownStream, errorCode, debugData, ctx.newPromise());
+    }
+
+    private void processRstStreamWriteResult(ChannelHandlerContext ctx, Http2Stream stream, ChannelFuture future) {
+        if (future.isSuccess()) {
+            closeStream(stream, future);
+        } else {
+            // The connection will be closed and so no need to change the resetSent flag to false.
+            onConnectionError(ctx, future.cause(), null);
+        }
     }
 
     /**
