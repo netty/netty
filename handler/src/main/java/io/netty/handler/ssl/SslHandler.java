@@ -900,17 +900,17 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             in.skipBytes(totalLength);
 
             // If SSLEngine expects a heap buffer for unwrapping, do the conversion.
-            if (in.isDirect() && wantsInboundHeapBuffer) {
-                ByteBuf copy = ctx.alloc().heapBuffer(totalLength);
-                try {
-                    copy.writeBytes(in, startOffset, totalLength);
-                    decoded = unwrap(ctx, copy, 0, totalLength);
-                } finally {
-                    copy.release();
-                }
-            } else {
+//            if (in.isDirect() && wantsInboundHeapBuffer) {
+//                ByteBuf copy = ctx.alloc().heapBuffer(totalLength);
+//                try {
+//                    copy.writeBytes(in, startOffset, totalLength);
+//                    decoded = unwrap(ctx, copy, 0, totalLength);
+//                } finally {
+//                    copy.release();
+//                }
+//            } else {
                 decoded = unwrap(ctx, in, startOffset, totalLength);
-            }
+//            }
 
             if (!firedChannelRead) {
                 // Check first if firedChannelRead is not set yet as it may have been set in a

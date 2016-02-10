@@ -50,6 +50,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
@@ -122,11 +123,14 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             "serverUsesDelegatedTaskExecutor = {3}, clientUsesDelegatedTaskExecutor = {4}, " +
             "autoRead = {5}, useChunkedWriteHandler = {6}, useCompositeByteBuf = {7}")
     public static Collection<Object[]> data() throws Exception {
+        Iterable<String> ciphers = Arrays.asList("TLS_RSA_WITH_AES_128_GCM_SHA256");
         List<SslContext> serverContexts = new ArrayList<SslContext>();
-        serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build());
+        serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK)
+                .ciphers(ciphers).build());
 
         List<SslContext> clientContexts = new ArrayList<SslContext>();
-        clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK).trustManager(CERT_FILE).build());
+        clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK).trustManager(CERT_FILE)
+                .ciphers(ciphers).build());
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
