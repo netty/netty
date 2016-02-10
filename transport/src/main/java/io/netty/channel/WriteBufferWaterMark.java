@@ -21,13 +21,14 @@ package io.netty.channel;
  * mark (default value is {@value #DEFAULT_WRITEBUFFER_HIGH_WATERMARK})
  * for write buffer.
  * <p>
- * If the number of bytes queued in the write buffer the
+ * If the number of bytes queued in the write buffer exceeds the
  * {@linkplain #writeBufferHighWaterMark}, {@link Channel#isWritable()}
  * will start to return {@code false}.
  * <p>
- * If the number of bytes queued in the write buffer exceeded the
- * {@linkplain #writeBufferLowWaterMark} and then
- * dropped down below the value, {@link Channel#isWritable()} will start to return
+ * If the number of bytes queued in the write buffer exceeds the
+ * {@linkplain #writeBufferHighWaterMark} and then
+ * dropped down below the {@linkplain #writeBufferLowWaterMark}, 
+ * {@link Channel#isWritable()} will start to return
  * {@code true} again.
  *
  */
