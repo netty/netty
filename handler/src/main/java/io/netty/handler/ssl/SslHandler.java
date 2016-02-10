@@ -214,12 +214,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * </p>
      */
     private final boolean wantsLargeOutboundNetworkBuffer;
-    /**
-     * {@code true} if and only if {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} expects a heap buffer rather than
-     * a direct buffer.  For an unknown reason, JDK8 SSLEngine causes JVM to crash when its cipher suite uses Galois
-     * Counter Mode (GCM).
-     */
-    private boolean wantsInboundHeapBuffer;
 
     // END Platform-dependent flags
 
@@ -898,19 +892,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // See https://github.com/netty/netty/issues/1534
 
             in.skipBytes(totalLength);
-
-            // If SSLEngine expects a heap buffer for unwrapping, do the conversion.
-            if (in.isDirect() && wantsInboundHeapBuffer) {
-                ByteBuf copy = ctx.alloc().heapBuffer(totalLength);
-                try {
-                    copy.writeBytes(in, startOffset, totalLength);
-                    decoded = unwrap(ctx, copy, 0, totalLength);
-                } finally {
-                    copy.release();
-                }
-            } else {
-                decoded = unwrap(ctx, in, startOffset, totalLength);
-            }
+            decoded = unwrap(ctx, in, startOffset, totalLength);
 
             if (!firedChannelRead) {
                 // Check first if firedChannelRead is not set yet as it may have been set in a
@@ -1189,12 +1171,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Notify all the handshake futures about the successfully handshake
      */
     private void setHandshakeSuccess() {
-        // Work around the JVM crash which occurs when a cipher suite with GCM enabled.
-        final String cipherSuite = String.valueOf(engine.getSession().getCipherSuite());
-        if (!wantsDirectBuffer && (cipherSuite.contains("_GCM_") || cipherSuite.contains("-GCM-"))) {
-            wantsInboundHeapBuffer = true;
-        }
-
         handshakePromise.trySuccess(ctx.channel());
 
         if (logger.isDebugEnabled()) {
