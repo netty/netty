@@ -20,6 +20,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannelConfig;
 
 /**
@@ -101,10 +102,15 @@ public interface OioSocketChannelConfig extends SocketChannelConfig {
     OioSocketChannelConfig setAutoClose(boolean autoClose);
 
     @Override
+    @Deprecated
     OioSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     @Override
+    @Deprecated
     OioSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    OioSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
 
     @Override
     OioSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
