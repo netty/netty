@@ -69,9 +69,9 @@ public final class WriteBufferWaterMark {
     public String toString() {
         StringBuilder builder = new StringBuilder(76)
             .append("WriteBufferWaterMark [low water mark=")
-            .append(writeBufferLowWaterMark);
-            .append(", high water mark=");
-            .append(writeBufferHighWaterMark);
+            .append(writeBufferLowWaterMark)
+            .append(", high water mark=")
+            .append(writeBufferHighWaterMark)
             .append("]");
         return builder.toString();
     }
