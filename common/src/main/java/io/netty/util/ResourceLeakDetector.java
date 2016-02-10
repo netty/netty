@@ -30,7 +30,9 @@ import java.util.EnumSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.netty.util.internal.StringUtil.*;
+import static io.netty.util.internal.StringUtil.EMPTY_STRING;
+import static io.netty.util.internal.StringUtil.NEWLINE;
+import static io.netty.util.internal.StringUtil.simpleClassName;
 
 public final class ResourceLeakDetector<T> {
 
@@ -276,6 +278,7 @@ public final class ResourceLeakDetector<T> {
         private final AtomicBoolean freed;
         private DefaultResourceLeak prev;
         private DefaultResourceLeak next;
+        private int removedRecords;
 
         DefaultResourceLeak(Object referent) {
             super(referent, referent != null? refQueue : null);
@@ -324,6 +327,7 @@ public final class ResourceLeakDetector<T> {
                     }
                     if (size > MAX_RECORDS) {
                         lastRecords.removeFirst();
+                        ++removedRecords;
                     }
                 }
             }
@@ -347,19 +351,30 @@ public final class ResourceLeakDetector<T> {
         @Override
         public String toString() {
             if (creationRecord == null) {
-                return "";
+                return EMPTY_STRING;
             }
 
-            Object[] array;
+            final Object[] array;
+            final int removedRecords;
             synchronized (lastRecords) {
                 array = lastRecords.toArray();
+                removedRecords = this.removedRecords;
             }
 
-            StringBuilder buf = new StringBuilder(16384)
-                .append(NEWLINE)
-                .append("Recent access records: ")
-                .append(array.length)
+            StringBuilder buf = new StringBuilder(16384).append(NEWLINE);
+            if (removedRecords > 0) {
+                buf.append("WARNING: ")
+                .append(removedRecords)
+                .append(" leak records were discarded because the leak record count is limited to ")
+                .append(MAX_RECORDS)
+                .append(". Use system property ")
+                .append(PROP_MAX_RECORDS)
+                .append(" to increase the limit.")
                 .append(NEWLINE);
+            }
+            buf.append("Recent access records: ")
+            .append(array.length)
+            .append(NEWLINE);
 
             if (array.length > 0) {
                 for (int i = array.length - 1; i >= 0; i --) {
