@@ -67,10 +67,10 @@ public final class WriteBufferWaterMark {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(94);
-        builder.append("WriteBufferWaterMark [writeBufferLowWaterMark=");
+        StringBuilder builder = new StringBuilder(76);
+        builder.append("WriteBufferWaterMark [low water mark=");
         builder.append(writeBufferLowWaterMark);
-        builder.append(", writeBufferHighWaterMark=");
+        builder.append(", high water mark=");
         builder.append(writeBufferHighWaterMark);
         builder.append("]");
         return builder.toString();
