@@ -33,6 +33,7 @@ import static io.netty.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty.channel.ChannelOption.RCVBUF_ALLOCATOR;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
+import static io.netty.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -85,7 +86,7 @@ public class DefaultChannelConfig implements ChannelConfig {
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
                 ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
-                WRITE_BUFFER_LOW_WATER_MARK, MESSAGE_SIZE_ESTIMATOR);
+                WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -179,6 +180,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setWriteBufferHighWaterMark((Integer) value);
         } else if (option == WRITE_BUFFER_LOW_WATER_MARK) {
             setWriteBufferLowWaterMark((Integer) value);
+        } else if (option == WRITE_BUFFER_WATER_MARK) {
+            setWriteBufferWaterMark((WriteBufferWaterMark) value);
         } else if (option == MESSAGE_SIZE_ESTIMATOR) {
             setMessageSizeEstimator((MessageSizeEstimator) value);
         } else {
@@ -342,6 +345,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         if (writeBufferHighWaterMark < getWriteBufferLowWaterMark()) {
             throw new IllegalArgumentException(
@@ -363,6 +367,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         if (writeBufferLowWaterMark > getWriteBufferHighWaterMark()) {
             throw new IllegalArgumentException(
@@ -375,6 +380,13 @@ public class DefaultChannelConfig implements ChannelConfig {
                     "writeBufferLowWaterMark must be >= 0");
         }
         this.writeBufferLowWaterMark = writeBufferLowWaterMark;
+        return this;
+    }
+
+    @Override
+    public ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
+        this.writeBufferLowWaterMark = writeBufferWaterMark.lowWaterMark();
+        this.writeBufferHighWaterMark = writeBufferWaterMark.highWaterMark();
         return this;
     }
 

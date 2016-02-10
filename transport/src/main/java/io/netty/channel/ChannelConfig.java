@@ -218,10 +218,13 @@ public interface ChannelConfig {
     int getWriteBufferHighWaterMark();
 
     /**
+     * @deprecated Use {@link #setWriteBufferWaterMark(WriteBufferWaterMark)}
+     * <p>
      * Sets the high water mark of the write buffer.  If the number of bytes
      * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
      * will start to return {@code false}.
      */
+    @Deprecated
     ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     /**
@@ -234,12 +237,15 @@ public interface ChannelConfig {
     int getWriteBufferLowWaterMark();
 
     /**
+     * @deprecated Use {@link #setWriteBufferWaterMark(WriteBufferWaterMark)}
+     * <p>
      * Sets the low water mark of the write buffer.  Once the number of bytes
      * queued in the write buffer exceeded the
      * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
      * dropped down below this value, {@link Channel#isWritable()} will start to return
      * {@code true} again.
      */
+    @Deprecated
     ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 
     /**
@@ -253,4 +259,11 @@ public interface ChannelConfig {
      * to detect the size of a message.
      */
     ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
+
+    /**
+     * Set the {@link WriteBufferWaterMark} which is used for setting the high and low
+     * water mark of the write buffer.
+     */
+    ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
+
 }
