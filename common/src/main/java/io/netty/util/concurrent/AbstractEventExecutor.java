@@ -15,12 +15,10 @@
  */
 package io.netty.util.concurrent;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
 import java.util.concurrent.RunnableFuture;
@@ -35,7 +33,6 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     static final long DEFAULT_SHUTDOWN_TIMEOUT = 15;
 
     private final EventExecutorGroup parent;
-    private final Collection<AbstractEventExecutor> selfCollection = Collections.singleton(this);
 
     protected AbstractEventExecutor() {
         this(null);
@@ -63,11 +60,6 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     @Override
     public Iterator<EventExecutor> iterator() {
         return new EventExecutorIterator();
-    }
-
-    @Override
-    public <E extends EventExecutor> Set<E> children() {
-        return (Set<E>) selfCollection;
     }
 
     @Override
@@ -156,6 +148,11 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public EventExecutor unRollWrapping() {
+        return this;
     }
 
     private final class EventExecutorIterator implements Iterator<EventExecutor> {

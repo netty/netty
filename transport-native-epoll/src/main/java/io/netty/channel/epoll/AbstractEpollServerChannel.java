@@ -67,7 +67,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EpollEventLoop;
+        return loop.unRollWrapping() instanceof EpollEventLoop;
     }
 
     @Override

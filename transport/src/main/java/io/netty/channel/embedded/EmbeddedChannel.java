@@ -403,7 +403,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EmbeddedEventLoop;
+        return loop.unRollWrapping() instanceof EmbeddedEventLoop;
     }
 
     @Override

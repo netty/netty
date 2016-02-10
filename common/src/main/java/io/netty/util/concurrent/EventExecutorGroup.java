@@ -17,7 +17,6 @@ package io.netty.util.concurrent;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -85,16 +84,11 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
     EventExecutor next();
 
     /**
-     * @deprecated Use {@link #children()} instead.
+     * Returns a read-only {@link Iterator} over all {@link EventExecutor}, which are handled by this
+     * {@link EventExecutorGroup} at the time of invoke this method.
      */
     @Override
-    @Deprecated
     Iterator<EventExecutor> iterator();
-
-    /**
-     * Returns the unmodifiable set of {@link EventExecutor}s managed by this {@link EventExecutorGroup}.
-     */
-    <E extends EventExecutor> Set<E> children();
 
     @Override
     Future<?> submit(Runnable task);
@@ -116,4 +110,12 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
 
     @Override
     ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit);
+
+    /**
+     * {@link EventExecutorGroup} can be wrapped to extend and enhance behavior. This method will unroll the wrapping
+     * and return the underlying {@link EventExecutorGroup}.
+     *
+     * @return {@code this} if the object is not wrapped or underlying {@link EventExecutorGroup} instance if wrapped.
+     */
+    EventExecutorGroup unRollWrapping();
 }

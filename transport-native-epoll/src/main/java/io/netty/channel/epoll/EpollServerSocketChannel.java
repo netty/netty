@@ -80,7 +80,7 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EpollEventLoop;
+        return loop.unRollWrapping() instanceof EpollEventLoop;
     }
 
     @Override

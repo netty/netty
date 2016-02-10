@@ -40,4 +40,7 @@ public interface EventLoopGroup extends EventExecutorGroup {
      * will get notified once the registration was complete and also will get returned.
      */
     ChannelFuture register(Channel channel, ChannelPromise promise);
+
+    @Override
+    EventLoopGroup unRollWrapping();
 }

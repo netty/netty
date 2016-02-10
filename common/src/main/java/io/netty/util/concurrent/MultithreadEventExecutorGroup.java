@@ -15,9 +15,11 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.ArrayIterator;
+
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -31,7 +33,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
     private final EventExecutor[] children;
-    private final Set<EventExecutor> readonlyChildren;
     private final AtomicInteger childIndex = new AtomicInteger();
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
@@ -113,10 +114,6 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         for (EventExecutor e: children) {
             e.terminationFuture().addListener(terminationListener);
         }
-
-        Set<EventExecutor> childrenSet = new LinkedHashSet<EventExecutor>(children.length);
-        Collections.addAll(childrenSet, children);
-        readonlyChildren = Collections.unmodifiableSet(childrenSet);
     }
 
     protected ThreadFactory newDefaultThreadFactory() {
@@ -130,7 +127,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     @Override
     public Iterator<EventExecutor> iterator() {
-        return children().iterator();
+        return new ArrayIterator<EventExecutor>(children);
     }
 
     /**
@@ -141,10 +138,13 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         return children.length;
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public final <E extends EventExecutor> Set<E> children() {
-        return (Set<E>) readonlyChildren;
+    /**
+     * Return a safe-copy of all of the children of this group.
+     */
+    protected Set<EventExecutor> children() {
+        Set<EventExecutor> children = Collections.newSetFromMap(new LinkedHashMap<EventExecutor, Boolean>());
+        Collections.addAll(children, this.children);
+        return children;
     }
 
     /**

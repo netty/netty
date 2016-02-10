@@ -77,8 +77,8 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
      * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
      */
     public void setIoRatio(int ioRatio) {
-        for (EventExecutor e: children()) {
-            ((NioEventLoop) e).setIoRatio(ioRatio);
+        for (EventExecutor e: this) {
+            ((NioEventLoop) e.unRollWrapping()).setIoRatio(ioRatio);
         }
     }
 
@@ -87,8 +87,8 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
      * around the  infamous epoll 100% CPU bug.
      */
     public void rebuildSelectors() {
-        for (EventExecutor e: children()) {
-            ((NioEventLoop) e).rebuildSelector();
+        for (EventExecutor e: this) {
+            ((NioEventLoop) e.unRollWrapping()).rebuildSelector();
         }
     }
 
