@@ -224,6 +224,7 @@ public interface ChannelConfig {
      * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
      * will start to return {@code false}.
      */
+    @Deprecated
     ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     /**
@@ -244,6 +245,7 @@ public interface ChannelConfig {
      * dropped down below this value, {@link Channel#isWritable()} will start to return
      * {@code true} again.
      */
+    @Deprecated
     ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 
     /**
