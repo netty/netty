@@ -196,7 +196,7 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
     }
-    
+
     @Override
     public ServerSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
         super.setWriteBufferWaterMark(writeBufferWaterMark);
