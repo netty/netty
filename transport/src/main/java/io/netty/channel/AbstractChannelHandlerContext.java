@@ -621,6 +621,16 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return invoker == null ? channel().unsafe().invoker() : invoker;
     }
 
+    EventExecutor executorSafe() {
+        if (invoker == null) {
+            // We check for channel().isRegistered and handlerAdded because even if isRegistered() is false we
+            // can safely access the invoker() if handlerAdded is true. This is because in this case the Channel
+            // was previously registered and so we can still access the old EventLoop to dispatch things.
+            return channel().isRegistered() || handlerAdded ? channel().unsafe().invoker().executor() : null;
+        }
+        return invoker.executor();
+    }
+
     final void setHandlerAddedCalled() {
         handlerAdded = true;
     }
