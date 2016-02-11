@@ -17,13 +17,14 @@ package io.netty.buffer;
 
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.charset.Charset;
 import java.util.Random;
 
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -97,75 +98,181 @@ public class ByteBufUtilTest {
     @Test
     public void testWriteUsAscii() {
         String usAscii = "NettyRocks";
-        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBuf buf = releaseLater(Unpooled.buffer(16));
         buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
-        ByteBuf buf2 = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBuf buf2 = releaseLater(Unpooled.buffer(16));
         ByteBufUtil.writeAscii(buf2, usAscii);
 
-        Assert.assertEquals(buf, buf2);
+        assertEquals(buf, buf2);
     }
 
     @Test
     public void testWriteUsAsciiWrapped() {
         String usAscii = "NettyRocks";
-        ByteBuf buf = Unpooled.unreleasableBuffer(ReferenceCountUtil.releaseLater(Unpooled.buffer(16)));
+        ByteBuf buf = unreleasableBuffer(releaseLater(Unpooled.buffer(16)));
         assertWrapped(buf);
         buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
-        ByteBuf buf2 = Unpooled.unreleasableBuffer(ReferenceCountUtil.releaseLater(Unpooled.buffer(16)));
+        ByteBuf buf2 = unreleasableBuffer(releaseLater(Unpooled.buffer(16)));
         assertWrapped(buf2);
         ByteBufUtil.writeAscii(buf2, usAscii);
 
-        Assert.assertEquals(buf, buf2);
+        assertEquals(buf, buf2);
     }
 
     @Test
     public void testWriteUtf8() {
         String usAscii = "Some UTF-8 like äÄ∏ŒŒ";
-        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBuf buf = releaseLater(Unpooled.buffer(16));
         buf.writeBytes(usAscii.getBytes(CharsetUtil.UTF_8));
-        ByteBuf buf2 = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBuf buf2 = releaseLater(Unpooled.buffer(16));
         ByteBufUtil.writeUtf8(buf2, usAscii);
 
-        Assert.assertEquals(buf, buf2);
+        assertEquals(buf, buf2);
     }
 
     @Test
     public void testWriteUtf8Surrogates() {
         // leading surrogate + trailing surrogate
         String surrogateString = new StringBuilder(2)
+                                .append('a')
                                 .append('\uD800')
                                 .append('\uDC00')
+                                .append('b')
                                 .toString();
-        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBuf buf = releaseLater(Unpooled.buffer(16));
         buf.writeBytes(surrogateString.getBytes(CharsetUtil.UTF_8));
-        ByteBuf buf2 = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBuf buf2 = releaseLater(Unpooled.buffer(16));
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
-        Assert.assertEquals(buf, buf2);
+        assertEquals(buf, buf2);
+    }
+
+    @Test
+    public void testWriteUtf8InvalidOnlyTrailingSurrogate() {
+        String surrogateString = new StringBuilder(2)
+                                .append('a')
+                                .append('\uDC00')
+                                .append('b')
+                                .toString();
+        ByteBuf buf = releaseLater(Unpooled.buffer(16));
+        buf.writeBytes(surrogateString.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = releaseLater(Unpooled.buffer(16));
+        ByteBufUtil.writeUtf8(buf2, surrogateString);
+
+        assertEquals(buf, buf2);
+    }
+
+    @Test
+    public void testWriteUtf8InvalidOnlyLeadingSurrogate() {
+        String surrogateString = new StringBuilder(2)
+                                .append('a')
+                                .append('\uD800')
+                                .append('b')
+                                .toString();
+        ByteBuf buf = releaseLater(Unpooled.buffer(16));
+        buf.writeBytes(surrogateString.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = releaseLater(Unpooled.buffer(16));
+        ByteBufUtil.writeUtf8(buf2, surrogateString);
+
+        assertEquals(buf, buf2);
+    }
+
+    @Test
+    public void testWriteUtf8InvalidSurrogatesSwitched() {
+        String surrogateString = new StringBuilder(2)
+                                .append('a')
+                                .append('\uDC00')
+                                .append('\uD800')
+                                .append('b')
+                                .toString();
+        ByteBuf buf = releaseLater(Unpooled.buffer(16));
+        buf.writeBytes(surrogateString.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = releaseLater(Unpooled.buffer(16));
+        ByteBufUtil.writeUtf8(buf2, surrogateString);
+
+        assertEquals(buf, buf2);
+    }
+
+    @Test
+    public void testWriteUtf8InvalidTwoLeadingSurrogates() {
+        String surrogateString = new StringBuilder(2)
+                                .append('a')
+                                .append('\uD800')
+                                .append('\uD800')
+                                .append('b')
+                                .toString();
+        ByteBuf buf = releaseLater(Unpooled.buffer(16));
+        buf.writeBytes(surrogateString.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = releaseLater(Unpooled.buffer(16));
+        ByteBufUtil.writeUtf8(buf2, surrogateString);
+
+        assertEquals(buf, buf2);
+    }
+
+    @Test
+    public void testWriteUtf8InvalidTwoTrailingSurrogates() {
+        String surrogateString = new StringBuilder(2)
+                                .append('a')
+                                .append('\uDC00')
+                                .append('\uDC00')
+                                .append('b')
+                                .toString();
+        ByteBuf buf = releaseLater(Unpooled.buffer(16));
+        buf.writeBytes(surrogateString.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = releaseLater(Unpooled.buffer(16));
+        ByteBufUtil.writeUtf8(buf2, surrogateString);
+
+        assertEquals(buf, buf2);
+    }
+
+    @Test
+    public void testWriteUtf8InvalidEndOnLeadingSurrogate() {
+        String surrogateString = new StringBuilder(2)
+                                .append('\uD800')
+                                .toString();
+        ByteBuf buf = releaseLater(Unpooled.buffer(16));
+        buf.writeBytes(surrogateString.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = releaseLater(Unpooled.buffer(16));
+        ByteBufUtil.writeUtf8(buf2, surrogateString);
+
+        assertEquals(buf, buf2);
+    }
+
+    @Test
+    public void testWriteUtf8InvalidEndOnTrailingSurrogate() {
+        String surrogateString = new StringBuilder(2)
+                                .append('\uDC00')
+                                .toString();
+        ByteBuf buf = releaseLater(Unpooled.buffer(16));
+        buf.writeBytes(surrogateString.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = releaseLater(Unpooled.buffer(16));
+        ByteBufUtil.writeUtf8(buf2, surrogateString);
+
+        assertEquals(buf, buf2);
     }
 
     @Test
     public void testWriteUsAsciiString() {
         AsciiString usAscii = new AsciiString("NettyRocks");
-        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBuf buf = releaseLater(Unpooled.buffer(16));
         buf.writeBytes(usAscii.toString().getBytes(CharsetUtil.US_ASCII));
-        ByteBuf buf2 = ReferenceCountUtil.releaseLater(Unpooled.buffer(16));
+        ByteBuf buf2 = releaseLater(Unpooled.buffer(16));
         ByteBufUtil.writeAscii(buf2, usAscii);
 
-        Assert.assertEquals(buf, buf2);
+        assertEquals(buf, buf2);
     }
 
     @Test
     public void testWriteUtf8Wrapped() {
         String usAscii = "Some UTF-8 like äÄ∏ŒŒ";
-        ByteBuf buf = Unpooled.unreleasableBuffer(ReferenceCountUtil.releaseLater(Unpooled.buffer(16)));
+        ByteBuf buf = unreleasableBuffer(releaseLater(Unpooled.buffer(16)));
         assertWrapped(buf);
         buf.writeBytes(usAscii.getBytes(CharsetUtil.UTF_8));
-        ByteBuf buf2 = Unpooled.unreleasableBuffer(ReferenceCountUtil.releaseLater(Unpooled.buffer(16)));
+        ByteBuf buf2 = unreleasableBuffer(releaseLater(Unpooled.buffer(16)));
         assertWrapped(buf2);
         ByteBufUtil.writeUtf8(buf2, usAscii);
 
-        Assert.assertEquals(buf, buf2);
+        assertEquals(buf, buf2);
     }
 
     private static void assertWrapped(ByteBuf buf) {
@@ -184,7 +291,7 @@ public class ByteBufUtilTest {
 
     private static void testDecodeString(String text, Charset charset) {
         ByteBuf buffer = Unpooled.copiedBuffer(text, charset);
-        Assert.assertEquals(text, ByteBufUtil.decodeString(buffer, 0, buffer.readableBytes(), charset));
+        assertEquals(text, ByteBufUtil.decodeString(buffer, 0, buffer.readableBytes(), charset));
         buffer.release();
     }
 
@@ -195,7 +302,7 @@ public class ByteBufUtilTest {
             byte[] bytes = "1234".getBytes(CharsetUtil.UTF_8);
             buffer.addComponent(Unpooled.buffer(bytes.length).writeBytes(bytes));
             buffer.addComponent(Unpooled.buffer(bytes.length).writeBytes(bytes));
-            Assert.assertEquals("1234", buffer.toString(bytes.length, bytes.length, CharsetUtil.UTF_8));
+            assertEquals("1234", buffer.toString(bytes.length, bytes.length, CharsetUtil.UTF_8));
         } finally {
             buffer.release();
         }

@@ -57,6 +57,7 @@ public final class ByteBufUtil {
         }
     };
 
+    private static final byte WRITE_UTF_UNKNOWN = (byte) '?';
     private static final int MAX_CHAR_BUFFER_SIZE;
     private static final int THREAD_LOCAL_BUFFER_SIZE;
 
@@ -400,8 +401,8 @@ public final class ByteBufUtil {
                 buffer._setByte(writerIndex++, (byte) (0x80 | (c & 0x3f)));
             } else if (isSurrogate(c)) {
                 if (!Character.isHighSurrogate(c)) {
-                    throw new IllegalArgumentException("Invalid encoding. " +
-                            "Expected high (leading) surrogate at index " + i + " but got " + c);
+                    buffer._setByte(writerIndex++, WRITE_UTF_UNKNOWN);
+                    continue;
                 }
                 final char c2;
                 try {
@@ -410,12 +411,13 @@ public final class ByteBufUtil {
                     // re-throw a more informative exception describing the problem.
                     c2 = seq.charAt(++i);
                 } catch (IndexOutOfBoundsException e) {
-                    throw new IllegalArgumentException("Underflow. " +
-                            "Expected low (trailing) surrogate at index " + i + " but no more characters found.", e);
+                    buffer._setByte(writerIndex++, WRITE_UTF_UNKNOWN);
+                    break;
                 }
                 if (!Character.isLowSurrogate(c2)) {
-                    throw new IllegalArgumentException("Invalid encoding. " +
-                            "Expected low (trailing) surrogate at index " + i + " but got " + c2);
+                    buffer._setByte(writerIndex++, WRITE_UTF_UNKNOWN);
+                    buffer._setByte(writerIndex++, Character.isHighSurrogate(c2) ? WRITE_UTF_UNKNOWN : c2);
+                    continue;
                 }
                 int codePoint = Character.toCodePoint(c, c2);
                 // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
