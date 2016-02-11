@@ -23,6 +23,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
@@ -75,6 +76,18 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
                 ValueConverter<CharSequence> valueConverter,
                 io.netty.handler.codec.DefaultHeaders.NameValidator<CharSequence> nameValidator) {
             super(nameHashingStrategy, valueConverter, nameValidator);
+        }
+
+        @Override
+        public List<CharSequence> getAll(CharSequence name) {
+            List<CharSequence> values = super.getAll(name);
+            if (values.isEmpty()) {
+                return values;
+            }
+            if (values.size() != 1) {
+                throw new IllegalStateException("CombinedHttpHeaders should only have one value");
+            }
+            return StringUtil.unescapeCsvFields(values.get(0));
         }
 
         @Override
@@ -155,6 +168,12 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
         @Override
         public CombinedHttpHeadersImpl set(CharSequence name, Iterable<? extends CharSequence> values) {
             super.set(name, commaSeparate(charSequenceEscaper(), values));
+            return this;
+        }
+
+        @Override
+        public CombinedHttpHeadersImpl setObject(CharSequence name, Object value) {
+            super.set(name, commaSeparate(objectEscaper(), value));
             return this;
         }
 
