@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.handler.codec.http.HttpHeadersTestUtils.HeaderValue;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 
 import static io.netty.util.AsciiString.contentEquals;
@@ -101,7 +102,7 @@ public class CombinedHttpHeadersTest {
         final CombinedHttpHeaders headers = newCombinedHttpHeaders();
         headers.add(HEADER_NAME, HeaderValue.SIX_QUOTED.subset(4));
         assertTrue(contentEquals(HeaderValue.SIX_QUOTED.subsetAsCsvString(4), headers.get(HEADER_NAME)));
-        assertTrue(contentEquals(HeaderValue.SIX_QUOTED.subsetAsCsvString(4), headers.getAll(HEADER_NAME).get(0)));
+        assertEquals(HeaderValue.SIX_QUOTED.subset(4), headers.getAll(HEADER_NAME));
     }
 
     @Test
@@ -109,7 +110,7 @@ public class CombinedHttpHeadersTest {
         final CombinedHttpHeaders headers = newCombinedHttpHeaders();
         headers.add(HEADER_NAME, HeaderValue.EIGHT.subset(6));
         assertTrue(contentEquals(HeaderValue.EIGHT.subsetAsCsvString(6), headers.get(HEADER_NAME)));
-        assertTrue(contentEquals(HeaderValue.EIGHT.subsetAsCsvString(6), headers.getAll(HEADER_NAME).get(0)));
+        assertEquals(HeaderValue.EIGHT.subset(6), headers.getAll(HEADER_NAME));
     }
 
     @Test (expected = NullPointerException.class)
@@ -168,7 +169,7 @@ public class CombinedHttpHeadersTest {
     public void addIterableCsvEmtpy() {
         final CombinedHttpHeaders headers = newCombinedHttpHeaders();
         headers.add(HEADER_NAME, Collections.<CharSequence>emptyList());
-        assertTrue(contentEquals("", headers.getAll(HEADER_NAME).get(0)));
+        assertEquals(Arrays.asList(""), headers.getAll(HEADER_NAME));
     }
 
     @Test
@@ -234,7 +235,7 @@ public class CombinedHttpHeadersTest {
 
     private static void assertCsvValues(final CombinedHttpHeaders headers, final HeaderValue headerValue) {
         assertTrue(contentEquals(headerValue.asCsv(), headers.get(HEADER_NAME)));
-        assertTrue(contentEquals(headerValue.asCsv(), headers.getAll(HEADER_NAME).get(0)));
+        assertEquals(headerValue.asList(), headers.getAll(HEADER_NAME));
     }
 
     private static void assertCsvValue(final CombinedHttpHeaders headers, final HeaderValue headerValue) {
@@ -252,5 +253,22 @@ public class CombinedHttpHeadersTest {
         for (HeaderValue v: headerValues) {
             headers.add(HEADER_NAME, v.toString());
         }
+    }
+
+    @Test
+    public void testGetAll() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        headers.set(HEADER_NAME, Arrays.asList("a", "b", "c"));
+        assertEquals(Arrays.asList("a", "b", "c"), headers.getAll(HEADER_NAME));
+        headers.set(HEADER_NAME, Arrays.asList("a,", "b,", "c,"));
+        assertEquals(Arrays.asList("a,", "b,", "c,"), headers.getAll(HEADER_NAME));
+        headers.set(HEADER_NAME, Arrays.asList("a\"", "b\"", "c\""));
+        assertEquals(Arrays.asList("a\"", "b\"", "c\""), headers.getAll(HEADER_NAME));
+        headers.set(HEADER_NAME, Arrays.asList("\"a\"", "\"b\"", "\"c\""));
+        assertEquals(Arrays.asList("a", "b", "c"), headers.getAll(HEADER_NAME));
+        headers.set(HEADER_NAME, "a,b,c");
+        assertEquals(Arrays.asList("a,b,c"), headers.getAll(HEADER_NAME));
+        headers.set(HEADER_NAME, "\"a,b,c\"");
+        assertEquals(Arrays.asList("a,b,c"), headers.getAll(HEADER_NAME));
     }
 }

@@ -15,6 +15,7 @@
  */
 package io.netty.util.internal;
 
+import java.util.Arrays;
 import org.junit.Test;
 
 import static io.netty.util.internal.StringUtil.*;
@@ -374,6 +375,47 @@ public class StringUtilTest {
 
     private void assertEscapeCsvAndUnEscapeCsv(String value) {
         assertEquals(value, unescapeCsv(StringUtil.escapeCsv(value)));
+    }
+
+    @Test
+    public void testUnescapeCsvFields() {
+        assertEquals(Arrays.asList(""), unescapeCsvFields(""));
+        assertEquals(Arrays.asList("", ""), unescapeCsvFields(","));
+        assertEquals(Arrays.asList("a", ""), unescapeCsvFields("a,"));
+        assertEquals(Arrays.asList("", "a"), unescapeCsvFields(",a"));
+        assertEquals(Arrays.asList("\""), unescapeCsvFields("\"\"\"\""));
+        assertEquals(Arrays.asList("\"", "\""), unescapeCsvFields("\"\"\"\",\"\"\"\""));
+        assertEquals(Arrays.asList("netty"), unescapeCsvFields("netty"));
+        assertEquals(Arrays.asList("hello", "netty"), unescapeCsvFields("hello,netty"));
+        assertEquals(Arrays.asList("hello,netty"), unescapeCsvFields("\"hello,netty\""));
+        assertEquals(Arrays.asList("hello", "netty"), unescapeCsvFields("\"hello\",\"netty\""));
+        assertEquals(Arrays.asList("a\"b", "c\"d"), unescapeCsvFields("\"a\"\"b\",\"c\"\"d\""));
+        assertEquals(Arrays.asList("a\rb", "c\nd"), unescapeCsvFields("\"a\rb\",\"c\nd\""));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void unescapeCsvFieldsWithCRWithoutQuote() {
+        unescapeCsvFields("a,\r");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void unescapeCsvFieldsWithLFWithoutQuote() {
+        unescapeCsvFields("a,\r");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void unescapeCsvFieldsWithQuote() {
+        unescapeCsvFields("a,\"");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void unescapeCsvFieldsWithQuote2() {
+        unescapeCsvFields("\",a");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void unescapeCsvFieldsWithQuote3() {
+        unescapeCsvFields("a\"b,a");
     }
 
     @Test
