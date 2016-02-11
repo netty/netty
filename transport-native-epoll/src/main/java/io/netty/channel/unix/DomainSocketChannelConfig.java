@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.WriteBufferWaterMark;
 
 /**
  * Special {@link ChannelConfig} for {@link DomainSocketChannel}s.
@@ -52,6 +53,9 @@ public interface DomainSocketChannelConfig extends ChannelConfig {
 
     @Override
     DomainSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    DomainSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
 
     @Override
     DomainSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
