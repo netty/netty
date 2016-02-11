@@ -385,8 +385,8 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        this.writeBufferLowWaterMark = writeBufferWaterMark.lowWaterMark();
-        this.writeBufferHighWaterMark = writeBufferWaterMark.highWaterMark();
+        this.writeBufferLowWaterMark = writeBufferWaterMark.low();
+        this.writeBufferHighWaterMark = writeBufferWaterMark.high();
         return this;
     }
 

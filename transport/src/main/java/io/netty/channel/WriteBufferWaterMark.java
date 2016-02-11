@@ -16,63 +16,71 @@
 package io.netty.channel;
 
 /**
- * WriteBufferWaterMark is used to set low water mark (default value is
- * {@value #DEFAULT_WRITEBUFFER_LOW_WATERMARK} bytes) and high water
- * mark (default value is {@value #DEFAULT_WRITEBUFFER_HIGH_WATERMARK} bytes)
- * for write buffer.
+ * Control for high and low water mark of channel's write buffer.
+ *
  * <p>
  * If the number of bytes queued in the write buffer exceeds the
- * {@linkplain #writeBufferHighWaterMark high water mark}, {@link Channel#isWritable()}
+ * {@linkplain #high high water mark}, {@link Channel#isWritable()}
  * will start to return {@code false}.
  * <p>
  * If the number of bytes queued in the write buffer exceeds the
- * {@linkplain #writeBufferHighWaterMark high water mark} and then
- * dropped down below the {@linkplain #writeBufferLowWaterMark low water mark},
+ * {@linkplain #high high water mark} and then
+ * dropped down below the {@linkplain #low low water mark},
  * {@link Channel#isWritable()} will start to return
  * {@code true} again.
  */
 public final class WriteBufferWaterMark {
 
-    private static final int DEFAULT_WRITEBUFFER_LOW_WATERMARK = 32 * 1024;
-    private static final int DEFAULT_WRITEBUFFER_HIGH_WATERMARK = 64 * 1024;
+    private static final int DEFAULT_LOW_WATER_MARK = 32 * 1024;
+    private static final int DEFAULT_HIGH_WATER_MARK = 64 * 1024;
 
-    private final int writeBufferLowWaterMark;
-    private final int writeBufferHighWaterMark;
+    private final int low;
+    private final int high;
 
-    public WriteBufferWaterMark() {
-        this(DEFAULT_WRITEBUFFER_LOW_WATERMARK, DEFAULT_WRITEBUFFER_HIGH_WATERMARK);
+    WriteBufferWaterMark() {
+        this(DEFAULT_LOW_WATER_MARK, DEFAULT_HIGH_WATER_MARK);
     }
 
-    public WriteBufferWaterMark(int writeBufferLowWaterMark, int writeBufferHighWaterMark) {
-        if (writeBufferLowWaterMark < 0) {
-            throw new IllegalArgumentException("writeBufferLowWaterMark must be >= 0");
+    /**
+     * @param low low water mark for write buffer.
+     * @param high high water mark for write buffer
+     */
+    public WriteBufferWaterMark(int low, int high) {
+        if (low < 0) {
+            throw new IllegalArgumentException("write buffer's low water mark must be >= 0");
         }
-        if (writeBufferHighWaterMark < writeBufferLowWaterMark) {
+        if (high < low) {
             throw new IllegalArgumentException(
-                    "writeBufferHighWaterMark cannot be less than " +
-                            "writeBufferLowWaterMark (" + writeBufferLowWaterMark + "): " +
-                            writeBufferHighWaterMark);
+                    "write buffer's high water mark cannot be less than " +
+                            " low water mark (" + low + "): " +
+                            high);
         }
-        this.writeBufferLowWaterMark = writeBufferLowWaterMark;
-        this.writeBufferHighWaterMark = writeBufferHighWaterMark;
+        this.low = low;
+        this.high = high;
     }
 
-    public int lowWaterMark() {
-        return writeBufferLowWaterMark;
+    /**
+     * @return low water mark for write buffer.
+     */
+    public int low() {
+        return low;
     }
 
-    public int highWaterMark() {
-        return writeBufferHighWaterMark;
+    /**
+     * @return high water mark for write buffer.
+     */
+    public int high() {
+        return high;
     }
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(76)
-            .append("WriteBufferWaterMark [low water mark=")
-            .append(writeBufferLowWaterMark)
-            .append(", high water mark=")
-            .append(writeBufferHighWaterMark)
-            .append("]");
+        StringBuilder builder = new StringBuilder(55)
+            .append("WriteBufferWaterMark(low: ")
+            .append(low)
+            .append(", high: ")
+            .append(high)
+            .append(")");
         return builder.toString();
     }
 
