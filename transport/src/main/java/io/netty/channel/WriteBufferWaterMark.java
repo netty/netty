@@ -17,7 +17,6 @@ package io.netty.channel;
 
 /**
  * Control for high and low water mark of channel's write buffer.
- *
  * <p>
  * If the number of bytes queued in the write buffer exceeds the
  * {@linkplain #high high water mark}, {@link Channel#isWritable()}
