@@ -57,13 +57,18 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
                     logger.warn("Failed to mark a promise as success because it is done already: {}", p);
                 }
             }
-            return;
-        }
-
-        Throwable cause = future.cause();
-        for (Promise<? super V> p: promises) {
-            if (!p.tryFailure(cause)) {
-                logger.warn("Failed to mark a promise as failure because it's done already: {}", p, cause);
+        } else if (future.isCancelled()) {
+            for (Promise<? super V> p: promises) {
+                if (!p.cancel(false)) {
+                    logger.warn("Failed to cancel a promise because it is done already: {}", p);
+                }
+            }
+        } else {
+            Throwable cause = future.cause();
+            for (Promise<? super V> p: promises) {
+                if (!p.tryFailure(cause)) {
+                    logger.warn("Failed to mark a promise as failure because it's done already: {}", p, cause);
+                }
             }
         }
     }
