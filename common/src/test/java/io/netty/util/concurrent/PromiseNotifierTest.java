@@ -78,6 +78,7 @@ public class PromiseNotifierTest {
         Future<Void> future = createStrictMock(Future.class);
         Throwable t = createStrictMock(Throwable.class);
         expect(future.isSuccess()).andReturn(false);
+        expect(future.isCancelled()).andReturn(false);
         expect(future.cause()).andReturn(t);
         expect(p1.tryFailure(t)).andReturn(true);
         expect(p2.tryFailure(t)).andReturn(true);
