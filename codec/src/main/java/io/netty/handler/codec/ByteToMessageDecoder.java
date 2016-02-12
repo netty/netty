@@ -21,6 +21,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
 
@@ -305,6 +306,21 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        channelInputClosed(ctx, true);
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof ChannelInputShutdownEvent) {
+            // The decodeLast method is invoked when a channelInactive event is encountered.
+            // This method is responsible for ending requests in some situations and must be called
+            // when the input has been shutdown.
+            channelInputClosed(ctx, false);
+        }
+        super.userEventTriggered(ctx, evt);
+    }
+
+    private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) throws Exception {
         RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
             if (cumulation != null) {
@@ -329,7 +345,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     // Something was read, call fireChannelReadComplete()
                     ctx.fireChannelReadComplete();
                 }
-                ctx.fireChannelInactive();
+                if (callChannelInactive) {
+                    ctx.fireChannelInactive();
+                }
             } finally {
                 // recycle in all cases
                 out.recycle();
