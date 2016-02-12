@@ -69,7 +69,8 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile boolean autoClose = true;
     private volatile int writeBufferHighWaterMark = 64 * 1024;
     private volatile int writeBufferLowWaterMark = 32 * 1024;
-    private volatile WriteBufferWaterMark writeBufferWaterMark = new WriteBufferWaterMark(writeBufferLowWaterMark,writeBufferHighWaterMark);
+    private volatile WriteBufferWaterMark writeBufferWaterMark =
+            new WriteBufferWaterMark(writeBufferLowWaterMark, writeBufferHighWaterMark);
 
     public DefaultChannelConfig(Channel channel) {
         this(channel, new AdaptiveRecvByteBufAllocator());
