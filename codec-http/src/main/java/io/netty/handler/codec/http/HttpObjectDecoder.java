@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.TooLongFrameException;
@@ -431,12 +430,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt instanceof ChannelInputShutdownEvent) {
-            // The decodeLast method is invoked when a channelInactive event is encountered.
-            // This method is responsible for ending requests in some situations and must be called
-            // when the input has been shutdown.
-            super.channelInactive(ctx);
-        } else if (evt instanceof HttpExpectationFailedEvent) {
+        if (evt instanceof HttpExpectationFailedEvent) {
             switch (currentState) {
             case READ_FIXED_LENGTH_CONTENT:
             case READ_VARIABLE_LENGTH_CONTENT:
