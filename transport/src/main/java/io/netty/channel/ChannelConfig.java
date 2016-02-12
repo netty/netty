@@ -268,4 +268,10 @@ public interface ChannelConfig {
      */
     ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
 
+    /**
+     * Returns the {@link WriteBufferWaterMark} which is used for setting the high and low
+     * water mark of the write buffer.
+     */
+    WriteBufferWaterMark getWriteBufferWaterMark();
+
 }
