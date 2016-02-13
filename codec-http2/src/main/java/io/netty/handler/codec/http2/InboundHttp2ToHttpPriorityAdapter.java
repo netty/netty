@@ -204,7 +204,7 @@ public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpA
             Http2Headers http2Headers = new DefaultHttp2Headers(validateHttpHeaders, httpHeaders.size());
             initializePseudoHeaders(http2Headers);
             addHttpHeadersToHttp2Headers(httpHeaders, http2Headers);
-            msg = newMessage(stream, http2Headers, validateHttpHeaders);
+            msg = newMessage(stream, http2Headers, validateHttpHeaders, ctx.alloc());
             fireChannelRead(ctx, msg, false, stream);
         }
     }
