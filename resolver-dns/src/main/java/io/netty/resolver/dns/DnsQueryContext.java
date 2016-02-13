@@ -35,7 +35,10 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 final class DnsQueryContext {
 
@@ -45,6 +48,7 @@ final class DnsQueryContext {
     private final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise;
     private final int id;
     private final DnsQuestion question;
+    private final Iterable<DnsRecord> additional;
     private final DnsRecord optResource;
     private final InetSocketAddress nameServerAddr;
 
@@ -53,12 +57,15 @@ final class DnsQueryContext {
 
     DnsQueryContext(DnsNameResolver parent,
                     InetSocketAddress nameServerAddr,
-                    DnsQuestion question, Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
+                    DnsQuestion question,
+                    Iterable<DnsRecord> additional,
+                    Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
 
-        this.parent = parent;
-        this.nameServerAddr = nameServerAddr;
-        this.question = question;
-        this.promise = promise;
+        this.parent = checkNotNull(parent, "parent");
+        this.nameServerAddr = checkNotNull(nameServerAddr, "nameServerAddr");
+        this.question = checkNotNull(question, "question");
+        this.additional = checkNotNull(additional, "additional");
+        this.promise = checkNotNull(promise, "promise");
         recursionDesired = parent.isRecursionDesired();
         id = parent.queryContextManager.add(this);
 
@@ -82,10 +89,16 @@ final class DnsQueryContext {
         final DnsQuestion question = question();
         final InetSocketAddress nameServerAddr = nameServerAddr();
         final DatagramDnsQuery query = new DatagramDnsQuery(null, nameServerAddr, id);
+
         query.setRecursionDesired(recursionDesired);
-        query.setRecord(DnsSection.QUESTION, question);
+
+        query.addRecord(DnsSection.QUESTION, question);
+
+        for (DnsRecord record:additional) {
+            query.addRecord(DnsSection.ADDITIONAL, record);
+        }
         if (optResource != null) {
-            query.setRecord(DnsSection.ADDITIONAL, optResource);
+            query.addRecord(DnsSection.ADDITIONAL, optResource);
         }
 
         if (logger.isDebugEnabled()) {
