@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -143,12 +144,15 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      * <li>{@code true} to validate HTTP headers in the http-codec</li>
      * <li>{@code false} not to validate HTTP headers in the http-codec</li>
      * </ul>
+     * @param alloc The {@link ByteBufAllocator} to use to generate the content of the message
      * @throws Http2Exception
      */
-    protected FullHttpMessage newMessage(Http2Stream stream, Http2Headers headers, boolean validateHttpHeaders)
+    protected FullHttpMessage newMessage(Http2Stream stream, Http2Headers headers, boolean validateHttpHeaders,
+                                         ByteBufAllocator alloc)
             throws Http2Exception {
-        return connection.isServer() ? HttpConversionUtil.toHttpRequest(stream.id(), headers,
-                validateHttpHeaders) : HttpConversionUtil.toHttpResponse(stream.id(), headers, validateHttpHeaders);
+        return connection.isServer() ? HttpConversionUtil.toHttpRequest(stream.id(), headers, alloc,
+                validateHttpHeaders) : HttpConversionUtil.toHttpResponse(stream.id(), headers, alloc,
+                                                                         validateHttpHeaders);
     }
 
     /**
@@ -180,7 +184,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         FullHttpMessage msg = getMessage(stream);
         boolean release = true;
         if (msg == null) {
-            msg = newMessage(stream, headers, validateHttpHeaders);
+            msg = newMessage(stream, headers, validateHttpHeaders, ctx.alloc());
         } else if (allowAppend) {
             release = false;
             HttpConversionUtil.addHttp2ToHttpHeaders(stream.id(), headers, msg, appendToTrailer);
