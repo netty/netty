@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -901,6 +902,30 @@ final class AdvancedLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     public CompositeByteBuf consolidate(int cIndex, int numComponents) {
         recordLeakNonRefCountingOperation(leak);
         return super.consolidate(cIndex, numComponents);
+    }
+
+    @Override
+    public int getBytes(int index, FileChannel out, long position, int length) throws IOException {
+        recordLeakNonRefCountingOperation(leak);
+        return super.getBytes(index, out, position, length);
+    }
+
+    @Override
+    public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
+        recordLeakNonRefCountingOperation(leak);
+        return super.setBytes(index, in, position, length);
+    }
+
+    @Override
+    public int readBytes(FileChannel out, long position, int length) throws IOException {
+        recordLeakNonRefCountingOperation(leak);
+        return super.readBytes(out, position, length);
+    }
+
+    @Override
+    public int writeBytes(FileChannel in, long position, int length) throws IOException {
+        recordLeakNonRefCountingOperation(leak);
+        return super.writeBytes(in, position, length);
     }
 
     @Override
