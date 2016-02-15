@@ -21,6 +21,8 @@ public class OpenSslRenegotiateTest extends RenegotiateTest {
 
     @Override
     public void testRenegotiateServer() throws Throwable {
+        // BoringSSL does not support renegotiation intentionally.
+        Assume.assumeFalse("BoringSSL".equals(OpenSsl.versionString()));
         Assume.assumeTrue(OpenSsl.isAvailable());
         super.testRenegotiateServer();
     }
