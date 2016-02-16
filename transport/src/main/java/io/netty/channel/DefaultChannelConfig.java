@@ -312,7 +312,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     public ChannelConfig setAutoRead(boolean autoRead) {
         boolean oldAutoRead = AUTOREAD_UPDATER.getAndSet(this, autoRead ? 1 : 0) == 1;
         if (autoRead && !oldAutoRead) {
-            channel.read();
+            autoReadEnabled();
         } else if (!autoRead && oldAutoRead) {
             autoReadCleared();
         }
@@ -324,6 +324,14 @@ public class DefaultChannelConfig implements ChannelConfig {
      * {@code true} before.
      */
     protected void autoReadCleared() { }
+
+    /**
+     * Is called once {@link #setAutoRead(boolean)} is called with {@code true} and {@link #isAutoRead()} was
+     * {@code false} before.
+     */
+    protected void autoReadEnabled() {
+        channel.read();
+    }
 
     @Override
     public boolean isAutoClose() {

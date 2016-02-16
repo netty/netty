@@ -165,4 +165,17 @@ public class EpollChannelConfig extends DefaultChannelConfig {
     protected final void autoReadCleared() {
         channel.clearEpollIn();
     }
+
+    @Override
+    protected void autoReadEnabled() {
+        if (EpollMode.EDGE_TRIGGERED == getEpollMode()) {
+            // Calling super.autoReadEnabled() (aka channel.read()) is not enough for ET mode.
+            // There may be remaining data on the socket still to be read, but ET will not notify
+            // us of that, so force a manual read
+            ((AbstractEpollChannel.AbstractEpollUnsafe) channel.unsafe()).epollInReady();
+        }
+
+        // Inform the OS we are ready for more data
+        super.autoReadEnabled();
+    }
 }

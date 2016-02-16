@@ -574,7 +574,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
                         readBuf.add(new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
                         data = null;
-                    } while (allocHandle.continueReading());
+                    } while (config.isAutoRead() && allocHandle.continueReading());
                 } catch (Throwable t) {
                     if (data != null) {
                         data.release();
