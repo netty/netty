@@ -121,7 +121,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     composite = (CompositeByteBuf) cumulation;
                 } else {
                     int readable = cumulation.readableBytes();
-                    composite = alloc.compositeBuffer();
+                    composite = alloc.compositeBuffer(Integer.MAX_VALUE);
                     composite.addComponent(cumulation).writerIndex(readable);
                 }
                 composite.addComponent(in).writerIndex(composite.writerIndex() + in.readableBytes());
