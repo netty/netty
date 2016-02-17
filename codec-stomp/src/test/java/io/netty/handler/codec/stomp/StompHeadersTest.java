@@ -23,7 +23,7 @@ import static org.junit.Assert.assertNull;
 
 public class StompHeadersTest {
     @Test
-    public void testHeadersCaseSensative() {
+    public void testHeadersCaseSensitive() {
         DefaultStompHeaders headers = new DefaultStompHeaders();
         AsciiString foo = new AsciiString("foo");
         AsciiString value = new AsciiString("value");
