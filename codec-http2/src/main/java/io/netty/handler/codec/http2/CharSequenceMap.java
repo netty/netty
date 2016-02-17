@@ -27,11 +27,11 @@ final class CharSequenceMap<V> extends DefaultHeaders<CharSequence, V, CharSeque
         this(true);
     }
 
-    public CharSequenceMap(boolean caseSensative) {
-        this(caseSensative, UnsupportedValueConverter.<V>instance());
+    public CharSequenceMap(boolean caseSensitive) {
+        this(caseSensitive, UnsupportedValueConverter.<V>instance());
     }
 
-    public CharSequenceMap(boolean caseSensative, ValueConverter<V> valueConverter) {
-        super(caseSensative ? CASE_SENSITIVE_HASHER : CASE_INSENSITIVE_HASHER, valueConverter);
+    public CharSequenceMap(boolean caseSensitive, ValueConverter<V> valueConverter) {
+        super(caseSensitive ? CASE_SENSITIVE_HASHER : CASE_INSENSITIVE_HASHER, valueConverter);
     }
 }
