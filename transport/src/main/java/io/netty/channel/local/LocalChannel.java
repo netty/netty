@@ -55,7 +55,7 @@ public class LocalChannel extends AbstractChannel {
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
     // To further optimize this we could write our own SPSC queue.
-    private final Queue<Object> inboundBuffer = PlatformDependent.newMpscQueue();
+    private final Queue<Object> inboundBuffer = PlatformDependent.newSpscQueue();
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
