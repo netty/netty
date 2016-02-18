@@ -611,6 +611,17 @@ public final class PlatformDependent {
     }
 
     /**
+     * Create a new {@link Queue} which is safe to use for single producer (one thread!) and a single
+     * consumer (one thread!).
+     */
+    public static <T> Queue<T> newSpscQueue() {
+        if (hasUnsafe()) {
+            return new SpscLinkedQueue<T>();
+        }
+        return new SpscLinkedAtomicQueue<T>();
+    }
+
+    /**
      * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and a single
      * consumer (one thread!) with the given fixes {@code capacity}.
      */
