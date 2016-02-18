@@ -16,16 +16,13 @@
 package io.netty.channel.socket;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPromise;
 
 import java.net.InetSocketAddress;
-import java.net.Socket;
 
 /**
  * A TCP/IP socket {@link Channel}.
  */
-public interface SocketChannel extends Channel {
+public interface SocketChannel extends DuplexChannel {
     @Override
     ServerSocketChannel parent();
 
@@ -35,28 +32,4 @@ public interface SocketChannel extends Channel {
     InetSocketAddress localAddress();
     @Override
     InetSocketAddress remoteAddress();
-
-    /**
-     * Returns {@code true} if and only if the remote peer shut down its output so that no more
-     * data is received from this channel.  Note that the semantic of this method is different from
-     * that of {@link Socket#shutdownInput()} and {@link Socket#isInputShutdown()}.
-     */
-    boolean isInputShutdown();
-
-    /**
-     * @see Socket#isOutputShutdown()
-     */
-    boolean isOutputShutdown();
-
-    /**
-     * @see Socket#shutdownOutput()
-     */
-    ChannelFuture shutdownOutput();
-
-    /**
-     * @see Socket#shutdownOutput()
-     *
-     * Will notify the given {@link ChannelPromise}
-     */
-    ChannelFuture shutdownOutput(ChannelPromise future);
 }

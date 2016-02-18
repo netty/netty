@@ -16,15 +16,11 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetAddress;
@@ -141,47 +137,6 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     @Override
     public EpollSocketChannelConfig config() {
         return config;
-    }
-
-    @Override
-    public boolean isInputShutdown() {
-        return fd().isInputShutdown();
-    }
-
-    @Override
-    public boolean isOutputShutdown() {
-        return fd().isOutputShutdown();
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput() {
-        return shutdownOutput(newPromise());
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        Executor closeExecutor = ((EpollSocketChannelUnsafe) unsafe()).prepareToClose();
-        if (closeExecutor != null) {
-            closeExecutor.execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    shutdownOutput0(promise);
-                }
-            });
-        } else {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                shutdownOutput0(promise);
-            } else {
-                loop.execute(new OneTimeTask() {
-                    @Override
-                    public void run() {
-                        shutdownOutput0(promise);
-                    }
-                });
-            }
-        }
-        return promise;
     }
 
     @Override
