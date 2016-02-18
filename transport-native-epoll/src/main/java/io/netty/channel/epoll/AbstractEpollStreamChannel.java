@@ -29,6 +29,7 @@ import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.util.internal.EmptyArrays;
@@ -44,13 +45,14 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.unix.FileDescriptor.pipe;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
+public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel implements DuplexChannel {
 
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
@@ -538,6 +540,47 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     }
 
     @Override
+    public boolean isInputShutdown() {
+        return fd().isInputShutdown();
+    }
+
+    @Override
+    public boolean isOutputShutdown() {
+        return fd().isOutputShutdown();
+    }
+
+    @Override
+    public ChannelFuture shutdownOutput() {
+        return shutdownOutput(newPromise());
+    }
+
+    @Override
+    public ChannelFuture shutdownOutput(final ChannelPromise promise) {
+        Executor closeExecutor = ((EpollStreamUnsafe) unsafe()).prepareToClose();
+        if (closeExecutor != null) {
+            closeExecutor.execute(new OneTimeTask() {
+                @Override
+                public void run() {
+                    shutdownOutput0(promise);
+                }
+            });
+        } else {
+            EventLoop loop = eventLoop();
+            if (loop.inEventLoop()) {
+                shutdownOutput0(promise);
+            } else {
+                loop.execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        shutdownOutput0(promise);
+                    }
+                });
+            }
+        }
+        return promise;
+    }
+
+    @Override
     protected void doClose() throws Exception {
         try {
             ChannelPromise promise = connectPromise;
@@ -610,6 +653,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     }
 
     class EpollStreamUnsafe extends AbstractEpollUnsafe {
+
+        // Overridden here just to be able to access this method from AbstractEpollStreamChannel
+        @Override
+        protected Executor prepareToClose() {
+            return super.prepareToClose();
+        }
+
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
