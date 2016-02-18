@@ -207,7 +207,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         @Override
         public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
             try {
-                if (readClientPrefaceString(in) && verifyFirstFrameIsSettings(in)) {
+                if (ctx.channel().isActive() && readClientPrefaceString(in) && verifyFirstFrameIsSettings(in)) {
                     // After the preface is read, it is time to hand over control to the post initialized decoder.
                     byteDecoder = new FrameDecoder();
                     byteDecoder.decode(ctx, in, out);
