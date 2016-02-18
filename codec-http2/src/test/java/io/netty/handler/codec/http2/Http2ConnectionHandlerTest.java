@@ -436,6 +436,18 @@ public class Http2ConnectionHandlerTest {
         verify(ctx, times(1)).flush();
     }
 
+    @Test
+    public void channelClosedDoesNotThrowPrefaceException() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        handler = newHandler();
+        when(channel.isActive()).thenReturn(false);
+        handler.channelInactive(ctx);
+        verify(frameWriter, never()).writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                                                 any(ByteBuf.class), any(ChannelPromise.class));
+        verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                                                    any(ChannelPromise.class));
+    }
+
     private static ByteBuf dummyData() {
         return Unpooled.buffer().writeBytes("abcdefgh".getBytes(UTF_8));
     }
