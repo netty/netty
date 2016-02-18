@@ -37,6 +37,9 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.CertificateRevokedException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -449,19 +452,32 @@ public abstract class OpenSslContext extends SslContext {
 
     abstract class AbstractCertificateVerifier implements CertificateVerifier {
         @Override
-        public final boolean verify(long ssl, byte[][] chain, String auth) {
+        public final int verify(long ssl, byte[][] chain, String auth) {
             X509Certificate[] peerCerts = certificates(chain);
             final OpenSslEngine engine = engineMap.remove(ssl);
             try {
                 verify(engine, peerCerts, auth);
-                return true;
+                return CertificateVerifier.X509_V_OK;
             } catch (Throwable cause) {
                 logger.debug("verification of certificate failed", cause);
                 SSLHandshakeException e = new SSLHandshakeException("General OpenSslEngine problem");
                 e.initCause(cause);
                 engine.handshakeException = e;
+
+                if (cause instanceof OpenSslCertificateException) {
+                    return ((OpenSslCertificateException) cause).errorCode();
+                }
+                if (cause instanceof CertificateExpiredException) {
+                    return CertificateVerifier.X509_V_ERR_CERT_HAS_EXPIRED;
+                }
+                if (cause instanceof CertificateNotYetValidException) {
+                    return CertificateVerifier.X509_V_ERR_CERT_NOT_YET_VALID;
+                }
+                if (PlatformDependent.javaVersion() >= 7 && cause instanceof CertificateRevokedException) {
+                    return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
+                }
+                return CertificateVerifier.X509_V_ERR_UNSPECIFIED;
             }
-            return false;
         }
 
         abstract void verify(OpenSslEngine engine, X509Certificate[] peerCerts, String auth) throws Exception;
