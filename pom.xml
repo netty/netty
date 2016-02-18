@@ -223,7 +223,7 @@
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>1.1.33.Fork13</tcnative.version>
+    <tcnative.version>1.1.33.Fork14</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
   </properties>
@@ -676,6 +676,7 @@
             <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>
             <ignore>javax.net.ssl.SSLParameters</ignore>
             <ignore>java.security.AlgorithmConstraints</ignore>
+            <ignore>java.security.cert.CertificateRevokedException</ignore>
 
             <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
           </ignores>
