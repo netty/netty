@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.NativeLibraryLoader;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.apache.tomcat.jni.Buffer;
@@ -28,6 +29,7 @@ import org.apache.tomcat.jni.SSLContext;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -37,6 +39,7 @@ import java.util.Set;
 public final class OpenSsl {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSsl.class);
+    private static final String UNKNOWN = "unknown";
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     private static final Set<String> AVAILABLE_CIPHER_SUITES;
@@ -57,7 +60,22 @@ public final class OpenSsl {
         // If in the classpath, try to load the native library and initialize netty-tcnative.
         if (cause == null) {
             try {
-                NativeLibraryLoader.load("netty-tcnative", SSL.class.getClassLoader());
+                String os = normalizeOs(SystemPropertyUtil.get("os.name", ""));
+                String arch = normalizeArch(SystemPropertyUtil.get("os.arch", ""));
+                String libName = "netty-tcnative-" + os + '-' + arch;
+                try {
+                    // First, try loading the platform-specific library. Platform-specific
+                    // libraries will be available if using a tcnative uber jar.
+                    NativeLibraryLoader.load(libName, SSL.class.getClassLoader());
+                } catch (Throwable t) {
+                    // Either the uber jar isn't on classpath, or it doesn't contain a library
+                    // for this platform. Load the default library.
+                    logger.debug("Unable to load platform-specific netty-tcnative library: " +
+                        libName + ". Will attempt to load the default netty-tcnative library.", t);
+
+                    NativeLibraryLoader.load("netty-tcnative", SSL.class.getClassLoader());
+                }
+
                 Library.initialize("provided");
                 SSL.initialize(null);
             } catch (Throwable t) {
@@ -198,4 +216,89 @@ public final class OpenSsl {
     }
 
     private OpenSsl() { }
+
+    private static String normalizeOs(String value) {
+        value = normalize(value);
+        if (value.startsWith("aix")) {
+            return "aix";
+        }
+        if (value.startsWith("hpux")) {
+            return "hpux";
+        }
+        if (value.startsWith("os400")) {
+            // Avoid the names such as os4000
+            if (value.length() <= 5 || !Character.isDigit(value.charAt(5))) {
+                return "os400";
+            }
+        }
+        if (value.startsWith("linux")) {
+            return "linux";
+        }
+        if (value.startsWith("macosx") || value.startsWith("osx")) {
+            return "osx";
+        }
+        if (value.startsWith("freebsd")) {
+            return "freebsd";
+        }
+        if (value.startsWith("openbsd")) {
+            return "openbsd";
+        }
+        if (value.startsWith("netbsd")) {
+            return "netbsd";
+        }
+        if (value.startsWith("solaris") || value.startsWith("sunos")) {
+            return "sunos";
+        }
+        if (value.startsWith("windows")) {
+            return "windows";
+        }
+
+        return UNKNOWN;
+    }
+
+    private static String normalizeArch(String value) {
+        value = normalize(value);
+        if (value.matches("^(x8664|amd64|ia32e|em64t|x64)$")) {
+            return "x86_64";
+        }
+        if (value.matches("^(x8632|x86|i[3-6]86|ia32|x32)$")) {
+            return "x86_32";
+        }
+        if (value.matches("^(ia64|itanium64)$")) {
+            return "itanium_64";
+        }
+        if (value.matches("^(sparc|sparc32)$")) {
+            return "sparc_32";
+        }
+        if (value.matches("^(sparcv9|sparc64)$")) {
+            return "sparc_64";
+        }
+        if (value.matches("^(arm|arm32)$")) {
+            return "arm_32";
+        }
+        if ("aarch64".equals(value)) {
+            return "aarch_64";
+        }
+        if (value.matches("^(ppc|ppc32)$")) {
+            return "ppc_32";
+        }
+        if ("ppc64".equals(value)) {
+            return "ppc_64";
+        }
+        if ("ppc64le".equals(value)) {
+            return "ppcle_64";
+        }
+        if ("s390".equals(value)) {
+            return "s390_32";
+        }
+        if ("s390x".equals(value)) {
+            return "s390_64";
+        }
+
+        return UNKNOWN;
+    }
+
+    private static String normalize(String value) {
+        return value.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "");
+    }
 }
