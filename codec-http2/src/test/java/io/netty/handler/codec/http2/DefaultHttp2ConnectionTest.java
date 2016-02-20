@@ -96,6 +96,20 @@ public class DefaultHttp2ConnectionTest {
         server = new DefaultHttp2Connection(true);
         client = new DefaultHttp2Connection(false);
         client.addListener(clientListener);
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                assertNotNull(client.stream(invocation.getArgumentAt(0, Http2Stream.class).id()));
+                return null;
+            }
+        }).when(clientListener).onStreamClosed(any(Http2Stream.class));
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                assertNull(client.stream(invocation.getArgumentAt(0, Http2Stream.class).id()));
+                return null;
+            }
+        }).when(clientListener).onStreamRemoved(any(Http2Stream.class));
     }
 
     @Test
