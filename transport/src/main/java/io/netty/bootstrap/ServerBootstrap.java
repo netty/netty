@@ -46,6 +46,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
 
+    private volatile AcceptLogicProvider<? extends AcceptLogic> acceptLogicProvider;
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> childAttrs = new LinkedHashMap<AttributeKey<?>, Object>();
     private volatile EventLoopGroup childGroup;
@@ -87,6 +88,26 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             throw new IllegalStateException("childGroup set already");
         }
         this.childGroup = childGroup;
+        return this;
+    }
+
+    /**
+     * Return the configured{@link AcceptLogicProvider} which provides the {@link AcceptLogic} of accepting a child
+     * {@link Channel} or {@code null} if none is configured yet.
+     */
+    public AcceptLogicProvider<? extends AcceptLogic> acceptLogicProvider() {
+        return this.acceptLogicProvider;
+    }
+
+    /**
+     * Allow to specify a {@link AcceptLogicProvider} which provides the {@link AcceptLogic} of accepting a child
+     * {@link Channel}.
+     * */
+    public ServerBootstrap acceptLogicProvider(AcceptLogicProvider<? extends AcceptLogic> acceptLogicProvider) {
+        if (acceptLogicProvider == null) {
+            throw new NullPointerException("acceptLogicProvider should not be null.");
+        }
+        this.acceptLogicProvider = acceptLogicProvider;
         return this;
     }
 
@@ -146,93 +167,47 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         return childGroup;
     }
 
-    @Override
-    void init(Channel channel) throws Exception {
-        final Map<ChannelOption<?>, Object> options = options();
-        synchronized (options) {
-            channel.config().setOptions(options);
-        }
-
-        final Map<AttributeKey<?>, Object> attrs = attrs();
-        synchronized (attrs) {
-            for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
-                @SuppressWarnings("unchecked")
-                AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
-                channel.attr(key).set(e.getValue());
-            }
-        }
-
-        ChannelPipeline p = channel.pipeline();
-
-        final EventLoopGroup currentChildGroup = childGroup;
-        final ChannelHandler currentChildHandler = childHandler;
-        final Entry<ChannelOption<?>, Object>[] currentChildOptions;
-        final Entry<AttributeKey<?>, Object>[] currentChildAttrs;
-        synchronized (childOptions) {
-            currentChildOptions = childOptions.entrySet().toArray(newOptionArray(childOptions.size()));
-        }
-        synchronized (childAttrs) {
-            currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(childAttrs.size()));
-        }
-
-        p.addLast(new ChannelInitializer<Channel>() {
-            @Override
-            public void initChannel(Channel ch) throws Exception {
-                ChannelPipeline pipeline = ch.pipeline();
-                ChannelHandler handler = handler();
-                if (handler != null) {
-                    pipeline.addLast(handler);
-                }
-                pipeline.addLast(new ServerBootstrapAcceptor(
-                        currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
-            }
-        });
+    /**
+     * Defined how the {@link ServerChannel} accepting the accepted child {@link Channel}.
+     * */
+    interface AcceptLogic {
+        void accept(Channel child);
     }
 
-    @Override
-    public ServerBootstrap validate() {
-        super.validate();
-        if (childHandler == null) {
-            throw new IllegalStateException("childHandler not set");
+    /**
+     * Create a new {@link AcceptLogic}.
+     * */
+    interface AcceptLogicProvider<T extends AcceptLogic> {
+        T getAcceptLogic(Entry<AttributeKey<?>, Object>[] childAttrs,
+                         EventLoopGroup childGroup, ChannelHandler childHandler,
+                         Entry<ChannelOption<?>, Object>[] childOptions);
+    }
+
+    public static class DefaultAcceptLogicProvider implements AcceptLogicProvider<DefaultAcceptLogic> {
+        @Override
+        public DefaultAcceptLogic getAcceptLogic(Entry<AttributeKey<?>, Object>[] childAttrs, EventLoopGroup childGroup,
+                                                 ChannelHandler childHandler, Entry<ChannelOption<?>,
+                                                 Object>[] childOptions) {
+            return new DefaultAcceptLogic(childAttrs, childGroup, childHandler, childOptions);
         }
-        if (childGroup == null) {
-            logger.warn("childGroup is not set. Using parentGroup instead.");
-            childGroup = group();
-        }
-        return this;
     }
 
-    @SuppressWarnings("unchecked")
-    private static Entry<ChannelOption<?>, Object>[] newOptionArray(int size) {
-        return new Entry[size];
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Entry<AttributeKey<?>, Object>[] newAttrArray(int size) {
-        return new Entry[size];
-    }
-
-    private static class ServerBootstrapAcceptor extends ChannelInboundHandlerAdapter {
-
+    public static class DefaultAcceptLogic implements AcceptLogic {
         private final EventLoopGroup childGroup;
         private final ChannelHandler childHandler;
         private final Entry<ChannelOption<?>, Object>[] childOptions;
         private final Entry<AttributeKey<?>, Object>[] childAttrs;
 
-        ServerBootstrapAcceptor(
-                EventLoopGroup childGroup, ChannelHandler childHandler,
-                Entry<ChannelOption<?>, Object>[] childOptions, Entry<AttributeKey<?>, Object>[] childAttrs) {
+        public DefaultAcceptLogic(Entry<AttributeKey<?>, Object>[] childAttrs, EventLoopGroup childGroup,
+                                  ChannelHandler childHandler, Entry<ChannelOption<?>, Object>[] childOptions) {
+            this.childAttrs = childAttrs;
             this.childGroup = childGroup;
             this.childHandler = childHandler;
             this.childOptions = childOptions;
-            this.childAttrs = childAttrs;
         }
 
         @Override
-        @SuppressWarnings("unchecked")
-        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            final Channel child = (Channel) msg;
-
+        public void accept(final Channel child) {
             child.pipeline().addLast(childHandler);
 
             for (Entry<ChannelOption<?>, Object> e: childOptions) {
@@ -266,6 +241,93 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         private static void forceClose(Channel child, Throwable t) {
             child.unsafe().closeForcibly();
             logger.warn("Failed to register an accepted channel: " + child, t);
+        }
+    }
+
+    @Override
+    void init(Channel channel) throws Exception {
+        final Map<ChannelOption<?>, Object> options = options();
+        synchronized (options) {
+            channel.config().setOptions(options);
+        }
+
+        final Map<AttributeKey<?>, Object> attrs = attrs();
+        synchronized (attrs) {
+            for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
+                @SuppressWarnings("unchecked")
+                AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
+                channel.attr(key).set(e.getValue());
+            }
+        }
+
+        ChannelPipeline p = channel.pipeline();
+
+        final EventLoopGroup currentChildGroup = childGroup;
+        final ChannelHandler currentChildHandler = childHandler;
+        final Entry<ChannelOption<?>, Object>[] currentChildOptions;
+        final Entry<AttributeKey<?>, Object>[] currentChildAttrs;
+        synchronized (childOptions) {
+            currentChildOptions = childOptions.entrySet().toArray(newOptionArray(childOptions.size()));
+        }
+        synchronized (childAttrs) {
+            currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(childAttrs.size()));
+        }
+
+        final AcceptLogicProvider<? extends AcceptLogic> userProvidedAcceptLogicProvider = acceptLogicProvider();
+        final AcceptLogicProvider<? extends AcceptLogic> acceptLogicProvider = userProvidedAcceptLogicProvider == null ?
+                new DefaultAcceptLogicProvider() : userProvidedAcceptLogicProvider;
+
+        final AcceptLogic acceptLogic = acceptLogicProvider.getAcceptLogic(currentChildAttrs, currentChildGroup,
+                currentChildHandler, currentChildOptions);
+        p.addLast(new ChannelInitializer<Channel>() {
+            @Override
+            public void initChannel(Channel ch) throws Exception {
+                ChannelPipeline pipeline = ch.pipeline();
+                ChannelHandler handler = handler();
+                if (handler != null) {
+                    pipeline.addLast(handler);
+                }
+
+                pipeline.addLast(new ServerBootstrapAcceptor(acceptLogic));
+            }
+        });
+    }
+
+    @Override
+    public ServerBootstrap validate() {
+        super.validate();
+        if (childHandler == null) {
+            throw new IllegalStateException("childHandler not set");
+        }
+        if (childGroup == null) {
+            logger.warn("childGroup is not set. Using parentGroup instead.");
+            childGroup = group();
+        }
+        return this;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Entry<ChannelOption<?>, Object>[] newOptionArray(int size) {
+        return new Entry[size];
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Entry<AttributeKey<?>, Object>[] newAttrArray(int size) {
+        return new Entry[size];
+    }
+
+    private static class ServerBootstrapAcceptor extends ChannelInboundHandlerAdapter {
+        private final AcceptLogic acceptLogic;
+
+        public ServerBootstrapAcceptor(AcceptLogic acceptLogic) {
+            this.acceptLogic = acceptLogic;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            final Channel child = (Channel) msg;
+            acceptLogic.accept(child);
         }
 
         @Override
