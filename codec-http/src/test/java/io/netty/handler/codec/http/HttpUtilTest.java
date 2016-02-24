@@ -88,4 +88,16 @@ public class HttpUtilTest {
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTFFF");
         assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, StandardCharsets.UTF_8));
     }
+
+    @Test
+    public void testGetMimeType() {
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        assertNull(HttpUtil.getMimeType(message));
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "");
+        assertNull(HttpUtil.getMimeType(message));
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html");
+        assertEquals("text/html", HttpUtil.getMimeType(message));
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=utf-8");
+        assertEquals("text/html", HttpUtil.getMimeType(message));
+    }
 }
