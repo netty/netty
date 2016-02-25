@@ -188,10 +188,16 @@ public class ReplayingDecoderTest {
 
             @Override
             protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-                in.skipBytes(in.readableBytes());
-                if (!ctx.channel().isActive()) {
-                    out.add("data");
-                }
+                int readable = in.readableBytes();
+                assertTrue(readable > 0);
+                in.skipBytes(readable);
+                out.add("data");
+            }
+
+            @Override
+            protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                assertFalse(in.isReadable());
+                out.add("data");
             }
         }, new ChannelInboundHandlerAdapter() {
             @Override
