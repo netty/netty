@@ -398,7 +398,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        decode(ctx, in, out);
+        super.decodeLast(ctx, in, out);
 
         // Handle the last unfinished message.
         if (message != null) {
