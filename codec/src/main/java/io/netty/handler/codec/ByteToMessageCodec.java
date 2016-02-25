@@ -150,7 +150,11 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
      * @see ByteToMessageDecoder#decodeLast(ChannelHandlerContext, ByteBuf, List)
      */
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        decode(ctx, in, out);
+        if (in.isReadable()) {
+            // Only call decode() if there is something left in the buffer to decode.
+            // See https://github.com/netty/netty/issues/4386
+            decode(ctx, in, out);
+        }
     }
 
     private final class Encoder extends MessageToByteEncoder<I> {

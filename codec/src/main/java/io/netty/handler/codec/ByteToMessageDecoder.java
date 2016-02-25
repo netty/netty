@@ -439,7 +439,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * override this for some special cleanup operation.
      */
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        decode(ctx, in, out);
+        if (in.isReadable()) {
+            // Only call decode() if there is something left in the buffer to decode.
+            // See https://github.com/netty/netty/issues/4386
+            decode(ctx, in, out);
+        }
     }
 
     static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf cumulation, int readable) {
