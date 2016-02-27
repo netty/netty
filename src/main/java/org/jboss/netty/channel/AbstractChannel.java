@@ -15,10 +15,9 @@
  */
 package org.jboss.netty.channel;
 
-import org.jboss.netty.util.internal.ConcurrentHashMap;
-
 import java.net.SocketAddress;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
