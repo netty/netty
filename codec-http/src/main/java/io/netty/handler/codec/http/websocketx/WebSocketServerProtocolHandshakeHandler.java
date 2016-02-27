@@ -55,6 +55,11 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         FullHttpRequest req = (FullHttpRequest) msg;
+        if (!websocketPath.equals(req.uri())) {
+            ctx.fireChannelRead(msg);
+            return;
+        }
+
         try {
             if (req.method() != GET) {
                 sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
