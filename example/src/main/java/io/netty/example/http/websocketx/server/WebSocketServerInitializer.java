@@ -26,6 +26,8 @@ import io.netty.handler.ssl.SslContext;
  */
 public class WebSocketServerInitializer extends ChannelInitializer<SocketChannel> {
 
+    private static final String WEBSOCKET_PATH = "/websocket";
+
     private final SslContext sslCtx;
 
     public WebSocketServerInitializer(SslContext sslCtx) {
@@ -40,6 +42,7 @@ public class WebSocketServerInitializer extends ChannelInitializer<SocketChannel
         }
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));
-        pipeline.addLast(new WebSocketServerHandler());
+        pipeline.addLast(new WebSocketIndexPageHandler(WEBSOCKET_PATH));
+        pipeline.addLast(new WebSocketFrameHandler());
     }
 }
