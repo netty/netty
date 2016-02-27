@@ -16,6 +16,7 @@
 package io.netty.channel.embedded;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -37,7 +38,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 public class EmbeddedChannelTest {
 
@@ -231,6 +236,50 @@ public class EmbeddedChannelTest {
         assertEquals(EventOutboundHandler.CLOSE, handler.pollEvent());
         assertEquals(EventOutboundHandler.CLOSE, handler.pollEvent());
         assertNull(handler.pollEvent());
+    }
+
+    @Test
+    public void channelRegisteredShouldFireOnAddFirstHandler() {
+        DummyHandler handler1 = new DummyHandler(),
+                     handler2 = new DummyHandler(),
+                     handler3 = new DummyHandler();
+
+        new EmbeddedChannel()
+                .pipeline()
+                .addFirst(handler1, handler2, handler3)
+                .firstContext()
+                .fireChannelRegistered();
+
+        assertTrue(handler3.fired);
+        assertTrue(handler2.fired);
+        assertFalse(handler1.fired);
+    }
+
+    @Test
+    public void channelRegisteredShouldFireOnAddLastHandler() {
+        DummyHandler handler1 = new DummyHandler(),
+                     handler2 = new DummyHandler(),
+                     handler3 = new DummyHandler();
+
+        new EmbeddedChannel()
+                .pipeline()
+                .addLast(handler1, handler2, handler3)
+                .firstContext()
+                .fireChannelRegistered();
+
+        assertFalse(handler1.fired);
+        assertTrue(handler2.fired);
+        assertTrue(handler3.fired);
+    }
+
+    private static final class DummyHandler extends ChannelDuplexHandler {
+        boolean fired;
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) {
+            fired = true;
+            ctx.fireChannelRegistered(); // forward event to next handler
+        }
     }
 
     private static final class EventOutboundHandler extends ChannelOutboundHandlerAdapter {

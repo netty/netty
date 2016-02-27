@@ -96,9 +96,23 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         pipeline = new DefaultChannelPipeline(this);
     }
 
+    protected AbstractChannel(Channel parent, ChannelId id, ChannelInboundHandler pipelineTail) {
+        this.parent = parent;
+        this.id = id;
+        unsafe = newUnsafe();
+        pipeline = new DefaultChannelPipeline(this, pipelineTail);
+    }
+
     @Override
     public final ChannelId id() {
         return id;
+    }
+
+    /**
+     * If the {@code pipelineTail} was specified in the constructor, this will return that object.
+     */
+    protected ChannelInboundHandler pipelineTail() {
+        return pipeline.tailDelegate();
     }
 
     /**
