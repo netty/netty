@@ -54,14 +54,14 @@
         </dependency>
       </dependencies>
       <build>
-      	<plugins>
-      	  <plugin>
-              <artifactId>maven-compiler-plugin</artifactId>
-              <configuration>
-                  <includes>
-                      <include>**/*.java</include>
-                  </includes>
-               </configuration>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>**/*.java</include>
+              </includes>
+            </configuration>
           </plugin>
         </plugins>
       </build>
@@ -109,7 +109,7 @@
 
   <build>
     <plugins>
-  	  <plugin>
+      <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
           <excludes>

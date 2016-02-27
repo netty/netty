@@ -469,7 +469,7 @@
         <artifactId>jboss-marshalling-serial</artifactId>
         <version>${jboss.marshalling.version}</version>
         <scope>test</scope>
-       </dependency>
+      </dependency>
       <dependency>
         <groupId>org.jboss.marshalling</groupId>
         <artifactId>jboss-marshalling-river</artifactId>
@@ -632,12 +632,12 @@
         <artifactId>animal-sniffer-maven-plugin</artifactId>
         <version>1.9</version>
         <dependencies>
-            <!-- Upgrade ASM and support Java 8 bytecode -->
-            <dependency>
-                <groupId>org.ow2.asm</groupId>
-                <artifactId>asm-all</artifactId>
-                <version>5.0.3</version>
-            </dependency>
+          <!-- Upgrade ASM and support Java 8 bytecode -->
+          <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-all</artifactId>
+            <version>5.0.3</version>
+          </dependency>
         </dependencies>
         <configuration>
           <signature>
@@ -718,6 +718,31 @@
           </dependency>
         </dependencies>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>xml-maven-plugin</artifactId>
+        <version>1.0.1</version>
+        <executions>
+          <execution>
+            <id>check-style</id>
+            <goals>
+              <goal>check-format</goal>
+            </goals>
+            <phase>validate</phase>
+          </execution>
+        </executions>
+        <configuration>
+          <formatFileSets>
+            <formatFileSet>
+              <directory>${project.basedir}</directory>
+              <includes>
+                <include>**/pom.xml</include>
+              </includes>
+            </formatFileSet>
+          </formatFileSets>
+          <useDefaultFormatFileSet>false</useDefaultFormatFileSet>
+        </configuration>
+      </plugin>
       <!-- Download the npn-boot.jar in advance to add it to the boot classpath. -->
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
@@ -740,8 +765,8 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <includes>
-             <include>**/*Test*.java</include>
-             <include>**/*Benchmark*.java</include>
+            <include>**/*Test*.java</include>
+            <include>**/*Benchmark*.java</include>
           </includes>
           <excludes>
             <exclude>**/Abstract*</exclude>
