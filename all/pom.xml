@@ -361,7 +361,7 @@
                       </patternset>
                     </unzip>
                     <concat destfile="${project.build.outputDirectory}/META-INF/${project.groupId}.versions.properties" append="true">
-                            <path path="${dependencyVersionsDir}/META-INF/${project.groupId}.versions.properties" />
+                      <path path="${dependencyVersionsDir}/META-INF/${project.groupId}.versions.properties" />
                     </concat>
                   </sequential>
                 </for>
@@ -433,14 +433,14 @@
             <goals>
               <goal>jar</goal>
             </goals>
-        <configuration>
-          <archive>
-            <manifest>
-              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-            </manifest>
-            <index>true</index>
-          </archive>
-        </configuration>
+            <configuration>
+              <archive>
+                <manifest>
+                  <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                </manifest>
+                <index>true</index>
+              </archive>
+            </configuration>
           </execution>
         </executions>
       </plugin>
