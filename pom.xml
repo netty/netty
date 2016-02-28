@@ -1010,6 +1010,11 @@
           <version>2.6</version>
         </plugin>
         <plugin>
+          <groupId>org.ops4j.pax.exam</groupId>
+          <artifactId>maven-paxexam-plugin</artifactId>
+          <version>1.2.4</version>
+        </plugin>
+        <plugin>
           <artifactId>maven-jar-plugin</artifactId>
           <version>2.5</version>
           <executions>
