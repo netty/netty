@@ -26,7 +26,6 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
-import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -520,20 +519,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
 
         @Override
-        protected EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.Handle handle) {
-            return new EpollRecvByteAllocatorMessageHandle(handle, isFlagSet(Native.EPOLLET));
-        }
-
-        @Override
         void epollInReady() {
             assert eventLoop().inEventLoop();
             if (fd().isInputShutdown()) {
                 return;
             }
             DatagramChannelConfig config = config();
-            boolean edgeTriggered = isFlagSet(Native.EPOLLET);
+            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
-            if (!readPending && !edgeTriggered && !config.isAutoRead()) {
+            if (!readPending && !allocHandle.isEdgeTriggered() && !config.isAutoRead()) {
                 // ChannelConfig.setAutoRead(false) was called in the meantime
                 clearEpollIn0();
                 return;
@@ -541,7 +536,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.reset(config);
 
             Throwable exception = null;
@@ -561,7 +555,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                             remoteAddress = fd().recvFrom(nioData, nioData.position(), nioData.limit());
                         }
 
+                        epollInReadAttempted();
                         if (remoteAddress == null) {
+                            allocHandle.lastBytesRead(-1);
                             data.release();
                             data = null;
                             break;
@@ -570,7 +566,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         allocHandle.incMessagesRead(1);
                         allocHandle.lastBytesRead(remoteAddress.receivedAmount());
                         data.writerIndex(data.writerIndex() + allocHandle.lastBytesRead());
-                        readPending = false;
 
                         readBuf.add(new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
                         data = null;
@@ -589,22 +584,15 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 }
                 readBuf.clear();
                 allocHandle.readComplete();
+                maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
                 pipeline.fireChannelReadComplete();
 
                 if (exception != null) {
                     pipeline.fireExceptionCaught(exception);
-                    checkResetEpollIn(edgeTriggered);
+                    checkResetEpollIn(allocHandle.isEdgeTriggered());
                 }
             } finally {
-                // Check if there is a readPending which was not processed yet.
-                // This could be for two reasons:
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-                //
-                // See https://github.com/netty/netty/issues/2254
-                if (!readPending && !config.isAutoRead()) {
-                    clearEpollIn();
-                }
+                epollInFinally(config);
             }
         }
     }

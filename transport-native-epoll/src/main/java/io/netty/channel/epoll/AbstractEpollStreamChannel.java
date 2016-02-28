@@ -660,7 +660,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return super.prepareToClose();
         }
 
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close) {
+        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
+                EpollRecvByteAllocatorHandle allocHandle) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
                     readPending = false;
@@ -669,7 +670,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     byteBuf.release();
                 }
             }
-            recvBufAllocHandle().readComplete();
+            allocHandle.readComplete();
+            maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
             pipeline.fireChannelReadComplete();
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof IOException) {
@@ -816,8 +818,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
 
         @Override
-        protected EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.Handle handle) {
-            return new EpollRecvByteAllocatorStreamingHandle(handle, isFlagSet(Native.EPOLLET));
+        EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.Handle handle) {
+            return new EpollRecvByteAllocatorStreamingHandle(handle, config());
         }
 
         @Override
@@ -826,9 +828,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 return;
             }
             final ChannelConfig config = config();
-            boolean edgeTriggered = isFlagSet(Native.EPOLLET);
+            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
-            if (!readPending && !edgeTriggered && !config.isAutoRead()) {
+            if (!readPending && !allocHandle.isEdgeTriggered() && !config.isAutoRead()) {
                 // ChannelConfig.setAutoRead(false) was called in the meantime
                 clearEpollIn0();
                 return;
@@ -836,7 +839,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.reset(config);
 
             ByteBuf byteBuf = null;
@@ -863,6 +865,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     // to handle direct buffers.
                     byteBuf = allocHandle.allocate(allocator);
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                    epollInReadAttempted();
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read, release the buffer.
                         byteBuf.release();
@@ -870,13 +873,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         close = allocHandle.lastBytesRead() < 0;
                         break;
                     }
-                    readPending = false;
                     allocHandle.incMessagesRead(1);
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
                 } while (allocHandle.continueReading());
 
                 allocHandle.readComplete();
+                maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
                 pipeline.fireChannelReadComplete();
 
                 if (close) {
@@ -884,18 +887,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     close = false;
                 }
             } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, close);
-                checkResetEpollIn(edgeTriggered);
+                handleReadException(pipeline, byteBuf, t, close, allocHandle);
+                checkResetEpollIn(allocHandle.isEdgeTriggered());
             } finally {
-                // Check if there is a readPending which was not processed yet.
-                // This could be for two reasons:
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-                //
-                // See https://github.com/netty/netty/issues/2254
-                if (!readPending && !config.isAutoRead()) {
-                    clearEpollIn0();
-                }
+                epollInFinally(config);
             }
         }
     }

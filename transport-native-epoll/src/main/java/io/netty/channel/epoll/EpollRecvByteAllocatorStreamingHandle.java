@@ -15,27 +15,20 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
 
-/**
- * EPOLL must read until no more data is available while in edge triggered mode. This class will always continue reading
- * unless the last read did not fill up the available buffer space.
- */
 final class EpollRecvByteAllocatorStreamingHandle extends EpollRecvByteAllocatorHandle {
-    public EpollRecvByteAllocatorStreamingHandle(RecvByteBufAllocator.Handle handle, boolean isEdgeTriggered) {
-        super(handle, isEdgeTriggered);
+    public EpollRecvByteAllocatorStreamingHandle(RecvByteBufAllocator.Handle handle, ChannelConfig config) {
+        super(handle, config);
     }
 
     @Override
-    public boolean continueReading() {
+    boolean maybeMoreDataToRead() {
         /**
-         * if edgeTriggered is used we need to read all bytes/messages as we are not notified again otherwise.
          * For stream oriented descriptors we can assume we are done reading if the last read attempt didn't produce
          * a full buffer (see Q9 in <a href="http://man7.org/linux/man-pages/man7/epoll.7.html">epoll man</a>).
-         *
-         * If EPOLLRDHUP has been received we must read until we get a read error.
          */
-        return isRdHup() ? true :
-                           isEdgeTriggered() ? lastBytesRead() == attemptedBytesRead() : super.continueReading();
+        return isEdgeTriggered() && lastBytesRead() == attemptedBytesRead();
     }
 }

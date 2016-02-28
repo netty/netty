@@ -15,26 +15,47 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
 
-abstract class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle {
-    private final boolean isEdgeTriggered;
+class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle {
+    private boolean isEdgeTriggered;
+    private final ChannelConfig config;
     private boolean receivedRdHup;
 
-    public EpollRecvByteAllocatorHandle(RecvByteBufAllocator.Handle handle, boolean isEdgeTriggered) {
+    EpollRecvByteAllocatorHandle(RecvByteBufAllocator.Handle handle, ChannelConfig config) {
         super(handle);
-        this.isEdgeTriggered = isEdgeTriggered;
+        this.config = config;
     }
 
-    public final boolean isEdgeTriggered() {
-        return isEdgeTriggered;
-    }
-
-    public final void receivedRdHup() {
+    final void receivedRdHup() {
         receivedRdHup = true;
     }
 
-    public final boolean isRdHup() {
-        return receivedRdHup;
+    boolean maybeMoreDataToRead() {
+        return isEdgeTriggered && lastBytesRead() > 0;
+    }
+
+    final void edgeTriggered(boolean edgeTriggered) {
+        isEdgeTriggered = edgeTriggered;
+    }
+
+    final boolean isEdgeTriggered() {
+        return isEdgeTriggered;
+    }
+
+    @Override
+    public final boolean continueReading() {
+        /**
+         * EPOLL ET requires that we read until we get an EAGAIN
+         * (see Q9 in <a href="http://man7.org/linux/man-pages/man7/epoll.7.html">epoll man</a>). However in order to
+         * respect auto read we supporting reading to stop if auto read is off. If auto read is on we force reading to
+         * continue to avoid a {@link java.lang.StackOverflowError} between channelReadComplete and reading from the
+         * channel. It is expected that the {@link #EpollSocketChannel} implementations will track if we are in
+         * edgeTriggered mode and all data was not read, and will force a EPOLLIN ready event.
+         *
+         * If EPOLLRDHUP has been received we must read until we get a read error.
+         */
+        return receivedRdHup ||  maybeMoreDataToRead() && config.isAutoRead() || super.continueReading();
     }
 }
