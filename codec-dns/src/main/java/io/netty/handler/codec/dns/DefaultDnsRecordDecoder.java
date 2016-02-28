@@ -87,6 +87,10 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             String name, DnsRecordType type, int dnsClass, long timeToLive,
             ByteBuf in, int offset, int length) throws Exception {
 
+        if (type == DnsRecordType.PTR) {
+            in.setIndex(offset, offset + length);
+            return new DefaultDnsPtrRecord(name, dnsClass, timeToLive, decodeName(in));
+        }
         return new DefaultDnsRawRecord(
                 name, type, dnsClass, timeToLive, in.duplicate().setIndex(offset, offset + length).retain());
     }
