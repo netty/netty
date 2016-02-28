@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
@@ -135,11 +136,18 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected final void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
-        ((AbstractEpollUnsafe) unsafe()).readPending = true;
+        AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) unsafe();
+        unsafe.readPending = true;
 
         setFlag(readFlag);
+
+        // If EPOLL ET mode is enabled and auto read was toggled off on the last read loop then we may not be notified
+        // again if we didn't consume all the data. So we force a read operation here if there maybe more data.
+        if (unsafe.maybeMoreDataToRead) {
+            unsafe.epollInReady();
+        }
     }
 
     final void clearEpollIn() {
@@ -299,12 +307,29 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {
         protected boolean readPending;
+        protected boolean maybeMoreDataToRead;
         private EpollRecvByteAllocatorHandle allocHandle;
 
         /**
          * Called once EPOLLIN event is ready to be processed
          */
         abstract void epollInReady();
+
+        final void epollInReadAttempted() {
+            readPending = maybeMoreDataToRead = false;
+        }
+
+        final void epollInFinally(ChannelConfig config) {
+            // Check if there is a readPending which was not processed yet.
+            // This could be for two reasons:
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+            //
+            // See https://github.com/netty/netty/issues/2254
+            if (!readPending && !config.isAutoRead()) {
+                clearEpollIn();
+            }
+        }
 
         /**
          * Will schedule a {@link #epollInReady()} call on the event loop if necessary.
@@ -390,7 +415,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
          * Create a new {@EpollRecvByteAllocatorHandle} instance.
          * @param handle The handle to wrap with EPOLL specific logic.
          */
-        protected abstract EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.Handle handle);
+        EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.Handle handle) {
+            return new EpollRecvByteAllocatorHandle(handle, config());
+        }
 
         @Override
         protected void flush0() {

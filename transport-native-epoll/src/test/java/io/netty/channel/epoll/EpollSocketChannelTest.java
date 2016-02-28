@@ -17,14 +17,18 @@ package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Assert;
@@ -34,8 +38,10 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -128,6 +134,76 @@ public class EpollSocketChannelTest {
         }
     }
 
+    @Test
+    public void testAutoReadOffDuringReadOnlyReadsOneTime() throws InterruptedException {
+        EventLoopGroup group = new EpollEventLoopGroup();
+        try {
+            runAutoReadTest(group, EpollServerSocketChannel.class, EpollSocketChannel.class,
+                    new InetSocketAddress(0));
+            runAutoReadTest(group, EpollServerDomainSocketChannel.class, EpollDomainSocketChannel.class,
+                    EpollSocketTestPermutation.newSocketAddress());
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    private void runAutoReadTest(EventLoopGroup group, Class<? extends ServerChannel> serverChannelClass,
+            Class<? extends Channel> channelClass, SocketAddress bindAddr) throws InterruptedException {
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        try {
+            AutoReadInitializer serverInitializer = new AutoReadInitializer();
+            AutoReadInitializer clientInitializer = new AutoReadInitializer();
+            ServerBootstrap sb = new ServerBootstrap();
+            sb.option(ChannelOption.SO_BACKLOG, 1024)
+            .option(EpollChannelOption.EPOLL_MODE, EpollMode.EDGE_TRIGGERED)
+            .option(ChannelOption.AUTO_READ, true)
+            .group(group)
+            .channel(serverChannelClass)
+            .childOption(EpollChannelOption.EPOLL_MODE, EpollMode.EDGE_TRIGGERED)
+            .childOption(ChannelOption.AUTO_READ, true)
+            // We want to ensure that we attempt multiple individual read operations per read loop so we can
+            // test the auto read feature being turned off when data is first read.
+            .childOption(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
+            .childHandler(serverInitializer);
+
+            serverChannel = sb.bind(bindAddr).syncUninterruptibly().channel();
+
+            Bootstrap b = new Bootstrap()
+            .group(group)
+            .channel(channelClass)
+            .remoteAddress(serverChannel.localAddress())
+            .option(EpollChannelOption.EPOLL_MODE, EpollMode.EDGE_TRIGGERED)
+            .option(ChannelOption.AUTO_READ, true)
+            // We want to ensure that we attempt multiple individual read operations per read loop so we can
+            // test the auto read feature being turned off when data is first read.
+            .option(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
+            .handler(clientInitializer);
+            clientChannel = b.connect().syncUninterruptibly().channel();
+
+            // 3 bytes means 3 independent reads for TestRecvByteBufAllocator
+            clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[3]));
+            serverInitializer.autoReadHandler.assertSingleRead();
+
+            // 3 bytes means 3 independent reads for TestRecvByteBufAllocator
+            serverInitializer.channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[3]));
+            clientInitializer.autoReadHandler.assertSingleRead();
+
+            serverInitializer.channel.read();
+            serverInitializer.autoReadHandler.assertSingleReadSecondTry();
+
+            clientChannel.read();
+            clientInitializer.autoReadHandler.assertSingleReadSecondTry();
+        } finally {
+            if (serverChannel != null) {
+                serverChannel.close().syncUninterruptibly();
+            }
+            if (clientChannel != null) {
+                clientChannel.close().syncUninterruptibly();
+            }
+        }
+    }
+
     private void runExceptionHandleFeedbackLoop(EventLoopGroup group, Class<? extends ServerChannel> serverChannelClass,
             Class<? extends Channel> channelClass, SocketAddress bindAddr) throws InterruptedException {
         Channel serverChannel = null;
@@ -168,6 +244,77 @@ public class EpollSocketChannelTest {
         }
     }
 
+    /**
+     * Designed to keep reading as long as autoread is enabled.
+     */
+    private static final class TestRecvByteBufAllocator implements RecvByteBufAllocator {
+        @Override
+        public Handle newHandle() {
+            return new Handle() {
+                private ChannelConfig config;
+                private int attemptedBytesRead;
+                private int lastBytesRead;
+                @Override
+                public ByteBuf allocate(ByteBufAllocator alloc) {
+                    return alloc.ioBuffer(guess());
+                }
+
+                @Override
+                public int guess() {
+                    return 1; // only ever allocate buffers of size 1 to ensure the number of reads is controlled.
+                }
+
+                @Override
+                public void reset(ChannelConfig config) {
+                    this.config = config;
+                }
+
+                @Override
+                public void incMessagesRead(int numMessages) {
+                }
+
+                @Override
+                public void lastBytesRead(int bytes) {
+                    lastBytesRead = bytes;
+                }
+
+                @Override
+                public int lastBytesRead() {
+                    return lastBytesRead;
+                }
+
+                @Override
+                public void attemptedBytesRead(int bytes) {
+                    attemptedBytesRead = bytes;
+                }
+
+                @Override
+                public int attemptedBytesRead() {
+                    return attemptedBytesRead;
+                }
+
+                @Override
+                public boolean continueReading() {
+                    return config.isAutoRead();
+                }
+
+                @Override
+                public void readComplete() {
+                }
+            };
+        }
+    }
+
+    private static class AutoReadInitializer extends ChannelInitializer<Channel> {
+        final AutoReadHandler autoReadHandler = new AutoReadHandler();
+        volatile Channel channel;
+        @Override
+        protected void initChannel(Channel ch) throws Exception {
+            channel = ch;
+            ch.pipeline().addLast(autoReadHandler);
+        }
+    }
+
     private static class MyInitializer extends ChannelInitializer<Channel> {
         final ExceptionHandler exceptionHandler = new ExceptionHandler();
         @Override
@@ -184,6 +331,36 @@ public class EpollSocketChannelTest {
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ReferenceCountUtil.release(msg);
             throw new NullPointerException("I am a bug!");
+        }
+    }
+
+    private static final class AutoReadHandler extends ChannelInboundHandlerAdapter {
+        private final AtomicInteger count = new AtomicInteger();
+        private final CountDownLatch latch = new CountDownLatch(1);
+        private final CountDownLatch latch2 = new CountDownLatch(2);
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            ReferenceCountUtil.release(msg);
+            if (count.incrementAndGet() == 1) {
+                ctx.channel().config().setAutoRead(false);
+            }
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            latch.countDown();
+            latch2.countDown();
+        }
+
+        void assertSingleRead() throws InterruptedException {
+            assertTrue(latch.await(5, TimeUnit.SECONDS));
+            assertEquals(1, count.get());
+        }
+
+        void assertSingleReadSecondTry() throws InterruptedException {
+            assertTrue(latch2.await(5, TimeUnit.SECONDS));
+            assertEquals(2, count.get());
         }
     }
 
