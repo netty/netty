@@ -43,11 +43,23 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     public void encodeRecord(DnsRecord record, ByteBuf out) throws Exception {
         if (record instanceof DnsQuestion) {
             encodeQuestion((DnsQuestion) record, out);
+        } else if (record instanceof DnsPtrRecord) {
+            encodePtrRecord((DnsPtrRecord) record, out);
         } else if (record instanceof DnsRawRecord) {
             encodeRawRecord((DnsRawRecord) record, out);
         } else {
             throw new UnsupportedMessageTypeException(StringUtil.simpleClassName(record));
         }
+    }
+
+    private void encodePtrRecord(DnsPtrRecord record, ByteBuf out) throws Exception {
+        encodeName(record.name(), out);
+
+        out.writeShort(record.type().intValue());
+        out.writeShort(record.dnsClass());
+        out.writeInt((int) record.timeToLive());
+
+        encodeName(record.hostname(), out);
     }
 
     private void encodeRawRecord(DnsRawRecord record, ByteBuf out) throws Exception {
