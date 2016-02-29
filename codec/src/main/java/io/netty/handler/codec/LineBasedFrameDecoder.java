@@ -16,8 +16,8 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufProcessor;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.ByteProcessor;
 
 import java.util.List;
 
@@ -153,7 +153,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
      * Returns -1 if no end of line was found in the buffer.
      */
     private static int findEndOfLine(final ByteBuf buffer) {
-        int i = buffer.forEachByte(ByteProcessor.FIND_LF);
+        int i = buffer.forEachByte(ByteBufProcessor.FIND_LF);
         if (i > 0 && buffer.getByte(i - 1) == '\r') {
             i--;
         }
