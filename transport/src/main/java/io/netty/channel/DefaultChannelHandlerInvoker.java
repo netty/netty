@@ -328,10 +328,14 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (msg == null) {
             throw new NullPointerException("msg");
         }
-        if (!validatePromise(ctx, promise, true)) {
-            // promise cancelled
+        try {
+            if (!validatePromise(ctx, promise, true)) {
+                ReferenceCountUtil.release(msg);
+                return;
+            }
+        } catch (RuntimeException e) {
             ReferenceCountUtil.release(msg);
-            return;
+            throw e;
         }
 
         if (executor.inEventLoop()) {
