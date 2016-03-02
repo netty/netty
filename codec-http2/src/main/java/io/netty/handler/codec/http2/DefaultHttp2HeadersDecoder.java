@@ -33,7 +33,7 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
 public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2HeadersDecoder.Configuration {
-    private static final float HEADERS_COUNT_WEIGHT_NEW = 1 / 5;
+    private static final float HEADERS_COUNT_WEIGHT_NEW = 1 / 5f;
     private static final float HEADERS_COUNT_WEIGHT_HISTORICAL = 1 - HEADERS_COUNT_WEIGHT_NEW;
 
     private final int maxHeaderSize;
@@ -109,8 +109,8 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
                         headers.size(), headerTable.maxHeaderListSize());
             }
 
-            headerArraySizeAccumulator =  HEADERS_COUNT_WEIGHT_NEW * headers.size() +
-                                          HEADERS_COUNT_WEIGHT_HISTORICAL * headerArraySizeAccumulator;
+            headerArraySizeAccumulator = HEADERS_COUNT_WEIGHT_NEW * headers.size() +
+                                         HEADERS_COUNT_WEIGHT_HISTORICAL * headerArraySizeAccumulator;
             return headers;
         } catch (IOException e) {
             throw connectionError(COMPRESSION_ERROR, e, e.getMessage());
