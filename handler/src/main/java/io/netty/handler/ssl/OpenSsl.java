@@ -39,6 +39,7 @@ import java.util.Set;
 public final class OpenSsl {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSsl.class);
+    private static final String LINUX = "linux";
     private static final String UNKNOWN = "unknown";
     private static final Throwable UNAVAILABILITY_CAUSE;
 
@@ -62,19 +63,20 @@ public final class OpenSsl {
             try {
                 String os = normalizeOs(SystemPropertyUtil.get("os.name", ""));
                 String arch = normalizeArch(SystemPropertyUtil.get("os.arch", ""));
-                String libName = "netty-tcnative-" + os + '-' + arch;
-                try {
-                    // First, try loading the platform-specific library. Platform-specific
-                    // libraries will be available if using a tcnative uber jar.
-                    NativeLibraryLoader.load(libName, SSL.class.getClassLoader());
-                } catch (Throwable t) {
-                    // Either the uber jar isn't on classpath, or it doesn't contain a library
-                    // for this platform. Load the default library.
-                    logger.debug("Unable to load platform-specific netty-tcnative library: " +
-                        libName + ". Will attempt to load the default netty-tcnative library.", t);
 
-                    NativeLibraryLoader.load("netty-tcnative", SSL.class.getClassLoader());
+                Set<String> libNames = new LinkedHashSet<String>(3);
+                // First, try loading the platform-specific library. Platform-specific
+                // libraries will be available if using a tcnative uber jar.
+                libNames.add("netty-tcnative-" + os + '-' + arch);
+                if (LINUX.equalsIgnoreCase(os)) {
+                    // Fedora SSL lib so naming (libssl.so.10 vs libssl.so.1.0.0)..
+                    libNames.add("netty-tcnative-" + os + '-' + arch + "-fedora");
                 }
+                // finally the default library.
+                libNames.add("netty-tcnative");
+
+                NativeLibraryLoader.loadFirstAvailable(SSL.class.getClassLoader(),
+                        libNames.toArray(new String[libNames.size()]));
 
                 Library.initialize("provided");
                 SSL.initialize(null);
@@ -231,8 +233,8 @@ public final class OpenSsl {
                 return "os400";
             }
         }
-        if (value.startsWith("linux")) {
-            return "linux";
+        if (value.startsWith(LINUX)) {
+            return LINUX;
         }
         if (value.startsWith("macosx") || value.startsWith("osx")) {
             return "osx";

@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Locale;
 
 /**
@@ -145,6 +146,26 @@ public final class NativeLibraryLoader {
 
     private static boolean isOSX() {
         return OSNAME.startsWith("macosx") || OSNAME.startsWith("osx");
+    }
+
+    /**
+     * Loads the first available library in the collection with the specified
+     * {@link ClassLoader}.
+     *
+     * @throws IllegalArgumentException
+     *         if none of the given libraries load successfully.
+     */
+    public static void loadFirstAvailable(ClassLoader loader, String... names) {
+        for (String name : names) {
+            try {
+                NativeLibraryLoader.load(name, loader);
+                return;
+            } catch (Throwable t) {
+                logger.debug("Unable to load the library: " + name + '.', t);
+            }
+        }
+        throw new IllegalArgumentException("Failed to load any of the given libraries: "
+                                           + Arrays.toString(names));
     }
 
     /**
