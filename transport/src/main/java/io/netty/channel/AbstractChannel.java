@@ -421,6 +421,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         /** true if the channel has never been registered, false otherwise */
         private boolean neverRegistered = true;
 
+        private void assertEventLoop() {
+            assert !registered || eventLoop.inEventLoop();
+        }
+
         @Override
         public RecvByteBufAllocator.Handle recvBufAllocHandle() {
             if (recvHandle == null) {
@@ -530,6 +534,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
+            assertEventLoop();
+
             if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
@@ -570,6 +576,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void disconnect(final ChannelPromise promise) {
+            assertEventLoop();
+
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -598,6 +606,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void close(final ChannelPromise promise) {
+            assertEventLoop();
+
             close(promise, CLOSED_CHANNEL_EXCEPTION, false);
         }
 
@@ -690,6 +700,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void closeForcibly() {
+            assertEventLoop();
+
             try {
                 doClose();
             } catch (Exception e) {
@@ -699,7 +711,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void deregister(final ChannelPromise promise) {
-           deregister(promise, false);
+            assertEventLoop();
+
+            deregister(promise, false);
         }
 
         private void deregister(final ChannelPromise promise, final boolean fireChannelInactive) {
@@ -748,6 +762,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void beginRead() {
+            assertEventLoop();
+
             if (!isActive()) {
                 return;
             }
@@ -767,6 +783,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void write(Object msg, ChannelPromise promise) {
+            assertEventLoop();
+
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
                 // If the outboundBuffer is null we know the channel was closed and so
@@ -797,6 +815,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void flush() {
+            assertEventLoop();
+
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
                 return;
@@ -858,6 +878,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final ChannelPromise voidPromise() {
+            assertEventLoop();
+
             return unsafeVoidPromise;
         }
 
