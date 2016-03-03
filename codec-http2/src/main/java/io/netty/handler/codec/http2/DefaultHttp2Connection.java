@@ -1181,6 +1181,14 @@ public class DefaultHttp2Connection implements Http2Connection {
                 pendingEvents.add(new Event() {
                     @Override
                     public void process() {
+                        // When deactivate is called the stream state has already been set to CLOSE however
+                        // it is possible that since this job has been queued other circumstances have caused
+                        // it to be removed from the priority tree and thus have a null parent (i.e. reprioritization).
+                        // If the parent is null this means it has already been removed from active streams and we
+                        // should not process the removal any further as this will lead to a NPE.
+                        if (stream.parent() == null) {
+                            return;
+                        }
                         removeFromActiveStreams(stream, itr);
                     }
                 });
@@ -1233,8 +1241,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (streams.remove(stream)) {
                 // Update the number of active streams initiated by the endpoint.
                 stream.createdBy().numActiveStreams--;
+                notifyClosed(stream);
             }
-            notifyClosed(stream);
             removeStream(stream, itr);
         }
 
