@@ -222,6 +222,22 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test
+    public void closeWhileIteratingDoesNotNPE() throws Http2Exception {
+        final Http2Stream streamA = client.local().createStream(3, false);
+        final Http2Stream streamB = client.local().createStream(5, false);
+        final Http2Stream streamC = client.local().createStream(7, false);
+        streamB.setPriority(streamA.id(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT, false);
+        client.forEachActiveStream(new Http2StreamVisitor() {
+            @Override
+            public boolean visit(Http2Stream stream) throws Http2Exception {
+                streamA.close();
+                streamB.setPriority(streamC.id(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT, false);
+                return true;
+            }
+        });
+    }
+
+    @Test
     public void goAwayReceivedShouldCloseStreamsGreaterThanLastStream() throws Exception {
         Http2Stream stream1 = client.local().createStream(3, false);
         Http2Stream stream2 = client.local().createStream(5, false);
