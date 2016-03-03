@@ -127,7 +127,7 @@ public interface Http2Stream {
     <V> V removeProperty(Http2Connection.PropertyKey key);
 
     /**
-     * Updates an priority for this stream. Calling this method may affect the straucture of the
+     * Updates an priority for this stream. Calling this method may affect the structure of the
      * priority tree.
      *
      * @param parentStreamId the parent stream that given stream should depend on. May be {@code 0},
