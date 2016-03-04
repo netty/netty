@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.CharsetUtil;
@@ -94,6 +95,7 @@ public class EpollSocketTcpMd5Test {
                 .handler(new ChannelInboundHandlerAdapter())
                 .option(EpollChannelOption.TCP_MD5SIG,
                         Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, BAD_KEY))
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
                 .connect(server.localAddress()).syncUninterruptibly().channel();
         client.close().syncUninterruptibly();
     }
