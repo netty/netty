@@ -47,7 +47,11 @@ public class EpollSocketChannelConfigTest {
 
     @AfterClass
     public static void after() {
-        group.shutdownGracefully();
+        try {
+            ch.close().syncUninterruptibly();
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 
     private long randLong(long min, long max) {
@@ -109,5 +113,13 @@ public class EpollSocketChannelConfigTest {
         assertFalse(ch.config().isTcpCork());
         ch.config().setTcpCork(true);
         assertTrue(ch.config().isTcpCork());
+    }
+
+    @Test
+    public void testTcpQickAck() {
+        ch.config().setTcpQuickAck(false);
+        assertFalse(ch.config().isTcpQuickAck());
+        ch.config().setTcpQuickAck(true);
+        assertTrue(ch.config().isTcpQuickAck());
     }
 }

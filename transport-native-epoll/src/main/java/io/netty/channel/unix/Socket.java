@@ -263,6 +263,14 @@ public final class Socket extends FileDescriptor {
         return getSoLinger(intValue());
     }
 
+    public int getTcpDeferAccept() {
+        return getTcpDeferAccept(intValue());
+    }
+
+    public boolean isTcpQuickAck() {
+        return isTcpQuickAck(intValue()) != 0;
+    }
+
     public int getSoError() {
         return getSoError(intValue());
     }
@@ -289,6 +297,14 @@ public final class Socket extends FileDescriptor {
 
     public void setSoLinger(int soLinger) {
         setSoLinger(intValue(), soLinger);
+    }
+
+    public void setTcpDeferAccept(int deferAccept) {
+        setTcpDeferAccept(intValue(), deferAccept);
+    }
+
+    public void setTcpQuickAck(boolean quickAck) {
+        setTcpQuickAck(intValue(), quickAck ? 1 : 0);
     }
 
     @Override
@@ -357,6 +373,8 @@ public final class Socket extends FileDescriptor {
     private static native int isTcpCork(int fd);
     private static native int getSoLinger(int fd);
     private static native int getSoError(int fd);
+    private static native int getTcpDeferAccept(int fd);
+    private static native int isTcpQuickAck(int fd);
 
     private static native void setKeepAlive(int fd, int keepAlive);
     private static native void setReceiveBufferSize(int fd, int receiveBufferSize);
@@ -364,4 +382,6 @@ public final class Socket extends FileDescriptor {
     private static native void setTcpNoDelay(int fd, int tcpNoDelay);
     private static native void setTcpCork(int fd, int tcpCork);
     private static native void setSoLinger(int fd, int soLinger);
+    private static native void setTcpDeferAccept(int fd, int deferAccept);
+    private static native void setTcpQuickAck(int fd, int quickAck);
 }
