@@ -38,7 +38,8 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND);
+        return getOptions(super.getOptions(), EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND,
+                EpollChannelOption.TCP_DEFER_ACCEPT);
     }
 
     @SuppressWarnings("unchecked")
@@ -49,6 +50,9 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
         }
         if (option == EpollChannelOption.IP_FREEBIND) {
             return (T) Boolean.valueOf(isFreeBind());
+        }
+        if (option == EpollChannelOption.TCP_DEFER_ACCEPT) {
+            return (T) Integer.valueOf(getTcpDeferAccept());
         }
         return super.getOption(option);
     }
@@ -65,6 +69,8 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
             @SuppressWarnings("unchecked")
             final Map<InetAddress, byte[]> m = (Map<InetAddress, byte[]>) value;
             setTcpMd5Sig(m);
+        } else if (option == EpollChannelOption.TCP_DEFER_ACCEPT) {
+            setTcpDeferAccept((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -194,5 +200,20 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
     public EpollServerSocketChannelConfig setFreeBind(boolean freeBind) {
         Native.setIpFreeBind(channel.fd().intValue(), freeBind ? 1: 0);
         return this;
+    }
+
+    /**
+     * Set the {@code TCP_DEFER_ACCEPT} option on the socket. See {@code man 7 tcp} for more details.
+     */
+    public EpollServerSocketChannelConfig setTcpDeferAccept(int deferAccept) {
+        channel.fd().setTcpDeferAccept(deferAccept);
+        return this;
+    }
+
+    /**
+     * Returns a positive value if <a href="http://linux.die.net/man/7/tcp">TCP_DEFER_ACCEPT</a> is enabled.
+     */
+    public int getTcpDeferAccept() {
+        return channel.fd().getTcpDeferAccept();
     }
 }

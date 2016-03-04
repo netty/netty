@@ -51,7 +51,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
                 ALLOW_HALF_CLOSURE, EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_NOTSENT_LOWAT,
                 EpollChannelOption.TCP_KEEPCNT, EpollChannelOption.TCP_KEEPIDLE, EpollChannelOption.TCP_KEEPINTVL,
-                EpollChannelOption.TCP_MD5SIG);
+                EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK);
     }
 
     @SuppressWarnings("unchecked")
@@ -99,6 +99,9 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         if (option == EpollChannelOption.TCP_USER_TIMEOUT) {
             return (T) Integer.valueOf(getTcpUserTimeout());
         }
+        if (option == EpollChannelOption.TCP_QUICKACK) {
+            return (T) Boolean.valueOf(isTcpQuickAck());
+        }
         return super.getOption(option);
     }
 
@@ -138,6 +141,8 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
             @SuppressWarnings("unchecked")
             final Map<InetAddress, byte[]> m = (Map<InetAddress, byte[]>) value;
             setTcpMd5Sig(m);
+        } else if (option == EpollChannelOption.TCP_QUICKACK) {
+            setTcpQuickAck((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -323,7 +328,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         return this;
     }
 
-    /*
+    /**
      * Set the {@code TCP_MD5SIG} option on the socket. See {@code linux/tcp.h} for more details.
      * Keys can only be set on, not read to prevent a potential leak, as they are confidential.
      * Allowing them being read would mean anyone with access to the channel could get them.
@@ -331,6 +336,23 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     public EpollSocketChannelConfig setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
         channel.setTcpMd5Sig(keys);
         return this;
+    }
+
+    /**
+     * Set the {@code TCP_QUICKACK} option on the socket. See <a href="http://linux.die.net/man/7/tcp">TCP_QUICKACK</a>
+     * for more details.
+     */
+    public EpollSocketChannelConfig setTcpQuickAck(boolean quickAck) {
+        channel.fd().setTcpQuickAck(quickAck);
+        return this;
+    }
+
+    /**
+     * Returns {@code true} if <a href="http://linux.die.net/man/7/tcp">TCP_QUICKACK</a> is enabled,
+     * {@code false} otherwise.
+     */
+    public boolean isTcpQuickAck() {
+        return channel.fd().isTcpQuickAck();
     }
 
     @Override
