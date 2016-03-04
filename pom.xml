@@ -201,6 +201,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <netty.build.version>22</netty.build.version>
     <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
     <jetty.alpnAgent.version>1.0.1.Final</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>${settings.localRepository}/kr/motd/javaagent/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
@@ -421,6 +422,12 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>netty-build</artifactId>
+        <version>${netty.build.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>org.hamcrest</groupId>
         <artifactId>hamcrest-library</artifactId>
         <version>1.3</version>
@@ -530,6 +537,11 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-build</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -714,7 +726,7 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>21</version>
+            <version>${netty.build.version}</version>
           </dependency>
         </dependencies>
       </plugin>
@@ -774,6 +786,12 @@
           </excludes>
           <runOrder>random</runOrder>
           <argLine>${argLine.common} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe}</argLine>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>io.netty.build.junit.TimedOutTestsListener</value>
+            </property>
+          </properties>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
