@@ -16,7 +16,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -695,15 +694,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     private ChannelFuture goAway(ChannelHandlerContext ctx, Http2Exception cause) {
         long errorCode = cause != null ? cause.error().code() : NO_ERROR.code();
-        ByteBuf debugData = Unpooled.EMPTY_BUFFER;
-        try {
-            debugData = Http2CodecUtil.toByteBuf(ctx, cause);
-        } catch (Throwable t) {
-            // We must continue on to prevent our internal state from becoming corrupted but we log this exception.
-            logger.warn("caught exception while translating " + cause + " to ByteBuf", t);
-        }
         int lastKnownStream = connection().remote().lastStreamCreated();
-        return goAway(ctx, lastKnownStream, errorCode, debugData, ctx.newPromise());
+        return goAway(ctx, lastKnownStream, errorCode, Http2CodecUtil.toByteBuf(ctx, cause), ctx.newPromise());
     }
 
     private void processRstStreamWriteResult(ChannelHandlerContext ctx, Http2Stream stream, ChannelFuture future) {
