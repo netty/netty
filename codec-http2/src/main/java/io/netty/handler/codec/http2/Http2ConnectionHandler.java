@@ -735,8 +735,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                     ctx.close();
                 }
             } else {
-                if (logger.isWarnEnabled()) {
-                    logger.warn("{} Sending GOAWAY failed: lastStreamId '{}', errorCode '{}', " +
+                if (logger.isDebugEnabled()) {
+                    logger.debug("{} Sending GOAWAY failed: lastStreamId '{}', errorCode '{}', " +
                                  "debugData '{}'. Forcing shutdown of the connection.",
                                  ctx.channel(), lastStreamId, errorCode, debugData.toString(UTF_8), future.cause());
                 }
