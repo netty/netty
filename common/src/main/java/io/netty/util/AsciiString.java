@@ -194,7 +194,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      */
     public AsciiString(char[] value, Charset charset, int start, int length) {
         CharBuffer cbuf = CharBuffer.wrap(value, start, length);
-        CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
+        CharsetEncoder encoder = CharsetUtil.encoder(charset);
         ByteBuffer nativeBuffer = ByteBuffer.allocate((int) (encoder.maxBytesPerChar() * length));
         encoder.encode(cbuf, nativeBuffer, true);
         final int bufferOffset = nativeBuffer.arrayOffset();
@@ -241,7 +241,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      */
     public AsciiString(CharSequence value, Charset charset, int start, int length) {
         CharBuffer cbuf = CharBuffer.wrap(value, start, start + length);
-        CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
+        CharsetEncoder encoder = CharsetUtil.encoder(charset);
         ByteBuffer nativeBuffer = ByteBuffer.allocate((int) (encoder.maxBytesPerChar() * length));
         encoder.encode(cbuf, nativeBuffer, true);
         final int offset = nativeBuffer.arrayOffset();
