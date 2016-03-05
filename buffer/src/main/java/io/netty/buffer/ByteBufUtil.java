@@ -61,7 +61,7 @@ public final class ByteBufUtil {
     private static final int MAX_CHAR_BUFFER_SIZE;
     private static final int THREAD_LOCAL_BUFFER_SIZE;
     private static final int MAX_BYTES_PER_CHAR_UTF8 =
-            (int) CharsetUtil.getEncoder(CharsetUtil.UTF_8).maxBytesPerChar();
+            (int) CharsetUtil.encoder(CharsetUtil.UTF_8).maxBytesPerChar();
 
     static final ByteBufAllocator DEFAULT_ALLOCATOR;
 
@@ -511,7 +511,7 @@ public final class ByteBufUtil {
     }
 
     static ByteBuf encodeString0(ByteBufAllocator alloc, boolean enforceHeap, CharBuffer src, Charset charset) {
-        final CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
+        final CharsetEncoder encoder = CharsetUtil.encoder(charset);
         int length = (int) ((double) src.remaining() * encoder.maxBytesPerChar());
         boolean release = true;
         final ByteBuf dst;
@@ -547,7 +547,7 @@ public final class ByteBufUtil {
         if (len == 0) {
             return StringUtil.EMPTY_STRING;
         }
-        final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
+        final CharsetDecoder decoder = CharsetUtil.decoder(charset);
         final int maxLength = (int) ((double) len * decoder.maxCharsPerByte());
         CharBuffer dst = CHAR_BUFFERS.get();
         if (dst.length() < maxLength) {
