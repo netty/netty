@@ -53,7 +53,7 @@ public final class SslContextBuilder {
      * Creates a builder for new server-side {@link SslContext}.
      *
      * @param keyCertChainInputStream an input stream for an X.509 certificate chain in PEM format
-     * @param keyFile an input stream for a PKCS#8 private key in PEM format
+     * @param keyInputStream an input stream for a PKCS#8 private key in PEM format
      * @see #keyManager(InputStream, InputStream)
      */
     public static SslContextBuilder forServer(InputStream keyCertChainInputStream, InputStream keyInputStream) {
