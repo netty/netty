@@ -166,8 +166,6 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                     ctx.write(ZERO_BUFFER.slice(0, framePaddingBytes), promiseAggregator.newPromise());
                 }
             } while (!lastFrame);
-
-            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
             if (needToReleaseHeaders) {
                 header.release();
@@ -175,8 +173,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             if (needToReleaseData) {
                 data.release();
             }
-            return promiseAggregator.setFailure(t);
+            promiseAggregator.setFailure(t);
         }
+        return promiseAggregator.doneAllocatingPromises();
     }
 
     @Override
@@ -275,14 +274,13 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             // Write the debug data.
             releaseData = false;
             ctx.write(data, promiseAggregator.newPromise());
-
-            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
             if (releaseData) {
                 data.release();
             }
-            return promiseAggregator.setFailure(t);
+            promiseAggregator.setFailure(t);
         }
+        return promiseAggregator.doneAllocatingPromises();
     }
 
     @Override
@@ -306,7 +304,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             int nonFragmentLength = INT_FIELD_LENGTH + padding + flags.getPaddingPresenceFieldLength();
             int maxFragmentLength = maxFrameSize - nonFragmentLength;
             ByteBuf fragment =
-                    headerBlock.readSlice(min(headerBlock.readableBytes(), maxFragmentLength)).retain();
+                    headerBlock.readSlice(min(headerBlock.readableBytes(), maxFragmentLength));
 
             flags.endOfHeaders(!headerBlock.isReadable());
 
@@ -320,7 +318,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             ctx.write(buf, promiseAggregator.newPromise());
 
             // Write the first fragment.
-            ctx.write(fragment, promiseAggregator.newPromise());
+            ctx.write(fragment.retain(), promiseAggregator.newPromise());
 
             if (padding > 0) { // Write out the padding, if any.
                 ctx.write(ZERO_BUFFER.slice(0, padding), promiseAggregator.newPromise());
@@ -329,15 +327,14 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             if (!flags.endOfHeaders()) {
                 writeContinuationFrames(ctx, streamId, headerBlock, padding, promiseAggregator);
             }
-
-            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
-            return promiseAggregator.setFailure(t);
+            promiseAggregator.setFailure(t);
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();
             }
         }
+        return promiseAggregator.doneAllocatingPromises();
     }
 
     @Override
@@ -359,13 +356,13 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             releaseData = false;
             ctx.write(debugData, promiseAggregator.newPromise());
-            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
             if (releaseData) {
                 debugData.release();
             }
-            return promiseAggregator.setFailure(t);
+            promiseAggregator.setFailure(t);
         }
+        return promiseAggregator.doneAllocatingPromises();
     }
 
     @Override
@@ -398,13 +395,13 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             releaseData = false;
             ctx.write(payload, promiseAggregator.newPromise());
-            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
             if (releaseData) {
                 payload.release();
             }
-            return promiseAggregator.setFailure(t);
+            promiseAggregator.setFailure(t);
         }
+        return promiseAggregator.doneAllocatingPromises();
     }
 
     private ChannelFuture writeHeadersInternal(ChannelHandlerContext ctx,
@@ -432,7 +429,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             int nonFragmentBytes = padding + flags.getNumPriorityBytes() + flags.getPaddingPresenceFieldLength();
             int maxFragmentLength = maxFrameSize - nonFragmentBytes;
             ByteBuf fragment =
-                    headerBlock.readSlice(min(headerBlock.readableBytes(), maxFragmentLength)).retain();
+                    headerBlock.readSlice(min(headerBlock.readableBytes(), maxFragmentLength));
 
             // Set the end of headers flag for the first frame.
             flags.endOfHeaders(!headerBlock.isReadable());
@@ -452,7 +449,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             ctx.write(buf, promiseAggregator.newPromise());
 
             // Write the first fragment.
-            ctx.write(fragment, promiseAggregator.newPromise());
+            ctx.write(fragment.retain(), promiseAggregator.newPromise());
 
             if (padding > 0) { // Write out the padding, if any.
                 ctx.write(ZERO_BUFFER.slice(0, padding), promiseAggregator.newPromise());
@@ -461,15 +458,14 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             if (!flags.endOfHeaders()) {
                 writeContinuationFrames(ctx, streamId, headerBlock, padding, promiseAggregator);
             }
-
-            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
-            return promiseAggregator.setFailure(t);
+            promiseAggregator.setFailure(t);
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();
             }
         }
+        return promiseAggregator.doneAllocatingPromises();
     }
 
     /**

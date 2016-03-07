@@ -105,14 +105,13 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                     encoder.writeHeaders(ctx, currentStreamId, trailers, 0, true, promiseAggregator.newPromise());
                 }
             }
-
-            promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
             promiseAggregator.setFailure(t);
         } finally {
             if (release) {
                 ReferenceCountUtil.release(msg);
             }
+            promiseAggregator.doneAllocatingPromises();
         }
     }
 }
