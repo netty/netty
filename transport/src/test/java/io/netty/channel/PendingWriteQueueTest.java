@@ -22,6 +22,9 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.Matchers.*;
@@ -195,7 +198,7 @@ public class PendingWriteQueueTest {
     }
 
     @Test
-    public void testRemoveAndFailAllReentrance() {
+    public void testRemoveAndFailAllReentrantFailAll() {
         EmbeddedChannel channel = new EmbeddedChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
@@ -211,9 +214,55 @@ public class PendingWriteQueueTest {
         ChannelPromise promise2 = channel.newPromise();
         queue.add(2L, promise2);
         queue.removeAndFailAll(new Exception());
+        assertTrue(promise.isDone());
         assertFalse(promise.isSuccess());
+        assertTrue(promise2.isDone());
         assertFalse(promise2.isSuccess());
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testRemoveAndFailAllReentrantWrite() {
+        final List<Integer> failOrder = Collections.synchronizedList(new ArrayList<Integer>());
+        EmbeddedChannel channel = new EmbeddedChannel();
+        final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
+
+        ChannelPromise promise = channel.newPromise();
+        final ChannelPromise promise3 = channel.newPromise();
+        promise3.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                failOrder.add(3);
+            }
+        });
+        promise.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                failOrder.add(1);
+                queue.add(3L, promise3);
+            }
+        });
+        queue.add(1L, promise);
+
+        ChannelPromise promise2 = channel.newPromise();
+        promise2.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                failOrder.add(2);
+            }
+        });
+        queue.add(2L, promise2);
+        queue.removeAndFailAll(new Exception());
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertTrue(promise2.isDone());
+        assertFalse(promise2.isSuccess());
+        assertTrue(promise3.isDone());
+        assertFalse(promise3.isSuccess());
+        assertFalse(channel.finish());
+        assertEquals(1, (int) failOrder.get(0));
+        assertEquals(2, (int) failOrder.get(1));
+        assertEquals(3, (int) failOrder.get(2));
     }
 
     @Test
