@@ -283,8 +283,10 @@ abstract class DnsNameResolverContext<T> {
         final String name = question.name().toLowerCase(Locale.US);
         String resolved = name;
         boolean found = false;
-        for (;;) {
-            String next = cnames.get(resolved);
+        while (!cnames.isEmpty()) { // Do not attempt to call Map.remove() when the Map is empty
+                                    // because it can be Collections.emptyMap()
+                                    // whose remove() throws a UnsupportedOperationException.
+            final String next = cnames.remove(resolved);
             if (next != null) {
                 found = true;
                 resolved = next;
