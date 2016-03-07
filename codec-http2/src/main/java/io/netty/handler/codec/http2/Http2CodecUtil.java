@@ -207,16 +207,16 @@ public final class Http2CodecUtil {
      * Provides the ability to associate the outcome of multiple {@link ChannelPromise}
      * objects into a single {@link ChannelPromise} object.
      */
-    static class SimpleChannelPromiseAggregator extends DefaultChannelPromise {
+    static final class SimpleChannelPromiseAggregator extends DefaultChannelPromise {
         private final ChannelPromise promise;
         private int expectedCount;
-        private int successfulCount;
-        private int failureCount;
+        private int doneCount;
+        private Throwable lastFailure;
         private boolean doneAllocating;
 
         SimpleChannelPromiseAggregator(ChannelPromise promise, Channel c, EventExecutor e) {
             super(c, e);
-            assert promise != null;
+            assert promise != null && !promise.isDone();
             this.promise = promise;
         }
 
@@ -226,9 +226,7 @@ public final class Http2CodecUtil {
          * {@code null} if {@link #doneAllocatingPromises()} was previously called.
          */
         public ChannelPromise newPromise() {
-            if (doneAllocating) {
-                throw new IllegalStateException("Done allocating. No more promises can be allocated.");
-            }
+            assert !doneAllocating : "Done allocating. No more promises can be allocated.";
             ++expectedCount;
             return this;
         }
@@ -241,9 +239,8 @@ public final class Http2CodecUtil {
         public ChannelPromise doneAllocatingPromises() {
             if (!doneAllocating) {
                 doneAllocating = true;
-                if (successfulCount == expectedCount) {
-                    promise.setSuccess();
-                    return super.setSuccess(null);
+                if (doneCount == expectedCount || expectedCount == 0) {
+                    return setPromise();
                 }
             }
             return this;
@@ -252,10 +249,10 @@ public final class Http2CodecUtil {
         @Override
         public boolean tryFailure(Throwable cause) {
             if (allowFailure()) {
-                ++failureCount;
-                if (failureCount == 1) {
-                    promise.tryFailure(cause);
-                    return super.tryFailure(cause);
+                ++doneCount;
+                lastFailure = cause;
+                if (allPromisesDone()) {
+                    return tryPromise();
                 }
                 // TODO: We break the interface a bit here.
                 // Multiple failure events can be processed without issue because this is an aggregation.
@@ -273,30 +270,21 @@ public final class Http2CodecUtil {
         @Override
         public ChannelPromise setFailure(Throwable cause) {
             if (allowFailure()) {
-                ++failureCount;
-                if (failureCount == 1) {
-                    promise.setFailure(cause);
-                    return super.setFailure(cause);
+                ++doneCount;
+                lastFailure = cause;
+                if (allPromisesDone()) {
+                    return setPromise();
                 }
             }
             return this;
         }
 
-        private boolean allowFailure() {
-            return awaitingPromises() || expectedCount == 0;
-        }
-
-        private boolean awaitingPromises() {
-            return successfulCount + failureCount < expectedCount;
-        }
-
         @Override
         public ChannelPromise setSuccess(Void result) {
             if (awaitingPromises()) {
-                ++successfulCount;
-                if (successfulCount == expectedCount && doneAllocating) {
-                    promise.setSuccess(result);
-                    return super.setSuccess(result);
+                ++doneCount;
+                if (allPromisesDone()) {
+                    setPromise();
                 }
             }
             return this;
@@ -305,16 +293,47 @@ public final class Http2CodecUtil {
         @Override
         public boolean trySuccess(Void result) {
             if (awaitingPromises()) {
-                ++successfulCount;
-                if (successfulCount == expectedCount && doneAllocating) {
-                    promise.trySuccess(result);
-                    return super.trySuccess(result);
+                ++doneCount;
+                if (allPromisesDone()) {
+                    return tryPromise();
                 }
                 // TODO: We break the interface a bit here.
                 // Multiple success events can be processed without issue because this is an aggregation.
                 return true;
             }
             return false;
+        }
+
+        private boolean allowFailure() {
+            return awaitingPromises() || expectedCount == 0;
+        }
+
+        private boolean awaitingPromises() {
+            return doneCount < expectedCount;
+        }
+
+        private boolean allPromisesDone() {
+            return doneCount == expectedCount && doneAllocating;
+        }
+
+        private ChannelPromise setPromise() {
+            if (lastFailure == null) {
+                promise.setSuccess();
+                return super.setSuccess(null);
+            } else {
+                promise.setFailure(lastFailure);
+                return super.setFailure(lastFailure);
+            }
+        }
+
+        private boolean tryPromise() {
+            if (lastFailure == null) {
+                promise.trySuccess();
+                return super.trySuccess(null);
+            } else {
+                promise.tryFailure(lastFailure);
+                return super.tryFailure(lastFailure);
+            }
         }
     }
 
