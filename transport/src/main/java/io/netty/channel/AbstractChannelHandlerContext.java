@@ -599,10 +599,15 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
             throw new NullPointerException("msg");
         }
 
-        if (!validatePromise(promise, true)) {
+        try {
+            if (!validatePromise(promise, true)) {
+                ReferenceCountUtil.release(msg);
+                // cancelled
+                return promise;
+            }
+        } catch (RuntimeException e) {
             ReferenceCountUtil.release(msg);
-            // cancelled
-            return promise;
+            throw e;
         }
         write(msg, false, promise);
 
