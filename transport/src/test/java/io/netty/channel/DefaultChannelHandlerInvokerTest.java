@@ -22,6 +22,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,19 +39,29 @@ public class DefaultChannelHandlerInvokerTest {
         MockitoAnnotations.initMocks(this);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void writeWithInvalidPromiseStillReleasesMessage() {
         when(promise.isDone()).thenReturn(true);
         DefaultChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(ImmediateEventExecutor.INSTANCE);
-        invoker.invokeWrite(ctx, msg, promise);
-        verify(msg).release();
+        try {
+            invoker.invokeWrite(ctx, msg, promise);
+        } catch (IllegalArgumentException e) {
+            verify(msg).release();
+            return;
+        }
+        fail();
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void writeWithNullPromiseStillReleasesMessage() {
         when(promise.isDone()).thenReturn(true);
         DefaultChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(ImmediateEventExecutor.INSTANCE);
-        invoker.invokeWrite(ctx, msg, null);
-        verify(msg).release();
+        try {
+            invoker.invokeWrite(ctx, msg, null);
+        } catch (NullPointerException e) {
+            verify(msg).release();
+            return;
+        }
+        fail();
     }
 }
