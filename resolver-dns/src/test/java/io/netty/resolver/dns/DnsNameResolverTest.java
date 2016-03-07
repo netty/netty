@@ -265,7 +265,7 @@ public class DnsNameResolverTest {
     private static final TestDnsServer dnsServer = new TestDnsServer();
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
 
-    private DnsNameResolverBuilder newResolver() {
+    private static DnsNameResolverBuilder newResolver() {
         return new DnsNameResolverBuilder(group.next())
                 .channelType(NioDatagramChannel.class)
                 .nameServerAddresses(DnsServerAddresses.singleton(dnsServer.localAddress()))
@@ -273,7 +273,7 @@ public class DnsNameResolverTest {
                 .optResourceEnabled(false);
     }
 
-    private DnsNameResolverBuilder newResolver(InternetProtocolFamily... resolvedAddressTypes) {
+    private static DnsNameResolverBuilder newResolver(InternetProtocolFamily... resolvedAddressTypes) {
         return newResolver()
                 .resolvedAddressTypes(resolvedAddressTypes);
     }
@@ -349,7 +349,7 @@ public class DnsNameResolverTest {
         }
     }
 
-    private Map<String, InetAddress> testResolve0(DnsNameResolver resolver, Set<String> excludedDomains)
+    private static Map<String, InetAddress> testResolve0(DnsNameResolver resolver, Set<String> excludedDomains)
             throws InterruptedException {
 
         assertThat(resolver.isRecursionDesired(), is(true));
@@ -482,7 +482,7 @@ public class DnsNameResolverTest {
         }
     }
 
-    private UnknownHostException resolveNonExistentDomain(DnsNameResolver resolver) {
+    private static UnknownHostException resolveNonExistentDomain(DnsNameResolver resolver) {
         try {
             resolver.resolve("non-existent.netty.io").sync();
             fail();
@@ -505,8 +505,7 @@ public class DnsNameResolverTest {
         }
     }
 
-    private void resolve(DnsNameResolver resolver, Map<String, Future<InetAddress>> futures, String hostname) {
-
+    private static void resolve(DnsNameResolver resolver, Map<String, Future<InetAddress>> futures, String hostname) {
         futures.put(hostname, resolver.resolve(hostname));
     }
 
@@ -580,7 +579,7 @@ public class DnsNameResolverTest {
                             // This is a hack to allow to also test for AAAA resolution as DnsMessageEncoder
                             // does not support it and it is hard to extend, because the interesting methods
                             // are private...
-                            // In case of RecordType.AAAA we need to encode the RecordType by ourself.
+                            // In case of RecordType.AAAA we need to encode the RecordType by ourselves.
                             if (record.getRecordType() == RecordType.AAAA) {
                                 try {
                                     recordEncoder.put(buf, record);
@@ -639,10 +638,10 @@ public class DnsNameResolverTest {
             }
 
             private static String nextIp() {
-                return ippart() + "." + ippart() + '.' + ippart() + '.' + ippart();
+                return ipPart() + "." + ipPart() + '.' + ipPart() + '.' + ipPart();
             }
 
-            private static int ippart() {
+            private static int ipPart() {
                 return NUMBERS[index(NUMBERS.length)];
             }
 
@@ -672,10 +671,10 @@ public class DnsNameResolverTest {
                         } while (ThreadLocalRandom.current().nextBoolean());
                         break;
                     case MX:
-                        int prioritity = 0;
+                        int priority = 0;
                         do {
                             rm.put(DnsAttribute.DOMAIN_NAME, nextDomain());
-                            rm.put(DnsAttribute.MX_PREFERENCE, String.valueOf(++prioritity));
+                            rm.put(DnsAttribute.MX_PREFERENCE, String.valueOf(++priority));
                         } while (ThreadLocalRandom.current().nextBoolean());
                         break;
                     default:
