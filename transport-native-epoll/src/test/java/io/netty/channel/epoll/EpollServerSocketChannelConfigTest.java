@@ -67,4 +67,12 @@ public class EpollServerSocketChannelConfigTest {
         ch.config().setReusePort(true);
         assertTrue(ch.config().isReusePort());
     }
+
+    @Test
+    public void testFreeBind() {
+        ch.config().setFreeBind(false);
+        assertFalse(ch.config().isFreeBind());
+        ch.config().setFreeBind(true);
+        assertTrue(ch.config().isFreeBind());
+    }
 }

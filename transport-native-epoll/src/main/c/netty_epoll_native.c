@@ -507,7 +507,7 @@ static jint netty_epoll_native_getTcpUserTimeout(JNIEnv* env, jclass clazz, jint
 
 static jint netty_epoll_Native_isIpFreeBind(JNIEnv* env, jclass clazz, jint fd) {
      int optval;
-     if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, IP_FREEBIND, &optval, sizeof(optval)) == -1) {
+     if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_FREEBIND, &optval, sizeof(optval)) == -1) {
          return -1;
      }
      return optval;
