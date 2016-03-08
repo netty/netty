@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * {@link Selector} and so does the multi-plexing of these in the event loop.
  *
  */
-public final class NioEventLoop extends SingleThreadEventLoop {
+public class NioEventLoop extends SingleThreadEventLoop {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
 
@@ -304,42 +304,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         for (;;) {
             boolean oldWakenUp = wakenUp.getAndSet(false);
             try {
-                if (hasTasks()) {
-                    selectNow();
-                } else {
-                    select(oldWakenUp);
-
-                    // 'wakenUp.compareAndSet(false, true)' is always evaluated
-                    // before calling 'selector.wakeup()' to reduce the wake-up
-                    // overhead. (Selector.wakeup() is an expensive operation.)
-                    //
-                    // However, there is a race condition in this approach.
-                    // The race condition is triggered when 'wakenUp' is set to
-                    // true too early.
-                    //
-                    // 'wakenUp' is set to true too early if:
-                    // 1) Selector is waken up between 'wakenUp.set(false)' and
-                    //    'selector.select(...)'. (BAD)
-                    // 2) Selector is waken up between 'selector.select(...)' and
-                    //    'if (wakenUp.get()) { ... }'. (OK)
-                    //
-                    // In the first case, 'wakenUp' is set to true and the
-                    // following 'selector.select(...)' will wake up immediately.
-                    // Until 'wakenUp' is set to false again in the next round,
-                    // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
-                    // any attempt to wake up the Selector will fail, too, causing
-                    // the following 'selector.select(...)' call to block
-                    // unnecessarily.
-                    //
-                    // To fix this problem, we wake up the selector again if wakenUp
-                    // is true immediately after selector.select(...).
-                    // It is inefficient in that it wakes up the selector for both
-                    // the first case (BAD - wake-up required) and the second case
-                    // (OK - no wake-up required).
-
-                    if (wakenUp.get()) {
-                        selector.wakeup();
-                    }
+                if (doConditionalSelect(oldWakenUp)) {
+                    continue;
                 }
 
                 cancelledKeys = 0;
@@ -375,6 +341,53 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
             }
         }
+    }
+
+    /**
+     * Helper method which can be overridden to implement custom select logic.
+     *
+     * Note:
+     *
+     * 'wakenUp.compareAndSet(false, true)' is always evaluated
+     * before calling 'selector.wakeup()' to reduce the wake-up
+     * overhead. (Selector.wakeup() is an expensive operation.)
+     *
+     * However, there is a race condition in this approach.
+     * The race condition is triggered when 'wakenUp' is set to
+     * true too early.
+     *
+     * 'wakenUp' is set to true too early if:
+     * 1) Selector is waken up between 'wakenUp.set(false)' and
+     *    'selector.select(...)'. (BAD)
+     * 2) Selector is waken up between 'selector.select(...)' and
+     *    'if (wakenUp.get()) { ... }'. (OK)
+     *
+     * In the first case, 'wakenUp' is set to true and the
+     * following 'selector.select(...)' will wake up immediately.
+     * Until 'wakenUp' is set to false again in the next round,
+     * 'wakenUp.compareAndSet(false, true)' will fail, and therefore
+     * any attempt to wake up the Selector will fail, too, causing
+     * the following 'selector.select(...)' call to block
+     * unnecessarily.
+     *
+     * To fix this problem, we wake up the selector again if wakenUp
+     * is true immediately after selector.select(...).
+     * It is inefficient in that it wakes up the selector for both
+     * the first case (BAD - wake-up required) and the second case
+     * (OK - no wake-up required).
+     */
+    protected boolean doConditionalSelect(boolean oldWakenUp) throws Exception {
+        if (hasTasks()) {
+            selectNow();
+        } else {
+            select(oldWakenUp);
+
+            if (wakenUp.get()) {
+                selector.wakeup();
+            }
+        }
+
+        return false;
     }
 
     private void processSelectedKeys() {
@@ -592,9 +605,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    void selectNow() throws IOException {
+    protected int selectNow() throws IOException {
         try {
-            selector.selectNow();
+            return selector.selectNow();
         } finally {
             // restore wakup state if needed
             if (wakenUp.get()) {
