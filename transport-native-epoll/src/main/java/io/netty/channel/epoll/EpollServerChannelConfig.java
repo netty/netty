@@ -21,13 +21,11 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.NetUtil;
 
-import java.net.InetAddress;
 import java.util.Map;
 
 import static io.netty.channel.ChannelOption.SO_BACKLOG;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
-import static io.netty.channel.epoll.EpollChannelOption.TCP_MD5SIG;;
 
 public class EpollServerChannelConfig extends EpollChannelConfig {
     protected final AbstractEpollChannel channel;
@@ -72,10 +70,6 @@ public class EpollServerChannelConfig extends EpollChannelConfig {
             setReuseAddress((Boolean) value);
         } else if (option == SO_BACKLOG) {
             setBacklog((Integer) value);
-        } else if (option == TCP_MD5SIG) {
-            @SuppressWarnings("unchecked")
-            final Map<InetAddress, byte[]> m = (Map<InetAddress, byte[]>) value;
-            ((EpollServerSocketChannel) channel).setTcpMd5Sig(m);
         } else if (option == EpollChannelOption.TCP_FASTOPEN) {
             setTcpFastopen((Integer) value);
         } else {
