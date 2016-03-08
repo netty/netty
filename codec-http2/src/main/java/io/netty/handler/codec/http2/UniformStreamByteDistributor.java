@@ -146,7 +146,8 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
         }
 
         void updateStreamableBytes(int newStreamableBytes, boolean hasFrame, int windowSize) {
-            assert hasFrame || newStreamableBytes == 0;
+            assert hasFrame || newStreamableBytes == 0 :
+                "hasFrame: " + hasFrame + " newStreamableBytes: " + newStreamableBytes;
 
             int delta = newStreamableBytes - streamableBytes;
             if (delta != 0) {

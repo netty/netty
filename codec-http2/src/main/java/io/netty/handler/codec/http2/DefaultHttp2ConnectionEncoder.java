@@ -331,22 +331,26 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
      */
     private final class FlowControlledData extends FlowControlledBase {
         private final CoalescingBufferQueue queue;
+        private int dataSize;
 
         public FlowControlledData(Http2Stream stream, ByteBuf buf, int padding, boolean endOfStream,
                                    ChannelPromise promise) {
             super(stream, padding, endOfStream, promise);
             queue = new CoalescingBufferQueue(promise.channel());
             queue.add(buf, promise);
+            dataSize = queue.readableBytes();
         }
 
         @Override
         public int size() {
-            return queue.readableBytes() + padding;
+            return dataSize + padding;
         }
 
         @Override
         public void error(ChannelHandlerContext ctx, Throwable cause) {
             queue.releaseAndFailAll(cause);
+            // Don't update dataSize because we need to ensure the size() method returns a consistent size even after
+            // error so we don't invalidate flow control when returning bytes to flow control.
             lifecycleManager.onError(ctx, cause);
             promise.tryFailure(cause);
         }
@@ -363,6 +367,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             int writeableData = min(queuedData, allowedBytes);
             ChannelPromise writePromise = ctx.newPromise().addListener(this);
             ByteBuf toWrite = queue.remove(writeableData, writePromise);
+            dataSize = queue.readableBytes();
 
             // Determine how much padding to write.
             int writeablePadding = min(allowedBytes - writeableData, padding);
@@ -381,6 +386,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 return false;
             }
             nextData.queue.copyTo(queue);
+            dataSize = queue.readableBytes();
             // Given that we're merging data into a frame it doesn't really make sense to accumulate padding.
             padding = Math.max(padding, nextData.padding);
             endOfStream = nextData.endOfStream;
