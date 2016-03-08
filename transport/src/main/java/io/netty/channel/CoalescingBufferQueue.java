@@ -37,11 +37,16 @@ import java.util.ArrayDeque;
 public final class CoalescingBufferQueue {
 
     private final Channel channel;
-    private final ArrayDeque<Object> bufAndListenerPairs = new ArrayDeque<Object>();
+    private final ArrayDeque<Object> bufAndListenerPairs;
     private int readableBytes;
 
     public CoalescingBufferQueue(Channel channel) {
+        this(channel, 4);
+    }
+
+    public CoalescingBufferQueue(Channel channel, int initSize) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
+        bufAndListenerPairs = new ArrayDeque<Object>(initSize);
     }
 
     /**
