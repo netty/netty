@@ -32,6 +32,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -496,6 +497,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                     localCharset = Charset.forName(charsetAttribute.getValue());
                 } catch (IOException e) {
                     throw new ErrorDataDecoderException(e);
+                } catch (UnsupportedCharsetException e) {
+                    throw new ErrorDataDecoderException(e);
                 }
             }
             Attribute nameAttribute = currentFieldAttributes.get(HttpPostBodyUtil.NAME);
@@ -827,6 +830,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             try {
                 localCharset = Charset.forName(charsetAttribute.getValue());
             } catch (IOException e) {
+                throw new ErrorDataDecoderException(e);
+            } catch (UnsupportedCharsetException e) {
                 throw new ErrorDataDecoderException(e);
             }
         }
