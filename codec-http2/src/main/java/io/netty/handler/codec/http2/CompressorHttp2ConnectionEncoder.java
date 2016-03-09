@@ -19,11 +19,11 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseAggregator;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.util.concurrent.PromiseCombiner;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -106,9 +106,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 return promise;
             }
 
-            ChannelPromiseAggregator aggregator = new ChannelPromiseAggregator(promise);
-            ChannelPromise bufPromise = ctx.newPromise();
-            aggregator.add(bufPromise);
+            PromiseCombiner combiner = new PromiseCombiner();
             for (;;) {
                 ByteBuf nextBuf = nextReadableBuf(channel);
                 boolean compressedEndOfStream = nextBuf == null && endOfStream;
@@ -117,16 +115,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                     compressedEndOfStream = nextBuf == null;
                 }
 
-                final ChannelPromise nextPromise;
-                if (nextBuf != null) {
-                    // We have to add the nextPromise to the aggregator before doing the current write. This is so
-                    // completing the current write before the next write is done won't complete the aggregate promise
-                    nextPromise = ctx.newPromise();
-                    aggregator.add(nextPromise);
-                } else {
-                    nextPromise = null;
-                }
-
+                ChannelPromise bufPromise = ctx.newPromise();
+                combiner.add(bufPromise);
                 super.writeData(ctx, streamId, buf, padding, compressedEndOfStream, bufPromise);
                 if (nextBuf == null) {
                     break;
@@ -134,14 +124,16 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
 
                 padding = 0; // Padding is only communicated once on the first iteration
                 buf = nextBuf;
-                bufPromise = nextPromise;
             }
-            return promise;
+            combiner.finish(promise);
+        } catch (Throwable cause) {
+            promise.tryFailure(cause);
         } finally {
             if (endOfStream) {
                 cleanup(stream, channel);
             }
         }
+        return promise;
     }
 
     @Override
