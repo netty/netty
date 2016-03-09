@@ -32,6 +32,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 
 import static io.netty.util.ReferenceCountUtil.releaseLater;
@@ -39,6 +40,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /** {@link HttpPostRequestDecoder} test case. */
 public class HttpPostRequestDecoderTest {
@@ -408,5 +410,68 @@ public class HttpPostRequestDecoderTest {
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         decoder.destroy();
+    }
+
+    @Test
+    public void testMultipartRequestWithFileInvalidCharset() throws Exception {
+        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+            "http://localhost");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        // Force to use memory-based data.
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        final String data = "asdf";
+        final String filename = "tmp;0.txt";
+        final String body =
+            "--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n" +
+                "Content-Type: image/gif; charset=ABCD\r\n" +
+                "\r\n" +
+                data + "\r\n" +
+                "--" + boundary + "--\r\n";
+
+        req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
+        // Create decoder instance to test.
+        try {
+            new HttpPostRequestDecoder(inMemoryFactory, req);
+            fail("Was expecting an ErrorDataDecoderException");
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            assertTrue(e.getCause() instanceof UnsupportedCharsetException);
+        } finally {
+            req.release();
+        }
+    }
+
+    @Test
+    public void testMultipartRequestWithFieldInvalidCharset() throws Exception {
+        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+            "http://localhost");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        // Force to use memory-based data.
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        final String aData = "some data would be here. the data should be long enough that it " +
+            "will be longer than the original buffer length of 256 bytes in " +
+            "the HttpPostRequestDecoder in order to trigger the issue. Some more " +
+            "data just to be on the safe side.";
+        final String body =
+            "--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"root\"\r\n" +
+                "Content-Type: text/plain; charset=ABCD\r\n" +
+                "\r\n" +
+                aData +
+                "\r\n" +
+                "--" + boundary + "--\r\n";
+
+        req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
+        // Create decoder instance to test.
+        try {
+            new HttpPostRequestDecoder(inMemoryFactory, req);
+            fail("Was expecting an ErrorDataDecoderException");
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            assertTrue(e.getCause() instanceof UnsupportedCharsetException);
+        } finally {
+            req.release();
+        }
     }
 }
