@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -169,17 +170,22 @@ public final class PendingWriteQueue {
         size = 0;
 
         ChannelPromise p = ctx.newPromise();
-        ChannelPromiseAggregator aggregator = new ChannelPromiseAggregator(p);
-        while (write != null) {
-            PendingWrite next = write.next;
-            Object msg = write.msg;
-            ChannelPromise promise = write.promise;
-            recycle(write, false);
-            ctx.write(msg, promise);
-            aggregator.add(promise);
-            write = next;
+        PromiseCombiner combiner = new PromiseCombiner();
+        try {
+            while (write != null) {
+                PendingWrite next = write.next;
+                Object msg = write.msg;
+                ChannelPromise promise = write.promise;
+                recycle(write, false);
+                combiner.add(promise);
+                ctx.write(msg, promise);
+                write = next;
+            }
+            assertEmpty();
+            combiner.finish(p);
+        } catch (Throwable cause) {
+            p.setFailure(cause);
         }
-        assertEmpty();
         return p;
     }
 

@@ -20,6 +20,8 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
+ * @deprecated Use {@link PromiseCombiner}
+ *
  * {@link GenericFutureListener} implementation which consolidates multiple {@link Future}s
  * into one, by listening to individual {@link Future}s and producing an aggregated result
  * (success/failure) when all {@link Future}s have completed.
@@ -27,6 +29,7 @@ import java.util.Set;
  * @param V the type of value returned by the {@link Future}
  * @param F the type of {@link Future}
  */
+@Deprecated
 public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureListener<F> {
 
     private final Promise<?> aggregatePromise;
