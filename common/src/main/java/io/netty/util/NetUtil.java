@@ -245,28 +245,31 @@ public final class NetUtil {
                 // - Linux and Mac OS X: 128
                 int somaxconn = PlatformDependent.isWindows() ? 200 : 128;
                 File file = new File("/proc/sys/net/core/somaxconn");
-                if (file.exists()) {
-                    BufferedReader in = null;
-                    try {
+                BufferedReader in = null;
+                try {
+                    // file.exists() may throw a SecurityException if a SecurityManager is used, so execute it in the
+                    // try / catch block.
+                    // See https://github.com/netty/netty/issues/4936
+                    if (file.exists()) {
                         in = new BufferedReader(new FileReader(file));
                         somaxconn = Integer.parseInt(in.readLine());
                         if (logger.isDebugEnabled()) {
                             logger.debug("{}: {}", file, somaxconn);
                         }
-                    } catch (Exception e) {
-                        logger.debug("Failed to get SOMAXCONN from: {}", file, e);
-                    } finally {
-                        if (in != null) {
-                            try {
-                                in.close();
-                            } catch (Exception e) {
-                                // Ignored.
-                            }
+                    } else {
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("{}: {} (non-existent)", file, somaxconn);
                         }
                     }
-                } else {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("{}: {} (non-existent)", file, somaxconn);
+                } catch (Exception e) {
+                    logger.debug("Failed to get SOMAXCONN from: {}", file, e);
+                } finally {
+                    if (in != null) {
+                        try {
+                            in.close();
+                        } catch (Exception e) {
+                            // Ignored.
+                        }
                     }
                 }
                 return somaxconn;
