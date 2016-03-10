@@ -502,6 +502,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     EpollDatagramChannel.this.local = fd().localAddress();
                     success = true;
 
+                    // First notify the promise before notifying the handler.
+                    channelPromise.trySuccess();
+
                     // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
                     // because what happened is what happened.
                     if (!wasActive && isActive()) {
@@ -511,12 +514,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     if (!success) {
                         doClose();
                     } else {
-                        channelPromise.setSuccess();
                         connected = true;
                     }
                 }
             } catch (Throwable cause) {
-                channelPromise.setFailure(cause);
+                channelPromise.tryFailure(cause);
             }
         }
 
