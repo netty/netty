@@ -34,18 +34,26 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * {@link FileDescriptor} for it.
  */
 public class FileDescriptor {
-    private static final AtomicIntegerFieldUpdater<FileDescriptor> openUpdater;
+    private static final AtomicIntegerFieldUpdater<FileDescriptor> stateUpdater;
     static {
         AtomicIntegerFieldUpdater<FileDescriptor> updater
-                = PlatformDependent.newAtomicIntegerFieldUpdater(FileDescriptor.class, "open");
+                = PlatformDependent.newAtomicIntegerFieldUpdater(FileDescriptor.class, "state");
         if (updater == null) {
-            updater = AtomicIntegerFieldUpdater.newUpdater(FileDescriptor.class, "open");
+            updater = AtomicIntegerFieldUpdater.newUpdater(FileDescriptor.class, "state");
         }
-        openUpdater = updater;
+        stateUpdater = updater;
     }
-
-    private final int fd;
-    private volatile int open = 1;
+    private static final int STATE_CLOSED_MASK = 1;
+    private static final int STATE_INPUT_SHUTDOWN_MASK = 1 << 1;
+    private static final int STATE_OUTPUT_SHUTDOWN_MASK = 1 << 2;
+    private static final int STATE_ALL_MASK = STATE_CLOSED_MASK |
+                                              STATE_INPUT_SHUTDOWN_MASK |
+                                              STATE_OUTPUT_SHUTDOWN_MASK;
+    /**
+     * Bit map = [Output Shutdown | Input Shutdown | Closed]
+     */
+    volatile int state;
+    final int fd;
 
     public FileDescriptor(int fd) {
         if (fd < 0) {
@@ -65,11 +73,19 @@ public class FileDescriptor {
      * Close the file descriptor.
      */
     public void close() throws IOException {
-        if (openUpdater.compareAndSet(this, 1, 0)) {
-            int res = close(fd);
-            if (res < 0) {
-                throw newIOException("close", res);
+        for (;;) {
+            int state = this.state;
+            if (isClosed(state)) {
+                return;
             }
+            // Once a close operation happens, the channel is considered shutdown.
+            if (casState(state, state | STATE_ALL_MASK)) {
+                break;
+            }
+        }
+        int res = close(fd);
+        if (res < 0) {
+            throw newIOException("close", res);
         }
     }
 
@@ -77,7 +93,7 @@ public class FileDescriptor {
      * Returns {@code true} if the file descriptor is open.
      */
     public boolean isOpen() {
-        return open == 1;
+        return !isClosed(state);
     }
 
     public final int write(ByteBuffer buf, int pos, int limit) throws IOException {
@@ -186,6 +202,36 @@ public class FileDescriptor {
             throw newIOException("newPipe", (int) res);
         }
         return new FileDescriptor[]{new FileDescriptor((int) (res >>> 32)), new FileDescriptor((int) res)};
+    }
+
+    final boolean casState(int expected, int update) {
+        return stateUpdater.compareAndSet(this, expected, update);
+    }
+
+    static boolean isClosed(int state) {
+        return (state & STATE_CLOSED_MASK) != 0;
+    }
+
+    static boolean isInputShutdown(int state) {
+        return (state & STATE_INPUT_SHUTDOWN_MASK) != 0;
+    }
+
+    static boolean isOutputShutdown(int state) {
+        return (state & STATE_OUTPUT_SHUTDOWN_MASK) != 0;
+    }
+
+    static boolean shouldAttemptShutdown(int state, boolean read, boolean write) {
+        return !isClosed(state) && (read && !isInputShutdown(state) || write && !isOutputShutdown(state));
+    }
+
+    static int calculateShutdownState(int state, boolean read, boolean write) {
+        if (read) {
+            state |= STATE_INPUT_SHUTDOWN_MASK;
+        }
+        if (write) {
+            state |= STATE_OUTPUT_SHUTDOWN_MASK;
+        }
+        return state;
     }
 
     private static native int open(String path);
