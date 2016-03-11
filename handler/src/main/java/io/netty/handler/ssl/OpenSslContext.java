@@ -19,7 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -51,7 +53,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 
-public abstract class OpenSslContext extends SslContext {
+public abstract class OpenSslContext extends SslContext implements ReferenceCounted {
     private static final byte[] BEGIN_CERT = "-----BEGIN CERTIFICATE-----\n".getBytes(CharsetUtil.US_ASCII);
     private static final byte[] END_CERT = "\n-----END CERTIFICATE-----\n".getBytes(CharsetUtil.US_ASCII);
     private static final byte[] BEGIN_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\n".getBytes(CharsetUtil.US_ASCII);
@@ -72,6 +74,28 @@ public abstract class OpenSslContext extends SslContext {
 
     // TODO: Maybe make configurable ?
     protected static final int VERIFY_DEPTH = 10;
+
+    /**
+     * [4958]: This reference counter provides an optimization that allows the
+     * user to efficiently share a context and also eagerly release its native
+     * resources once it's no longer in use instead of relaying on the Garbage
+     * Collector and object finalization.
+     */
+    private final ReferenceCounted refCnt = new AbstractReferenceCounted() {
+        @SuppressWarnings("unused")
+        private Object hint;
+
+        @Override
+        public ReferenceCounted touch(Object hint) {
+            this.hint = hint;
+            return this;
+        }
+
+        @Override
+        protected void deallocate() {
+            destroy();
+        }
+    };
 
     /** The OpenSSL SSL_CTX object */
     protected volatile long ctx;
@@ -385,6 +409,45 @@ public abstract class OpenSslContext extends SslContext {
                 aprPool = 0;
             }
         }
+    }
+
+    @Override
+    public int refCnt() {
+        return refCnt.refCnt();
+    }
+
+    @Override
+    public OpenSslContext retain() {
+        refCnt.retain();
+        return this;
+    }
+
+    @Override
+    public OpenSslContext retain(int increment) {
+        refCnt.retain(increment);
+        return this;
+    }
+
+    @Override
+    public OpenSslContext touch() {
+        refCnt.touch();
+        return this;
+    }
+
+    @Override
+    public OpenSslContext touch(Object hint) {
+        refCnt.touch(hint);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return refCnt.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return refCnt.release(decrement);
     }
 
     protected static X509Certificate[] certificates(byte[][] chain) {
