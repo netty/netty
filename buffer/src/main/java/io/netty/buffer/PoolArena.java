@@ -57,8 +57,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private final List<PoolChunkListMetric> chunkListMetrics;
 
     // Metrics for allocations and deallocations
-    private long allocationsTiny;
-    private long allocationsSmall;
+    private LongCounter allocationsTiny = PlatformDependent.newLongCounter();
+    private LongCounter allocationsSmall = PlatformDependent.newLongCounter();
     private long allocationsNormal;
     // We need to use the LongCounter here as this is not guarded via synchronized block.
     private final LongCounter allocationsHuge = PlatformDependent.newLongCounter();
@@ -195,9 +195,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
 
                     if (tiny) {
-                        ++allocationsTiny;
+                        allocationsTiny.increment();
                     } else {
-                        ++allocationsSmall;
+                        allocationsSmall.increment();
                     }
                     return;
                 }
@@ -432,17 +432,17 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numAllocations() {
-        return allocationsTiny + allocationsSmall + allocationsNormal + allocationsHuge.value();
+        return allocationsTiny.value() + allocationsSmall.value() + allocationsNormal + allocationsHuge.value();
     }
 
     @Override
     public long numTinyAllocations() {
-        return allocationsTiny;
+        return allocationsTiny.value();
     }
 
     @Override
     public long numSmallAllocations() {
-        return allocationsSmall;
+        return allocationsSmall.value();
     }
 
     @Override
