@@ -142,12 +142,13 @@ public final class JdkSslServerContext extends JdkSslContext {
 
     /**
      * Creates a new instance.
-     * @param trustCertChainFile an X.509 certificate chain file in PEM format.
-     *                      This provides the certificate chains used for mutual authentication.
+     * @param trustCertCollectionFile an X.509 certificate collection file in PEM format.
+     *                      This provides the certificate collection used for mutual authentication.
      *                      {@code null} to use the system default
      * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
      *                            that verifies the certificates sent from clients.
-     *                            {@code null} to use the default or the results of parsing {@code trustCertChainFile}.
+     *                            {@code null} to use the default or the results of parsing
+     *                            {@code trustCertCollectionFile}.
      * @param keyCertChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
      * @param keyPassword the password of the {@code keyFile}.
@@ -168,22 +169,23 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
-    public JdkSslServerContext(File trustCertChainFile, TrustManagerFactory trustManagerFactory,
+    public JdkSslServerContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
-        this(trustCertChainFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword, keyManagerFactory,
+        this(trustCertCollectionFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, toNegotiator(apn, true), sessionCacheSize, sessionTimeout);
     }
 
     /**
      * Creates a new instance.
-     * @param trustCertChainFile an X.509 certificate chain file in PEM format.
-     *                      This provides the certificate chains used for mutual authentication.
+     * @param trustCertCollectionFile an X.509 certificate collection file in PEM format.
+     *                      This provides the certificate collection used for mutual authentication.
      *                      {@code null} to use the system default
      * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
      *                            that verifies the certificates sent from clients.
-     *                            {@code null} to use the default or the results of parsing {@code trustCertChainFile}
+     *                            {@code null} to use the default or the results of parsing
+     *                            {@code trustCertCollectionFile}
      * @param keyCertChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
      * @param keyPassword the password of the {@code keyFile}.
@@ -204,13 +206,13 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
-    public JdkSslServerContext(File trustCertChainFile, TrustManagerFactory trustManagerFactory,
+    public JdkSslServerContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         super(ciphers, cipherFilter, apn, ClientAuth.NONE);
         try {
-            ctx = newSSLContext(toX509Certificates(trustCertChainFile), trustManagerFactory,
+            ctx = newSSLContext(toX509Certificates(trustCertCollectionFile), trustManagerFactory,
                                 toX509Certificates(keyCertChainFile), toPrivateKey(keyFile, keyPassword),
                                 keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout);
         } catch (Exception e) {
@@ -221,27 +223,28 @@ public final class JdkSslServerContext extends JdkSslContext {
         }
     }
 
-    JdkSslServerContext(X509Certificate[] trustCertChain, TrustManagerFactory trustManagerFactory,
+    JdkSslServerContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                         ApplicationProtocolConfig apn, long sessionCacheSize, long sessionTimeout,
                         ClientAuth clientAuth) throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apn, true), clientAuth);
-        ctx = newSSLContext(trustCertChain, trustManagerFactory, keyCertChain, key,
+        ctx = newSSLContext(trustCertCollection, trustManagerFactory, keyCertChain, key,
                             keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout);
     }
 
-    private static SSLContext newSSLContext(X509Certificate[] trustCertChain, TrustManagerFactory trustManagerFactory,
-                                     X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
-                                     KeyManagerFactory keyManagerFactory, long sessionCacheSize, long sessionTimeout)
+    private static SSLContext newSSLContext(X509Certificate[] trustCertCollection,
+                                     TrustManagerFactory trustManagerFactory, X509Certificate[] keyCertChain,
+                                     PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
+                                     long sessionCacheSize, long sessionTimeout)
             throws SSLException {
         if (key == null && keyManagerFactory == null) {
             throw new NullPointerException("key, keyManagerFactory");
         }
 
         try {
-            if (trustCertChain != null) {
-                trustManagerFactory = buildTrustManagerFactory(trustCertChain, trustManagerFactory);
+            if (trustCertCollection != null) {
+                trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory);
             }
             if (key != null) {
                 keyManagerFactory = buildKeyManagerFactory(keyCertChain, key, keyPassword, keyManagerFactory);

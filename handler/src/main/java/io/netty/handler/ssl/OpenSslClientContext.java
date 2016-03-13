@@ -136,11 +136,12 @@ public final class OpenSslClientContext extends OpenSslContext {
 
     /**
      * Creates a new instance.
-     * @param trustCertChainFile an X.509 certificate chain file in PEM format.
+     * @param trustCertCollectionFile an X.509 certificate collection file in PEM format.
      *                      {@code null} to use the system default
      * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
      *                            that verifies the certificates sent from servers.
-     *                            {@code null} to use the default or the results of parsing {@code trustCertChainFile}
+     *                            {@code null} to use the default or the results of parsing
+     *                            {@code trustCertCollectionFile}
      * @param keyCertChainFile an X.509 certificate chain file in PEM format.
      *                      This provides the public key for mutual authentication.
      *                      {@code null} to use the system default
@@ -165,19 +166,19 @@ public final class OpenSslClientContext extends OpenSslContext {
      * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
-    public OpenSslClientContext(File trustCertChainFile, TrustManagerFactory trustManagerFactory,
+    public OpenSslClientContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
                                 File keyCertChainFile, File keyFile, String keyPassword,
                                 KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                 long sessionCacheSize, long sessionTimeout)
             throws SSLException {
-        this(toX509CertificatesInternal(trustCertChainFile), trustManagerFactory,
+        this(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
     }
 
     @SuppressWarnings("deprecation")
-    OpenSslClientContext(X509Certificate[] trustCertChain, TrustManagerFactory trustManagerFactory,
+    OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                          X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                                 KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
@@ -237,8 +238,8 @@ public final class OpenSslClientContext extends OpenSslContext {
                 SSLContext.setVerify(ctx, SSL.SSL_VERIFY_NONE, VERIFY_DEPTH);
 
                 try {
-                    if (trustCertChain != null) {
-                        trustManagerFactory = buildTrustManagerFactory(trustCertChain, trustManagerFactory);
+                    if (trustCertCollection != null) {
+                        trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory);
                     } else if (trustManagerFactory == null) {
                         trustManagerFactory = TrustManagerFactory.getInstance(
                                 TrustManagerFactory.getDefaultAlgorithm());
