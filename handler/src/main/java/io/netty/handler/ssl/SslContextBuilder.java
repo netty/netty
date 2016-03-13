@@ -125,7 +125,7 @@ public final class SslContextBuilder {
 
     private final boolean forServer;
     private SslProvider provider;
-    private X509Certificate[] trustCertChain;
+    private X509Certificate[] trustCertCollection;
     private TrustManagerFactory trustManagerFactory;
     private X509Certificate[] keyCertChain;
     private PrivateKey key;
@@ -152,23 +152,24 @@ public final class SslContextBuilder {
 
     /**
      * Trusted certificates for verifying the remote endpoint's certificate. The file should
-     * contain an X.509 certificate chain in PEM format. {@code null} uses the system default.
+     * contain an X.509 certificate collection in PEM format. {@code null} uses the system default.
      */
-    public SslContextBuilder trustManager(File trustCertChainFile) {
+    public SslContextBuilder trustManager(File trustCertCollectionFile) {
         try {
-            return trustManager(SslContext.toX509Certificates(trustCertChainFile));
+            return trustManager(SslContext.toX509Certificates(trustCertCollectionFile));
         } catch (Exception e) {
-            throw new IllegalArgumentException("File does not contain valid certificates: " + trustCertChainFile, e);
+            throw new IllegalArgumentException("File does not contain valid certificates: "
+                    + trustCertCollectionFile, e);
         }
     }
 
     /**
      * Trusted certificates for verifying the remote endpoint's certificate. The input stream should
-     * contain an X.509 certificate chain in PEM format. {@code null} uses the system default.
+     * contain an X.509 certificate collection in PEM format. {@code null} uses the system default.
      */
-    public SslContextBuilder trustManager(InputStream trustCertChainInputStream) {
+    public SslContextBuilder trustManager(InputStream trustCertCollectionInputStream) {
         try {
-            return trustManager(SslContext.toX509Certificates(trustCertChainInputStream));
+            return trustManager(SslContext.toX509Certificates(trustCertCollectionInputStream));
         } catch (Exception e) {
             throw new IllegalArgumentException("Input stream does not contain valid certificates.", e);
         }
@@ -177,8 +178,8 @@ public final class SslContextBuilder {
     /**
      * Trusted certificates for verifying the remote endpoint's certificate, {@code null} uses the system default.
      */
-    public SslContextBuilder trustManager(X509Certificate... trustCertChain) {
-        this.trustCertChain = trustCertChain != null ? trustCertChain.clone() : null;
+    public SslContextBuilder trustManager(X509Certificate... trustCertCollection) {
+        this.trustCertCollection = trustCertCollection != null ? trustCertCollection.clone() : null;
         trustManagerFactory = null;
         return this;
     }
@@ -189,7 +190,7 @@ public final class SslContextBuilder {
      * you must use {@link #trustManager(File)}. {@code null} uses the system default.
      */
     public SslContextBuilder trustManager(TrustManagerFactory trustManagerFactory) {
-        trustCertChain = null;
+        trustCertCollection = null;
         this.trustManagerFactory = trustManagerFactory;
         return this;
     }
@@ -387,11 +388,11 @@ public final class SslContextBuilder {
      */
     public SslContext build() throws SSLException {
         if (forServer) {
-            return SslContext.newServerContextInternal(provider, trustCertChain,
+            return SslContext.newServerContextInternal(provider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth);
         } else {
-            return SslContext.newClientContextInternal(provider, trustCertChain,
+            return SslContext.newClientContextInternal(provider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
         }
