@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
@@ -343,36 +342,36 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
-        private final AtomicInteger index = new AtomicInteger();
-        final AtomicInteger caches = new AtomicInteger();
 
         @Override
-        protected PoolThreadCache initialValue() {
-            caches.incrementAndGet();
-            final int idx = index.getAndIncrement();
-            final PoolArena<byte[]> heapArena;
-            final PoolArena<ByteBuffer> directArena;
+        protected synchronized PoolThreadCache initialValue() {
+            final PoolArena<byte[]> heapArena = leastUsedArena(heapArenas);
+            final PoolArena<ByteBuffer> directArena = leastUsedArena(directArenas);
 
-            if (heapArenas != null) {
-                heapArena = heapArenas[Math.abs(idx % heapArenas.length)];
-            } else {
-                heapArena = null;
-            }
-
-            if (directArenas != null) {
-                directArena = directArenas[Math.abs(idx % directArenas.length)];
-            } else {
-                directArena = null;
-            }
             return new PoolThreadCache(
                     heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
                     DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
         }
 
         @Override
-        protected void onRemoval(PoolThreadCache value) {
-            value.free();
-            caches.decrementAndGet();
+        protected void onRemoval(PoolThreadCache threadCache) {
+            threadCache.free();
+        }
+
+        private <T> PoolArena<T> leastUsedArena(PoolArena<T>[] arenas) {
+            if (arenas == null || arenas.length == 0) {
+                return null;
+            }
+
+            PoolArena<T> minArena = arenas[0];
+            for (int i = 1; i < arenas.length; i++) {
+                PoolArena<T> arena = arenas[i];
+                if (arena.numThreadCaches.get() < minArena.numThreadCaches.get()) {
+                    minArena = arena;
+                }
+            }
+
+            return minArena;
         }
     }
 
@@ -408,7 +407,17 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
      * Return the number of thread local caches used by this {@link PooledByteBufAllocator}.
      */
     public int numThreadLocalCaches() {
-        return threadCache.caches.get();
+        PoolArena<?>[] arenas = heapArenas != null ? heapArenas : directArenas;
+        if (arenas == null) {
+            return 0;
+        }
+
+        int total = 0;
+        for (int i = 0; i < arenas.length; i++) {
+            total += arenas[i].numThreadCaches.get();
+        }
+
+        return total;
     }
 
     /**
