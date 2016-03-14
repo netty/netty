@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 abstract class PoolArena<T> implements PoolArenaMetric {
     static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
@@ -68,6 +69,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private long deallocationsNormal;
     // We need to use the LongCounter here as this is not guarded via synchronized block.
     private final LongCounter deallocationsHuge = PlatformDependent.newLongCounter();
+
+    // Number of thread caches backed by this arena.
+    final AtomicInteger numThreadCaches = new AtomicInteger();
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
@@ -379,6 +383,11 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         if (freeOldMemory) {
             free(oldChunk, oldHandle, oldMaxLength, buf.cache);
         }
+    }
+
+    @Override
+    public int numThreadCaches() {
+        return numThreadCaches.get();
     }
 
     @Override

@@ -16,6 +16,8 @@
 
 package io.netty.buffer;
 
+import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.SystemPropertyUtil;
 import org.junit.Test;
 
@@ -24,20 +26,140 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class PooledByteBufAllocatorTest {
 
-    private static final int[] ALLOCATION_SIZES = new int[16 * 1024];
-    static {
-        for (int i = 0; i < ALLOCATION_SIZES.length; i++) {
-            ALLOCATION_SIZES[i] = i;
+    // The ThreadDeathWatcher sleeps 1s, give it double that time.
+    @Test (timeout = 2000)
+    public void testThreadCacheDestroyedByThreadDeathWatcher() {
+        int numArenas = 11;
+        final PooledByteBufAllocator allocator =
+            new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
+
+        for (int i = 0; i < numArenas; i++) {
+            new FastThreadLocalThread(new Runnable() {
+                @Override
+                public void run() {
+                    ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
+                    for (int i = 0; i < buf.capacity(); i++) {
+                        buf.writeByte(0);
+                    }
+
+                    assertTrue(allocator.numThreadLocalCaches() > 0);
+
+                    buf.release();
+                }
+            }).start();
+        }
+
+        // Wait for the ThreadDeathWatcher to have destroyed all thread caches
+        while (allocator.numThreadLocalCaches() > 0) {
+            LockSupport.parkNanos(MILLISECONDS.toNanos(100));
         }
     }
 
     @Test
+    public void testNumThreadCachesWithNoDirectArenas() {
+        int numHeapArenas = 1;
+        final PooledByteBufAllocator allocator =
+            new PooledByteBufAllocator(numHeapArenas, 0, 8192, 1);
+
+        CountDownLatch tcache0 = createNewThreadCache(allocator);
+        assertEquals(1, allocator.numThreadLocalCaches());
+
+        CountDownLatch tcache1 = createNewThreadCache(allocator);
+        assertEquals(2, allocator.numThreadLocalCaches());
+
+        destroyThreadCache(tcache0);
+        assertEquals(1, allocator.numThreadLocalCaches());
+
+        destroyThreadCache(tcache1);
+        assertEquals(0, allocator.numThreadLocalCaches());
+    }
+
+    @Test
+    public void testThreadCacheToArenaMappings() throws InterruptedException {
+        int numArenas = 2;
+        final PooledByteBufAllocator allocator =
+            new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
+
+        CountDownLatch tcache0 = createNewThreadCache(allocator);
+        CountDownLatch tcache1 = createNewThreadCache(allocator);
+        assertEquals(2, allocator.numThreadLocalCaches());
+        assertEquals(1, allocator.heapArenas().get(0).numThreadCaches());
+        assertEquals(1, allocator.heapArenas().get(1).numThreadCaches());
+        assertEquals(1, allocator.directArenas().get(0).numThreadCaches());
+        assertEquals(1, allocator.directArenas().get(0).numThreadCaches());
+
+        destroyThreadCache(tcache1);
+        assertEquals(1, allocator.numThreadLocalCaches());
+        assertEquals(1, allocator.heapArenas().get(0).numThreadCaches());
+        assertEquals(0, allocator.heapArenas().get(1).numThreadCaches());
+        assertEquals(1, allocator.directArenas().get(0).numThreadCaches());
+        assertEquals(0, allocator.directArenas().get(1).numThreadCaches());
+
+        CountDownLatch tcache2 = createNewThreadCache(allocator);
+        assertEquals(2, allocator.numThreadLocalCaches());
+        assertEquals(1, allocator.heapArenas().get(0).numThreadCaches());
+        assertEquals(1, allocator.heapArenas().get(1).numThreadCaches());
+        assertEquals(1, allocator.directArenas().get(0).numThreadCaches());
+        assertEquals(1, allocator.directArenas().get(1).numThreadCaches());
+
+        destroyThreadCache(tcache0);
+        assertEquals(1, allocator.numThreadLocalCaches());
+
+        destroyThreadCache(tcache2);
+        assertEquals(0, allocator.numThreadLocalCaches());
+        assertEquals(0, allocator.heapArenas().get(0).numThreadCaches());
+        assertEquals(0, allocator.heapArenas().get(1).numThreadCaches());
+        assertEquals(0, allocator.directArenas().get(0).numThreadCaches());
+        assertEquals(0, allocator.directArenas().get(1).numThreadCaches());
+    }
+
+    private static void destroyThreadCache(CountDownLatch tcache) {
+        tcache.countDown();
+        LockSupport.parkNanos(MILLISECONDS.toNanos(100));
+    }
+
+    private static CountDownLatch createNewThreadCache(final PooledByteBufAllocator allocator) {
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        Thread t = new FastThreadLocalThread(new Runnable() {
+
+            @Override
+            public void run() {
+                ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
+                for (int i = 0; i < buf.capacity(); i++) {
+                    buf.writeByte(0);
+                }
+
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    throw new IllegalStateException(e);
+                }
+
+                buf.release();
+
+                FastThreadLocal.removeAll();
+            }
+        });
+        t.start();
+
+        // Wait a bit for the thread & thread cache to be created.
+        LockSupport.parkNanos(MILLISECONDS.toNanos(100));
+
+        return latch;
+    }
+
+    @Test
     public void testConcurrentUsage() throws Throwable {
-        long runningTime = TimeUnit.MILLISECONDS.toNanos(SystemPropertyUtil.getLong(
+        long runningTime = MILLISECONDS.toNanos(SystemPropertyUtil.getLong(
                 "io.netty.buffer.PooledByteBufAllocatorTest.testConcurrentUsageTime", 15000));
 
         // We use no caches and only one arena to maximize the chance of hitting the race-condition we
@@ -76,6 +198,14 @@ public class PooledByteBufAllocatorTest {
     }
 
     private static final class AllocationThread extends Thread {
+
+        private static final int[] ALLOCATION_SIZES = new int[16 * 1024];
+        static {
+            for (int i = 0; i < ALLOCATION_SIZES.length; i++) {
+                ALLOCATION_SIZES[i] = i;
+            }
+        }
+
         private final CountDownLatch latch = new CountDownLatch(1);
         private final Queue<ByteBuf> buffers = new ArrayDeque<ByteBuf>(10);
         private final ByteBufAllocator allocator;
