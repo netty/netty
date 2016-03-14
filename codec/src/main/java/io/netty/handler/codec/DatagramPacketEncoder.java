@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
 import io.netty.util.ReferenceCountUtil;
@@ -27,6 +28,7 @@ import io.netty.util.internal.StringUtil;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.List;
 
 /**
@@ -94,5 +96,57 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
                 buffers.recycle();
             }
         }
+    }
+
+    @Override
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        encoder.bind(ctx, localAddress, promise);
+    }
+
+    @Override
+    public void connect(
+            ChannelHandlerContext ctx, SocketAddress remoteAddress,
+            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        encoder.connect(ctx, remoteAddress, localAddress, promise);
+    }
+
+    @Override
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        encoder.disconnect(ctx, promise);
+    }
+
+    @Override
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        encoder.close(ctx, promise);
+    }
+
+    @Override
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        encoder.deregister(ctx, promise);
+    }
+
+    @Override
+    public void read(ChannelHandlerContext ctx) throws Exception {
+        encoder.read(ctx);
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx) throws Exception {
+        encoder.flush(ctx);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        encoder.handlerAdded(ctx);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        encoder.handlerRemoved(ctx);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        encoder.exceptionCaught(ctx, cause);
     }
 }
