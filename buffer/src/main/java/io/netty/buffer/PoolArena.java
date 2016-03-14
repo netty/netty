@@ -58,15 +58,16 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private final List<PoolChunkListMetric> chunkListMetrics;
 
     // Metrics for allocations and deallocations
-    private LongCounter allocationsTiny = PlatformDependent.newLongCounter();
-    private LongCounter allocationsSmall = PlatformDependent.newLongCounter();
     private long allocationsNormal;
     // We need to use the LongCounter here as this is not guarded via synchronized block.
+    private final LongCounter allocationsTiny = PlatformDependent.newLongCounter();
+    private final LongCounter allocationsSmall = PlatformDependent.newLongCounter();
     private final LongCounter allocationsHuge = PlatformDependent.newLongCounter();
 
     private long deallocationsTiny;
     private long deallocationsSmall;
     private long deallocationsNormal;
+
     // We need to use the LongCounter here as this is not guarded via synchronized block.
     private final LongCounter deallocationsHuge = PlatformDependent.newLongCounter();
 
