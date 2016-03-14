@@ -147,11 +147,11 @@ public class HttpObjectAggregator
 
         HttpUtil.setTransferEncodingChunked(start, false);
 
-        AggregatedFullHttpMessage ret;
+        AggregatedHttpMessage ret;
         if (start instanceof HttpRequest) {
-            ret = new AggregatedFullHttpRequest((HttpRequest) start, content, null);
+            ret = newAggregatedHttpRequest((HttpRequest) start, content, null);
         } else if (start instanceof HttpResponse) {
-            ret = new AggregatedFullHttpResponse((HttpResponse) start, content, null);
+            ret = newAggregatedHttpResponse((HttpResponse) start, content, null);
         } else {
             throw new Error();
         }
@@ -162,7 +162,7 @@ public class HttpObjectAggregator
     protected void aggregate(FullHttpMessage aggregated, HttpContent content) throws Exception {
         if (content instanceof LastHttpContent) {
             // Merge trailing headers into the message.
-            ((AggregatedFullHttpMessage) aggregated).setTrailingHeaders(((LastHttpContent) content).trailingHeaders());
+            ((AggregatedHttpMessage) aggregated).setTrailingHeaders(((LastHttpContent) content).trailingHeaders());
         }
     }
 
@@ -217,12 +217,32 @@ public class HttpObjectAggregator
         }
     }
 
-    private abstract static class AggregatedFullHttpMessage implements ByteBufHolder, FullHttpMessage {
+    protected AggregatedHttpRequest newAggregatedHttpRequest(HttpRequest request,
+                                                             ByteBuf content, HttpHeaders trailingHeaders) {
+        return new DefaultAggregatedHttpRequest(request, content, trailingHeaders);
+    }
+
+    protected AggregatedHttpResponse newAggregatedHttpResponse(HttpResponse response,
+                                                               ByteBuf content, HttpHeaders trailingHeaders) {
+        return new DefaultAggregatedHttpResponse(response, content, trailingHeaders);
+    }
+
+    public interface AggregatedHttpMessage extends FullHttpMessage {
+        void setTrailingHeaders(HttpHeaders trailingHeaders);
+    }
+
+    public interface AggregatedHttpRequest extends AggregatedHttpMessage, FullHttpRequest {
+    }
+
+    public interface AggregatedHttpResponse extends AggregatedHttpMessage, FullHttpResponse {
+    }
+
+    private abstract static class AbstractAggregatedHttpMessage implements ByteBufHolder, AggregatedHttpMessage {
         protected final HttpMessage message;
         private final ByteBuf content;
         private HttpHeaders trailingHeaders;
 
-        AggregatedFullHttpMessage(HttpMessage message, ByteBuf content, HttpHeaders trailingHeaders) {
+        AbstractAggregatedHttpMessage(HttpMessage message, ByteBuf content, HttpHeaders trailingHeaders) {
             this.message = message;
             this.content = content;
             this.trailingHeaders = trailingHeaders;
@@ -238,7 +258,8 @@ public class HttpObjectAggregator
             }
         }
 
-        void setTrailingHeaders(HttpHeaders trailingHeaders) {
+        @Override
+        public void setTrailingHeaders(HttpHeaders trailingHeaders) {
             this.trailingHeaders = trailingHeaders;
         }
 
@@ -329,9 +350,10 @@ public class HttpObjectAggregator
         public abstract FullHttpMessage duplicate();
     }
 
-    private static final class AggregatedFullHttpRequest extends AggregatedFullHttpMessage implements FullHttpRequest {
+    private static final class DefaultAggregatedHttpRequest extends AbstractAggregatedHttpMessage
+            implements AggregatedHttpRequest {
 
-        AggregatedFullHttpRequest(HttpRequest request, ByteBuf content, HttpHeaders trailingHeaders) {
+        DefaultAggregatedHttpRequest(HttpRequest request, ByteBuf content, HttpHeaders trailingHeaders) {
             super(request, content, trailingHeaders);
         }
 
@@ -447,10 +469,10 @@ public class HttpObjectAggregator
         }
     }
 
-    private static final class AggregatedFullHttpResponse extends AggregatedFullHttpMessage
-            implements FullHttpResponse {
+    private static final class DefaultAggregatedHttpResponse extends AbstractAggregatedHttpMessage
+            implements AggregatedHttpResponse {
 
-        AggregatedFullHttpResponse(HttpResponse message, ByteBuf content, HttpHeaders trailingHeaders) {
+        DefaultAggregatedHttpResponse(HttpResponse message, ByteBuf content, HttpHeaders trailingHeaders) {
             super(message, content, trailingHeaders);
         }
 

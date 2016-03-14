@@ -233,7 +233,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 // fast-path
                 // No content is expected.
                 out.add(message);
-                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                out.add(newEmptyLastHttpContent());
                 resetNow();
                 return;
             case READ_CHUNK_SIZE:
@@ -253,7 +253,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 long contentLength = contentLength();
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                     out.add(message);
-                    out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                    out.add(newEmptyLastHttpContent());
                     resetNow();
                     return;
                 }
@@ -280,7 +280,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             int toRead = Math.min(buffer.readableBytes(), maxChunkSize);
             if (toRead > 0) {
                 ByteBuf content = buffer.readSlice(toRead).retain();
-                out.add(new DefaultHttpContent(content));
+                out.add(newHttpContent(content));
             }
             return;
         }
@@ -309,7 +309,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 out.add(new DefaultLastHttpContent(content, validateHeaders));
                 resetNow();
             } else {
-                out.add(new DefaultHttpContent(content));
+                out.add(newHttpContent(content));
             }
             return;
         }
@@ -341,7 +341,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (toRead == 0) {
                 return;
             }
-            HttpContent chunk = new DefaultHttpContent(buffer.readSlice(toRead).retain());
+            HttpContent chunk = newHttpContent(buffer.readSlice(toRead).retain());
             chunkSize -= toRead;
 
             out.add(chunk);
@@ -405,7 +405,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             boolean chunked = HttpUtil.isTransferEncodingChunked(message);
             if (currentState == State.READ_VARIABLE_LENGTH_CONTENT && !in.isReadable() && !chunked) {
                 // End of connection.
-                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                out.add(newEmptyLastHttpContent());
                 reset();
                 return;
             }
@@ -423,7 +423,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             resetNow();
 
             if (!prematureClosure) {
-                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                out.add(newEmptyLastHttpContent());
             }
         }
     }
@@ -522,7 +522,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         // when we produced an invalid message without consuming anything.
         in.skipBytes(in.readableBytes());
 
-        HttpContent chunk = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
+        HttpContent chunk = newLastHttpContent(Unpooled.EMPTY_BUFFER);
         chunk.setDecoderResult(DecoderResult.failure(cause));
         message = null;
         trailer = null;
@@ -615,7 +615,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         if (line.length() > 0) {
             LastHttpContent trailer = this.trailer;
             if (trailer == null) {
-                trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
+                trailer = this.trailer = newLastHttpContent(Unpooled.EMPTY_BUFFER);
             }
             do {
                 char firstChar = line.charAt(0);
@@ -656,12 +656,24 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             return trailer;
         }
 
-        return LastHttpContent.EMPTY_LAST_CONTENT;
+        return newEmptyLastHttpContent();
     }
 
     protected abstract boolean isDecodingRequest();
     protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
     protected abstract HttpMessage createInvalidMessage();
+
+    protected HttpContent newHttpContent(ByteBuf content) {
+        return new DefaultHttpContent(content);
+    }
+
+    protected LastHttpContent newLastHttpContent(ByteBuf content) {
+        return new DefaultLastHttpContent(content, validateHeaders);
+    }
+
+    protected LastHttpContent newEmptyLastHttpContent() {
+        return LastHttpContent.EMPTY_LAST_CONTENT;
+    }
 
     private static int getChunkSize(String hex) {
         hex = hex.trim();
