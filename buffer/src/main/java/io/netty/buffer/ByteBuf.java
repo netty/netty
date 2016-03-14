@@ -842,7 +842,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 3} is greater than {@code this.capacity}
      */
-    public abstract ByteBuf setMedium(int index, int   value);
+    public abstract ByteBuf setMedium(int index, int value);
 
     /**
      * Sets the specified 32-bit integer at the specified absolute
@@ -854,7 +854,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 4} is greater than {@code this.capacity}
      */
-    public abstract ByteBuf setInt(int index, int   value);
+    public abstract ByteBuf setInt(int index, int value);
 
     /**
      * Sets the specified 64-bit long integer at the specified absolute
@@ -866,7 +866,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 8} is greater than {@code this.capacity}
      */
-    public abstract ByteBuf setLong(int index, long  value);
+    public abstract ByteBuf setLong(int index, long value);
 
     /**
      * Sets the specified 2-byte UTF-16 character at the specified absolute
@@ -1364,7 +1364,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 3}
      */
-    public abstract ByteBuf writeMedium(int   value);
+    public abstract ByteBuf writeMedium(int value);
 
     /**
      * Sets the specified 32-bit integer at the current {@code writerIndex}
@@ -1373,7 +1373,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 4}
      */
-    public abstract ByteBuf writeInt(int   value);
+    public abstract ByteBuf writeInt(int value);
 
     /**
      * Sets the specified 64-bit long integer at the current
@@ -1383,7 +1383,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 8}
      */
-    public abstract ByteBuf writeLong(long  value);
+    public abstract ByteBuf writeLong(long value);
 
     /**
      * Sets the specified 2-byte UTF-16 character at the current
