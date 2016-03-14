@@ -442,7 +442,11 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numAllocations() {
-        return allocationsTiny.value() + allocationsSmall.value() + allocationsNormal + allocationsHuge.value();
+        final long allocsNormal;
+        synchronized (this) {
+            allocsNormal = allocationsNormal;
+        }
+        return allocationsTiny.value() + allocationsSmall.value() + allocsNormal + allocationsHuge.value();
     }
 
     @Override
@@ -456,27 +460,31 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     @Override
-    public long numNormalAllocations() {
+    public synchronized long numNormalAllocations() {
         return allocationsNormal;
     }
 
     @Override
     public long numDeallocations() {
-        return deallocationsTiny + deallocationsSmall + allocationsNormal + deallocationsHuge.value();
+        final long deallocs;
+        synchronized (this) {
+            deallocs = deallocationsTiny + deallocationsSmall + allocationsNormal;
+        }
+        return deallocs + deallocationsHuge.value();
     }
 
     @Override
-    public long numTinyDeallocations() {
+    public synchronized long numTinyDeallocations() {
         return deallocationsTiny;
     }
 
     @Override
-    public long numSmallDeallocations() {
+    public synchronized long numSmallDeallocations() {
         return deallocationsSmall;
     }
 
     @Override
-    public long numNormalDeallocations() {
+    public synchronized long numNormalDeallocations() {
         return deallocationsNormal;
     }
 
@@ -491,8 +499,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     @Override
-    public long numActiveAllocations() {
-        long val = numAllocations() - numDeallocations();
+    public  long numActiveAllocations() {
+        long val;
+        synchronized (this) {
+            val = allocationsNormal - deallocationsTiny - deallocationsSmall - allocationsNormal;
+        }
+        val -= deallocationsHuge.value();
         return val >= 0 ? val : 0;
     }
 
@@ -510,7 +522,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numActiveNormalAllocations() {
-        long val = numNormalAllocations() - numNormalDeallocations();
+        final long val;
+        synchronized (this) {
+            val = allocationsNormal - deallocationsNormal;
+        }
         return val >= 0 ? val : 0;
     }
 
