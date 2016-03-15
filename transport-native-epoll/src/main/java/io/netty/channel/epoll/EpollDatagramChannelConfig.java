@@ -16,12 +16,14 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannelConfig;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Map;
@@ -191,57 +193,97 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public int getSendBufferSize() {
-        return datagramChannel.fd().getSendBufferSize();
+        try {
+            return datagramChannel.fd().getSendBufferSize();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public EpollDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
-        datagramChannel.fd().setSendBufferSize(sendBufferSize);
-        return this;
+        try {
+            datagramChannel.fd().setSendBufferSize(sendBufferSize);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public int getReceiveBufferSize() {
-        return datagramChannel.fd().getReceiveBufferSize();
+        try {
+            return datagramChannel.fd().getReceiveBufferSize();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public EpollDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
-        datagramChannel.fd().setReceiveBufferSize(receiveBufferSize);
-        return this;
+        try {
+            datagramChannel.fd().setReceiveBufferSize(receiveBufferSize);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public int getTrafficClass() {
-        return Native.getTrafficClass(datagramChannel.fd().intValue());
+        try {
+            return Native.getTrafficClass(datagramChannel.fd().intValue());
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public EpollDatagramChannelConfig setTrafficClass(int trafficClass) {
-        Native.setTrafficClass(datagramChannel.fd().intValue(), trafficClass);
-        return this;
+        try {
+            Native.setTrafficClass(datagramChannel.fd().intValue(), trafficClass);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public boolean isReuseAddress() {
-        return Native.isReuseAddress(datagramChannel.fd().intValue()) == 1;
+        try {
+            return Native.isReuseAddress(datagramChannel.fd().intValue()) == 1;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public EpollDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
-        Native.setReuseAddress(datagramChannel.fd().intValue(), reuseAddress ? 1 : 0);
-        return this;
+        try {
+            Native.setReuseAddress(datagramChannel.fd().intValue(), reuseAddress ? 1 : 0);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public boolean isBroadcast() {
-        return Native.isBroadcast(datagramChannel.fd().intValue()) == 1;
+        try {
+            return Native.isBroadcast(datagramChannel.fd().intValue()) == 1;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public EpollDatagramChannelConfig setBroadcast(boolean broadcast) {
-        Native.setBroadcast(datagramChannel.fd().intValue(), broadcast ? 1 : 0);
-        return this;
+        try {
+            Native.setBroadcast(datagramChannel.fd().intValue(), broadcast ? 1 : 0);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
@@ -294,7 +336,11 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
     public boolean isReusePort() {
-        return Native.isReusePort(datagramChannel.fd().intValue()) == 1;
+        try {
+            return Native.isReusePort(datagramChannel.fd().intValue()) == 1;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     /**
@@ -305,7 +351,11 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * any affect.
      */
     public EpollDatagramChannelConfig setReusePort(boolean reusePort) {
-        Native.setReusePort(datagramChannel.fd().intValue(), reusePort ? 1 : 0);
-        return this;
+        try {
+            Native.setReusePort(datagramChannel.fd().intValue(), reusePort ? 1 : 0);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 }
