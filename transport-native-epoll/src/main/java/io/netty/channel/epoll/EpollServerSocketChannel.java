@@ -21,6 +21,7 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -125,7 +126,7 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
         return tcpMd5SigAddresses;
     }
 
-    void setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
+    void setTcpMd5Sig(Map<InetAddress, byte[]> keys) throws IOException {
         this.tcpMd5SigAddresses = TcpMd5Util.newTcpMd5Sigs(this, tcpMd5SigAddresses, keys);
     }
 }

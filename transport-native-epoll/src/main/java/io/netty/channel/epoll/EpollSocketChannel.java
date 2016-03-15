@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.FileDescriptor;
@@ -23,6 +24,7 @@ import io.netty.channel.unix.Socket;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.PlatformDependent;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -103,8 +105,12 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
      * See <a href="http://linux.die.net/man/7/tcp">man 7 tcp</a>.
      */
     public EpollTcpInfo tcpInfo(EpollTcpInfo info) {
-        Native.tcpInfo(fd().intValue(), info);
-        return info;
+        try {
+            Native.tcpInfo(fd().intValue(), info);
+            return info;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
@@ -223,7 +229,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         }
     }
 
-    void setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
+    void setTcpMd5Sig(Map<InetAddress, byte[]> keys) throws IOException {
         this.tcpMd5SigAddresses = TcpMd5Util.newTcpMd5Sigs(this, tcpMd5SigAddresses, keys);
     }
 }

@@ -16,11 +16,13 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
 
@@ -162,15 +164,23 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      * Allowing them being read would mean anyone with access to the channel could get them.
      */
     public EpollServerSocketChannelConfig setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
-        ((EpollServerSocketChannel) channel).setTcpMd5Sig(keys);
-        return this;
+        try {
+            ((EpollServerSocketChannel) channel).setTcpMd5Sig(keys);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
     public boolean isReusePort() {
-        return Native.isReusePort(channel.fd().intValue()) == 1;
+        try {
+            return Native.isReusePort(channel.fd().intValue()) == 1;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     /**
@@ -181,8 +191,12 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      * any affect.
      */
     public EpollServerSocketChannelConfig setReusePort(boolean reusePort) {
-        Native.setReusePort(channel.fd().intValue(), reusePort ? 1 : 0);
-        return this;
+        try {
+            Native.setReusePort(channel.fd().intValue(), reusePort ? 1 : 0);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     /**
@@ -190,7 +204,11 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      * {@code false} otherwise.
      */
     public boolean isFreeBind() {
-        return Native.isIpFreeBind(channel.fd().intValue()) != 0;
+        try {
+            return Native.isIpFreeBind(channel.fd().intValue()) != 0;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     /**
@@ -198,22 +216,34 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      * {@code false} for disable it. Default is disabled.
      */
     public EpollServerSocketChannelConfig setFreeBind(boolean freeBind) {
-        Native.setIpFreeBind(channel.fd().intValue(), freeBind ? 1: 0);
-        return this;
+        try {
+            Native.setIpFreeBind(channel.fd().intValue(), freeBind ? 1 : 0);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     /**
      * Set the {@code TCP_DEFER_ACCEPT} option on the socket. See {@code man 7 tcp} for more details.
      */
     public EpollServerSocketChannelConfig setTcpDeferAccept(int deferAccept) {
-        channel.fd().setTcpDeferAccept(deferAccept);
-        return this;
+        try {
+            channel.fd().setTcpDeferAccept(deferAccept);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     /**
      * Returns a positive value if <a href="http://linux.die.net/man/7/tcp">TCP_DEFER_ACCEPT</a> is enabled.
      */
     public int getTcpDeferAccept() {
-        return channel.fd().getTcpDeferAccept();
+        try {
+            return channel.fd().getTcpDeferAccept();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 }
