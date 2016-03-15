@@ -239,35 +239,35 @@ public final class Socket extends FileDescriptor {
         return address(addr, 0, addr.length);
     }
 
-    public int getReceiveBufferSize() {
+    public int getReceiveBufferSize() throws IOException {
         return getReceiveBufferSize(intValue());
     }
 
-    public int getSendBufferSize() {
+    public int getSendBufferSize() throws IOException {
         return getSendBufferSize(intValue());
     }
 
-    public boolean isKeepAlive() {
+    public boolean isKeepAlive() throws IOException {
         return isKeepAlive(intValue()) != 0;
     }
 
-    public boolean isTcpNoDelay() {
+    public boolean isTcpNoDelay() throws IOException {
         return isTcpNoDelay(intValue()) != 0;
     }
 
-    public boolean isTcpCork() {
+    public boolean isTcpCork() throws IOException  {
         return isTcpCork(intValue()) != 0;
     }
 
-    public int getSoLinger() {
+    public int getSoLinger() throws IOException {
         return getSoLinger(intValue());
     }
 
-    public int getTcpDeferAccept() {
+    public int getTcpDeferAccept() throws IOException {
         return getTcpDeferAccept(intValue());
     }
 
-    public boolean isTcpQuickAck() {
+    public boolean isTcpQuickAck() throws IOException {
         return isTcpQuickAck(intValue()) != 0;
     }
 
@@ -275,35 +275,35 @@ public final class Socket extends FileDescriptor {
         return getSoError(intValue());
     }
 
-    public void setKeepAlive(boolean keepAlive) {
+    public void setKeepAlive(boolean keepAlive) throws IOException {
         setKeepAlive(intValue(), keepAlive ? 1 : 0);
     }
 
-    public void setReceiveBufferSize(int receiveBufferSize) {
+    public void setReceiveBufferSize(int receiveBufferSize) throws IOException  {
         setReceiveBufferSize(intValue(), receiveBufferSize);
     }
 
-    public void setSendBufferSize(int sendBufferSize) {
+    public void setSendBufferSize(int sendBufferSize) throws IOException {
         setSendBufferSize(intValue(), sendBufferSize);
     }
 
-    public void setTcpNoDelay(boolean tcpNoDelay) {
+    public void setTcpNoDelay(boolean tcpNoDelay) throws IOException  {
         setTcpNoDelay(intValue(), tcpNoDelay ? 1 : 0);
     }
 
-    public void setTcpCork(boolean tcpCork) {
+    public void setTcpCork(boolean tcpCork) throws IOException {
         setTcpCork(intValue(), tcpCork ? 1 : 0);
     }
 
-    public void setSoLinger(int soLinger) {
+    public void setSoLinger(int soLinger) throws IOException {
         setSoLinger(intValue(), soLinger);
     }
 
-    public void setTcpDeferAccept(int deferAccept) {
+    public void setTcpDeferAccept(int deferAccept) throws IOException {
         setTcpDeferAccept(intValue(), deferAccept);
     }
 
-    public void setTcpQuickAck(boolean quickAck) {
+    public void setTcpQuickAck(boolean quickAck) throws IOException {
         setTcpQuickAck(intValue(), quickAck ? 1 : 0);
     }
 
