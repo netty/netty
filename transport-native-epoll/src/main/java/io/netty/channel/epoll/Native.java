@@ -208,40 +208,40 @@ public final class Native {
     private static native int sendFd0(int socketFd, int fd);
 
     // Socket option operations
-    public static native int isReuseAddress(int fd);
-    public static native int isReusePort(int fd);
-    public static native int getTcpNotSentLowAt(int fd);
-    public static native int getTrafficClass(int fd);
-    public static native int isBroadcast(int fd);
-    public static native int getTcpKeepIdle(int fd);
-    public static native int getTcpKeepIntvl(int fd);
-    public static native int getTcpKeepCnt(int fd);
-    public static native int getTcpUserTimeout(int milliseconds);
-    public static native int isIpFreeBind(int fd);
+    public static native int isReuseAddress(int fd) throws IOException;
+    public static native int isReusePort(int fd) throws IOException;
+    public static native int getTcpNotSentLowAt(int fd) throws IOException;
+    public static native int getTrafficClass(int fd) throws IOException;
+    public static native int isBroadcast(int fd) throws IOException;
+    public static native int getTcpKeepIdle(int fd) throws IOException;
+    public static native int getTcpKeepIntvl(int fd) throws IOException;
+    public static native int getTcpKeepCnt(int fd) throws IOException;
+    public static native int getTcpUserTimeout(int milliseconds) throws IOException;
+    public static native int isIpFreeBind(int fd)throws IOException;
 
-    public static native void setReuseAddress(int fd, int reuseAddress);
-    public static native void setReusePort(int fd, int reuseAddress);
-    public static native void setTcpFastopen(int fd, int tcpFastopenBacklog);
-    public static native void setTcpNotSentLowAt(int fd, int tcpNotSentLowAt);
-    public static native void setTrafficClass(int fd, int tcpNoDelay);
-    public static native void setBroadcast(int fd, int broadcast);
-    public static native void setTcpKeepIdle(int fd, int seconds);
-    public static native void setTcpKeepIntvl(int fd, int seconds);
-    public static native void setTcpKeepCnt(int fd, int probes);
-    public static native void setTcpUserTimeout(int fd, int milliseconds);
-    public static native void setIpFreeBind(int fd, int freeBind);
-    public static void tcpInfo(int fd, EpollTcpInfo info) {
+    public static native void setReuseAddress(int fd, int reuseAddress) throws IOException;
+    public static native void setReusePort(int fd, int reuseAddress) throws IOException;
+    public static native void setTcpFastopen(int fd, int tcpFastopenBacklog) throws IOException;
+    public static native void setTcpNotSentLowAt(int fd, int tcpNotSentLowAt) throws IOException;
+    public static native void setTrafficClass(int fd, int tcpNoDelay) throws IOException;
+    public static native void setBroadcast(int fd, int broadcast) throws IOException;
+    public static native void setTcpKeepIdle(int fd, int seconds) throws IOException;
+    public static native void setTcpKeepIntvl(int fd, int seconds) throws IOException;
+    public static native void setTcpKeepCnt(int fd, int probes) throws IOException;
+    public static native void setTcpUserTimeout(int fd, int milliseconds)throws IOException;
+    public static native void setIpFreeBind(int fd, int freeBind) throws IOException;
+    public static void tcpInfo(int fd, EpollTcpInfo info) throws IOException {
         tcpInfo0(fd, info.info);
     }
 
-    private static native void tcpInfo0(int fd, int[] array);
+    private static native void tcpInfo0(int fd, int[] array) throws IOException;
 
-    public static void setTcpMd5Sig(int fd, InetAddress address, byte[] key) {
+    public static void setTcpMd5Sig(int fd, InetAddress address, byte[] key) throws IOException {
         final NativeInetAddress a = NativeInetAddress.newInstance(address);
         setTcpMd5Sig0(fd, a.address(), a.scopeId(), key);
     }
 
-    private static native void setTcpMd5Sig0(int fd, byte[] address, int scopeId, byte[] key);
+    private static native void setTcpMd5Sig0(int fd, byte[] address, int scopeId, byte[] key) throws IOException;
 
     // epoll_event related
     public static native int sizeofEpollEvent();

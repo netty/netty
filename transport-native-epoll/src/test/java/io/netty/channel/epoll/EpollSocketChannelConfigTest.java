@@ -18,10 +18,12 @@ package io.netty.channel.epoll;
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 
 import java.net.InetSocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.util.Random;
 
 import org.junit.AfterClass;
@@ -121,5 +123,27 @@ public class EpollSocketChannelConfigTest {
         assertFalse(ch.config().isTcpQuickAck());
         ch.config().setTcpQuickAck(true);
         assertTrue(ch.config().isTcpQuickAck());
+    }
+
+    @Test
+    public void testSetOptionWhenClosed() {
+        ch.close().syncUninterruptibly();
+        try {
+            ch.config().setSoLinger(0);
+            fail();
+        } catch (ChannelException e) {
+            assertTrue(e.getCause() instanceof ClosedChannelException);
+        }
+    }
+
+    @Test
+    public void testGetOptionWhenClosed() {
+        ch.close().syncUninterruptibly();
+        try {
+        ch.config().getSoLinger();
+            fail();
+        } catch (ChannelException e) {
+            assertTrue(e.getCause() instanceof ClosedChannelException);
+        }
     }
 }

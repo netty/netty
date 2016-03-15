@@ -296,7 +296,12 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
 int netty_unix_socket_getOption(JNIEnv* env, jint fd, int level, int optname, void* optval, socklen_t optlen) {
     int rc = getsockopt(fd, level, optname, optval, &optlen);
     if (rc < 0) {
-        netty_unix_errors_throwChannelExceptionErrorNo(env, "getsockopt() failed: ", errno);
+        int err = errno;
+        if (err == EBADF) {
+            netty_unix_errors_throwClosedChannelException(env);
+        } else {
+            netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", err);
+        }
     }
     return rc;
 }
@@ -304,7 +309,12 @@ int netty_unix_socket_getOption(JNIEnv* env, jint fd, int level, int optname, vo
 int netty_unix_socket_setOption(JNIEnv* env, jint fd, int level, int optname, const void* optval, socklen_t len) {
     int rc = setsockopt(fd, level, optname, optval, len);
     if (rc < 0) {
-        netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", errno);
+        int err = errno;
+        if (err == EBADF) {
+            netty_unix_errors_throwClosedChannelException(env);
+        } else {
+            netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", err);
+        }
     }
     return rc;
 }
