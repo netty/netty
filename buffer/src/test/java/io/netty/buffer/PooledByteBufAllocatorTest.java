@@ -174,7 +174,7 @@ public class PooledByteBufAllocatorTest {
 
         // We use no caches and only one arena to maximize the chance of hitting the race-condition we
         // had before.
-        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
+        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0, true);
         List<AllocationThread> threads = new ArrayList<AllocationThread>();
         try {
             for (int i = 0; i < 512; i++) {
