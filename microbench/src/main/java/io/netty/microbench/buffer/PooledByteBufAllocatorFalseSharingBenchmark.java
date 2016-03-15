@@ -19,47 +19,69 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
-import org.openjdk.jmh.infra.Blackhole;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 @State(Scope.Benchmark)
-@Threads(4)
+@Threads(8)
 public class PooledByteBufAllocatorFalseSharingBenchmark extends AbstractMicrobenchmark {
     private static final byte BYTE = 'a';
+    private final AtomicInteger index = new AtomicInteger();
+    private final int threads = PooledByteBufAllocatorFalseSharingBenchmark.class.getAnnotation(Threads.class).value();
+    private final ByteBuf[] buffers = new ByteBuf[threads];
+    private final ByteBuf[] buffersNoFalseSharing = new ByteBuf[threads];
 
-    private PooledByteBufAllocator allocator;
-    private PooledByteBufAllocator allocator2;
+    @Param({ "00512" }) //, "01024", "02048", "04096", "08192" })
+    public int size;
 
     @Setup
     public void setup() {
-        allocator = new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0, false);
-        allocator2 = new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0, true);
+        fillBuffers(buffers, size, new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0, false));
+        fillBuffers(buffersNoFalseSharing, size, new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0, true));
+        index.set(0);
     }
 
-    @Param({ "00512", "01024", "02048", "04096", "08192" })
-    public int size;
-
-    @Benchmark
-    public void falseSharing(Blackhole hole) {
-        alloc(allocator, size, hole);
-    }
-
-    @Benchmark
-    public void noFalseSharing(Blackhole hole) {
-        alloc(allocator2, size, hole);
-    }
-
-    private static void alloc(ByteBufAllocator allocator, int size, Blackhole hole) {
-        ByteBuf buffer = allocator.directBuffer(size);
-        for (int a = 0; a < size; a++) {
-            buffer.setByte(a, BYTE);
-            hole.consume(buffer.getByte(a));
+    private static void fillBuffers(ByteBuf[] buffers, int size, ByteBufAllocator allocator) {
+        for (int i = 0; i < buffers.length; i++) {
+            buffers[i] = allocator.directBuffer(size);
         }
-        buffer.release();
+    }
+
+    @TearDown
+    public void destroy() {
+        release(buffers);
+        release(buffersNoFalseSharing);
+    }
+
+    private static void release(ByteBuf[] buffers) {
+        for (ByteBuf buf: buffers) {
+            buf.release();
+        }
+    }
+
+    @Benchmark
+    public void falseSharing() {
+        benchmark(buffers[index()]);
+    }
+
+    @Benchmark
+    public void noFalseSharing() {
+        benchmark(buffersNoFalseSharing[index()]);
+    }
+
+    private int index() {
+        return index.getAndIncrement() & threads - 1;
+    }
+
+    private static void benchmark(ByteBuf buffer) {
+        buffer.setByte(0, BYTE);
     }
 }
