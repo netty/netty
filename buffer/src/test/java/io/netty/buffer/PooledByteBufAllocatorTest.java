@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -41,6 +42,8 @@ public class PooledByteBufAllocatorTest {
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
 
+        final AtomicBoolean threadCachesCreated = new AtomicBoolean(true);
+
         for (int i = 0; i < numArenas; i++) {
             new FastThreadLocalThread(new Runnable() {
                 @Override
@@ -50,7 +53,12 @@ public class PooledByteBufAllocatorTest {
                         buf.writeByte(0);
                     }
 
-                    assertTrue(allocator.numThreadLocalCaches() > 0);
+                    // Make sure that thread caches are actually created,
+                    // so that down below we are not testing for zero
+                    // thread caches without any of them ever having been initialized.
+                    if (allocator.numThreadLocalCaches() == 0) {
+                        threadCachesCreated.set(false);
+                    }
 
                     buf.release();
                 }
@@ -61,6 +69,8 @@ public class PooledByteBufAllocatorTest {
         while (allocator.numThreadLocalCaches() > 0) {
             LockSupport.parkNanos(MILLISECONDS.toNanos(100));
         }
+
+        assertTrue(threadCachesCreated.get());
     }
 
     @Test
