@@ -221,6 +221,15 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
         final int willQos = (b1 & 0x18) >> 3;
         final boolean willFlag = (b1 & 0x04) == 0x04;
         final boolean cleanSession = (b1 & 0x02) == 0x02;
+        if (mqttVersion == MqttVersion.MQTT_3_1_1) {
+            final boolean zeroReservedFlag = (b1 & 0x01) == 0x0;
+            if (!zeroReservedFlag) {
+                // MQTT v3.1.1: The Server MUST validate that the reserved flag in the CONNECT Control Packet is
+                // set to zero and disconnect the Client if it is not zero.
+                // See http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349230
+                throw new DecoderException("non-zero reserved flag");
+            }
+        }
 
         final MqttConnectVariableHeader mqttConnectVariableHeader = new MqttConnectVariableHeader(
                 mqttVersion.protocolName(),
