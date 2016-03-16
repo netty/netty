@@ -70,14 +70,9 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
          * adding all handlers required for the new protocol.
          *
          * @param ctx the context for the current handler.
-         * @param upgradeRequest the request that triggered the upgrade to this protocol. The
-         *            upgraded protocol is responsible for sending the response.
-         * @param upgradeResponse a 101 Switching Protocols response that is populated with the
-         *            {@link HttpHeaderNames#CONNECTION} and {@link HttpHeaderNames#UPGRADE} headers.
-         *            The protocol is required to send this before sending any other frames back to the client.
-         *            The headers may be augmented as necessary by the protocol before sending.
+         * @param upgradeRequest the request that triggered the upgrade to this protocol.
          */
-        void upgradeTo(ChannelHandlerContext ctx, FullHttpRequest upgradeRequest, FullHttpResponse upgradeResponse);
+        void upgradeTo(ChannelHandlerContext ctx, FullHttpRequest upgradeRequest);
     }
 
     /**
@@ -320,7 +315,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
                     if (future.isSuccess()) {
                         // Perform the upgrade to the new protocol.
                         sourceCodec.upgradeFrom(ctx);
-                        finalUpgradeCodec.upgradeTo(ctx, request, upgradeResponse);
+                        finalUpgradeCodec.upgradeTo(ctx, request);
 
                         // Notify that the upgrade has occurred. Retain the event to offset
                         // the release() in the finally block.
