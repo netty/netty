@@ -29,6 +29,7 @@ import org.apache.tomcat.jni.Pool;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
@@ -582,6 +583,13 @@ public abstract class OpenSslContext extends SslContext {
             return SslContext.toX509Certificates(file);
         } catch (CertificateException e) {
             throw new SSLException(e);
+        }
+    }
+
+    static void checkKeyManagerFactory(KeyManagerFactory keyManagerFactory) {
+        if (keyManagerFactory != null) {
+            throw new IllegalArgumentException(
+                    "KeyManagerFactory is currently not supported with OpenSslContext");
         }
     }
 }
