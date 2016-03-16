@@ -319,24 +319,22 @@ public final class OpenSslServerContext extends OpenSslContext {
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, null,
                 ClientAuth.NONE);
-        OpenSsl.ensureAvailability();
-
-        checkKeyManagerFactory(keyManagerFactory);
-        checkNotNull(keyCertChainFile, "keyCertChainFile");
-        if (!keyCertChainFile.isFile()) {
-            throw new IllegalArgumentException("keyCertChainFile is not a file: " + keyCertChainFile);
-        }
-        checkNotNull(keyFile, "keyFile");
-        if (!keyFile.isFile()) {
-            throw new IllegalArgumentException("keyFile is not a file: " + keyFile);
-        }
-        if (keyPassword == null) {
-            keyPassword = "";
-        }
-
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
+            checkKeyManagerFactory(keyManagerFactory);
+            checkNotNull(keyCertChainFile, "keyCertChainFile");
+            if (!keyCertChainFile.isFile()) {
+                throw new IllegalArgumentException("keyCertChainFile is not a file: " + keyCertChainFile);
+            }
+            checkNotNull(keyFile, "keyFile");
+            if (!keyFile.isFile()) {
+                throw new IllegalArgumentException("keyFile is not a file: " + keyFile);
+            }
+            if (keyPassword == null) {
+                keyPassword = "";
+            }
+
             synchronized (OpenSslContext.class) {
                 /* Set certificate verification policy. */
                 SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
@@ -419,19 +417,17 @@ public final class OpenSslServerContext extends OpenSslContext {
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth) throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, keyCertChain,
                 clientAuth);
-        OpenSsl.ensureAvailability();
-
-        checkKeyManagerFactory(keyManagerFactory);
-        checkNotNull(keyCertChain, "keyCertChainFile");
-        checkNotNull(key, "keyFile");
-
-        if (keyPassword == null) {
-            keyPassword = "";
-        }
-
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
+            checkKeyManagerFactory(keyManagerFactory);
+            checkNotNull(keyCertChain, "keyCertChainFile");
+            checkNotNull(key, "keyFile");
+
+            if (keyPassword == null) {
+                keyPassword = "";
+            }
+
             synchronized (OpenSslContext.class) {
                 /* Set certificate verification policy. */
                 SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
