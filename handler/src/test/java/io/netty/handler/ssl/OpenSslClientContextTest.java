@@ -15,13 +15,15 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+
 import javax.net.ssl.SSLException;
 import java.io.File;
 
-public class JdkSslServerContextTest extends SslContextTest {
-
+public class OpenSslClientContextTest extends SslContextTest  {
     @Override
     protected SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException {
-        return new JdkSslServerContext(crtFile, keyFile, pass);
+        return new OpenSslClientContext(crtFile, InsecureTrustManagerFactory.INSTANCE, crtFile, keyFile, pass,
+                null, null, IdentityCipherSuiteFilter.INSTANCE, ApplicationProtocolConfig.DISABLED, 0, 0);
     }
 }
