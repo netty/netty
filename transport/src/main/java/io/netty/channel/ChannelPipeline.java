@@ -347,7 +347,7 @@ public interface ChannelPipeline
     ChannelPipeline addAfter(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
     /**
-     * Inserts a {@link ChannelHandler}s at the first position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the first position of this pipeline.
      *
      * @param handlers  the handlers to insert first
      *
@@ -355,7 +355,7 @@ public interface ChannelPipeline
     ChannelPipeline addFirst(ChannelHandler... handlers);
 
     /**
-     * Inserts a {@link ChannelHandler}s at the first position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the first position of this pipeline.
      *
      * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}s
      *                  methods.
@@ -365,7 +365,7 @@ public interface ChannelPipeline
     ChannelPipeline addFirst(EventExecutorGroup group, ChannelHandler... handlers);
 
     /**
-     * Inserts a {@link ChannelHandler}s at the last position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the last position of this pipeline.
      *
      * @param handlers  the handlers to insert last
      *
@@ -373,7 +373,7 @@ public interface ChannelPipeline
     ChannelPipeline addLast(ChannelHandler... handlers);
 
     /**
-     * Inserts a {@link ChannelHandler}s at the last position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the last position of this pipeline.
      *
      * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}s
      *                  methods.

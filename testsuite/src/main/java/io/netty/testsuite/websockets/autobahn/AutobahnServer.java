@@ -24,8 +24,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
- * A Web Socket echo server for running the <a href="http://www.tavendo.de/autobahn/testsuite.html">autobahn</a> test
- * suite
+ * A Web Socket echo server for running the
+ * <a href="http://autobahn.ws/testsuite/">autobahn test suite</a>
  */
 public class AutobahnServer {
 
