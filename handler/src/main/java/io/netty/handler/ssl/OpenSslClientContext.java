@@ -175,6 +175,7 @@ public final class OpenSslClientContext extends OpenSslContext {
                 ClientAuth.NONE);
         boolean success = false;
         try {
+            checkKeyManagerFactory(keyManagerFactory);
             if (trustCertChainFile != null && !trustCertChainFile.isFile()) {
                 throw new IllegalArgumentException("trustCertChainFile is not a file: " + trustCertChainFile);
             }
@@ -275,6 +276,7 @@ public final class OpenSslClientContext extends OpenSslContext {
                 ClientAuth.NONE);
         boolean success = false;
         try {
+            checkKeyManagerFactory(keyManagerFactory);
             if (key == null && keyCertChain != null || key != null && keyCertChain == null) {
                 throw new IllegalArgumentException(
                         "Either both keyCertChain and key needs to be null or none of them");

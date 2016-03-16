@@ -29,6 +29,7 @@ import org.apache.tomcat.jni.Pool;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
@@ -565,5 +566,12 @@ public abstract class OpenSslContext extends SslContext {
             throw new IllegalStateException("Could not write data to memory BIO");
         }
         return bio;
+    }
+
+    static void checkKeyManagerFactory(KeyManagerFactory keyManagerFactory) {
+        if (keyManagerFactory != null) {
+            throw new IllegalArgumentException(
+                    "KeyManagerFactory is currently not supported with OpenSslContext");
+        }
     }
 }
