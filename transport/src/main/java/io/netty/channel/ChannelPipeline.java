@@ -410,7 +410,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
     ChannelPipeline addAfter(ChannelHandlerInvoker invoker, String baseName, String name, ChannelHandler handler);
 
     /**
-     * Inserts a {@link ChannelHandler}s at the first position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the first position of this pipeline.
      *
      * @param handlers  the handlers to insert first
      *
@@ -418,7 +418,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
     ChannelPipeline addFirst(ChannelHandler... handlers);
 
     /**
-     * Inserts a {@link ChannelHandler}s at the first position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the first position of this pipeline.
      *
      * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}s
      *                  methods.
@@ -428,7 +428,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
     ChannelPipeline addFirst(EventExecutorGroup group, ChannelHandler... handlers);
 
     /**
-     * Inserts a {@link ChannelHandler}s at the first position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the first position of this pipeline.
      *
      * @param invoker   the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
      * @param handlers  the handlers to insert first
@@ -437,7 +437,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
     ChannelPipeline addFirst(ChannelHandlerInvoker invoker, ChannelHandler... handlers);
 
     /**
-     * Inserts a {@link ChannelHandler}s at the last position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the last position of this pipeline.
      *
      * @param handlers  the handlers to insert last
      *
@@ -445,7 +445,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
     ChannelPipeline addLast(ChannelHandler... handlers);
 
     /**
-     * Inserts a {@link ChannelHandler}s at the last position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the last position of this pipeline.
      *
      * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}s
      *                  methods.
@@ -455,7 +455,7 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
     ChannelPipeline addLast(EventExecutorGroup group, ChannelHandler... handlers);
 
     /**
-     * Inserts a {@link ChannelHandler}s at the last position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the last position of this pipeline.
      *
      * @param invoker   the {@link ChannelHandlerInvoker} which invokes the {@code handler}s event handler methods
      * @param handlers  the handlers to insert last

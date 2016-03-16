@@ -35,7 +35,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  *     }
  * </pre>
  *
- * Be aware that depending of the constructor parameters it will release all handled messages by pass them to
+ * Be aware that depending of the constructor parameters it will release all handled messages by passing them to
  * {@link ReferenceCountUtil#release(Object)}. In this case you may need to use
  * {@link ReferenceCountUtil#retain(Object)} if you pass the object to the next handler in the {@link ChannelPipeline}.
  *
@@ -60,7 +60,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
     /**
      * Create a new instance which will try to detect the types to match out of the type parameter of the class.
      *
-     * @param autoRelease   {@code true} if handled messages should be released automatically by pass them to
+     * @param autoRelease   {@code true} if handled messages should be released automatically by passing them to
      *                      {@link ReferenceCountUtil#release(Object)}.
      */
     protected SimpleChannelInboundHandler(boolean autoRelease) {
@@ -79,7 +79,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
      * Create a new instance
      *
      * @param inboundMessageType    The type of messages to match
-     * @param autoRelease           {@code true} if handled messages should be released automatically by pass them to
+     * @param autoRelease           {@code true} if handled messages should be released automatically by passing them to
      *                              {@link ReferenceCountUtil#release(Object)}.
      */
     protected SimpleChannelInboundHandler(Class<? extends I> inboundMessageType, boolean autoRelease) {
