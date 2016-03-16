@@ -13,15 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.ssl;
+
+import org.junit.Assume;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
 
-public class JdkSslServerContextTest extends SslContextTest {
+public class OpenSslServerContextTest extends SslContextTest {
 
     @Override
     protected SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException {
-        return new JdkSslServerContext(crtFile, keyFile, pass);
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        return new OpenSslServerContext(crtFile, keyFile, pass);
     }
 }
