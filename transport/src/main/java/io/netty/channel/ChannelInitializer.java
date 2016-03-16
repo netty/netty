@@ -67,7 +67,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
     public final void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         initChannel((C) ctx.channel());
         ctx.pipeline().remove(this);
-        ctx.fireChannelRegistered();
+        ctx.pipeline().fireChannelRegistered();
     }
 
     /**
