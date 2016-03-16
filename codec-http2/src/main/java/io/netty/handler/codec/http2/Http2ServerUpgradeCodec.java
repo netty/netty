@@ -98,8 +98,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
     }
 
     @Override
-    public void upgradeTo(final ChannelHandlerContext ctx, FullHttpRequest upgradeRequest,
-            FullHttpResponse upgradeResponse) {
+    public void upgradeTo(final ChannelHandlerContext ctx, FullHttpRequest upgradeRequest) {
         // Add the HTTP/2 connection handler to the pipeline immediately following the current handler.
         ctx.pipeline().addAfter(ctx.name(), handlerName, connectionHandler);
     }
