@@ -340,19 +340,17 @@ public final class OpenSslServerContext extends OpenSslContext {
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth) throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, keyCertChain,
                 clientAuth);
-        OpenSsl.ensureAvailability();
-
-        checkKeyManagerFactory(keyManagerFactory);
-        checkNotNull(keyCertChain, "keyCertChainFile");
-        checkNotNull(key, "keyFile");
-
-        if (keyPassword == null) {
-            keyPassword = "";
-        }
-
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
+            checkKeyManagerFactory(keyManagerFactory);
+            checkNotNull(keyCertChain, "keyCertChainFile");
+            checkNotNull(key, "keyFile");
+
+            if (keyPassword == null) {
+                keyPassword = "";
+            }
+
             synchronized (OpenSslContext.class) {
                 /* Set certificate verification policy. */
                 SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
