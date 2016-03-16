@@ -856,7 +856,7 @@ public abstract class SslContext {
     /**
      * Generates a key specification for an (encrypted) private key.
      *
-     * @param password characters, if {@code null} or empty an unencrypted key is assumed
+     * @param password characters, if {@code null} an unencrypted key is assumed
      * @param key bytes of the DER encoded private key
      *
      * @return a key specification
@@ -873,7 +873,7 @@ public abstract class SslContext {
             throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException,
             InvalidKeyException, InvalidAlgorithmParameterException {
 
-        if (password == null || password.length == 0) {
+        if (password == null) {
             return new PKCS8EncodedKeySpec(key);
         }
 
@@ -933,24 +933,21 @@ public abstract class SslContext {
         byte[] encodedKey = new byte[encodedKeyBuf.readableBytes()];
         encodedKeyBuf.readBytes(encodedKey).release();
 
-        PKCS8EncodedKeySpec encodedKeySpec = generateKeySpec(keyPassword == null ? null : keyPassword.toCharArray(),
-                                                             encodedKey);
-
-        PrivateKey key;
+        PKCS8EncodedKeySpec encodedKeySpec = generateKeySpec(
+                keyPassword == null ? null : keyPassword.toCharArray(), encodedKey);
         try {
-            key = KeyFactory.getInstance("RSA").generatePrivate(encodedKeySpec);
+            return KeyFactory.getInstance("RSA").generatePrivate(encodedKeySpec);
         } catch (InvalidKeySpecException ignore) {
             try {
-                key = KeyFactory.getInstance("DSA").generatePrivate(encodedKeySpec);
+                return KeyFactory.getInstance("DSA").generatePrivate(encodedKeySpec);
             } catch (InvalidKeySpecException ignore2) {
                 try {
-                    key = KeyFactory.getInstance("EC").generatePrivate(encodedKeySpec);
+                    return  KeyFactory.getInstance("EC").generatePrivate(encodedKeySpec);
                 } catch (InvalidKeySpecException e) {
                     throw new InvalidKeySpecException("Neither RSA, DSA nor EC worked", e);
                 }
             }
         }
-        return key;
     }
 
     /**
