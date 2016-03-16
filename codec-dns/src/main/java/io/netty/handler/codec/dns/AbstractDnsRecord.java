@@ -17,6 +17,8 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.StringUtil;
 
+import java.net.IDN;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -61,7 +63,11 @@ public abstract class AbstractDnsRecord implements DnsRecord {
         if (timeToLive < 0) {
             throw new IllegalArgumentException("timeToLive: " + timeToLive + " (expected: >= 0)");
         }
-        this.name = checkNotNull(name, "name");
+        // Convert to ASCII which will also check that the length is not too big.
+        // See:
+        //   - https://github.com/netty/netty/issues/4937
+        //   - https://github.com/netty/netty/issues/4935
+        this.name = IDN.toASCII(checkNotNull(name, "name"));
         this.type = checkNotNull(type, "type");
         this.dnsClass = (short) dnsClass;
         this.timeToLive = timeToLive;
