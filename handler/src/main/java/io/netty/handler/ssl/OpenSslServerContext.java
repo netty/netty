@@ -449,11 +449,4 @@ public final class OpenSslServerContext extends OpenSslContext {
     public OpenSslServerSessionContext sessionContext() {
         return sessionContext;
     }
-
-    private static void checkKeyManagerFactory(KeyManagerFactory keyManagerFactory) {
-        if (keyManagerFactory != null) {
-            throw new IllegalArgumentException(
-                    "KeyManagerFactory is currently not supported with OpenSslServerContext");
-        }
-    }
 }
