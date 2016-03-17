@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import javax.xml.bind.DatatypeConverter;
@@ -76,9 +77,17 @@ public class SniHandlerTest {
             // expected
         }
 
-        assertThat(ch.finish(), is(false));
+        assertThat(ch.finish(), is(true));
         assertThat(handler.hostname(), is("chat4.leancloud.cn"));
         assertThat(handler.sslContext(), is(leanContext));
+
+        for (;;) {
+            Object msg = ch.readOutbound();
+            if (msg == null) {
+                break;
+            }
+            ReferenceCountUtil.release(msg);
+        }
     }
 
     @Test
