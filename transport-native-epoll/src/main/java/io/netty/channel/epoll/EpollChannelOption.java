@@ -33,7 +33,7 @@ public final class EpollChannelOption<T> extends ChannelOption<T> {
     public static final ChannelOption<Boolean> IP_FREEBIND = valueOf("IP_FREEBIND");
     public static final ChannelOption<Integer> TCP_FASTOPEN = valueOf("TCP_FASTOPEN");
     public static final ChannelOption<Integer> TCP_DEFER_ACCEPT = valueOf("TCP_DEFER_ACCEPT");
-    public static final ChannelOption<Integer> TCP_QUICKACK = valueOf("TCP_QUICKACK");
+    public static final ChannelOption<Boolean> TCP_QUICKACK = valueOf("TCP_QUICKACK");
 
     public static final ChannelOption<DomainSocketReadMode> DOMAIN_SOCKET_READ_MODE =
             valueOf("DOMAIN_SOCKET_READ_MODE");
