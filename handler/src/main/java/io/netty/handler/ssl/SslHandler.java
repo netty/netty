@@ -1342,12 +1342,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         try {
             engine.beginHandshake();
             wrapNonAppData(ctx, false);
+            ctx.flush();
         } catch (Exception e) {
             notifyHandshakeFailure(e);
-        } finally {
-            // We have may haven written some parts of data before an exception was thrown so ensure we always flush.
-            // See https://github.com/netty/netty/issues/3900#issuecomment-172481830
-            ctx.flush();
         }
 
         // Set timeout if necessary.
