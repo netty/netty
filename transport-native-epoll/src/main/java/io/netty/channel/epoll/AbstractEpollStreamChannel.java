@@ -106,7 +106,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      */
     @Deprecated
     protected AbstractEpollStreamChannel(Socket fd) {
-        this(fd, fd.getSoError() == 0);
+        this(fd, isSoErrorZero(fd));
     }
 
     protected AbstractEpollStreamChannel(Channel parent, Socket fd) {
