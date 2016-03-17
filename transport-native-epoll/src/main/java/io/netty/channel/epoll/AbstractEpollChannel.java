@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
@@ -57,6 +58,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         readFlag = flag;
         flags |= flag;
         this.active = active;
+    }
+
+    static boolean isSoErrorZero(Socket fd) {
+        try {
+            return fd.getSoError() == 0;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     void setFlag(int flag) throws IOException {

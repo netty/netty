@@ -272,7 +272,7 @@ public final class Socket extends FileDescriptor {
         return isTcpQuickAck(fd) != 0;
     }
 
-    public int getSoError() {
+    public int getSoError() throws IOException {
         return getSoError(fd);
     }
 
@@ -367,22 +367,22 @@ public final class Socket extends FileDescriptor {
     private static native int newSocketDgramFd();
     private static native int newSocketDomainFd();
 
-    private static native int getReceiveBufferSize(int fd);
-    private static native int getSendBufferSize(int fd);
-    private static native int isKeepAlive(int fd);
-    private static native int isTcpNoDelay(int fd);
-    private static native int isTcpCork(int fd);
-    private static native int getSoLinger(int fd);
-    private static native int getSoError(int fd);
-    private static native int getTcpDeferAccept(int fd);
-    private static native int isTcpQuickAck(int fd);
+    private static native int getReceiveBufferSize(int fd) throws IOException;
+    private static native int getSendBufferSize(int fd) throws IOException;
+    private static native int isKeepAlive(int fd) throws IOException;
+    private static native int isTcpNoDelay(int fd) throws IOException;
+    private static native int isTcpCork(int fd) throws IOException;
+    private static native int getSoLinger(int fd) throws IOException;
+    private static native int getSoError(int fd) throws IOException;
+    private static native int getTcpDeferAccept(int fd) throws IOException;
+    private static native int isTcpQuickAck(int fd) throws IOException;
 
-    private static native void setKeepAlive(int fd, int keepAlive);
-    private static native void setReceiveBufferSize(int fd, int receiveBufferSize);
-    private static native void setSendBufferSize(int fd, int sendBufferSize);
-    private static native void setTcpNoDelay(int fd, int tcpNoDelay);
-    private static native void setTcpCork(int fd, int tcpCork);
-    private static native void setSoLinger(int fd, int soLinger);
-    private static native void setTcpDeferAccept(int fd, int deferAccept);
-    private static native void setTcpQuickAck(int fd, int quickAck);
+    private static native void setKeepAlive(int fd, int keepAlive) throws IOException;
+    private static native void setReceiveBufferSize(int fd, int receiveBufferSize) throws IOException;
+    private static native void setSendBufferSize(int fd, int sendBufferSize) throws IOException;
+    private static native void setTcpNoDelay(int fd, int tcpNoDelay) throws IOException;
+    private static native void setTcpCork(int fd, int tcpCork) throws IOException;
+    private static native void setSoLinger(int fd, int soLinger) throws IOException;
+    private static native void setTcpDeferAccept(int fd, int deferAccept) throws IOException;
+    private static native void setTcpQuickAck(int fd, int quickAck) throws IOException;
 }

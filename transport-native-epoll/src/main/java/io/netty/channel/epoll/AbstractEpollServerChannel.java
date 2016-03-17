@@ -52,7 +52,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
      */
     @Deprecated
     protected AbstractEpollServerChannel(Socket fd) {
-        this(fd, fd.getSoError() == 0);
+        this(fd, isSoErrorZero(fd));
     }
 
     protected AbstractEpollServerChannel(Socket fd, boolean active) {
