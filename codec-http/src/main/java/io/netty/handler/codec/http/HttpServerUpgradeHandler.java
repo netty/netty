@@ -153,7 +153,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
 
         @Override
         public boolean release(int decrement) {
-            return upgradeRequest.release();
+            return upgradeRequest.release(decrement);
         }
 
         @Override
