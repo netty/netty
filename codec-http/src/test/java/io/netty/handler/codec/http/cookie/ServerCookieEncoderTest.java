@@ -24,7 +24,9 @@ import io.netty.handler.codec.http.HttpHeaderDateFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -74,6 +76,34 @@ public class ServerCookieEncoderTest {
         Cookie cookie3 = new DefaultCookie("cookie1", "value3");
         List<String> encodedCookies = ServerCookieEncoder.STRICT.encode(cookie1, cookie2, cookie3);
         assertEquals(result, encodedCookies);
+    }
+
+    @Test
+    public void illegalCharInCookieValueMakesStrictEncoderThrowsException() {
+
+        Set<Character> illegalChars = new HashSet<Character>();
+        // CTLs
+        for (int i = 0x00; i <= 0x1F; i++) {
+            illegalChars.add((char) i);
+        }
+        illegalChars.add((char) 0x7F);
+        // whitespace, DQUOTE, comma, semicolon, and backslash
+        for (char c : new char[] { ' ', '"', ',', ';', '\\' }) {
+            illegalChars.add(c);
+        }
+
+        int exceptions = 0;
+
+        for (char c : illegalChars) {
+            Cookie cookie = new DefaultCookie("name", "value" + c);
+            try {
+                ServerCookieEncoder.STRICT.encode(cookie);
+            } catch (IllegalArgumentException e) {
+                exceptions++;
+            }
+        }
+
+        assertEquals(illegalChars.size(), exceptions);
     }
 
     @Test
