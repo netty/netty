@@ -24,14 +24,28 @@ public class AbstractDnsRecordTest {
     public void testValidDomainName() {
         String name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
         AbstractDnsRecord record = new AbstractDnsRecord(name, DnsRecordType.A, 0) { };
-        Assert.assertEquals(name, record.name());
+        Assert.assertEquals(name + '.', record.name());
     }
 
     @Test
     public void testValidDomainNameUmlaut() {
         String name = "ä";
         AbstractDnsRecord record = new AbstractDnsRecord(name, DnsRecordType.A, 0) { };
-        Assert.assertEquals("xn--4ca", record.name());
+        Assert.assertEquals("xn--4ca.", record.name());
+    }
+
+    @Test
+    public void testValidDomainNameTrailingDot() {
+        String name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.";
+        AbstractDnsRecord record = new AbstractDnsRecord(name, DnsRecordType.A, 0) { };
+        Assert.assertEquals(name, record.name());
+    }
+
+    @Test
+    public void testValidDomainNameUmlautTrailingDot() {
+        String name = "ä.";
+        AbstractDnsRecord record = new AbstractDnsRecord(name, DnsRecordType.A, 0) { };
+        Assert.assertEquals("xn--4ca.", record.name());
     }
 
     @Test(expected = IllegalArgumentException.class)
