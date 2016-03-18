@@ -55,7 +55,7 @@ public abstract class Recycler<T> {
         // e.g. io.netty.recycler.maxCapacity.writeTask
         //      io.netty.recycler.maxCapacity.outboundBuffer
         int maxCapacity = SystemPropertyUtil.getInt("io.netty.recycler.maxCapacity", DEFAULT_INITIAL_MAX_CAPACITY);
-        if (maxCapacity <= 0) {
+        if (maxCapacity < 0) {
             // TODO: Some arbitrary large number - should adjust as we get more production experience.
             maxCapacity = 262144;
         }
