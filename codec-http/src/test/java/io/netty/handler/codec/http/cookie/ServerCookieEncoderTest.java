@@ -79,8 +79,34 @@ public class ServerCookieEncoderTest {
     }
 
     @Test
-    public void illegalCharInCookieValueMakesStrictEncoderThrowsException() {
+    public void illegalCharInCookieNameMakesStrictEncoderThrowsException() {
+        Set<Character> illegalChars = new HashSet<Character>();
+        // CTLs
+        for (int i = 0x00; i <= 0x1F; i++) {
+            illegalChars.add((char) i);
+        }
+        illegalChars.add((char) 0x7F);
+        // separators
+        for (char c : new char[] { '(', ')', '<', '>', '@', ',', ';', ':', '\\', '"', '/', '[', ']',
+                '?', '=', '{', '}', ' ', '\t' }) {
+            illegalChars.add(c);
+        }
 
+        int exceptions = 0;
+
+        for (char c : illegalChars) {
+            try {
+                ServerCookieEncoder.STRICT.encode(new DefaultCookie("foo" + c + "bar", "value"));
+            } catch (IllegalArgumentException e) {
+                exceptions++;
+            }
+        }
+
+        assertEquals(illegalChars.size(), exceptions);
+    }
+
+    @Test
+    public void illegalCharInCookieValueMakesStrictEncoderThrowsException() {
         Set<Character> illegalChars = new HashSet<Character>();
         // CTLs
         for (int i = 0x00; i <= 0x1F; i++) {
@@ -95,9 +121,8 @@ public class ServerCookieEncoderTest {
         int exceptions = 0;
 
         for (char c : illegalChars) {
-            Cookie cookie = new DefaultCookie("name", "value" + c);
             try {
-                ServerCookieEncoder.STRICT.encode(cookie);
+                ServerCookieEncoder.STRICT.encode(new DefaultCookie("name", "value" + c));
             } catch (IllegalArgumentException e) {
                 exceptions++;
             }
