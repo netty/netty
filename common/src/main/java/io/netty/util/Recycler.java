@@ -63,9 +63,9 @@ public abstract class Recycler<T> {
         DEFAULT_MAX_CAPACITY = maxCapacity;
         if (logger.isDebugEnabled()) {
             if (DEFAULT_MAX_CAPACITY == 0) {
-                logger.debug("-Dio.netty.recycler.maxCapacity.maxCapacity: disabled");
+                logger.debug("-Dio.netty.recycler.maxCapacity: disabled");
             } else {
-                logger.debug("-Dio.netty.recycler.maxCapacity.maxCapacity: {}", DEFAULT_MAX_CAPACITY);
+                logger.debug("-Dio.netty.recycler.maxCapacity: {}", DEFAULT_MAX_CAPACITY);
             }
         }
 
