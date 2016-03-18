@@ -67,10 +67,17 @@ public abstract class AbstractDnsRecord implements DnsRecord {
         // See:
         //   - https://github.com/netty/netty/issues/4937
         //   - https://github.com/netty/netty/issues/4935
-        this.name = IDN.toASCII(checkNotNull(name, "name"));
+        this.name = appendTrailingDot(IDN.toASCII(checkNotNull(name, "name")));
         this.type = checkNotNull(type, "type");
         this.dnsClass = (short) dnsClass;
         this.timeToLive = timeToLive;
+    }
+
+    private static String appendTrailingDot(String name) {
+        if (name.length() > 0 && name.charAt(name.length() - 1) != '.') {
+            return name + '.';
+        }
+        return name;
     }
 
     @Override
