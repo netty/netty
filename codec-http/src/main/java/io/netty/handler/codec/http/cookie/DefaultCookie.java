@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.cookie;
 
-import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
+import static io.netty.handler.codec.http.cookie.CookieUtil.*;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -40,28 +40,6 @@ public class DefaultCookie implements Cookie {
         if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }
-
-        for (int i = 0; i < name.length(); i ++) {
-            char c = name.charAt(i);
-            if (c > 127) {
-                throw new IllegalArgumentException(
-                        "name contains non-ascii character: " + name);
-            }
-
-            // Check prohibited characters.
-            switch (c) {
-            case '\t': case '\n': case 0x0b: case '\f': case '\r':
-            case ' ':  case ',':  case ';':  case '=':
-                throw new IllegalArgumentException(
-                        "name contains one of the following prohibited characters: " +
-                        "=,; \\t\\r\\n\\v\\f: " + name);
-            }
-        }
-
-        if (name.charAt(0) == '$') {
-            throw new IllegalArgumentException("name starting with '$' not allowed: " + name);
-        }
-
         this.name = name;
         setValue(value);
     }
@@ -98,7 +76,7 @@ public class DefaultCookie implements Cookie {
 
     @Override
     public void setDomain(String domain) {
-        this.domain = validateValue("domain", domain);
+        this.domain = validateAttributeValue("domain", domain);
     }
 
     @Override
@@ -108,7 +86,7 @@ public class DefaultCookie implements Cookie {
 
     @Override
     public void setPath(String path) {
-        this.path = validateValue("path", path);
+        this.path = validateAttributeValue("path", path);
     }
 
     @Override
@@ -218,6 +196,19 @@ public class DefaultCookie implements Cookie {
         return 0;
     }
 
+    /**
+     * Validate a cookie attribute value, throws a {@link IllegalArgumentException} otherwise.
+     * Only intended to be used by {@link io.netty.handler.codec.http.DefaultCookie}.
+     * @param name attribute name
+     * @param value attribute value
+     * @return the trimmed, validated attribute value
+     * @deprecated CookieUtil is package private, will be removed once old Cookie API is dropped
+     */
+    @Deprecated
+    protected String validateValue(String name, String value) {
+        return validateAttributeValue(name, value);
+    }
+
     @Override
     public String toString() {
         StringBuilder buf = stringBuilder()
@@ -244,25 +235,5 @@ public class DefaultCookie implements Cookie {
             buf.append(", HTTPOnly");
         }
         return buf.toString();
-    }
-
-    protected String validateValue(String name, String value) {
-        if (value == null) {
-            return null;
-        }
-        value = value.trim();
-        if (value.isEmpty()) {
-            return null;
-        }
-        for (int i = 0; i < value.length(); i ++) {
-            char c = value.charAt(i);
-            switch (c) {
-            case '\r': case '\n': case '\f': case 0x0b: case ';':
-                throw new IllegalArgumentException(
-                        name + " contains one of the following prohibited characters: " +
-                        ";\\r\\n\\f\\v (" + value + ')');
-            }
-        }
-        return value;
     }
 }
