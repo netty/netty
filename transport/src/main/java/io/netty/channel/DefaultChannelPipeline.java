@@ -40,6 +40,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
  * by a {@link Channel} implementation when the {@link Channel} is created.
@@ -85,16 +87,24 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     private boolean registered;
 
     DefaultChannelPipeline(AbstractChannel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        this.channel = channel;
+        this.channel = checkNotNull(channel, "channel");
 
         tail = new TailContext(this);
         head = new HeadContext(this);
 
         head.next = tail;
         tail.prev = head;
+    }
+
+    DefaultChannelPipeline(AbstractChannel channel, ChannelInboundHandler tail) {
+        this.channel = checkNotNull(channel, "channel");
+
+        AbstractChannelHandlerContext ctxTail = new WrappedTailContext(this, tail);
+        this.tail = ctxTail;
+        head = new HeadContext(this);
+
+        head.next = ctxTail;
+        this.tail.prev = head;
     }
 
     Object touch(Object msg, AbstractChannelHandlerContext next) {
@@ -1358,6 +1368,65 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             } finally {
                 ReferenceCountUtil.release(msg);
             }
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception { }
+    }
+
+    ChannelInboundHandler tailDelegate() {
+        return tail instanceof WrappedTailContext ? ((WrappedTailContext) tail).delegate : null;
+    }
+
+    private static final class WrappedTailContext extends AbstractChannelHandlerContext
+                                                  implements ChannelInboundHandler {
+        private static final String TAIL_NAME = generateName0(WrappedTailContext.class);
+        final ChannelInboundHandler delegate;
+
+        WrappedTailContext(DefaultChannelPipeline pipeline, ChannelInboundHandler tail) {
+            super(pipeline, null, TAIL_NAME, true, false);
+            this.delegate = checkNotNull(tail, "tail");
+        }
+
+        @Override
+        public ChannelHandler handler() {
+            return this;
+        }
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            delegate.userEventTriggered(ctx, evt);
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            delegate.exceptionCaught(ctx, cause);
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            delegate.channelRead(ctx, msg);
         }
 
         @Override

@@ -62,9 +62,8 @@ public class EmbeddedChannel extends AbstractChannel {
     private final ChannelMetadata metadata;
     private final ChannelConfig config;
 
-    private Queue<Object> inboundMessages;
+    private final LastInboundHandler lastHandler;
     private Queue<Object> outboundMessages;
-    private Throwable lastException;
     private State state;
 
     /**
@@ -124,7 +123,8 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelHandler... handlers) {
-        super(null, channelId);
+        super(null, channelId, new LastInboundHandler());
+        lastHandler = (LastInboundHandler) pipelineTail();
 
         ObjectUtil.checkNotNull(handlers, "handlers");
         metadata = hasDisconnect ? METADATA_DISCONNECT : METADATA_NO_DISCONNECT;
@@ -146,7 +146,6 @@ public class EmbeddedChannel extends AbstractChannel {
 
         ChannelFuture future = loop.register(this);
         assert future.isDone();
-        p.addLast(new LastInboundHandler());
     }
 
     @Override
@@ -173,10 +172,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * Returns the {@link Queue} which holds all the {@link Object}s that were received by this {@link Channel}.
      */
     public Queue<Object> inboundMessages() {
-        if (inboundMessages == null) {
-            inboundMessages = new ArrayDeque<Object>();
-        }
-        return inboundMessages;
+        return lastHandler.inboundMessages();
     }
 
     /**
@@ -210,7 +206,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     @SuppressWarnings("unchecked")
     public <T> T readInbound() {
-        return (T) poll(inboundMessages);
+        return (T) poll(lastHandler.inboundMessages);
     }
 
     /**
@@ -231,7 +227,7 @@ public class EmbeddedChannel extends AbstractChannel {
     public boolean writeInbound(Object... msgs) {
         ensureOpen();
         if (msgs.length == 0) {
-            return isNotEmpty(inboundMessages);
+            return isNotEmpty(lastHandler.inboundMessages);
         }
 
         ChannelPipeline p = pipeline();
@@ -241,7 +237,7 @@ public class EmbeddedChannel extends AbstractChannel {
         p.fireChannelReadComplete();
         runPendingTasks();
         checkException();
-        return isNotEmpty(inboundMessages);
+        return isNotEmpty(lastHandler.inboundMessages);
     }
 
     /**
@@ -272,7 +268,7 @@ public class EmbeddedChannel extends AbstractChannel {
                 ChannelFuture future = (ChannelFuture) futures.get(i);
                 assert future.isDone();
                 if (future.cause() != null) {
-                    recordException(future.cause());
+                    lastHandler.recordException(future.cause());
                 }
             }
 
@@ -292,7 +288,7 @@ public class EmbeddedChannel extends AbstractChannel {
     public boolean finish() {
         close();
         checkException();
-        return isNotEmpty(inboundMessages) || isNotEmpty(outboundMessages);
+        return isNotEmpty(lastHandler.inboundMessages) || isNotEmpty(outboundMessages);
     }
 
     private void finishPendingTasks(boolean cancel) {
@@ -343,13 +339,13 @@ public class EmbeddedChannel extends AbstractChannel {
         try {
             loop.runTasks();
         } catch (Exception e) {
-            recordException(e);
+            lastHandler.recordException(e);
         }
 
         try {
             loop.runScheduledTasks();
         } catch (Exception e) {
-            recordException(e);
+            lastHandler.recordException(e);
         }
     }
 
@@ -362,18 +358,8 @@ public class EmbeddedChannel extends AbstractChannel {
         try {
             return loop.runScheduledTasks();
         } catch (Exception e) {
-            recordException(e);
+            lastHandler.recordException(e);
             return loop.nextScheduledTask();
-        }
-    }
-
-    private void recordException(Throwable cause) {
-        if (lastException == null) {
-            lastException = cause;
-        } else {
-            logger.warn(
-                    "More than one exception was raised. " +
-                            "Will report only the first one and log others.", cause);
         }
     }
 
@@ -381,12 +367,12 @@ public class EmbeddedChannel extends AbstractChannel {
      * Check if there was any {@link Throwable} received and if so rethrow it.
      */
     public void checkException() {
-        Throwable t = lastException;
+        Throwable t = lastHandler.lastException;
         if (t == null) {
             return;
         }
 
-        lastException = null;
+        lastHandler.lastException = null;
 
         PlatformDependent.throwException(t);
     }
@@ -396,7 +382,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     protected final void ensureOpen() {
         if (!isOpen()) {
-            recordException(new ClosedChannelException());
+            lastHandler.recordException(new ClosedChannelException());
             checkException();
         }
     }
@@ -469,7 +455,30 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private final class LastInboundHandler extends ChannelInboundHandlerAdapter {
+    private static final class LastInboundHandler extends ChannelInboundHandlerAdapter {
+        Queue<Object> inboundMessages;
+        Throwable lastException;
+        /**
+         * Returns the {@link Queue} which holds all the {@link Object}s that were received by this {@link Channel}.
+         */
+        Queue<Object> inboundMessages() {
+            if (inboundMessages == null) {
+                inboundMessages = new ArrayDeque<Object>();
+            }
+            return inboundMessages;
+        }
+
+        void recordException(Throwable cause) {
+            if (lastException == null) {
+                lastException = cause;
+            } else {
+                logger.warn(
+                        "More than one exception was raised. " +
+                                "Will report only the first one and log others.", cause);
+                ReferenceCountUtil.release(cause);
+            }
+        }
+
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             inboundMessages().add(msg);
@@ -478,6 +487,13 @@ public class EmbeddedChannel extends AbstractChannel {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             recordException(cause);
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            // This may not be a configuration error and so don't log anything.
+            // The event may be superfluous for the current pipeline configuration.
+            ReferenceCountUtil.release(evt);
         }
     }
 }

@@ -200,6 +200,8 @@ public class PendingWriteQueueTest {
     @Test
     public void testRemoveAndFailAllReentrantFailAll() {
         EmbeddedChannel channel = new EmbeddedChannel();
+        // Just add any handler to satisfy PendingWriteQueue's interface contract requiring a ChannelHandlerContext.
+        channel.pipeline().addLast(new ChannelInboundHandlerAdapter());
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         ChannelPromise promise = channel.newPromise();
@@ -268,6 +270,8 @@ public class PendingWriteQueueTest {
     @Test
     public void testRemoveAndWriteAllReentrance() {
         EmbeddedChannel channel = new EmbeddedChannel();
+        // Just add any handler to satisfy PendingWriteQueue's interface contract requiring a ChannelHandlerContext.
+        channel.pipeline().addLast(new ChannelInboundHandlerAdapter());
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         ChannelPromise promise = channel.newPromise();
