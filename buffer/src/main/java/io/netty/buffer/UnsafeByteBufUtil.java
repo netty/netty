@@ -580,7 +580,7 @@ final class UnsafeByteBufUtil {
             try {
                 byte[] tmp = tmpBuf.array();
                 src.get(tmp, tmpBuf.arrayOffset(), length); // moves the src position too
-                PlatformDependent.copyMemory(tmp, 0, addr, length);
+                PlatformDependent.copyMemory(tmp, tmpBuf.arrayOffset(), addr, length);
             } finally {
                 tmpBuf.release();
             }
