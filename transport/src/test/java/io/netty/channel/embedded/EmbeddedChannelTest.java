@@ -15,6 +15,8 @@
  */
 package io.netty.channel.embedded;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
@@ -231,6 +233,95 @@ public class EmbeddedChannelTest {
         assertEquals(EventOutboundHandler.CLOSE, handler.pollEvent());
         assertEquals(EventOutboundHandler.CLOSE, handler.pollEvent());
         assertNull(handler.pollEvent());
+    }
+
+    @Test
+    public void testFinishAndReleaseAll() {
+        ByteBuf in = Unpooled.buffer();
+        ByteBuf out = Unpooled.buffer();
+        try {
+            EmbeddedChannel channel = new EmbeddedChannel();
+            assertTrue(channel.writeInbound(in));
+            assertEquals(1, in.refCnt());
+
+            assertTrue(channel.writeOutbound(out));
+            assertEquals(1, out.refCnt());
+
+            assertTrue(channel.finishAndReleaseAll());
+            assertEquals(0, in.refCnt());
+            assertEquals(0, out.refCnt());
+
+            assertNull(channel.readInbound());
+            assertNull(channel.readOutbound());
+        } finally {
+            release(in, out);
+        }
+    }
+
+    @Test
+    public void testReleaseInbound() {
+        ByteBuf in = Unpooled.buffer();
+        ByteBuf out = Unpooled.buffer();
+        try {
+            EmbeddedChannel channel = new EmbeddedChannel();
+            assertTrue(channel.writeInbound(in));
+            assertEquals(1, in.refCnt());
+
+            assertTrue(channel.writeOutbound(out));
+            assertEquals(1, out.refCnt());
+
+            assertTrue(channel.releaseInbound());
+            assertEquals(0, in.refCnt());
+            assertEquals(1, out.refCnt());
+
+            assertTrue(channel.finish());
+            assertNull(channel.readInbound());
+
+            ByteBuf buffer = channel.readOutbound();
+            assertSame(out, buffer);
+            buffer.release();
+
+            assertNull(channel.readOutbound());
+        } finally {
+            release(in, out);
+        }
+    }
+
+    @Test
+    public void testReleaseOutbound() {
+        ByteBuf in = Unpooled.buffer();
+        ByteBuf out = Unpooled.buffer();
+        try {
+            EmbeddedChannel channel = new EmbeddedChannel();
+            assertTrue(channel.writeInbound(in));
+            assertEquals(1, in.refCnt());
+
+            assertTrue(channel.writeOutbound(out));
+            assertEquals(1, out.refCnt());
+
+            assertTrue(channel.releaseOutbound());
+            assertEquals(1, in.refCnt());
+            assertEquals(0, out.refCnt());
+
+            assertTrue(channel.finish());
+            assertNull(channel.readOutbound());
+
+            ByteBuf buffer = channel.readInbound();
+            assertSame(in, buffer);
+            buffer.release();
+
+            assertNull(channel.readInbound());
+        } finally {
+            release(in, out);
+        }
+    }
+
+    private static void release(ByteBuf... buffers) {
+        for (ByteBuf buffer : buffers) {
+            if (buffer.refCnt() > 0) {
+                buffer.release();
+            }
+        }
     }
 
     private static final class EventOutboundHandler extends ChannelOutboundHandlerAdapter {
