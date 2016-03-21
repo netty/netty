@@ -290,9 +290,66 @@ public class EmbeddedChannel extends AbstractChannel {
      * @return bufferReadable returns {@code true} if any of the used buffers has something left to read
      */
     public boolean finish() {
+        return finish(false);
+    }
+
+    /**
+     * Mark this {@link Channel} as finished and release all pending message in the inbound and outbound buffer.
+     * Any futher try to write data to it will fail.
+     *
+     * @return bufferReadable returns {@code true} if any of the used buffers has something left to read
+     */
+    public boolean finishAndReleaseAll() {
+        return finish(true);
+    }
+
+    /**
+     * Mark this {@link Channel} as finished. Any futher try to write data to it will fail.
+     *
+     * @param releaseAll if {@code true} all pending message in the inbound and outbound buffer are released.
+     * @return bufferReadable returns {@code true} if any of the used buffers has something left to read
+     */
+    private boolean finish(boolean releaseAll) {
         close();
-        checkException();
-        return isNotEmpty(inboundMessages) || isNotEmpty(outboundMessages);
+        try {
+            checkException();
+            return isNotEmpty(inboundMessages) || isNotEmpty(outboundMessages);
+        } finally {
+            if (releaseAll) {
+                releaseAll(inboundMessages);
+                releaseAll(outboundMessages);
+            }
+        }
+    }
+
+    /**
+     * Release all buffered inbound messages and return {@code true} if any were in the inbound buffer, {@code false}
+     * otherwise.
+     */
+    public boolean releaseInbound() {
+        return releaseAll(inboundMessages);
+    }
+
+    /**
+     * Release all buffered outbound messages and return {@code true} if any were in the outbound buffer, {@code false}
+     * otherwise.
+     */
+    public boolean releaseOutbound() {
+        return releaseAll(outboundMessages);
+    }
+
+    private static boolean releaseAll(Queue<Object> queue) {
+        if (isNotEmpty(queue)) {
+            for (;;) {
+                Object msg = queue.poll();
+                if (msg == null) {
+                    break;
+                }
+                ReferenceCountUtil.release(msg);
+            }
+            return true;
+        }
+        return false;
     }
 
     private void finishPendingTasks(boolean cancel) {
