@@ -28,8 +28,6 @@ public interface DnsCache {
     /**
      * Clears all the resolved addresses cached by this resolver.
      *
-     * @return {@code this}
-     *
      * @see #clear(String)
      */
     void clear();

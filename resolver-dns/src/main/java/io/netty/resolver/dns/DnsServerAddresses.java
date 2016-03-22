@@ -23,7 +23,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -262,7 +261,7 @@ public abstract class DnsServerAddresses {
 
     /**
      * Starts a new infinite stream of DNS server addresses. This method is invoked by {@link DnsNameResolver} on every
-     * uncached {@link DnsNameResolver#resolve(SocketAddress)} or {@link DnsNameResolver#resolveAll(SocketAddress)}.
+     * uncached {@link DnsNameResolver#resolve(String)}or {@link DnsNameResolver#resolveAll(String)}.
      */
     public abstract DnsServerAddressStream stream();
 }
