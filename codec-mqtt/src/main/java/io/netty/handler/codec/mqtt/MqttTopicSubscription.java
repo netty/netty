@@ -22,7 +22,7 @@ import io.netty.util.internal.StringUtil;
  * Contains a topic name and Qos Level.
  * This is part of the {@link MqttSubscribePayload}
  */
-public class MqttTopicSubscription {
+public final class MqttTopicSubscription {
 
     private final String topicFilter;
     private final MqttQoS qualityOfService;

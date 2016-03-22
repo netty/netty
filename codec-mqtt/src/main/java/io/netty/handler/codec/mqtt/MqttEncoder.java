@@ -21,20 +21,21 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.EmptyArrays;
 
 import java.util.List;
 
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.*;
 
 /**
- * Encodes Mqtt messages into bytes following the protocl specification v3.1
+ * Encodes Mqtt messages into bytes following the protocol specification v3.1
  * as described here <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html">MQTTV3.1</a>
  */
-public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
+public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
-    public static final MqttEncoder DEFAUL_ENCODER = new MqttEncoder();
+    public static final MqttEncoder INSTANCE = new MqttEncoder();
 
-    private static final byte[] EMPTY = new byte[0];
+    private MqttEncoder() { }
 
     @Override
     protected void encode(ChannelHandlerContext ctx, MqttMessage msg, List<Object> out) throws Exception {
@@ -109,22 +110,22 @@ public class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
         // Will topic and message
         String willTopic = payload.willTopic();
-        byte[] willTopicBytes = willTopic != null ? encodeStringUtf8(willTopic) : EMPTY;
+        byte[] willTopicBytes = willTopic != null ? encodeStringUtf8(willTopic) : EmptyArrays.EMPTY_BYTES;
         String willMessage = payload.willMessage();
-        byte[] willMessageBytes = willMessage != null ? encodeStringUtf8(willMessage) : EMPTY;
+        byte[] willMessageBytes = willMessage != null ? encodeStringUtf8(willMessage) : EmptyArrays.EMPTY_BYTES;
         if (variableHeader.isWillFlag()) {
             payloadBufferSize += 2 + willTopicBytes.length;
             payloadBufferSize += 2 + willMessageBytes.length;
         }
 
         String userName = payload.userName();
-        byte[] userNameBytes = userName != null ? encodeStringUtf8(userName) : EMPTY;
+        byte[] userNameBytes = userName != null ? encodeStringUtf8(userName) : EmptyArrays.EMPTY_BYTES;
         if (variableHeader.hasUserName()) {
             payloadBufferSize += 2 + userNameBytes.length;
         }
 
         String password = payload.password();
-        byte[] passwordBytes = password != null ? encodeStringUtf8(password) : EMPTY;
+        byte[] passwordBytes = password != null ? encodeStringUtf8(password) : EmptyArrays.EMPTY_BYTES;
         if (variableHeader.hasPassword()) {
             payloadBufferSize += 2 + passwordBytes.length;
         }

@@ -17,6 +17,7 @@
 package io.netty.handler.codec.mqtt;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Mqtt version specific constant values used by multiple classes in mqtt-codec.
@@ -25,12 +26,12 @@ public enum MqttVersion {
     MQTT_3_1("MQIsdp", (byte) 3),
     MQTT_3_1_1("MQTT", (byte) 4);
 
-    private String name;
-    private byte level;
+    private final String name;
+    private final byte level;
 
-    private MqttVersion(String protocolName, byte protocolLevel) {
-        this.name = protocolName;
-        this.level = protocolLevel;
+    MqttVersion(String protocolName, byte protocolLevel) {
+        name = ObjectUtil.checkNotNull(protocolName, "protocolName");
+        level = protocolLevel;
     }
 
     public String protocolName() {
@@ -58,5 +59,4 @@ public enum MqttVersion {
         }
         throw new MqttUnacceptableProtocolVersionException(protocolName + "is unknown protocol name");
     }
-
 }
