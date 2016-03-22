@@ -38,7 +38,7 @@ public final class DnsNameResolverBuilder {
     private final EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private InetSocketAddress localAddress = DnsNameResolver.ANY_LOCAL_ADDR;
-    private DnsServerAddresses nameServerAddresses = DefaultDnsServerAddresses.defaultAddresses();
+    private DnsServerAddresses nameServerAddresses = DnsServerAddresses.defaultAddresses();
     private DnsCache resolveCache;
     private Integer minTtl;
     private Integer maxTtl;
@@ -77,7 +77,7 @@ public final class DnsNameResolverBuilder {
      * Sets the {@link ChannelFactory} as a {@link ReflectiveChannelFactory} of this type.
      * Use as an alternative to {@link #channelFactory(ChannelFactory)}.
      *
-     * @param channelType
+     * @param channelType the type
      * @return {@code this}
      */
     public DnsNameResolverBuilder channelType(Class<? extends DatagramChannel> channelType) {
