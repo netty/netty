@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * Pyaload of the {@link MqttUnsubscribeMessage}
  */
-public class MqttUnsubscribePayload {
+public final class MqttUnsubscribePayload {
 
     private final List<String> topics;
 

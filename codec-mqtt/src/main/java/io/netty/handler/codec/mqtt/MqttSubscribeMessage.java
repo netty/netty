@@ -20,7 +20,7 @@ package io.netty.handler.codec.mqtt;
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#subscribe">
  *     MQTTV3.1/subscribe</a>
  */
-public class MqttSubscribeMessage extends MqttMessage {
+public final class MqttSubscribeMessage extends MqttMessage {
 
     public MqttSubscribeMessage(
             MqttFixedHeader mqttFixedHeader,

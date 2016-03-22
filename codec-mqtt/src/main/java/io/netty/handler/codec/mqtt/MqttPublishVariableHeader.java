@@ -21,7 +21,7 @@ import io.netty.util.internal.StringUtil;
 /**
  * Variable Header of the {@link MqttPublishMessage}
  */
-public class MqttPublishVariableHeader {
+public final class MqttPublishVariableHeader {
 
     private final String topicName;
     private final int messageId;

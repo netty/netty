@@ -21,7 +21,7 @@ import io.netty.util.internal.StringUtil;
 /**
  * Payload of {@link MqttConnectMessage}
  */
-public class MqttConnectPayload {
+public final class MqttConnectPayload {
 
     private final String clientIdentifier;
     private final String willTopic;

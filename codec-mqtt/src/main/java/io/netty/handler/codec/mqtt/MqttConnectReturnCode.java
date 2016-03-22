@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Return Code of {@link io.netty.handler.codec.mqtt.MqttConnAckMessage}
+ * Return Code of {@link MqttConnAckMessage}
  */
 public enum MqttConnectReturnCode {
     CONNECTION_ACCEPTED((byte) 0x00),
