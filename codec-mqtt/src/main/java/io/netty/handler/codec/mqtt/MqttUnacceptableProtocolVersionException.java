@@ -21,7 +21,7 @@ import io.netty.handler.codec.DecoderException;
  * A {@link MqttUnacceptableProtocolVersionException} which is thrown when
  * a CONNECT request contains unacceptable protocol version.
  */
-public class MqttUnacceptableProtocolVersionException extends DecoderException {
+public final class MqttUnacceptableProtocolVersionException extends DecoderException {
 
     private static final long serialVersionUID = 4914652213232455749L;
 

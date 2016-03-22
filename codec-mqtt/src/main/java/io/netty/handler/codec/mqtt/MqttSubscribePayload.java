@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * Payload of the {@link MqttSubscribeMessage}
  */
-public class MqttSubscribePayload {
+public final class MqttSubscribePayload {
 
     private final List<MqttTopicSubscription> topicSubscriptions;
 

@@ -19,7 +19,7 @@ package io.netty.handler.codec.mqtt;
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#suback">MQTTV3.1/suback</a>
  */
-public class MqttSubAckMessage extends MqttMessage {
+public final class MqttSubAckMessage extends MqttMessage {
 
     public MqttSubAckMessage(
             MqttFixedHeader mqttFixedHeader,

@@ -21,7 +21,7 @@ import io.netty.util.internal.StringUtil;
 /**
  * Variable Header for the {@link MqttConnectMessage}
  */
-public class MqttConnectVariableHeader {
+public final class MqttConnectVariableHeader {
 
     private final String name;
     private final int version;

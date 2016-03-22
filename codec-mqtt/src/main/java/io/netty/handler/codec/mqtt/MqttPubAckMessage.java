@@ -19,7 +19,7 @@ package io.netty.handler.codec.mqtt;
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#puback">MQTTV3.1/puback</a>
  */
-public class MqttPubAckMessage extends MqttMessage {
+public final class MqttPubAckMessage extends MqttMessage {
 
     public MqttPubAckMessage(MqttFixedHeader mqttFixedHeader, MqttMessageIdVariableHeader variableHeader) {
         super(mqttFixedHeader, variableHeader);
