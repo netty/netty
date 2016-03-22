@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,11 +24,11 @@ import org.openjdk.jmh.annotations.Threads;
 import java.util.Random;
 
 /**
- * This class benchmarks different allocators with different allocation sizes.
+ * This class benchmarks the slow path of FastThreadLocal and the JDK ThreadLocal.
  */
 @Threads(4)
 @Measurement(iterations = 10, batchSize = 100)
-public class FastThreadLocalBenchmark extends AbstractMicrobenchmark {
+public class FastThreadLocalSlowPathBenchmark extends AbstractMicrobenchmark {
 
     private static final Random rand = new Random();
 
@@ -39,22 +39,24 @@ public class FastThreadLocalBenchmark extends AbstractMicrobenchmark {
 
     static {
         for (int i = 0; i < jdkThreadLocals.length; i ++) {
+            final int num = rand.nextInt();
             jdkThreadLocals[i] = new ThreadLocal<Integer>() {
                 @Override
                 protected Integer initialValue() {
-                    return rand.nextInt();
+                    return num;
                 }
             };
-        }
-
-        for (int i = 0; i < fastThreadLocals.length; i ++) {
             fastThreadLocals[i] = new FastThreadLocal<Integer>() {
                 @Override
                 protected Integer initialValue() {
-                    return rand.nextInt();
+                    return num;
                 }
             };
         }
+    }
+
+    public FastThreadLocalSlowPathBenchmark() {
+        super(false, true);
     }
 
     @Benchmark
