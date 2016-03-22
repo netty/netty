@@ -66,7 +66,7 @@ public class DefaultStompFrame extends DefaultStompHeadersSubframe implements St
 
     @Override
     public StompFrame retain(int increment) {
-        content.retain();
+        content.retain(increment);
         return this;
     }
 
