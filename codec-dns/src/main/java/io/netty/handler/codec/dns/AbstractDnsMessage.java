@@ -54,26 +54,26 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     /**
      * Creates a new instance with the specified {@code id} and {@link DnsOpCode#QUERY} opCode.
      */
-    protected AbstractDnsMessage(int id) {
+    protected AbstractDnsMessage(short id) {
         this(id, DnsOpCode.QUERY);
     }
 
     /**
      * Creates a new instance with the specified {@code id} and {@code opCode}.
      */
-    protected AbstractDnsMessage(int id, DnsOpCode opCode) {
+    protected AbstractDnsMessage(short id, DnsOpCode opCode) {
         setId(id);
         setOpCode(opCode);
     }
 
     @Override
-    public int id() {
-        return id & 0xFFFF;
+    public short id() {
+        return id;
     }
 
     @Override
-    public DnsMessage setId(int id) {
-        this.id = (short) id;
+    public DnsMessage setId(short id) {
+        this.id = id;
         return this;
     }
 

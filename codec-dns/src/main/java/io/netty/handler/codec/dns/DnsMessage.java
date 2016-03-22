@@ -25,12 +25,12 @@ public interface DnsMessage extends ReferenceCounted {
     /**
      * Returns the {@code ID} of this DNS message.
      */
-    int id();
+    short id();
 
     /**
      * Sets the {@code ID} of this DNS message.
      */
-    DnsMessage setId(int id);
+    DnsMessage setId(short id);
 
     /**
      * Returns the {@code opCode} of this DNS message.

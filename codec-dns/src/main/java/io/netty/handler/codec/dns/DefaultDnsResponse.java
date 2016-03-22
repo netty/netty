@@ -33,7 +33,7 @@ public class DefaultDnsResponse extends AbstractDnsMessage implements DnsRespons
      *
      * @param id the {@code ID} of the DNS response
      */
-    public DefaultDnsResponse(int id) {
+    public DefaultDnsResponse(short id) {
         this(id, DnsOpCode.QUERY, DnsResponseCode.NOERROR);
     }
 
@@ -43,7 +43,7 @@ public class DefaultDnsResponse extends AbstractDnsMessage implements DnsRespons
      * @param id the {@code ID} of the DNS response
      * @param opCode the {@code opCode} of the DNS response
      */
-    public DefaultDnsResponse(int id, DnsOpCode opCode) {
+    public DefaultDnsResponse(short id, DnsOpCode opCode) {
         this(id, opCode, DnsResponseCode.NOERROR);
     }
 
@@ -54,7 +54,7 @@ public class DefaultDnsResponse extends AbstractDnsMessage implements DnsRespons
      * @param opCode the {@code opCode} of the DNS response
      * @param code the {@code RCODE} of the DNS response
      */
-    public DefaultDnsResponse(int id, DnsOpCode opCode, DnsResponseCode code) {
+    public DefaultDnsResponse(short id, DnsOpCode opCode, DnsResponseCode code) {
         super(id, opCode);
         setCode(code);
     }
@@ -104,7 +104,7 @@ public class DefaultDnsResponse extends AbstractDnsMessage implements DnsRespons
     }
 
     @Override
-    public DnsResponse setId(int id) {
+    public DnsResponse setId(short id) {
         return (DnsResponse) super.setId(id);
     }
 

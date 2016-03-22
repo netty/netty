@@ -35,19 +35,19 @@ public class DnsQueryTest {
         InetSocketAddress addr = new InetSocketAddress("8.8.8.8", 53);
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsQueryEncoder());
         List<DnsQuery> queries = new ArrayList<DnsQuery>(5);
-        queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
+        queries.add(new DatagramDnsQuery(null, addr, (short) 1).setRecord(
                 DnsSection.QUESTION,
                 new DefaultDnsQuestion("1.0.0.127.in-addr.arpa", DnsRecordType.PTR)));
-        queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
+        queries.add(new DatagramDnsQuery(null, addr, (short) 1).setRecord(
                 DnsSection.QUESTION,
                 new DefaultDnsQuestion("www.example.com", DnsRecordType.A)));
-        queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
+        queries.add(new DatagramDnsQuery(null, addr, (short) 1).setRecord(
                 DnsSection.QUESTION,
                 new DefaultDnsQuestion("example.com", DnsRecordType.AAAA)));
-        queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
+        queries.add(new DatagramDnsQuery(null, addr, (short) 1).setRecord(
                 DnsSection.QUESTION,
                 new DefaultDnsQuestion("example.com", DnsRecordType.MX)));
-        queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
+        queries.add(new DatagramDnsQuery(null, addr, (short) 1).setRecord(
                 DnsSection.QUESTION,
                 new DefaultDnsQuestion("example.com", DnsRecordType.CNAME)));
 

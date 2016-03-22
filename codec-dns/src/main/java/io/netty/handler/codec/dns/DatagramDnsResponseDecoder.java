@@ -22,7 +22,6 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
-import java.net.InetSocketAddress;
 import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -76,7 +75,7 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
     }
 
     private static DnsResponse newResponse(DatagramPacket packet, ByteBuf buf) {
-        final int id = buf.readUnsignedShort();
+        final short id = buf.readShort();
 
         final int flags = buf.readUnsignedShort();
         if (flags >> 15 == 0) {

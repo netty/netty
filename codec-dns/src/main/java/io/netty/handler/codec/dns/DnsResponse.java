@@ -73,7 +73,7 @@ public interface DnsResponse extends DnsMessage {
     DnsResponse setCode(DnsResponseCode code);
 
     @Override
-    DnsResponse setId(int id);
+    DnsResponse setId(short id);
 
     @Override
     DnsResponse setOpCode(DnsOpCode opCode);
