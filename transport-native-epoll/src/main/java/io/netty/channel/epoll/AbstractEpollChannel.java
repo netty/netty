@@ -411,7 +411,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         /**
-         * Create a new {@EpollRecvByteAllocatorHandle} instance.
+         * Create a new {@link EpollRecvByteAllocatorHandle} instance.
          * @param handle The handle to wrap with EPOLL specific logic.
          */
         EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.Handle handle) {
