@@ -94,7 +94,7 @@ public class DefaultStompFrame extends DefaultStompHeadersSubframe implements St
 
     @Override
     public String toString() {
-        return "DefaultFullStompFrame{" +
+        return "DefaultStompFrame{" +
             "command=" + command +
             ", headers=" + headers +
             ", content=" + content.toString(CharsetUtil.UTF_8) +
