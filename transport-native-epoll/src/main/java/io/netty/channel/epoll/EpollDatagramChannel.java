@@ -575,7 +575,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 } catch (Throwable t) {
                     if (data != null) {
                         data.release();
-                        data = null;
                     }
                     exception = t;
                 }

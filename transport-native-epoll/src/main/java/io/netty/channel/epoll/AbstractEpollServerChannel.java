@@ -35,6 +35,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     /**
      * @deprecated Use {@link #AbstractEpollServerChannel(Socket, boolean)}.
      */
+    @Deprecated
     protected AbstractEpollServerChannel(int fd) {
         this(new Socket(fd), false);
     }
