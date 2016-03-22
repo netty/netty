@@ -50,7 +50,7 @@ class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle
          * EPOLL ET requires that we read until we get an EAGAIN
          * (see Q9 in <a href="http://man7.org/linux/man-pages/man7/epoll.7.html">epoll man</a>). However in order to
          * respect auto read we supporting reading to stop if auto read is off. If auto read is on we force reading to
-         * continue to avoid a {@link java.lang.StackOverflowError} between channelReadComplete and reading from the
+         * continue to avoid a {@link StackOverflowError} between channelReadComplete and reading from the
          * channel. It is expected that the {@link #EpollSocketChannel} implementations will track if we are in
          * edgeTriggered mode and all data was not read, and will force a EPOLLIN ready event.
          *

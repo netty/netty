@@ -640,7 +640,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
     }
 
-    private void safeClosePipe(FileDescriptor fd) {
+    private static void safeClosePipe(FileDescriptor fd) {
         if (fd != null) {
             try {
                 fd.close();
@@ -930,7 +930,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return this;
         }
 
-        abstract boolean spliceIn(RecvByteBufAllocator.Handle handle) throws IOException;
+        abstract boolean spliceIn(RecvByteBufAllocator.Handle handle);
 
         protected final int spliceIn(FileDescriptor pipeOut, RecvByteBufAllocator.Handle handle) throws IOException {
             // calculate the maximum amount of data we are allowed to splice
@@ -967,7 +967,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
 
         @Override
-        public boolean spliceIn(RecvByteBufAllocator.Handle handle) throws IOException {
+        public boolean spliceIn(RecvByteBufAllocator.Handle handle) {
             assert ch.eventLoop().inEventLoop();
             if (len == 0) {
                 promise.setSuccess();
@@ -1061,7 +1061,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     private final class SpliceFdTask extends SpliceInTask {
         private final FileDescriptor fd;
         private final ChannelPromise promise;
-        private int offset;
+        private final int offset;
 
         SpliceFdTask(FileDescriptor fd, int offset, int len, ChannelPromise promise) {
             super(len, promise);
@@ -1076,7 +1076,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
 
         @Override
-        public boolean spliceIn(RecvByteBufAllocator.Handle handle) throws IOException {
+        public boolean spliceIn(RecvByteBufAllocator.Handle handle) {
             assert eventLoop().inEventLoop();
             if (len == 0) {
                 promise.setSuccess();
