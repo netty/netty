@@ -41,18 +41,10 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     public static InternalThreadLocalMap getIfSet() {
         Thread thread = Thread.currentThread();
-        InternalThreadLocalMap threadLocalMap;
         if (thread instanceof FastThreadLocalThread) {
-            threadLocalMap = ((FastThreadLocalThread) thread).threadLocalMap();
-        } else {
-            ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = UnpaddedInternalThreadLocalMap.slowThreadLocalMap;
-            if (slowThreadLocalMap == null) {
-                threadLocalMap = null;
-            } else {
-                threadLocalMap = slowThreadLocalMap.get();
-            }
+            return ((FastThreadLocalThread) thread).threadLocalMap();
         }
-        return threadLocalMap;
+        return slowThreadLocalMap.get();
     }
 
     public static InternalThreadLocalMap get() {
@@ -74,11 +66,6 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     private static InternalThreadLocalMap slowGet() {
         ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = UnpaddedInternalThreadLocalMap.slowThreadLocalMap;
-        if (slowThreadLocalMap == null) {
-            UnpaddedInternalThreadLocalMap.slowThreadLocalMap =
-                    slowThreadLocalMap = new ThreadLocal<InternalThreadLocalMap>();
-        }
-
         InternalThreadLocalMap ret = slowThreadLocalMap.get();
         if (ret == null) {
             ret = new InternalThreadLocalMap();
@@ -92,15 +79,12 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         if (thread instanceof FastThreadLocalThread) {
             ((FastThreadLocalThread) thread).setThreadLocalMap(null);
         } else {
-            ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = UnpaddedInternalThreadLocalMap.slowThreadLocalMap;
-            if (slowThreadLocalMap != null) {
-                slowThreadLocalMap.remove();
-            }
+            slowThreadLocalMap.remove();
         }
     }
 
     public static void destroy() {
-        slowThreadLocalMap = null;
+        slowThreadLocalMap.remove();
     }
 
     public static int nextVariableIndex() {
