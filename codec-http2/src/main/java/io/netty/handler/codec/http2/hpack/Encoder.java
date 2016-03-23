@@ -454,6 +454,9 @@ public final class Encoder {
         private void remove() {
             before.after = after;
             after.before = before;
+            before = null; // null references to prevent nepotism in generational GC.
+            after = null;
+            next = null;
         }
 
         /**
