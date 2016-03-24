@@ -105,6 +105,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             allocHandle.reset(config);
 
             ByteBuf byteBuf = null;
+            boolean close = false;
             try {
                 boolean needReadPendingReset = true;
                 do {
@@ -114,6 +115,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         // nothing was read. release the buffer.
                         byteBuf.release();
                         byteBuf = null;
+                        close = allocHandle.lastBytesRead() < 0;
                         break;
                     }
 
@@ -129,11 +131,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
 
-                if (allocHandle.lastBytesRead() < 0) {
+                if (close) {
                     closeOnRead(pipeline);
                 }
             } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, allocHandle.lastBytesRead() < 0, allocHandle);
+                handleReadException(pipeline, byteBuf, t, close, allocHandle);
             } finally {
                 // Check if there is a readPending which was not processed yet.
                 // This could be for two reasons:
