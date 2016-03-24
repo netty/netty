@@ -80,10 +80,14 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         String[] parts = StringUtil.split(name, '.');
         for (String part: parts) {
             final int partLen = part.length();
+            // We always need to write the length even if its 0.
+            // See:
+            // - https://github.com/netty/netty/issues/5014
+            // - https://www.ietf.org/rfc/rfc1035.txt , Section 3.1
+            buf.writeByte(partLen);
             if (partLen == 0) {
                 continue;
             }
-            buf.writeByte(partLen);
             ByteBufUtil.writeAscii(buf, part);
         }
         buf.writeByte(0); // marks end of name field
