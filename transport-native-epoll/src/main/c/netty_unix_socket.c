@@ -300,7 +300,7 @@ int netty_unix_socket_getOption(JNIEnv* env, jint fd, int level, int optname, vo
         if (err == EBADF) {
             netty_unix_errors_throwClosedChannelException(env);
         } else {
-            netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", err);
+            netty_unix_errors_throwChannelExceptionErrorNo(env, "getsockopt() failed: ", err);
         }
     }
     return rc;
