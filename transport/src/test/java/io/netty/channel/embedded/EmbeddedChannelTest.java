@@ -316,6 +316,52 @@ public class EmbeddedChannelTest {
         }
     }
 
+    @Test
+    public void testWriteLater() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
+                    throws Exception {
+                ctx.executor().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        ctx.write(msg, promise);
+                    }
+                });
+            }
+        });
+        Object msg = new Object();
+
+        assertTrue(channel.writeOutbound(msg));
+        assertTrue(channel.finish());
+        assertSame(msg, channel.readOutbound());
+        assertNull(channel.readOutbound());
+    }
+
+    @Test
+    public void testWriteScheduled() throws InterruptedException  {
+        final int delay = 500;
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
+                    throws Exception {
+                ctx.executor().schedule(new Runnable() {
+                    @Override
+                    public void run() {
+                        ctx.writeAndFlush(msg, promise);
+                    }
+                }, delay, TimeUnit.MILLISECONDS);
+            }
+        });
+        Object msg = new Object();
+
+        assertFalse(channel.writeOutbound(msg));
+        Thread.sleep(delay  * 2);
+        assertTrue(channel.finish());
+        assertSame(msg, channel.readOutbound());
+        assertNull(channel.readOutbound());
+    }
+
     private static void release(ByteBuf... buffers) {
         for (ByteBuf buffer : buffers) {
             if (buffer.refCnt() > 0) {

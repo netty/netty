@@ -19,6 +19,7 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
@@ -59,6 +60,13 @@ public class EmbeddedChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
 
     private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
+    private final ChannelFutureListener recordExceptionListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            recordException(future);
+        }
+    };
+
     private final ChannelMetadata metadata;
     private final ChannelConfig config;
 
@@ -264,19 +272,22 @@ public class EmbeddedChannel extends AbstractChannel {
                 }
                 futures.add(write(m));
             }
-
+            // We need to call runPendingTasks first as a ChannelOutboundHandler may used eventloop.execute(...) to
+            // delay the write on the next eventloop run.
+            runPendingTasks();
             flush();
 
             int size = futures.size();
             for (int i = 0; i < size; i++) {
                 ChannelFuture future = (ChannelFuture) futures.get(i);
-                assert future.isDone();
-                if (future.cause() != null) {
-                    recordException(future.cause());
+                if (future.isDone()) {
+                    recordException(future);
+                } else {
+                    // The write may be delayed to run later by runPendingTasks()
+                    future.addListener(recordExceptionListener);
                 }
             }
 
-            runPendingTasks();
             checkException();
             return isNotEmpty(outboundMessages);
         } finally {
@@ -372,7 +383,12 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public final ChannelFuture close(ChannelPromise promise) {
+        // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
+        // that needs to be run before the actual close takes place.
+        runPendingTasks();
         ChannelFuture future = super.close(promise);
+
+        // Now finish everything else and cancel all scheduled tasks that were not ready set.
         finishPendingTasks(true);
         return future;
     }
@@ -421,6 +437,12 @@ public class EmbeddedChannel extends AbstractChannel {
         } catch (Exception e) {
             recordException(e);
             return loop.nextScheduledTask();
+        }
+    }
+
+    private void recordException(ChannelFuture future) {
+        if (!future.isSuccess()) {
+            recordException(future.cause());
         }
     }
 
