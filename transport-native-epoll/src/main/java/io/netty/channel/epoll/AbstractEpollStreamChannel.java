@@ -884,7 +884,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
                 if (close) {
                     shutdownInput();
-                    close = false;
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
