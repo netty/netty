@@ -367,10 +367,9 @@ public class EpollSocketChannelTest {
     private static class ExceptionHandler extends ChannelInboundHandlerAdapter {
         final AtomicLong count = new AtomicLong();
         /**
-         * We expect to get 2 calls to {@link #exceptionCaught(ChannelHandlerContext, Throwable)}.
-         * 1 call from BuggyChannelHandler and 1 from closing the channel in this class.
+         * We expect to get 1 call to {@link #exceptionCaught(ChannelHandlerContext, Throwable)}.
          */
-        final CountDownLatch latch1 = new CountDownLatch(2);
+        final CountDownLatch latch1 = new CountDownLatch(1);
         final CountDownLatch latch2 = new CountDownLatch(1);
 
         @Override
@@ -380,7 +379,7 @@ public class EpollSocketChannelTest {
             } else {
                 latch2.countDown();
             }
-            // This is expected to throw an exception!
+            // This should not throw any exception.
             ctx.close();
         }
     }

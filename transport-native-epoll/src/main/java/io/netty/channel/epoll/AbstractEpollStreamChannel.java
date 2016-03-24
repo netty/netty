@@ -876,6 +876,21 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     allocHandle.incMessagesRead(1);
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
+
+                    if (fd().isInputShutdown()) {
+                        // We need to do this for two reasons:
+                        //
+                        // - If the input was shutdown in between (which may be the case when the user did it in the
+                        //   fireChannelRead(...) method we should not try to read again to not produce any
+                        //   miss-leading exceptions.
+                        //
+                        // - If the user closes the channel we need to ensure we not try to read from it again as
+                        //   the filedescriptor may be re-used already by the OS if the system is handling a lot of
+                        //   concurrent connections and so needs a lot of filedescriptors. If not do this we risk
+                        //   reading data from a filedescriptor that belongs to another socket then the socket that
+                        //   was "wrapped" by this Channel implementation.
+                        break;
+                    }
                 } while (allocHandle.continueReading());
 
                 allocHandle.readComplete();
