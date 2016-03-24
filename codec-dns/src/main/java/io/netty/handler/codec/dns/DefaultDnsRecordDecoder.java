@@ -107,7 +107,19 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         int position = -1;
         int checked = 0;
         final int end = in.writerIndex();
-        final StringBuilder name = new StringBuilder(in.readableBytes() << 1);
+        final int readable = in.readableBytes();
+
+        // Looking at the spec we should always have at least enough readable bytes to read a byte here but it seems
+        // some servers do not respect this for empty names. So just workaround this and return an empty name in this
+        // case.
+        //
+        // See:
+        // - https://github.com/netty/netty/issues/5014
+        // - https://www.ietf.org/rfc/rfc1035.txt , Section 3.1
+        if (readable == 0) {
+            return StringUtil.EMPTY_STRING;
+        }
+        final StringBuilder name = new StringBuilder(readable << 1);
         for (int len = in.readUnsignedByte(); in.isReadable() && len != 0; len = in.readUnsignedByte()) {
             boolean pointer = (len & 0xc0) == 0xc0;
             if (pointer) {
