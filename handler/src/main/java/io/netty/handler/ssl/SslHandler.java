@@ -510,6 +510,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ByteBuf out = null;
         ChannelPromise promise = null;
         ByteBufAllocator alloc = ctx.alloc();
+        boolean needUnwrap = false;
         try {
             for (;;) {
                 Object msg = pendingUnencryptedWrites.current();
@@ -546,11 +547,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             setHandshakeSuccessIfStillHandshaking();
                             // deliberate fall-through
                         case NEED_WRAP:
-                            finishWrap(ctx, out, promise, inUnwrap);
+                            finishWrap(ctx, out, promise, inUnwrap, false);
                             promise = null;
                             out = null;
                             break;
                         case NEED_UNWRAP:
+                            needUnwrap = true;
                             return;
                         default:
                             throw new IllegalStateException(
@@ -562,11 +564,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             setHandshakeFailure(ctx, e);
             throw e;
         } finally {
-            finishWrap(ctx, out, promise, inUnwrap);
+            finishWrap(ctx, out, promise, inUnwrap, needUnwrap);
         }
     }
 
-    private void finishWrap(ChannelHandlerContext ctx, ByteBuf out, ChannelPromise promise, boolean inUnwrap) {
+    private void finishWrap(ChannelHandlerContext ctx, ByteBuf out, ChannelPromise promise, boolean inUnwrap,
+            boolean needUnwrap) {
         if (out == null) {
             out = Unpooled.EMPTY_BUFFER;
         } else if (!out.isReadable()) {
@@ -582,6 +585,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         if (inUnwrap) {
             needsFlush = true;
+        }
+
+        if (needUnwrap) {
+            // The underlying engine is starving so we need to feed it with more data.
+            // See https://github.com/netty/netty/pull/5039
+            readIfNeeded(ctx);
         }
     }
 
@@ -917,16 +926,19 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         discardSomeReadBytes();
 
         flushIfNeeded(ctx);
+        readIfNeeded(ctx);
 
+        firedChannelRead = false;
+        ctx.fireChannelReadComplete();
+    }
+
+    private void readIfNeeded(ChannelHandlerContext ctx) {
         // If handshake is not finished yet, we need more data.
         if (!ctx.channel().config().isAutoRead() && (!firedChannelRead || !handshakePromise.isDone())) {
             // No auto-read used and no message passed through the ChannelPipeline or the handhshake was not complete
             // yet, which means we need to trigger the read to ensure we not encounter any stalls.
             ctx.read();
         }
-
-        firedChannelRead = false;
-        ctx.fireChannelReadComplete();
     }
 
     private void flushIfNeeded(ChannelHandlerContext ctx) {
@@ -1031,6 +1043,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
 
                 if (status == Status.BUFFER_UNDERFLOW || consumed == 0 && produced == 0) {
+                    if (handshakeStatus == HandshakeStatus.NEED_UNWRAP) {
+                        // The underlying engine is starving so we need to feed it with more data.
+                        // See https://github.com/netty/netty/pull/5039
+                        readIfNeeded(ctx);
+                    }
+
                     break;
                 }
             }
