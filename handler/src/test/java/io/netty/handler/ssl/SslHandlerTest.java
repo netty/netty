@@ -17,6 +17,10 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -62,5 +66,51 @@ public class SslHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
         ch.writeOutbound(new Object());
+    }
+
+    private static final class TlsReadTest extends ChannelOutboundHandlerAdapter {
+        private volatile boolean readIssued;
+
+        @Override
+        public void read(ChannelHandlerContext ctx) throws Exception {
+            readIssued = true;
+            super.read(ctx);
+        }
+
+        public void test(final boolean dropChannelActive) throws Exception {
+          SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+          engine.setUseClientMode(true);
+
+          EmbeddedChannel ch = new EmbeddedChannel(
+              this,
+              new SslHandler(engine),
+              new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                  if (!dropChannelActive) {
+                    ctx.fireChannelActive();
+                  }
+                }
+              }
+          );
+          ch.config().setAutoRead(false);
+          assertFalse(ch.config().isAutoRead());
+
+          assertTrue(ch.writeOutbound(Unpooled.EMPTY_BUFFER));
+          assertTrue(readIssued);
+          assertTrue(ch.finishAndReleaseAll());
+       }
+    }
+
+    @Test
+    public void testIssueReadAfterActiveWriteFlush() throws Exception {
+        // the handshake is initiated by channelActive
+        new TlsReadTest().test(false);
+    }
+
+    @Test
+    public void testIssueReadAfterWriteFlushActive() throws Exception {
+        // the handshake is initiated by flush
+        new TlsReadTest().test(true);
     }
 }
