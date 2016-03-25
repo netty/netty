@@ -35,7 +35,7 @@ public class InboundHttpToHttp2Adapter extends ChannelInboundHandlerAdapter {
 
     private int getStreamId(HttpHeaders httpHeaders) {
         return httpHeaders.getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(),
-            connection.remote().nextStreamId());
+                                  connection.remote().incrementAndGetNextStreamId());
     }
 
     @Override
