@@ -52,11 +52,24 @@ public final class Socket extends FileDescriptor {
 
     public void shutdown(boolean read, boolean write) throws IOException {
         for (;;) {
-            int state = this.state;
-            if (!shouldAttemptShutdown(state, read, write)) {
+            // We need to only shutdown what has not been shutdown yet, and if there is no change we should not
+            // shutdown anything. This is because if the underlying FD is reused and we still have an object which
+            // represents the previous incarnation of the FD we need to be sure we don't inadvertently shutdown the
+            // "new" FD without explicitly having a change.
+            final int oldState = this.state;
+            int newState = oldState;
+            if (read && !isInputShutdown(newState)) {
+                newState = inputShutdown(newState);
+            }
+            if (write && !isOutputShutdown(newState)) {
+                newState = outputShutdown(newState);
+            }
+
+            // If there is no change in state, then we should not take any action.
+            if (newState == oldState) {
                 return;
             }
-            if (casState(state, calculateShutdownState(state, read, write))) {
+            if (casState(oldState, newState)) {
                 break;
             }
         }

@@ -220,18 +220,12 @@ public class FileDescriptor {
         return (state & STATE_OUTPUT_SHUTDOWN_MASK) != 0;
     }
 
-    static boolean shouldAttemptShutdown(int state, boolean read, boolean write) {
-        return !isClosed(state) && (read && !isInputShutdown(state) || write && !isOutputShutdown(state));
+    static int inputShutdown(int state) {
+        return state | STATE_INPUT_SHUTDOWN_MASK;
     }
 
-    static int calculateShutdownState(int state, boolean read, boolean write) {
-        if (read) {
-            state |= STATE_INPUT_SHUTDOWN_MASK;
-        }
-        if (write) {
-            state |= STATE_OUTPUT_SHUTDOWN_MASK;
-        }
-        return state;
+    static int outputShutdown(int state) {
+        return state | STATE_OUTPUT_SHUTDOWN_MASK;
     }
 
     private static native int open(String path);
