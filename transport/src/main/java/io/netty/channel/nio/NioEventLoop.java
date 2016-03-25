@@ -15,11 +15,10 @@
  */
 package io.netty.channel.nio;
 
-
-import io.netty.channel.SelectStrategy;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoopException;
+import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.nio.AbstractNioChannel.NioUnsafe;
 import io.netty.util.IntSupplier;
@@ -27,6 +26,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.channels.CancelledKeyException;
@@ -316,11 +316,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void run() {
-        selectloop: for (;;) {
+        for (;;) {
             try {
                 switch (selectStrategy.calculateStrategy(selectNowSupplier, hasTasks())) {
                     case SelectStrategy.CONTINUE:
-                        continue selectloop;
+                        continue;
                     case SelectStrategy.SELECT:
                         select(wakenUp.getAndSet(false));
 

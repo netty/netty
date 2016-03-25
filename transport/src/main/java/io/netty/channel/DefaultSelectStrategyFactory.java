@@ -13,26 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.nio;
-
-import io.netty.channel.SelectStrategy;
-import io.netty.util.IntSupplier;
+package io.netty.channel;
 
 /**
- * Default {@link SelectStrategy} which triggers the blocking select without backoff if no
- * tasks are in the queue to be processed.
+ * Factory which uses the default select strategy.
  */
-final class DefaultSelectStrategy implements SelectStrategy {
+public final class DefaultSelectStrategyFactory implements SelectStrategyFactory {
+    public static final SelectStrategyFactory INSTANCE = new DefaultSelectStrategyFactory();
 
-    public static final SelectStrategy INSTANCE = new DefaultSelectStrategy();
-
-    private DefaultSelectStrategy() {
-        // singleton.
-    }
+    private DefaultSelectStrategyFactory() { }
 
     @Override
-    public int calculateStrategy(final IntSupplier supplier, final boolean hasTasks)
-        throws Exception {
-        return hasTasks ? supplier.get() : SelectStrategy.SELECT;
+    public SelectStrategy newSelectStrategy() {
+        return DefaultSelectStrategy.INSTANCE;
     }
 }
