@@ -13,24 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.nio;
+package io.netty.channel;
 
-import io.netty.channel.SelectStrategy;
-import io.netty.channel.SelectStrategyFactory;
+import io.netty.util.IntSupplier;
 
 /**
- * Select Strategy Factory for the Noop implementation (default).
+ * Default select strategy.
  */
-final class DefaultSelectStrategyFactory implements SelectStrategyFactory {
+final class DefaultSelectStrategy implements SelectStrategy {
+    static final SelectStrategy INSTANCE = new DefaultSelectStrategy();
 
-    public static final SelectStrategyFactory INSTANCE = new DefaultSelectStrategyFactory();
-
-    private DefaultSelectStrategyFactory() {
-        // singleton
-    }
+    private DefaultSelectStrategy() { }
 
     @Override
-    public SelectStrategy newSelectStrategy() {
-        return DefaultSelectStrategy.INSTANCE;
+    public int calculateStrategy(IntSupplier selectSupplier, boolean hasTasks) throws Exception {
+        return hasTasks ? selectSupplier.get() : SelectStrategy.SELECT;
     }
 }

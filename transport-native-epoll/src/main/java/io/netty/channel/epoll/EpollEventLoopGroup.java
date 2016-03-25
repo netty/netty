@@ -15,8 +15,10 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.concurrent.EventExecutor;
 
 import java.util.concurrent.ThreadFactory;
@@ -38,7 +40,15 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      * Create a new instance using the specified number of threads and the default {@link ThreadFactory}.
      */
     public EpollEventLoopGroup(int nThreads) {
-        this(nThreads, null);
+        this(nThreads, (ThreadFactory) null);
+    }
+
+    /**
+     * Create a new instance using the specified number of threads and the default {@link ThreadFactory}.
+     */
+    @SuppressWarnings("deprecation")
+    public EpollEventLoopGroup(int nThreads, SelectStrategyFactory selectStrategyFactory) {
+        this(nThreads, null, selectStrategyFactory);
     }
 
     /**
@@ -50,15 +60,35 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     /**
+     * Create a new instance using the specified number of threads and the given {@link ThreadFactory}.
+     */
+    @SuppressWarnings("deprecation")
+    public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, SelectStrategyFactory selectStrategyFactory) {
+        this(nThreads, threadFactory, 0, selectStrategyFactory);
+    }
+
+    /**
      * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the given
      * maximal amount of epoll events to handle per epollWait(...).
      *
-     * @deprecated  Use {@link #EpollEventLoopGroup(int)}, {@link #EpollEventLoopGroup(int)} or
-     *              {@link #EpollEventLoopGroup(int, ThreadFactory)}
+     * @deprecated  Use {@link #EpollEventLoopGroup(int)} or {@link #EpollEventLoopGroup(int, ThreadFactory)}
      */
     @Deprecated
     public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce) {
-        super(nThreads, threadFactory, maxEventsAtOnce);
+        this(nThreads, threadFactory, maxEventsAtOnce, DefaultSelectStrategyFactory.INSTANCE);
+    }
+
+    /**
+     * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the given
+     * maximal amount of epoll events to handle per epollWait(...).
+     *
+     * @deprecated  Use {@link #EpollEventLoopGroup(int)}, {@link #EpollEventLoopGroup(int, ThreadFactory)}, or
+     * {@link #EpollEventLoopGroup(int, SelectStrategyFactory)}
+     */
+    @Deprecated
+    public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce,
+                               SelectStrategyFactory selectStrategyFactory) {
+        super(nThreads, threadFactory, maxEventsAtOnce, selectStrategyFactory);
     }
 
     /**
@@ -73,6 +103,7 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
 
     @Override
     protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
-        return new EpollEventLoop(this, threadFactory, (Integer) args[0]);
+        return new EpollEventLoop(this, threadFactory, (Integer) args[0],
+                                  ((SelectStrategyFactory) args[1]).newSelectStrategy());
     }
 }
