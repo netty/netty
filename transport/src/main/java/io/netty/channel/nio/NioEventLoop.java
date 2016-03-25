@@ -15,7 +15,6 @@
  */
 package io.netty.channel.nio;
 
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoopException;
@@ -316,11 +315,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void run() {
-        selectloop: for (;;) {
+        for (;;) {
             try {
                 switch (selectStrategy.calculateStrategy(selectNowSupplier, hasTasks())) {
                     case SelectStrategy.CONTINUE:
-                        continue selectloop;
+                        continue;
                     case SelectStrategy.SELECT:
                         select(wakenUp.getAndSet(false));
 
