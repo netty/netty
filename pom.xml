@@ -383,6 +383,11 @@
         <version>1.1.3</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-api</artifactId>
+        <version>2.3</version>
+      </dependency>
+      <dependency>
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
         <version>1.2.17</version>
@@ -520,6 +525,14 @@
         <groupId>org.apache.directory.server</groupId>
         <artifactId>apacheds-protocol-dns</artifactId>
         <version>1.5.7</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Test dependency for log4j2 tests -->
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-core</artifactId>
+        <version>2.3</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
