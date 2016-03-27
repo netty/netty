@@ -29,7 +29,6 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.OneTimeTask;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -201,7 +200,7 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
                 in.remove();
             }
 
-            preferredExecutor.execute(new OneTimeTask() {
+            preferredExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
                     for (Object msg : msgsCopy) {
@@ -248,7 +247,7 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         if (eventLoop().inEventLoop()) {
             fireChildRead0(msg);
         } else {
-            eventLoop().execute(new OneTimeTask() {
+            eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
                     fireChildRead0(msg);

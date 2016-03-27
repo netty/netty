@@ -31,7 +31,6 @@ import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
@@ -212,7 +211,7 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
             writeFromStreamChannel0(msg, flush, promise);
         } else {
             try {
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         writeFromStreamChannel0(msg, flush, promise);
@@ -344,7 +343,7 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
                 if (eventLoop.inEventLoop()) {
                     onStreamClosed0(streamInfo);
                 } else {
-                    eventLoop.execute(new OneTimeTask() {
+                    eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
                             onStreamClosed0(streamInfo);
@@ -381,7 +380,7 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
                 if (executor.inEventLoop()) {
                     exceptionCaught(ctx, t);
                 } else {
-                    executor.execute(new OneTimeTask() {
+                    executor.execute(new Runnable() {
                         @Override
                         public void run() {
                             exceptionCaught(ctx, t);
@@ -518,7 +517,7 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
             if (executor.inEventLoop()) {
                 bytesConsumed0(bytes);
             } else {
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         bytesConsumed0(bytes);

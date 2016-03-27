@@ -44,6 +44,12 @@
       <scope>compile</scope> <!-- override the 'test' scope defined at parent pom.xml -->
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.jctools</groupId>
+      <artifactId>jctools-core</artifactId>
+      <!-- Mark as optional as otherwise the bundle plugin will add strict import statements and so fail in OSGI containers-->
+      <optional>true</optional>
+    </dependency>
 
     <!-- Logging frameworks - completely optional -->
     <dependency>
@@ -75,6 +81,31 @@
 
   <build>
     <plugins>
+      <plugin>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>org.jctools</include>
+                </includes>
+              </artifactSet>
+              <relocations>
+                <relocation>
+                  <pattern>org.jctools.</pattern>
+                  <shadedPattern>io.netty.util.internal.shaded.org.jctools.</shadedPattern>
+                </relocation>
+              </relocations>
+              <minimizeJar>true</minimizeJar>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <!-- Add generated collection sources. -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -151,6 +182,7 @@
             </goals>
             <configuration>
               <instructions>
+                <!-- Exclude org.jctools.* as we shade it -->
                 <!-- NativeLibraryLoader can be used to manually load native libraries from other bundles that this bundle does not depend on,
                 hence use DynamicImport-Package instruction to ensure the loading is successful -->
                 <DynamicImport-Package>*</DynamicImport-Package>

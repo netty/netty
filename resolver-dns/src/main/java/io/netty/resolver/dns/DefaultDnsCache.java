@@ -16,7 +16,6 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -198,7 +197,7 @@ public class DefaultDnsCache implements DnsCache {
                                          final DnsCacheEntry e,
                                          int ttl,
                                          EventLoop loop) {
-        e.scheduleExpiration(loop, new OneTimeTask() {
+        e.scheduleExpiration(loop, new Runnable() {
                     @Override
                     public void run() {
                         synchronized (entries) {

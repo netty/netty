@@ -28,7 +28,6 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ScheduledFuture;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -195,7 +194,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     private void sendInitialMessage(final ChannelHandlerContext ctx) throws Exception {
         final long connectTimeoutMillis = this.connectTimeoutMillis;
         if (connectTimeoutMillis > 0) {
-            connectTimeoutFuture = ctx.executor().schedule(new OneTimeTask() {
+            connectTimeoutFuture = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
                     if (!connectPromise.isDone()) {

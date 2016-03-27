@@ -24,8 +24,6 @@ import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.OneTimeTask;
-import io.netty.util.internal.RecyclableMpscLinkedQueueNode;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -126,7 +124,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelRegistered();
         } else {
-            executor.execute(new OneTimeTask() {
+            executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     next.invokeChannelRegistered();
@@ -158,7 +156,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelUnregistered();
         } else {
-            executor.execute(new OneTimeTask() {
+            executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     next.invokeChannelUnregistered();
@@ -191,7 +189,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelActive();
         } else {
-            executor.execute(new OneTimeTask() {
+            executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     next.invokeChannelActive();
@@ -223,7 +221,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelInactive();
         } else {
-            executor.execute(new OneTimeTask() {
+            executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     next.invokeChannelInactive();
@@ -257,7 +255,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             next.invokeExceptionCaught(cause);
         } else {
             try {
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         next.invokeExceptionCaught(cause);
@@ -300,7 +298,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeUserEventTriggered(event);
         } else {
-            executor.execute(new OneTimeTask() {
+            executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     next.invokeUserEventTriggered(event);
@@ -333,7 +331,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelRead(m);
         } else {
-            executor.execute(new OneTimeTask() {
+            executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     next.invokeChannelRead(m);
@@ -471,7 +469,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeBind(localAddress, promise);
         } else {
-            safeExecute(executor, new OneTimeTask() {
+            safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
                     next.invokeBind(localAddress, promise);
@@ -515,7 +513,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeConnect(remoteAddress, localAddress, promise);
         } else {
-            safeExecute(executor, new OneTimeTask() {
+            safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
                     next.invokeConnect(remoteAddress, localAddress, promise);
@@ -555,7 +553,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 next.invokeDisconnect(promise);
             }
         } else {
-            safeExecute(executor, new OneTimeTask() {
+            safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
                     if (!channel().metadata().hasDisconnect()) {
@@ -593,7 +591,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeClose(promise);
         } else {
-            safeExecute(executor, new OneTimeTask() {
+            safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
                     next.invokeClose(promise);
@@ -628,7 +626,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeDeregister(promise);
         } else {
-            safeExecute(executor, new OneTimeTask() {
+            safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
                     next.invokeDeregister(promise);
@@ -999,7 +997,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel() + ')';
     }
 
-    abstract static class AbstractWriteTask extends RecyclableMpscLinkedQueueNode<Runnable> implements Runnable {
+    abstract static class AbstractWriteTask implements Runnable {
 
         private static final boolean ESTIMATE_TASK_SIZE_ON_SUBMIT =
                 SystemPropertyUtil.getBoolean("io.netty.transport.estimateSizeOnSubmit", true);
@@ -1008,13 +1006,15 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         private static final int WRITE_TASK_OVERHEAD =
                 SystemPropertyUtil.getInt("io.netty.transport.writeTaskSizeOverhead", 48);
 
+        private final Recycler.Handle<AbstractWriteTask> handle;
         private AbstractChannelHandlerContext ctx;
         private Object msg;
         private ChannelPromise promise;
         private int size;
 
+        @SuppressWarnings("unchecked")
         private AbstractWriteTask(Recycler.Handle<? extends AbstractWriteTask> handle) {
-            super(handle);
+            this.handle = (Recycler.Handle<AbstractWriteTask>) handle;
         }
 
         protected static void init(AbstractWriteTask task, AbstractChannelHandlerContext ctx,
@@ -1052,12 +1052,8 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 ctx = null;
                 msg = null;
                 promise = null;
+                handle.recycle(this);
             }
-        }
-
-        @Override
-        public Runnable value() {
-            return this;
         }
 
         protected void write(AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {

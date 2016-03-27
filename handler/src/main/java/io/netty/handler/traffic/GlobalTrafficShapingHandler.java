@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayDeque;
@@ -361,7 +360,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         }
         final long futureNow = newToSend.relativeTimeAction;
         final PerChannel forSchedule = perChannel;
-        ctx.executor().schedule(new OneTimeTask() {
+        ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
                 sendAllValid(ctx, forSchedule, futureNow);
