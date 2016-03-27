@@ -28,7 +28,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -114,7 +113,7 @@ public class ChunkedWriteHandler
             }
         } else {
             // let the transfer resume on the next event loop round
-            ctx.executor().execute(new OneTimeTask() {
+            ctx.executor().execute(new Runnable() {
 
                 @Override
                 public void run() {

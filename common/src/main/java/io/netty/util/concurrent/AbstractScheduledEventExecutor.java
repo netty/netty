@@ -16,7 +16,6 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.OneTimeTask;
 
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -188,7 +187,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (inEventLoop()) {
             scheduledTaskQueue().add(task);
         } else {
-            execute(new OneTimeTask() {
+            execute(new Runnable() {
                 @Override
                 public void run() {
                     scheduledTaskQueue().add(task);
@@ -203,7 +202,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (inEventLoop()) {
             scheduledTaskQueue().remove(task);
         } else {
-            execute(new OneTimeTask() {
+            execute(new Runnable() {
                 @Override
                 public void run() {
                     removeScheduled(task);

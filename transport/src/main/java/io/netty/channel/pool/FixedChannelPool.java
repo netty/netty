@@ -22,7 +22,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.OneTimeTask;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
@@ -202,7 +201,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
             if (executor.inEventLoop()) {
                 acquire0(promise);
             } else {
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         acquire0(promise);
@@ -398,7 +397,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
 
     @Override
     public void close() {
-        executor.execute(new OneTimeTask() {
+        executor.execute(new Runnable() {
             @Override
             public void run() {
                 if (!closed) {

@@ -23,7 +23,6 @@ import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
-import io.netty.util.internal.OneTimeTask;
 
 import java.net.SocketAddress;
 
@@ -201,7 +200,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                 pipeline.fireExceptionCaught(t);
                 // trigger a read again as there may be something left to read and because of epoll ET we
                 // will not get notified again until we read everything from the socket
-                eventLoop().execute(new OneTimeTask() {
+                eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
                         epollInReady();

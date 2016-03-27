@@ -29,7 +29,6 @@ import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import io.netty.util.internal.OneTimeTask;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -152,7 +151,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
         Executor closeExecutor = ((NioSocketChannelUnsafe) unsafe()).prepareToClose();
         if (closeExecutor != null) {
-            closeExecutor.execute(new OneTimeTask() {
+            closeExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
                     shutdownOutput0(promise);
@@ -163,7 +162,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             if (loop.inEventLoop()) {
                 shutdownOutput0(promise);
             } else {
-                loop.execute(new OneTimeTask() {
+                loop.execute(new Runnable() {
                     @Override
                     public void run() {
                         shutdownOutput0(promise);

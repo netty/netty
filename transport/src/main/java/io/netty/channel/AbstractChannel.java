@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
@@ -412,7 +411,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 register0(promise);
             } else {
                 try {
-                    eventLoop.execute(new OneTimeTask() {
+                    eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
                             register0(promise);
@@ -495,7 +494,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             if (!wasActive && isActive()) {
-                invokeLater(new OneTimeTask() {
+                invokeLater(new Runnable() {
                     @Override
                     public void run() {
                         pipeline.fireChannelActive();
@@ -524,7 +523,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             if (wasActive && !isActive()) {
-                invokeLater(new OneTimeTask() {
+                invokeLater(new Runnable() {
                     @Override
                     public void run() {
                         pipeline.fireChannelInactive();
@@ -573,7 +572,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
             Executor closeExecutor = prepareToClose();
             if (closeExecutor != null) {
-                closeExecutor.execute(new OneTimeTask() {
+                closeExecutor.execute(new Runnable() {
                     @Override
                     public void run() {
                         try {
@@ -581,7 +580,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             doClose0(promise);
                         } finally {
                             // Call invokeLater so closeAndDeregister is executed in the EventLoop again!
-                            invokeLater(new OneTimeTask() {
+                            invokeLater(new Runnable() {
                                 @Override
                                 public void run() {
                                     // Fail all the queued messages
@@ -603,7 +602,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     outboundBuffer.close(CLOSED_CHANNEL_EXCEPTION);
                 }
                 if (inFlush0) {
-                    invokeLater(new OneTimeTask() {
+                    invokeLater(new Runnable() {
                         @Override
                         public void run() {
                             fireChannelInactiveAndDeregister(wasActive);
@@ -667,7 +666,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             //
             // See:
             // https://github.com/netty/netty/issues/4435
-            invokeLater(new OneTimeTask() {
+            invokeLater(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -703,7 +702,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doBeginRead();
             } catch (final Exception e) {
-                invokeLater(new OneTimeTask() {
+                invokeLater(new Runnable() {
                     @Override
                     public void run() {
                         pipeline.fireExceptionCaught(e);

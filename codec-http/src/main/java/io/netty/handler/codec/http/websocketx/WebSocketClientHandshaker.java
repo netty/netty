@@ -33,7 +33,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.StringUtil;
 
 import java.net.URI;
@@ -272,7 +271,7 @@ public abstract class WebSocketClientHandshaker {
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
             // See https://github.com/netty/netty/issues/4533
-            channel.eventLoop().execute(new OneTimeTask() {
+            channel.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
                     p.remove(codec);
@@ -289,7 +288,7 @@ public abstract class WebSocketClientHandshaker {
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
             // See https://github.com/netty/netty/issues/4533
-            channel.eventLoop().execute(new OneTimeTask() {
+            channel.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
                     p.remove(context.handler());

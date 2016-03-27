@@ -33,8 +33,6 @@ import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.MpscLinkedQueueNode;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -238,7 +236,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             // Seems like the Channel was closed in the meantime try to fail the promise to prevent any
             // cases where a future may not be notified otherwise.
             if (promise.tryFailure(CLOSED_CHANNEL_EXCEPTION)) {
-                eventLoop().execute(new OneTimeTask() {
+                eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
                         // Call this via the EventLoop as it is a MPSC queue.
@@ -558,7 +556,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
         Executor closeExecutor = ((EpollStreamUnsafe) unsafe()).prepareToClose();
         if (closeExecutor != null) {
-            closeExecutor.execute(new OneTimeTask() {
+            closeExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
                     shutdownOutput0(promise);
@@ -569,7 +567,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             if (loop.inEventLoop()) {
                 shutdownOutput0(promise);
             } else {
-                loop.execute(new OneTimeTask() {
+                loop.execute(new Runnable() {
                     @Override
                     public void run() {
                         shutdownOutput0(promise);
@@ -702,7 +700,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = eventLoop().schedule(new OneTimeTask() {
+                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
                             @Override
                             public void run() {
                                 ChannelPromise connectPromise = AbstractEpollStreamChannel.this.connectPromise;
@@ -928,7 +926,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 if (!closed) {
                     // trigger a read again as there may be something left to read and because of epoll ET we
                     // will not get notified again until we read everything from the socket
-                    eventLoop().execute(new OneTimeTask() {
+                    eventLoop().execute(new Runnable() {
                         @Override
                         public void run() {
                             epollInReady();
@@ -954,7 +952,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (eventLoop.inEventLoop()) {
             addToSpliceQueue0(task);
         } else {
-            eventLoop.execute(new OneTimeTask() {
+            eventLoop.execute(new Runnable() {
                 @Override
                 public void run() {
                     addToSpliceQueue0(task);
@@ -970,18 +968,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         spliceQueue.add(task);
     }
 
-    protected abstract class SpliceInTask extends MpscLinkedQueueNode<SpliceInTask> {
+    protected abstract class SpliceInTask {
         final ChannelPromise promise;
         int len;
 
         protected SpliceInTask(int len, ChannelPromise promise) {
             this.promise = promise;
             this.len = len;
-        }
-
-        @Override
-        public SpliceInTask value() {
-            return this;
         }
 
         abstract boolean spliceIn(RecvByteBufAllocator.Handle handle);
@@ -1124,11 +1117,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             this.fd = fd;
             this.promise = promise;
             this.offset = offset;
-        }
-
-        @Override
-        public SpliceFdTask value() {
-            return this;
         }
 
         @Override

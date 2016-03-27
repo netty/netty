@@ -15,7 +15,6 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.MpscLinkedQueueNode;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -106,7 +105,7 @@ public class HashedWheelTimer implements Timer {
     private final int mask;
     private final CountDownLatch startTimeInitialized = new CountDownLatch(1);
     private final Queue<HashedWheelTimeout> timeouts = PlatformDependent.newMpscQueue();
-    private final Queue<Runnable> cancelledTimeouts = PlatformDependent.newMpscQueue();
+    private final Queue<HashedWheelTimeout> cancelledTimeouts = PlatformDependent.newMpscQueue();
 
     private volatile long startTime;
 
@@ -412,13 +411,13 @@ public class HashedWheelTimer implements Timer {
 
         private void processCancelledTasks() {
             for (;;) {
-                Runnable task = cancelledTimeouts.poll();
-                if (task == null) {
+                HashedWheelTimeout timeout = cancelledTimeouts.poll();
+                if (timeout == null) {
                     // all processed
                     break;
                 }
                 try {
-                    task.run();
+                    timeout.remove();
                 } catch (Throwable t) {
                     if (logger.isWarnEnabled()) {
                         logger.warn("An exception was thrown while process a cancellation task", t);
@@ -472,8 +471,7 @@ public class HashedWheelTimer implements Timer {
         }
     }
 
-    private static final class HashedWheelTimeout extends MpscLinkedQueueNode<Timeout>
-            implements Timeout {
+    private static final class HashedWheelTimeout implements Timeout {
 
         private static final int ST_INIT = 0;
         private static final int ST_CANCELLED = 1;
@@ -530,23 +528,18 @@ public class HashedWheelTimer implements Timer {
             if (!compareAndSetState(ST_INIT, ST_CANCELLED)) {
                 return false;
             }
-            // If a task should be canceled we create a new Runnable for this to another queue which will
-            // be processed on each tick. So this means that we will have a GC latency of max. 1 tick duration
-            // which is good enough. This way we can make again use of our MpscLinkedQueue and so minimize the
-            // locking / overhead as much as possible.
-            //
-            // It is important that we not just add the HashedWheelTimeout itself again as it extends
-            // MpscLinkedQueueNode and so may still be used as tombstone.
-            timer.cancelledTimeouts.add(new Runnable() {
-                @Override
-                public void run() {
-                    HashedWheelBucket bucket = HashedWheelTimeout.this.bucket;
-                    if (bucket != null) {
-                        bucket.remove(HashedWheelTimeout.this);
-                    }
-                }
-            });
+            // If a task should be canceled we put this to another queue which will be processed on each tick.
+            // So this means that we will have a GC latency of max. 1 tick duration which is good enough. This way
+            // we can make again use of our MpscLinkedQueue and so minimize the locking / overhead as much as possible.
+            timer.cancelledTimeouts.add(this);
             return true;
+        }
+
+        void remove() {
+            HashedWheelBucket bucket = this.bucket;
+            if (bucket != null) {
+                bucket.remove(this);
+            }
         }
 
         public boolean compareAndSetState(int expected, int state) {
@@ -565,11 +558,6 @@ public class HashedWheelTimer implements Timer {
         @Override
         public boolean isExpired() {
             return state() == ST_EXPIRED;
-        }
-
-        @Override
-        public HashedWheelTimeout value() {
-            return this;
         }
 
         public void expire() {

@@ -34,7 +34,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.AfterClass;
@@ -365,7 +364,7 @@ public class LocalChannelTest {
 
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
-                cc.pipeline().lastContext().executor().execute(new OneTimeTask() {
+                cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
                         ChannelPromise promise = ccCpy.newPromise();
@@ -429,7 +428,7 @@ public class LocalChannelTest {
 
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
-                cc.pipeline().lastContext().executor().execute(new OneTimeTask() {
+                cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
                         ChannelPromise promise = ccCpy.newPromise();
@@ -511,7 +510,7 @@ public class LocalChannelTest {
 
             final Channel ccCpy = cc;
             // Make sure a write operation is executed in the eventloop
-            cc.pipeline().lastContext().executor().execute(new OneTimeTask() {
+            cc.pipeline().lastContext().executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     ChannelPromise promise = ccCpy.newPromise();
@@ -593,7 +592,7 @@ public class LocalChannelTest {
 
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
-                cc.pipeline().lastContext().executor().execute(new OneTimeTask() {
+                cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
                         ChannelPromise promise = ccCpy.newPromise();
@@ -673,7 +672,7 @@ public class LocalChannelTest {
 
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
-                cc.pipeline().lastContext().executor().execute(new OneTimeTask() {
+                cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
                         ChannelPromise promise = ccCpy.newPromise();
@@ -754,14 +753,14 @@ public class LocalChannelTest {
                 ccCpy.closeFuture().addListener(clientChannelCloseLatch);
 
                 // Make sure a write operation is executed in the eventloop
-                cc.pipeline().lastContext().executor().execute(new OneTimeTask() {
+                cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
                         ccCpy.writeAndFlush(data.duplicate().retain(), ccCpy.newPromise())
                         .addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
-                                serverChannelCpy.eventLoop().execute(new OneTimeTask() {
+                                serverChannelCpy.eventLoop().execute(new Runnable() {
                                     @Override
                                     public void run() {
                                         // The point of this test is to write while the peer is closed, so we should

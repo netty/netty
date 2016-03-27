@@ -26,7 +26,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Deque;
@@ -143,7 +142,7 @@ public class SimpleChannelPool implements ChannelPool {
             if (loop.inEventLoop()) {
                 doHealthCheck(ch, promise);
             } else {
-                loop.execute(new OneTimeTask() {
+                loop.execute(new Runnable() {
                     @Override
                     public void run() {
                         doHealthCheck(ch, promise);
@@ -226,7 +225,7 @@ public class SimpleChannelPool implements ChannelPool {
             if (loop.inEventLoop()) {
                 doReleaseChannel(channel, promise);
             } else {
-                loop.execute(new OneTimeTask() {
+                loop.execute(new Runnable() {
                     @Override
                     public void run() {
                         doReleaseChannel(channel, promise);
