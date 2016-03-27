@@ -18,7 +18,6 @@ package io.netty.channel.local;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
@@ -31,7 +30,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.InternalThreadLocalMap;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 
 import java.net.ConnectException;
@@ -193,7 +191,7 @@ public class LocalChannel extends AbstractChannel {
             // This ensures that if both channels are on the same event loop, the peer's channelActive
             // event is triggered *after* this channel's channelRegistered event, so that this channel's
             // pipeline is fully initialized by ChannelInitializer before any channelRead events.
-            peer.eventLoop().execute(new OneTimeTask() {
+            peer.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
                     registerInProgress = false;
@@ -262,7 +260,7 @@ public class LocalChannel extends AbstractChannel {
                 // This value may change, and so we should save it before executing the Runnable.
                 final boolean peerWriteInProgress = peer.writeInProgress;
                 try {
-                    peer.eventLoop().execute(new OneTimeTask() {
+                    peer.eventLoop().execute(new Runnable() {
                         @Override
                         public void run() {
                             doPeerClose(peer, peerWriteInProgress);
@@ -388,7 +386,7 @@ public class LocalChannel extends AbstractChannel {
     private void runFinishPeerReadTask(final LocalChannel peer) {
         // If the peer is writing, we must wait until after reads are completed for that peer before we can read. So
         // we keep track of the task, and coordinate later that our read can't happen until the peer is done.
-        final Runnable finishPeerReadTask = new OneTimeTask() {
+        final Runnable finishPeerReadTask = new Runnable() {
             @Override
             public void run() {
                 finishPeerRead0(peer);

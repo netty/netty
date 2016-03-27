@@ -18,7 +18,6 @@ package io.netty.util.concurrent;
 import io.netty.util.Signal;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.InternalThreadLocalMap;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -36,12 +35,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final InternalLogger rejectedExecutionLogger =
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
+    @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER;
     private static final Signal SUCCESS = Signal.valueOf(DefaultPromise.class, "SUCCESS");
     private static final Signal UNCANCELLABLE = Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE");
     private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(new CancellationException());
 
     static {
+        @SuppressWarnings("rawtypes")
         AtomicReferenceFieldUpdater<DefaultPromise, Object> updater =
                 PlatformDependent.newAtomicReferenceFieldUpdater(DefaultPromise.class, "result");
         RESULT_UPDATER = updater == null ? AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class,
@@ -302,6 +303,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public V getNow() {
         Object result = this.result;
@@ -436,7 +438,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
-        safeExecute(executor, new OneTimeTask() {
+        safeExecute(executor, new Runnable() {
             @Override
             public void run() {
                 notifyListenersNow();
@@ -466,7 +468,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
-        safeExecute(executor, new OneTimeTask() {
+        safeExecute(executor, new Runnable() {
             @Override
             public void run() {
                 notifyListener0(future, listener);
@@ -664,7 +666,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             if (listeners instanceof GenericProgressiveFutureListener[]) {
                 final GenericProgressiveFutureListener<?>[] array =
                         (GenericProgressiveFutureListener<?>[]) listeners;
-                safeExecute(executor, new OneTimeTask() {
+                safeExecute(executor, new Runnable() {
                     @Override
                     public void run() {
                         notifyProgressiveListeners0(self, array, progress, total);
@@ -673,7 +675,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             } else {
                 final GenericProgressiveFutureListener<ProgressiveFuture<V>> l =
                         (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners;
-                safeExecute(executor, new OneTimeTask() {
+                safeExecute(executor, new Runnable() {
                     @Override
                     public void run() {
                         notifyProgressiveListener0(self, l, progress, total);

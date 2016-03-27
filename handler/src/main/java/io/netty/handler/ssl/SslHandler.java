@@ -41,7 +41,6 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -389,7 +388,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     public ChannelFuture close(final ChannelPromise future) {
         final ChannelHandlerContext ctx = this.ctx;
-        ctx.executor().execute(new OneTimeTask() {
+        ctx.executor().execute(new Runnable() {
             @Override
             public void run() {
                 outboundClosed = true;
@@ -1139,7 +1138,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             final CountDownLatch latch = new CountDownLatch(1);
-            delegatedTaskExecutor.execute(new OneTimeTask() {
+            delegatedTaskExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -1304,7 +1303,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         EventExecutor executor = ctx.executor();
         if (!executor.inEventLoop()) {
-            executor.execute(new OneTimeTask() {
+            executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     handshake(promise);
@@ -1371,7 +1370,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             return;
         }
 
-        final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new OneTimeTask() {
+        final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
                 if (p.isDone()) {
@@ -1413,7 +1412,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         final ScheduledFuture<?> timeoutFuture;
         if (closeNotifyTimeoutMillis > 0) {
             // Force-close the connection if close_notify is not fully sent in time.
-            timeoutFuture = ctx.executor().schedule(new OneTimeTask() {
+            timeoutFuture = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
                     logger.warn("{} Last write attempt timed out; force-closing the connection.", ctx.channel());

@@ -22,7 +22,6 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -161,7 +160,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             EventExecutor executor = newCtx.executor();
             if (!executor.inEventLoop()) {
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         callHandlerAdded0(newCtx);
@@ -207,7 +206,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             EventExecutor executor = newCtx.executor();
             if (!executor.inEventLoop()) {
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         callHandlerAdded0(newCtx);
@@ -257,7 +256,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             EventExecutor executor = newCtx.executor();
             if (!executor.inEventLoop()) {
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         callHandlerAdded0(newCtx);
@@ -314,7 +313,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
             EventExecutor executor = newCtx.executor();
             if (!executor.inEventLoop()) {
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         callHandlerAdded0(newCtx);
@@ -445,7 +444,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             EventExecutor executor = ctx.executor();
             if (!executor.inEventLoop()) {
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         callHandlerRemoved0(ctx);
@@ -530,7 +529,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
             EventExecutor executor = ctx.executor();
             if (!executor.inEventLoop()) {
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         // Invoke newHandler.handlerAdded() first (i.e. before oldHandler.handlerRemoved() is invoked)
@@ -832,7 +831,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             final EventExecutor executor = ctx.executor();
             if (!inEventLoop && !executor.inEventLoop(currentThread)) {
                 final AbstractChannelHandlerContext finalCtx = ctx;
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         destroyUp(finalCtx, true);
@@ -862,7 +861,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 callHandlerRemoved0(ctx);
             } else {
                 final AbstractChannelHandlerContext finalCtx = ctx;
-                executor.execute(new OneTimeTask() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         destroyDown(Thread.currentThread(), finalCtx, true);
@@ -1344,7 +1343,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private abstract static class PendingHandlerCallback extends OneTimeTask {
+    private abstract static class PendingHandlerCallback implements Runnable {
         final AbstractChannelHandlerContext ctx;
         PendingHandlerCallback next;
 
