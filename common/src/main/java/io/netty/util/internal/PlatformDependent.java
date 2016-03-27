@@ -20,6 +20,13 @@ import io.netty.util.internal.chmv8.ConcurrentHashMapV8;
 import io.netty.util.internal.chmv8.LongAdderV8;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jctools.queues.MpscArrayQueue;
+import org.jctools.queues.MpscLinkedQueue7;
+import org.jctools.queues.MpscLinkedQueue8;
+import org.jctools.queues.SpscLinkedQueue;
+import org.jctools.queues.atomic.MpscAtomicArrayQueue;
+import org.jctools.queues.atomic.MpscLinkedAtomicQueue;
+import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -30,7 +37,6 @@ import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
@@ -41,7 +47,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
@@ -465,7 +470,10 @@ public final class PlatformDependent {
      * consumer (one thread!).
      */
     public static <T> Queue<T> newMpscQueue() {
-        return new MpscLinkedQueue<T>();
+        if (hasUnsafe()) {
+            return JAVA_VERSION < 8 ? new MpscLinkedQueue7<T>() : new MpscLinkedQueue8<T>();
+        }
+        return new MpscLinkedAtomicQueue<T>();
     }
 
     /**
@@ -473,10 +481,7 @@ public final class PlatformDependent {
      * consumer (one thread!).
      */
     public static <T> Queue<T> newSpscQueue() {
-        if (hasUnsafe()) {
-            return new SpscLinkedQueue<T>();
-        }
-        return new SpscLinkedAtomicQueue<T>();
+        return hasUnsafe() ? new SpscLinkedQueue<T>() : new SpscLinkedAtomicQueue<T>();
     }
 
     /**
@@ -484,11 +489,7 @@ public final class PlatformDependent {
      * consumer (one thread!) with the given fixes {@code capacity}.
      */
     public static <T> Queue<T> newFixedMpscQueue(int capacity) {
-        if (hasUnsafe()) {
-            return new MpscArrayQueue<T>(capacity);
-        } else {
-            return new LinkedBlockingQueue<T>(capacity);
-        }
+        return hasUnsafe() ? new MpscArrayQueue<T>(capacity) : new MpscAtomicArrayQueue<T>(capacity);
     }
 
     /**
