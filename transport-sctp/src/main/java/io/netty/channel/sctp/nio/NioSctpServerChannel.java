@@ -25,7 +25,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
-import io.netty.util.internal.OneTimeTask;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -160,7 +159,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(new OneTimeTask() {
+            eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
                     bindAddress(localAddress, promise);
@@ -185,7 +184,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(new OneTimeTask() {
+            eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
                     unbindAddress(localAddress, promise);

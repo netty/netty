@@ -230,7 +230,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
-    private void fetchFromScheduledTaskQueue() {
+    private boolean fetchFromScheduledTaskQueue() {
         if (hasScheduledTasks()) {
             long nanoTime = AbstractScheduledEventExecutor.nanoTime();
             for (;;) {
@@ -238,9 +238,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 if (scheduledTask == null) {
                     break;
                 }
-                taskQueue.add(scheduledTask);
+                if (!taskQueue.offer(scheduledTask)) {
+                    // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
+                    scheduledTaskQueue().add((ScheduledFutureTask<?>) scheduledTask);
+                    return false;
+                }
             }
         }
+        return true;
     }
 
     /**
@@ -280,7 +285,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         if (isShutdown()) {
             reject();
         }
-        taskQueue.add(task);
+        try {
+            taskQueue.add(task);
+        } catch (IllegalStateException e) {
+            // Just use add and catch the exception as this should happen only very rarely.
+            throw new RejectedExecutionException("Internal task queue is full", e);
+        }
     }
 
     /**
@@ -299,25 +309,30 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @return {@code true} if and only if at least one task was run
      */
     protected boolean runAllTasks() {
-        fetchFromScheduledTaskQueue();
-        Runnable task = pollTask();
-        if (task == null) {
-            return false;
-        }
-
-        for (;;) {
-            try {
-                task.run();
-            } catch (Throwable t) {
-                logger.warn("A task raised an exception.", t);
-            }
-
-            task = pollTask();
+        boolean fetchedAll;
+        do {
+            fetchedAll = fetchFromScheduledTaskQueue();
+            Runnable task = pollTask();
             if (task == null) {
-                lastExecutionTime = ScheduledFutureTask.nanoTime();
-                return true;
+                return false;
             }
-        }
+
+            for (;;) {
+                try {
+                    task.run();
+                } catch (Throwable t) {
+                    logger.warn("A task raised an exception.", t);
+                }
+
+                task = pollTask();
+                if (task == null) {
+                    break;
+                }
+            }
+        } while (!fetchedAll); // keep on processing until we fetched all scheduled tasks.
+
+        lastExecutionTime = ScheduledFutureTask.nanoTime();
+        return true;
     }
 
     /**
