@@ -136,9 +136,11 @@ public interface UdtChannelConfig extends ChannelConfig {
     UdtChannelConfig setAutoClose(boolean autoClose);
 
     @Override
+    @Deprecated
     UdtChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     @Override
+    @Deprecated
     UdtChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 
     @Override
