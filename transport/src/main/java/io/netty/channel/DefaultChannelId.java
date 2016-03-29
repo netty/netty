@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 /**
  * The default {@link ChannelId} implementation.
  */
-final class DefaultChannelId implements ChannelId {
+public final class DefaultChannelId implements ChannelId {
 
     private static final long serialVersionUID = 3884076183504074063L;
 
@@ -53,7 +53,10 @@ final class DefaultChannelId implements ChannelId {
 
     private static final AtomicInteger nextSequence = new AtomicInteger();
 
-    static ChannelId newInstance() {
+    /**
+     * Returns a new {@link DefaultChannelId} instance.
+     */
+    public static DefaultChannelId newInstance() {
         DefaultChannelId id = new DefaultChannelId();
         id.init();
         return id;
@@ -183,6 +186,8 @@ final class DefaultChannelId implements ChannelId {
 
     private transient String shortValue;
     private transient String longValue;
+
+    private DefaultChannelId() { }
 
     private void init() {
         int i = 0;
