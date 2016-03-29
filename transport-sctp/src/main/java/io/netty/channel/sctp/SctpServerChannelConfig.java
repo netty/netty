@@ -117,9 +117,11 @@ public interface SctpServerChannelConfig extends ChannelConfig {
     SctpServerChannelConfig setAutoClose(boolean autoClose);
 
     @Override
+    @Deprecated
     SctpServerChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     @Override
+    @Deprecated
     SctpServerChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 
     @Override
