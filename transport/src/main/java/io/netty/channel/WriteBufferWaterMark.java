@@ -33,8 +33,8 @@ public final class WriteBufferWaterMark {
     private static final int DEFAULT_LOW_WATER_MARK = 32 * 1024;
     private static final int DEFAULT_HIGH_WATER_MARK = 64 * 1024;
 
-    private int low;
-    private int high;
+    private volatile int low;
+    private volatile int high;
 
     WriteBufferWaterMark() {
         this(DEFAULT_LOW_WATER_MARK, DEFAULT_HIGH_WATER_MARK);
