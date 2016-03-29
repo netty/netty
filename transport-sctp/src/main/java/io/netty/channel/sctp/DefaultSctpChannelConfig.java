@@ -219,12 +219,14 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     }
 
     @Override
+    @Deprecated
     public SctpChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
+    @Deprecated
     public SctpChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
