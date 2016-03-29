@@ -180,12 +180,14 @@ public class EpollServerChannelConfig extends EpollChannelConfig {
     }
 
     @Override
+    @Deprecated
     public EpollServerChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
+    @Deprecated
     public EpollServerChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
