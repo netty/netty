@@ -22,20 +22,36 @@ import io.netty.util.internal.PlatformDependent;
  */
 public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
 
+    private final boolean disableLeakDetector;
+
     /**
-     * Default instance
+     * Default instance which uses leak-detection for direct buffers.
      */
     public static final UnpooledByteBufAllocator DEFAULT =
             new UnpooledByteBufAllocator(PlatformDependent.directBufferPreferred());
+
+    /**
+     * Create a new instance which uses leak-detection for direct buffers.
+     *
+     * @param preferDirect {@code true} if {@link #buffer(int)} should try to allocate a direct buffer rather than
+     *                     a heap buffer
+     */
+    public UnpooledByteBufAllocator(boolean preferDirect) {
+        this(preferDirect, false);
+    }
 
     /**
      * Create a new instance
      *
      * @param preferDirect {@code true} if {@link #buffer(int)} should try to allocate a direct buffer rather than
      *                     a heap buffer
+     * @param disableLeakDetector {@code true} if the leak-detection should be disabled completely for this
+     *                            allocator. This can be useful if the user just want to depend on the GC to handle
+     *                            direct buffers when not explicit released.
      */
-    public UnpooledByteBufAllocator(boolean preferDirect) {
+    public UnpooledByteBufAllocator(boolean preferDirect, boolean disableLeakDetector) {
         super(preferDirect);
+        this.disableLeakDetector = disableLeakDetector;
     }
 
     @Override
@@ -46,14 +62,23 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        ByteBuf buf;
-        if (PlatformDependent.hasUnsafe()) {
-            buf = new UnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
-        } else {
-            buf = new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
-        }
+        ByteBuf buf = PlatformDependent.hasUnsafe() ?
+                new UnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity) :
+                new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
 
-        return toLeakAwareBuffer(buf);
+        return disableLeakDetector ? buf : toLeakAwareBuffer(buf);
+    }
+
+    @Override
+    public CompositeByteBuf compositeHeapBuffer(int maxNumComponents) {
+        CompositeByteBuf buf = new CompositeByteBuf(this, false, maxNumComponents);
+        return disableLeakDetector ? buf : toLeakAwareBuffer(buf);
+    }
+
+    @Override
+    public CompositeByteBuf compositeDirectBuffer(int maxNumComponents) {
+        CompositeByteBuf buf = new CompositeByteBuf(this, true, maxNumComponents);
+        return disableLeakDetector ? buf : toLeakAwareBuffer(buf);
     }
 
     @Override
