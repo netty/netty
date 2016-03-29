@@ -347,6 +347,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
+    @Deprecated
     public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         if (writeBufferHighWaterMark < getWriteBufferLowWaterMark()) {
             throw new IllegalArgumentException(
@@ -368,6 +369,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
+    @Deprecated
     public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         if (writeBufferLowWaterMark > getWriteBufferHighWaterMark()) {
             throw new IllegalArgumentException(
