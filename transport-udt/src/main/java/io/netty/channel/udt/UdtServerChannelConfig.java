@@ -94,9 +94,11 @@ public interface UdtServerChannelConfig extends UdtChannelConfig {
     UdtServerChannelConfig setSystemSendBufferSize(int size);
 
     @Override
+    @Deprecated
     UdtServerChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     @Override
+    @Deprecated
     UdtServerChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 
     @Override
