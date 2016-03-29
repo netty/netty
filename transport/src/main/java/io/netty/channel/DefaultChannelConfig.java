@@ -67,10 +67,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
-    private volatile int writeBufferHighWaterMark = 64 * 1024;
-    private volatile int writeBufferLowWaterMark = 32 * 1024;
-    private volatile WriteBufferWaterMark writeBufferWaterMark =
-            new WriteBufferWaterMark(writeBufferLowWaterMark, writeBufferHighWaterMark);
+    private volatile WriteBufferWaterMark writeBufferWaterMark = new WriteBufferWaterMark();
 
     public DefaultChannelConfig(Channel channel) {
         this(channel, new AdaptiveRecvByteBufAllocator());
@@ -346,7 +343,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public int getWriteBufferHighWaterMark() {
-        return writeBufferHighWaterMark;
+        return writeBufferWaterMark.high();
     }
 
     @Override
@@ -362,13 +359,13 @@ public class DefaultChannelConfig implements ChannelConfig {
             throw new IllegalArgumentException(
                     "writeBufferHighWaterMark must be >= 0");
         }
-        this.writeBufferHighWaterMark = writeBufferHighWaterMark;
+        this.writeBufferWaterMark.setHigh(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
     public int getWriteBufferLowWaterMark() {
-        return writeBufferLowWaterMark;
+        return writeBufferWaterMark.low();
     }
 
     @Override
@@ -384,14 +381,12 @@ public class DefaultChannelConfig implements ChannelConfig {
             throw new IllegalArgumentException(
                     "writeBufferLowWaterMark must be >= 0");
         }
-        this.writeBufferLowWaterMark = writeBufferLowWaterMark;
+        this.writeBufferWaterMark.setLow(writeBufferLowWaterMark);
         return this;
     }
 
     @Override
     public ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        this.writeBufferLowWaterMark = writeBufferWaterMark.low();
-        this.writeBufferHighWaterMark = writeBufferWaterMark.high();
         this.writeBufferWaterMark = writeBufferWaterMark;
         return this;
     }
