@@ -64,12 +64,26 @@ public final class WriteBufferWaterMark {
     public int low() {
         return low;
     }
+    
+    /**
+     * set the low water mark for write buffer
+     */
+    void setLow(int low) {
+        this.low = low;
+    }
 
     /**
      * @return high water mark for write buffer.
      */
     public int high() {
         return high;
+    }
+    
+    /**
+     * set the high water mark for write buffer
+     */
+    void setHigh(int high) {
+        this.high = high;
     }
 
     @Override
