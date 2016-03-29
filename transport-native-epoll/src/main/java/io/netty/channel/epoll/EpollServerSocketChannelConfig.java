@@ -134,12 +134,14 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
     }
 
     @Override
+    @Deprecated
     public EpollServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
+    @Deprecated
     public EpollServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
