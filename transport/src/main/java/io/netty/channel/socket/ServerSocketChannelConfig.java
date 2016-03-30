@@ -106,14 +106,14 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
 
     @Override
     ServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
-    
+
     /**
      * @deprecated Use {@link #setWriteBufferWaterMark(WriteBufferWaterMark)}
      */
     @Override
     @Deprecated
     ServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
-    
+
     /**
      * @deprecated Use {@link #setWriteBufferWaterMark(WriteBufferWaterMark)}
      */

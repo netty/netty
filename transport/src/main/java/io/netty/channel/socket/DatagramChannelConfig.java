@@ -181,14 +181,14 @@ public interface DatagramChannelConfig extends ChannelConfig {
 
     @Override
     DatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
-    
+
     /**
      * @deprecated Use {@link #setWriteBufferWaterMark(WriteBufferWaterMark)}
      */
     @Override
     @Deprecated
     DatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
-    
+
     /**
      * @deprecated Use {@link #setWriteBufferWaterMark(WriteBufferWaterMark)}
      */
