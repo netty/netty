@@ -183,10 +183,16 @@ public interface SocketChannelConfig extends ChannelConfig {
     @Override
     SocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 
+    /**
+     * @deprecated Use {@link #setWriteBufferWaterMark(WriteBufferWaterMark)}
+     */
     @Override
     @Deprecated
     SocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
-
+    
+    /**
+     * @deprecated Use {@link #setWriteBufferWaterMark(WriteBufferWaterMark)}
+     */
     @Override
     @Deprecated
     SocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
