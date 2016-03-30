@@ -77,6 +77,11 @@ public class HttpResponseEncoderTest {
         }
 
         @Override
+        public long transferred() {
+            return 0;
+        }
+
+        @Override
         public long count() {
             return INTEGER_OVERLFLOW;
         }
