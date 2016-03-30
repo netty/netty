@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.WriteBufferWaterMark;
 
 import java.net.ServerSocket;
 import java.net.StandardSocketOptions;
@@ -105,4 +106,22 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
 
     @Override
     ServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
+
+    /**
+     * @deprecated Use {@link #setWriteBufferWaterMark(WriteBufferWaterMark)}
+     */
+    @Override
+    @Deprecated
+    ServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    /**
+     * @deprecated Use {@link #setWriteBufferWaterMark(WriteBufferWaterMark)}
+     */
+    @Override
+    @Deprecated
+    ServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    ServerSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
+
 }
