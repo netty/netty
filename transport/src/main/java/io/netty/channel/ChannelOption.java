@@ -79,10 +79,20 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     /**
      * @deprecated Use {@link MaxMessagesRecvByteBufAllocator}
      */
+    @Deprecated
     public static final ChannelOption<Integer> MAX_MESSAGES_PER_READ = valueOf("MAX_MESSAGES_PER_READ");
     public static final ChannelOption<Integer> WRITE_SPIN_COUNT = valueOf("WRITE_SPIN_COUNT");
+    /**
+     * @deprecated Use {@link WRITE_BUFFER_WATER_MARK}
+     */
+    @Deprecated
     public static final ChannelOption<Integer> WRITE_BUFFER_HIGH_WATER_MARK = valueOf("WRITE_BUFFER_HIGH_WATER_MARK");
+    /**
+     * @deprecated Use {@link WRITE_BUFFER_WATER_MARK}
+     */
+    @Deprecated
     public static final ChannelOption<Integer> WRITE_BUFFER_LOW_WATER_MARK = valueOf("WRITE_BUFFER_LOW_WATER_MARK");
+    public static final ChannelOption<Integer> WRITE_BUFFER_WATER_MARK = valueOf("WRITE_BUFFER_WATER_MARK");
 
     public static final ChannelOption<Boolean> ALLOW_HALF_CLOSURE = valueOf("ALLOW_HALF_CLOSURE");
     public static final ChannelOption<Boolean> AUTO_READ = valueOf("AUTO_READ");

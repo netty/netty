@@ -21,6 +21,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.WriteBufferWaterMark;
 
 /**
  * A {@link ChannelConfig} for a {@link SctpChannel}.
@@ -121,10 +122,15 @@ public interface SctpChannelConfig extends ChannelConfig {
     SctpChannelConfig setAutoClose(boolean autoClose);
 
     @Override
+    @Deprecated
     SctpChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     @Override
+    @Deprecated
     SctpChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    SctpChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
 
     @Override
     SctpChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
