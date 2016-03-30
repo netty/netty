@@ -201,7 +201,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
             } else if (msg instanceof FileRegion) {
                 FileRegion region = (FileRegion) msg;
-                boolean done = region.transfered() >= region.count();
+                boolean done = region.transferred() >= region.count();
 
                 if (!done) {
                     long flushedAmount = 0;
@@ -217,7 +217,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         }
 
                         flushedAmount += localFlushedAmount;
-                        if (region.transfered() >= region.count()) {
+                        if (region.transferred() >= region.count()) {
                             done = true;
                             break;
                         }

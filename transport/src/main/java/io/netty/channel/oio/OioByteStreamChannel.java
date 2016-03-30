@@ -144,9 +144,9 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
     }
 
     private static void checkEOF(FileRegion region) throws IOException {
-        if (region.transfered() < region.count()) {
+        if (region.transferred() < region.count()) {
             throw new EOFException("Expected to be able to write " + region.count() + " bytes, " +
-                                   "but only wrote " + region.transfered());
+                                   "but only wrote " + region.transferred());
         }
     }
 
