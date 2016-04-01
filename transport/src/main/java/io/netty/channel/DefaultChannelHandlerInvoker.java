@@ -167,10 +167,20 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelReadCompleteNow(ctx);
         } else {
-            AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
-            Runnable task = dctx.invokeChannelReadCompleteTask;
-            if (task == null) {
-                dctx.invokeChannelReadCompleteTask = task = new Runnable() {
+            Runnable task;
+            if (ctx instanceof AbstractChannelHandlerContext) {
+                AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
+                task = dctx.invokeChannelReadCompleteTask;
+                if (task == null) {
+                    dctx.invokeChannelReadCompleteTask = task = new Runnable() {
+                        @Override
+                        public void run() {
+                            invokeChannelReadCompleteNow(ctx);
+                        }
+                    };
+                }
+            } else {
+                task = new OneTimeTask() {
                     @Override
                     public void run() {
                         invokeChannelReadCompleteNow(ctx);
@@ -186,10 +196,20 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeChannelWritabilityChangedNow(ctx);
         } else {
-            AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
-            Runnable task = dctx.invokeChannelWritableStateChangedTask;
-            if (task == null) {
-                dctx.invokeChannelWritableStateChangedTask = task = new Runnable() {
+            Runnable task;
+            if (ctx instanceof AbstractChannelHandlerContext) {
+                AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
+                task = dctx.invokeChannelWritableStateChangedTask;
+                if (task == null) {
+                    dctx.invokeChannelWritableStateChangedTask = task = new Runnable() {
+                        @Override
+                        public void run() {
+                            invokeChannelWritabilityChangedNow(ctx);
+                        }
+                    };
+                }
+            } else {
+                task = new OneTimeTask() {
                     @Override
                     public void run() {
                         invokeChannelWritabilityChangedNow(ctx);
@@ -309,10 +329,20 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeReadNow(ctx);
         } else {
-            AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
-            Runnable task = dctx.invokeReadTask;
-            if (task == null) {
-                dctx.invokeReadTask = task = new Runnable() {
+            Runnable task;
+            if (ctx instanceof AbstractChannelHandlerContext) {
+                AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
+                task = dctx.invokeReadTask;
+                if (task == null) {
+                    dctx.invokeReadTask = task = new Runnable() {
+                        @Override
+                        public void run() {
+                            invokeReadNow(ctx);
+                        }
+                    };
+                }
+            } else {
+                task = new OneTimeTask() {
                     @Override
                     public void run() {
                         invokeReadNow(ctx);
@@ -350,10 +380,20 @@ public class DefaultChannelHandlerInvoker implements ChannelHandlerInvoker {
         if (executor.inEventLoop()) {
             invokeFlushNow(ctx);
         } else {
-            AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
-            Runnable task = dctx.invokeFlushTask;
-            if (task == null) {
-                dctx.invokeFlushTask = task = new Runnable() {
+            Runnable task;
+            if (ctx instanceof AbstractChannelHandlerContext) {
+                AbstractChannelHandlerContext dctx = (AbstractChannelHandlerContext) ctx;
+                task = dctx.invokeFlushTask;
+                if (task == null) {
+                    dctx.invokeFlushTask = task = new Runnable() {
+                        @Override
+                        public void run() {
+                            invokeFlushNow(ctx);
+                        }
+                    };
+                }
+            } else {
+                task = new OneTimeTask() {
                     @Override
                     public void run() {
                         invokeFlushNow(ctx);
