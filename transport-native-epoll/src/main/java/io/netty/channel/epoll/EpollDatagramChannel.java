@@ -523,18 +523,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         @Override
         void epollInReady() {
             assert eventLoop().inEventLoop();
-            if (fd().isInputShutdown()) {
-                return;
-            }
             DatagramChannelConfig config = config();
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
-
-            if (!readPending && !allocHandle.isEdgeTriggered() && !config.isAutoRead()) {
+            if (!readPending && !config.isAutoRead() || fd().isInputShutdown()) {
                 // ChannelConfig.setAutoRead(false) was called in the meantime
                 clearEpollIn0();
                 return;
             }
+            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
@@ -548,6 +544,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         data = allocHandle.allocate(allocator);
                         allocHandle.attemptedBytesRead(data.writableBytes());
                         final DatagramSocketAddress remoteAddress;
+                        epollInReadAttempted();
                         if (data.hasMemoryAddress()) {
                             // has a memory address so use optimized call
                             remoteAddress = fd().recvFromAddress(data.memoryAddress(), data.writerIndex(),
@@ -557,7 +554,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                             remoteAddress = fd().recvFrom(nioData, nioData.position(), nioData.limit());
                         }
 
-                        epollInReadAttempted();
                         if (remoteAddress == null) {
                             allocHandle.lastBytesRead(-1);
                             data.release();
@@ -585,12 +581,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 }
                 readBuf.clear();
                 allocHandle.readComplete();
-                maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
                 pipeline.fireChannelReadComplete();
 
                 if (exception != null) {
                     pipeline.fireExceptionCaught(exception);
-                    checkResetEpollIn(allocHandle.isEdgeTriggered());
                 }
             } finally {
                 epollInFinally(config);

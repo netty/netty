@@ -148,17 +148,14 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
         }
 
         private void epollInReadFd() {
-            if (fd().isInputShutdown()) {
-                return;
-            }
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
             final ChannelConfig config = config();
-            if (!readPending && !allocHandle.isEdgeTriggered() && !config.isAutoRead()) {
+            if (!readPending && !config.isAutoRead() || fd().isInputShutdown()) {
                 // ChannelConfig.setAutoRead(false) was called in the meantime
                 clearEpollIn0();
                 return;
             }
+            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);
@@ -168,8 +165,8 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                     // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
                     // EpollRecvByteAllocatorHandle knows if it should try to read again or not when autoRead is
                     // enabled.
-                    allocHandle.lastBytesRead(Native.recvFd(fd().intValue()));
                     epollInReadAttempted();
+                    allocHandle.lastBytesRead(Native.recvFd(fd().intValue()));
                     switch(allocHandle.lastBytesRead()) {
                     case 0:
                         break readLoop;
@@ -184,14 +181,11 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                 } while (allocHandle.continueReading());
 
                 allocHandle.readComplete();
-                maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
                 pipeline.fireChannelReadComplete();
             } catch (Throwable t) {
                 allocHandle.readComplete();
-                maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
                 pipeline.fireChannelReadComplete();
                 pipeline.fireExceptionCaught(t);
-                checkResetEpollIn(allocHandle.isEdgeTriggered());
             } finally {
                 epollInFinally(config);
             }
