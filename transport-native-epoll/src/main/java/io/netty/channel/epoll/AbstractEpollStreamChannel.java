@@ -664,14 +664,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 EpollRecvByteAllocatorHandle allocHandle) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
-                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                 } else {
                     byteBuf.release();
                 }
             }
             allocHandle.readComplete();
-            maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
             pipeline.fireChannelReadComplete();
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof IOException) {
@@ -824,18 +822,15 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
         @Override
         void epollInReady() {
-            if (fd().isInputShutdown()) {
-                return;
-            }
             final ChannelConfig config = config();
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
-
-            if (!readPending && !allocHandle.isEdgeTriggered() && !config.isAutoRead()) {
+            if (!readPending && !config.isAutoRead() || fd().isInputShutdown()) {
                 // ChannelConfig.setAutoRead(false) was called in the meantime
                 clearEpollIn0();
                 return;
             }
+
+            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
@@ -864,8 +859,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     // we use a direct buffer here as the native implementations only be able
                     // to handle direct buffers.
                     byteBuf = allocHandle.allocate(allocator);
-                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     epollInReadAttempted();
+                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read, release the buffer.
                         byteBuf.release();
@@ -894,7 +889,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 } while (allocHandle.continueReading());
 
                 allocHandle.readComplete();
-                maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
                 pipeline.fireChannelReadComplete();
 
                 if (close) {
@@ -902,7 +896,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
-                checkResetEpollIn(allocHandle.isEdgeTriggered());
             } finally {
                 epollInFinally(config);
             }

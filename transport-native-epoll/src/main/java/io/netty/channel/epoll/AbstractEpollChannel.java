@@ -137,15 +137,18 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     @Override
     protected final void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
-        AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) unsafe();
+        final AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) unsafe();
         unsafe.readPending = true;
-
-        setFlag(readFlag);
 
         // If EPOLL ET mode is enabled and auto read was toggled off on the last read loop then we may not be notified
         // again if we didn't consume all the data. So we force a read operation here if there maybe more data.
         if (unsafe.maybeMoreDataToRead) {
-            unsafe.epollInReady();
+            // Run epollInReady later because this is consistent with declaring interest with the polling mechanism.
+            // We also set maybeMoreDataToRead to false to prevent executing multiple of these runnables.
+            unsafe.maybeMoreDataToRead = false;
+            unsafe.executeEpollInReadyRunnable();
+        } else {
+            setFlag(readFlag);
         }
     }
 
@@ -161,7 +164,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 loop.execute(new OneTimeTask() {
                     @Override
                     public void run() {
-                        if (!config().isAutoRead() && !unsafe.readPending) {
+                        if (!unsafe.readPending && !config().isAutoRead()) {
                             // Still no read triggered so clear it now
                             unsafe.clearEpollIn0();
                         }
@@ -305,9 +308,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {
-        protected boolean readPending;
-        protected boolean maybeMoreDataToRead;
+        boolean readPending;
+        boolean maybeMoreDataToRead;
         private EpollRecvByteAllocatorHandle allocHandle;
+        private Runnable epollInReadyRunnable;
 
         /**
          * Called once EPOLLIN event is ready to be processed
@@ -319,6 +323,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         final void epollInFinally(ChannelConfig config) {
+            maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
             // Check if there is a readPending which was not processed yet.
             // This could be for two reasons:
             // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
@@ -327,24 +332,28 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             // See https://github.com/netty/netty/issues/2254
             if (!readPending && !config.isAutoRead()) {
                 clearEpollIn();
+            } else if (readPending && maybeMoreDataToRead && !fd().isInputShutdown()) {
+                // trigger a read again as there may be something left to read and because of epoll ET we
+                // will not get notified again until we read everything from the socket
+                //
+                // It is possible the last fireChannelRead call could cause the user to call read() again, or if
+                // autoRead is true the call to channelReadComplete would also call read, but maybeMoreDataToRead is set
+                // to false before every read operation to prevent re-entry into epollInReady() we will not read from
+                // the underlying OS again unless the user happens to call read again.
+                executeEpollInReadyRunnable();
             }
         }
 
-        /**
-         * Will schedule a {@link #epollInReady()} call on the event loop if necessary.
-         * @param edgeTriggered {@code true} if the channel is using ET mode. {@code false} otherwise.
-         */
-        final void checkResetEpollIn(boolean edgeTriggered) {
-            if (edgeTriggered && !fd().isInputShutdown()) {
-                // trigger a read again as there may be something left to read and because of epoll ET we
-                // will not get notified again until we read everything from the socket
-                eventLoop().execute(new OneTimeTask() {
+        final void executeEpollInReadyRunnable() {
+            if (epollInReadyRunnable == null) {
+                epollInReadyRunnable = new Runnable() {
                     @Override
                     public void run() {
                         epollInReady();
                     }
-                });
+                };
             }
+            eventLoop().execute(epollInReadyRunnable);
         }
 
         /**

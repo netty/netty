@@ -138,22 +138,28 @@ public class EpollSocketChannelTest {
     public void testAutoReadOffDuringReadOnlyReadsOneTime() throws InterruptedException {
         EventLoopGroup group = new EpollEventLoopGroup();
         try {
-            runAutoReadTest(group, EpollServerSocketChannel.class, EpollSocketChannel.class,
-                    new InetSocketAddress(0));
-            runAutoReadTest(group, EpollServerDomainSocketChannel.class, EpollDomainSocketChannel.class,
-                    EpollSocketTestPermutation.newSocketAddress());
+            runAutoReadTest(true, group, EpollServerSocketChannel.class,
+                    EpollSocketChannel.class, new InetSocketAddress(0));
+            runAutoReadTest(true, group, EpollServerDomainSocketChannel.class,
+                    EpollDomainSocketChannel.class, EpollSocketTestPermutation.newSocketAddress());
+            runAutoReadTest(false, group, EpollServerSocketChannel.class,
+                    EpollSocketChannel.class, new InetSocketAddress(0));
+            runAutoReadTest(false, group, EpollServerDomainSocketChannel.class,
+                    EpollDomainSocketChannel.class, EpollSocketTestPermutation.newSocketAddress());
         } finally {
             group.shutdownGracefully();
         }
     }
 
-    private void runAutoReadTest(EventLoopGroup group, Class<? extends ServerChannel> serverChannelClass,
-            Class<? extends Channel> channelClass, SocketAddress bindAddr) throws InterruptedException {
+    private void runAutoReadTest(boolean readOutsideEventLoopThread, EventLoopGroup group,
+                                 Class<? extends ServerChannel> serverChannelClass,
+                                 Class<? extends Channel> channelClass, SocketAddress bindAddr)
+            throws InterruptedException {
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
-            AutoReadInitializer serverInitializer = new AutoReadInitializer();
-            AutoReadInitializer clientInitializer = new AutoReadInitializer();
+            AutoReadInitializer serverInitializer = new AutoReadInitializer(!readOutsideEventLoopThread);
+            AutoReadInitializer clientInitializer = new AutoReadInitializer(!readOutsideEventLoopThread);
             ServerBootstrap sb = new ServerBootstrap();
             sb.option(ChannelOption.SO_BACKLOG, 1024)
             .option(EpollChannelOption.EPOLL_MODE, EpollMode.EDGE_TRIGGERED)
@@ -189,10 +195,14 @@ public class EpollSocketChannelTest {
             serverInitializer.channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[3]));
             clientInitializer.autoReadHandler.assertSingleRead();
 
-            serverInitializer.channel.read();
+            if (readOutsideEventLoopThread) {
+                serverInitializer.channel.read();
+            }
             serverInitializer.autoReadHandler.assertSingleReadSecondTry();
 
-            clientChannel.read();
+            if (readOutsideEventLoopThread) {
+                clientChannel.read();
+            }
             clientInitializer.autoReadHandler.assertSingleReadSecondTry();
         } finally {
             if (serverChannel != null) {
@@ -306,8 +316,13 @@ public class EpollSocketChannelTest {
     }
 
     private static class AutoReadInitializer extends ChannelInitializer<Channel> {
-        final AutoReadHandler autoReadHandler = new AutoReadHandler();
+        final AutoReadHandler autoReadHandler;
         volatile Channel channel;
+
+        AutoReadInitializer(boolean readInEventLoop) {
+            autoReadHandler = new AutoReadHandler(readInEventLoop);
+        }
+
         @Override
         protected void initChannel(Channel ch) throws Exception {
             channel = ch;
@@ -337,13 +352,23 @@ public class EpollSocketChannelTest {
     private static final class AutoReadHandler extends ChannelInboundHandlerAdapter {
         private final AtomicInteger count = new AtomicInteger();
         private final CountDownLatch latch = new CountDownLatch(1);
-        private final CountDownLatch latch2 = new CountDownLatch(2);
+        private final CountDownLatch latch2;
+        private final boolean callRead;
+
+        AutoReadHandler(boolean callRead) {
+            this.callRead = callRead;
+            latch2 = new CountDownLatch(callRead ? 3 : 2);
+        }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ReferenceCountUtil.release(msg);
             if (count.incrementAndGet() == 1) {
                 ctx.channel().config().setAutoRead(false);
+            }
+            if (callRead) {
+                // Test calling read in the EventLoop thread to ensure a read is eventually done.
+                ctx.read();
             }
         }
 
@@ -355,12 +380,12 @@ public class EpollSocketChannelTest {
 
         void assertSingleRead() throws InterruptedException {
             assertTrue(latch.await(5, TimeUnit.SECONDS));
-            assertEquals(1, count.get());
+            assertTrue(count.get() > 0);
         }
 
         void assertSingleReadSecondTry() throws InterruptedException {
             assertTrue(latch2.await(5, TimeUnit.SECONDS));
-            assertEquals(2, count.get());
+            assertEquals(callRead ? 3 : 2, count.get());
         }
     }
 

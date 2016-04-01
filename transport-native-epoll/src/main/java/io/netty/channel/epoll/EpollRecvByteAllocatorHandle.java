@@ -56,6 +56,6 @@ class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle
          *
          * If EPOLLRDHUP has been received we must read until we get a read error.
          */
-        return receivedRdHup ||  maybeMoreDataToRead() && config.isAutoRead() || super.continueReading();
+        return receivedRdHup || maybeMoreDataToRead() && config.isAutoRead() || super.continueReading();
     }
 }
