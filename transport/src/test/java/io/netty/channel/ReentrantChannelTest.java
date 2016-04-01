@@ -17,97 +17,100 @@ package io.netty.channel;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.LoggingHandler.Event;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
 
-public class ReentrantChannelTest extends BaseChannelTest {
+public class ReentrantChannelTest {
 
-    @Test
-    public void testWritabilityChanged() throws Exception {
+    private EventLoopGroup clientGroup;
+    private EventLoopGroup serverGroup;
+    private LoggingHandler loggingHandler;
 
-        LocalAddress addr = new LocalAddress("testWritabilityChanged");
+    private ServerBootstrap getLocalServerBootstrap() {
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(serverGroup);
+        sb.channel(LocalServerChannel.class);
+        sb.childHandler(new ChannelInboundHandlerAdapter());
 
-        ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
-
-        Bootstrap cb = getLocalClientBootstrap();
-
-        setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
-
-        Channel clientChannel = cb.connect(addr).sync().channel();
-        clientChannel.config().setWriteBufferLowWaterMark(512);
-        clientChannel.config().setWriteBufferHighWaterMark(1024);
-
-        // What is supposed to happen from this point:
-        //
-        // 1. Because this write attempt has been made from a non-I/O thread,
-        //    ChannelOutboundBuffer.pendingWriteBytes will be increased before
-        //    write() event is really evaluated.
-        //    -> channelWritabilityChanged() will be triggered,
-        //       because the Channel became unwritable.
-        //
-        // 2. The write() event is handled by the pipeline in an I/O thread.
-        //    -> write() will be triggered.
-        //
-        // 3. Once the write() event is handled, ChannelOutboundBuffer.pendingWriteBytes
-        //    will be decreased.
-        //    -> channelWritabilityChanged() will be triggered,
-        //       because the Channel became writable again.
-        //
-        // 4. The message is added to the ChannelOutboundBuffer and thus
-        //    pendingWriteBytes will be increased again.
-        //    -> channelWritabilityChanged() will be triggered.
-        //
-        // 5. The flush() event causes the write request in theChannelOutboundBuffer
-        //    to be removed.
-        //    -> flush() and channelWritabilityChanged() will be triggered.
-        //
-        // Note that the channelWritabilityChanged() in the step 4 can occur between
-        // the flush() and the channelWritabilityChanged() in the stap 5, because
-        // the flush() is invoked from a non-I/O thread while the other are from
-        // an I/O thread.
-
-        ChannelFuture future = clientChannel.write(createTestBuf(2000));
-
-        clientChannel.flush();
-        future.sync();
-
-        clientChannel.close().sync();
-
-        assertLog(
-                // Case 1:
-                "WRITABILITY: writable=false\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n",
-                // Case 2:
-                "WRITABILITY: writable=false\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n" +
-                "WRITABILITY: writable=true\n");
+        return sb;
     }
 
-    /**
-     * Similar to {@link #testWritabilityChanged()} with slight variation.
-     */
+    private Bootstrap getLocalClientBootstrap() {
+        Bootstrap cb = new Bootstrap();
+        cb.group(clientGroup);
+        cb.channel(LocalChannel.class);
+        cb.handler(loggingHandler);
+
+        return cb;
+    }
+
+    private static ByteBuf createTestBuf(int len) {
+        ByteBuf buf = Unpooled.buffer(len, len);
+        buf.setIndex(0, len);
+        return buf;
+    }
+
+    private void assertLog(String firstExpected, String... otherExpected) {
+        String actual = loggingHandler.getLog();
+        if (firstExpected.equals(actual)) {
+            return;
+        }
+        for (String e: otherExpected) {
+            if (e.equals(actual)) {
+                return;
+            }
+        }
+
+        // Let the comparison fail with the first expectation.
+        assertEquals(firstExpected, actual);
+    }
+
+    private void setInterest(LoggingHandler.Event... events) {
+        loggingHandler.setInterest(events);
+    }
+
+    @Before
+    public void setup() {
+        loggingHandler = new LoggingHandler();
+        clientGroup = new DefaultEventLoop();
+        serverGroup = new DefaultEventLoop();
+    }
+
+    @After
+    public void teardown() {
+        clientGroup.shutdownGracefully();
+        serverGroup.shutdownGracefully();
+    }
+
     @Test
-    public void testFlushInWritabilityChanged() throws Exception {
+    public void testWritabilityChangedWriteAndFlush() throws Exception {
+        testWritabilityChanged0(true);
+    }
 
+    @Test
+    public void testWritabilityChangedWriteThenFlush() throws Exception {
+        testWritabilityChanged0(false);
+    }
+
+    private void testWritabilityChanged0(boolean writeAndFlush) throws Exception {
         LocalAddress addr = new LocalAddress("testFlushInWritabilityChanged");
-
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        Channel serverChannel = sb.bind(addr).sync().channel();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -117,38 +120,37 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.config().setWriteBufferLowWaterMark(512);
         clientChannel.config().setWriteBufferHighWaterMark(1024);
 
-        clientChannel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-            @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-                if (!ctx.channel().isWritable()) {
-                    ctx.channel().flush();
-                }
-                ctx.fireChannelWritabilityChanged();
-            }
-        });
-
         assertTrue(clientChannel.isWritable());
-
-        clientChannel.write(createTestBuf(2000)).sync();
+        if (writeAndFlush) {
+            clientChannel.writeAndFlush(createTestBuf(2000)).sync();
+        } else {
+            ChannelFuture future = clientChannel.write(createTestBuf(2000));
+            clientChannel.flush();
+            future.sync();
+        }
         clientChannel.close().sync();
+        serverChannel.close().sync();
 
+        // Because of timing of the scheduling we either should see:
+        // - WRITE, FLUSH
+        // - WRITE, WRITABILITY: writable=false, FLUSH
+        // - WRITE, WRITABILITY: writable=false, FLUSH, WRITABILITY: writable=true
+        //
+        // This is the case as between the write and flush the EventLoop may already pick up the pending writes and
+        // put these into the ChannelOutboundBuffer. Once the flush then happen from outside the EventLoop we may be
+        // able to flush everything and also schedule the writabilityChanged event before the actual close takes
+        // place which means we may see another writability changed event to inform the channel is writable again.
         assertLog(
-                // Case 1:
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
+                "WRITE\n" +
+                "FLUSH\n",
                 "WRITE\n" +
                 "WRITABILITY: writable=false\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n",
-                // Case 2:
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
+                "FLUSH\n",
                 "WRITE\n" +
                 "WRITABILITY: writable=false\n" +
                 "FLUSH\n" +
-                "WRITABILITY: writable=true\n" +
-                "WRITABILITY: writable=true\n");
+                "WRITABILITY: writable=true\n"
+            );
     }
 
     @Test
@@ -157,7 +159,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testWriteFlushPingPong");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        Channel serverChannel = sb.bind(addr).sync().channel();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -191,6 +193,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         clientChannel.writeAndFlush(createTestBuf(2000));
         clientChannel.close().sync();
+        serverChannel.close().sync();
 
         assertLog(
                 "WRITE\n" +
@@ -214,7 +217,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testCloseInFlush");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        Channel serverChannel = sb.bind(addr).sync().channel();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -239,6 +242,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         clientChannel.write(createTestBuf(2000)).sync();
         clientChannel.closeFuture().sync();
+        serverChannel.close().sync();
 
         assertLog("WRITE\nFLUSH\nCLOSE\n");
     }
@@ -249,7 +253,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testFlushFailure");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        Channel serverChannel = sb.bind(addr).sync().channel();
 
         Bootstrap cb = getLocalClientBootstrap();
 
@@ -279,7 +283,56 @@ public class ReentrantChannelTest extends BaseChannelTest {
         }
 
         clientChannel.closeFuture().sync();
+        serverChannel.close().sync();
 
         assertLog("WRITE\nCLOSE\n");
+    }
+
+    // Test for https://github.com/netty/netty/issues/5028
+    @Test
+    public void testWriteRentrance() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelDuplexHandler() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                for (int i = 0; i < 3; i++) {
+                    ctx.write(i);
+                }
+                ctx.write(3, promise);
+            }
+
+            @Override
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+                if (ctx.channel().isWritable()) {
+                    ctx.channel().writeAndFlush(-1);
+                }
+            }
+        });
+
+        channel.config().setMessageSizeEstimator(new MessageSizeEstimator() {
+            @Override
+            public Handle newHandle() {
+                return new Handle() {
+                    @Override
+                    public int size(Object msg) {
+                        // Each message will just increase the pending bytes by 1.
+                        return 1;
+                    }
+                };
+            }
+        });
+        channel.config().setWriteBufferLowWaterMark(3);
+        channel.config().setWriteBufferHighWaterMark(4);
+        channel.writeOutbound(-1);
+        assertTrue(channel.finish());
+        assertSequenceOutbound(channel);
+        assertSequenceOutbound(channel);
+        assertNull(channel.readOutbound());
+    }
+
+    private static void assertSequenceOutbound(EmbeddedChannel channel) {
+        assertEquals(0, channel.readOutbound());
+        assertEquals(1, channel.readOutbound());
+        assertEquals(2, channel.readOutbound());
+        assertEquals(3, channel.readOutbound());
     }
 }
