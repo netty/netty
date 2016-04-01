@@ -24,19 +24,46 @@ import org.junit.Test;
 public class DefaultDnsRecordDecoderTest {
 
     @Test
-    public void testDecodeEmptyName() {
-        testDecodeEmptyName0(Unpooled.buffer().writeByte('0'));
+    public void testDecodeName() {
+        testDecodeName("netty.io.", Unpooled.wrappedBuffer(new byte[] {
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0
+        }));
     }
 
     @Test
-    public void testDecodeEmptyNameNonRFC() {
-        testDecodeEmptyName0(Unpooled.EMPTY_BUFFER);
+    public void testDecodeNameWithoutTerminator() {
+        testDecodeName("netty.io.", Unpooled.wrappedBuffer(new byte[] {
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o'
+        }));
     }
 
-    private static void testDecodeEmptyName0(ByteBuf buffer) {
+    @Test
+    public void testDecodeNameWithExtraTerminator() {
+        // Should not be decoded as 'netty.io..'
+        testDecodeName("netty.io.", Unpooled.wrappedBuffer(new byte[] {
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0, 0
+        }));
+    }
+
+    @Test
+    public void testDecodeEmptyName() {
+        testDecodeName(".", Unpooled.buffer().writeByte(0));
+    }
+
+    @Test
+    public void testDecodeEmptyNameFromEmptyBuffer() {
+        testDecodeName(".", Unpooled.EMPTY_BUFFER);
+    }
+
+    @Test
+    public void testDecodeEmptyNameFromExtraZeroes() {
+        testDecodeName(".", Unpooled.wrappedBuffer(new byte[] { 0, 0 }));
+    }
+
+    private static void testDecodeName(String expected, ByteBuf buffer) {
         try {
             DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
-            Assert.assertEquals(StringUtil.EMPTY_STRING, decoder.decodeName(buffer));
+            Assert.assertEquals(expected, decoder.decodeName(buffer));
         } finally {
             buffer.release();
         }
