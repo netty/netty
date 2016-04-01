@@ -229,11 +229,17 @@ public class ChannelOutboundBufferTest {
 
         // Ensure exceeding the high watermark makes channel unwritable.
         ch.write(buffer().writeZero(128));
+        assertThat(buf.toString(), is(""));
+
+        ch.runPendingTasks();
         assertThat(buf.toString(), is("false "));
 
         // Ensure going down to the low watermark makes channel writable again by flushing the first write.
         assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
         assertThat(ch.unsafe().outboundBuffer().totalPendingWriteBytes(), is(128L));
+        assertThat(buf.toString(), is("false "));
+
+        ch.runPendingTasks();
         assertThat(buf.toString(), is("false true "));
 
         safeClose(ch);
@@ -331,6 +337,9 @@ public class ChannelOutboundBufferTest {
 
         // Trigger channelWritabilityChanged() by writing a lot.
         ch.write(buffer().writeZero(256));
+        assertThat(buf.toString(), is(""));
+
+        ch.runPendingTasks();
         assertThat(buf.toString(), is("false "));
 
         // Ensure that setting a user-defined writability flag to false does not trigger channelWritabilityChanged()
