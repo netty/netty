@@ -77,7 +77,7 @@ final class PoolThreadCache {
         }
         if (freeSweepAllocationThreshold < 1) {
             throw new IllegalArgumentException("freeSweepAllocationThreshold: "
-                    + maxCachedBufferCapacity + " (expected: > 0)");
+                    + freeSweepAllocationThreshold + " (expected: > 0)");
         }
         this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
         this.heapArena = heapArena;
