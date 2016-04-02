@@ -318,9 +318,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
          */
         abstract void epollInReady();
 
-        final void epollInReadAttempted() {
-            readPending = maybeMoreDataToRead = false;
-        }
+        final void epollInBefore() { maybeMoreDataToRead = false; }
 
         final void epollInFinally(ChannelConfig config) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
@@ -452,6 +450,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         protected final void clearEpollIn0() {
             assert eventLoop().inEventLoop();
             try {
+                readPending = false;
                 clearFlag(readFlag);
             } catch (IOException e) {
                 // When this happens there is something completely wrong with either the filedescriptor or epoll,

@@ -523,18 +523,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         @Override
         void epollInReady() {
             assert eventLoop().inEventLoop();
-            DatagramChannelConfig config = config();
-            if (!readPending && !config.isAutoRead() || fd().isInputShutdown()) {
-                // ChannelConfig.setAutoRead(false) was called in the meantime
+            if (fd().isInputShutdown()) {
                 clearEpollIn0();
                 return;
             }
+            DatagramChannelConfig config = config();
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
             allocHandle.reset(config);
+            epollInBefore();
 
             Throwable exception = null;
             try {
@@ -544,7 +544,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         data = allocHandle.allocate(allocator);
                         allocHandle.attemptedBytesRead(data.writableBytes());
                         final DatagramSocketAddress remoteAddress;
-                        epollInReadAttempted();
                         if (data.hasMemoryAddress()) {
                             // has a memory address so use optimized call
                             remoteAddress = fd().recvFromAddress(data.memoryAddress(), data.writerIndex(),
@@ -577,6 +576,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
+                    readPending = false;
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
                 readBuf.clear();
