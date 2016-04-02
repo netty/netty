@@ -18,7 +18,6 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.StringUtil;
 
 /**
  * The default {@link DnsRecordDecoder} implementation.
