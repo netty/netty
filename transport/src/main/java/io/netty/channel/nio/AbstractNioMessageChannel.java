@@ -59,7 +59,6 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 removeReadOp();
                 return;
             }
-
             final ChannelPipeline pipeline = pipeline();
             final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
             allocHandle.reset(config);
@@ -68,7 +67,6 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             Throwable exception = null;
             try {
                 try {
-                    boolean needReadPendingReset = true;
                     do {
                         int localRead = doReadMessages(readBuf);
                         if (localRead == 0) {
@@ -80,10 +78,6 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                         }
 
                         allocHandle.incMessagesRead(localRead);
-                        if (needReadPendingReset) {
-                            needReadPendingReset = false;
-                            setReadPending(false);
-                        }
                     } while (allocHandle.continueReading());
                 } catch (Throwable t) {
                     exception = t;
@@ -91,6 +85,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
+                    setReadPending(false);
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
                 readBuf.clear();

@@ -107,17 +107,17 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
         @Override
         void epollInReady() {
             assert eventLoop().inEventLoop();
-            final ChannelConfig config = config();
-            if (!readPending && !config.isAutoRead() || fd().isInputShutdown()) {
-                // ChannelConfig.setAutoRead(false) was called in the meantime
+            if (fd().isInputShutdown()) {
                 clearEpollIn0();
                 return;
             }
+            final ChannelConfig config = config();
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);
+            epollInBefore();
 
             Throwable exception = null;
             try {
@@ -126,7 +126,6 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                         // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
                         // EpollRecvByteAllocatorHandle knows if it should try to read again or not when autoRead is
                         // enabled.
-                        epollInReadAttempted();
                         allocHandle.lastBytesRead(fd().accept(acceptedAddress));
                         if (allocHandle.lastBytesRead() == -1) {
                             // this means everything was handled for now
@@ -135,6 +134,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                         allocHandle.incMessagesRead(1);
 
                         int len = acceptedAddress[0];
+                        readPending = false;
                         pipeline.fireChannelRead(newChildChannel(allocHandle.lastBytesRead(), acceptedAddress, 1, len));
                     } while (allocHandle.continueReading());
                 } catch (Throwable t) {
