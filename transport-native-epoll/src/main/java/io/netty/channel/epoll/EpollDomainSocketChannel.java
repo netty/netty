@@ -148,24 +148,23 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
         }
 
         private void epollInReadFd() {
-            final ChannelConfig config = config();
-            if (!readPending && !config.isAutoRead() || fd().isInputShutdown()) {
-                // ChannelConfig.setAutoRead(false) was called in the meantime
+            if (fd().isInputShutdown()) {
                 clearEpollIn0();
                 return;
             }
+            final ChannelConfig config = config();
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);
+            epollInBefore();
 
             try {
                 readLoop: do {
                     // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
                     // EpollRecvByteAllocatorHandle knows if it should try to read again or not when autoRead is
                     // enabled.
-                    epollInReadAttempted();
                     allocHandle.lastBytesRead(Native.recvFd(fd().intValue()));
                     switch(allocHandle.lastBytesRead()) {
                     case 0:
@@ -175,6 +174,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                         return;
                     default:
                         allocHandle.incMessagesRead(1);
+                        readPending = false;
                         pipeline.fireChannelRead(new FileDescriptor(allocHandle.lastBytesRead()));
                         break;
                     }

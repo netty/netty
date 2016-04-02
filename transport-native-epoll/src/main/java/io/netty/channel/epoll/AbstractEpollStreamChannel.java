@@ -664,6 +664,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 EpollRecvByteAllocatorHandle allocHandle) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
+                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                 } else {
                     byteBuf.release();
@@ -822,19 +823,18 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
         @Override
         void epollInReady() {
-            final ChannelConfig config = config();
-            if (!readPending && !config.isAutoRead() || fd().isInputShutdown()) {
-                // ChannelConfig.setAutoRead(false) was called in the meantime
+            if (fd().isInputShutdown()) {
                 clearEpollIn0();
                 return;
             }
-
+            final ChannelConfig config = config();
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
             allocHandle.reset(config);
+            epollInBefore();
 
             ByteBuf byteBuf = null;
             boolean close = false;
@@ -859,7 +859,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     // we use a direct buffer here as the native implementations only be able
                     // to handle direct buffers.
                     byteBuf = allocHandle.allocate(allocator);
-                    epollInReadAttempted();
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read, release the buffer.
@@ -869,6 +868,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         break;
                     }
                     allocHandle.incMessagesRead(1);
+                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
 
