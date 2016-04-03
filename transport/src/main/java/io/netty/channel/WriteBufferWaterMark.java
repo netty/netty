@@ -22,7 +22,7 @@ package io.netty.channel;
  * for write buffer.
  * <p>
  * If the number of bytes queued in the write buffer exceeds the
- * {@linkplain #high}  high water mark}, {@link Channel#isWritable()}
+ * {@linkplain #high high water mark}, {@link Channel#isWritable()}
  * will start to return {@code false}.
  * <p>
  * If the number of bytes queued in the write buffer exceeds the
