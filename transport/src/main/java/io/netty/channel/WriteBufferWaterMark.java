@@ -16,13 +16,10 @@
 package io.netty.channel;
 
 /**
- * WriteBufferWaterMark is used to set low water mark (default value is
- * {@value #DEFAULT_LOW_WATER_MARK} bytes) and high water
- * mark (default value is {@value #DEFAULT_HIGH_WATER_MARK} bytes)
- * for write buffer.
+ * WriteBufferWaterMark is used to set low water mark and high water mark for the write buffer.
  * <p>
  * If the number of bytes queued in the write buffer exceeds the
- * {@linkplain #high}  high water mark}, {@link Channel#isWritable()}
+ * {@linkplain #high high water mark}, {@link Channel#isWritable()}
  * will start to return {@code false}.
  * <p>
  * If the number of bytes queued in the write buffer exceeds the
