@@ -69,15 +69,6 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
     short keyLength();
 
     /**
-     * Set the key length of the message.
-     * <p/>
-     * This may be 0, since the key is optional.
-     *
-     * @param keyLength the key length to use.
-     */
-    BinaryMemcacheMessage setKeyLength(short keyLength);
-
-    /**
      * Return the extras length of the message.
      * <p/>
      * This may be 0, since the extras content is optional.
@@ -85,15 +76,6 @@ public interface BinaryMemcacheMessage extends MemcacheMessage {
      * @return the extras length.
      */
     byte extrasLength();
-
-    /**
-     * Set the extras length of the message.
-     * <p/>
-     * This may be 0, since the extras content is optional.
-     *
-     * @param extrasLength the extras length.
-     */
-    BinaryMemcacheMessage setExtrasLength(byte extrasLength);
 
     /**
      * Returns the data type of the message.
