@@ -259,8 +259,6 @@ public class BinaryMemcacheDecoderTest {
         ByteBuf key = Unpooled.copiedBuffer("Netty", CharsetUtil.UTF_8);
         ByteBuf extras = Unpooled.copiedBuffer("extras", CharsetUtil.UTF_8);
         BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest(key, extras);
-        request.setKeyLength((short) key.readableBytes());
-        request.setExtrasLength((byte) extras.readableBytes());
 
         assertTrue(channel.writeOutbound(request));
         assertTrue(channel.writeInbound(channel.outboundMessages().toArray()));

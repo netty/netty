@@ -51,6 +51,7 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
         }
 
         this.content = content;
+        setTotalBodyLength(keyLength() + extrasLength() + content.readableBytes());
     }
 
     @Override

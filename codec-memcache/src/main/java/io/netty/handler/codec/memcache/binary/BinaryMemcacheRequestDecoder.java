@@ -34,7 +34,7 @@ public class BinaryMemcacheRequestDecoder
 
     @Override
     protected BinaryMemcacheRequest decodeHeader(ByteBuf in) {
-        BinaryMemcacheRequest header = new DefaultBinaryMemcacheRequest();
+        DefaultBinaryMemcacheRequest header = new DefaultBinaryMemcacheRequest();
         header.setMagic(in.readByte());
         header.setOpcode(in.readByte());
         header.setKeyLength(in.readShort());
