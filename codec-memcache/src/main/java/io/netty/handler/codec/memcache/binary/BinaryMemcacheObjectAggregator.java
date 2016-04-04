@@ -55,7 +55,7 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
     private static FullBinaryMemcacheRequest toFullRequest(BinaryMemcacheRequest request, ByteBuf content) {
         ByteBuf key = request.key() == null ? null : request.key().retain();
         ByteBuf extras = request.extras() == null ? null : request.extras().retain();
-        FullBinaryMemcacheRequest fullRequest =
+        DefaultFullBinaryMemcacheRequest fullRequest =
                 new DefaultFullBinaryMemcacheRequest(key, extras, content);
 
         fullRequest.setMagic(request.magic());
@@ -74,7 +74,7 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
     private static FullBinaryMemcacheResponse toFullResponse(BinaryMemcacheResponse response, ByteBuf content) {
         ByteBuf key = response.key() == null ? null : response.key().retain();
         ByteBuf extras = response.extras() == null ? null : response.extras().retain();
-        FullBinaryMemcacheResponse fullResponse =
+        DefaultFullBinaryMemcacheResponse fullResponse =
                 new DefaultFullBinaryMemcacheResponse(key, extras, content);
 
         fullResponse.setMagic(response.magic());

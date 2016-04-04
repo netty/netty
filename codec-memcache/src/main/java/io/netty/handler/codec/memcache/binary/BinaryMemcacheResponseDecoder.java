@@ -34,7 +34,7 @@ public class BinaryMemcacheResponseDecoder
 
     @Override
     protected BinaryMemcacheResponse decodeHeader(ByteBuf in) {
-        BinaryMemcacheResponse header = new DefaultBinaryMemcacheResponse();
+        DefaultBinaryMemcacheResponse header = new DefaultBinaryMemcacheResponse();
         header.setMagic(in.readByte());
         header.setOpcode(in.readByte());
         header.setKeyLength(in.readShort());

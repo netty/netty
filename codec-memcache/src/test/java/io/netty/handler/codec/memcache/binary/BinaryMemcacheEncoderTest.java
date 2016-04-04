@@ -86,7 +86,6 @@ public class BinaryMemcacheEncoderTest {
         int extrasLength = extras.readableBytes();
 
         BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest(Unpooled.EMPTY_BUFFER, extras);
-        request.setExtrasLength((byte) extrasLength);
 
         boolean result = channel.writeOutbound(request);
         assertThat(result, is(true));
@@ -104,7 +103,6 @@ public class BinaryMemcacheEncoderTest {
         int keyLength = key.readableBytes();
 
         BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest(key);
-        request.setKeyLength((byte) keyLength);
 
         boolean result = channel.writeOutbound(request);
         assertThat(result, is(true));
