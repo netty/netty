@@ -223,30 +223,31 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
-            ++allocationsNormal;
         if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
             q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
             q075.allocate(buf, reqCapacity, normCapacity) || q100.allocate(buf, reqCapacity, normCapacity)) {
+            ++allocationsNormal;
             return;
         }
 
         // Add a new chunk.
         PoolChunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
         long handle = c.allocate(normCapacity);
+        ++allocationsNormal;
         assert handle > 0;
         c.initBuf(buf, handle, reqCapacity);
         qInit.add(c);
     }
 
     private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
-        allocationsHuge.increment();
         buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
+        allocationsHuge.increment();
     }
 
     void free(PoolChunk<T> chunk, long handle, int normCapacity, PoolThreadCache cache) {
         if (chunk.unpooled) {
-            allocationsHuge.decrement();
             destroyChunk(chunk);
+            deallocationsHuge.decrement();
         } else {
             SizeClass sizeClass = sizeClass(normCapacity);
             if (cache != null && cache.add(this, chunk, handle, normCapacity, sizeClass)) {
