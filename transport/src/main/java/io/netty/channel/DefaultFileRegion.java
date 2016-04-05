@@ -38,7 +38,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     private final File f;
     private final long position;
     private final long count;
-    private long transfered;
+    private long transferred;
     private FileChannel file;
 
     /**
@@ -117,12 +117,12 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     @Deprecated
     @Override
     public long transfered() {
-        return transfered;
+        return transferred;
     }
 
     @Override
     public long transferred() {
-        return transfered;
+        return transferred;
     }
 
     @Override
@@ -144,7 +144,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
 
         long written = file.transferTo(this.position + position, count, target);
         if (written > 0) {
-            transfered += written;
+            transferred += written;
         }
         return written;
     }
