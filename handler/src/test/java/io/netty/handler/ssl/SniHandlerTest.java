@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -40,6 +41,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.ssl.HandshakeCompletedEvent;
 import javax.xml.bind.DatatypeConverter;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -165,7 +167,8 @@ public class SniHandlerTest {
         SslContext leanContext = makeSslContext();
         final SslContext clientContext = makeSslClientContext();
         SslContext wrappedLeanContext = null;
-        final CountDownLatch apnDoneLatch = new CountDownLatch(1);
+        final CountDownLatch serverApnDoneLatch = new CountDownLatch(1);
+        final CountDownLatch clientApnDoneLatch = new CountDownLatch(1);
 
         final DomainNameMapping<SslContext> mapping = new DomainMappingBuilder(nettyContext)
                                                          .add("*.netty.io", nettyContext)
@@ -191,11 +194,13 @@ public class SniHandlerTest {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ChannelPipeline p = ch.pipeline();
+                    // Server side SNI.
                     p.addLast(new SniHandler(mapping));
+                    // Catch the notification event that APN has completed successfully.
                     p.addLast(new ApplicationProtocolNegotiationHandler("foo") {
                         @Override
                         protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
-                            apnDoneLatch.countDown();
+                            serverApnDoneLatch.countDown();
                         }
                     });
                 }
@@ -207,10 +212,18 @@ public class SniHandlerTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ChannelPipeline p = ch.pipeline();
+                    // Simulate client side SNI (which is currently not supported).
                     ch.write(Unpooled.wrappedBuffer(DatatypeConverter.parseHexBinary(tlsHandshakeMessageHex1)));
                     ch.writeAndFlush(Unpooled.wrappedBuffer(DatatypeConverter.parseHexBinary(tlsHandshakeMessageHex)));
+                    // Add a SslHandler so we can do the client side of the handshake.
                     ch.pipeline().addLast(clientContext.newHandler(ch.alloc()));
+                    // Catch the notification event that APN has completed successfully.
+                    ch.pipeline().addLast(new ApplicationProtocolNegotiationHandler("foo") {
+                        @Override
+                        protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
+                            clientApnDoneLatch.countDown();
+                        }
+                    });
                 }
             });
 
@@ -220,7 +233,8 @@ public class SniHandlerTest {
             assertTrue(ccf.awaitUninterruptibly().isSuccess());
             clientChannel = ccf.channel();
 
-            assertTrue(apnDoneLatch.await(5, TimeUnit.SECONDS));
+            assertTrue(serverApnDoneLatch.await(5, TimeUnit.SECONDS));
+            assertTrue(clientApnDoneLatch.await(5, TimeUnit.SECONDS));
         } finally {
             if (serverChannel != null) {
                 serverChannel.close().sync();
