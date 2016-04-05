@@ -46,6 +46,7 @@ public final class HttpProxyHandler extends ProxyHandler {
     private final String password;
     private final CharSequence authorization;
     private HttpResponseStatus status;
+    private boolean isTransparent;
 
     public HttpProxyHandler(SocketAddress proxyAddress) {
         super(proxyAddress);
@@ -72,6 +73,18 @@ public final class HttpProxyHandler extends ProxyHandler {
 
         authz.release();
         authzBase64.release();
+    }
+
+    /**
+     *
+     * @return endpoint http/ws support
+     */
+    public boolean isTransparent() {
+        return isTransparent;
+    }
+
+    public void setTransparent(boolean transparent) {
+        isTransparent = transparent;
     }
 
     @Override
@@ -157,5 +170,14 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
 
         return finished;
+    }
+
+    @Override
+    protected void sendInitialMessage(ChannelHandlerContext ctx) throws Exception {
+        if(isTransparent()){
+            setConnectSuccess();
+        }else {
+            super.sendInitialMessage(ctx);
+        }
     }
 }
