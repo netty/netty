@@ -75,15 +75,37 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         chunk.free(handle);
         if (chunk.usage() < minUsage) {
             remove(chunk);
-            if (prevList == null) {
-                assert chunk.usage() == 0;
-                return false;
-            } else {
-                prevList.add(chunk);
-                return true;
-            }
+            // Move the PoolChunk down the PoolChunkList linked-list.
+            return move0(chunk);
         }
         return true;
+    }
+
+    private boolean move(PoolChunk<T> chunk) {
+        assert chunk.usage() < maxUsage;
+
+        if (chunk.usage() < minUsage) {
+            // Move the PoolChunk down the PoolChunkList linked-list.
+            return move0(chunk);
+        }
+
+        // PoolChunk fits into this PoolChunkList, adding it here.
+        add0(chunk);
+        return true;
+    }
+
+    /**
+     * Moves the {@link PoolChunk} down the {@link PoolChunkList} linked-list so it will end up in the right
+     * {@link PoolChunkList} that has the correct minUsage / maxUsage in respect to {@link PoolChunk#usage()}.
+     */
+    private boolean move0(PoolChunk<T> chunk) {
+        if (prevList == null) {
+            // There is no previous PoolChunkList so return false which result in having the PoolChunk destroyed and
+            // all memory associated with the PoolChunk will be released.
+            assert chunk.usage() == 0;
+            return false;
+        }
+        return prevList.move(chunk);
     }
 
     void add(PoolChunk<T> chunk) {
@@ -91,7 +113,13 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
             nextList.add(chunk);
             return;
         }
+        add0(chunk);
+    }
 
+    /**
+     * Adds the {@link PoolChunk} to this {@link PoolChunkList}.
+     */
+    void add0(PoolChunk<T> chunk) {
         chunk.parent = this;
         if (head == null) {
             head = chunk;
