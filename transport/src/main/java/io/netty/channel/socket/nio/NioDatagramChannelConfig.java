@@ -169,7 +169,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
 
     @Override
     protected void autoReadCleared() {
-        ((NioDatagramChannel) channel).setReadPending(false);
+        ((NioDatagramChannel) channel).clearReadPending0();
     }
 
     private Object getOption0(Object option) {
