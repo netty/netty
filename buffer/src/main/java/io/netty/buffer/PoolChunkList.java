@@ -122,12 +122,12 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
 
     @Override
     public int minUsage() {
-        return minUsage;
+        return minUsage == Integer.MIN_VALUE ? 1 : minUsage;
     }
 
     @Override
     public int maxUsage() {
-        return maxUsage;
+        return maxUsage == Integer.MAX_VALUE ? 100 : maxUsage;
     }
 
     @Override
