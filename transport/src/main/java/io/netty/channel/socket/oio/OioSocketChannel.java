@@ -234,8 +234,13 @@ public class OioSocketChannel extends OioByteStreamChannel
         return false;
     }
 
+    @Deprecated
     @Override
     protected void setReadPending(boolean readPending) {
         super.setReadPending(readPending);
+    }
+
+    final void clearReadPending0() {
+        clearReadPending();
     }
 }
