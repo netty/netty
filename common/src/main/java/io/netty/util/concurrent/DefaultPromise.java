@@ -577,7 +577,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         if (listeners instanceof DefaultFutureListeners) {
             final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
-            execute(executor, new OneTimeTask() {
+            safeExecute(executor, new OneTimeTask() {
                 @Override
                 public void run() {
                     notifyListeners0(DefaultPromise.this, dfl);
@@ -587,7 +587,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         } else {
             final GenericFutureListener<? extends Future<V>> l =
                     (GenericFutureListener<? extends Future<V>>) listeners;
-            execute(executor, new OneTimeTask() {
+            safeExecute(executor, new OneTimeTask() {
                 @Override
                 public void run() {
                     notifyListener0(DefaultPromise.this, l);
@@ -633,7 +633,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     this.lateListeners = lateListeners = new LateListeners();
                 }
                 lateListeners.add(l);
-                execute(executor, lateListeners);
+                executor.execute(lateListeners);
                 return;
             }
         }
@@ -641,7 +641,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         // Add the late listener to lateListeners in the executor thread for thread safety.
         // We could just make LateListeners extend ConcurrentLinkedQueue, but it's an overkill considering
         // that most asynchronous applications won't execute this code path.
-        execute(executor, new LateListenerNotifier(l));
+        executor.execute(new LateListenerNotifier(l));
     }
 
     protected static void notifyListener(
@@ -661,7 +661,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
-        execute(eventExecutor, new OneTimeTask() {
+        safeExecute(eventExecutor, new OneTimeTask() {
             @Override
             public void run() {
                 notifyListener0(future, l);
@@ -669,7 +669,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         });
     }
 
-    private static void execute(EventExecutor executor, Runnable task) {
+    private static void safeExecute(EventExecutor executor, Runnable task) {
         try {
             executor.execute(task);
         } catch (Throwable t) {
@@ -755,7 +755,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             if (listeners instanceof GenericProgressiveFutureListener[]) {
                 final GenericProgressiveFutureListener<?>[] array =
                         (GenericProgressiveFutureListener<?>[]) listeners;
-                execute(executor, new OneTimeTask() {
+                safeExecute(executor, new OneTimeTask() {
                     @Override
                     public void run() {
                         notifyProgressiveListeners0(self, array, progress, total);
@@ -764,7 +764,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             } else {
                 final GenericProgressiveFutureListener<ProgressiveFuture<V>> l =
                         (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners;
-                execute(executor, new OneTimeTask() {
+                safeExecute(executor, new OneTimeTask() {
                     @Override
                     public void run() {
                         notifyProgressiveListener0(self, l, progress, total);
@@ -856,7 +856,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             } else {
                 // Reschedule until the initial notification is done to avoid the race condition
                 // where the notification is made in an incorrect order.
-                execute(executor, this);
+                safeExecute(executor, this);
             }
         }
     }
