@@ -30,6 +30,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     private final PoolChunkList<T> nextList;
     private final int minUsage;
     private final int maxUsage;
+    private final int maxCapacity;
 
     private PoolChunk<T> head;
 
@@ -39,10 +40,32 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
-    PoolChunkList(PoolChunkList<T> nextList, int minUsage, int maxUsage) {
+    PoolChunkList(PoolChunkList<T> nextList, int minUsage, int maxUsage, int chunkSize) {
+        assert minUsage <= maxUsage;
         this.nextList = nextList;
         this.minUsage = minUsage;
         this.maxUsage = maxUsage;
+        maxCapacity = calculateMaxCapacity(minUsage, chunkSize);
+    }
+
+    /**
+     * Calculates the maximum capacity of a buffer that will ever be possible to allocate out of the {@link PoolChunk}s
+     * that belong to the {@link PoolChunkList} with the given {@code minUsage} and {@code maxUsage} settings.
+     */
+    private static int calculateMaxCapacity(int minUsage, int chunkSize) {
+        minUsage = minUsage0(minUsage);
+
+        if (minUsage == 100) {
+            // If the minUsage is 100 we can not allocate anything out of this list.
+            return 0;
+        }
+
+        // Calculate the maximum amount of bytes that can be allocated from a PoolChunk in this PoolChunkList.
+        //
+        // As an example:
+        // - If a PoolChunkList has minUsage == 25 we are allowed to allocate at most 75% of the chunkSize because
+        //   this is the maximum amount available in any PoolChunk in this PoolChunkList.
+        return  (int) (chunkSize * (100L - minUsage) / 100L);
     }
 
     void prevList(PoolChunkList<T> prevList) {
@@ -51,7 +74,9 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     }
 
     boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
-        if (head == null) {
+        if (head == null || normCapacity > maxCapacity) {
+            // Either this PoolChunkList is empty or the requested capacity is larger then the capacity which can
+            // be handled by the PoolChunks that are contained in this PoolChunkList.
             return false;
         }
 
@@ -152,12 +177,16 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
 
     @Override
     public int minUsage() {
-        return max(1, minUsage);
+        return minUsage0(minUsage);
     }
 
     @Override
     public int maxUsage() {
         return min(maxUsage, 100);
+    }
+
+    private static int minUsage0(int value) {
+        return max(1, value);
     }
 
     @Override
