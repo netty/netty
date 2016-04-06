@@ -16,6 +16,7 @@
 
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Locale;
@@ -33,6 +34,7 @@ public class DefaultThreadFactory implements ThreadFactory {
     private final String prefix;
     private final boolean daemon;
     private final int priority;
+    private final ThreadGroup threadGroup;
 
     public DefaultThreadFactory(Class<?> poolType) {
         this(poolType, false, Thread.NORM_PRIORITY);
@@ -82,7 +84,7 @@ public class DefaultThreadFactory implements ThreadFactory {
         }
     }
 
-    public DefaultThreadFactory(String poolName, boolean daemon, int priority) {
+    public DefaultThreadFactory(String poolName, boolean daemon, int priority, ThreadGroup threadGroup) {
         if (poolName == null) {
             throw new NullPointerException("poolName");
         }
@@ -94,6 +96,11 @@ public class DefaultThreadFactory implements ThreadFactory {
         prefix = poolName + '-' + poolId.incrementAndGet() + '-';
         this.daemon = daemon;
         this.priority = priority;
+        this.threadGroup = ObjectUtil.checkNotNull(threadGroup, "threadGroup");
+    }
+
+    public DefaultThreadFactory(String poolName, boolean daemon, int priority) {
+        this(poolName, daemon, priority, Thread.currentThread().getThreadGroup());
     }
 
     @Override
@@ -119,8 +126,9 @@ public class DefaultThreadFactory implements ThreadFactory {
         return t;
     }
 
+    // TODO: Once we can break the API we should add ThreadGroup to the arguments of this method.
     protected Thread newThread(Runnable r, String name) {
-        return new FastThreadLocalThread(r, name);
+        return new FastThreadLocalThread(threadGroup, r, name);
     }
 
     private static final class DefaultRunnableDecorator implements Runnable {
