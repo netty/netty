@@ -826,7 +826,7 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.file");
         return JNI_ERR;
     }
-    transferedFieldId = (*env)->GetFieldID(env, fileRegionCls, "transfered", "J");
+    transferedFieldId = (*env)->GetFieldID(env, fileRegionCls, "transferred", "J");
     if (transferedFieldId == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.transfered");
         return JNI_ERR;
