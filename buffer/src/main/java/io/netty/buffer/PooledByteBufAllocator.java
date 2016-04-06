@@ -18,6 +18,7 @@ package io.netty.buffer;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -445,31 +446,33 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         return threadCache.get();
     }
 
-    // Too noisy at the moment.
-    //
-    //public String toString() {
-    //    StringBuilder buf = new StringBuilder();
-    //    int heapArenasLen = heapArenas == null ? 0 : heapArenas.length;
-    //    buf.append(heapArenasLen);
-    //    buf.append(" heap arena(s):");
-    //    buf.append(StringUtil.NEWLINE);
-    //    if (heapArenasLen > 0) {
-    //        for (PoolArena<byte[]> a: heapArenas) {
-    //            buf.append(a);
-    //        }
-    //    }
-    //
-    //    int directArenasLen = directArenas == null ? 0 : directArenas.length;
-    //
-    //    buf.append(directArenasLen);
-    //    buf.append(" direct arena(s):");
-    //    buf.append(StringUtil.NEWLINE);
-    //    if (directArenasLen > 0) {
-    //        for (PoolArena<ByteBuffer> a: directArenas) {
-    //            buf.append(a);
-    //        }
-    //    }
-    //
-    //    return buf.toString();
-    //}
+    /**
+     * Returns the status of the allocator (which contains all metrics) as string. Be aware this may be expensive
+     * and so should not called too frequently.
+     */
+    public String dumpStats() {
+        int heapArenasLen = heapArenas == null ? 0 : heapArenas.length;
+        StringBuilder buf = new StringBuilder(512)
+                .append(heapArenasLen)
+                .append(" heap arena(s):")
+                .append(StringUtil.NEWLINE);
+        if (heapArenasLen > 0) {
+            for (PoolArena<byte[]> a: heapArenas) {
+                buf.append(a);
+            }
+        }
+
+        int directArenasLen = directArenas == null ? 0 : directArenas.length;
+
+        buf.append(directArenasLen)
+           .append(" direct arena(s):")
+           .append(StringUtil.NEWLINE);
+        if (directArenasLen > 0) {
+            for (PoolArena<ByteBuffer> a: directArenas) {
+                buf.append(a);
+            }
+        }
+
+        return buf.toString();
+    }
 }
