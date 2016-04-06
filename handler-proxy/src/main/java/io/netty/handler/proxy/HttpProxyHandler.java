@@ -21,15 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.base64.Base64;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.*;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
@@ -46,7 +38,7 @@ public final class HttpProxyHandler extends ProxyHandler {
     private final String password;
     private final CharSequence authorization;
     private HttpResponseStatus status;
-    private boolean isTransparent;
+    private boolean transparent;
 
     public HttpProxyHandler(SocketAddress proxyAddress) {
         super(proxyAddress);
@@ -75,17 +67,19 @@ public final class HttpProxyHandler extends ProxyHandler {
         authzBase64.release();
     }
 
+    public HttpProxyHandler(SocketAddress proxyAddress, String username, String password, boolean transparent) {
+        this(proxyAddress, username, password);
+        this.transparent = transparent;
+
+    }
+
     /**
-     *
      * @return endpoint http/ws support
      */
     public boolean isTransparent() {
-        return isTransparent;
+        return transparent;
     }
 
-    public void setTransparent(boolean transparent) {
-        isTransparent = transparent;
-    }
 
     @Override
     public String protocol() {
@@ -94,7 +88,7 @@ public final class HttpProxyHandler extends ProxyHandler {
 
     @Override
     public String authScheme() {
-        return authorization != null? AUTH_BASIC : AUTH_NONE;
+        return authorization != null ? AUTH_BASIC : AUTH_NONE;
     }
 
     public String username() {
@@ -174,9 +168,9 @@ public final class HttpProxyHandler extends ProxyHandler {
 
     @Override
     protected void sendInitialMessage(ChannelHandlerContext ctx) throws Exception {
-        if(isTransparent()){
+        if (isTransparent()) {
             setConnectSuccess();
-        }else {
+        } else {
             super.sendInitialMessage(ctx);
         }
     }

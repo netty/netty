@@ -280,7 +280,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
      */
     protected abstract boolean handleResponse(ChannelHandlerContext ctx, Object response) throws Exception;
 
-    protected void setConnectSuccess() {
+    protected final void setConnectSuccess() {
         finished = true;
         if (connectTimeoutFuture != null) {
             connectTimeoutFuture.cancel(false);
