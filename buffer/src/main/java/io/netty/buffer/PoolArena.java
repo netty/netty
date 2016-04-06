@@ -225,7 +225,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
             q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
-            q075.allocate(buf, reqCapacity, normCapacity) || q100.allocate(buf, reqCapacity, normCapacity)) {
+            q075.allocate(buf, reqCapacity, normCapacity)) {
             ++allocationsNormal;
             return;
         }
