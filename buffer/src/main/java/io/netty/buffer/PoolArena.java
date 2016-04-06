@@ -98,12 +98,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             smallSubpagePools[i] = newSubpagePoolHead(pageSize);
         }
 
-        q100 = new PoolChunkList<T>(null, 100, Integer.MAX_VALUE);
-        q075 = new PoolChunkList<T>(q100, 75, 100);
-        q050 = new PoolChunkList<T>(q075, 50, 100);
-        q025 = new PoolChunkList<T>(q050, 25, 75);
-        q000 = new PoolChunkList<T>(q025, 1, 50);
-        qInit = new PoolChunkList<T>(q000, Integer.MIN_VALUE, 25);
+        q100 = new PoolChunkList<T>(null, 100, Integer.MAX_VALUE, chunkSize);
+        q075 = new PoolChunkList<T>(q100, 75, 100, chunkSize);
+        q050 = new PoolChunkList<T>(q075, 50, 100, chunkSize);
+        q025 = new PoolChunkList<T>(q050, 25, 75, chunkSize);
+        q000 = new PoolChunkList<T>(q025, 1, 50, chunkSize);
+        qInit = new PoolChunkList<T>(q000, Integer.MIN_VALUE, 25, chunkSize);
 
         q100.prevList(q075);
         q075.prevList(q050);
