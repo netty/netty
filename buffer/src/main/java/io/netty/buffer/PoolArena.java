@@ -65,6 +65,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private final LongCounter allocationsTiny = PlatformDependent.newLongCounter();
     private final LongCounter allocationsSmall = PlatformDependent.newLongCounter();
     private final LongCounter allocationsHuge = PlatformDependent.newLongCounter();
+    private final LongCounter activeBytesHuge = PlatformDependent.newLongCounter();
 
     private long deallocationsTiny;
     private long deallocationsSmall;
@@ -242,13 +243,17 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
-        buf.initUnpooled(newUnpooledChunk(reqCapacity), reqCapacity);
+        PoolChunk<T> chunk = newUnpooledChunk(reqCapacity);
+        activeBytesHuge.add(chunk.chunkSize());
+        buf.initUnpooled(chunk, reqCapacity);
         allocationsHuge.increment();
     }
 
     void free(PoolChunk<T> chunk, long handle, int normCapacity, PoolThreadCache cache) {
         if (chunk.unpooled) {
+            int size = chunk.chunkSize();
             destroyChunk(chunk);
+            activeBytesHuge.add(-size);
             deallocationsHuge.decrement();
         } else {
             SizeClass sizeClass = sizeClass(normCapacity);
@@ -533,6 +538,19 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     @Override
     public long numActiveHugeAllocations() {
         return max(numHugeAllocations() - numHugeDeallocations(), 0);
+    }
+
+    @Override
+    public long numActiveBytes() {
+        long val = activeBytesHuge.value();
+        synchronized (this) {
+            for (int i = 0; i < chunkListMetrics.size(); i++) {
+                for (PoolChunkMetric m: chunkListMetrics.get(i)) {
+                    val += m.chunkSize();
+                }
+            }
+        }
+        return max(0, val);
     }
 
     protected abstract PoolChunk<T> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize);
