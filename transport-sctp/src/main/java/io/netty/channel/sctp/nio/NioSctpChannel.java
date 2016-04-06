@@ -398,7 +398,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
         @Override
         protected void autoReadCleared() {
-            setReadPending(false);
+            clearReadPending();
         }
     }
 }

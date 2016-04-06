@@ -579,7 +579,12 @@ public final class NioDatagramChannel
     }
 
     @Override
+    @Deprecated
     protected void setReadPending(boolean readPending) {
         super.setReadPending(readPending);
+    }
+
+    void clearReadPending0() {
+        clearReadPending();
     }
 }

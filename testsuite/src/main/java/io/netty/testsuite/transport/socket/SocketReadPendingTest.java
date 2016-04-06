@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -30,116 +30,87 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
-public class SocketAutoReadTest extends AbstractSocketTest {
+public class SocketReadPendingTest extends AbstractSocketTest {
     @Test
-    public void testAutoReadOffDuringReadOnlyReadsOneTime() throws Throwable {
+    public void testReadPendingIsResetAfterEachRead() throws Throwable {
         run();
     }
 
-    public void testAutoReadOffDuringReadOnlyReadsOneTime(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testAutoReadOffDuringReadOnlyReadsOneTime(true, sb, cb);
-        testAutoReadOffDuringReadOnlyReadsOneTime(false, sb, cb);
-    }
-
-    private void testAutoReadOffDuringReadOnlyReadsOneTime(boolean readOutsideEventLoopThread,
-                                                           ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    public void testReadPendingIsResetAfterEachRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
-            AutoReadInitializer serverInitializer = new AutoReadInitializer(!readOutsideEventLoopThread);
-            AutoReadInitializer clientInitializer = new AutoReadInitializer(!readOutsideEventLoopThread);
+            ReadPendingInitializer serverInitializer = new ReadPendingInitializer();
+            ReadPendingInitializer clientInitializer = new ReadPendingInitializer();
             sb.option(ChannelOption.SO_BACKLOG, 1024)
-                    .option(ChannelOption.AUTO_READ, true)
-                    .childOption(ChannelOption.AUTO_READ, true)
-                    // We want to ensure that we attempt multiple individual read operations per read loop so we can
-                    // test the auto read feature being turned off when data is first read.
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
-                    .childHandler(serverInitializer);
+              .option(ChannelOption.AUTO_READ, true)
+              .childOption(ChannelOption.AUTO_READ, false)
+              // We intend to do 2 reads per read loop wakeup
+              .childOption(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(2))
+              .childHandler(serverInitializer);
 
             serverChannel = sb.bind().syncUninterruptibly().channel();
 
             cb.remoteAddress(serverChannel.localAddress())
-                    .option(ChannelOption.AUTO_READ, true)
-                    // We want to ensure that we attempt multiple individual read operations per read loop so we can
-                    // test the auto read feature being turned off when data is first read.
-                    .option(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
-                    .handler(clientInitializer);
-
+              .option(ChannelOption.AUTO_READ, false)
+              // We intend to do 2 reads per read loop wakeup
+              .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(2))
+              .handler(clientInitializer);
             clientChannel = cb.connect().syncUninterruptibly().channel();
 
-            // 3 bytes means 3 independent reads for TestRecvByteBufAllocator
-            clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[3]));
-            serverInitializer.autoReadHandler.assertSingleRead();
+            // 4 bytes means 2 read loops for TestNumReadsRecvByteBufAllocator
+            clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[4]));
 
-            // 3 bytes means 3 independent reads for TestRecvByteBufAllocator
-            serverInitializer.channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[3]));
-            clientInitializer.autoReadHandler.assertSingleRead();
+            // 4 bytes means 2 read loops for TestNumReadsRecvByteBufAllocator
+            assertTrue(serverInitializer.channelInitLatch.await(5, TimeUnit.SECONDS));
+            serverInitializer.channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[4]));
 
-            if (readOutsideEventLoopThread) {
-                serverInitializer.channel.read();
-            }
-            serverInitializer.autoReadHandler.assertSingleReadSecondTry();
+            serverInitializer.channel.read();
+            serverInitializer.readPendingHandler.assertAllRead();
 
-            if (readOutsideEventLoopThread) {
-                clientChannel.read();
-            }
-            clientInitializer.autoReadHandler.assertSingleReadSecondTry();
+            clientChannel.read();
+            clientInitializer.readPendingHandler.assertAllRead();
         } finally {
-            if (clientChannel != null) {
-                clientChannel.close().sync();
-            }
             if (serverChannel != null) {
-                serverChannel.close().sync();
+                serverChannel.close().syncUninterruptibly();
+            }
+            if (clientChannel != null) {
+                clientChannel.close().syncUninterruptibly();
             }
         }
     }
 
-    private static class AutoReadInitializer extends ChannelInitializer<Channel> {
-        final AutoReadHandler autoReadHandler;
+    private static class ReadPendingInitializer extends ChannelInitializer<Channel> {
+        final ReadPendingReadHandler readPendingHandler = new ReadPendingReadHandler();
+        final CountDownLatch channelInitLatch = new CountDownLatch(1);
         volatile Channel channel;
-
-        AutoReadInitializer(boolean readInEventLoop) {
-            autoReadHandler = new AutoReadHandler(readInEventLoop);
-        }
 
         @Override
         protected void initChannel(Channel ch) throws Exception {
             channel = ch;
-            ch.pipeline().addLast(autoReadHandler);
+            ch.pipeline().addLast(readPendingHandler);
+            channelInitLatch.countDown();
         }
     }
 
-    private static final class AutoReadHandler extends ChannelInboundHandlerAdapter {
+    private static final class ReadPendingReadHandler extends ChannelInboundHandlerAdapter {
         private final AtomicInteger count = new AtomicInteger();
         private final CountDownLatch latch = new CountDownLatch(1);
-        private final CountDownLatch latch2;
-        private final boolean callRead;
-
-        AutoReadHandler(boolean callRead) {
-            this.callRead = callRead;
-            latch2 = new CountDownLatch(callRead ? 3 : 2);
-        }
+        private final CountDownLatch latch2 = new CountDownLatch(2);
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ReferenceCountUtil.release(msg);
             if (count.incrementAndGet() == 1) {
-                ctx.channel().config().setAutoRead(false);
-            }
-            if (callRead) {
-                // Test calling read in the EventLoop thread to ensure a read is eventually done.
+                // Call read the first time, to ensure it is not reset the second time.
                 ctx.read();
             }
         }
@@ -150,27 +121,29 @@ public class SocketAutoReadTest extends AbstractSocketTest {
             latch2.countDown();
         }
 
-        void assertSingleRead() throws InterruptedException {
+        void assertAllRead() throws InterruptedException {
             assertTrue(latch.await(5, TimeUnit.SECONDS));
-            assertTrue(count.get() > 0);
-        }
-
-        void assertSingleReadSecondTry() throws InterruptedException {
-            assertTrue(latch2.await(5, TimeUnit.SECONDS));
-            assertEquals(callRead ? 3 : 2, count.get());
+            // We should only do 1 read loop, because we only called read() on the first channelRead.
+            assertFalse(latch2.await(1, TimeUnit.SECONDS));
+            assertEquals(2, count.get());
         }
     }
 
     /**
      * Designed to keep reading as long as autoread is enabled.
      */
-    private static final class TestRecvByteBufAllocator implements RecvByteBufAllocator {
+    private static final class TestNumReadsRecvByteBufAllocator implements RecvByteBufAllocator {
+        private final int numReads;
+        TestNumReadsRecvByteBufAllocator(int numReads) {
+            this.numReads = numReads;
+        }
+
         @Override
         public Handle newHandle() {
             return new Handle() {
-                private ChannelConfig config;
                 private int attemptedBytesRead;
                 private int lastBytesRead;
+                private int numMessagesRead;
                 @Override
                 public ByteBuf allocate(ByteBufAllocator alloc) {
                     return alloc.ioBuffer(guess(), guess());
@@ -183,12 +156,12 @@ public class SocketAutoReadTest extends AbstractSocketTest {
 
                 @Override
                 public void reset(ChannelConfig config) {
-                    this.config = config;
+                    numMessagesRead = 0;
                 }
 
                 @Override
                 public void incMessagesRead(int numMessages) {
-                    // No need to track the number of messages read because it is not used.
+                    numMessagesRead += numMessages;
                 }
 
                 @Override
@@ -213,7 +186,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
 
                 @Override
                 public boolean continueReading() {
-                    return config.isAutoRead();
+                    return numMessagesRead < numReads;
                 }
 
                 @Override

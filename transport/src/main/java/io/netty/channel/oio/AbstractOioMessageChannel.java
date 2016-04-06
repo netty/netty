@@ -37,14 +37,16 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
     @Override
     protected void doRead() {
-        final ChannelConfig config = config();
-        if (!config.isAutoRead() && !isReadPending()) {
-            // ChannelConfig.setAutoRead(false) was called in the meantime
+        if (!readPending) {
+            // We have to check readPending here because the Runnable to read could have been scheduled and later
+            // during the same read loop readPending was set to false.
             return;
         }
-        // OIO reads are scheduled as a runnable object, the read is not pending as soon as the runnable is run.
-        setReadPending(false);
+        // In OIO we should set readPending to false even if the read was not successful so we can schedule
+        // another read on the event loop if no reads are done.
+        readPending = false;
 
+        final ChannelConfig config = config();
         final ChannelPipeline pipeline = pipeline();
         final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
         allocHandle.reset(config);
@@ -69,13 +71,18 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             exception = t;
         }
 
+        boolean readData = false;
         int size = readBuf.size();
-        for (int i = 0; i < size; i ++) {
-            pipeline.fireChannelRead(readBuf.get(i));
+        if (size > 0) {
+            readData = true;
+            for (int i = 0; i < size; i++) {
+                readPending = false;
+                pipeline.fireChannelRead(readBuf.get(i));
+            }
+            readBuf.clear();
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
         }
-        readBuf.clear();
-        allocHandle.readComplete();
-        pipeline.fireChannelReadComplete();
 
         if (exception != null) {
             if (exception instanceof IOException) {
@@ -89,13 +96,9 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             if (isOpen()) {
                 unsafe().close(unsafe().voidPromise());
             }
-        } else if (allocHandle.lastBytesRead() == 0 && isActive()) {
-            // If the read amount was 0 and the channel is still active we need to trigger a new read()
-            // as otherwise we will never try to read again and the user will never know.
-            // Just call read() is ok here as it will be submitted to the EventLoop as a task and so we are
-            // able to process the rest of the tasks in the queue first.
-            //
-            // See https://github.com/netty/netty/issues/2404
+        } else if (readPending || config.isAutoRead() || !readData && isActive()) {
+            // Reading 0 bytes could mean there is a SocketTimeout and no data was actually read, so we
+            // should execute read() again because no data may have been read.
             read();
         }
     }

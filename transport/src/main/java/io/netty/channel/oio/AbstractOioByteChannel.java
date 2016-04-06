@@ -93,7 +93,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
             RecvByteBufAllocator.Handle allocHandle) {
         if (byteBuf != null) {
             if (byteBuf.isReadable()) {
-                setReadPending(false);
+                readPending = false;
                 pipeline.fireChannelRead(byteBuf);
             } else {
                 byteBuf.release();
@@ -110,12 +110,14 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     @Override
     protected void doRead() {
         final ChannelConfig config = config();
-        if (isInputShutdown() || !config.isAutoRead() && !isReadPending()) {
-            // ChannelConfig.setAutoRead(false) was called in the meantime
+        if (isInputShutdown() || !readPending) {
+            // We have to check readPending here because the Runnable to read could have been scheduled and later
+            // during the same read loop readPending was set to false.
             return;
         }
-        // OIO reads are scheduled as a runnable object, the read is not pending as soon as the runnable is run.
-        setReadPending(false);
+        // In OIO we should set readPending to false even if the read was not successful so we can schedule
+        // another read on the event loop if no reads are done.
+        readPending = false;
 
         final ChannelPipeline pipeline = pipeline();
         final ByteBufAllocator allocator = config.getAllocator();
@@ -123,19 +125,22 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         allocHandle.reset(config);
 
         ByteBuf byteBuf = null;
-        boolean read = false;
+        boolean close = false;
+        boolean readData = false;
         try {
             byteBuf = allocHandle.allocate(allocator);
             do {
                 allocHandle.lastBytesRead(doReadBytes(byteBuf));
                 if (allocHandle.lastBytesRead() <= 0) {
-                    if (!read) { // nothing was read. release the buffer.
+                    if (!byteBuf.isReadable()) { // nothing was read. release the buffer.
                         byteBuf.release();
                         byteBuf = null;
+                        close = allocHandle.lastBytesRead() < 0;
                     }
                     break;
+                } else {
+                    readData = true;
                 }
-                read = true;
 
                 final int available = available();
                 if (available <= 0) {
@@ -148,7 +153,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     final int maxCapacity = byteBuf.maxCapacity();
                     if (capacity == maxCapacity) {
                         allocHandle.incMessagesRead(1);
-                        read = false;
+                        readPending = false;
                         pipeline.fireChannelRead(byteBuf);
                         byteBuf = allocHandle.allocate(allocator);
                     } else {
@@ -162,27 +167,32 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 }
             } while (allocHandle.continueReading());
 
-            if (read) {
-                pipeline.fireChannelRead(byteBuf);
+            if (byteBuf != null) {
+                // It is possible we allocated a buffer because the previous one was not writable, but then didn't use
+                // it because allocHandle.continueReading() returned false.
+                if (byteBuf.isReadable()) {
+                    readPending = false;
+                    pipeline.fireChannelRead(byteBuf);
+                } else {
+                    byteBuf.release();
+                }
                 byteBuf = null;
             }
 
-            allocHandle.readComplete();
-            pipeline.fireChannelReadComplete();
+            if (readData) {
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
+            }
 
-            if (allocHandle.lastBytesRead() < 0) {
+            if (close) {
                 closeOnRead(pipeline);
             }
         } catch (Throwable t) {
-            handleReadException(pipeline, byteBuf, t, allocHandle.lastBytesRead() < 0, allocHandle);
+            handleReadException(pipeline, byteBuf, t, close, allocHandle);
         } finally {
-            if (allocHandle.lastBytesRead() == 0 && isActive()) {
-                // If the read amount was 0 and the channel is still active we need to trigger a new read()
-                // as otherwise we will never try to read again and the user will never know.
-                // Just call read() is ok here as it will be submitted to the EventLoop as a task and so we are
-                // able to process the rest of the tasks in the queue first.
-                //
-                // See https://github.com/netty/netty/issues/2404
+            if (readPending || config.isAutoRead() || !readData && isActive()) {
+                // Reading 0 bytes could mean there is a SocketTimeout and no data was actually read, so we
+                // should execute read() again because no data may have been read.
                 read();
             }
         }
