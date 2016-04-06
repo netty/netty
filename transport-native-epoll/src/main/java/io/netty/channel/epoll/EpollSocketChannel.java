@@ -179,21 +179,21 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         if (localAddress != null) {
             checkResolvable((InetSocketAddress) localAddress);
         }
-        // We always need to set the localAddress even if not connected yet
+        InetSocketAddress remoteAddr = (InetSocketAddress) remoteAddress;
+        checkResolvable(remoteAddr);
+
+        boolean connected = super.doConnect(remoteAddress, localAddress);
+        if (connected) {
+            remote = computeRemoteAddr(remoteAddr, fd().remoteAddress());
+        } else {
+            // Store for later usage in doFinishConnect()
+            requestedRemote = remoteAddr;
+        }
+        // We always need to set the localAddress even if not connected yet as the bind already took place.
         //
         // See https://github.com/netty/netty/issues/3463
         local = fd().localAddress();
-
-        InetSocketAddress remoteAddr = (InetSocketAddress) remoteAddress;
-        checkResolvable(remoteAddr);
-        if (super.doConnect(remoteAddress, localAddress)) {
-            remote = computeRemoteAddr(remoteAddr, fd().remoteAddress());
-            return true;
-        }
-
-        // Store for later usage in doFinishConnect()
-        requestedRemote = remoteAddr;
-        return false;
+        return connected;
     }
 
     private final class EpollSocketChannelUnsafe extends EpollStreamUnsafe {
