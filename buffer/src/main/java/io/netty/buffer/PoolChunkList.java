@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import static java.lang.Math.*;
+
 final class PoolChunkList<T> implements PoolChunkListMetric {
     private static final Iterator<PoolChunkMetric> EMPTY_METRICS = Collections.<PoolChunkMetric>emptyList().iterator();
     private final PoolChunkList<T> nextList;
@@ -150,12 +152,12 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
 
     @Override
     public int minUsage() {
-        return minUsage == Integer.MIN_VALUE ? 1 : minUsage;
+        return max(1, minUsage);
     }
 
     @Override
     public int maxUsage() {
-        return maxUsage == Integer.MAX_VALUE ? 100 : maxUsage;
+        return min(maxUsage, 100);
     }
 
     @Override
