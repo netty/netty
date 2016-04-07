@@ -1496,6 +1496,7 @@ public abstract class AbstractByteBufTest {
             // Make sure if it is a copied buffer.
             actualValue.setByte(0, (byte) (actualValue.getByte(0) + 1));
             assertFalse(buffer.getByte(i) == actualValue.getByte(0));
+            actualValue.release();
         }
     }
 
@@ -2978,6 +2979,21 @@ public abstract class AbstractByteBufTest {
             }
             file.delete();
         }
+    }
+
+    @Test
+    public void testReadBytes() {
+        ByteBuf buffer = newBuffer(8);
+        byte[] bytes = new byte[8];
+        buffer.writeBytes(bytes);
+
+        ByteBuf buffer2 = buffer.readBytes(4);
+        assertSame(buffer.alloc(), buffer2.alloc());
+        assertEquals(4, buffer.readerIndex());
+        assertTrue(buffer.release());
+        assertEquals(0, buffer.refCnt());
+        assertTrue(buffer2.release());
+        assertEquals(0, buffer2.refCnt());
     }
 
     private void testRefCnt0(final boolean parameter) throws Exception {
