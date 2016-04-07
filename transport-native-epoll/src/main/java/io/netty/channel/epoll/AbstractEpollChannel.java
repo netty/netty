@@ -140,15 +140,15 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         final AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) unsafe();
         unsafe.readPending = true;
 
+        // We must set the read flag here as it is possible the user didn't read in the last read loop, the
+        // executeEpollInReadyRunnable could read nothing, and if the user doesn't explicitly call read they will
+        // never get data after this.
+        setFlag(readFlag);
+
         // If EPOLL ET mode is enabled and auto read was toggled off on the last read loop then we may not be notified
         // again if we didn't consume all the data. So we force a read operation here if there maybe more data.
         if (unsafe.maybeMoreDataToRead) {
-            // Run epollInReady later because this is consistent with declaring interest with the polling mechanism.
-            // We also set maybeMoreDataToRead to false to prevent executing multiple of these runnables.
-            unsafe.maybeMoreDataToRead = false;
             unsafe.executeEpollInReadyRunnable();
-        } else {
-            setFlag(readFlag);
         }
     }
 
@@ -187,6 +187,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     @Override
     protected void doRegister() throws Exception {
         EpollEventLoop loop = (EpollEventLoop) eventLoop();
+        // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
+        // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
+        // new EventLoop.
+        ((AbstractEpollUnsafe) unsafe()).epollInReadyRunnablePending = false;
         loop.add(this);
     }
 
@@ -310,6 +314,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {
         boolean readPending;
         boolean maybeMoreDataToRead;
+        boolean epollInReadyRunnablePending;
         private EpollRecvByteAllocatorHandle allocHandle;
         private Runnable epollInReadyRunnable;
 
@@ -343,10 +348,15 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         final void executeEpollInReadyRunnable() {
+            if (epollInReadyRunnablePending) {
+                return;
+            }
+            epollInReadyRunnablePending = true;
             if (epollInReadyRunnable == null) {
                 epollInReadyRunnable = new Runnable() {
                     @Override
                     public void run() {
+                        epollInReadyRunnablePending = false;
                         epollInReady();
                     }
                 };
