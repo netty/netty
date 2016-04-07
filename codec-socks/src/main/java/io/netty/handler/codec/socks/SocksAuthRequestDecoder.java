@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socks.SocksAuthRequestDecoder.State;
-import io.netty.util.CharsetUtil;
 
 import java.util.List;
 
@@ -51,12 +50,12 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<State> {
             }
             case READ_USERNAME: {
                 fieldLength = byteBuf.readByte();
-                username = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
+                username = SocksCommonUtils.readUsAscii(byteBuf, fieldLength);
                 checkpoint(State.READ_PASSWORD);
             }
             case READ_PASSWORD: {
                 fieldLength = byteBuf.readByte();
-                password = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
+                password = SocksCommonUtils.readUsAscii(byteBuf, fieldLength);
                 msg = new SocksAuthRequest(username, password);
             }
         }

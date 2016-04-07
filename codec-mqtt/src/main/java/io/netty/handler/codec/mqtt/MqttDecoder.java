@@ -437,9 +437,10 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             numberOfBytesConsumed += size;
             return new Result<String>(null, numberOfBytesConsumed);
         }
-        ByteBuf buf = buffer.readBytes(size);
+        String s = buffer.toString(buffer.readerIndex(), size, CharsetUtil.UTF_8);
+        buffer.skipBytes(size);
         numberOfBytesConsumed += size;
-        return new Result<String>(buf.toString(CharsetUtil.UTF_8), numberOfBytesConsumed);
+        return new Result<String>(s, numberOfBytesConsumed);
     }
 
     private static Result<Integer> decodeMsbLsb(ByteBuf buffer) {
