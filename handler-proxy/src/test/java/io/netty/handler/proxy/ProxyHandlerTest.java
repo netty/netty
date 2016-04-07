@@ -151,17 +151,17 @@ public class ProxyHandlerTest {
                 new SuccessTestItem(
                         "HTTP proxy: successful connection",
                         DESTINATION,
-                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
+                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD, false)),
 
                 new FailureTestItem(
                         "HTTP proxy: rejected connection",
                         BAD_DESTINATION, "status: 403",
-                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
+                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD, false)),
 
                 new FailureTestItem(
                         "HTTP proxy: authentication failure",
                         DESTINATION, "status: 401",
-                        new HttpProxyHandler(httpProxy.address(), BAD_USERNAME, BAD_PASSWORD)),
+                        new HttpProxyHandler(httpProxy.address(), BAD_USERNAME, BAD_PASSWORD, false)),
 
                 new TimeoutTestItem(
                         "HTTP proxy: timeout",
@@ -191,19 +191,19 @@ public class ProxyHandlerTest {
                         "HTTPS proxy: successful connection",
                         DESTINATION,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
+                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD, false)),
 
                 new FailureTestItem(
                         "HTTPS proxy: rejected connection",
                         BAD_DESTINATION, "status: 403",
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
+                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD, false)),
 
                 new FailureTestItem(
                         "HTTPS proxy: authentication failure",
                         DESTINATION, "status: 401",
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(httpsProxy.address(), BAD_USERNAME, BAD_PASSWORD)),
+                        new HttpProxyHandler(httpsProxy.address(), BAD_USERNAME, BAD_PASSWORD, false)),
 
                 new TimeoutTestItem(
                         "HTTPS proxy: timeout",
