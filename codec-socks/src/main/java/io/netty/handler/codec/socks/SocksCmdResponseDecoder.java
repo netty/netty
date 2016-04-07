@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socks.SocksCmdResponseDecoder.State;
-import io.netty.util.CharsetUtil;
 
 import java.util.List;
 
@@ -68,13 +67,15 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<State> {
                     }
                     case DOMAIN: {
                         fieldLength = byteBuf.readByte();
-                        host = byteBuf.readBytes(fieldLength).toString(CharsetUtil.US_ASCII);
+                        host = SocksCommonUtils.readUsAscii(byteBuf, fieldLength);
                         port = byteBuf.readUnsignedShort();
                         msg = new SocksCmdResponse(cmdStatus, addressType, host, port);
                         break;
                     }
                     case IPv6: {
-                        host = SocksCommonUtils.ipv6toStr(byteBuf.readBytes(16).array());
+                        byte[] bytes = new byte[16];
+                        byteBuf.readBytes(bytes);
+                        host = SocksCommonUtils.ipv6toStr(bytes);
                         port = byteBuf.readUnsignedShort();
                         msg = new SocksCmdResponse(cmdStatus, addressType, host, port);
                         break;
