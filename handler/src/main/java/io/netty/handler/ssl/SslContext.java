@@ -1018,4 +1018,20 @@ public abstract class SslContext {
 
         return trustManagerFactory;
     }
+
+    static PrivateKey toPrivateKeyInternal(File keyFile, String keyPassword) throws SSLException {
+        try {
+            return toPrivateKey(keyFile, keyPassword);
+        } catch (Exception e) {
+            throw new SSLException(e);
+        }
+    }
+
+    static X509Certificate[] toX509CertificatesInternal(File file) throws SSLException {
+        try {
+            return toX509Certificates(file);
+        } catch (CertificateException e) {
+            throw new SSLException(e);
+        }
+    }
 }

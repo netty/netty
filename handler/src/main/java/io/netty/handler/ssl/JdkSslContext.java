@@ -51,7 +51,7 @@ import static io.netty.util.internal.ObjectUtil.*;
 /**
  * An {@link SslContext} which uses JDK's SSL/TLS implementation.
  */
-public abstract class JdkSslContext extends SslContext {
+public class JdkSslContext extends SslContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkSslContext.class);
 
@@ -140,20 +140,60 @@ public abstract class JdkSslContext extends SslContext {
     private final List<String> unmodifiableCipherSuites;
     private final JdkApplicationProtocolNegotiator apn;
     private final ClientAuth clientAuth;
+    private final SSLContext sslContext;
+    private final boolean isClient;
 
-    JdkSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
-                  ClientAuth clientAuth) {
+    /**
+     * Creates a new {@link JdkSslContext} from a pre-configured {@link SSLContext}.
+     *
+     * @param sslContext the {@link SSLContext} to use.
+     * @param isClient {@code true} if this context should create {@link SSLEngine}s for client-side usage.
+     * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.
+     */
+    public JdkSslContext(SSLContext sslContext, boolean isClient,
+                         ClientAuth clientAuth) {
+        this(sslContext, isClient, null, IdentityCipherSuiteFilter.INSTANCE,
+                JdkDefaultApplicationProtocolNegotiator.INSTANCE, clientAuth);
+    }
+
+    /**
+     * Creates a new {@link JdkSslContext} from a pre-configured {@link SSLContext}.
+     *
+     * @param sslContext the {@link SSLContext} to use.
+     * @param isClient {@code true} if this context should create {@link SSLEngine}s for client-side usage.
+     * @param ciphers the ciphers to use or {@code null} if the standart should be used.
+     * @param cipherFilter the filter to use.
+     * @param apn the {@link ApplicationProtocolConfig} to use.
+     * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.
+     */
+    public JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers,
+                         CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+                         ClientAuth clientAuth) {
+        this(sslContext, isClient, ciphers, cipherFilter, toNegotiator(apn, !isClient), clientAuth);
+    }
+
+    JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
+                  JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth) {
         this.apn = checkNotNull(apn, "apn");
         this.clientAuth = checkNotNull(clientAuth, "clientAuth");
         cipherSuites = checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
                 ciphers, DEFAULT_CIPHERS, SUPPORTED_CIPHERS);
         unmodifiableCipherSuites = Collections.unmodifiableList(Arrays.asList(cipherSuites));
+        this.sslContext = checkNotNull(sslContext, "sslContext");
+        this.isClient = isClient;
     }
 
     /**
      * Returns the JDK {@link SSLContext} object held by this context.
      */
-    public abstract SSLContext context();
+    public final SSLContext context() {
+        return sslContext;
+    }
+
+    @Override
+    public final boolean isClient() {
+        return isClient;
+    }
 
     /**
      * Returns the JDK {@link SSLSessionContext} object held by this context.
@@ -210,7 +250,7 @@ public abstract class JdkSslContext extends SslContext {
     }
 
     @Override
-    public JdkApplicationProtocolNegotiator applicationProtocolNegotiator() {
+    public final JdkApplicationProtocolNegotiator applicationProtocolNegotiator() {
         return apn;
     }
 
