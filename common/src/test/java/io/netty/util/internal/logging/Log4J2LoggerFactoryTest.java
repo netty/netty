@@ -24,7 +24,7 @@ public class Log4J2LoggerFactoryTest {
 
     @Test
     public void testCreation() {
-        InternalLogger logger = new Log4J2LoggerFactory().newInstance("foo");
+        InternalLogger logger = Log4J2LoggerFactory.INSTANCE.newInstance("foo");
         assertTrue(logger instanceof Log4J2Logger);
         assertEquals("foo", logger.name());
     }

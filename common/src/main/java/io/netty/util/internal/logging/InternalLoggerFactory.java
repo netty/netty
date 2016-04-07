@@ -25,7 +25,7 @@ import io.netty.util.internal.ThreadLocalRandom;
  * {@link JdkLoggerFactory} is used.  You can change it to your preferred
  * logging framework before other Netty classes are loaded:
  * <pre>
- * {@link InternalLoggerFactory}.setDefaultFactory(new {@link Log4JLoggerFactory}());
+ * {@link InternalLoggerFactory}.setDefaultFactory({@link Log4JLoggerFactory}.INSTANCE);
  * </pre>
  * Please note that the new default factory is effective only for the classes
  * which were loaded after the default factory is changed.  Therefore,
@@ -55,10 +55,10 @@ public abstract class InternalLoggerFactory {
             f.newInstance(name).debug("Using SLF4J as the default logging framework");
         } catch (Throwable t1) {
             try {
-                f = new Log4JLoggerFactory();
+                f = Log4JLoggerFactory.INSTANCE;
                 f.newInstance(name).debug("Using Log4J as the default logging framework");
             } catch (Throwable t2) {
-                f = new JdkLoggerFactory();
+                f = JdkLoggerFactory.INSTANCE;
                 f.newInstance(name).debug("Using java.util.logging as the default logging framework");
             }
         }
