@@ -28,7 +28,14 @@ import java.util.Map;
  */
 public class CommonsLoggerFactory extends InternalLoggerFactory {
 
-    Map<String, InternalLogger> loggerMap = new HashMap<String, InternalLogger>();
+    public static final InternalLoggerFactory INSTANCE = new CommonsLoggerFactory();
+
+    /**
+     * @deprecated Use {@link #INSTANCE} instead.
+     */
+    @Deprecated
+    public CommonsLoggerFactory() {
+    }
 
     @Override
     public InternalLogger newInstance(String name) {
