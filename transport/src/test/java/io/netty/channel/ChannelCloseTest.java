@@ -19,7 +19,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -50,7 +52,7 @@ public class ChannelCloseTest {
         serverBootstrap.group(GROUP)
             .channel(NioServerSocketChannel.class)
             .option(ChannelOption.SO_REUSEADDR, true)
-            //.option(ChannelOption.SO_TIMEOUT, 1000)
+            .option(ChannelOption.SO_TIMEOUT, 1000)
             .childOption(ChannelOption.AUTO_READ, autoRead)
             .childHandler(new ChannelInitializer<Channel>() {
                 @Override
@@ -98,8 +100,8 @@ public class ChannelCloseTest {
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                latch.countDown();
                 ReferenceCountUtil.release(msg);
+                latch.countDown();
             }
         };
 
@@ -146,12 +148,13 @@ public class ChannelCloseTest {
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                ReferenceCountUtil.release(msg);
+
                 // We receive a message from the client and turn auto reading off.
                 // The client closes the connection in the meantime and there should
                 // be a channelInactive() event but there isn't.
 
                 latch.countDown();
-                ReferenceCountUtil.release(msg);
                 ctx.channel().config().setAutoRead(false);
             }
         };
@@ -192,14 +195,23 @@ public class ChannelCloseTest {
      */
     @Test
     public void testDisconnectAutoReadOff() throws Exception {
+
+        final Exchanger<Channel> clientRef = new Exchanger<Channel>();
+
         final CountDownLatch latch = new CountDownLatch(1);
         DisconnectHandler disconnect = new DisconnectHandler();
 
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             @Override
+            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                clientRef.exchange(ctx.channel());
+                ctx.fireChannelActive();
+            }
+
+            @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                latch.countDown();
                 ReferenceCountUtil.release(msg);
+                latch.countDown();
             }
         };
 
@@ -212,7 +224,8 @@ public class ChannelCloseTest {
                 .syncUninterruptibly();
 
             // The server receives the message
-            server.read();
+            Channel serverSide = clientRef.exchange(null, 1L, TimeUnit.SECONDS);
+            serverSide.read();
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
 
             // The client disconnects
