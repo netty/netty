@@ -29,10 +29,12 @@ import java.security.cert.X509Certificate;
 
 /**
  * A client-side {@link SslContext} which uses JDK's SSL/TLS implementation.
+ *
+ * @deprecated Use {@link SslContextBuilder} to create {@link JdkSslContext} instances and only
+ * use {@link JdkSslContext} in your code.
  */
+@Deprecated
 public final class JdkSslClientContext extends JdkSslContext {
-
-    private final SSLContext ctx;
 
     /**
      * Creates a new instance.
@@ -245,26 +247,20 @@ public final class JdkSslClientContext extends JdkSslContext {
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
-        super(ciphers, cipherFilter, apn, ClientAuth.NONE);
-        try {
-            ctx = newSSLContext(toX509Certificates(trustCertCollectionFile), trustManagerFactory,
-                                toX509Certificates(keyCertChainFile), toPrivateKey(keyFile, keyPassword),
-                                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout);
-        } catch (Exception e) {
-            if (e instanceof SSLException) {
-                throw (SSLException) e;
-            }
-            throw new SSLException("failed to initialize the client-side SSL context", e);
-        }
+        super(newSSLContext(toX509CertificatesInternal(
+                trustCertCollectionFile), trustManagerFactory,
+                toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
+                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout), true,
+                ciphers, cipherFilter, apn, ClientAuth.NONE);
     }
 
     JdkSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                         ApplicationProtocolConfig apn, long sessionCacheSize, long sessionTimeout) throws SSLException {
-        super(ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE);
-        ctx = newSSLContext(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
-                            keyManagerFactory, sessionCacheSize, sessionTimeout);
+        super(newSSLContext(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
+                keyManagerFactory, sessionCacheSize, sessionTimeout), true,
+                ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE);
     }
 
     private static SSLContext newSSLContext(X509Certificate[] trustCertCollection,
@@ -297,15 +293,5 @@ public final class JdkSslClientContext extends JdkSslContext {
             }
             throw new SSLException("failed to initialize the client-side SSL context", e);
         }
-    }
-
-    @Override
-    public boolean isClient() {
-        return true;
-    }
-
-    @Override
-    public SSLContext context() {
-        return ctx;
     }
 }
