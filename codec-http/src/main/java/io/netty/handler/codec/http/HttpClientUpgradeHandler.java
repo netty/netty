@@ -231,10 +231,13 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
             // Upgrade to the new protocol.
             sourceCodec.prepareUpgradeFrom(ctx);
             upgradeCodec.upgradeTo(ctx, response);
-            sourceCodec.upgradeFrom(ctx);
 
             // Notify that the upgrade to the new protocol completed successfully.
             ctx.fireUserEventTriggered(UpgradeEvent.UPGRADE_SUCCESSFUL);
+
+            // We guarantee UPGRADE_SUCCESSFUL event will be arrived at the next handler
+            // before http2 setting frame and http response.
+            sourceCodec.upgradeFrom(ctx);
 
             // We switched protocols, so we're done with the upgrade response.
             // Release it and clear it from the output.
