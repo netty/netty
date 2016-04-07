@@ -570,22 +570,6 @@ public abstract class OpenSslContext extends SslContext {
         return bio;
     }
 
-    static PrivateKey toPrivateKeyInternal(File keyFile, String keyPassword) throws SSLException {
-        try {
-            return SslContext.toPrivateKey(keyFile, keyPassword);
-        } catch (Exception e) {
-            throw new SSLException(e);
-        }
-    }
-
-    static X509Certificate[] toX509CertificatesInternal(File file) throws SSLException {
-        try {
-            return SslContext.toX509Certificates(file);
-        } catch (CertificateException e) {
-            throw new SSLException(e);
-        }
-    }
-
     static void checkKeyManagerFactory(KeyManagerFactory keyManagerFactory) {
         if (keyManagerFactory != null) {
             throw new IllegalArgumentException(
