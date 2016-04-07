@@ -29,6 +29,12 @@ import java.io.UnsupportedEncodingException;
  */
 public class Slf4JLoggerFactory extends InternalLoggerFactory {
 
+    public static final InternalLoggerFactory INSTANCE = new Slf4JLoggerFactory();
+
+    /**
+     * @deprecated Use {@link #INSTANCE} instead.
+     */
+    @Deprecated
     public Slf4JLoggerFactory() {
     }
 
