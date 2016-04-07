@@ -50,7 +50,7 @@ public class ChannelCloseTest {
         serverBootstrap.group(GROUP)
             .channel(NioServerSocketChannel.class)
             .option(ChannelOption.SO_REUSEADDR, true)
-            .option(ChannelOption.SO_TIMEOUT, 1000)
+            //.option(ChannelOption.SO_TIMEOUT, 1000)
             .childOption(ChannelOption.AUTO_READ, autoRead)
             .childHandler(new ChannelInitializer<Channel>() {
                 @Override
@@ -83,6 +83,48 @@ public class ChannelCloseTest {
         return bootstrap.connect(server.localAddress())
                 .syncUninterruptibly()
                 .channel();
+    }
+
+    /**
+     * Scenario 0
+     *
+     * Same as scenario 1 and 2 but we do nothing to disable auto reading
+     */
+    @Test
+    public void testDisconnectDoNothingWithAutoRead() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(1);
+        DisconnectHandler disconnect = new DisconnectHandler();
+
+        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                latch.countDown();
+                ReferenceCountUtil.release(msg);
+            }
+        };
+
+        Channel server = newServer(true, handler, disconnect);
+        Channel client = newClient(server);
+
+        try {
+            // The clients sends the message
+            client.writeAndFlush(newMessage())
+                .syncUninterruptibly();
+
+            // The server receives the message
+            assertTrue(latch.await(1L, TimeUnit.SECONDS));
+
+            // The client disconnects
+            client.close().syncUninterruptibly();
+
+            // The server should get notified
+            if (!disconnect.await(1L, TimeUnit.SECONDS)) {
+                fail("The server didn't receive a disconnect event.");
+            }
+        } finally {
+            client.close();
+            server.close();
+        }
     }
 
     /**
