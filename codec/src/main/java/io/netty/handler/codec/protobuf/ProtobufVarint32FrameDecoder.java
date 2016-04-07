@@ -65,7 +65,7 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
                     in.resetReaderIndex();
                     return;
                 } else {
-                    out.add(in.readBytes(length));
+                    out.add(in.readSlice(length).retain());
                     return;
                 }
             }
