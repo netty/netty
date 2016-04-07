@@ -117,7 +117,13 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     @Test
     @Override
     public void testLittleEndianWithExpand() {
-       // ignore for SlicedByteBuf
+        // ignore for SlicedByteBuf
+    }
+
+    @Test
+    @Override
+    public void testReadBytes() {
+        // ignore for SlicedByteBuf
     }
 
     @Test

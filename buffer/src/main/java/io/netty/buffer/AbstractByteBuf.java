@@ -786,8 +786,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        // Use an unpooled heap buffer because there's no way to mandate a user to free the returned buffer.
-        ByteBuf buf = Unpooled.buffer(length, maxCapacity);
+        ByteBuf buf = alloc().buffer(length, maxCapacity);
         buf.writeBytes(this, readerIndex, length);
         readerIndex += length;
         return buf;
