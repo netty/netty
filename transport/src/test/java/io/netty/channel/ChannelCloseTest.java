@@ -51,7 +51,7 @@ public class ChannelCloseTest {
             .channel(NioServerSocketChannel.class)
             .option(ChannelOption.SO_REUSEADDR, true)
             .option(ChannelOption.SO_TIMEOUT, 1000)
-            .option(ChannelOption.AUTO_READ, autoRead)
+            .childOption(ChannelOption.AUTO_READ, autoRead)
             .childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
