@@ -48,12 +48,12 @@ public final class HttpProxyHandler extends ProxyHandler {
     private final CharSequence authorization;
     private HttpResponseStatus status;
 
-    public HttpProxyHandler(SocketAddress proxyAddress) {
+    public HttpProxyHandler(SocketAddress proxyAddress, boolean transparent) {
         super(proxyAddress);
         username = null;
         password = null;
         authorization = null;
-        transparent = false;
+        this.transparent = transparent ;
     }
 
     public HttpProxyHandler(SocketAddress proxyAddress, String username, String password, boolean transparent) {
