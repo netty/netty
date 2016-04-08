@@ -65,7 +65,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final Runnable clearReadPendingRunnable = new Runnable() {
         @Override
         public void run() {
-            readPending = false;
+            clearReadPending0();
         }
     };
 
@@ -149,17 +149,17 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         if (isRegistered()) {
             EventLoop eventLoop = eventLoop();
             if (eventLoop.inEventLoop()) {
-                this.readPending = readPending;
+                setReadPending0(readPending);
             } else {
                 eventLoop.execute(new OneTimeTask() {
                     @Override
                     public void run() {
-                        AbstractNioChannel.this.readPending = readPending;
+                        setReadPending0(readPending);
                     }
                 });
             }
         } else {
-            this.readPending = readPending;
+            setReadPending0(readPending);
         }
     }
 
@@ -170,14 +170,26 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         if (isRegistered()) {
             EventLoop eventLoop = eventLoop();
             if (eventLoop.inEventLoop()) {
-                readPending = false;
+                clearReadPending0();
             } else {
                 eventLoop.execute(clearReadPendingRunnable);
             }
         } else {
             // Best effort if we are not registered yet clear readPending. This happens during channel initialization.
-            readPending = false;
+            clearReadPending0();
         }
+    }
+
+    private void setReadPending0(boolean readPending) {
+        this.readPending = readPending;
+        if (!readPending) {
+            ((AbstractNioUnsafe) unsafe()).removeReadOp();
+        }
+    }
+
+    private void clearReadPending0() {
+        readPending = false;
+        ((AbstractNioUnsafe) unsafe()).removeReadOp();
     }
 
     /**
