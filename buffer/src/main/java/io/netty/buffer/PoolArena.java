@@ -26,6 +26,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.lang.Math.max;
+
 abstract class PoolArena<T> implements PoolArenaMetric {
     static final boolean HAS_UNSAFE = PlatformDependent.hasUnsafe();
 
@@ -506,19 +508,17 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         synchronized (this) {
             val += allocationsNormal - (deallocationsTiny + deallocationsSmall + deallocationsNormal);
         }
-        return val >= 0 ? val : 0;
+        return max(val, 0);
     }
 
     @Override
     public long numActiveTinyAllocations() {
-        long val = numTinyAllocations() - numTinyDeallocations();
-        return val >= 0 ? val : 0;
+        return max(numTinyAllocations() - numTinyDeallocations(), 0);
     }
 
     @Override
     public long numActiveSmallAllocations() {
-        long val = numSmallAllocations() - numSmallDeallocations();
-        return val >= 0 ? val : 0;
+        return max(numSmallAllocations() - numSmallDeallocations(), 0);
     }
 
     @Override
@@ -527,13 +527,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         synchronized (this) {
             val = allocationsNormal - deallocationsNormal;
         }
-        return val >= 0 ? val : 0;
+        return max(val, 0);
     }
 
     @Override
     public long numActiveHugeAllocations() {
-        long val = numHugeAllocations() - numHugeDeallocations();
-        return val >= 0 ? val : 0;
+        return max(numHugeAllocations() - numHugeDeallocations(), 0);
     }
 
     protected abstract PoolChunk<T> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize);
