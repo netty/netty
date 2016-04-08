@@ -159,7 +159,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 });
             }
         } else {
-            setReadPending0(readPending);
+            // Best effort if we are not registered yet clear readPending.
+            // NB: We only set the boolean field instead of calling clearReadPending0(), because the SelectionKey is
+            // not set yet so it would produce an assertion failure.
+            this.readPending = readPending;
         }
     }
 
