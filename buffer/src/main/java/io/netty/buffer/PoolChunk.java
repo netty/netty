@@ -102,6 +102,8 @@ package io.netty.buffer;
  */
 final class PoolChunk<T> implements PoolChunkMetric {
 
+    private static final int INTEGER_SIZE_MINUS_ONE = Integer.SIZE - 1;
+
     final PoolArena<T> arena;
     final T memory;
     final boolean unpooled;
@@ -342,8 +344,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
      * @param handle handle to free
      */
     void free(long handle) {
-        int memoryMapIdx = (int) handle;
-        int bitmapIdx = (int) (handle >>> Integer.SIZE);
+        int memoryMapIdx = memoryMapIdx(handle);
+        int bitmapIdx = bitmapIdx(handle);
 
         if (bitmapIdx != 0) { // free a subpage
             PoolSubpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
@@ -364,8 +366,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     void initBuf(PooledByteBuf<T> buf, long handle, int reqCapacity) {
-        int memoryMapIdx = (int) handle;
-        int bitmapIdx = (int) (handle >>> Integer.SIZE);
+        int memoryMapIdx = memoryMapIdx(handle);
+        int bitmapIdx = bitmapIdx(handle);
         if (bitmapIdx == 0) {
             byte val = value(memoryMapIdx);
             assert val == unusable : String.valueOf(val);
@@ -377,13 +379,13 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int reqCapacity) {
-        initBufWithSubpage(buf, handle, (int) (handle >>> Integer.SIZE), reqCapacity);
+        initBufWithSubpage(buf, handle, bitmapIdx(handle), reqCapacity);
     }
 
     private void initBufWithSubpage(PooledByteBuf<T> buf, long handle, int bitmapIdx, int reqCapacity) {
         assert bitmapIdx != 0;
 
-        int memoryMapIdx = (int) handle;
+        int memoryMapIdx = memoryMapIdx(handle);
 
         PoolSubpage<T> subpage = subpages[subpageIdx(memoryMapIdx)];
         assert subpage.doNotDestroy;
@@ -409,7 +411,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     private static int log2(int val) {
         // compute the (0-based, with lsb = 0) position of highest set bit i.e, log2
-        return Integer.SIZE - 1 - Integer.numberOfLeadingZeros(val);
+        return INTEGER_SIZE_MINUS_ONE - Integer.numberOfLeadingZeros(val);
     }
 
     private int runLength(int id) {
@@ -425,6 +427,14 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     private int subpageIdx(int memoryMapIdx) {
         return memoryMapIdx ^ maxSubpageAllocs; // remove highest set bit, to get offset
+    }
+
+    private static int memoryMapIdx(long handle) {
+        return (int) handle;
+    }
+
+    private static int bitmapIdx(long handle) {
+        return (int) (handle >>> Integer.SIZE);
     }
 
     @Override
