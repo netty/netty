@@ -176,7 +176,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             }
         } else {
             // Best effort if we are not registered yet clear readPending. This happens during channel initialization.
-            clearReadPending0();
+            // NB: We only set the boolean field instead of calling clearReadPending0(), because the SelectionKey is
+            // not set yet so it would produce an assertion failure.
+            readPending = false;
         }
     }
 
