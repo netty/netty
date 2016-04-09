@@ -33,6 +33,7 @@ import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -700,16 +701,19 @@ public class DefaultChannelPipelineTest {
 
             assertTrue(removedQueue.isEmpty());
             pipeline.channel().close().syncUninterruptibly();
-            assertHandler(handler1, addedQueue.take());
-            assertHandler(handler2, addedQueue.take());
-            assertHandler(handler3, addedQueue.take());
-            assertHandler(handler4, addedQueue.take());
+            assertHandler(addedQueue.take(), handler1);
+
+            // Depending on timing this can be handler2 or handler3 as these use different EventExecutorGroups.
+            assertHandler(addedQueue.take(), handler2, handler3, handler4);
+            assertHandler(addedQueue.take(), handler2, handler3, handler4);
+            assertHandler(addedQueue.take(), handler2, handler3, handler4);
+
             assertTrue(addedQueue.isEmpty());
 
-            assertHandler(handler4, removedQueue.take());
-            assertHandler(handler3, removedQueue.take());
-            assertHandler(handler2, removedQueue.take());
-            assertHandler(handler1, removedQueue.take());
+            assertHandler(removedQueue.take(), handler4);
+            assertHandler(removedQueue.take(), handler3);
+            assertHandler(removedQueue.take(), handler2);
+            assertHandler(removedQueue.take(), handler1);
             assertTrue(removedQueue.isEmpty());
         } finally {
             group1.shutdownGracefully();
@@ -793,39 +797,7 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    @Test(timeout = 3000)
-    public void testHandlerAddBlocksUntilHandlerAddedCalled() {
-        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
-        try {
-            final Promise<Void> promise = group1.next().newPromise();
-            ChannelPipeline pipeline = new LocalChannel().pipeline();
-            group.register(pipeline.channel()).syncUninterruptibly();
-
-            pipeline.addLast(new ChannelHandlerAdapter() {
-                @Override
-                public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                    final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
-                    ctx.pipeline().addLast(group1, new ChannelHandlerAdapter() {
-                        @Override
-                        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                            handlerAddedCalled.set(true);
-                        }
-                    });
-                    if (handlerAddedCalled.get()) {
-                        promise.setSuccess(null);
-                    } else {
-                        promise.setFailure(new AssertionError("handlerAdded(...) was not called yet"));
-                    }
-                }
-            });
-
-            promise.syncUninterruptibly();
-        } finally {
-            group1.shutdownGracefully();
-        }
-    }
-
-    @Test
+    @Test(timeout = 2000)
     public void testAddRemoveHandlerCalledOnceRegistered() throws Throwable {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
         CallbackCheckHandler handler = new CallbackCheckHandler();
@@ -833,8 +805,8 @@ public class DefaultChannelPipelineTest {
         pipeline.addFirst(handler);
         pipeline.remove(handler);
 
-        assertFalse(handler.addedHandler.get());
-        assertFalse(handler.removedHandler.get());
+        assertNull(handler.addedHandler.getNow());
+        assertNull(handler.removedHandler.getNow());
 
         group.register(pipeline.channel()).syncUninterruptibly();
         Throwable cause = handler.error.get();
@@ -846,7 +818,7 @@ public class DefaultChannelPipelineTest {
         assertTrue(handler.removedHandler.get());
     }
 
-    @Test
+    @Test(timeout = 3000)
     public void testAddReplaceHandlerCalledOnceRegistered() throws Throwable {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
         CallbackCheckHandler handler = new CallbackCheckHandler();
@@ -855,10 +827,10 @@ public class DefaultChannelPipelineTest {
         pipeline.addFirst(handler);
         pipeline.replace(handler, null, handler2);
 
-        assertFalse(handler.addedHandler.get());
-        assertFalse(handler.removedHandler.get());
-        assertFalse(handler2.addedHandler.get());
-        assertFalse(handler2.removedHandler.get());
+        assertNull(handler.addedHandler.getNow());
+        assertNull(handler.removedHandler.getNow());
+        assertNull(handler2.addedHandler.getNow());
+        assertNull(handler2.removedHandler.getNow());
 
         group.register(pipeline.channel()).syncUninterruptibly();
         Throwable cause = handler.error.get();
@@ -875,30 +847,71 @@ public class DefaultChannelPipelineTest {
         }
 
         assertTrue(handler2.addedHandler.get());
-        assertFalse(handler2.removedHandler.get());
+        assertNull(handler2.removedHandler.getNow());
         pipeline.remove(handler2);
         assertTrue(handler2.removedHandler.get());
     }
 
+    @Test(timeout = 3000)
+    public void testAddBefore() throws Throwable {
+        ChannelPipeline pipeline1 = new LocalChannel().pipeline();
+        ChannelPipeline pipeline2 = new LocalChannel().pipeline();
+
+        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(2);
+        try {
+            EventLoop eventLoop1 = defaultGroup.next();
+            EventLoop eventLoop2 = defaultGroup.next();
+
+            eventLoop1.register(pipeline1.channel()).syncUninterruptibly();
+            eventLoop2.register(pipeline2.channel()).syncUninterruptibly();
+
+            CountDownLatch latch = new CountDownLatch(2 * 10);
+            for (int i = 0; i < 10; i++) {
+                eventLoop1.execute(new TestTask(pipeline2, latch));
+                eventLoop2.execute(new TestTask(pipeline1, latch));
+            }
+            latch.await();
+        } finally {
+            defaultGroup.shutdownGracefully();
+        }
+    }
+
+    private static final class TestTask implements Runnable {
+
+        private final ChannelPipeline pipeline;
+        private final CountDownLatch latch;
+
+        TestTask(ChannelPipeline pipeline, CountDownLatch latch) {
+            this.pipeline = pipeline;
+            this.latch = latch;
+        }
+
+        @Override
+        public void run() {
+            pipeline.addLast(new ChannelInboundHandlerAdapter());
+            latch.countDown();
+        }
+    }
+
     private static final class CallbackCheckHandler extends ChannelHandlerAdapter {
-        final AtomicBoolean addedHandler = new AtomicBoolean();
-        final AtomicBoolean removedHandler = new AtomicBoolean();
+        final Promise<Boolean> addedHandler = ImmediateEventExecutor.INSTANCE.newPromise();
+        final Promise<Boolean> removedHandler = ImmediateEventExecutor.INSTANCE.newPromise();
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-            if (!addedHandler.compareAndSet(false, true)) {
+            if (!addedHandler.trySuccess(true)) {
                 error.set(new AssertionError("handlerAdded(...) called multiple times: " + ctx.name()));
-            } else if (removedHandler.get()) {
+            } else if (removedHandler.getNow() == Boolean.TRUE) {
                 error.set(new AssertionError("handlerRemoved(...) called before handlerAdded(...): " + ctx.name()));
             }
         }
 
         @Override
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-            if (!removedHandler.compareAndSet(false, true)) {
+            if (!removedHandler.trySuccess(true)) {
                 error.set(new AssertionError("handlerRemoved(...) called multiple times: " + ctx.name()));
-            } else if (!addedHandler.get()) {
+            } else if (addedHandler.getNow() == Boolean.FALSE) {
                 error.set(new AssertionError("handlerRemoved(...) called before handlerAdded(...): " + ctx.name()));
             }
         }
@@ -923,9 +936,14 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static void assertHandler(CheckOrderHandler expected, CheckOrderHandler actual) throws Throwable {
-        assertSame(expected, actual);
-        actual.checkError();
+    private static void assertHandler(CheckOrderHandler actual, CheckOrderHandler... handlers) throws Throwable {
+        for (CheckOrderHandler h : handlers) {
+            if (h == actual) {
+                actual.checkError();
+                return;
+            }
+        }
+        fail("handler was not one of the expected handlers");
     }
 
     private static final class CheckOrderHandler extends ChannelHandlerAdapter {
