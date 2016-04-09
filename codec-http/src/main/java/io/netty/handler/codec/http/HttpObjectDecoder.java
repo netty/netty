@@ -400,6 +400,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         super.decodeLast(ctx, in, out);
 
+        if (resetRequested) {
+            // If a reset was requested by decodeLast() we need to do it now otherwise we may produce a
+            // LastHttpContent while there was already one.
+            resetNow();
+        }
         // Handle the last unfinished message.
         if (message != null) {
             boolean chunked = HttpUtil.isTransferEncodingChunked(message);
