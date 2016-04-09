@@ -39,16 +39,30 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     volatile AbstractChannelHandlerContext next;
     volatile AbstractChannelHandlerContext prev;
 
+    /**
+     * {@link ChannelHandler#handlerAdded(ChannelHandlerContext)} was called.
+     */
+    private static final int ADDED = 1;
+    /**
+     * {@link ChannelHandler#handlerRemoved(ChannelHandlerContext)} was called.
+     */
+    private static final int REMOVED = 2;
+    /**
+     * Neither {@link ChannelHandler#handlerAdded(ChannelHandlerContext)}
+     * nor {@link ChannelHandler#handlerRemoved(ChannelHandlerContext)} was called.
+     */
+    private static final int INIT = 0;
+
     private final boolean inbound;
     private final boolean outbound;
     private final DefaultChannelPipeline pipeline;
     private final String name;
-    private boolean handlerRemoved;
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
     // child executor.
     final EventExecutor executor;
     private ChannelFuture succeededFuture;
+    private int handlerState = INIT;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     // These needs to be volatile as otherwise an other Thread may see an half initialized instance.
@@ -119,10 +133,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeChannelRegistered() {
-        try {
-            ((ChannelInboundHandler) handler()).channelRegistered(this);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+        if (isAdded()) {
+            try {
+                ((ChannelInboundHandler) handler()).channelRegistered(this);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            fireChannelRegistered();
         }
     }
 
@@ -144,10 +162,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeChannelUnregistered() {
-        try {
-            ((ChannelInboundHandler) handler()).channelUnregistered(this);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+        if (isAdded()) {
+            try {
+                ((ChannelInboundHandler) handler()).channelUnregistered(this);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            fireChannelUnregistered();
         }
     }
 
@@ -169,10 +191,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeChannelActive() {
-        try {
-            ((ChannelInboundHandler) handler()).channelActive(this);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+        if (isAdded()) {
+            try {
+                ((ChannelInboundHandler) handler()).channelActive(this);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            fireChannelActive();
         }
     }
 
@@ -194,10 +220,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeChannelInactive() {
-        try {
-            ((ChannelInboundHandler) handler()).channelInactive(this);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+        if (isAdded()) {
+            try {
+                ((ChannelInboundHandler) handler()).channelInactive(this);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            fireChannelInactive();
         }
     }
 
@@ -231,14 +261,18 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeExceptionCaught(final Throwable cause) {
-        try {
-            handler().exceptionCaught(this, cause);
-        } catch (Throwable t) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by a user handler's " +
-                        "exceptionCaught() method while handling the following exception:", cause);
+        if (isAdded()) {
+            try {
+                handler().exceptionCaught(this, cause);
+            } catch (Throwable t) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "An exception was thrown by a user handler's " +
+                                    "exceptionCaught() method while handling the following exception:", cause);
+                }
             }
+        } else {
+            fireExceptionCaught(cause);
         }
     }
 
@@ -264,10 +298,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeUserEventTriggered(Object event) {
-        try {
-            ((ChannelInboundHandler) handler()).userEventTriggered(this, event);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+        if (isAdded()) {
+            try {
+                ((ChannelInboundHandler) handler()).userEventTriggered(this, event);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            fireUserEventTriggered(event);
         }
     }
 
@@ -294,10 +332,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeChannelRead(Object msg) {
-        try {
-            ((ChannelInboundHandler) handler()).channelRead(this, msg);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+        if (isAdded()) {
+            try {
+                ((ChannelInboundHandler) handler()).channelRead(this, msg);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            fireChannelRead(msg);
         }
     }
 
@@ -323,10 +365,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeChannelReadComplete() {
-        try {
-            ((ChannelInboundHandler) handler()).channelReadComplete(this);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+        if (isAdded()) {
+            try {
+                ((ChannelInboundHandler) handler()).channelReadComplete(this);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            fireChannelReadComplete();
         }
     }
 
@@ -352,10 +398,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeChannelWritabilityChanged() {
-        try {
-            ((ChannelInboundHandler) handler()).channelWritabilityChanged(this);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+        if (isAdded()) {
+            try {
+                ((ChannelInboundHandler) handler()).channelWritabilityChanged(this);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            fireChannelWritabilityChanged();
         }
     }
 
@@ -415,10 +465,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeBind(SocketAddress localAddress, ChannelPromise promise) {
-        try {
-            ((ChannelOutboundHandler) handler()).bind(this, localAddress, promise);
-        } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+        if (isAdded()) {
+            try {
+                ((ChannelOutboundHandler) handler()).bind(this, localAddress, promise);
+            } catch (Throwable t) {
+                notifyOutboundHandlerException(t, promise);
+            }
+        } else {
+            bind(localAddress, promise);
         }
     }
 
@@ -455,10 +509,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        try {
-            ((ChannelOutboundHandler) handler()).connect(this, remoteAddress, localAddress, promise);
-        } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+        if (isAdded()) {
+            try {
+                ((ChannelOutboundHandler) handler()).connect(this, remoteAddress, localAddress, promise);
+            } catch (Throwable t) {
+                notifyOutboundHandlerException(t, promise);
+            }
+        } else {
+            connect(remoteAddress, localAddress, promise);
         }
     }
 
@@ -495,10 +553,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeDisconnect(ChannelPromise promise) {
-        try {
-            ((ChannelOutboundHandler) handler()).disconnect(this, promise);
-        } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+        if (isAdded()) {
+            try {
+                ((ChannelOutboundHandler) handler()).disconnect(this, promise);
+            } catch (Throwable t) {
+                notifyOutboundHandlerException(t, promise);
+            }
+        } else {
+            disconnect(promise);
         }
     }
 
@@ -526,10 +588,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeClose(ChannelPromise promise) {
-        try {
-            ((ChannelOutboundHandler) handler()).close(this, promise);
-        } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+        if (isAdded()) {
+            try {
+                ((ChannelOutboundHandler) handler()).close(this, promise);
+            } catch (Throwable t) {
+                notifyOutboundHandlerException(t, promise);
+            }
+        } else {
+            close(promise);
         }
     }
 
@@ -557,10 +623,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeDeregister(ChannelPromise promise) {
-        try {
-            ((ChannelOutboundHandler) handler()).deregister(this, promise);
-        } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
+        if (isAdded()) {
+            try {
+                ((ChannelOutboundHandler) handler()).deregister(this, promise);
+            } catch (Throwable t) {
+                notifyOutboundHandlerException(t, promise);
+            }
+        } else {
+            deregister(promise);
         }
     }
 
@@ -587,10 +657,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeRead() {
-        try {
-            ((ChannelOutboundHandler) handler()).read(this);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+        if (isAdded()) {
+            try {
+                ((ChannelOutboundHandler) handler()).read(this);
+            } catch (Throwable t) {
+                notifyHandlerException(t);
+            }
+        } else {
+            read();
         }
     }
 
@@ -621,6 +695,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeWrite(Object msg, ChannelPromise promise) {
+        if (isAdded()) {
+            invokeWrite0(msg, promise);
+        } else {
+            write(msg, promise);
+        }
+    }
+
+    private void invokeWrite0(Object msg, ChannelPromise promise) {
         try {
             ((ChannelOutboundHandler) handler()).write(this, msg, promise);
         } catch (Throwable t) {
@@ -651,6 +733,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void invokeFlush() {
+        if (isAdded()) {
+            invokeFlush0();
+        } else {
+            flush();
+        }
+    }
+
+    private void invokeFlush0() {
         try {
             ((ChannelOutboundHandler) handler()).flush(this);
         } catch (Throwable t) {
@@ -675,14 +765,24 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         return promise;
     }
 
+    private void invokeWriteAndFlush(Object msg, ChannelPromise promise) {
+        if (isAdded()) {
+            invokeWrite0(msg, promise);
+            invokeFlush0();
+        } else {
+            writeAndFlush(msg, promise);
+        }
+    }
+
     private void write(Object msg, boolean flush, ChannelPromise promise) {
         AbstractChannelHandlerContext next = findContextOutbound();
         final Object m = pipeline.touch(msg, next);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeWrite(m, promise);
             if (flush) {
-                next.invokeFlush();
+                next.invokeWriteAndFlush(m, promise);
+            } else {
+                next.invokeWrite(m, promise);
             }
         } else {
             AbstractWriteTask task;
@@ -823,13 +923,29 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         return channel().voidPromise();
     }
 
-    void setRemoved() {
-        handlerRemoved = true;
+    final void setRemoved() {
+        handlerState = REMOVED;
+    }
+
+    final void setAdded() {
+        handlerState = ADDED;
+    }
+
+    /**
+     * Makes best possible effort to detect if {@link ChannelHandler#handlerAdded(ChannelHandlerContext)} was called
+     * yet. If not return {@code false} and if called or could not detect return {@code true}.
+     *
+     * If this method returns {@code true} we will not invoke the {@link ChannelHandler} but just forward the event.
+     * This is needed as {@link DefaultChannelPipeline} may already put the {@link ChannelHandler} in the linked-list
+     * but not called {@link }
+     */
+    private boolean isAdded() {
+        return handlerState == ADDED;
     }
 
     @Override
     public boolean isRemoved() {
-        return handlerRemoved;
+        return handlerState == REMOVED;
     }
 
     @Override
