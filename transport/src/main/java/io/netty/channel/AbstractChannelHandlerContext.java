@@ -869,9 +869,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
                 // Check for null as it may be set to null if the channel is closed already
                 if (buffer != null) {
                     task.size = ((AbstractChannel) ctx.channel()).estimatorHandle().size(msg) + WRITE_TASK_OVERHEAD;
-                    // We increment the pending bytes but NOT call fireChannelWritabilityChanged() because this
-                    // will be done automaticaly once we add the message to the ChannelOutboundBuffer.
-                    buffer.incrementPendingOutboundBytes(task.size, false);
+                    buffer.incrementPendingOutboundBytes(task.size);
                 } else {
                     task.size = 0;
                 }
@@ -886,9 +884,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
                 ChannelOutboundBuffer buffer = ctx.channel().unsafe().outboundBuffer();
                 // Check for null as it may be set to null if the channel is closed already
                 if (ESTIMATE_TASK_SIZE_ON_SUBMIT && buffer != null) {
-                    // We decrement the pending bytes but NOT call fireChannelWritabilityChanged() because this
-                    // will be done automaticaly once we pick up the messages out of the buffer to actually write these.
-                    buffer.decrementPendingOutboundBytes(size, false);
+                    buffer.decrementPendingOutboundBytes(size);
                 }
                 write(ctx, msg, promise);
             } finally {
