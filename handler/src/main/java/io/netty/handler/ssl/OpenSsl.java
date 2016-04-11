@@ -61,29 +61,30 @@ public final class OpenSsl {
         // If in the classpath, try to load the native library and initialize netty-tcnative.
         if (cause == null) {
             try {
-                String os = normalizeOs(SystemPropertyUtil.get("os.name", ""));
-                String arch = normalizeArch(SystemPropertyUtil.get("os.arch", ""));
-
-                Set<String> libNames = new LinkedHashSet<String>(3);
-                // First, try loading the platform-specific library. Platform-specific
-                // libraries will be available if using a tcnative uber jar.
-                libNames.add("netty-tcnative-" + os + '-' + arch);
-                if (LINUX.equalsIgnoreCase(os)) {
-                    // Fedora SSL lib so naming (libssl.so.10 vs libssl.so.1.0.0)..
-                    libNames.add("netty-tcnative-" + os + '-' + arch + "-fedora");
-                }
-                // finally the default library.
-                libNames.add("netty-tcnative");
-
-                NativeLibraryLoader.loadFirstAvailable(SSL.class.getClassLoader(),
-                        libNames.toArray(new String[libNames.size()]));
-
-                Library.initialize("provided");
-                SSL.initialize(null);
+                // The JNI library was not already loaded. Load it now.
+                loadTcNative();
             } catch (Throwable t) {
                 cause = t;
                 logger.debug(
-                        "Failed to load netty-tcnative; " +
+                    "Failed to load netty-tcnative; " +
+                        OpenSslEngine.class.getSimpleName() + " will be unavailable, unless the " +
+                        "application has already loaded the symbols by some other means. " +
+                        "See http://netty.io/wiki/forked-tomcat-native.html for more information.", t);
+            }
+
+            try {
+                initializeTcNative();
+
+                // The library was initialized successfully. If loading the library failed above,
+                // reset the cause now since it appears that the library was loaded by some other
+                // means.
+                cause = null;
+            } catch (Throwable t) {
+                if (cause == null) {
+                    cause = t;
+                }
+                logger.debug(
+                    "Failed to initialize netty-tcnative; " +
                         OpenSslEngine.class.getSimpleName() + " will be unavailable. " +
                         "See http://netty.io/wiki/forked-tomcat-native.html for more information.", t);
             }
@@ -218,6 +219,30 @@ public final class OpenSsl {
     }
 
     private OpenSsl() { }
+
+    private static void loadTcNative() throws Exception {
+        String os = normalizeOs(SystemPropertyUtil.get("os.name", ""));
+        String arch = normalizeArch(SystemPropertyUtil.get("os.arch", ""));
+
+        Set<String> libNames = new LinkedHashSet<String>(3);
+        // First, try loading the platform-specific library. Platform-specific
+        // libraries will be available if using a tcnative uber jar.
+        libNames.add("netty-tcnative-" + os + '-' + arch);
+        if (LINUX.equalsIgnoreCase(os)) {
+            // Fedora SSL lib so naming (libssl.so.10 vs libssl.so.1.0.0)..
+            libNames.add("netty-tcnative-" + os + '-' + arch + "-fedora");
+        }
+        // finally the default library.
+        libNames.add("netty-tcnative");
+
+        NativeLibraryLoader.loadFirstAvailable(SSL.class.getClassLoader(),
+            libNames.toArray(new String[libNames.size()]));
+    }
+
+    private static void initializeTcNative() throws Exception {
+        Library.initialize("provided");
+        SSL.initialize(null);
+    }
 
     private static String normalizeOs(String value) {
         value = normalize(value);
