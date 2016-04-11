@@ -392,6 +392,12 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public CharSequence getCharSequence(int index, int length, Charset charset) {
+        checkIndex(index, length);
+        return null;
+    }
+
+    @Override
     public ByteBuf setBoolean(int index, boolean value) {
         throw new IndexOutOfBoundsException();
     }
@@ -507,6 +513,11 @@ public final class EmptyByteBuf extends ByteBuf {
     @Override
     public ByteBuf setZero(int index, int length) {
         return checkIndex(index, length);
+    }
+
+    @Override
+    public int setCharSequence(int index, CharSequence sequence, Charset charset) {
+        throw new IndexOutOfBoundsException();
     }
 
     @Override
@@ -667,6 +678,12 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public CharSequence readCharSequence(int length, Charset charset) {
+        checkLength(length);
+        return null;
+    }
+
+    @Override
     public ByteBuf skipBytes(int length) {
         return checkLength(length);
     }
@@ -787,6 +804,11 @@ public final class EmptyByteBuf extends ByteBuf {
     @Override
     public ByteBuf writeZero(int length) {
         return checkLength(length);
+    }
+
+    @Override
+    public int writeCharSequence(CharSequence sequence, Charset charset) {
+        throw new IndexOutOfBoundsException();
     }
 
     @Override

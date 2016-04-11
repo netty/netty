@@ -227,6 +227,12 @@ final class AdvancedLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     }
 
     @Override
+    public CharSequence getCharSequence(int index, int length, Charset charset) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.getCharSequence(index, length, charset);
+    }
+
+    @Override
     public CompositeByteBuf setBoolean(int index, boolean value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setBoolean(index, value);
@@ -467,6 +473,12 @@ final class AdvancedLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     }
 
     @Override
+    public CharSequence readCharSequence(int length, Charset charset) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.readCharSequence(length, charset);
+    }
+
+    @Override
     public CompositeByteBuf skipBytes(int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.skipBytes(length);
@@ -578,6 +590,12 @@ final class AdvancedLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     public CompositeByteBuf writeZero(int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeZero(length);
+    }
+
+    @Override
+    public int writeCharSequence(CharSequence sequence, Charset charset) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.writeCharSequence(sequence, charset);
     }
 
     @Override
@@ -758,6 +776,12 @@ final class AdvancedLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     public ByteBuf setLongLE(int index, long value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setLongLE(index, value);
+    }
+
+    @Override
+    public int setCharSequence(int index, CharSequence sequence, Charset charset) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.setCharSequence(index, sequence, charset);
     }
 
     @Override

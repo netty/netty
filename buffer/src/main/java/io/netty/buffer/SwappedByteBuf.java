@@ -377,6 +377,11 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public CharSequence getCharSequence(int index, int length, Charset charset) {
+        return buf.getCharSequence(index, length, charset);
+    }
+
+    @Override
     public ByteBuf setBoolean(int index, boolean value) {
         buf.setBoolean(index, value);
         return this;
@@ -509,6 +514,11 @@ public class SwappedByteBuf extends ByteBuf {
     public ByteBuf setZero(int index, int length) {
         buf.setZero(index, length);
         return this;
+    }
+
+    @Override
+    public int setCharSequence(int index, CharSequence sequence, Charset charset) {
+        return buf.setCharSequence(index, sequence, charset);
     }
 
     @Override
@@ -674,6 +684,11 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public CharSequence readCharSequence(int length, Charset charset) {
+        return buf.readCharSequence(length, charset);
+    }
+
+    @Override
     public ByteBuf skipBytes(int length) {
         buf.skipBytes(length);
         return this;
@@ -812,6 +827,11 @@ public class SwappedByteBuf extends ByteBuf {
     public ByteBuf writeZero(int length) {
         buf.writeZero(length);
         return this;
+    }
+
+    @Override
+    public int writeCharSequence(CharSequence sequence, Charset charset) {
+        return buf.writeCharSequence(sequence, charset);
     }
 
     @Override
