@@ -367,6 +367,15 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 if (outSize > 0) {
                     fireChannelRead(ctx, out, outSize);
                     out.clear();
+
+                    // Check if this handler was removed before continuing with decoding.
+                    // If it was removed, it is not safe to continue to operate on the buffer.
+                    //
+                    // See:
+                    // - https://github.com/netty/netty/issues/4635
+                    if (ctx.isRemoved()) {
+                        break;
+                    }
                     outSize = 0;
                 }
 
