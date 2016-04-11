@@ -245,6 +245,12 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public CharSequence getCharSequence(int index, int length, Charset charset) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.getCharSequence(index, length, charset);
+    }
+
+    @Override
     public ByteBuf setBoolean(int index, boolean value) {
         recordLeakNonRefCountingOperation(leak);
         return super.setBoolean(index, value);
@@ -350,6 +356,12 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     public ByteBuf setZero(int index, int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.setZero(index, length);
+    }
+
+    @Override
+    public int setCharSequence(int index, CharSequence sequence, Charset charset) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.setCharSequence(index, sequence, charset);
     }
 
     @Override
@@ -482,6 +494,12 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     public int readBytes(GatheringByteChannel out, int length) throws IOException {
         recordLeakNonRefCountingOperation(leak);
         return super.readBytes(out, length);
+    }
+
+    @Override
+    public CharSequence readCharSequence(int length, Charset charset) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.readCharSequence(length, charset);
     }
 
     @Override
@@ -842,6 +860,12 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     public ByteBuf writeLongLE(long value) {
         recordLeakNonRefCountingOperation(leak);
         return super.writeLongLE(value);
+    }
+
+    @Override
+    public int writeCharSequence(CharSequence sequence, Charset charset) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.writeCharSequence(sequence, charset);
     }
 
     @Override
