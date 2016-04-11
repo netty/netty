@@ -914,6 +914,17 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract int getBytes(int index, FileChannel out, long position, int length) throws IOException;
 
     /**
+     * Gets a {@link CharSequence} with the given length at the given index.
+     *
+     * @param length the length to read
+     * @param charset that should be used
+     * @return the sequence
+     * @throws IndexOutOfBoundsException
+     *         if {@code length} is greater than {@code this.readableBytes}
+     */
+    public abstract CharSequence getCharSequence(int index, int length, Charset charset);
+
+    /**
      * Sets the specified boolean at the specified absolute {@code index} in this
      * buffer.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
@@ -1248,6 +1259,19 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf setZero(int index, int length);
 
     /**
+     * Writes the specified {@link CharSequence} at the current {@code writerIndex} and increases
+     * the {@code writerIndex} by the written bytes.
+     *
+     * @param index on which the sequence should be written
+     * @param sequence to write
+     * @param charset that should be used.
+     * @return the written number of bytes.
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is not large enough to write the whole sequence
+     */
+    public abstract int setCharSequence(int index, CharSequence sequence, Charset charset);
+
+    /**
      * Gets a boolean at the current {@code readerIndex} and increases
      * the {@code readerIndex} by {@code 1} in this buffer.
      *
@@ -1580,6 +1604,18 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract int readBytes(GatheringByteChannel out, int length) throws IOException;
 
     /**
+     * Gets a {@link CharSequence} with the given length at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by the given length.
+     *
+     * @param length the length to read
+     * @param charset that should be used
+     * @return the sequence
+     * @throws IndexOutOfBoundsException
+     *         if {@code length} is greater than {@code this.readableBytes}
+     */
+    public abstract CharSequence readCharSequence(int length, Charset charset);
+
+    /**
      * Transfers this buffer's data starting at the current {@code readerIndex}
      * to the specified channel starting at the given file position.
      * This method does not modify the channel's position.
@@ -1884,6 +1920,19 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if {@code length} is greater than {@code this.writableBytes}
      */
     public abstract ByteBuf writeZero(int length);
+
+    /**
+     * Writes the specified {@link CharSequence} at the current {@code writerIndex} and increases
+     * the {@code writerIndex} by the written bytes.
+     * in this buffer.
+     *
+     * @param sequence to write
+     * @param charset that should be used
+     * @return the written number of bytes
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is not large enough to write the whole sequence
+     */
+    public abstract int writeCharSequence(CharSequence sequence, Charset charset);
 
     /**
      * Locates the first occurrence of the specified {@code value} in this

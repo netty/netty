@@ -360,6 +360,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public CharSequence getCharSequence(int index, int length, Charset charset) {
+        checkIndex(index, length);
+        return buffer.getCharSequence(index, length, charset);
+    }
+
+    @Override
     public int hashCode() {
         reject();
         return 0;
@@ -710,6 +716,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     public double readDouble() {
         checkReadableBytes(8);
         return buffer.readDouble();
+    }
+
+    @Override
+    public CharSequence readCharSequence(int length, Charset charset) {
+        checkReadableBytes(length);
+        return buffer.readCharSequence(length, charset);
     }
 
     @Override
@@ -1112,6 +1124,18 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     public ByteBuf writeDouble(double value) {
         reject();
         return this;
+    }
+
+    @Override
+    public int setCharSequence(int index, CharSequence sequence, Charset charset) {
+        reject();
+        return -1;
+    }
+
+    @Override
+    public int writeCharSequence(CharSequence sequence, Charset charset) {
+        reject();
+        return -1;
     }
 
     private void checkIndex(int index, int length) {
