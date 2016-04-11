@@ -323,12 +323,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) throws Exception {
         RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
-            if (cumulation != null) {
-                callDecode(ctx, cumulation, out);
-                decodeLast(ctx, cumulation, out);
-            } else {
-                decodeLast(ctx, Unpooled.EMPTY_BUFFER, out);
-            }
+            channelInputClosed(ctx, out);
         } catch (DecoderException e) {
             throw e;
         } catch (Exception e) {
@@ -352,6 +347,19 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 // recycle in all cases
                 out.recycle();
             }
+        }
+    }
+
+    /**
+     * Called when the input of the channel was closed which may be because it changed to inactive or because of
+     * {@link ChannelInputShutdownEvent}.
+     */
+    void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
+        if (cumulation != null) {
+            callDecode(ctx, cumulation, out);
+            decodeLast(ctx, cumulation, out);
+        } else {
+            decodeLast(ctx, Unpooled.EMPTY_BUFFER, out);
         }
     }
 

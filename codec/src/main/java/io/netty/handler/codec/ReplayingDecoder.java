@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -322,37 +323,19 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        RecyclableArrayList out = RecyclableArrayList.newInstance();
+    final void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
         try {
             replayable.terminate();
-            callDecode(ctx, internalBuffer(), out);
-            decodeLast(ctx, replayable, out);
+            if (cumulation != null) {
+                callDecode(ctx, internalBuffer(), out);
+                decodeLast(ctx, replayable, out);
+            } else {
+                replayable.setCumulation(Unpooled.EMPTY_BUFFER);
+                decodeLast(ctx, replayable, out);
+            }
         } catch (Signal replay) {
             // Ignore
             replay.expect(REPLAY);
-        } catch (DecoderException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new DecoderException(e);
-        } finally {
-            try {
-                if (cumulation != null) {
-                    cumulation.release();
-                    cumulation = null;
-                }
-
-                int size = out.size();
-                if (size > 0) {
-                    fireChannelRead(ctx, out, size);
-                    // Something was read, call fireChannelReadComplete()
-                    ctx.fireChannelReadComplete();
-                }
-                ctx.fireChannelInactive();
-            } finally {
-                // recycle in all cases
-                out.recycle();
-            }
         }
     }
 
