@@ -314,4 +314,10 @@ public class FixedCompositeByteBufTest {
         assertEquals(1, byteBuffers[2].limit());
         composite.release();
     }
+
+    @Test
+    public void testEmptyArray() {
+        ByteBuf buf = newBuffer(new ByteBuf[0]);
+        buf.release();
+    }
 }

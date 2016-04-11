@@ -49,7 +49,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
             order = ByteOrder.BIG_ENDIAN;
             nioBufferCount = 1;
             capacity = 0;
-            direct = buffers[0].isDirect();
+            direct = false;
         } else {
             ByteBuf b = buffers[0];
             this.buffers = new Object[buffers.length];
