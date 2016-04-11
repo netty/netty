@@ -20,11 +20,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import org.junit.Test;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
@@ -224,5 +226,40 @@ public class ReplayingDecoderTest {
         assertEquals(2, (int) queue.take());
         assertEquals(3, (int) queue.take());
         assertTrue(queue.isEmpty());
+    }
+
+    @Test
+    public void testChannelInputShutdownEvent() {
+        final AtomicReference<Error> error = new AtomicReference<Error>();
+
+        EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder<Integer>(0) {
+            private boolean decoded;
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                if (!(in instanceof ReplayingDecoderByteBuf)) {
+                    error.set(new AssertionError("in must be of type " + ReplayingDecoderByteBuf.class
+                            + " but was " + in.getClass()));
+                    return;
+                }
+                if (!decoded) {
+                    decoded = true;
+                    in.readByte();
+                    state(1);
+                } else {
+                    // This will throw an ReplayingError
+                    in.skipBytes(Integer.MAX_VALUE);
+                }
+            }
+        });
+
+        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {0, 1})));
+        channel.pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+        assertFalse(channel.finishAndReleaseAll());
+
+        Error err = error.get();
+        if (err != null) {
+            throw err;
+        }
     }
 }
