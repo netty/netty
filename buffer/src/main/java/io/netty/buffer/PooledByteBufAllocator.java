@@ -209,7 +209,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private static int validateAndCalculatePageShifts(int pageSize) {
         if (pageSize < MIN_PAGE_SIZE) {
-            throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: " + MIN_PAGE_SIZE + "+)");
+            throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: " + MIN_PAGE_SIZE + ")");
         }
 
         if ((pageSize & pageSize - 1) != 0) {
