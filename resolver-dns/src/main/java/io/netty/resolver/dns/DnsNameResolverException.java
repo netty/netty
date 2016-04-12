@@ -18,12 +18,14 @@ package io.netty.resolver.dns;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 
 /**
  * A {@link RuntimeException} raised when {@link DnsNameResolver} failed to perform a successful query.
  */
+@UnstableApi
 public final class DnsNameResolverException extends RuntimeException {
 
     private static final long serialVersionUID = -8826717909627131850L;

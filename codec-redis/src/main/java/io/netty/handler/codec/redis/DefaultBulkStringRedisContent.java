@@ -18,10 +18,12 @@ package io.netty.handler.codec.redis;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * A default implementation of {@link BulkStringRedisContent}.
  */
+@UnstableApi
 public class DefaultBulkStringRedisContent extends DefaultByteBufHolder implements BulkStringRedisContent {
 
     /**

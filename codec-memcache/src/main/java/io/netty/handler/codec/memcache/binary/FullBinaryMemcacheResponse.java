@@ -16,10 +16,12 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.handler.codec.memcache.FullMemcacheMessage;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * A {@link BinaryMemcacheResponse} that also includes the content.
  */
+@UnstableApi
 public interface FullBinaryMemcacheResponse extends BinaryMemcacheResponse, FullMemcacheMessage {
 
     @Override

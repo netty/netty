@@ -15,11 +15,14 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.UnstableApi;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The default {@link Http2HeadersFrame} implementation.
  */
+@UnstableApi
 public final class DefaultHttp2HeadersFrame extends AbstractHttp2StreamFrame implements Http2HeadersFrame {
     private final Http2Headers headers;
     private final boolean endStream;

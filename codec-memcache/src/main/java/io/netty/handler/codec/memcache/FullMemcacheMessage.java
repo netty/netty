@@ -15,10 +15,13 @@
  */
 package io.netty.handler.codec.memcache;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * Combines {@link MemcacheMessage} and {@link LastMemcacheContent} into one
  * message. So it represent a <i>complete</i> memcache message.
  */
+@UnstableApi
 public interface FullMemcacheMessage extends MemcacheMessage, LastMemcacheContent {
 
     @Override

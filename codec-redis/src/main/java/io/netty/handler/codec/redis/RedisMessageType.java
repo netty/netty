@@ -15,9 +15,12 @@
 
 package io.netty.handler.codec.redis;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * Type of <a href="http://redis.io/topics/protocol">RESP (REdis Serialization Protocol)</a>.
  */
+@UnstableApi
 public enum RedisMessageType {
 
     SIMPLE_STRING((byte) '+', true),

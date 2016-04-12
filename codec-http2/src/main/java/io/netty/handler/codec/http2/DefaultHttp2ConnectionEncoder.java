@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
 import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
 
@@ -33,6 +34,7 @@ import static java.lang.Math.min;
 /**
  * Default implementation of {@link Http2ConnectionEncoder}.
  */
+@UnstableApi
 public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     private final Http2FrameWriter frameWriter;
     private final Http2Connection connection;

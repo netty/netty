@@ -19,10 +19,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * An aggregated bulk string of <a href="http://redis.io/topics/protocol">RESP</a>.
  */
+@UnstableApi
 public class FullBulkStringRedisMessage extends DefaultByteBufHolder implements LastBulkStringRedisContent {
 
     private FullBulkStringRedisMessage() {

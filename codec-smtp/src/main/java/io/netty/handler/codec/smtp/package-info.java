@@ -17,4 +17,7 @@
 /**
  * <a href="https://www.ietf.org/rfc/rfc2821.txt">SMTP</a> codec.
  */
+@UnstableApi
 package io.netty.handler.codec.smtp;
+
+import io.netty.util.internal.UnstableApi;

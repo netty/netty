@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.UnstableApi;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -23,6 +25,7 @@ import java.util.List;
 /**
  * Provides utilities related to security requirements specific to HTTP/2.
  */
+@UnstableApi
 public final class Http2SecurityUtil {
     /**
      * The following list is derived from <a

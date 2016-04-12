@@ -17,8 +17,9 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
-import io.netty.handler.codec.http2.hpack.Encoder;
+import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -32,6 +33,7 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+@UnstableApi
 public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2HeadersEncoder.Configuration {
     private final Encoder encoder;
     private final ByteArrayOutputStream tableSizeChangeOutput = new ByteArrayOutputStream();

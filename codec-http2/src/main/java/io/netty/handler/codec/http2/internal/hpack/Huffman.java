@@ -29,20 +29,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.hpack;
+package io.netty.handler.codec.http2.internal.hpack;
 
-import java.util.List;
+import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.HUFFMAN_CODES;
+import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.HUFFMAN_CODE_LENGTHS;
 
-final class TestHeaderListener implements HeaderListener {
+public final class Huffman {
 
-    private final List<HeaderField> headers;
+    /**
+     * Huffman Decoder
+     */
+    public static final HuffmanDecoder DECODER =
+            new HuffmanDecoder(HUFFMAN_CODES, HUFFMAN_CODE_LENGTHS);
 
-    TestHeaderListener(List<HeaderField> headers) {
-        this.headers = headers;
-    }
+    /**
+     * Huffman Encoder
+     */
+    public static final HuffmanEncoder ENCODER =
+            new HuffmanEncoder(HUFFMAN_CODES, HUFFMAN_CODE_LENGTHS);
 
-    @Override
-    public void addHeader(byte[] name, byte[] value, boolean sensitive) {
-        headers.add(new HeaderField(name, value));
+    private Huffman() {
+        // utility class
     }
 }

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.dns.DefaultDnsRecordDecoder.ROOT;
 
@@ -27,6 +28,7 @@ import static io.netty.handler.codec.dns.DefaultDnsRecordDecoder.ROOT;
  *
  * @see DefaultDnsRecordDecoder
  */
+@UnstableApi
 public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
 
     /**

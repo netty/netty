@@ -18,10 +18,12 @@ package io.netty.handler.codec.memcache;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * The default implementation for the {@link LastMemcacheContent}.
  */
+@UnstableApi
 public class DefaultLastMemcacheContent extends DefaultMemcacheContent implements LastMemcacheContent {
 
     public DefaultLastMemcacheContent() {

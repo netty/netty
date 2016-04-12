@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -30,6 +31,7 @@ import java.util.List;
  * {@link RedisMessage} parts can be aggregated to {@link RedisMessage} using
  * {@link RedisArrayAggregator} or processed directly.
  */
+@UnstableApi
 public final class RedisDecoder extends ByteToMessageDecoder {
 
     private final ToPositiveLongProcessor toPositiveLongProcessor = new ToPositiveLongProcessor();

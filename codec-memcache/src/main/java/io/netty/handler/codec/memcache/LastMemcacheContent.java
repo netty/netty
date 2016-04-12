@@ -18,6 +18,7 @@ package io.netty.handler.codec.memcache;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderResult;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * The {@link MemcacheContent} which signals the end of the content batch.
@@ -26,6 +27,7 @@ import io.netty.handler.codec.DecoderResult;
  * empty {@link LastMemcacheContent} is issued to make the upstream parsing
  * easier.
  */
+@UnstableApi
 public interface LastMemcacheContent extends MemcacheContent {
 
     LastMemcacheContent EMPTY_LAST_CONTENT = new LastMemcacheContent() {

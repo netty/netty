@@ -16,10 +16,13 @@
 package io.netty.handler.codec.redis;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * A strategy interface for caching {@link RedisMessage}s.
  */
+@UnstableApi
+
 public interface RedisMessagePool {
 
     /**

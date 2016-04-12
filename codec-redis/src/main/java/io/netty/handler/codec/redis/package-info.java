@@ -16,4 +16,7 @@
 /**
  * Encoder, decoder for Redis.
  */
+@UnstableApi
 package io.netty.handler.codec.redis;
+
+import io.netty.util.internal.UnstableApi;

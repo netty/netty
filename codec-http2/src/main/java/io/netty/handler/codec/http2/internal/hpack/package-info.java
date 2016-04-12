@@ -33,4 +33,4 @@
 /**
  * <a href="http://tools.ietf.org/html/rfc7541">HPACK: Header Compression for HTTP/2</a>
  */
-package io.netty.handler.codec.http2.hpack;
+package io.netty.handler.codec.http2.internal.hpack;

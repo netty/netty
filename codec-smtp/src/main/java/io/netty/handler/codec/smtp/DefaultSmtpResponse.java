@@ -15,12 +15,15 @@
  */
 package io.netty.handler.codec.smtp;
 
+import io.netty.util.internal.UnstableApi;
+
 import java.util.Collections;
 import java.util.List;
 
 /**
  * Default {@link SmtpResponse} implementation.
  */
+@UnstableApi
 public final class DefaultSmtpResponse implements SmtpResponse {
 
     private final int code;

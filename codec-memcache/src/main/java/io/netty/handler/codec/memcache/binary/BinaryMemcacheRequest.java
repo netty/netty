@@ -15,9 +15,12 @@
  */
 package io.netty.handler.codec.memcache.binary;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * Represents a full {@link BinaryMemcacheRequest}, which contains the header and optional key and extras.
  */
+@UnstableApi
 public interface BinaryMemcacheRequest extends BinaryMemcacheMessage {
 
     /**

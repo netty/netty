@@ -15,9 +15,12 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * HTTP/2 HEADERS frame.
  */
+@UnstableApi
 public interface Http2HeadersFrame extends Http2StreamFrame {
     @Override
     Http2HeadersFrame setStream(Object stream);

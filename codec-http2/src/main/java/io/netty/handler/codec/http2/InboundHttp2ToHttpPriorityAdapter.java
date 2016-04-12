@@ -19,6 +19,7 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -32,6 +33,7 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  * generate multiple messages per stream because the chances of an HTTP/2 event happening outside
  * the header/data message flow is more likely.
  */
+@UnstableApi
 public final class InboundHttp2ToHttpPriorityAdapter extends InboundHttp2ToHttpAdapter {
     private static final AsciiString OUT_OF_MESSAGE_SEQUENCE_METHOD = new AsciiString(
             HttpConversionUtil.OUT_OF_MESSAGE_SEQUENCE_METHOD.toString());

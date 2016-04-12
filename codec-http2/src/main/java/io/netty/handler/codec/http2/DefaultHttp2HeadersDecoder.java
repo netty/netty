@@ -17,9 +17,10 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
-import io.netty.handler.codec.http2.hpack.Decoder;
-import io.netty.handler.codec.http2.hpack.HeaderListener;
+import io.netty.handler.codec.http2.internal.hpack.Decoder;
+import io.netty.handler.codec.http2.internal.hpack.HeaderListener;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,6 +33,7 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
+@UnstableApi
 public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2HeadersDecoder.Configuration {
     private static final float HEADERS_COUNT_WEIGHT_NEW = 1 / 5f;
     private static final float HEADERS_COUNT_WEIGHT_HISTORICAL = 1 - HEADERS_COUNT_WEIGHT_NEW;

@@ -17,10 +17,12 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * The default implementation of a {@link FullBinaryMemcacheRequest}.
  */
+@UnstableApi
 public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheRequest
     implements FullBinaryMemcacheRequest {
 

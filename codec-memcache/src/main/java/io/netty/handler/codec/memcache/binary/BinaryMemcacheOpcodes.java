@@ -15,12 +15,15 @@
  */
 package io.netty.handler.codec.memcache.binary;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * Represents all Opcodes that can occur in a {@link BinaryMemcacheMessage}.
  * <p/>
  * This class can be extended if a custom application needs to implement a superset of the normally supported
  * operations by a vanilla memcached protocol.
  */
+@UnstableApi
 public final class BinaryMemcacheOpcodes {
 
     private BinaryMemcacheOpcodes() {

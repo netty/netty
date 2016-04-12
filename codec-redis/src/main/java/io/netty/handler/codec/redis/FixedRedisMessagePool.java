@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.Map;
 /**
  * A default fixed redis message pool.
  */
+@UnstableApi
 public final class FixedRedisMessagePool implements RedisMessagePool {
 
     private static final String[] DEFAULT_SIMPLE_STRINGS = {

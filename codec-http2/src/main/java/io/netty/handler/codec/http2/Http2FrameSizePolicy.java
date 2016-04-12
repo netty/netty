@@ -14,6 +14,9 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.UnstableApi;
+
+@UnstableApi
 public interface Http2FrameSizePolicy {
     /**
      * Sets the maximum allowed frame size. Attempts to write frames longer than this maximum will fail.

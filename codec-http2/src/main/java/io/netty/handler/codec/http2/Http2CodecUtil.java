@@ -25,6 +25,7 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.UnstableApi;
 
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
@@ -35,6 +36,7 @@ import static java.lang.Math.min;
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
  */
+@UnstableApi
 public final class Http2CodecUtil {
     public static final int CONNECTION_STREAM_ID = 0;
     public static final int HTTP_UPGRADE_STREAM_ID = 1;

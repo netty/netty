@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.Closeable;
 
@@ -27,6 +28,7 @@ import java.io.Closeable;
  * this interface write to the context, but DO NOT FLUSH. To perform a flush, you must separately
  * call {@link ChannelHandlerContext#flush()}.
  */
+@UnstableApi
 public interface Http2FrameWriter extends Http2DataWriter, Closeable {
     /**
      * Configuration specific to {@link Http2FrameWriter}

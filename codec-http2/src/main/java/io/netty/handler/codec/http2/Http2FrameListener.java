@@ -17,10 +17,12 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * An listener of HTTP/2 frames.
  */
+@UnstableApi
 public interface Http2FrameListener {
     /**
      * Handles an inbound {@code DATA} frame.

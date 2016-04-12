@@ -16,10 +16,12 @@
 package io.netty.handler.codec.smtp;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * Default implementation of {@link LastSmtpContent} that does no validation of the raw data passed in.
  */
+@UnstableApi
 public final class DefaultLastSmtpContent extends DefaultSmtpContent implements LastSmtpContent {
 
     /**

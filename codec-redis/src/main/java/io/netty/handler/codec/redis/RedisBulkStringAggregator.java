@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.MessageAggregator;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link BulkStringHeaderRedisMessage}
@@ -38,6 +39,7 @@ import io.netty.handler.codec.MessageAggregator;
  * Be aware that you need to have the {@link RedisEncoder} before the {@link RedisBulkStringAggregator}
  * in the {@link ChannelPipeline}.
  */
+@UnstableApi
 public final class RedisBulkStringAggregator extends MessageAggregator<RedisMessage, BulkStringHeaderRedisMessage,
                                                                  BulkStringRedisContent, FullBulkStringRedisMessage> {
 

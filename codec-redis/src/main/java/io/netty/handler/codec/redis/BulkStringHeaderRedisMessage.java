@@ -15,9 +15,12 @@
 
 package io.netty.handler.codec.redis;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * The header of Bulk Strings in <a href="http://redis.io/topics/protocol">RESP</a>.
  */
+@UnstableApi
 public class BulkStringHeaderRedisMessage implements RedisMessage {
 
     private final int bulkStringLength;

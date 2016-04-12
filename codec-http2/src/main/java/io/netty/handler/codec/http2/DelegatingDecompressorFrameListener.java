@@ -21,6 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -37,6 +38,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * A HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
  * stream. The decompression provided by this class will be applied to the data for the entire stream.
  */
+@UnstableApi
 public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecorator {
 
     private final Http2Connection connection;

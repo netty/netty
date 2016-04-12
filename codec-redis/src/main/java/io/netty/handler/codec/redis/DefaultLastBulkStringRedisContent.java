@@ -16,10 +16,12 @@
 package io.netty.handler.codec.redis;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * A default implementation for {@link LastBulkStringRedisContent}.
  */
+@UnstableApi
 public final class DefaultLastBulkStringRedisContent extends DefaultBulkStringRedisContent
         implements LastBulkStringRedisContent {
 

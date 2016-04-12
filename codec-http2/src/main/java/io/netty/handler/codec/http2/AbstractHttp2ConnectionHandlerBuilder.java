@@ -17,6 +17,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty.util.internal.UnstableApi;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -66,6 +67,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * @param <T> The type of handler created by this builder.
  * @param <B> The concrete type of this builder.
  */
+@UnstableApi
 public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2ConnectionHandler,
                                                             B extends AbstractHttp2ConnectionHandlerBuilder<T, B>> {
 

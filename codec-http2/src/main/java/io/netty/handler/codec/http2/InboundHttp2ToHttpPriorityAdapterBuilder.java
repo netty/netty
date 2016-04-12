@@ -14,9 +14,12 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * Builds an {@link InboundHttp2ToHttpPriorityAdapter}.
  */
+@UnstableApi
 public final class InboundHttp2ToHttpPriorityAdapterBuilder
         extends AbstractInboundHttp2ToHttpAdapterBuilder<InboundHttp2ToHttpPriorityAdapter,
                                                          InboundHttp2ToHttpPriorityAdapterBuilder> {

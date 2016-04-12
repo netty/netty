@@ -17,10 +17,12 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * The decoder which takes care of decoding the response headers.
  */
+@UnstableApi
 public class BinaryMemcacheResponseDecoder
     extends AbstractBinaryMemcacheDecoder<BinaryMemcacheResponse> {
 

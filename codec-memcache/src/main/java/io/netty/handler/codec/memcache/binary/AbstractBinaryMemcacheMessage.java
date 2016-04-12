@@ -17,10 +17,12 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.memcache.AbstractMemcacheObject;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * Default implementation of a {@link BinaryMemcacheMessage}.
  */
+@UnstableApi
 public abstract class AbstractBinaryMemcacheMessage
     extends AbstractMemcacheObject
     implements BinaryMemcacheMessage {

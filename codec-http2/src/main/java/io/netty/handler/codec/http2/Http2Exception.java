@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.UnstableApi;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -25,6 +27,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * Exception thrown when an HTTP/2 error was encountered.
  */
+@UnstableApi
 public class Http2Exception extends Exception {
     private static final long serialVersionUID = -6941186345430164209L;
     private final Http2Error error;
