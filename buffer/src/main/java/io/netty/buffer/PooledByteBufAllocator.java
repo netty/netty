@@ -17,6 +17,7 @@
 package io.netty.buffer;
 
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.LongCounter;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -41,6 +42,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     private static final int DEFAULT_NORMAL_CACHE_SIZE;
     private static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
     private static final int DEFAULT_CACHE_TRIM_INTERVAL;
+    private static final long DEFAULT_MAX_POOLED_BYTES;
 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
@@ -103,6 +105,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         DEFAULT_CACHE_TRIM_INTERVAL = SystemPropertyUtil.getInt(
                 "io.netty.allocator.cacheTrimInterval", 8192);
 
+        DEFAULT_MAX_POOLED_BYTES = SystemPropertyUtil.getLong("io.netty.allocator.maxPooledBytes", Long.MAX_VALUE);
+
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
             logger.debug("-Dio.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
@@ -122,6 +126,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             logger.debug("-Dio.netty.allocator.normalCacheSize: {}", DEFAULT_NORMAL_CACHE_SIZE);
             logger.debug("-Dio.netty.allocator.maxCachedBufferCapacity: {}", DEFAULT_MAX_CACHED_BUFFER_CAPACITY);
             logger.debug("-Dio.netty.allocator.cacheTrimInterval: {}", DEFAULT_CACHE_TRIM_INTERVAL);
+            logger.debug("-Dio.netty.allocator.maxPooledBytes: {}", DEFAULT_MAX_POOLED_BYTES);
         }
     }
 
@@ -136,6 +141,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     private final List<PoolArenaMetric> heapArenaMetrics;
     private final List<PoolArenaMetric> directArenaMetrics;
     private final PoolThreadLocalCache threadCache;
+    private LongCounter pooledBytes = PlatformDependent.newLongCounter();
+    private final long maxPooledBytes;
 
     public PooledByteBufAllocator() {
         this(false);
@@ -156,6 +163,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
                                   int tinyCacheSize, int smallCacheSize, int normalCacheSize) {
+        this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder,
+                tinyCacheSize, smallCacheSize, normalCacheSize, DEFAULT_MAX_POOLED_BYTES);
+    }
+    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
+                                  int tinyCacheSize, int smallCacheSize, int normalCacheSize, long maxPooledBytes) {
         super(preferDirect);
         threadCache = new PoolThreadLocalCache();
         this.tinyCacheSize = tinyCacheSize;
@@ -163,6 +175,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         this.normalCacheSize = normalCacheSize;
         final int chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
 
+        if (chunkSize > maxPooledBytes) {
+            throw new IllegalArgumentException("maxPooledBytes: " + maxPooledBytes +
+                    " (expected >= " + chunkSize + ")");
+        }
         if (nHeapArena < 0) {
             throw new IllegalArgumentException("nHeapArena: " + nHeapArena + " (expected: >= 0)");
         }
@@ -171,7 +187,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         int pageShifts = validateAndCalculatePageShifts(pageSize);
-
+        this.maxPooledBytes = maxPooledBytes;
         if (nHeapArena > 0) {
             heapArenas = newArenaArray(nHeapArena);
             List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(heapArenas.length);
@@ -442,8 +458,40 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         return normalCacheSize;
     }
 
+    /**
+     * Return the maximum amount of pooled memory. {@link Long#MAX_VALUE} means there is no limit.
+     */
+    public long maxPooledBytes() {
+        return maxPooledBytes;
+    }
+
     final PoolThreadCache threadCache() {
         return threadCache.get();
+    }
+
+    final boolean allocatePooled(int bytes) {
+        if (maxPooledBytes == Long.MAX_VALUE) {
+            // No limit enforced, so just return true.
+            return true;
+        }
+        assert bytes >= 0;
+
+        // The code used below is not really a very hard limit as the pooledBytes.value() may change in between.
+        // That said this is ok as we trade a bit of correctness for performance.
+        if (maxPooledBytes < pooledBytes.value() + bytes) {
+            return false;
+        }
+        pooledBytes.add(bytes);
+        return true;
+    }
+
+    final void deallocatePooled(int bytes) {
+        if (maxPooledBytes == Long.MAX_VALUE) {
+            // no limit enforced, just return.
+            return;
+        }
+        assert bytes >= 0;
+        pooledBytes.add(-bytes);
     }
 
     /**

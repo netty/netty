@@ -225,21 +225,28 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
     }
 
-    private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
-        if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
-            q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
-            q075.allocate(buf, reqCapacity, normCapacity)) {
-            ++allocationsNormal;
-            return;
-        }
+    private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+        synchronized (this) {
+            if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
+                    q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
+                    q075.allocate(buf, reqCapacity, normCapacity)) {
+                ++allocationsNormal;
+                return;
+            }
 
-        // Add a new chunk.
-        PoolChunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
-        long handle = c.allocate(normCapacity);
-        ++allocationsNormal;
-        assert handle > 0;
-        c.initBuf(buf, handle, reqCapacity);
-        qInit.add(c);
+            if (parent.allocatePooled(chunkSize)) {
+                // Add a new chunk.
+                PoolChunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
+
+                long handle = c.allocate(normCapacity);
+                ++allocationsNormal;
+                assert handle > 0;
+                c.initBuf(buf, handle, reqCapacity);
+                qInit.add(c);
+                return;
+            }
+        }
+        allocateHuge(buf, reqCapacity);
     }
 
     private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
@@ -276,6 +283,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     void freeChunk(PoolChunk<T> chunk, long handle, SizeClass sizeClass) {
         final boolean destroyChunk;
         synchronized (this) {
+            final int chunkSize = chunk.chunkSize();
+
             switch (sizeClass) {
             case Normal:
                 ++deallocationsNormal;
@@ -290,6 +299,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 throw new Error();
             }
             destroyChunk = !chunk.parent.free(chunk, handle);
+            if (destroyChunk) {
+                parent.deallocatePooled(chunkSize);
+            }
         }
         if (destroyChunk) {
             // destroyChunk not need to be called while holding the synchronized lock.

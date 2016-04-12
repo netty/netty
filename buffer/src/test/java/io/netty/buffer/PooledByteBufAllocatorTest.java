@@ -87,6 +87,36 @@ public class PooledByteBufAllocatorTest {
         assertFalse(lists.get(5).iterator().hasNext());
     }
 
+    @Test
+    public void testLimitPool() {
+        int chunkSize = 16 * 1024 * 1024;
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 0, 8192, 11, 0, 0, 0, chunkSize);
+        PooledByteBuf<?> buffer = unwrap(allocator.heapBuffer(chunkSize));
+        assertFalse(buffer.chunk.unpooled);
+
+        PooledByteBuf<?> buffer2 = unwrap(allocator.heapBuffer(chunkSize));
+        assertTrue(buffer2.chunk.unpooled);
+        assertTrue(buffer2.release());
+
+        PooledByteBuf<?> buffer3 = unwrap(allocator.heapBuffer(chunkSize));
+        assertTrue(buffer3.chunk.unpooled);
+        assertTrue(buffer3.release());
+
+        assertTrue(buffer.release());
+
+        PooledByteBuf<?> buffer4 = unwrap(allocator.heapBuffer(chunkSize));
+        assertFalse(buffer4.chunk.unpooled);
+        assertTrue(buffer4.release());
+    }
+
+    private static PooledByteBuf<?> unwrap(ByteBuf buffer) {
+        ByteBuf buf;
+        while ((buf = buffer.unwrap()) != null) {
+            buffer = buf;
+        }
+        return (PooledByteBuf<?>) buffer;
+    }
+
     // The ThreadDeathWatcher sleeps 1s, give it double that time.
     @Test (timeout = 2000)
     public void testThreadCacheDestroyedByThreadDeathWatcher() {
