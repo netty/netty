@@ -113,7 +113,6 @@
 
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.7</version>
         <executions>
           <execution>
             <!-- Phase must be before regex-glibc-sendmmsg and regex-linux-sendmmsg -->
@@ -140,7 +139,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.7</version>
         <executions>
           <execution>
             <!-- Phase must be before regex-combined-sendmmsg -->

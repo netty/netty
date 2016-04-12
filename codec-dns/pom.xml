@@ -38,7 +38,6 @@
     <dependency>
       <groupId>org.apache.directory.server</groupId>
       <artifactId>apacheds-protocol-dns</artifactId>
-      <version>1.5.7</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
