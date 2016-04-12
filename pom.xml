@@ -227,6 +227,8 @@
     <tcnative.version>1.1.33.Fork15</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
+    <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
+    <logging.logLevel>debug</logging.logLevel>
   </properties>
 
   <modules>
@@ -807,6 +809,10 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
+          <systemPropertyVariables>
+            <logback.configurationFile>${logging.config}</logback.configurationFile>
+            <logLevel>${logging.logLevel}</logLevel>
+          </systemPropertyVariables>
           <argLine>${argLine.common} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe}</argLine>
           <properties>
             <property>
