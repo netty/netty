@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -610,6 +610,11 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf readSliceRetained(int length) {
+        return checkLength(length);
+    }
+
+    @Override
     public ByteBuf readBytes(ByteBuf dst) {
         return checkLength(dst.writableBytes());
     }
@@ -841,12 +846,27 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf sliceRetained() {
+        return this;
+    }
+
+    @Override
     public ByteBuf slice(int index, int length) {
         return checkIndex(index, length);
     }
 
     @Override
+    public ByteBuf sliceRetained(int index, int length) {
+        return checkIndex(index, length);
+    }
+
+    @Override
     public ByteBuf duplicate() {
+        return this;
+    }
+
+    @Override
+    public ByteBuf duplicateRetained() {
         return this;
     }
 

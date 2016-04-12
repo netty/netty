@@ -31,8 +31,7 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        ByteBuf buffer = Unpooled.wrappedBuffer(
-                new byte[length * 2], random.nextInt(length - 1) + 1, length);
+        ByteBuf buffer = Unpooled.wrappedBuffer(new byte[length * 2], random.nextInt(length - 1) + 1, length);
         assertEquals(length, buffer.writerIndex());
         return buffer;
     }

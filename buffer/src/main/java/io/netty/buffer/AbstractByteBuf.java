@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -800,6 +800,13 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf readSliceRetained(int length) {
+        ByteBuf slice = sliceRetained(readerIndex, length);
+        readerIndex += length;
+        return slice;
+    }
+
+    @Override
     public ByteBuf readBytes(byte[] dst, int dstIndex, int length) {
         checkReadableBytes(length);
         getBytes(readerIndex, dst, dstIndex, length);
@@ -1112,17 +1119,32 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf duplicate() {
-        return new DuplicatedAbstractByteBuf(this);
+        return ByteBufUtil.duplicate(this);
+    }
+
+    @Override
+    public ByteBuf duplicateRetained() {
+        return duplicate().retain();
     }
 
     @Override
     public ByteBuf slice() {
-        return slice(readerIndex, readableBytes());
+        return ByteBufUtil.slice(this);
+    }
+
+    @Override
+    public ByteBuf sliceRetained() {
+        return slice().retain();
     }
 
     @Override
     public ByteBuf slice(int index, int length) {
-        return new SlicedAbstractByteBuf(this, index, length);
+        return ByteBufUtil.slice(this, index, length);
+    }
+
+    @Override
+    public ByteBuf sliceRetained(int index, int length) {
+        return slice(index, length).retain();
     }
 
     @Override

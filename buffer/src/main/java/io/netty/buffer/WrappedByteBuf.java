@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -602,6 +602,11 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf readSliceRetained(int length) {
+        return buf.readSliceRetained(length);
+    }
+
+    @Override
     public ByteBuf readBytes(ByteBuf dst) {
         buf.readBytes(dst);
         return this;
@@ -850,13 +855,28 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf sliceRetained() {
+        return buf.sliceRetained();
+    }
+
+    @Override
     public ByteBuf slice(int index, int length) {
         return buf.slice(index, length);
     }
 
     @Override
+    public ByteBuf sliceRetained(int index, int length) {
+        return buf.sliceRetained(index, length);
+    }
+
+    @Override
     public ByteBuf duplicate() {
         return buf.duplicate();
+    }
+
+    @Override
+    public ByteBuf duplicateRetained() {
+        return buf.duplicateRetained();
     }
 
     @Override

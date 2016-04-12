@@ -41,6 +41,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     private ByteBuf buffer;
     private boolean terminated;
+    @SuppressWarnings("deprecation")
     private SwappedByteBuf swapped;
 
     static final ReplayingDecoderByteBuf EMPTY_BUFFER = new ReplayingDecoderByteBuf(Unpooled.EMPTY_BUFFER);
@@ -167,6 +168,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf duplicate() {
+        reject();
+        return this;
+    }
+
+    @Override
+    public ByteBuf duplicateRetained() {
         reject();
         return this;
     }
@@ -461,11 +468,13 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    @Deprecated
     public ByteOrder order() {
         return buffer.order();
     }
 
     @Override
+    @Deprecated
     public ByteBuf order(ByteOrder endianness) {
         if (endianness == null) {
             throw new NullPointerException("endianness");
@@ -580,6 +589,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     public ByteBuf readSlice(int length) {
         checkReadableBytes(length);
         return buffer.readSlice(length);
+    }
+
+    @Override
+    public ByteBuf readSliceRetained(int length) {
+        checkReadableBytes(length);
+        return buffer.readSliceRetained(length);
     }
 
     @Override
@@ -871,7 +886,19 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf sliceRetained() {
+        reject();
+        return this;
+    }
+
+    @Override
     public ByteBuf slice(int index, int length) {
+        checkIndex(index, length);
+        return buffer.slice(index, length);
+    }
+
+    @Override
+    public ByteBuf sliceRetained(int index, int length) {
         checkIndex(index, length);
         return buffer.slice(index, length);
     }

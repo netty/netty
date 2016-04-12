@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.buffer;
 
 
@@ -63,8 +64,18 @@ final class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     }
 
     @Override
+    public ByteBuf sliceRetained() {
+        return new SimpleLeakAwareByteBuf(super.sliceRetained(), leak);
+    }
+
+    @Override
     public ByteBuf slice(int index, int length) {
         return new SimpleLeakAwareByteBuf(super.slice(index, length), leak);
+    }
+
+    @Override
+    public ByteBuf sliceRetained(int index, int length) {
+        return new SimpleLeakAwareByteBuf(super.sliceRetained(index, length), leak);
     }
 
     @Override
@@ -73,7 +84,17 @@ final class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     }
 
     @Override
+    public ByteBuf duplicateRetained() {
+        return new SimpleLeakAwareByteBuf(super.duplicateRetained(), leak);
+    }
+
+    @Override
     public ByteBuf readSlice(int length) {
         return new SimpleLeakAwareByteBuf(super.readSlice(length), leak);
+    }
+
+    @Override
+    public ByteBuf readSliceRetained(int length) {
+        return new SimpleLeakAwareByteBuf(super.readSliceRetained(length), leak);
     }
 }

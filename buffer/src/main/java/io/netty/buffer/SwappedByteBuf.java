@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -33,6 +33,7 @@ import java.nio.charset.Charset;
  * @deprecated use the Little Endian accessors, e.g. {@code getShortLE}, {@code getIntLE}
  * instead.
  */
+@Deprecated
 public class SwappedByteBuf extends ByteBuf {
 
     private final ByteBuf buf;
@@ -611,6 +612,11 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf readSliceRetained(int length) {
+        return buf.readSliceRetained(length).order(order);
+    }
+
+    @Override
     public ByteBuf readBytes(ByteBuf dst) {
         buf.readBytes(dst);
         return this;
@@ -859,13 +865,28 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf sliceRetained() {
+        return buf.sliceRetained().order(order);
+    }
+
+    @Override
     public ByteBuf slice(int index, int length) {
         return buf.slice(index, length).order(order);
     }
 
     @Override
+    public ByteBuf sliceRetained(int index, int length) {
+        return buf.sliceRetained(index, length).order(order);
+    }
+
+    @Override
     public ByteBuf duplicate() {
         return buf.duplicate().order(order);
+    }
+
+    @Override
+    public ByteBuf duplicateRetained() {
+        return buf.duplicateRetained().order(order);
     }
 
     @Override

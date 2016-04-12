@@ -35,12 +35,12 @@ public class ReadOnlyByteBufTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
-        new ReadOnlyByteBuf(null);
+        PooledReadOnlyByteBuf.newInstance(null);
     }
 
     @Test
     public void testUnmodifiableBuffer() {
-        assertTrue(unmodifiableBuffer(buffer(1)) instanceof ReadOnlyByteBuf);
+        assertTrue(unmodifiableBuffer(buffer(1)) instanceof PooledReadOnlyByteBuf);
     }
 
     @Test
@@ -60,26 +60,27 @@ public class ReadOnlyByteBufTest {
     @Test
     public void shouldReturnReadOnlyDerivedBuffer() {
         ByteBuf buf = unmodifiableBuffer(buffer(1));
-        assertTrue(buf.duplicate() instanceof ReadOnlyByteBuf);
-        assertTrue(buf.slice() instanceof ReadOnlyByteBuf);
-        assertTrue(buf.slice(0, 1) instanceof ReadOnlyByteBuf);
-        assertTrue(buf.duplicate() instanceof ReadOnlyByteBuf);
+        assertTrue(buf.duplicate() instanceof PooledReadOnlyByteBuf);
+        assertTrue(buf.slice() instanceof PooledReadOnlyByteBuf);
+        assertTrue(buf.slice(0, 1) instanceof PooledReadOnlyByteBuf);
+        assertTrue(buf.duplicate() instanceof PooledReadOnlyByteBuf);
     }
 
     @Test
     public void shouldReturnWritableCopy() {
         ByteBuf buf = unmodifiableBuffer(buffer(1));
-        assertFalse(buf.copy() instanceof ReadOnlyByteBuf);
+        assertFalse(buf.copy() instanceof PooledReadOnlyByteBuf);
     }
 
     @Test
     public void shouldForwardReadCallsBlindly() throws Exception {
-        ByteBuf buf = createStrictMock(ByteBuf.class);
-        expect(buf.order()).andReturn(BIG_ENDIAN).anyTimes();
-        expect(buf.maxCapacity()).andReturn(65536).anyTimes();
+        ByteBuf buf = createStrictMock(AbstractByteBuf.class);
+        expect(buf.order(BIG_ENDIAN)).andReturn(buf).anyTimes();
         expect(buf.readerIndex()).andReturn(0).anyTimes();
         expect(buf.writerIndex()).andReturn(0).anyTimes();
+        expect(buf.maxCapacity()).andReturn(65536).anyTimes();
         expect(buf.capacity()).andReturn(0).anyTimes();
+        expect(buf.order()).andReturn(BIG_ENDIAN).anyTimes();
 
         expect(buf.getBytes(1, (GatheringByteChannel) null, 2)).andReturn(3);
         expect(buf.getBytes(4, (OutputStream) null, 5)).andReturn(buf);
@@ -100,6 +101,7 @@ public class ReadOnlyByteBufTest {
         replay(buf);
 
         ByteBuf roBuf = unmodifiableBuffer(buf);
+
         assertEquals(3, roBuf.getBytes(1, (GatheringByteChannel) null, 2));
         roBuf.getBytes(4, (OutputStream) null, 5);
         roBuf.getBytes(6, (byte[]) null, 7, 8);
@@ -175,10 +177,12 @@ public class ReadOnlyByteBufTest {
         unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuffer) null);
     }
 
+    @Test
     public void shouldIndicateNotWriteable() {
         assertFalse(unmodifiableBuffer(buffer(1)).isWritable());
     }
 
+    @Test
     public void shouldIndicteNotWritableAnyNumber() {
         assertFalse(unmodifiableBuffer(buffer(1)).isWritable(1));
     }

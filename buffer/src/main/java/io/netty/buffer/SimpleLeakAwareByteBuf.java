@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -73,8 +73,18 @@ final class SimpleLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf sliceRetained() {
+        return new SimpleLeakAwareByteBuf(super.sliceRetained(), leak);
+    }
+
+    @Override
     public ByteBuf slice(int index, int length) {
         return new SimpleLeakAwareByteBuf(super.slice(index, length), leak);
+    }
+
+    @Override
+    public ByteBuf sliceRetained(int index, int length) {
+        return new SimpleLeakAwareByteBuf(super.sliceRetained(index, length), leak);
     }
 
     @Override
@@ -83,7 +93,17 @@ final class SimpleLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf duplicateRetained() {
+        return new SimpleLeakAwareByteBuf(super.duplicateRetained(), leak);
+    }
+
+    @Override
     public ByteBuf readSlice(int length) {
         return new SimpleLeakAwareByteBuf(super.readSlice(length), leak);
+    }
+
+    @Override
+    public ByteBuf readSliceRetained(int length) {
+        return new SimpleLeakAwareByteBuf(super.readSliceRetained(length), leak);
     }
 }

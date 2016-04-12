@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -728,6 +728,65 @@ public final class ByteBufUtil {
      */
     public static void appendPrettyHexDump(StringBuilder dump, ByteBuf buf, int offset, int length) {
         HexUtil.appendPrettyHexDump(dump, buf, offset, length);
+    }
+
+    /**
+     * Creates a duplicate of the specified {@link ByteBuf}.
+     */
+    public static ByteBuf duplicate(ByteBuf buf) {
+        final boolean readOnly = buf instanceof PooledReadOnlyByteBuf || buf instanceof ReadOnlyByteBuf;
+        final int readerIndex = buf.readerIndex();
+        final int writerIndex = buf.writerIndex();
+
+        if (readOnly) {
+            buf = buf.unwrap();
+        }
+
+        final AbstractByteBuf duplicate;
+        if (buf instanceof PooledSlicedByteBuf || buf instanceof SlicedAbstractByteBuf) {
+            duplicate = PooledSlicedByteBuf.newInstance((AbstractByteBuf) buf, 0, buf.capacity());
+            duplicate.setIndex(readerIndex, writerIndex);
+            duplicate.markReaderIndex();
+            duplicate.markWriterIndex();
+        } else if (buf instanceof SlicedByteBuf) {
+            duplicate = new SlicedByteBuf(buf, 0, buf.capacity());
+            duplicate.setIndex(readerIndex, writerIndex);
+            duplicate.markReaderIndex();
+            duplicate.markWriterIndex();
+        } else if (buf instanceof AbstractByteBuf) {
+            duplicate = PooledDuplicatedByteBuf.newInstance((AbstractByteBuf) buf, readerIndex, writerIndex);
+        } else {
+            duplicate = new DuplicatedByteBuf(buf, readerIndex, writerIndex);
+        }
+
+        return readOnly ? PooledReadOnlyByteBuf.newInstance(duplicate) : duplicate;
+    }
+
+    /**
+     * Creates a slice of the specified {@link ByteBuf}.
+     */
+    public static ByteBuf slice(ByteBuf buf) {
+        final int index = buf.readerIndex();
+        return slice(buf, index, buf.writerIndex() - index);
+    }
+
+    /**
+     * Creates a slice of the specified {@link ByteBuf}.
+     */
+    public static ByteBuf slice(ByteBuf buf, int index, int length) {
+        final boolean readOnly = buf instanceof PooledReadOnlyByteBuf || buf instanceof ReadOnlyByteBuf;
+        if (readOnly) {
+            buf = buf.unwrap();
+        }
+
+        final AbstractByteBuf slice;
+        if (buf instanceof AbstractByteBuf) {
+            slice = PooledSlicedByteBuf.newInstance((AbstractByteBuf) buf, index, length);
+        } else {
+            slice = new SlicedByteBuf(buf, index, length);
+        }
+
+        return readOnly ? PooledReadOnlyByteBuf.newInstance(slice) : slice;
     }
 
     /* Separate class so that the expensive static initialization is only done when needed */

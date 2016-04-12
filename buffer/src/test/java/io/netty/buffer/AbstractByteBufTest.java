@@ -2840,10 +2840,56 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testSliceRetained() {
+        ByteBuf buf = newBuffer(8);
+        assertEquals(1, buf.refCnt());
+        assertFalse(buf.sliceRetained().release());
+        assertEquals(1, buf.refCnt());
+        assertTrue(buf.release());
+
+        buf = newBuffer(8);
+        ByteBuf slice = buf.slice().retain();
+        assertEquals(2, buf.refCnt());
+        assertFalse(slice.release(1));
+        assertEquals(1, buf.refCnt());
+        assertTrue(slice.release(1));
+        assertEquals(0, buf.refCnt());
+
+        buf = newBuffer(8);
+        slice = buf.slice().retain(2);
+        assertEquals(3, buf.refCnt());
+        assertTrue(slice.release(3));
+        assertEquals(0, buf.refCnt());
+    }
+
+    @Test
     public void testDuplicateRelease() {
         ByteBuf buf = newBuffer(8);
         assertEquals(1, buf.refCnt());
         assertTrue(buf.duplicate().release());
+        assertEquals(0, buf.refCnt());
+    }
+
+    @Test
+    public void testDuplicateRetained() {
+        ByteBuf buf = newBuffer(8);
+        assertEquals(1, buf.refCnt());
+        assertFalse(buf.duplicateRetained().release());
+        assertEquals(1, buf.refCnt());
+        assertTrue(buf.release());
+
+        buf = newBuffer(8);
+        ByteBuf duplicate = buf.duplicate().retain();
+        assertEquals(2, buf.refCnt());
+        assertFalse(duplicate.release(1));
+        assertEquals(1, buf.refCnt());
+        assertTrue(duplicate.release(1));
+        assertEquals(0, buf.refCnt());
+
+        buf = newBuffer(8);
+        duplicate = buf.duplicate().retain(2);
+        assertEquals(3, buf.refCnt());
+        assertTrue(duplicate.release(3));
         assertEquals(0, buf.refCnt());
     }
 

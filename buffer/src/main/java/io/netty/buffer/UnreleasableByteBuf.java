@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -51,7 +51,17 @@ final class UnreleasableByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf readSliceRetained(int length) {
+        return new UnreleasableByteBuf(buf.readSlice(length));
+    }
+
+    @Override
     public ByteBuf slice() {
+        return new UnreleasableByteBuf(buf.slice());
+    }
+
+    @Override
+    public ByteBuf sliceRetained() {
         return new UnreleasableByteBuf(buf.slice());
     }
 
@@ -61,7 +71,17 @@ final class UnreleasableByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf sliceRetained(int index, int length) {
+        return new UnreleasableByteBuf(buf.slice(index, length));
+    }
+
+    @Override
     public ByteBuf duplicate() {
+        return new UnreleasableByteBuf(buf.duplicate());
+    }
+
+    @Override
+    public ByteBuf duplicateRetained() {
         return new UnreleasableByteBuf(buf.duplicate());
     }
 

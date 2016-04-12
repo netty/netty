@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,7 +21,10 @@ import java.nio.ByteBuffer;
 /**
  * Abstract base class for {@link ByteBuf} implementations that wrap another
  * {@link ByteBuf}.
+ *
+ * @deprecated Do not use.
  */
+@Deprecated
 public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
 
     protected AbstractDerivedByteBuf(int maxCapacity) {
