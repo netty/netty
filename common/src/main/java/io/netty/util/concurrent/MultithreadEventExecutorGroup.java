@@ -32,10 +32,9 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     private final EventExecutor[] children;
     private final Set<EventExecutor> readonlyChildren;
-    private final AtomicInteger childIndex = new AtomicInteger();
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
-    private final EventExecutorChooser chooser;
+    private final EventExecutorChooserFactory.EventExecutorChooser chooser;
 
     /**
      * Create a new instance.
@@ -56,6 +55,19 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
      * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
      */
     protected MultithreadEventExecutorGroup(int nThreads, Executor executor, Object... args) {
+        this(nThreads, executor, DefaultEventExecutorChooserFactory.INSTANCE, args);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param nThreads          the number of threads that will be used by this instance.
+     * @param executor          the Executor to use, or {@code null} if the default should be used.
+     * @param chooserFactory    the {@link EventExecutorChooserFactory} to use.
+     * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
+     */
+    protected MultithreadEventExecutorGroup(int nThreads, Executor executor,
+                                            EventExecutorChooserFactory chooserFactory, Object... args) {
         if (nThreads <= 0) {
             throw new IllegalArgumentException(String.format("nThreads: %d (expected: > 0)", nThreads));
         }
@@ -65,11 +77,6 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         }
 
         children = new EventExecutor[nThreads];
-        if (isPowerOfTwo(children.length)) {
-            chooser = new PowerOfTwoEventExecutorChooser();
-        } else {
-            chooser = new GenericEventExecutorChooser();
-        }
 
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
@@ -100,6 +107,8 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                 }
             }
         }
+
+        chooser = chooserFactory.newChooser(children);
 
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
             @Override
@@ -215,27 +224,5 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         }
         return isTerminated();
-    }
-
-    private static boolean isPowerOfTwo(int val) {
-        return (val & -val) == val;
-    }
-
-    private interface EventExecutorChooser {
-        EventExecutor next();
-    }
-
-    private final class PowerOfTwoEventExecutorChooser implements EventExecutorChooser {
-        @Override
-        public EventExecutor next() {
-            return children[childIndex.getAndIncrement() & children.length - 1];
-        }
-    }
-
-    private final class GenericEventExecutorChooser implements EventExecutorChooser {
-        @Override
-        public EventExecutor next() {
-            return children[Math.abs(childIndex.getAndIncrement() % children.length)];
-        }
     }
 }
