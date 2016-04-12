@@ -202,9 +202,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>22</netty.build.version>
-    <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
-    <jetty.alpnAgent.version>1.0.1.Final</jetty.alpnAgent.version>
-    <jetty.alpnAgent.path>${settings.localRepository}/kr/motd/javaagent/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
+    <jboss.marshalling.version>1.4.8.Final</jboss.marshalling.version>
+    <jetty.alpnAgent.version>2.0.1</jetty.alpnAgent.version>
+    <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
@@ -266,7 +266,7 @@
       <dependency>
         <groupId>org.javassist</groupId>
         <artifactId>javassist</artifactId>
-        <version>3.19.0-GA</version>
+        <version>3.20.0-GA</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -298,12 +298,12 @@
       <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
-        <version>2.5.0</version>
+        <version>2.6.1</version>
       </dependency>
       <dependency>
         <groupId>com.google.protobuf.nano</groupId>
         <artifactId>protobuf-javanano</artifactId>
-        <version>3.0.0-alpha-4</version>
+        <version>3.0.0-alpha-5</version>
       </dependency>
 
       <!-- Our own Tomcat Native fork - completely optional, used for acclerating SSL with OpenSSL. -->
@@ -324,7 +324,7 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcpkix-jdk15on</artifactId>
-        <version>1.50</version>
+        <version>1.54</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -332,7 +332,7 @@
       <dependency>
         <groupId>com.fasterxml</groupId>
         <artifactId>aalto-xml</artifactId>
-        <version>0.9.9</version>
+        <version>1.0.0</version>
       </dependency>
 
       <dependency>
@@ -377,17 +377,17 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.7.5</version>
+        <version>1.7.21</version>
       </dependency>
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
-        <version>1.1.3</version>
+        <version>1.2</version>
       </dependency>
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
         <artifactId>log4j-api</artifactId>
-        <version>2.3</version>
+        <version>2.5</version>
       </dependency>
       <dependency>
         <groupId>log4j</groupId>
@@ -455,7 +455,7 @@
       <dependency>
         <groupId>org.jmock</groupId>
         <artifactId>jmock-junit4</artifactId>
-        <version>2.6.0</version>
+        <version>2.8.2</version>
         <scope>test</scope>
         <exclusions>
           <exclusion>
@@ -467,13 +467,13 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>1.10.8</version>
+        <version>1.10.19</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-classic</artifactId>
-        <version>1.0.13</version>
+        <version>1.1.7</version>
         <scope>test</scope>
       </dependency>
 
@@ -511,7 +511,7 @@
       <dependency>
         <groupId>com.google.code.gson</groupId>
         <artifactId>gson</artifactId>
-        <version>2.3.1</version>
+        <version>2.6.2</version>
         <scope>test</scope>
       </dependency>
 
@@ -534,7 +534,7 @@
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
         <artifactId>log4j-core</artifactId>
-        <version>2.3</version>
+        <version>2.5</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
@@ -788,7 +788,7 @@
               <goal>get</goal>
             </goals>
             <configuration>
-              <groupId>kr.motd.javaagent</groupId>
+              <groupId>org.mortbay.jetty.alpn</groupId>
               <artifactId>jetty-alpn-agent</artifactId>
               <version>${jetty.alpnAgent.version}</version>
             </configuration>
