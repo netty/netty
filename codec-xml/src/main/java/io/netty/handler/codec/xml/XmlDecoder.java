@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.xml;
 
-import com.fasterxml.aalto.AsyncInputFeeder;
+import com.fasterxml.aalto.AsyncByteArrayFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
@@ -38,8 +38,8 @@ public class XmlDecoder extends ByteToMessageDecoder {
     private static final AsyncXMLInputFactory XML_INPUT_FACTORY = new InputFactoryImpl();
     private static final XmlDocumentEnd XML_DOCUMENT_END = XmlDocumentEnd.INSTANCE;
 
-    private final AsyncXMLStreamReader streamReader = XML_INPUT_FACTORY.createAsyncXMLStreamReader();
-    private final AsyncInputFeeder streamFeeder = streamReader.getInputFeeder();
+    private final AsyncXMLStreamReader streamReader = XML_INPUT_FACTORY.createAsyncForByteArray();
+    private final AsyncByteArrayFeeder streamFeeder = (AsyncByteArrayFeeder) streamReader.getInputFeeder();
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
