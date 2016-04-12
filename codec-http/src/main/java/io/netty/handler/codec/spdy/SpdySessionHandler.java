@@ -192,7 +192,7 @@ public class SpdySessionHandler
             if (newWindowSize < 0) {
                 while (spdyDataFrame.content().readableBytes() > initialReceiveWindowSize) {
                     SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamId,
-                            spdyDataFrame.content().readSlice(initialReceiveWindowSize).retain());
+                            spdyDataFrame.content().readSlice(initialReceiveWindowSize, true));
                     ctx.writeAndFlush(partialDataFrame);
                 }
             }
@@ -499,7 +499,7 @@ public class SpdySessionHandler
 
                 // Create a partial data frame whose length is the current window size
                 SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamId,
-                        spdyDataFrame.content().readSlice(sendWindowSize).retain());
+                        spdyDataFrame.content().readSlice(sendWindowSize, true));
 
                 // Enqueue the remaining data (will be the first frame queued)
                 spdySession.putPendingWrite(streamId, new SpdySession.PendingWrite(spdyDataFrame, promise));
@@ -780,7 +780,7 @@ public class SpdySessionHandler
 
                 // Create a partial data frame whose length is the current window size
                 SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(writeStreamId,
-                        spdyDataFrame.content().readSlice(sendWindowSize).retain());
+                        spdyDataFrame.content().readSlice(sendWindowSize, true));
 
                 // The transfer window size is pre-decremented when sending a data frame downstream.
                 // Close the session on write failures that leave the transfer window in a corrupt state.

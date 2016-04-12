@@ -19,11 +19,13 @@ package io.netty.buffer;
  * A special {@link SlicedByteBuf} that can make optimizations because it knows the sliced buffer is of type
  * {@link AbstractByteBuf}.
  */
-final class SlicedAbstractByteBuf extends SlicedByteBuf {
+class SlicedAbstractByteBuf extends SlicedByteBuf {
 
     SlicedAbstractByteBuf(AbstractByteBuf buffer, int index, int length) {
         super(buffer, index, length);
     }
+
+    SlicedAbstractByteBuf() { }
 
     @Override
     protected byte _getByte(int index) {
