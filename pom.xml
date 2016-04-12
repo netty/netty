@@ -618,6 +618,13 @@
                 <requireMavenVersion>
                   <version>[3.1.1,)</version>
                 </requireMavenVersion>
+                <requireProperty>
+                  <regexMessage>
+                    x86_64 JDK must be used.
+                  </regexMessage>
+                  <property>os.detected.arch</property>
+                  <regex>^x86_64$</regex>
+                </requireProperty>
               </rules>
             </configuration>
           </execution>
