@@ -20,6 +20,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.MessageAggregator;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheRequestDecoder;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseEncoder;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link MemcacheMessage}
@@ -41,6 +42,7 @@ import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseEncoder;
  * p.addLast("handler", new YourMemcacheRequestHandler());
  * </pre>
  */
+@UnstableApi
 public abstract class AbstractMemcacheObjectAggregator<H extends MemcacheMessage> extends
         MessageAggregator<MemcacheObject, H, MemcacheContent, FullMemcacheMessage> {
 

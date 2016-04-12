@@ -29,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.hpack;
+package io.netty.handler.codec.http2.internal.hpack;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,7 +45,8 @@ import java.util.Collection;
 @RunWith(Parameterized.class)
 public class HpackTest {
 
-    private static final String TEST_DIR = "/io/netty/handler/codec/http2/hpack/testdata/";
+    private static final String TEST_DIR = '/' + HpackTest.class.getPackage().getName().replaceAll("\\.", "/")
+            + "/testdata/";
 
     private final String fileName;
 

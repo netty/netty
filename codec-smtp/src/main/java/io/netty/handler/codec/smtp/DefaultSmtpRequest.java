@@ -16,6 +16,7 @@
 package io.netty.handler.codec.smtp;
 
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Collections;
 import java.util.List;
@@ -23,6 +24,7 @@ import java.util.List;
 /**
  * Default {@link SmtpRequest} implementation.
  */
+@UnstableApi
 public final class DefaultSmtpRequest implements SmtpRequest {
 
     private final SmtpCommand command;

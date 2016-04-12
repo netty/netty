@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.OneTimeTask;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,6 +72,7 @@ import java.util.List;
  * <p>{@link ChannelConfig#setMaxMessagesPerRead(int)} and {@link
  * ChannelConfig#setAutoRead(boolean)} are supported.
  */
+@UnstableApi
 public final class Http2MultiplexCodec extends ChannelDuplexHandler {
     private static final Http2FrameLogger HTTP2_FRAME_LOGGER = new Http2FrameLogger(INFO, Http2MultiplexCodec.class);
 

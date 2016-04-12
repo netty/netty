@@ -61,10 +61,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * A {@link Http2FrameWriter} that supports all frame types defined by the HTTP/2 specification.
  */
+@UnstableApi
 public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSizePolicy, Configuration {
     private static final String STREAM_ID = "Stream ID";
     private static final String STREAM_DEPENDENCY = "Stream Dependency";

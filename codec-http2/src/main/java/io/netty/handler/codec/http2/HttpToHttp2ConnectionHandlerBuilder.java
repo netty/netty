@@ -17,10 +17,12 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * Builder which builds {@link HttpToHttp2ConnectionHandler} objects.
  */
+@UnstableApi
 public final class HttpToHttp2ConnectionHandlerBuilder extends
         AbstractHttp2ConnectionHandlerBuilder<HttpToHttp2ConnectionHandler, HttpToHttp2ConnectionHandlerBuilder> {
 

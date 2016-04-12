@@ -18,11 +18,12 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
-import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * The default {@link Http2GoAwayFrame} implementation.
  */
+@UnstableApi
 public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implements Http2GoAwayFrame {
     private final long errorCode;
     private int extraStreamIds;
@@ -39,7 +40,7 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
     /**
      * Equivalent to {@code new DefaultHttp2GoAwayFrame(content, Unpooled.EMPTY_BUFFER)}.
      *
-     * @param error reason for the go away
+     * @param errorCode reason for the go away
      */
     public DefaultHttp2GoAwayFrame(long errorCode) {
         this(errorCode, Unpooled.EMPTY_BUFFER);
@@ -58,7 +59,7 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
     /**
      * Construct a new GOAWAY message.
      *
-     * @param error reason for the go away
+     * @param errorCode reason for the go away
      * @param content non-{@code null} debug data
      */
     public DefaultHttp2GoAwayFrame(long errorCode, ByteBuf content) {

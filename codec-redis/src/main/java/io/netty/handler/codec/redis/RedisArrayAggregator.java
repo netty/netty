@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ import java.util.List;
  * Aggregates {@link RedisMessage} parts into {@link ArrayRedisMessage}. This decoder
  * should be used together with {@link RedisDecoder}.
  */
+@UnstableApi
 public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMessage> {
 
     private final Deque<AggregateState> depths = new ArrayDeque<AggregateState>(4);

@@ -14,9 +14,12 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * Extracts a common interface for encoding and processing HPACK header constraints
  */
+@UnstableApi
 public interface Http2HeaderTable {
     /**
      * Sets the maximum size of the HPACK header table used for decoding HTTP/2 headers.

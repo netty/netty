@@ -20,6 +20,7 @@ import io.netty.handler.codec.memcache.AbstractMemcacheObjectAggregator;
 import io.netty.handler.codec.memcache.FullMemcacheMessage;
 import io.netty.handler.codec.memcache.MemcacheContent;
 import io.netty.handler.codec.memcache.MemcacheObject;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * An object aggregator for the memcache binary protocol.
@@ -27,6 +28,7 @@ import io.netty.handler.codec.memcache.MemcacheObject;
  * It aggregates {@link BinaryMemcacheMessage}s and {@link MemcacheContent} into {@link FullBinaryMemcacheRequest}s
  * or {@link FullBinaryMemcacheResponse}s.
  */
+@UnstableApi
 public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggregator<BinaryMemcacheMessage> {
 
     public BinaryMemcacheObjectAggregator(int maxContentLength) {

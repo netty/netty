@@ -17,7 +17,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.hpack.Encoder;
+import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.util.AsciiString;
 import org.junit.Before;
 import org.junit.Test;

@@ -16,10 +16,12 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * The encoder part which takes care of encoding the request headers.
  */
+@UnstableApi
 public class BinaryMemcacheRequestEncoder
     extends AbstractBinaryMemcacheEncoder<BinaryMemcacheRequest> {
 

@@ -29,9 +29,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.microbench.http2.hpack;
+package io.netty.microbench.http2.internal.hpack;
 
-import io.netty.handler.codec.http2.hpack.Encoder;
+import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;

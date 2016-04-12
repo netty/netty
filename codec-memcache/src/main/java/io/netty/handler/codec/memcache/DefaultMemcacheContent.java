@@ -17,10 +17,12 @@ package io.netty.handler.codec.memcache;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * The default {@link MemcacheContent} implementation.
  */
+@UnstableApi
 public class DefaultMemcacheContent extends AbstractMemcacheObject implements MemcacheContent {
 
     private final ByteBuf content;

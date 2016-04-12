@@ -26,6 +26,7 @@ import static java.lang.Math.min;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.StreamByteDistributor.Writer;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -38,6 +39,8 @@ import java.util.Deque;
  * This class is <strong>NOT</strong> thread safe. The assumption is all methods must be invoked from a single thread.
  * Typically this thread is the event loop thread for the {@link ChannelHandlerContext} managed by this class.
  */
+@UnstableApi
+
 public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowController {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(DefaultHttp2RemoteFlowController.class);

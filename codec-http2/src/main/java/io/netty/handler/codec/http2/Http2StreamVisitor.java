@@ -14,9 +14,12 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * A visitor that allows iteration over a collection of streams.
  */
+@UnstableApi
 public interface Http2StreamVisitor {
     /**
      * @return <ul>

@@ -17,6 +17,7 @@ package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.memcache.MemcacheMessage;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * An interface that defines a binary Memcache message, providing common properties for
@@ -28,6 +29,7 @@ import io.netty.handler.codec.memcache.MemcacheMessage;
  * @see BinaryMemcacheRequest
  * @see BinaryMemcacheResponse
  */
+@UnstableApi
 public interface BinaryMemcacheMessage extends MemcacheMessage {
 
     /**

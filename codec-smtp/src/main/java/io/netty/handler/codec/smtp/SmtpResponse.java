@@ -15,11 +15,14 @@
  */
 package io.netty.handler.codec.smtp;
 
+import io.netty.util.internal.UnstableApi;
+
 import java.util.List;
 
 /**
  * A SMTP response
  */
+@UnstableApi
 public interface SmtpResponse {
 
     /**

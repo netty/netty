@@ -18,6 +18,7 @@ package io.netty.resolver.dns;
 import io.netty.channel.EventLoop;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 /**
  * Default implementation of {@link DnsCache}, backed by a {@link ConcurrentMap}.
  */
+@UnstableApi
 public class DefaultDnsCache implements DnsCache {
 
     private final ConcurrentMap<String, List<DnsCacheEntry>> resolveCache = PlatformDependent.newConcurrentHashMap();

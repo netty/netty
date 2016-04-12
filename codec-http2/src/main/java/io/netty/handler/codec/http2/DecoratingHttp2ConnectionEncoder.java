@@ -14,11 +14,14 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.UnstableApi;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A decorator around another {@link Http2ConnectionEncoder} instance.
  */
+@UnstableApi
 public class DecoratingHttp2ConnectionEncoder extends DecoratingHttp2FrameWriter implements Http2ConnectionEncoder {
     private final Http2ConnectionEncoder delegate;
 

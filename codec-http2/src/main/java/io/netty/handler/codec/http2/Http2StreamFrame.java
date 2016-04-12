@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * A frame whose meaning <em>may</em> apply to a particular stream, instead of the entire
  * connection. It is still possibly for this frame type to apply to the entire connection. In such
@@ -24,6 +26,7 @@ package io.netty.handler.codec.http2;
  * <p>The meaning of {@code stream} is context-dependent and may change as a frame is processed in
  * the pipeline.
  */
+@UnstableApi
 public interface Http2StreamFrame extends Http2Frame {
     /**
      * Set the stream identifier for this message.

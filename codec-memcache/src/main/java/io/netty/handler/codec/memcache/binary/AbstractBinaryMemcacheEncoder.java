@@ -20,10 +20,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.memcache.AbstractMemcacheObjectEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * A {@link MessageToByteEncoder} that encodes binary memcache messages into bytes.
  */
+@UnstableApi
 public abstract class AbstractBinaryMemcacheEncoder<M extends BinaryMemcacheMessage>
     extends AbstractMemcacheObjectEncoder<M> {
 

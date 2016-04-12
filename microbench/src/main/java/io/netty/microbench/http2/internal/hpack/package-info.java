@@ -33,4 +33,4 @@
 /**
  * Benchmarks for {@link io.netty.handler.codec.http2.hpack}.
  */
-package io.netty.microbench.http2.hpack;
+package io.netty.microbench.http2.internal.hpack;

@@ -28,6 +28,7 @@ import io.netty.util.concurrent.UnaryPromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -63,6 +64,7 @@ import static java.lang.Math.max;
 /**
  * Simple implementation of {@link Http2Connection}.
  */
+@UnstableApi
 public class DefaultHttp2Connection implements Http2Connection {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2Connection.class);
     // Fields accessed by inner classes

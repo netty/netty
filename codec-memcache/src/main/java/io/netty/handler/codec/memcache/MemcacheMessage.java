@@ -16,10 +16,12 @@
 package io.netty.handler.codec.memcache;
 
 import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * Marker interface for both ascii and binary messages.
  */
+@UnstableApi
 public interface MemcacheMessage extends MemcacheObject, ReferenceCounted {
 
     /**

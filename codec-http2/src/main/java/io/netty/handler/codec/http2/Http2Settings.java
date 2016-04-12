@@ -34,12 +34,14 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.util.collection.CharObjectHashMap;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * Settings for one endpoint in an HTTP/2 connection. Each of the values are optional as defined in
  * the spec for the SETTINGS frame. Permits storage of arbitrary key/value pairs but provides helper
  * methods for standard settings.
  */
+@UnstableApi
 public final class Http2Settings extends CharObjectHashMap<Long> {
     /**
      * Default capacity based on the number of standard settings from the HTTP/2 spec, adjusted so that adding all of

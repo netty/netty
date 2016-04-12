@@ -29,10 +29,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.hpack;
+package io.netty.handler.codec.http2.internal.hpack;
 
-import static io.netty.handler.codec.http2.hpack.HpackUtil.ISO_8859_1;
-import static io.netty.handler.codec.http2.hpack.HpackUtil.requireNonNull;
+import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.ISO_8859_1;
+import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.requireNonNull;
 
 class HeaderField implements Comparable<HeaderField> {
 

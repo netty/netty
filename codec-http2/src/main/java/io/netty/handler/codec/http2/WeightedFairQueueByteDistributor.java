@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PriorityQueue;
 import io.netty.util.internal.PriorityQueueNode;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Queue;
 
@@ -41,6 +42,7 @@ import static java.lang.Math.min;
  * Each write operation will use the {@link #allocationQuantum(int)} to know how many more bytes should be allocated
  * relative to the next stream which wants to write. This is to balance fairness while also considering goodput.
  */
+@UnstableApi
 public final class WeightedFairQueueByteDistributor implements StreamByteDistributor {
     private final Http2Connection.PropertyKey stateKey;
     private final State connectionState;

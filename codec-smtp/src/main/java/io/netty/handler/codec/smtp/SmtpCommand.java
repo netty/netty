@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,6 +27,7 @@ import java.util.Map;
 /**
  * The command part of a {@link SmtpRequest}.
  */
+@UnstableApi
 public final class SmtpCommand {
     public static final SmtpCommand EHLO = new SmtpCommand(new AsciiString("EHLO"), false);
     public static final SmtpCommand HELO = new SmtpCommand(new AsciiString("HELO"), false);

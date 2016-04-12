@@ -29,9 +29,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.hpack;
+package io.netty.handler.codec.http2.internal.hpack;
 
-import static io.netty.handler.codec.http2.hpack.HpackUtil.ISO_8859_1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -60,7 +59,7 @@ public class DecoderTest {
     }
 
     private static byte[] getBytes(String s) {
-        return s.getBytes(ISO_8859_1);
+        return s.getBytes(HpackUtil.ISO_8859_1);
     }
 
     private void decode(String encoded) throws IOException {
