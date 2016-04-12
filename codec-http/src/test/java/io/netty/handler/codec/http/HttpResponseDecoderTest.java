@@ -542,7 +542,7 @@ public class HttpResponseDecoderTest {
         assertThat(ch.finish(), is(true));
 
         ByteBuf expected = Unpooled.wrappedBuffer(otherData);
-        ByteBuf buffer = ch.readInbound();
+        ByteBuf buffer = (ByteBuf) ch.readInbound();
         try {
             assertEquals(expected, buffer);
         } finally {
