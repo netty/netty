@@ -53,14 +53,16 @@ import static io.netty.channel.unix.Errors.newIOException;
  */
 public final class Native {
     static {
-        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
-        if (!name.startsWith("linux")) {
-            throw new IllegalStateException("Only supported on Linux");
+        try {
+            // First, try calling a side-effect free JNI method to see if the library was already
+            // loaded by the application.
+            offsetofEpollData();
+        } catch (UnsatisfiedLinkError ignore) {
+            // The library was not previously loaded, load it now.
+            loadNativeLibrary();
         }
-        NativeLibraryLoader.load(SystemPropertyUtil.get("io.netty.packagePrefix", "").replace('.', '-') +
-                                 "netty-transport-native-epoll",
-                                 PlatformDependent.getClassLoader(Native.class));
     }
+
     // EventLoop operations and constants
     public static final int EPOLLIN = epollin();
     public static final int EPOLLOUT = epollout();
@@ -249,5 +251,14 @@ public final class Native {
 
     private Native() {
         // utility
+    }
+
+    private static void loadNativeLibrary() {
+        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
+        if (!name.startsWith("linux")) {
+            throw new IllegalStateException("Only supported on Linux");
+        }
+        NativeLibraryLoader.load(SystemPropertyUtil.get("io.netty.packagePrefix", "").replace('.', '-') +
+            "netty-transport-native-epoll", PlatformDependent.getClassLoader(Native.class));
     }
 }
