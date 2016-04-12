@@ -61,10 +61,12 @@ public class WebSocketServerHandshaker08Test {
 
         if (subProtocol) {
             new WebSocketServerHandshaker08(
-                    "ws://example.com/chat", "chat", false, Integer.MAX_VALUE, false).handshake(ch, req);
+                    "ws://example.com/chat", "chat", false, Integer.MAX_VALUE, false)
+                    .handshake(ch.pipeline().lastContext(), req);
         } else {
             new WebSocketServerHandshaker08(
-                    "ws://example.com/chat", null, false, Integer.MAX_VALUE, false).handshake(ch, req);
+                    "ws://example.com/chat", null, false, Integer.MAX_VALUE, false)
+                    .handshake(ch.pipeline().lastContext(), req);
         }
 
         ByteBuf resBuf = ch.readOutbound();

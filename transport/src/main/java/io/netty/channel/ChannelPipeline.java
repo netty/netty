@@ -633,6 +633,24 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
     <T extends ChannelHandler> T get(Class<T> handlerType);
 
     /**
+     * Returns the first {@link ChannelHandler} of the specified type in this
+     * pipeline that is found before the given {@link ChannelHandlerContext}.
+     *
+     * @return the handler of the specified handler type.
+     *         {@code null} if there's no such handler in this pipeline.
+     */
+    <T extends ChannelHandler> T getBefore(ChannelHandlerContext ctx, Class<T> handlerType);
+
+    /**
+     * Returns the first {@link ChannelHandler} of the specified type in this
+     * pipeline that is found after the given {@link ChannelHandlerContext}.
+     *
+     * @return the handler of the specified handler type.
+     *         {@code null} if there's no such handler in this pipeline.
+     */
+    <T extends ChannelHandler> T getAfter(ChannelHandlerContext ctx, Class<T> handlerType);
+
+    /**
      * Returns the context object of the specified {@link ChannelHandler} in
      * this pipeline.
      *
@@ -658,6 +676,24 @@ public interface ChannelPipeline extends Iterable<Entry<String, ChannelHandler>>
      *         {@code null} if there's no such handler in this pipeline.
      */
     ChannelHandlerContext context(Class<? extends ChannelHandler> handlerType);
+
+    /**
+     * Returns the context object of the {@link ChannelHandler} of the
+     * specified type in this pipeline that is found before the given {@link ChannelHandlerContext}.
+     *
+     * @return the context object of the handler of the specified type.
+     *         {@code null} if there's no such handler in this pipeline.
+     */
+    ChannelHandlerContext contextBefore(ChannelHandlerContext ctx, Class<? extends ChannelHandler> handlerType);
+
+    /**
+     * Returns the context object of the {@link ChannelHandler} of the
+     * specified type in this pipeline that is found after the given {@link ChannelHandlerContext}.
+     *
+     * @return the context object of the handler of the specified type.
+     *         {@code null} if there's no such handler in this pipeline.
+     */
+    ChannelHandlerContext contextAfter(ChannelHandlerContext ctx, Class<? extends ChannelHandler> handlerType);
 
     /**
      * Returns the {@link Channel} that this pipeline is attached to.

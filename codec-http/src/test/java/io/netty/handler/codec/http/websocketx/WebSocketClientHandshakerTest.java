@@ -118,7 +118,7 @@ public abstract class WebSocketClientHandshakerTest {
                 new SimpleChannelInboundHandler<FullHttpResponse>() {
                     @Override
                     protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-                        handshaker.finishHandshake(ctx.channel(), msg);
+                        handshaker.finishHandshake(ctx, msg);
                         ctx.pipeline().remove(this);
                     }
                 });
@@ -129,7 +129,7 @@ public abstract class WebSocketClientHandshakerTest {
         }
         // We need to first write the request as HttpClientCodec will fail if we receive a response before a request
         // was written.
-        shaker.handshake(ch).syncUninterruptibly();
+        shaker.handshake(ch.pipeline().lastContext()).syncUninterruptibly();
         for (;;) {
             // Just consume the bytes, we are not interested in these.
             ByteBuf buf = ch.readOutbound();
