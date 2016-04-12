@@ -29,26 +29,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.hpack;
+package io.netty.handler.codec.http2.internal.hpack;
 
-import static io.netty.handler.codec.http2.hpack.HpackUtil.HUFFMAN_CODES;
-import static io.netty.handler.codec.http2.hpack.HpackUtil.HUFFMAN_CODE_LENGTHS;
+public interface HeaderListener {
 
-public final class Huffman {
-
-    /**
-     * Huffman Decoder
-     */
-    public static final HuffmanDecoder DECODER =
-            new HuffmanDecoder(HUFFMAN_CODES, HUFFMAN_CODE_LENGTHS);
-
-    /**
-     * Huffman Encoder
-     */
-    public static final HuffmanEncoder ENCODER =
-            new HuffmanEncoder(HUFFMAN_CODES, HUFFMAN_CODE_LENGTHS);
-
-    private Huffman() {
-        // utility class
-    }
+  /**
+   * emitHeader is called by the decoder during header field emission.
+   * The name and value byte arrays must not be modified.
+   */
+  void addHeader(byte[] name, byte[] value, boolean sensitive);
 }

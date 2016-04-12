@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.URI;
 import java.util.Iterator;
@@ -52,6 +53,7 @@ import static io.netty.util.internal.StringUtil.length;
 /**
  * Provides utility methods and constants for the HTTP/2 to HTTP conversion
  */
+@UnstableApi
 public final class HttpConversionUtil {
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP to HTTP/2.

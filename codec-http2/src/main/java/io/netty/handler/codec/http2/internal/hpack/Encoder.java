@@ -29,13 +29,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.hpack;
-
-import io.netty.handler.codec.http2.hpack.HpackUtil.IndexType;
+package io.netty.handler.codec.http2.internal.hpack;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+
+import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.INCREMENTAL;
+import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NEVER;
+import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NONE;
 
 public final class Encoder {
 
@@ -88,7 +90,7 @@ public final class Encoder {
         // If the header value is sensitive then it must never be indexed
         if (sensitive) {
             int nameIndex = getNameIndex(name);
-            encodeLiteral(out, name, value, IndexType.NEVER, nameIndex);
+            encodeLiteral(out, name, value, NEVER, nameIndex);
             return;
         }
 
@@ -97,7 +99,7 @@ public final class Encoder {
             int staticTableIndex = StaticTable.getIndex(name, value);
             if (staticTableIndex == -1) {
                 int nameIndex = StaticTable.getIndex(name);
-                encodeLiteral(out, name, value, IndexType.NONE, nameIndex);
+                encodeLiteral(out, name, value, NONE, nameIndex);
             } else {
                 encodeInteger(out, 0x80, 7, staticTableIndex);
             }
@@ -109,7 +111,7 @@ public final class Encoder {
         // If the headerSize is greater than the max table size then it must be encoded literally
         if (headerSize > capacity) {
             int nameIndex = getNameIndex(name);
-            encodeLiteral(out, name, value, IndexType.NONE, nameIndex);
+            encodeLiteral(out, name, value, NONE, nameIndex);
             return;
         }
 
@@ -128,7 +130,8 @@ public final class Encoder {
                 if (useIndexing) {
                     ensureCapacity(headerSize);
                 }
-                IndexType indexType = useIndexing ? IndexType.INCREMENTAL : IndexType.NONE;
+                HpackUtil.IndexType indexType =
+                        useIndexing ? INCREMENTAL : NONE;
                 encodeLiteral(out, name, value, indexType, nameIndex);
                 if (useIndexing) {
                     add(name, value);
@@ -201,7 +204,7 @@ public final class Encoder {
     /**
      * Encode literal header field according to Section 6.2.
      */
-    private void encodeLiteral(OutputStream out, byte[] name, byte[] value, IndexType indexType,
+    private void encodeLiteral(OutputStream out, byte[] name, byte[] value, HpackUtil.IndexType indexType,
                                int nameIndex)
             throws IOException {
         int mask;

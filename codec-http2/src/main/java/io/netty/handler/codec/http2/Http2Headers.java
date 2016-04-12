@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -24,6 +25,7 @@ import java.util.Map.Entry;
 /**
  * A collection of headers sent or received via HTTP/2.
  */
+@UnstableApi
 public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2Headers> {
 
     /**

@@ -16,10 +16,12 @@
 package io.netty.handler.codec.redis;
 
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * Header of Redis Array Message.
  */
+@UnstableApi
 public class ArrayHeaderRedisMessage implements RedisMessage {
 
     private final long length;

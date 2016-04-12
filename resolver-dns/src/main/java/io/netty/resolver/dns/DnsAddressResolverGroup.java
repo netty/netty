@@ -24,6 +24,7 @@ import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 
@@ -32,6 +33,7 @@ import static io.netty.resolver.dns.DnsNameResolver.ANY_LOCAL_ADDR;
 /**
  * A {@link AddressResolverGroup} of {@link DnsNameResolver}s.
  */
+@UnstableApi
 public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
 
     private final ChannelFactory<? extends DatagramChannel> channelFactory;

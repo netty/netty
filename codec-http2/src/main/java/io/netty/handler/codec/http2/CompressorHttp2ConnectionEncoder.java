@@ -24,6 +24,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -37,6 +38,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
  * stream. The compression provided by this class will be applied to the data for the entire stream.
  */
+@UnstableApi
 public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEncoder {
     public static final int DEFAULT_COMPRESSION_LEVEL = 6;
     public static final int DEFAULT_WINDOW_BITS = 15;

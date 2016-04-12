@@ -16,6 +16,7 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,6 +24,7 @@ import java.util.Map;
 /**
  * Represents a DNS record type.
  */
+@UnstableApi
 public class DnsRecordType implements Comparable<DnsRecordType> {
 
     /**

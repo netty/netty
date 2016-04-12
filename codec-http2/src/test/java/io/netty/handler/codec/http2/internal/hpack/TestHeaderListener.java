@@ -29,13 +29,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.hpack;
+package io.netty.handler.codec.http2.internal.hpack;
 
-public interface HeaderListener {
+import java.util.List;
 
-  /**
-   * emitHeader is called by the decoder during header field emission.
-   * The name and value byte arrays must not be modified.
-   */
-  void addHeader(byte[] name, byte[] value, boolean sensitive);
+final class TestHeaderListener implements HeaderListener {
+
+    private final List<HeaderField> headers;
+
+    TestHeaderListener(List<HeaderField> headers) {
+        this.headers = headers;
+    }
+
+    @Override
+    public void addHeader(byte[] name, byte[] value, boolean sensitive) {
+        headers.add(new HeaderField(name, value));
+    }
 }

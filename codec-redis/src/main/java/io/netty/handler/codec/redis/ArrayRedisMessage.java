@@ -19,6 +19,7 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Collections;
 import java.util.List;
@@ -26,6 +27,7 @@ import java.util.List;
 /**
  * Arrays of <a href="http://redis.io/topics/protocol">RESP</a>.
  */
+@UnstableApi
 public class ArrayRedisMessage extends AbstractReferenceCounted implements RedisMessage {
 
     private final List<RedisMessage> children;

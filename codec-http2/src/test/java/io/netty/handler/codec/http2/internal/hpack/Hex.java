@@ -31,7 +31,7 @@
  * limitations under the License.
  */
 
-package io.netty.handler.codec.http2.hpack;
+package io.netty.handler.codec.http2.internal.hpack;
 
 import java.io.IOException;
 

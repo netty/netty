@@ -15,9 +15,12 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * A DNS resource record.
  */
+@UnstableApi
 public interface DnsRecord {
 
     /**

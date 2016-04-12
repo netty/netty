@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -30,6 +31,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * Decodes a {@link DatagramPacket} into a {@link DatagramDnsQuery}.
  */
+@UnstableApi
 @ChannelHandler.Sharable
 public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPacket> {
 

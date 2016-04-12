@@ -18,7 +18,9 @@ package io.netty.handler.codec.dns;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
+@UnstableApi
 public class DefaultDnsPtrRecord extends AbstractDnsRecord implements DnsPtrRecord {
 
     private final String hostname;
@@ -27,7 +29,6 @@ public class DefaultDnsPtrRecord extends AbstractDnsRecord implements DnsPtrReco
      * Creates a new PTR record.
      *
      * @param name the domain name
-     * @param type the type of the record
      * @param dnsClass the class of the record, usually one of the following:
      *                 <ul>
      *                     <li>{@link #CLASS_IN}</li>

@@ -16,10 +16,12 @@
 package io.netty.handler.codec.redis;
 
 import io.netty.handler.codec.CodecException;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * An {@link Exception} which is thrown by {@link RedisEncoder} or {@link RedisDecoder}.
  */
+@UnstableApi
 public final class RedisCodecException extends CodecException {
 
     private static final long serialVersionUID = 5570454251549268063L;

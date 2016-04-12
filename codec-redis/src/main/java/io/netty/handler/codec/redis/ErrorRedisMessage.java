@@ -16,10 +16,12 @@
 package io.netty.handler.codec.redis;
 
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * Errors of <a href="http://redis.io/topics/protocol">RESP</a>.
  */
+@UnstableApi
 public final class ErrorRedisMessage extends AbstractStringRedisMessage {
 
     /**

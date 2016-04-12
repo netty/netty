@@ -20,10 +20,12 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * The default {@link Http2DataFrame} implementation.
  */
+@UnstableApi
 public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implements Http2DataFrame {
     private final ByteBuf content;
     private final boolean endStream;

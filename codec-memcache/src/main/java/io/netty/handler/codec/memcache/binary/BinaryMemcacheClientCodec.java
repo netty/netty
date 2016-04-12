@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * content, which defaults to 8192. This chunk size is the maximum, so if smaller chunks arrive they
  * will be passed up the pipeline and not queued up to the chunk size.
  */
+@UnstableApi
 public final class BinaryMemcacheClientCodec extends
         CombinedChannelDuplexHandler<BinaryMemcacheResponseDecoder, BinaryMemcacheRequestEncoder> {
 

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * The full server codec that combines the correct encoder and decoder.
@@ -24,6 +25,7 @@ import io.netty.channel.CombinedChannelDuplexHandler;
  * Internally, it combines the {@link BinaryMemcacheRequestDecoder} and the
  * {@link BinaryMemcacheResponseEncoder} to request decoding and response encoding.
  */
+@UnstableApi
 public class BinaryMemcacheServerCodec extends
         CombinedChannelDuplexHandler<BinaryMemcacheRequestDecoder, BinaryMemcacheResponseEncoder> {
 

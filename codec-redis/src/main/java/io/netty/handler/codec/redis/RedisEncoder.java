@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -29,6 +30,7 @@ import java.util.List;
  * Encodes {@link RedisMessage} into bytes following
  * <a href="http://redis.io/topics/protocol">RESP (REdis Serialization Protocol)</a>.
  */
+@UnstableApi
 public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
 
     private final RedisMessagePool messagePool;

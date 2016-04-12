@@ -20,6 +20,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Entry in {@link DnsCache}.
  */
+@UnstableApi
 public final class DnsCacheEntry {
 
     private final String hostname;

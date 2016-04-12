@@ -16,10 +16,12 @@
 package io.netty.handler.codec.redis;
 
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * Abstract class for Simple Strings or Errors.
  */
+@UnstableApi
 public abstract class AbstractStringRedisMessage implements RedisMessage {
 
     private final String content;

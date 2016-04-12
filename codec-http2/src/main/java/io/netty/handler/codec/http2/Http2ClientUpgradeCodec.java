@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.collection.CharObjectMap;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -39,6 +40,7 @@ import java.util.List;
 /**
  * Client-side cleartext upgrade codec from HTTP to HTTP/2.
  */
+@UnstableApi
 public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.UpgradeCodec {
 
     private static final List<CharSequence> UPGRADE_HEADERS = Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);

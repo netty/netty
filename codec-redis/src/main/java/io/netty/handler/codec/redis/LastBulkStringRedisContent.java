@@ -18,10 +18,12 @@ package io.netty.handler.codec.redis;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * A last chunk of Bulk Strings.
  */
+@UnstableApi
 public interface LastBulkStringRedisContent extends BulkStringRedisContent {
 
     /**

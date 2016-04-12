@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.logging.LogLevel;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -29,6 +30,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 /**
  * Logs HTTP2 frames for debugging purposes.
  */
+@UnstableApi
 public class Http2FrameLogger extends ChannelHandlerAdapter {
 
     public enum Direction {

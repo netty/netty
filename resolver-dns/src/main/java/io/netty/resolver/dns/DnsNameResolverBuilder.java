@@ -24,6 +24,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -33,6 +34,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * A {@link DnsNameResolver} builder.
  */
+@UnstableApi
 public final class DnsNameResolverBuilder {
 
     private final EventLoop eventLoop;

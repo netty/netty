@@ -16,11 +16,14 @@
 
 package io.netty.resolver.dns;
 
+import io.netty.util.internal.UnstableApi;
+
 import java.net.InetSocketAddress;
 
 /**
  * An infinite stream of DNS server addresses.
  */
+@UnstableApi
 public interface DnsServerAddressStream {
     /**
      * Retrieves the next DNS server address from the stream.
