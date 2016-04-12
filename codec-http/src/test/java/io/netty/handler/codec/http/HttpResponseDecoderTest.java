@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.TooLongFrameException;
@@ -540,7 +541,16 @@ public class HttpResponseDecoderTest {
 
         assertThat(ch.finish(), is(true));
 
-        assertEquals(ch.readInbound(), Unpooled.wrappedBuffer(otherData));
+        ByteBuf expected = Unpooled.wrappedBuffer(otherData);
+        ByteBuf buffer = ch.readInbound();
+        try {
+            assertEquals(expected, buffer);
+        } finally {
+            expected.release();
+            if (buffer != null) {
+                buffer.release();
+            }
+        }
     }
 
     @Test
