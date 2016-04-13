@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-
 import io.netty.util.internal.PlatformDependent;
 
 final class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
@@ -146,6 +145,7 @@ final class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
     }
 
     @Override
+    @Deprecated
     protected SwappedByteBuf newSwappedByteBuf() {
         if (PlatformDependent.isUnaligned()) {
             // Only use if unaligned access is supported otherwise there is no gain.
