@@ -46,6 +46,11 @@ final class UnreleasableByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf asReadOnly() {
+        return new UnreleasableByteBuf(buf.asReadOnly());
+    }
+
+    @Override
     public ByteBuf readSlice(int length) {
         return new UnreleasableByteBuf(buf.readSlice(length));
     }

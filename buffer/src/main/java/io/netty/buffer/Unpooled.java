@@ -674,7 +674,10 @@ public final class Unpooled {
      * on the specified {@code buffer}.  The new buffer has the same
      * {@code readerIndex} and {@code writerIndex} with the specified
      * {@code buffer}.
+     *
+     * @deprecated Use {@link ByteBuf#asReadOnly()}.
      */
+    @Deprecated
     public static ByteBuf unmodifiableBuffer(ByteBuf buffer) {
         ByteOrder endianness = buffer.order();
         if (endianness == BIG_ENDIAN) {
