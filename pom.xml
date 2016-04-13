@@ -239,7 +239,7 @@
     <module>codec-http2</module>
     <module>codec-memcache</module>
     <module>codec-mqtt</module>
-    <module>codec-smtp</module>
+    <module>codec-redis</module>
     <module>codec-socks</module>
     <module>codec-stomp</module>
     <module>codec-xml</module>
