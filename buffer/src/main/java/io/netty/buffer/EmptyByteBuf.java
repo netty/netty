@@ -96,6 +96,11 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public boolean isReadOnly() {
+        return true;
+    }
+
+    @Override
     public boolean isDirect() {
         return true;
     }

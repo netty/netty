@@ -316,6 +316,11 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public boolean isReadOnly() {
+        return buffer.isReadOnly();
+    }
+
+    @Override
     public boolean isDirect() {
         return buffer.isDirect();
     }

@@ -116,6 +116,11 @@ abstract class AbstractPooledDerivedByteBuf<T> extends AbstractByteBuf {
     }
 
     @Override
+    public boolean isReadOnly() {
+        return unwrap().isReadOnly();
+    }
+
+    @Override
     public final boolean isDirect() {
         return unwrap().isDirect();
     }

@@ -70,6 +70,11 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public boolean isReadOnly() {
+        return false;
+    }
+
+    @Override
     public int maxCapacity() {
         return maxCapacity;
     }

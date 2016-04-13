@@ -60,6 +60,11 @@ final class PooledReadOnlyByteBuf extends AbstractPooledDerivedByteBuf<PooledRea
     }
 
     @Override
+    public boolean isReadOnly() {
+        return true;
+    }
+
+    @Override
     public boolean isWritable() {
         return false;
     }
