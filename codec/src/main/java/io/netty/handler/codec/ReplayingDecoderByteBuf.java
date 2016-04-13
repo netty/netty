@@ -93,6 +93,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
         return false;
     }
 
+    @SuppressWarnings("deprecation")
+    @Override
+    public ByteBuf asReadOnly() {
+        return Unpooled.unmodifiableBuffer(this);
+    }
+
     @Override
     public boolean isDirect() {
         return buffer.isDirect();

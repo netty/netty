@@ -869,6 +869,12 @@ final class AdvancedLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf asReadOnly() {
+        recordLeakNonRefCountingOperation(leak);
+        return new AdvancedLeakAwareByteBuf(super.asReadOnly(), leak);
+    }
+
+    @Override
     public ByteBuf retain() {
         leak.record();
         return super.retain();

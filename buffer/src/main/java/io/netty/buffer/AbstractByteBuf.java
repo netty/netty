@@ -71,6 +71,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return false;
     }
 
+    @SuppressWarnings("deprecation")
+    @Override
+    public ByteBuf asReadOnly() {
+        if (isReadOnly()) {
+            return this;
+        }
+        return Unpooled.unmodifiableBuffer(this);
+    }
+
     @Override
     public int maxCapacity() {
         return maxCapacity;

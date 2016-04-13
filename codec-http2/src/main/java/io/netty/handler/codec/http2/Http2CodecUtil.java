@@ -27,7 +27,6 @@ import io.netty.util.AsciiString;
 import io.netty.util.concurrent.EventExecutor;
 
 import static io.netty.buffer.Unpooled.directBuffer;
-import static io.netty.buffer.Unpooled.unmodifiableBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.lang.Math.max;
@@ -54,10 +53,12 @@ public final class Http2CodecUtil {
     public static final short MAX_WEIGHT = 256;
     public static final short MIN_WEIGHT = 1;
 
-    private static final ByteBuf CONNECTION_PREFACE = unmodifiableBuffer(
-            unreleasableBuffer(directBuffer(24).writeBytes("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8))));
-    private static final ByteBuf EMPTY_PING = unmodifiableBuffer(
-            unreleasableBuffer(directBuffer(PING_FRAME_PAYLOAD_LENGTH).writeZero(PING_FRAME_PAYLOAD_LENGTH)));
+    private static final ByteBuf CONNECTION_PREFACE =
+            unreleasableBuffer(directBuffer(24).writeBytes("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8)))
+                    .asReadOnly();
+    private static final ByteBuf EMPTY_PING =
+            unreleasableBuffer(directBuffer(PING_FRAME_PAYLOAD_LENGTH).writeZero(PING_FRAME_PAYLOAD_LENGTH))
+                    .asReadOnly();
 
     private static final int MAX_PADDING_LENGTH_LENGTH = 1;
     public static final int DATA_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH;
