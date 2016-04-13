@@ -94,6 +94,11 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf asReadOnly() {
+        return buf.asReadOnly();
+    }
+
+    @Override
     public boolean isReadOnly() {
         return buf.isReadOnly();
     }

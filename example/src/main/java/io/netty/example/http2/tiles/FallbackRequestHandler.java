@@ -17,7 +17,6 @@
 package io.netty.example.http2.tiles;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty.buffer.Unpooled.unmodifiableBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
@@ -40,10 +39,10 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
  */
 public final class FallbackRequestHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
-    private static final ByteBuf response = unmodifiableBuffer(unreleasableBuffer(copiedBuffer("<!DOCTYPE html>"
+    private static final ByteBuf response = unreleasableBuffer(copiedBuffer("<!DOCTYPE html>"
             + "<html><body><h2>To view the example you need a browser that supports HTTP/2 ("
             + Http2CodecUtil.TLS_UPGRADE_PROTOCOL_NAME
-            + ")</h2></body></html>", UTF_8)));
+            + ")</h2></body></html>", UTF_8)).asReadOnly();
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
