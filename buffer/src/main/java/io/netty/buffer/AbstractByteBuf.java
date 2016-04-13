@@ -57,10 +57,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     int writerIndex;
     private int markedReaderIndex;
     private int markedWriterIndex;
-
     private int maxCapacity;
-
-    private SwappedByteBuf swappedBuf;
 
     protected AbstractByteBuf(int maxCapacity) {
         if (maxCapacity < 0) {
@@ -313,12 +310,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (endianness == order()) {
             return this;
         }
-
-        SwappedByteBuf swappedBuf = this.swappedBuf;
-        if (swappedBuf == null) {
-            this.swappedBuf = swappedBuf = newSwappedByteBuf();
-        }
-        return swappedBuf;
+        return newSwappedByteBuf();
     }
 
     /**
