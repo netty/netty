@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -676,12 +676,15 @@ public final class Unpooled {
      * {@code buffer}.
      */
     public static ByteBuf unmodifiableBuffer(ByteBuf buffer) {
-        ByteOrder endianness = buffer.order();
-        if (endianness == BIG_ENDIAN) {
-            return new ReadOnlyByteBuf(buffer);
+        final ByteBuf bigEndianBuffer = buffer.order(BIG_ENDIAN);
+        final ByteBuf unmodifiable;
+        if (bigEndianBuffer instanceof AbstractByteBuf) {
+            unmodifiable = PooledReadOnlyByteBuf.newInstance((AbstractByteBuf) bigEndianBuffer);
+        } else {
+            unmodifiable = new ReadOnlyByteBuf(bigEndianBuffer);
         }
 
-        return new ReadOnlyByteBuf(buffer.order(BIG_ENDIAN)).order(LITTLE_ENDIAN);
+        return buffer.order() == BIG_ENDIAN ? unmodifiable : unmodifiable.order(LITTLE_ENDIAN);
     }
 
     /**

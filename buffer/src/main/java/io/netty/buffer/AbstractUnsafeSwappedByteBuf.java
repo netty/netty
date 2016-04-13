@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,6 +24,7 @@ import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
 /**
  * Special {@link SwappedByteBuf} for {@link ByteBuf}s that is using unsafe.
  */
+@Deprecated
 abstract class AbstractUnsafeSwappedByteBuf extends SwappedByteBuf {
     private final boolean nativeByteOrder;
     private final AbstractByteBuf wrapped;

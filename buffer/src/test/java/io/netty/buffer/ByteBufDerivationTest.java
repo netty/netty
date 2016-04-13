@@ -34,7 +34,7 @@ public class ByteBufDerivationTest {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf slice = buf.slice(1, 7);
 
-        assertThat(slice, instanceOf(SlicedByteBuf.class));
+        assertThat(slice, instanceOf(PooledSlicedByteBuf.class));
         assertThat(slice.unwrap(), sameInstance(buf));
         assertThat(slice.readerIndex(), is(0));
         assertThat(slice.writerIndex(), is(7));
@@ -53,7 +53,7 @@ public class ByteBufDerivationTest {
         ByteBuf slice2 = slice.slice(0, 6);
 
         assertThat(slice2, not(sameInstance(slice)));
-        assertThat(slice2, instanceOf(SlicedByteBuf.class));
+        assertThat(slice2, instanceOf(PooledSlicedByteBuf.class));
         assertThat(slice2.unwrap(), sameInstance(buf));
         assertThat(slice2.writerIndex(), is(6));
         assertThat(slice2.capacity(), is(6));
@@ -64,7 +64,7 @@ public class ByteBufDerivationTest {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf dup = buf.duplicate();
 
-        assertThat(dup, instanceOf(DuplicatedByteBuf.class));
+        assertThat(dup, instanceOf(PooledDuplicatedByteBuf.class));
         assertThat(dup.unwrap(), sameInstance(buf));
         assertThat(dup.readerIndex(), is(buf.readerIndex()));
         assertThat(dup.writerIndex(), is(buf.writerIndex()));
@@ -83,7 +83,7 @@ public class ByteBufDerivationTest {
         ByteBuf dup2 = dup.duplicate();
 
         assertThat(dup2, not(sameInstance(dup)));
-        assertThat(dup2, instanceOf(DuplicatedByteBuf.class));
+        assertThat(dup2, instanceOf(PooledDuplicatedByteBuf.class));
         assertThat(dup2.unwrap(), sameInstance(buf));
         assertThat(dup2.readerIndex(), is(dup.readerIndex()));
         assertThat(dup2.writerIndex(), is(dup.writerIndex()));
@@ -96,7 +96,7 @@ public class ByteBufDerivationTest {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf ro = Unpooled.unmodifiableBuffer(buf);
 
-        assertThat(ro, instanceOf(ReadOnlyByteBuf.class));
+        assertThat(ro, instanceOf(PooledReadOnlyByteBuf.class));
         assertThat(ro.unwrap(), sameInstance(buf));
         assertThat(ro.readerIndex(), is(buf.readerIndex()));
         assertThat(ro.writerIndex(), is(buf.writerIndex()));
@@ -114,7 +114,7 @@ public class ByteBufDerivationTest {
         ByteBuf ro2 = Unpooled.unmodifiableBuffer(ro);
 
         assertThat(ro2, not(sameInstance(ro)));
-        assertThat(ro2, instanceOf(ReadOnlyByteBuf.class));
+        assertThat(ro2, instanceOf(PooledReadOnlyByteBuf.class));
         assertThat(ro2.unwrap(), sameInstance(buf));
         assertThat(ro2.readerIndex(), is(ro.readerIndex()));
         assertThat(ro2.writerIndex(), is(ro.writerIndex()));
@@ -128,7 +128,7 @@ public class ByteBufDerivationTest {
         ByteBuf dup = buf.duplicate().setIndex(2, 6);
         ByteBuf ro = Unpooled.unmodifiableBuffer(dup);
 
-        assertThat(ro, instanceOf(ReadOnlyByteBuf.class));
+        assertThat(ro, instanceOf(PooledReadOnlyByteBuf.class));
         assertThat(ro.unwrap(), sameInstance(buf));
         assertThat(ro.readerIndex(), is(dup.readerIndex()));
         assertThat(ro.writerIndex(), is(dup.writerIndex()));
@@ -142,7 +142,7 @@ public class ByteBufDerivationTest {
         ByteBuf ro = Unpooled.unmodifiableBuffer(buf).setIndex(2, 6);
         ByteBuf dup = ro.duplicate();
 
-        assertThat(dup, instanceOf(ReadOnlyByteBuf.class));
+        assertThat(dup, instanceOf(PooledReadOnlyByteBuf.class));
         assertThat(dup.unwrap(), sameInstance(buf));
         assertThat(dup.readerIndex(), is(ro.readerIndex()));
         assertThat(dup.writerIndex(), is(ro.writerIndex()));
