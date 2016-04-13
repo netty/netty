@@ -1,7 +1,9 @@
 /*
  * Copyright 2015 The Netty Project
  *
- * The Netty Project licenses this file tothe License at:
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -47,8 +49,18 @@ final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
     }
 
     @Override
+    protected short _getShortLE(int index) {
+        return UnsafeByteBufUtil.getShortLE(memory, idx(index));
+    }
+
+    @Override
     protected int _getUnsignedMedium(int index) {
         return UnsafeByteBufUtil.getUnsignedMedium(memory, idx(index));
+    }
+
+    @Override
+    protected int _getUnsignedMediumLE(int index) {
+        return UnsafeByteBufUtil.getUnsignedMediumLE(memory, idx(index));
     }
 
     @Override
@@ -57,8 +69,18 @@ final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
     }
 
     @Override
+    protected int _getIntLE(int index) {
+        return UnsafeByteBufUtil.getIntLE(memory, idx(index));
+    }
+
+    @Override
     protected long _getLong(int index) {
         return UnsafeByteBufUtil.getLong(memory, idx(index));
+    }
+
+    @Override
+    protected long _getLongLE(int index) {
+        return UnsafeByteBufUtil.getLongLE(memory, idx(index));
     }
 
     @Override
@@ -72,8 +94,18 @@ final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
     }
 
     @Override
+    protected void _setShortLE(int index, int value) {
+        UnsafeByteBufUtil.setShortLE(memory, idx(index), value);
+    }
+
+    @Override
     protected void _setMedium(int index, int value) {
         UnsafeByteBufUtil.setMedium(memory, idx(index), value);
+    }
+
+    @Override
+    protected void _setMediumLE(int index, int value) {
+        UnsafeByteBufUtil.setMediumLE(memory, idx(index), value);
     }
 
     @Override
@@ -82,11 +114,22 @@ final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
     }
 
     @Override
+    protected void _setIntLE(int index, int value) {
+        UnsafeByteBufUtil.setIntLE(memory, idx(index), value);
+    }
+
+    @Override
     protected void _setLong(int index, long value) {
         UnsafeByteBufUtil.setLong(memory, idx(index), value);
     }
 
     @Override
+    protected void _setLongLE(int index, long value) {
+        UnsafeByteBufUtil.setLongLE(memory, idx(index), value);
+    }
+
+    @Override
+    @Deprecated
     protected SwappedByteBuf newSwappedByteBuf() {
         if (PlatformDependent.isUnaligned()) {
             // Only use if unaligned access is supported otherwise there is no gain.
