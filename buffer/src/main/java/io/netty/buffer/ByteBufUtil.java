@@ -365,7 +365,7 @@ public final class ByteBufUtil {
      */
     public static ByteBuf writeUtf8(ByteBufAllocator alloc, CharSequence seq) {
         // UTF-8 uses max. 3 bytes per char, so calculate the worst case.
-        ByteBuf buf = alloc.buffer(seq.length() * MAX_BYTES_PER_CHAR_UTF8);
+        ByteBuf buf = alloc.buffer(utf8MaxBytes(seq));
         writeUtf8(buf, seq);
         return buf;
     }
@@ -378,7 +378,7 @@ public final class ByteBufUtil {
      */
     public static int writeUtf8(ByteBuf buf, CharSequence seq) {
         final int len = seq.length();
-        buf.ensureWritable(len * MAX_BYTES_PER_CHAR_UTF8);
+        buf.ensureWritable(utf8MaxBytes(seq));
 
         for (;;) {
             if (buf instanceof AbstractByteBuf) {
@@ -443,6 +443,13 @@ public final class ByteBufUtil {
         // update the writerIndex without any extra checks for performance reasons
         buffer.writerIndex = writerIndex;
         return writerIndex - oldWriterIndex;
+    }
+
+    /**
+     * Returns max bytes length of UTF8 character sequence.
+     */
+    public static int utf8MaxBytes(CharSequence seq) {
+        return seq.length() * MAX_BYTES_PER_CHAR_UTF8;
     }
 
     /**
