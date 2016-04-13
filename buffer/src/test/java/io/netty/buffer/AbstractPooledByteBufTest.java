@@ -53,7 +53,7 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
 
         ByteBuf buf2 = newBuffer(capacity);
 
-        assertSame(unwrapIfNeeded(buf), unwrapIfNeeded(buf2));
+        assertEquals(unwrapIfNeeded(buf), unwrapIfNeeded(buf2));
 
         buf2.writeShort(1);
 
