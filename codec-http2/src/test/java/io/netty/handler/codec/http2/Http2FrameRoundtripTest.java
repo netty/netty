@@ -39,7 +39,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.EmptyByteBuf;
-import io.netty.buffer.ReadOnlyByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -127,7 +126,7 @@ public class Http2FrameRoundtripTest {
             // Now verify that all of the reference counts are zero.
             for (ByteBuf buf : needReleasing) {
                 int expectedFinalRefCount = 0;
-                if (buf instanceof ReadOnlyByteBuf || buf instanceof EmptyByteBuf) {
+                if (buf.isReadOnly() || buf instanceof EmptyByteBuf) {
                     // Special case for when we're writing slices of the padding buffer.
                     expectedFinalRefCount = 1;
                 }

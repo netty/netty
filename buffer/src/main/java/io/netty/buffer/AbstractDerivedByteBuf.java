@@ -71,6 +71,11 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public boolean isReadOnly() {
+        return unwrap().isReadOnly();
+    }
+
+    @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
         return nioBuffer(index, length);
     }

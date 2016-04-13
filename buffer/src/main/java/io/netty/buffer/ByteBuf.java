@@ -296,6 +296,11 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract boolean isDirect();
 
     /**
+     * Returns {@code true} if and only if this buffer is read-only.
+     */
+    public abstract boolean isReadOnly();
+
+    /**
      * Returns the {@code readerIndex} of this buffer.
      */
     public abstract int readerIndex();
