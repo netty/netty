@@ -33,6 +33,7 @@ import java.nio.charset.Charset;
  * @deprecated use the Little Endian accessors, e.g. {@code getShortLE}, {@code getIntLE}
  * instead.
  */
+@Deprecated
 public class SwappedByteBuf extends ByteBuf {
 
     private final ByteBuf buf;
