@@ -43,7 +43,7 @@ public class ReplayingDecoderTest {
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 'C' }));
         assertNull(ch.readInbound());
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { '\n' }));
-        assertEquals(Unpooled.wrappedBuffer(new byte[] { 'A', 'B', 'C' }), ch.readInbound());
+        assertEquals(Unpooled.wrappedBuffer(new byte[] { 'A', 'B', 'C' }), releaseLater(ch.readInbound()));
 
         // Truncated input
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 'A' }));
