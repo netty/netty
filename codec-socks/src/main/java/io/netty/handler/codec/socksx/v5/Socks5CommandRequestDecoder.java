@@ -78,7 +78,7 @@ public class Socks5CommandRequestDecoder extends ReplayingDecoder<State> {
             case SUCCESS: {
                 int readableBytes = actualReadableBytes();
                 if (readableBytes > 0) {
-                    out.add(in.readSlice(readableBytes).retain());
+                    out.add(in.readRetainedSlice(readableBytes));
                 }
                 break;
             }

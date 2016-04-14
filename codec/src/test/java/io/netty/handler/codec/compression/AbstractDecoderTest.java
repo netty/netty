@@ -28,7 +28,8 @@ import org.junit.experimental.theories.Theory;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(Theories.class)
 public abstract class AbstractDecoderTest extends AbstractCompressionTest {
@@ -106,8 +107,8 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
         final int compressedLength = data.readableBytes();
         int written = 0, length = rand.nextInt(100);
         while (written + length < compressedLength) {
-            ByteBuf compressedBuf = data.slice(written, length);
-            channel.writeInbound(compressedBuf.retain());
+            ByteBuf compressedBuf = data.retainedSlice(written, length);
+            channel.writeInbound(compressedBuf);
             written += length;
             length = rand.nextInt(100);
         }

@@ -80,14 +80,22 @@ public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements Spdy
 
     @Override
     public SpdyDataFrame copy() {
-        SpdyDataFrame frame = new DefaultSpdyDataFrame(streamId(), content().copy());
-        frame.setLast(isLast());
-        return frame;
+        return replace(content().copy());
     }
 
     @Override
     public SpdyDataFrame duplicate() {
-        SpdyDataFrame frame = new DefaultSpdyDataFrame(streamId(), content().duplicate());
+        return replace(content().duplicate());
+    }
+
+    @Override
+    public SpdyDataFrame retainedDuplicate() {
+        return replace(content().retainedDuplicate());
+    }
+
+    @Override
+    public SpdyDataFrame replace(ByteBuf content) {
+        SpdyDataFrame frame = new DefaultSpdyDataFrame(streamId(), content);
         frame.setLast(isLast());
         return frame;
     }

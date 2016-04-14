@@ -56,8 +56,18 @@ final class UnreleasableByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf readRetainedSlice(int length) {
+        return new UnreleasableByteBuf(buf.readRetainedSlice(length));
+    }
+
+    @Override
     public ByteBuf slice() {
         return new UnreleasableByteBuf(buf.slice());
+    }
+
+    @Override
+    public ByteBuf retainedSlice() {
+        return new UnreleasableByteBuf(buf.retainedSlice());
     }
 
     @Override
@@ -66,8 +76,18 @@ final class UnreleasableByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf retainedSlice(int index, int length) {
+        return new UnreleasableByteBuf(buf.retainedSlice(index, length));
+    }
+
+    @Override
     public ByteBuf duplicate() {
         return new UnreleasableByteBuf(buf.duplicate());
+    }
+
+    @Override
+    public ByteBuf retainedDuplicate() {
+        return new UnreleasableByteBuf(buf.retainedDuplicate());
     }
 
     @Override

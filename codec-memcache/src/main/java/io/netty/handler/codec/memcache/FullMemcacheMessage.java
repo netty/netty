@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.memcache;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -28,6 +29,15 @@ public interface FullMemcacheMessage extends MemcacheMessage, LastMemcacheConten
     FullMemcacheMessage copy();
 
     @Override
+    FullMemcacheMessage duplicate();
+
+    @Override
+    FullMemcacheMessage retainedDuplicate();
+
+    @Override
+    FullMemcacheMessage replace(ByteBuf content);
+
+    @Override
     FullMemcacheMessage retain(int increment);
 
     @Override
@@ -38,7 +48,4 @@ public interface FullMemcacheMessage extends MemcacheMessage, LastMemcacheConten
 
     @Override
     FullMemcacheMessage touch(Object hint);
-
-    @Override
-    FullMemcacheMessage duplicate();
 }

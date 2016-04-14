@@ -61,10 +61,22 @@ public abstract class WebSocketFrame extends DefaultByteBufHolder {
     }
 
     @Override
-    public abstract WebSocketFrame copy();
+    public WebSocketFrame copy() {
+        return (WebSocketFrame) super.copy();
+    }
 
     @Override
-    public abstract WebSocketFrame duplicate();
+    public WebSocketFrame duplicate() {
+        return (WebSocketFrame) super.duplicate();
+    }
+
+    @Override
+    public WebSocketFrame retainedDuplicate() {
+        return (WebSocketFrame) super.retainedDuplicate();
+    }
+
+    @Override
+    public abstract WebSocketFrame replace(ByteBuf content);
 
     @Override
     public String toString() {

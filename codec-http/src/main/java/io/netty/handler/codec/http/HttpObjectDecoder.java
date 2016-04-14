@@ -279,7 +279,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // Keep reading data as a chunk until the end of connection is reached.
             int toRead = Math.min(buffer.readableBytes(), maxChunkSize);
             if (toRead > 0) {
-                ByteBuf content = buffer.readSlice(toRead).retain();
+                ByteBuf content = buffer.readRetainedSlice(toRead);
                 out.add(new DefaultHttpContent(content));
             }
             return;
@@ -301,7 +301,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (toRead > chunkSize) {
                 toRead = (int) chunkSize;
             }
-            ByteBuf content = buffer.readSlice(toRead).retain();
+            ByteBuf content = buffer.readRetainedSlice(toRead);
             chunkSize -= toRead;
 
             if (chunkSize == 0) {
@@ -341,7 +341,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (toRead == 0) {
                 return;
             }
-            HttpContent chunk = new DefaultHttpContent(buffer.readSlice(toRead).retain());
+            HttpContent chunk = new DefaultHttpContent(buffer.readRetainedSlice(toRead));
             chunkSize -= toRead;
 
             out.add(chunk);

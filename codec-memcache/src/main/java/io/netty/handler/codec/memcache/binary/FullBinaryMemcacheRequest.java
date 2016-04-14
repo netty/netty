@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.memcache.binary;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.memcache.FullMemcacheMessage;
 import io.netty.util.internal.UnstableApi;
 
@@ -28,6 +29,15 @@ public interface FullBinaryMemcacheRequest extends BinaryMemcacheRequest, FullMe
     FullBinaryMemcacheRequest copy();
 
     @Override
+    FullBinaryMemcacheRequest duplicate();
+
+    @Override
+    FullBinaryMemcacheRequest retainedDuplicate();
+
+    @Override
+    FullBinaryMemcacheRequest replace(ByteBuf content);
+
+    @Override
     FullBinaryMemcacheRequest retain(int increment);
 
     @Override
@@ -38,7 +48,4 @@ public interface FullBinaryMemcacheRequest extends BinaryMemcacheRequest, FullMe
 
     @Override
     FullBinaryMemcacheRequest touch(Object hint);
-
-    @Override
-    FullBinaryMemcacheRequest duplicate();
 }

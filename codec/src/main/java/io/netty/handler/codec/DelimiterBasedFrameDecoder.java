@@ -268,13 +268,13 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
             }
 
             if (stripDelimiter) {
-                frame = buffer.readSlice(minFrameLength);
+                frame = buffer.readRetainedSlice(minFrameLength);
                 buffer.skipBytes(minDelimLength);
             } else {
-                frame = buffer.readSlice(minFrameLength + minDelimLength);
+                frame = buffer.readRetainedSlice(minFrameLength + minDelimLength);
             }
 
-            return frame.retain();
+            return frame;
         } else {
             if (!discardingTooLongFrame) {
                 if (buffer.readableBytes() > maxFrameLength) {

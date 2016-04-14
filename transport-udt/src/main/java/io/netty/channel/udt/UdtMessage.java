@@ -33,12 +33,22 @@ public final class UdtMessage extends DefaultByteBufHolder {
 
     @Override
     public UdtMessage copy() {
-        return new UdtMessage(content().copy());
+        return (UdtMessage) super.copy();
     }
 
     @Override
     public UdtMessage duplicate() {
-        return new UdtMessage(content().duplicate());
+        return (UdtMessage) super.duplicate();
+    }
+
+    @Override
+    public UdtMessage retainedDuplicate() {
+        return (UdtMessage) super.retainedDuplicate();
+    }
+
+    @Override
+    public UdtMessage replace(ByteBuf content) {
+        return new UdtMessage(content);
     }
 
     @Override

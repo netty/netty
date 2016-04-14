@@ -129,7 +129,7 @@ public final class CoalescingBufferQueue {
                 bufAndListenerPairs.addFirst(entryBuffer);
                 if (bytes > 0) {
                     // Take a slice of what we can consume and retain it.
-                    toReturn = compose(toReturn, entryBuffer.readSlice(bytes).retain());
+                    toReturn = compose(toReturn, entryBuffer.readRetainedSlice(bytes));
                     bytes = 0;
                 }
                 break;

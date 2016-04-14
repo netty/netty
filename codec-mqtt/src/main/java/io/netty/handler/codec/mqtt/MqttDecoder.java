@@ -26,7 +26,11 @@ import io.netty.util.CharsetUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.handler.codec.mqtt.MqttCodecUtil.*;
+import static io.netty.handler.codec.mqtt.MqttCodecUtil.isValidClientId;
+import static io.netty.handler.codec.mqtt.MqttCodecUtil.isValidMessageId;
+import static io.netty.handler.codec.mqtt.MqttCodecUtil.isValidPublishTopicName;
+import static io.netty.handler.codec.mqtt.MqttCodecUtil.resetUnusedFields;
+import static io.netty.handler.codec.mqtt.MqttCodecUtil.validateFixedHeader;
 
 /**
  * Decodes Mqtt messages from bytes, following
@@ -409,7 +413,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     }
 
     private static Result<ByteBuf> decodePublishPayload(ByteBuf buffer, int bytesRemainingInVariablePart) {
-        ByteBuf b = buffer.readSlice(bytesRemainingInVariablePart).retain();
+        ByteBuf b = buffer.readRetainedSlice(bytesRemainingInVariablePart);
         return new Result<ByteBuf>(b, bytesRemainingInVariablePart);
     }
 

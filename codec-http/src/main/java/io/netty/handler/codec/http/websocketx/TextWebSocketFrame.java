@@ -96,12 +96,22 @@ public class TextWebSocketFrame extends WebSocketFrame {
 
     @Override
     public TextWebSocketFrame copy() {
-        return new TextWebSocketFrame(isFinalFragment(), rsv(), content().copy());
+        return (TextWebSocketFrame) super.copy();
     }
 
     @Override
     public TextWebSocketFrame duplicate() {
-        return new TextWebSocketFrame(isFinalFragment(), rsv(), content().duplicate());
+        return (TextWebSocketFrame) super.duplicate();
+    }
+
+    @Override
+    public TextWebSocketFrame retainedDuplicate() {
+        return (TextWebSocketFrame) super.retainedDuplicate();
+    }
+
+    @Override
+    public TextWebSocketFrame replace(ByteBuf content) {
+        return new TextWebSocketFrame(isFinalFragment(), rsv(), content);
     }
 
     @Override

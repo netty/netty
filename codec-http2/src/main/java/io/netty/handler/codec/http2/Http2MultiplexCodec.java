@@ -371,7 +371,7 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
                             StreamInfo streamInfo = (StreamInfo) stream.getProperty(streamInfoKey);
                             // TODO: Can we force a user interaction pattern that doesn't require us to duplicate()?
                             // https://github.com/netty/netty/issues/4943
-                            streamInfo.childChannel.pipeline().fireUserEventTriggered(goAway.duplicate().retain());
+                            streamInfo.childChannel.pipeline().fireUserEventTriggered(goAway.retainedDuplicate());
                         }
                         return true;
                     }
@@ -389,12 +389,12 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
                     });
                 }
             }
-            ctx.fireUserEventTriggered(goAway.duplicate().retain());
+            ctx.fireUserEventTriggered(goAway.retainedDuplicate());
         }
     }
 
     class InternalHttp2ConnectionHandler extends Http2ConnectionHandler {
-        public InternalHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+        InternalHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                 Http2Settings initialSettings) {
             super(decoder, encoder, initialSettings);
         }

@@ -45,6 +45,16 @@ public interface LastStompContentSubframe extends StompContentSubframe {
         }
 
         @Override
+        public LastStompContentSubframe retainedDuplicate() {
+            return this;
+        }
+
+        @Override
+        public LastStompContentSubframe replace(ByteBuf content) {
+            return new DefaultLastStompContentSubframe(content);
+        }
+
+        @Override
         public LastStompContentSubframe retain() {
             return this;
         }
@@ -95,6 +105,12 @@ public interface LastStompContentSubframe extends StompContentSubframe {
 
     @Override
     LastStompContentSubframe duplicate();
+
+    @Override
+    LastStompContentSubframe retainedDuplicate();
+
+    @Override
+    LastStompContentSubframe replace(ByteBuf content);
 
     @Override
     LastStompContentSubframe retain();

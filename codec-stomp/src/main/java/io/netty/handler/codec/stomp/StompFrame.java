@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.stomp;
 
+import io.netty.buffer.ByteBuf;
+
 /**
  * Combines {@link StompHeadersSubframe} and {@link LastStompContentSubframe} into one
  * frame. So it represent a <i>complete</i> STOMP frame.
@@ -25,6 +27,12 @@ public interface StompFrame extends StompHeadersSubframe, LastStompContentSubfra
 
     @Override
     StompFrame duplicate();
+
+    @Override
+    StompFrame retainedDuplicate();
+
+    @Override
+    StompFrame replace(ByteBuf content);
 
     @Override
     StompFrame retain();

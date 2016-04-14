@@ -119,7 +119,7 @@ public final class Http2CodecUtil {
      */
     public static ByteBuf connectionPrefaceBuf() {
         // Return a duplicate so that modifications to the reader index will not affect the original buffer.
-        return CONNECTION_PREFACE.duplicate().retain();
+        return CONNECTION_PREFACE.retainedDuplicate();
     }
 
     /**
@@ -127,7 +127,7 @@ public final class Http2CodecUtil {
      */
     public static ByteBuf emptyPingBuf() {
         // Return a duplicate so that modifications to the reader index will not affect the original buffer.
-        return EMPTY_PING.duplicate().retain();
+        return EMPTY_PING.retainedDuplicate();
     }
 
     /**

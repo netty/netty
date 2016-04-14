@@ -15,12 +15,12 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.UnstableApi;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The default {@link Http2DataFrame} implementation.
@@ -101,12 +101,22 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
 
     @Override
     public DefaultHttp2DataFrame copy() {
-        return new DefaultHttp2DataFrame(content().copy(), endStream, padding);
+        return replace(content().copy());
     }
 
     @Override
     public DefaultHttp2DataFrame duplicate() {
-        return new DefaultHttp2DataFrame(content().duplicate(), endStream, padding);
+        return replace(content().duplicate());
+    }
+
+    @Override
+    public DefaultHttp2DataFrame retainedDuplicate() {
+        return replace(content().retainedDuplicate());
+    }
+
+    @Override
+    public DefaultHttp2DataFrame replace(ByteBuf content) {
+        return new DefaultHttp2DataFrame(content, endStream, padding);
     }
 
     @Override

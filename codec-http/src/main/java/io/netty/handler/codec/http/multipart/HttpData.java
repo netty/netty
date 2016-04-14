@@ -220,6 +220,12 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     HttpData duplicate();
 
     @Override
+    HttpData retainedDuplicate();
+
+    @Override
+    HttpData replace(ByteBuf content);
+
+    @Override
     HttpData retain();
 
     @Override
