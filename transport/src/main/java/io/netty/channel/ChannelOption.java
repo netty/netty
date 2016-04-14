@@ -79,6 +79,7 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     /**
      * @deprecated Use {@link MaxMessagesRecvByteBufAllocator}
      */
+    @Deprecated
     public static final ChannelOption<Integer> MAX_MESSAGES_PER_READ = valueOf("MAX_MESSAGES_PER_READ");
     public static final ChannelOption<Integer> WRITE_SPIN_COUNT = valueOf("WRITE_SPIN_COUNT");
     /**
