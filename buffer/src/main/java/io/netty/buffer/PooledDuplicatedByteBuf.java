@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,68 +13,41 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
+import io.netty.util.Recycler;
+import io.netty.util.Recycler.Handle;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
-/**
- * A derived buffer which simply forwards all data access requests to its
- * parent.  It is recommended to use {@link ByteBuf#duplicate()} instead
- * of calling the constructor explicitly.
- *
- * @deprecated Do not use.
- */
-@Deprecated
-public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
+final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf<PooledDuplicatedByteBuf> {
 
-    private final ByteBuf buffer;
-
-    public DuplicatedByteBuf(ByteBuf buffer) {
-        this(buffer, buffer.readerIndex(), buffer.writerIndex());
-    }
-
-    DuplicatedByteBuf(ByteBuf buffer, int readerIndex, int writerIndex) {
-        super(buffer.maxCapacity());
-
-        if (buffer instanceof DuplicatedByteBuf) {
-            this.buffer = ((DuplicatedByteBuf) buffer).buffer;
-        } else {
-            this.buffer = buffer;
+    private static final Recycler<PooledDuplicatedByteBuf> RECYCLER = new Recycler<PooledDuplicatedByteBuf>() {
+        @Override
+        protected PooledDuplicatedByteBuf newObject(Handle<PooledDuplicatedByteBuf> handle) {
+            return new PooledDuplicatedByteBuf(handle);
         }
+    };
 
-        setIndex(readerIndex, writerIndex);
-        markReaderIndex();
-        markWriterIndex();
+    static PooledDuplicatedByteBuf newInstance(AbstractByteBuf buffer, int readerIndex, int writerIndex) {
+        final PooledDuplicatedByteBuf duplicate = RECYCLER.get();
+        duplicate.init(buffer, readerIndex, writerIndex, buffer.maxCapacity());
+        duplicate.markReaderIndex();
+        duplicate.markWriterIndex();
+
+        return duplicate;
     }
 
-    @Override
-    public ByteBuf unwrap() {
-        return buffer;
-    }
-
-    @Override
-    public ByteBufAllocator alloc() {
-        return unwrap().alloc();
-    }
-
-    @Override
-    @Deprecated
-    public ByteOrder order() {
-        return unwrap().order();
-    }
-
-    @Override
-    public boolean isDirect() {
-        return unwrap().isDirect();
+    private PooledDuplicatedByteBuf(Handle<PooledDuplicatedByteBuf> handle) {
+        super(handle);
     }
 
     @Override
@@ -89,28 +62,28 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public boolean hasArray() {
-        return unwrap().hasArray();
-    }
-
-    @Override
-    public byte[] array() {
-        return unwrap().array();
-    }
-
-    @Override
     public int arrayOffset() {
         return unwrap().arrayOffset();
     }
 
     @Override
-    public boolean hasMemoryAddress() {
-        return unwrap().hasMemoryAddress();
+    public long memoryAddress() {
+        return unwrap().memoryAddress();
     }
 
     @Override
-    public long memoryAddress() {
-        return unwrap().memoryAddress();
+    public ByteBuffer nioBuffer(int index, int length) {
+        return unwrap().nioBuffer(index, length);
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        return unwrap().nioBuffers(index, length);
+    }
+
+    @Override
+    public ByteBuf copy(int index, int length) {
+        return unwrap().copy(index, length);
     }
 
     @Override
@@ -120,7 +93,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected byte _getByte(int index) {
-        return unwrap().getByte(index);
+        return unwrap()._getByte(index);
     }
 
     @Override
@@ -130,7 +103,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected short _getShort(int index) {
-        return unwrap().getShort(index);
+        return unwrap()._getShort(index);
     }
 
     @Override
@@ -140,7 +113,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected short _getShortLE(int index) {
-        return unwrap().getShortLE(index);
+        return unwrap()._getShortLE(index);
     }
 
     @Override
@@ -150,7 +123,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        return unwrap().getUnsignedMedium(index);
+        return unwrap()._getUnsignedMedium(index);
     }
 
     @Override
@@ -160,7 +133,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected int _getUnsignedMediumLE(int index) {
-        return unwrap().getUnsignedMediumLE(index);
+        return unwrap()._getUnsignedMediumLE(index);
     }
 
     @Override
@@ -170,7 +143,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected int _getInt(int index) {
-        return unwrap().getInt(index);
+        return unwrap()._getInt(index);
     }
 
     @Override
@@ -180,7 +153,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected int _getIntLE(int index) {
-        return unwrap().getIntLE(index);
+        return unwrap()._getIntLE(index);
     }
 
     @Override
@@ -190,7 +163,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected long _getLong(int index) {
-        return unwrap().getLong(index);
+        return unwrap()._getLong(index);
     }
 
     @Override
@@ -200,17 +173,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected long _getLongLE(int index) {
-        return unwrap().getLongLE(index);
-    }
-
-    @Override
-    public ByteBuf copy(int index, int length) {
-        return unwrap().copy(index, length);
-    }
-
-    @Override
-    public ByteBuf slice(int index, int length) {
-        return unwrap().slice(index, length);
+        return unwrap()._getLongLE(index);
     }
 
     @Override
@@ -239,7 +202,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected void _setByte(int index, int value) {
-        unwrap().setByte(index, value);
+        unwrap()._setByte(index, value);
     }
 
     @Override
@@ -250,7 +213,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected void _setShort(int index, int value) {
-        unwrap().setShort(index, value);
+        unwrap()._setShort(index, value);
     }
 
     @Override
@@ -261,7 +224,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected void _setShortLE(int index, int value) {
-        unwrap().setShortLE(index, value);
+        unwrap()._setShortLE(index, value);
     }
 
     @Override
@@ -272,7 +235,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected void _setMedium(int index, int value) {
-        unwrap().setMedium(index, value);
+        unwrap()._setMedium(index, value);
     }
 
     @Override
@@ -283,7 +246,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected void _setMediumLE(int index, int value) {
-        unwrap().setMediumLE(index, value);
+        unwrap()._setMediumLE(index, value);
     }
 
     @Override
@@ -294,7 +257,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected void _setInt(int index, int value) {
-        unwrap().setInt(index, value);
+        unwrap()._setInt(index, value);
     }
 
     @Override
@@ -305,7 +268,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected void _setIntLE(int index, int value) {
-        unwrap().setIntLE(index, value);
+        unwrap()._setIntLE(index, value);
     }
 
     @Override
@@ -316,7 +279,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     protected void _setLong(int index, long value) {
-        unwrap().setLong(index, value);
+        unwrap()._setLong(index, value);
     }
 
     @Override
@@ -386,16 +349,6 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public int nioBufferCount() {
-        return unwrap().nioBufferCount();
-    }
-
-    @Override
-    public ByteBuffer[] nioBuffers(int index, int length) {
-        return unwrap().nioBuffers(index, length);
-    }
-
-    @Override
     public int forEachByte(int index, int length, ByteProcessor processor) {
         return unwrap().forEachByte(index, length, processor);
     }
@@ -405,4 +358,3 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
         return unwrap().forEachByteDesc(index, length, processor);
     }
 }
-

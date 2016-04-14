@@ -23,10 +23,16 @@ import io.netty.buffer.ByteBuf;
  */
 public interface FullHttpResponse extends HttpResponse, FullHttpMessage {
     @Override
-    FullHttpResponse copy(ByteBuf newContent);
+    FullHttpResponse copy();
 
     @Override
-    FullHttpResponse copy();
+    FullHttpResponse duplicate();
+
+    @Override
+    FullHttpResponse retainedDuplicate();
+
+    @Override
+    FullHttpResponse replace(ByteBuf content);
 
     @Override
     FullHttpResponse retain(int increment);
@@ -39,9 +45,6 @@ public interface FullHttpResponse extends HttpResponse, FullHttpMessage {
 
     @Override
     FullHttpResponse touch(Object hint);
-
-    @Override
-    FullHttpResponse duplicate();
 
     @Override
     FullHttpResponse setProtocolVersion(HttpVersion version);

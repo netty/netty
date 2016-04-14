@@ -244,9 +244,9 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     // See https://github.com/netty/netty/issues/1461
     private static Object safeDuplicate(Object message) {
         if (message instanceof ByteBuf) {
-            return ((ByteBuf) message).duplicate().retain();
+            return ((ByteBuf) message).retainedDuplicate();
         } else if (message instanceof ByteBufHolder) {
-            return ((ByteBufHolder) message).duplicate().retain();
+            return ((ByteBufHolder) message).retainedDuplicate();
         } else {
             return ReferenceCountUtil.retain(message);
         }

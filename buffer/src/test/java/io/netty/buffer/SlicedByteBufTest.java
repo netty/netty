@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -27,12 +28,11 @@ import static org.junit.Assert.*;
  */
 public class SlicedByteBufTest extends AbstractByteBufTest {
 
-    private final Random random = new Random();
-
     @Override
     protected ByteBuf newBuffer(int length) {
         ByteBuf buffer = Unpooled.wrappedBuffer(
-                new byte[length * 2], random.nextInt(length - 1) + 1, length);
+                new byte[length * 2], ThreadLocalRandom.current().nextInt(length - 1) + 1, length);
+        assertEquals(0, buffer.readerIndex());
         assertEquals(length, buffer.writerIndex());
         return buffer;
     }

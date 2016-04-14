@@ -50,6 +50,12 @@ public interface Http2DataFrame extends Http2StreamFrame, ByteBufHolder {
     Http2DataFrame duplicate();
 
     @Override
+    Http2DataFrame retainedDuplicate();
+
+    @Override
+    Http2DataFrame replace(ByteBuf content);
+
+    @Override
     Http2DataFrame retain();
 
     @Override

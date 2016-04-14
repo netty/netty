@@ -59,6 +59,12 @@ public interface Http2GoAwayFrame extends Http2Frame, ByteBufHolder {
     Http2GoAwayFrame duplicate();
 
     @Override
+    Http2GoAwayFrame retainedDuplicate();
+
+    @Override
+    Http2GoAwayFrame replace(ByteBuf content);
+
+    @Override
     Http2GoAwayFrame retain();
 
     @Override

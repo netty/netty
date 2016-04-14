@@ -173,27 +173,43 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public FileUpload copy() {
-        DiskFileUpload upload = new DiskFileUpload(getName(),
-                getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
-        ByteBuf buf = content();
-        if (buf != null) {
-            try {
-                upload.setContent(buf.copy());
-            } catch (IOException e) {
-                throw new ChannelException(e);
-            }
-        }
-        return upload;
+        final ByteBuf content = content();
+        return replace(content != null ? content.copy() : null);
     }
 
     @Override
     public FileUpload duplicate() {
-        DiskFileUpload upload = new DiskFileUpload(getName(),
-                getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
-        ByteBuf buf = content();
-        if (buf != null) {
+        final ByteBuf content = content();
+        return replace(content != null ? content.duplicate() : null);
+    }
+
+    @Override
+    public FileUpload retainedDuplicate() {
+        ByteBuf content = content();
+        if (content != null) {
+            content = content.retainedDuplicate();
+            boolean success = false;
             try {
-                upload.setContent(buf.duplicate());
+                FileUpload duplicate = replace(content);
+                success = true;
+                return duplicate;
+            } finally {
+                if (!success) {
+                    content.release();
+                }
+            }
+        } else {
+            return replace(null);
+        }
+    }
+
+    @Override
+    public FileUpload replace(ByteBuf content) {
+        DiskFileUpload upload = new DiskFileUpload(
+                getName(), getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
+        if (content != null) {
+            try {
+                upload.setContent(content);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }

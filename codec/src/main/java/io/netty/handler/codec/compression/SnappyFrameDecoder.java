@@ -22,7 +22,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import java.util.Arrays;
 import java.util.List;
 
-import static io.netty.handler.codec.compression.Snappy.*;
+import static io.netty.handler.codec.compression.Snappy.validateChecksum;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded with the Snappy framing format.
@@ -153,7 +153,7 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
                     } else {
                         in.skipBytes(4);
                     }
-                    out.add(in.readSlice(chunkLength - 4).retain());
+                    out.add(in.readRetainedSlice(chunkLength - 4));
                     break;
                 case COMPRESSED_DATA:
                     if (!started) {

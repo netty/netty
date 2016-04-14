@@ -177,7 +177,7 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
      */
     @SuppressWarnings("UnusedParameters")
     protected ByteBuf extractObject(ChannelHandlerContext ctx, ByteBuf buffer, int index, int length) {
-        return buffer.slice(index, length).retain();
+        return buffer.retainedSlice(index, length);
     }
 
     private void decodeByte(byte c, ByteBuf in, int idx) {

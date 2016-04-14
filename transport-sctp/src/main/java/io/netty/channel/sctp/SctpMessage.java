@@ -150,19 +150,25 @@ public final class SctpMessage extends DefaultByteBufHolder {
 
     @Override
     public SctpMessage copy() {
-        if (msgInfo == null) {
-            return new SctpMessage(protocolIdentifier, streamIdentifier, unordered, content().copy());
-        } else {
-            return new SctpMessage(msgInfo, content().copy());
-        }
+        return (SctpMessage) super.copy();
     }
 
     @Override
     public SctpMessage duplicate() {
+        return (SctpMessage) super.duplicate();
+    }
+
+    @Override
+    public SctpMessage retainedDuplicate() {
+        return (SctpMessage) super.retainedDuplicate();
+    }
+
+    @Override
+    public SctpMessage replace(ByteBuf content) {
         if (msgInfo == null) {
-            return new SctpMessage(protocolIdentifier, streamIdentifier, unordered, content().duplicate());
+            return new SctpMessage(protocolIdentifier, streamIdentifier, unordered, content);
         } else {
-            return new SctpMessage(msgInfo, content().duplicate());
+            return new SctpMessage(msgInfo, content);
         }
     }
 

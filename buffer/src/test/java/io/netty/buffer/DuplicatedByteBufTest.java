@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * Tests duplicated channel buffers
  */
-public class DuplicateByteBufTest extends AbstractByteBufTest {
+public class DuplicatedByteBufTest extends AbstractByteBufTest {
 
     @Override
     protected ByteBuf newBuffer(int length) {

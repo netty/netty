@@ -267,7 +267,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 @Override
                 public void run() {
                     clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    clientHandler.encoder().writeData(ctxClient(), 3, content.duplicate().retain(), 0, true,
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.retainedDuplicate(), 0, true,
                                                       newPromiseClient());
                     clientChannel.flush();
                 }
@@ -300,10 +300,11 @@ public class InboundHttp2ToHttpAdapterTest {
                 @Override
                 public void run() {
                     clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    clientHandler.encoder().writeData(ctxClient(), 3, content.slice(0, midPoint).retain(), 0, false,
-                            newPromiseClient());
-                    clientHandler.encoder().writeData(ctxClient(), 3,
-                            content.slice(midPoint, text.length() - midPoint).retain(), 0, true, newPromiseClient());
+                    clientHandler.encoder().writeData(
+                            ctxClient(), 3, content.retainedSlice(0, midPoint), 0, false, newPromiseClient());
+                    clientHandler.encoder().writeData(
+                            ctxClient(), 3, content.retainedSlice(midPoint, text.length() - midPoint),
+                            0, true, newPromiseClient());
                     clientChannel.flush();
                 }
             });
@@ -417,7 +418,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 @Override
                 public void run() {
                     clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    clientHandler.encoder().writeData(ctxClient(), 3, content.duplicate().retain(), 0, false,
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.retainedDuplicate(), 0, false,
                                                       newPromiseClient());
                     clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers2, 0, true, newPromiseClient());
                     clientChannel.flush();
@@ -464,9 +465,9 @@ public class InboundHttp2ToHttpAdapterTest {
                     clientHandler.encoder().writeHeaders(ctxClient(), 5, http2Headers2, 0, false, newPromiseClient());
                     clientChannel.flush(); // Headers are queued in the flow controller and so flush them.
                     clientHandler.encoder().writePriority(ctxClient(), 5, 3, (short) 123, true, newPromiseClient());
-                    clientHandler.encoder().writeData(ctxClient(), 3, content.duplicate().retain(), 0, true,
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.retainedDuplicate(), 0, true,
                                                       newPromiseClient());
-                    clientHandler.encoder().writeData(ctxClient(), 5, content2.duplicate().retain(), 0, true,
+                    clientHandler.encoder().writeData(ctxClient(), 5, content2.retainedDuplicate(), 0, true,
                                                       newPromiseClient());
                     clientChannel.flush();
                 }
@@ -518,9 +519,9 @@ public class InboundHttp2ToHttpAdapterTest {
                 public void run() {
                     clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
                     clientHandler.encoder().writeHeaders(ctxClient(), 5, http2Headers2, 0, false, newPromiseClient());
-                    clientHandler.encoder().writeData(ctxClient(), 3, content.duplicate().retain(), 0, true,
+                    clientHandler.encoder().writeData(ctxClient(), 3, content.retainedDuplicate(), 0, true,
                                                       newPromiseClient());
-                    clientHandler.encoder().writeData(ctxClient(), 5, content2.duplicate().retain(), 0, true,
+                    clientHandler.encoder().writeData(ctxClient(), 5, content2.retainedDuplicate(), 0, true,
                                                       newPromiseClient());
                     clientChannel.flush(); // headers and data are queued in the flow controller, so flush them.
                     clientHandler.encoder().writePriority(ctxClient(), 5, 3, (short) 222, false, newPromiseClient());
@@ -592,9 +593,9 @@ public class InboundHttp2ToHttpAdapterTest {
                 public void run() {
                     serverHandler.encoder().writeHeaders(ctxServer(), 3, http2Headers, 0, false, newPromiseServer());
                     serverHandler.encoder().writePushPromise(ctxServer(), 3, 2, http2Headers2, 0, newPromiseServer());
-                    serverHandler.encoder().writeData(ctxServer(), 3, content.duplicate().retain(), 0, true,
+                    serverHandler.encoder().writeData(ctxServer(), 3, content.retainedDuplicate(), 0, true,
                                                       newPromiseServer());
-                    serverHandler.encoder().writeData(ctxServer(), 5, content2.duplicate().retain(), 0, true,
+                    serverHandler.encoder().writeData(ctxServer(), 5, content2.retainedDuplicate(), 0, true,
                                                       newPromiseServer());
                     serverConnectedChannel.flush();
                 }
@@ -627,7 +628,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final FullHttpMessage response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
         final String text = "a big payload";
         final ByteBuf payload = Unpooled.copiedBuffer(text.getBytes());
-        final FullHttpMessage request2 = request.copy(payload);
+        final FullHttpMessage request2 = request.replace(payload);
         final FullHttpMessage response2 = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 
         try {
@@ -660,7 +661,7 @@ public class InboundHttp2ToHttpAdapterTest {
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() {
-                    clientHandler.encoder().writeData(ctxClient(), 3, payload.duplicate().retain(), 0, true,
+                    clientHandler.encoder().writeData(ctxClient(), 3, payload.retainedDuplicate(), 0, true,
                                                       newPromiseClient());
                     clientChannel.flush();
                 }

@@ -375,7 +375,7 @@ public class LocalChannelTest {
                                 ccCpy.pipeline().lastContext().close();
                             }
                         });
-                        ccCpy.writeAndFlush(data.duplicate().retain(), promise);
+                        ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                     }
                 });
 
@@ -436,10 +436,10 @@ public class LocalChannelTest {
                         promise.addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
-                                ccCpy.writeAndFlush(data2.duplicate().retain(), ccCpy.newPromise());
+                                ccCpy.writeAndFlush(data2.retainedDuplicate(), ccCpy.newPromise());
                             }
                         });
-                        ccCpy.writeAndFlush(data.duplicate().retain(), promise);
+                        ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                     }
                 });
 
@@ -519,10 +519,10 @@ public class LocalChannelTest {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             Channel serverChannelCpy = serverChannelRef.get();
-                            serverChannelCpy.writeAndFlush(data2.duplicate().retain(), serverChannelCpy.newPromise());
+                            serverChannelCpy.writeAndFlush(data2.retainedDuplicate(), serverChannelCpy.newPromise());
                         }
                     });
-                    ccCpy.writeAndFlush(data.duplicate().retain(), promise);
+                    ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                 }
             });
 
@@ -601,11 +601,11 @@ public class LocalChannelTest {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
                                 Channel serverChannelCpy = serverChannelRef.get();
-                                serverChannelCpy.writeAndFlush(data2.duplicate().retain(),
-                                        serverChannelCpy.newPromise());
+                                serverChannelCpy.writeAndFlush(
+                                        data2.retainedDuplicate(), serverChannelCpy.newPromise());
                             }
                         });
-                        ccCpy.writeAndFlush(data.duplicate().retain(), promise);
+                        ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                     }
                 });
 
@@ -683,7 +683,7 @@ public class LocalChannelTest {
                                 serverChannelRef.get().close();
                             }
                         });
-                        ccCpy.writeAndFlush(data.duplicate().retain(), promise);
+                        ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                     }
                 });
 
@@ -757,7 +757,7 @@ public class LocalChannelTest {
                 cc.pipeline().lastContext().executor().execute(new OneTimeTask() {
                     @Override
                     public void run() {
-                        ccCpy.writeAndFlush(data.duplicate().retain(), ccCpy.newPromise())
+                        ccCpy.writeAndFlush(data.retainedDuplicate(), ccCpy.newPromise())
                         .addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
@@ -777,7 +777,7 @@ public class LocalChannelTest {
                                                 fail();
                                             }
                                         }
-                                        serverChannelCpy.writeAndFlush(data2.duplicate().retain(),
+                                        serverChannelCpy.writeAndFlush(data2.retainedDuplicate(),
                                                                        serverChannelCpy.newPromise())
                                             .addListener(new ChannelFutureListener() {
                                             @Override
@@ -864,7 +864,7 @@ public class LocalChannelTest {
     }
 
     private static final class LatchChannelFutureListener extends CountDownLatch implements ChannelFutureListener {
-        public LatchChannelFutureListener(int count) {
+        private LatchChannelFutureListener(int count) {
             super(count);
         }
 

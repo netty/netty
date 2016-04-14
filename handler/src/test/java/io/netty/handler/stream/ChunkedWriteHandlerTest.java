@@ -131,7 +131,7 @@ public class ChunkedWriteHandlerTest {
                     return null;
                 }
                 done = true;
-                return buffer.duplicate().retain();
+                return buffer.retainedDuplicate();
             }
 
             @Override

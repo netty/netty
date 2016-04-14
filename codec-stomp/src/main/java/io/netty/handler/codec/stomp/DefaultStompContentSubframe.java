@@ -17,74 +17,61 @@ package io.netty.handler.codec.stomp;
 
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.handler.codec.DecoderResult;
 
 /**
  * The default {@link StompContentSubframe} implementation.
  */
-public class DefaultStompContentSubframe implements StompContentSubframe {
+public class DefaultStompContentSubframe extends DefaultByteBufHolder implements StompContentSubframe {
     private DecoderResult decoderResult = DecoderResult.SUCCESS;
-    private final ByteBuf content;
 
     public DefaultStompContentSubframe(ByteBuf content) {
-        if (content == null) {
-            throw new NullPointerException("content");
-        }
-        this.content = content;
-    }
-
-    @Override
-    public ByteBuf content() {
-        return content;
+        super(content);
     }
 
     @Override
     public StompContentSubframe copy() {
-        return new DefaultStompContentSubframe(content().copy());
+        return (StompContentSubframe) super.copy();
     }
 
     @Override
     public StompContentSubframe duplicate() {
-        return new DefaultStompContentSubframe(content().duplicate());
+        return (StompContentSubframe) super.duplicate();
     }
 
     @Override
-    public int refCnt() {
-        return content().refCnt();
+    public StompContentSubframe retainedDuplicate() {
+        return (StompContentSubframe) super.retainedDuplicate();
+    }
+
+    @Override
+    public StompContentSubframe replace(ByteBuf content) {
+        return new DefaultStompContentSubframe(content);
     }
 
     @Override
     public StompContentSubframe retain() {
-        content().retain();
+        super.retain();
         return this;
     }
 
     @Override
     public StompContentSubframe retain(int increment) {
-        content().retain(increment);
+        super.retain(increment);
         return this;
     }
 
     @Override
     public StompContentSubframe touch() {
-        content.touch();
+        super.touch();
         return this;
     }
 
     @Override
     public StompContentSubframe touch(Object hint) {
-        content.touch(hint);
+        super.touch(hint);
         return this;
-    }
-
-    @Override
-    public boolean release() {
-        return content().release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        return content().release(decrement);
     }
 
     @Override

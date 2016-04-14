@@ -194,17 +194,31 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <h3>Derived buffers</h3>
  *
- * You can create a view of an existing buffer by calling either
- * {@link #duplicate()}, {@link #slice()} or {@link #slice(int, int)}.
+ * You can create a view of an existing buffer by calling one of the following methods:
+ * <ul>
+ *   <li>{@link #duplicate()}</li>
+ *   <li>{@link #slice()}</li>
+ *   <li>{@link #slice(int, int)}</li>
+ *   <li>{@link #readSlice(int)}</li>
+ *   <li>{@link #retainedDuplicate()}</li>
+ *   <li>{@link #retainedSlice()}</li>
+ *   <li>{@link #retainedSlice(int, int)}</li>
+ *   <li>{@link #readRetainedSlice(int)}</li>
+ * </ul>
  * A derived buffer will have an independent {@link #readerIndex() readerIndex},
  * {@link #writerIndex() writerIndex} and marker indexes, while it shares
  * other internal data representation, just like a NIO buffer does.
  * <p>
  * In case a completely fresh copy of an existing buffer is required, please
  * call {@link #copy()} method instead.
- * <p>
- * Also be aware that obtaining derived buffers will NOT call {@link #retain()} and so the
- * reference count will NOT be increased.
+ *
+ * <h4>Non-retained and retained derived buffers</h4>
+ *
+ * Note that the {@link #duplicate()}, {@link #slice()}, {@link #slice(int, int)} and {@link #readSlice(int)} does NOT
+ * call {@link #retain()} on the returned derived buffer, and thus its reference count will NOT be increased. If you
+ * need to create a derived buffer with increased reference count, consider using {@link #retainedDuplicate()},
+ * {@link #retainedSlice()}, {@link #retainedSlice(int, int)} and {@link #readRetainedSlice(int)} which may return
+ * a buffer implementation that produces less garbage.
  *
  * <h3>Conversion to existing JDK types</h3>
  *
@@ -1492,6 +1506,24 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf readSlice(int length);
 
     /**
+     * Returns a new retained slice of this buffer's sub-region starting at the current
+     * {@code readerIndex} and increases the {@code readerIndex} by the size
+     * of the new slice (= {@code length}).
+     * <p>
+     * Note that this method returns a {@linkplain #retain() retained} buffer unlike {@link #readSlice(int)}.
+     * This method behaves similarly to {@code readSlice(...).retain()} except that this method may return
+     * a buffer implementation that produces less garbage.
+     *
+     * @param length the size of the new slice
+     *
+     * @return the newly created slice
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code length} is greater than {@code this.readableBytes}
+     */
+    public abstract ByteBuf readRetainedSlice(int length);
+
+    /**
      * Transfers this buffer's data to the specified destination starting at
      * the current {@code readerIndex} until the destination becomes
      * non-writable, and increases the {@code readerIndex} by the number of the
@@ -2061,6 +2093,20 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf slice();
 
     /**
+     * Returns a retained slice of this buffer's readable bytes. Modifying the content
+     * of the returned buffer or this buffer affects each other's content
+     * while they maintain separate indexes and marks.  This method is
+     * identical to {@code buf.slice(buf.readerIndex(), buf.readableBytes())}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     * <p>
+     * Note that this method returns a {@linkplain #retain() retained} buffer unlike {@link #slice()}.
+     * This method behaves similarly to {@code slice().retain()} except that this method may return
+     * a buffer implementation that produces less garbage.
+     */
+    public abstract ByteBuf retainedSlice();
+
+    /**
      * Returns a slice of this buffer's sub-region. Modifying the content of
      * the returned buffer or this buffer affects each other's content while
      * they maintain separate indexes and marks.
@@ -2071,6 +2117,19 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * reference count will NOT be increased.
      */
     public abstract ByteBuf slice(int index, int length);
+
+    /**
+     * Returns a retained slice of this buffer's sub-region. Modifying the content of
+     * the returned buffer or this buffer affects each other's content while
+     * they maintain separate indexes and marks.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     * <p>
+     * Note that this method returns a {@linkplain #retain() retained} buffer unlike {@link #slice(int, int)}.
+     * This method behaves similarly to {@code slice(...).retain()} except that this method may return
+     * a buffer implementation that produces less garbage.
+     */
+    public abstract ByteBuf retainedSlice(int index, int length);
 
     /**
      * Returns a buffer which shares the whole region of this buffer.
@@ -2084,6 +2143,20 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * NOT call {@link #retain()} and so the reference count will NOT be increased.
      */
     public abstract ByteBuf duplicate();
+
+    /**
+     * Returns a retained buffer which shares the whole region of this buffer.
+     * Modifying the content of the returned buffer or this buffer affects
+     * each other's content while they maintain separate indexes and marks.
+     * This method is identical to {@code buf.slice(0, buf.capacity())}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     * <p>
+     * Note that this method returns a {@linkplain #retain() retained} buffer unlike {@link #slice(int, int)}.
+     * This method behaves similarly to {@code duplicate().retain()} except that this method may return
+     * a buffer implementation that produces less garbage.
+     */
+    public abstract ByteBuf retainedDuplicate();
 
     /**
      * Returns the maximum number of NIO {@link ByteBuffer}s that consist this buffer.  Note that {@link #nioBuffers()}

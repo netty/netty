@@ -136,6 +136,22 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         return null;
     }
 
+    @Override
+    public final ByteBuf retainedDuplicate() {
+        return PooledDuplicatedByteBuf.newInstance(this, readerIndex(), writerIndex());
+    }
+
+    @Override
+    public final ByteBuf retainedSlice() {
+        final int index = readerIndex();
+        return retainedSlice(index, writerIndex() - index);
+    }
+
+    @Override
+    public final ByteBuf retainedSlice(int index, int length) {
+        return PooledSlicedByteBuf.newInstance(this, index, length, index);
+    }
+
     protected final ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {

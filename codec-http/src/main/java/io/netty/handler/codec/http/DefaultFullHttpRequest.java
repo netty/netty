@@ -125,44 +125,24 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
         return this;
     }
 
-    /**
-     * Copy this object
-     *
-     * @param copyContent
-     * <ul>
-     * <li>{@code true} if this object's {@link #content()} should be used to copy.</li>
-     * <li>{@code false} if {@code newContent} should be used instead.</li>
-     * </ul>
-     * @param newContent
-     * <ul>
-     * <li>if {@code copyContent} is false then this will be used in the copy's content.</li>
-     * <li>if {@code null} then a default buffer of 0 size will be selected</li>
-     * </ul>
-     * @return A copy of this object
-     */
-    private FullHttpRequest copy(boolean copyContent, ByteBuf newContent) {
-        return new DefaultFullHttpRequest(
-                protocolVersion(), method(), uri(),
-                copyContent ? content().copy() :
-                        newContent == null ? Unpooled.buffer(0) : newContent,
-                headers(),
-                trailingHeaders());
-    }
-
-    @Override
-    public FullHttpRequest copy(ByteBuf newContent) {
-        return copy(false, newContent);
-    }
-
     @Override
     public FullHttpRequest copy() {
-        return copy(true, null);
+        return replace(content().copy());
     }
 
     @Override
     public FullHttpRequest duplicate() {
-        return new DefaultFullHttpRequest(
-                protocolVersion(), method(), uri(), content().duplicate(), headers(), trailingHeaders());
+        return replace(content().duplicate());
+    }
+
+    @Override
+    public FullHttpRequest retainedDuplicate() {
+        return replace(content().retainedDuplicate());
+    }
+
+    @Override
+    public FullHttpRequest replace(ByteBuf content) {
+        return new DefaultFullHttpRequest(protocolVersion(), method(), uri(), content, headers(), trailingHeaders());
     }
 
     @Override

@@ -26,11 +26,11 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.stream.ChunkedInput;
@@ -48,7 +48,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static io.netty.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
@@ -836,7 +836,6 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         int length = currentBuffer.readableBytes();
         if (length > HttpPostBodyUtil.chunkSize) {
             ByteBuf slice = currentBuffer.slice(currentBuffer.readerIndex(), HttpPostBodyUtil.chunkSize);
-            currentBuffer.retain();
             currentBuffer.skipBytes(HttpPostBodyUtil.chunkSize);
             return slice;
         } else {
@@ -1239,45 +1238,24 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             return this;
         }
 
-        /**
-         * Copy this object
-         *
-         * @param copyContent
-         * <ul>
-         * <li>{@code true} if this object's {@link #content()} should be used to copy.</li>
-         * <li>{@code false} if {@code newContent} should be used instead.</li>
-         * </ul>
-         * @param newContent
-         * <ul>
-         * <li>if {@code copyContent} is false then this will be used in the copy's content.</li>
-         * <li>if {@code null} then a default buffer of 0 size will be selected</li>
-         * </ul>
-         * @return A copy of this object
-         */
-        private FullHttpRequest copy(boolean copyContent, ByteBuf newContent) {
-            DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
-                    protocolVersion(), method(), uri(),
-                    copyContent ? content().copy() :
-                            newContent == null ? buffer(0) : newContent);
-            copy.headers().set(headers());
-            copy.trailingHeaders().set(trailingHeaders());
-            return copy;
-        }
-
-        @Override
-        public FullHttpRequest copy(ByteBuf newContent) {
-            return copy(false, newContent);
-        }
-
         @Override
         public FullHttpRequest copy() {
-            return copy(true, null);
+            return replace(content().copy());
         }
 
         @Override
         public FullHttpRequest duplicate() {
-            DefaultFullHttpRequest duplicate = new DefaultFullHttpRequest(
-                    getProtocolVersion(), getMethod(), getUri(), content().duplicate());
+            return replace(content().duplicate());
+        }
+
+        @Override
+        public FullHttpRequest retainedDuplicate() {
+            return replace(content().retainedDuplicate());
+        }
+
+        @Override
+        public FullHttpRequest replace(ByteBuf content) {
+            DefaultFullHttpRequest duplicate = new DefaultFullHttpRequest(protocolVersion(), method(), uri(), content);
             duplicate.headers().set(headers());
             duplicate.trailingHeaders().set(trailingHeaders());
             return duplicate;

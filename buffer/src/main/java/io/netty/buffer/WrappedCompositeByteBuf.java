@@ -333,8 +333,18 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
+    public ByteBuf retainedSlice() {
+        return wrapped.retainedSlice();
+    }
+
+    @Override
     public ByteBuf slice(int index, int length) {
         return wrapped.slice(index, length);
+    }
+
+    @Override
+    public ByteBuf retainedSlice(int index, int length) {
+        return wrapped.retainedSlice(index, length);
     }
 
     @Override
@@ -418,8 +428,18 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
+    public ByteBuf retainedDuplicate() {
+        return wrapped.retainedDuplicate();
+    }
+
+    @Override
     public ByteBuf readSlice(int length) {
         return wrapped.readSlice(length);
+    }
+
+    @Override
+    public ByteBuf readRetainedSlice(int length) {
+        return wrapped.readRetainedSlice(length);
     }
 
     @Override

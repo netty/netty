@@ -21,7 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static io.netty.util.ReferenceCountUtil.*;
+import static io.netty.util.ReferenceCountUtil.releaseLater;
 
 public class LengthFieldBasedFrameDecoderTest {
 
@@ -64,12 +64,12 @@ public class LengthFieldBasedFrameDecoderTest {
         buf.writeByte('a');
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
         try {
-            channel.writeInbound(buf.readSlice(14).retain());
+            channel.writeInbound(buf.readRetainedSlice(14));
             Assert.fail();
         } catch (TooLongFrameException e) {
             // expected
         }
-        Assert.assertTrue(channel.writeInbound(buf.readSlice(buf.readableBytes()).retain()));
+        Assert.assertTrue(channel.writeInbound(buf.readRetainedSlice(buf.readableBytes())));
 
         Assert.assertTrue(channel.finish());
 

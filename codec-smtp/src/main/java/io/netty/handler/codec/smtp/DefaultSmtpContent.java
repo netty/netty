@@ -34,12 +34,22 @@ public class DefaultSmtpContent extends DefaultByteBufHolder implements SmtpCont
 
     @Override
     public SmtpContent copy() {
-        return new DefaultSmtpContent(content().copy());
+        return (SmtpContent) super.copy();
     }
 
     @Override
     public SmtpContent duplicate() {
-        return new DefaultSmtpContent(content().duplicate());
+        return (SmtpContent) super.duplicate();
+    }
+
+    @Override
+    public SmtpContent retainedDuplicate() {
+        return (SmtpContent) super.retainedDuplicate();
+    }
+
+    @Override
+    public SmtpContent replace(ByteBuf content) {
+        return new DefaultSmtpContent(content);
     }
 
     @Override

@@ -33,34 +33,44 @@ public final class DefaultLastSmtpContent extends DefaultSmtpContent implements 
 
     @Override
     public LastSmtpContent copy() {
-        return new DefaultLastSmtpContent(content().copy());
+        return (LastSmtpContent) super.copy();
     }
 
     @Override
     public LastSmtpContent duplicate() {
-        return new DefaultLastSmtpContent(content().duplicate());
+        return (LastSmtpContent) super.duplicate();
     }
 
     @Override
-    public LastSmtpContent retain() {
+    public LastSmtpContent retainedDuplicate() {
+        return (LastSmtpContent) super.retainedDuplicate();
+    }
+
+    @Override
+    public LastSmtpContent replace(ByteBuf content) {
+        return new DefaultLastSmtpContent(content);
+    }
+
+    @Override
+    public DefaultLastSmtpContent retain() {
         super.retain();
         return this;
     }
 
     @Override
-    public LastSmtpContent retain(int increment) {
+    public DefaultLastSmtpContent retain(int increment) {
         super.retain(increment);
         return this;
     }
 
     @Override
-    public LastSmtpContent touch() {
+    public DefaultLastSmtpContent touch() {
         super.touch();
         return this;
     }
 
     @Override
-    public LastSmtpContent touch(Object hint) {
+    public DefaultLastSmtpContent touch(Object hint) {
         super.touch(hint);
         return this;
     }

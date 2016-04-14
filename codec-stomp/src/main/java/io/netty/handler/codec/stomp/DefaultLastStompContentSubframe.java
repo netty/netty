@@ -27,6 +27,26 @@ public class DefaultLastStompContentSubframe extends DefaultStompContentSubframe
     }
 
     @Override
+    public LastStompContentSubframe copy() {
+        return (LastStompContentSubframe) super.copy();
+    }
+
+    @Override
+    public LastStompContentSubframe duplicate() {
+        return (LastStompContentSubframe) super.duplicate();
+    }
+
+    @Override
+    public LastStompContentSubframe retainedDuplicate() {
+        return (LastStompContentSubframe) super.retainedDuplicate();
+    }
+
+    @Override
+    public LastStompContentSubframe replace(ByteBuf content) {
+        return new DefaultLastStompContentSubframe(content);
+    }
+
+    @Override
     public DefaultLastStompContentSubframe retain() {
         super.retain();
         return this;
@@ -48,16 +68,6 @@ public class DefaultLastStompContentSubframe extends DefaultStompContentSubframe
     public LastStompContentSubframe touch(Object hint) {
         super.touch(hint);
         return this;
-    }
-
-    @Override
-    public LastStompContentSubframe copy() {
-        return new DefaultLastStompContentSubframe(content().copy());
-    }
-
-    @Override
-    public LastStompContentSubframe duplicate() {
-        return new DefaultLastStompContentSubframe(content().duplicate());
     }
 
     @Override

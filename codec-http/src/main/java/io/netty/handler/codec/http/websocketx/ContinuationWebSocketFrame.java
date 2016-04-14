@@ -93,12 +93,22 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
 
     @Override
     public ContinuationWebSocketFrame copy() {
-        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), content().copy());
+        return (ContinuationWebSocketFrame) super.copy();
     }
 
     @Override
     public ContinuationWebSocketFrame duplicate() {
-        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), content().duplicate());
+        return (ContinuationWebSocketFrame) super.duplicate();
+    }
+
+    @Override
+    public ContinuationWebSocketFrame retainedDuplicate() {
+        return (ContinuationWebSocketFrame) super.retainedDuplicate();
+    }
+
+    @Override
+    public ContinuationWebSocketFrame replace(ByteBuf content) {
+        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), content);
     }
 
     @Override

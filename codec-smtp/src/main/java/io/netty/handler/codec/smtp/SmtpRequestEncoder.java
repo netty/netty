@@ -76,7 +76,7 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
             final ByteBuf content = ((SmtpContent) msg).content();
             out.add(content.retain());
             if (msg instanceof LastSmtpContent) {
-                out.add(DOT_CRLF_BUFFER.duplicate().retain());
+                out.add(DOT_CRLF_BUFFER.retainedDuplicate());
                 contentExpected = false;
             }
         }

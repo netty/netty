@@ -74,7 +74,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
         if (in.readableBytes() < frameLength) {
             return null;
         } else {
-            return in.readSlice(frameLength).retain();
+            return in.readRetainedSlice(frameLength);
         }
     }
 }
