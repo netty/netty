@@ -240,6 +240,7 @@
     <module>codec-memcache</module>
     <module>codec-mqtt</module>
     <module>codec-redis</module>
+    <module>codec-smtp</module>
     <module>codec-socks</module>
     <module>codec-stomp</module>
     <module>codec-xml</module>
