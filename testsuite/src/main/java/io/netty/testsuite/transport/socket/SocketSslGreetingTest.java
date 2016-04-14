@@ -52,7 +52,8 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 @RunWith(Parameterized.class)
 public class SocketSslGreetingTest extends AbstractSocketTest {
@@ -200,7 +201,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
-            channel.writeAndFlush(greeting.duplicate().retain());
+            channel.writeAndFlush(greeting.retainedDuplicate());
         }
 
         @Override

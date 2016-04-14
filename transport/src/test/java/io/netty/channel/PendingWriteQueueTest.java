@@ -150,7 +150,7 @@ public class PendingWriteQueueTest {
 
         ByteBuf[] buffers = new ByteBuf[count];
         for (int i = 0; i < buffers.length; i++) {
-            buffers[i] = buffer.duplicate().retain();
+            buffers[i] = buffer.retainedDuplicate();
         }
         assertTrue(channel.writeOutbound(buffers));
         assertTrue(channel.finish());
@@ -182,7 +182,7 @@ public class PendingWriteQueueTest {
         final EmbeddedChannel channel = new EmbeddedChannel(handler);
         ByteBuf[] buffers = new ByteBuf[count];
         for (int i = 0; i < buffers.length; i++) {
-            buffers[i] = buffer.duplicate().retain();
+            buffers[i] = buffer.retainedDuplicate();
         }
         try {
             assertFalse(channel.writeOutbound(buffers));

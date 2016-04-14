@@ -95,7 +95,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             return new DefaultDnsPtrRecord(name, dnsClass, timeToLive, decodeName(in));
         }
         return new DefaultDnsRawRecord(
-                name, type, dnsClass, timeToLive, in.duplicate().setIndex(offset, offset + length).retain());
+                name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
     }
 
     /**

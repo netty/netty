@@ -60,11 +60,21 @@ public class DefaultLastMemcacheContent extends DefaultMemcacheContent implement
 
     @Override
     public LastMemcacheContent copy() {
-        return new DefaultLastMemcacheContent(content().copy());
+        return replace(content().copy());
     }
 
     @Override
     public LastMemcacheContent duplicate() {
-        return new DefaultLastMemcacheContent(content().duplicate());
+        return replace(content().duplicate());
+    }
+
+    @Override
+    public LastMemcacheContent retainedDuplicate() {
+        return replace(content().retainedDuplicate());
+    }
+
+    @Override
+    public LastMemcacheContent replace(ByteBuf content) {
+        return new DefaultLastMemcacheContent(content);
     }
 }

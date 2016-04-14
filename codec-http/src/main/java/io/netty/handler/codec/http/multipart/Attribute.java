@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.ByteBuf;
+
 import java.io.IOException;
 
 /**
@@ -36,6 +38,12 @@ public interface Attribute extends HttpData {
 
     @Override
     Attribute duplicate();
+
+    @Override
+    Attribute retainedDuplicate();
+
+    @Override
+    Attribute replace(ByteBuf content);
 
     @Override
     Attribute retain();

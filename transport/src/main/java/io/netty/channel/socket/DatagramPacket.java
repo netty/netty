@@ -44,12 +44,22 @@ public final class DatagramPacket
 
     @Override
     public DatagramPacket copy() {
-        return new DatagramPacket(content().copy(), recipient(), sender());
+        return replace(content().copy());
     }
 
     @Override
     public DatagramPacket duplicate() {
-        return new DatagramPacket(content().duplicate(), recipient(), sender());
+        return replace(content().duplicate());
+    }
+
+    @Override
+    public DatagramPacket retainedDuplicate() {
+        return replace(content().retainedDuplicate());
+    }
+
+    @Override
+    public DatagramPacket replace(ByteBuf content) {
+        return new DatagramPacket(content, recipient(), sender());
     }
 
     @Override

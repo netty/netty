@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelPipeline;
 
@@ -32,6 +33,12 @@ public interface HttpContent extends HttpObject, ByteBufHolder {
 
     @Override
     HttpContent duplicate();
+
+    @Override
+    HttpContent retainedDuplicate();
+
+    @Override
+    HttpContent replace(ByteBuf content);
 
     @Override
     HttpContent retain();

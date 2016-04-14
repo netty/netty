@@ -294,6 +294,16 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
+    public FileUpload retainedDuplicate() {
+        return fileUpload.retainedDuplicate();
+    }
+
+    @Override
+    public FileUpload replace(ByteBuf content) {
+        return fileUpload.replace(content);
+    }
+
+    @Override
     public ByteBuf content() {
         return fileUpload.content();
     }

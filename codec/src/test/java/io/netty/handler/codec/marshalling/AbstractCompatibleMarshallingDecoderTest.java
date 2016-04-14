@@ -28,7 +28,10 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public abstract class AbstractCompatibleMarshallingDecoderTest {
     @SuppressWarnings("RedundantStringConstructorCall")
@@ -81,9 +84,9 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         byte[] testBytes = bout.toByteArray();
 
         ByteBuf buffer = input(testBytes);
-        ByteBuf slice = buffer.readSlice(2);
+        ByteBuf slice = buffer.readRetainedSlice(2);
 
-        ch.writeInbound(slice.retain());
+        ch.writeInbound(slice);
         ch.writeInbound(buffer);
         assertTrue(ch.finish());
 

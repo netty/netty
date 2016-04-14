@@ -29,7 +29,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class LzmaFrameEncoderTest extends AbstractEncoderTest {
 
@@ -50,16 +51,16 @@ public class LzmaFrameEncoderTest extends AbstractEncoderTest {
         final int dataLength = data.readableBytes();
         int written = 0, length = rand.nextInt(50);
         while (written + length < dataLength) {
-            ByteBuf in = data.slice(written, length);
-            assertTrue(channel.writeOutbound(in.retain()));
+            ByteBuf in = data.retainedSlice(written, length);
+            assertTrue(channel.writeOutbound(in));
             written += length;
             originalLengths.add(length);
             length = rand.nextInt(50);
         }
         length = dataLength - written;
-        ByteBuf in = data.slice(written, dataLength - written);
+        ByteBuf in = data.retainedSlice(written, dataLength - written);
         originalLengths.add(length);
-        assertTrue(channel.writeOutbound(in.retain()));
+        assertTrue(channel.writeOutbound(in));
         assertTrue(channel.finish());
 
         CompositeByteBuf decompressed = Unpooled.compositeBuffer();

@@ -28,14 +28,26 @@ public interface ByteBufHolder extends ReferenceCounted {
     ByteBuf content();
 
     /**
-     * Create a deep copy of this {@link ByteBufHolder}.
+     * Creates a deep copy of this {@link ByteBufHolder}.
      */
     ByteBufHolder copy();
 
     /**
-     * Duplicate the {@link ByteBufHolder}. Be aware that this will not automatically call {@link #retain()}.
+     * Duplicates this {@link ByteBufHolder}. Be aware that this will not automatically call {@link #retain()}.
      */
     ByteBufHolder duplicate();
+
+    /**
+     * Duplicates this {@link ByteBufHolder}. This method returns a retained duplicate unlike {@link #duplicate()}.
+     *
+     * @see ByteBuf#retainedDuplicate()
+     */
+    ByteBufHolder retainedDuplicate();
+
+    /**
+     * Returns a new {@link ByteBufHolder} which contains the specified {@code content}.
+     */
+    ByteBufHolder replace(ByteBuf content);
 
     @Override
     ByteBufHolder retain();

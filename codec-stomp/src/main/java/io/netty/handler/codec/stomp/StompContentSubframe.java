@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.stomp;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelPipeline;
 
@@ -31,6 +32,12 @@ public interface StompContentSubframe extends ByteBufHolder, StompSubframe {
 
     @Override
     StompContentSubframe duplicate();
+
+    @Override
+    StompContentSubframe retainedDuplicate();
+
+    @Override
+    StompContentSubframe replace(ByteBuf content);
 
     @Override
     StompContentSubframe retain();

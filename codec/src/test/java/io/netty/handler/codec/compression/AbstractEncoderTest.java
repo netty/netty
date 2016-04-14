@@ -26,7 +26,8 @@ import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(Theories.class)
 public abstract class AbstractEncoderTest extends AbstractCompressionTest {
@@ -88,13 +89,13 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
         final int dataLength = data.readableBytes();
         int written = 0, length = rand.nextInt(100);
         while (written + length < dataLength) {
-            ByteBuf in = data.slice(written, length);
-            assertTrue(channel.writeOutbound(in.retain()));
+            ByteBuf in = data.retainedSlice(written, length);
+            assertTrue(channel.writeOutbound(in));
             written += length;
             length = rand.nextInt(100);
         }
-        ByteBuf in = data.slice(written, dataLength - written);
-        assertTrue(channel.writeOutbound(in.retain()));
+        ByteBuf in = data.retainedSlice(written, dataLength - written);
+        assertTrue(channel.writeOutbound(in));
         assertTrue(channel.finish());
 
         ByteBuf decompressed = readDecompressed(dataLength);

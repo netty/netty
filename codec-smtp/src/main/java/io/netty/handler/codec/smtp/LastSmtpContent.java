@@ -43,6 +43,16 @@ public interface LastSmtpContent extends SmtpContent {
         }
 
         @Override
+        public LastSmtpContent retainedDuplicate() {
+            return this;
+        }
+
+        @Override
+        public LastSmtpContent replace(ByteBuf content) {
+            return new DefaultLastSmtpContent(content);
+        }
+
+        @Override
         public LastSmtpContent retain() {
             return this;
         }
@@ -88,6 +98,12 @@ public interface LastSmtpContent extends SmtpContent {
 
     @Override
     LastSmtpContent duplicate();
+
+    @Override
+    LastSmtpContent retainedDuplicate();
+
+    @Override
+    LastSmtpContent replace(ByteBuf content);
 
     @Override
     LastSmtpContent retain();

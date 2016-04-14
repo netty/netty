@@ -78,7 +78,7 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
     }
 
     @Override
-    public DefaultHttp2GoAwayFrame setExtraStreamIds(int extraStreamIds) {
+    public Http2GoAwayFrame setExtraStreamIds(int extraStreamIds) {
         if (extraStreamIds < 0) {
             throw new IllegalArgumentException("extraStreamIds must be non-negative");
         }
@@ -87,41 +87,45 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
     }
 
     @Override
-    public DefaultHttp2GoAwayFrame copy() {
-        return new DefaultHttp2GoAwayFrame(errorCode, content().copy()).setExtraStreamIds(extraStreamIds);
+    public Http2GoAwayFrame copy() {
+        return (Http2GoAwayFrame) super.copy();
     }
 
     @Override
-    public DefaultHttp2GoAwayFrame duplicate() {
-        return new DefaultHttp2GoAwayFrame(errorCode, content().duplicate()).setExtraStreamIds(extraStreamIds);
+    public Http2GoAwayFrame duplicate() {
+        return (Http2GoAwayFrame) super.duplicate();
     }
 
     @Override
-    public DefaultHttp2GoAwayFrame retain() {
+    public Http2GoAwayFrame retainedDuplicate() {
+        return (Http2GoAwayFrame) super.retainedDuplicate();
+    }
+
+    @Override
+    public Http2GoAwayFrame replace(ByteBuf content) {
+        return new DefaultHttp2GoAwayFrame(errorCode, content).setExtraStreamIds(extraStreamIds);
+    }
+
+    @Override
+    public Http2GoAwayFrame retain() {
         super.retain();
         return this;
     }
 
     @Override
-    public DefaultHttp2GoAwayFrame retain(int increment) {
+    public Http2GoAwayFrame retain(int increment) {
         super.retain(increment);
         return this;
     }
 
     @Override
-    public String toString() {
-        return "DefaultHttp2GoAwayFrame(errorCode=" + errorCode + ", content=" + content()
-            + ", extraStreamIds=" + extraStreamIds + ")";
-    }
-
-    @Override
-    public DefaultHttp2GoAwayFrame touch() {
+    public Http2GoAwayFrame touch() {
         super.touch();
         return this;
     }
 
     @Override
-    public DefaultHttp2GoAwayFrame touch(Object hint) {
+    public Http2GoAwayFrame touch(Object hint) {
         super.touch(hint);
         return this;
     }
@@ -143,5 +147,11 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
         hash = hash * 31 + content().hashCode();
         hash = hash * 31 + extraStreamIds;
         return hash;
+    }
+
+    @Override
+    public String toString() {
+        return "DefaultHttp2GoAwayFrame(errorCode=" + errorCode + ", content=" + content()
+               + ", extraStreamIds=" + extraStreamIds + ")";
     }
 }

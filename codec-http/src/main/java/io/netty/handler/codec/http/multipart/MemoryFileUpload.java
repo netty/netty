@@ -132,12 +132,43 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
 
     @Override
     public FileUpload copy() {
-        MemoryFileUpload upload = new MemoryFileUpload(getName(), getFilename(), getContentType(),
-                getContentTransferEncoding(), getCharset(), size);
-        ByteBuf buf = content();
-        if (buf != null) {
+        final ByteBuf content = content();
+        return replace(content != null ? content.copy() : content);
+    }
+
+    @Override
+    public FileUpload duplicate() {
+        final ByteBuf content = content();
+        return replace(content != null ? content.duplicate() : content);
+    }
+
+    @Override
+    public FileUpload retainedDuplicate() {
+        ByteBuf content = content();
+        if (content != null) {
+            content = content.retainedDuplicate();
+            boolean success = false;
             try {
-                upload.setContent(buf.copy());
+                FileUpload duplicate = replace(content);
+                success = true;
+                return duplicate;
+            } finally {
+                if (!success) {
+                    content.release();
+                }
+            }
+        } else {
+            return replace(null);
+        }
+    }
+
+    @Override
+    public FileUpload replace(ByteBuf content) {
+        MemoryFileUpload upload = new MemoryFileUpload(
+                getName(), getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
+        if (content != null) {
+            try {
+                upload.setContent(content);
                 return upload;
             } catch (IOException e) {
                 throw new ChannelException(e);
@@ -146,21 +177,6 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
         return upload;
     }
 
-    @Override
-    public FileUpload duplicate() {
-        MemoryFileUpload upload = new MemoryFileUpload(getName(), getFilename(), getContentType(),
-                getContentTransferEncoding(), getCharset(), size);
-        ByteBuf buf = content();
-        if (buf != null) {
-            try {
-                upload.setContent(buf.duplicate());
-                return upload;
-            } catch (IOException e) {
-                throw new ChannelException(e);
-            }
-        }
-        return upload;
-    }
     @Override
     public FileUpload retain() {
         super.retain();

@@ -16,6 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -53,7 +54,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         @Override
         public FullHttpMessage copyIfNeeded(FullHttpMessage msg) {
             if (msg instanceof FullHttpRequest) {
-                FullHttpRequest copy = ((FullHttpRequest) msg).copy(null);
+                FullHttpRequest copy = ((FullHttpRequest) msg).replace(Unpooled.buffer(0));
                 copy.headers().remove(HttpHeaderNames.EXPECT);
                 return copy;
             }
