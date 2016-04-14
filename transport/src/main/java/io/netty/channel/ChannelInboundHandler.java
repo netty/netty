@@ -70,6 +70,6 @@ public interface ChannelInboundHandler extends ChannelHandler {
      * Gets called if a {@link Throwable} was thrown.
      */
     @Override
-    @SuppressWarnings("deprecated")
+    @SuppressWarnings("deprecation")
     void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
 }
