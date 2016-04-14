@@ -24,6 +24,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
@@ -178,6 +179,14 @@ public class Http2ConnectionHandlerTest {
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
         when(ctx.executor()).thenReturn(executor);
+        doAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock in) throws Throwable {
+                Object msg = in.getArgumentAt(0, Object.class);
+                ReferenceCountUtil.release(msg);
+                return null;
+            }
+        }).when(ctx).fireChannelRead(any());
     }
 
     private Http2ConnectionHandler newHandler() throws Exception {
