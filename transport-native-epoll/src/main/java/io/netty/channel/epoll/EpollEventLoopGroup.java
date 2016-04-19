@@ -15,8 +15,8 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.EventLoop;
 import io.netty.channel.DefaultSelectStrategyFactory;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
@@ -50,7 +50,7 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      */
     @SuppressWarnings("deprecation")
     public EpollEventLoopGroup(int nThreads, SelectStrategyFactory selectStrategyFactory) {
-        this(nThreads, null, selectStrategyFactory);
+        this(nThreads, (ThreadFactory) null, selectStrategyFactory);
     }
 
     /**
@@ -59,6 +59,10 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     @SuppressWarnings("deprecation")
     public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
         this(nThreads, threadFactory, 0);
+    }
+
+    public EpollEventLoopGroup(int nThreads, Executor executor) {
+        this(nThreads, executor, DefaultSelectStrategyFactory.INSTANCE);
     }
 
     /**
@@ -91,6 +95,10 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce,
                                SelectStrategyFactory selectStrategyFactory) {
         super(nThreads, threadFactory, maxEventsAtOnce, selectStrategyFactory);
+    }
+
+    public EpollEventLoopGroup(int nThreads, Executor executor, SelectStrategyFactory selectStrategyFactory) {
+        super(nThreads, executor, 0, selectStrategyFactory);
     }
 
     /**
