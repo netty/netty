@@ -287,7 +287,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     @Override
-    long checkWaitReadTime(final ChannelHandlerContext ctx, long wait, final long now) {
+    protected long checkWaitReadTime(final ChannelHandlerContext ctx, long wait, final long now) {
         Integer key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel != null) {
@@ -299,7 +299,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     }
 
     @Override
-    void informReadOperation(final ChannelHandlerContext ctx, final long now) {
+    protected void informReadOperation(final ChannelHandlerContext ctx, final long now) {
         Integer key = ctx.channel().hashCode();
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel != null) {
