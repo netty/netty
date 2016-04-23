@@ -15,8 +15,16 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseAggregatorFactory;
+import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
+
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.channel.DefaultChannelPromiseAggregatorFactory.newInstance;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONTINUATION_FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DATA_FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
@@ -54,13 +62,6 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
-import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 
 /**
  * A {@link Http2FrameWriter} that supports all frame types defined by the HTTP/2 specification.
@@ -126,8 +127,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endStream, ChannelPromise promise) {
-        final SimpleChannelPromiseAggregator promiseAggregator =
-                new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
+        ChannelPromiseAggregatorFactory promiseAggregator = newInstance(promise, ctx.executor());
         final DataFrameHeader header = new DataFrameHeader(ctx, streamId);
         boolean needToReleaseHeaders = true;
         boolean needToReleaseData = true;
@@ -165,6 +165,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                     ctx.write(ZERO_BUFFER.slice(0, framePaddingBytes), promiseAggregator.newPromise());
                 }
             } while (!lastFrame);
+            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
             if (needToReleaseHeaders) {
                 header.release();
@@ -172,9 +173,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             if (needToReleaseData) {
                 data.release();
             }
-            promiseAggregator.setFailure(t);
+            return promise.setFailure(t);
         }
-        return promiseAggregator.doneAllocatingPromises();
     }
 
     @Override
@@ -261,8 +261,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data,
             ChannelPromise promise) {
         boolean releaseData = true;
-        SimpleChannelPromiseAggregator promiseAggregator =
-                new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
+        ChannelPromiseAggregatorFactory promiseAggregator = newInstance(promise, ctx.executor());
         try {
             verifyPingPayload(data);
             Http2Flags flags = ack ? new Http2Flags().ack(true) : new Http2Flags();
@@ -273,21 +272,20 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             // Write the debug data.
             releaseData = false;
             ctx.write(data, promiseAggregator.newPromise());
+            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
             if (releaseData) {
                 data.release();
             }
-            promiseAggregator.setFailure(t);
+            return promise.setFailure(t);
         }
-        return promiseAggregator.doneAllocatingPromises();
     }
 
     @Override
     public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId,
             int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) {
         ByteBuf headerBlock = null;
-        SimpleChannelPromiseAggregator promiseAggregator =
-                new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
+        ChannelPromiseAggregatorFactory promiseAggregator = newInstance(promise, ctx.executor());
         try {
             verifyStreamId(streamId, STREAM_ID);
             verifyStreamId(promisedStreamId, "Promised Stream ID");
@@ -326,22 +324,21 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             if (!flags.endOfHeaders()) {
                 writeContinuationFrames(ctx, streamId, headerBlock, padding, promiseAggregator);
             }
+            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
-            promiseAggregator.setFailure(t);
+            return promise.setFailure(t);
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();
             }
         }
-        return promiseAggregator.doneAllocatingPromises();
     }
 
     @Override
     public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
             ByteBuf debugData, ChannelPromise promise) {
         boolean releaseData = true;
-        SimpleChannelPromiseAggregator promiseAggregator =
-                new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
+        ChannelPromiseAggregatorFactory promiseAggregator = newInstance(promise, ctx.executor());
         try {
             verifyStreamOrConnectionId(lastStreamId, "Last Stream ID");
             verifyErrorCode(errorCode);
@@ -355,13 +352,13 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             releaseData = false;
             ctx.write(debugData, promiseAggregator.newPromise());
+            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
             if (releaseData) {
                 debugData.release();
             }
-            promiseAggregator.setFailure(t);
+            return promise.setFailure(t);
         }
-        return promiseAggregator.doneAllocatingPromises();
     }
 
     @Override
@@ -384,8 +381,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
             Http2Flags flags, ByteBuf payload, ChannelPromise promise) {
         boolean releaseData = true;
-        SimpleChannelPromiseAggregator promiseAggregator =
-                new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
+        ChannelPromiseAggregatorFactory promiseAggregator = newInstance(promise, ctx.executor());
         try {
             verifyStreamOrConnectionId(streamId, STREAM_ID);
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
@@ -394,21 +390,20 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             releaseData = false;
             ctx.write(payload, promiseAggregator.newPromise());
+            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
             if (releaseData) {
                 payload.release();
             }
-            promiseAggregator.setFailure(t);
+            return promise.setFailure(t);
         }
-        return promiseAggregator.doneAllocatingPromises();
     }
 
     private ChannelFuture writeHeadersInternal(ChannelHandlerContext ctx,
             int streamId, Http2Headers headers, int padding, boolean endStream,
             boolean hasPriority, int streamDependency, short weight, boolean exclusive, ChannelPromise promise) {
         ByteBuf headerBlock = null;
-        SimpleChannelPromiseAggregator promiseAggregator =
-                new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
+        ChannelPromiseAggregatorFactory promiseAggregator = newInstance(promise, ctx.executor());
         try {
             verifyStreamId(streamId, STREAM_ID);
             if (hasPriority) {
@@ -457,28 +452,28 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             if (!flags.endOfHeaders()) {
                 writeContinuationFrames(ctx, streamId, headerBlock, padding, promiseAggregator);
             }
+            return promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
-            promiseAggregator.setFailure(t);
+            return promise.setFailure(t);
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();
             }
         }
-        return promiseAggregator.doneAllocatingPromises();
     }
 
     /**
      * Writes as many continuation frames as needed until {@code padding} and {@code headerBlock} are consumed.
      */
-    private ChannelFuture writeContinuationFrames(ChannelHandlerContext ctx, int streamId,
-            ByteBuf headerBlock, int padding, SimpleChannelPromiseAggregator promiseAggregator) {
+    private void writeContinuationFrames(ChannelHandlerContext ctx, int streamId,
+            ByteBuf headerBlock, int padding, ChannelPromiseAggregatorFactory promiseAggregator) {
         Http2Flags flags = new Http2Flags().paddingPresent(padding > 0);
         int nonFragmentLength = padding + flags.getPaddingPresenceFieldLength();
         int maxFragmentLength = maxFrameSize - nonFragmentLength;
         // TODO: same padding is applied to all frames, is this desired?
         if (maxFragmentLength <= 0) {
-            return promiseAggregator.setFailure(new IllegalArgumentException(
-                    "Padding [" + padding + "] is too large for max frame size [" + maxFrameSize + "]"));
+            throw new IllegalArgumentException(
+                    "Padding [" + padding + "] is too large for max frame size [" + maxFrameSize + "]");
         }
 
         if (headerBlock.isReadable()) {
@@ -514,7 +509,6 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 }
             } while(headerBlock.isReadable());
         }
-        return promiseAggregator;
     }
 
     private static void writePaddingLength(ByteBuf buf, int paddingLength) {

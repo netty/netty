@@ -18,13 +18,15 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseAggregatorFactory;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
+
+import static io.netty.channel.DefaultChannelPromiseAggregatorFactory.newInstance;
 
 /**
  * Translates HTTP/1.x object writes into HTTP/2 frames.
@@ -66,8 +68,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
         }
 
         boolean release = true;
-        SimpleChannelPromiseAggregator promiseAggregator =
-                new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
+        ChannelPromiseAggregatorFactory promiseAggregator = newInstance(promise, ctx.executor());
         try {
             Http2ConnectionEncoder encoder = encoder();
             boolean endStream = false;
@@ -105,13 +106,13 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                     encoder.writeHeaders(ctx, currentStreamId, trailers, 0, true, promiseAggregator.newPromise());
                 }
             }
+            promiseAggregator.doneAllocatingPromises();
         } catch (Throwable t) {
-            promiseAggregator.setFailure(t);
+            promise.setFailure(t);
         } finally {
             if (release) {
                 ReferenceCountUtil.release(msg);
             }
-            promiseAggregator.doneAllocatingPromises();
         }
     }
 }

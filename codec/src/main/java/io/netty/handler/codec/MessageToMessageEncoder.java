@@ -20,6 +20,7 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseAggregatorFactory;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.RecyclableArrayList;
@@ -49,15 +50,12 @@ import java.util.List;
  * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageEncoder} will call
  * {@link ReferenceCounted#release()} on encoded messages.
  */
-public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerAdapter {
-
-    private final TypeParameterMatcher matcher;
-
+public abstract class MessageToMessageEncoder<I> extends TypeSensitiveMessageEncoder<I> {
     /**
      * Create a new instance which will try to detect the types to match out of the type parameter of the class.
      */
     protected MessageToMessageEncoder() {
-        matcher = TypeParameterMatcher.find(this, MessageToMessageEncoder.class, "I");
+        super();
     }
 
     /**
@@ -66,65 +64,32 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
      * @param outboundMessageType   The type of messages to match and so encode
      */
     protected MessageToMessageEncoder(Class<? extends I> outboundMessageType) {
-        matcher = TypeParameterMatcher.get(outboundMessageType);
-    }
-
-    /**
-     * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
-     * {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
-     */
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return matcher.match(msg);
+        super(outboundMessageType);
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        RecyclableArrayList out = null;
+    public boolean acceptOutboundMessage(Object msg) throws Exception {
+        return super.acceptOutboundMessage(msg);
+    }
+
+    @Override
+    protected final void encode(ChannelHandlerContext ctx, I msg, ChannelPromiseAggregatorFactory promise)
+            throws Exception {
+        RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
-            if (acceptOutboundMessage(msg)) {
-                out = RecyclableArrayList.newInstance();
-                @SuppressWarnings("unchecked")
-                I cast = (I) msg;
-                try {
-                    encode(ctx, cast, out);
-                } finally {
-                    ReferenceCountUtil.release(cast);
-                }
+            encode(ctx, msg, out);
 
-                if (out.isEmpty()) {
-                    out.recycle();
-                    out = null;
+            if (out.isEmpty()) {
+                out.recycle();
+                out = null;
 
-                    throw new EncoderException(
-                            StringUtil.simpleClassName(this) + " must produce at least one message.");
-                }
-            } else {
-                ctx.write(msg, promise);
+                throw new EncoderException(
+                        StringUtil.simpleClassName(this) + " must produce at least one message.");
             }
-        } catch (EncoderException e) {
-            throw e;
-        } catch (Throwable t) {
-            throw new EncoderException(t);
         } finally {
             if (out != null) {
-                final int sizeMinusOne = out.size() - 1;
-                if (sizeMinusOne == 0) {
-                    ctx.write(out.get(0), promise);
-                } else if (sizeMinusOne > 0) {
-                    // Check if we can use a voidPromise for our extra writes to reduce GC-Pressure
-                    // See https://github.com/netty/netty/issues/2525
-                    ChannelPromise voidPromise = ctx.voidPromise();
-                    boolean isVoidPromise = promise == voidPromise;
-                    for (int i = 0; i < sizeMinusOne; i ++) {
-                        ChannelPromise p;
-                        if (isVoidPromise) {
-                            p = voidPromise;
-                        } else {
-                            p = ctx.newPromise();
-                        }
-                        ctx.write(out.get(i), p);
-                    }
-                    ctx.write(out.get(sizeMinusOne), promise);
+                for (int i = 0; i < out.size(); ++i) {
+                    ctx.write(out.get(i), promise.newPromise());
                 }
                 out.recycle();
             }
@@ -139,7 +104,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
      * @param msg           the message to encode to an other one
      * @param out           the {@link List} into which the encoded msg should be added
      *                      needs to do some kind of aggragation
-     * @throws Exception    is thrown if an error accour
+     * @throws Exception    is thrown if an error occurs.
      */
     protected abstract void encode(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception;
 }

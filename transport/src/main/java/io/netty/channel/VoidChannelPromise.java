@@ -21,7 +21,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.concurrent.TimeUnit;
 
-final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPromise {
+class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPromise {
 
     private final Channel channel;
     private final boolean fireException;
@@ -40,31 +40,32 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
     }
 
     @Override
-    public VoidChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
+    public final VoidChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         fail();
         return this;
     }
 
     @Override
-    public VoidChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
+    public final VoidChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
         fail();
         return this;
     }
 
     @Override
-    public VoidChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
+    public final VoidChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         // NOOP
         return this;
     }
 
     @Override
-    public VoidChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
+    public final VoidChannelPromise removeListeners(
+            GenericFutureListener<? extends Future<? super Void>>... listeners) {
         // NOOP
         return this;
     }
 
     @Override
-    public VoidChannelPromise await() throws InterruptedException {
+    public final VoidChannelPromise await() throws InterruptedException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
@@ -72,129 +73,125 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
     }
 
     @Override
-    public boolean await(long timeout, TimeUnit unit) {
+    public final boolean await(long timeout, TimeUnit unit) {
         fail();
         return false;
     }
 
     @Override
-    public boolean await(long timeoutMillis) {
+    public final boolean await(long timeoutMillis) {
         fail();
         return false;
     }
 
     @Override
-    public VoidChannelPromise awaitUninterruptibly() {
+    public final VoidChannelPromise awaitUninterruptibly() {
         fail();
         return this;
     }
 
     @Override
-    public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
+    public final boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
         fail();
         return false;
     }
 
     @Override
-    public boolean awaitUninterruptibly(long timeoutMillis) {
+    public final boolean awaitUninterruptibly(long timeoutMillis) {
         fail();
         return false;
     }
 
     @Override
-    public Channel channel() {
+    public final Channel channel() {
         return channel;
     }
 
     @Override
-    public boolean isDone() {
+    public final boolean isDone() {
         return false;
     }
 
     @Override
-    public boolean isSuccess() {
+    public final boolean isSuccess() {
         return false;
     }
 
     @Override
-    public boolean setUncancellable() {
+    public final boolean setUncancellable() {
         return true;
     }
 
     @Override
-    public boolean isCancellable() {
+    public final boolean isCancellable() {
         return false;
     }
 
     @Override
-    public boolean isCancelled() {
+    public final boolean isCancelled() {
         return false;
     }
 
     @Override
-    public Throwable cause() {
+    public final Throwable cause() {
         return null;
     }
 
     @Override
-    public VoidChannelPromise sync() {
+    public final VoidChannelPromise sync() {
         fail();
         return this;
     }
 
     @Override
-    public VoidChannelPromise syncUninterruptibly() {
+    public final VoidChannelPromise syncUninterruptibly() {
         fail();
         return this;
     }
     @Override
-    public VoidChannelPromise setFailure(Throwable cause) {
+    public final VoidChannelPromise setFailure(Throwable cause) {
         fireException(cause);
         return this;
     }
 
     @Override
-    public VoidChannelPromise setSuccess() {
+    public final VoidChannelPromise setSuccess() {
         return this;
     }
 
     @Override
-    public boolean tryFailure(Throwable cause) {
+    public final boolean tryFailure(Throwable cause) {
         fireException(cause);
         return false;
     }
 
     @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
+    public final boolean cancel(boolean mayInterruptIfRunning) {
         return false;
     }
 
     @Override
-    public boolean trySuccess() {
+    public final boolean trySuccess() {
         return false;
     }
 
-    private static void fail() {
-        throw new IllegalStateException("void future");
-    }
-
     @Override
-    public VoidChannelPromise setSuccess(Void result) {
+    public final VoidChannelPromise setSuccess(Void result) {
         return this;
     }
 
     @Override
-    public boolean trySuccess(Void result) {
+    public final boolean trySuccess(Void result) {
         return false;
     }
 
     @Override
-    public Void getNow() {
+    public final Void getNow() {
         return null;
     }
 
     @Override
-    public ChannelPromise unvoid() {
+    public final ChannelPromise unvoid() {
         ChannelPromise promise = new DefaultChannelPromise(channel);
         if (fireException) {
             promise.addListener(new ChannelFutureListener() {
@@ -210,7 +207,7 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
     }
 
     @Override
-    public boolean isVoid() {
+    public final boolean isVoid() {
         return true;
     }
 
@@ -222,5 +219,9 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
         if (fireException && channel.isRegistered()) {
             channel.pipeline().fireExceptionCaught(cause);
         }
+    }
+
+    private static void fail() {
+        throw new IllegalStateException("void future");
     }
 }
