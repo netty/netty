@@ -16,20 +16,18 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromiseAggregatorFactory;
 import io.netty.channel.FileRegion;
-import io.netty.handler.codec.MessageToMessageEncoder;
-import io.netty.util.CharsetUtil;
+import io.netty.handler.codec.TypeSensitiveMessageEncoder;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map.Entry;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.buffer.Unpooled.directBuffer;
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http.HttpConstants.CR;
 import static io.netty.handler.codec.http.HttpConstants.LF;
 
@@ -46,13 +44,10 @@ import static io.netty.handler.codec.http.HttpConstants.LF;
  * To implement the encoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
  */
-public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToMessageEncoder<Object> {
+public abstract class HttpObjectEncoder<H extends HttpMessage> extends TypeSensitiveMessageEncoder<Object> {
     private static final byte[] CRLF = { CR, LF };
     private static final byte[] ZERO_CRLF = { '0', CR, LF };
     private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
-    private static final ByteBuf CRLF_BUF = unreleasableBuffer(directBuffer(CRLF.length).writeBytes(CRLF));
-    private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(directBuffer(ZERO_CRLF_CRLF.length)
-            .writeBytes(ZERO_CRLF_CRLF));
 
     private static final int ST_INIT = 0;
     private static final int ST_CONTENT_NON_CHUNK = 1;
@@ -62,7 +57,8 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private int state = ST_INIT;
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Object msg,
+                                ChannelPromiseAggregatorFactory promiseFactory) throws Exception {
         ByteBuf buf = null;
         if (msg instanceof HttpMessage) {
             if (state != ST_INIT) {
@@ -87,7 +83,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         // See https://github.com/netty/netty/issues/2983 for more information.
 
         if (msg instanceof ByteBuf && !((ByteBuf) msg).isReadable()) {
-            out.add(EMPTY_BUFFER);
+            ctx.write(EMPTY_BUFFER, promiseFactory.newPromise());
             return;
         }
 
@@ -103,20 +99,20 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     if (buf != null && buf.writableBytes() >= contentLength && msg instanceof HttpContent) {
                         // merge into other buffer for performance reasons
                         buf.writeBytes(((HttpContent) msg).content());
-                        out.add(buf);
+                        ctx.write(buf, promiseFactory.newPromise());
                     } else {
                         if (buf != null) {
-                            out.add(buf);
+                            ctx.write(buf, promiseFactory.newPromise());
                         }
-                        out.add(encodeAndRetain(msg));
+                        ctx.write(encodeAndRetain(msg), promiseFactory.newPromise());
                     }
                 } else {
                     if (buf != null) {
-                        out.add(buf);
+                        ctx.write(buf, promiseFactory.newPromise());
                     } else {
                         // Need to produce some output otherwise an
                         // IllegalStateException will be thrown
-                        out.add(EMPTY_BUFFER);
+                        ctx.write(EMPTY_BUFFER, promiseFactory.newPromise());
                     }
                 }
 
@@ -125,16 +121,14 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 }
             } else if (state == ST_CONTENT_CHUNK) {
                 if (buf != null) {
-                    out.add(buf);
+                    ctx.write(buf, promiseFactory.newPromise());
                 }
-                encodeChunkedContent(ctx, msg, contentLength, out);
+                encodeChunkedContent(ctx, msg, contentLength, promiseFactory);
             } else {
                 throw new Error();
             }
-        } else {
-            if (buf != null) {
-                out.add(buf);
-            }
+        } else if (buf != null) {
+            ctx.write(buf, promiseFactory.newPromise());
         }
     }
 
@@ -149,41 +143,43 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
     }
 
-    private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, long contentLength, List<Object> out) {
+    private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, long contentLength,
+                                      ChannelPromiseAggregatorFactory promiseFactory) throws Exception {
         if (contentLength > 0) {
-            byte[] length = Long.toHexString(contentLength).getBytes(CharsetUtil.US_ASCII);
-            ByteBuf buf = ctx.alloc().buffer(length.length + 2);
-            buf.writeBytes(length);
-            buf.writeBytes(CRLF);
-            out.add(buf);
-            out.add(encodeAndRetain(msg));
-            out.add(CRLF_BUF.duplicate());
+            String length = Long.toHexString(contentLength);
+            ByteBuf buf = ctx.alloc().buffer(length.length() + CRLF.length);
+            ByteBufUtil.writeAscii(buf, length);
+            ctx.write(buf, promiseFactory.newPromise());
+            ctx.write(encodeAndRetain(msg), promiseFactory.newPromise());
+            ctx.write(ctx.alloc().buffer(CRLF.length).writeBytes(CRLF));
         }
 
         if (msg instanceof LastHttpContent) {
             HttpHeaders headers = ((LastHttpContent) msg).trailingHeaders();
             if (headers.isEmpty()) {
-                out.add(ZERO_CRLF_CRLF_BUF.duplicate());
+                ctx.write(ctx.alloc().buffer(ZERO_CRLF_CRLF.length).writeBytes(ZERO_CRLF_CRLF));
             } else {
-                ByteBuf buf = ctx.alloc().buffer();
+                // rough estimate that each header entry will require 15 characters to encode.
+                ByteBuf buf = ctx.alloc().buffer(ZERO_CRLF.length + headers.size() * 15 + CRLF.length);
                 buf.writeBytes(ZERO_CRLF);
                 try {
                     encodeHeaders(headers, buf);
-                } catch (Exception ex) {
+                } catch (Exception e) {
                     buf.release();
-                    PlatformDependent.throwException(ex);
+                    throw e;
+                } catch (Throwable cause) {
+                    buf.release();
+                    PlatformDependent.throwException(cause);
                 }
                 buf.writeBytes(CRLF);
-                out.add(buf);
+                ctx.write(buf, promiseFactory.newPromise());
             }
 
             state = ST_INIT;
-        } else {
-            if (contentLength == 0) {
-                // Need to produce some output otherwise an
-                // IllegalstateException will be thrown
-                out.add(EMPTY_BUFFER);
-            }
+        } else if (contentLength == 0) {
+            // Need to produce some output otherwise an
+            // IllegalstateException will be thrown
+            ctx.write(EMPTY_BUFFER, promiseFactory.newPromise());
         }
     }
 

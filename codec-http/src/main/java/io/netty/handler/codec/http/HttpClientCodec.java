@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromiseAggregatorFactory;
 import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.ReferenceCountUtil;
@@ -130,11 +131,11 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
         boolean upgraded;
 
         @Override
-        protected void encode(
-                ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+        protected void encode(ChannelHandlerContext ctx, Object msg,
+                              ChannelPromiseAggregatorFactory promiseFactory) throws Exception {
 
             if (upgraded) {
-                out.add(ReferenceCountUtil.retain(msg));
+                ctx.write(ReferenceCountUtil.retain(msg), promiseFactory.newPromise());
                 return;
             }
 
@@ -142,7 +143,7 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
                 queue.offer(((HttpRequest) msg).method());
             }
 
-            super.encode(ctx, msg, out);
+            super.encode(ctx, msg, promiseFactory);
 
             if (failOnMissingResponse) {
                 // check if the request is chunked if so do not increment
