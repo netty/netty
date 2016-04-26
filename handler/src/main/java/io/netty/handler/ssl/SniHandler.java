@@ -29,8 +29,6 @@ import java.net.IDN;
 import java.util.List;
 import java.util.Locale;
 
-import javax.net.ssl.SSLEngine;
-
 /**
  * <p>Enables <a href="https://tools.ietf.org/html/rfc3546#section-3.1">SNI
  * (Server Name Indication)</a> extension for server side SSL. For clients
@@ -248,18 +246,20 @@ public class SniHandler extends ByteToMessageDecoder {
     }
 
     private void select(ChannelHandlerContext ctx, String hostname) {
-        SSLEngine sslEngine = null;
+        SslHandler sslHandler = null;
         SslContext selectedContext = mapping.map(hostname);
         selection = new Selection(selectedContext, hostname);
         try {
-            sslEngine = selection.context.newEngine(ctx.alloc());
-            ctx.pipeline().replace(this, SslHandler.class.getName(), selection.context.newHandler(sslEngine));
+            sslHandler = selection.context.newHandler(ctx.alloc());
+            ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
         } catch (Throwable cause) {
             selection = EMPTY_SELECTION;
             // Since the SslHandler was not inserted into the pipeline the ownership of the SSLEngine was not
             // transferred to the SslHandler.
             // See https://github.com/netty/netty/issues/5678
-            ReferenceCountUtil.safeRelease(sslEngine);
+            if (sslHandler != null) {
+                ReferenceCountUtil.safeRelease(sslHandler.engine());
+            }
             ctx.fireExceptionCaught(cause);
         }
     }

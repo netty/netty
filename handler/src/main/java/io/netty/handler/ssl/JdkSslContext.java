@@ -153,7 +153,7 @@ public class JdkSslContext extends SslContext {
     public JdkSslContext(SSLContext sslContext, boolean isClient,
                          ClientAuth clientAuth) {
         this(sslContext, isClient, null, IdentityCipherSuiteFilter.INSTANCE,
-                JdkDefaultApplicationProtocolNegotiator.INSTANCE, clientAuth);
+                JdkDefaultApplicationProtocolNegotiator.INSTANCE, clientAuth, false);
     }
 
     /**
@@ -169,11 +169,12 @@ public class JdkSslContext extends SslContext {
     public JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers,
                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                          ClientAuth clientAuth) {
-        this(sslContext, isClient, ciphers, cipherFilter, toNegotiator(apn, !isClient), clientAuth);
+        this(sslContext, isClient, ciphers, cipherFilter, toNegotiator(apn, !isClient), clientAuth, false);
     }
 
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                  JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth) {
+                  JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, boolean startTls) {
+        super(startTls);
         this.apn = checkNotNull(apn, "apn");
         this.clientAuth = checkNotNull(clientAuth, "clientAuth");
         cipherSuites = checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
