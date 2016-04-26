@@ -29,17 +29,18 @@ import javax.net.ssl.SSLException;
 public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
                    long sessionCacheSize, long sessionTimeout, int mode, Certificate[] keyCertChain,
-                   ClientAuth clientAuth)
+                   ClientAuth clientAuth, boolean startTls)
             throws SSLException {
         super(ciphers, cipherFilter, apnCfg, sessionCacheSize, sessionTimeout, mode, keyCertChain,
-                clientAuth, false);
+                clientAuth, startTls, false);
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                    OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
                    long sessionTimeout, int mode, Certificate[] keyCertChain,
-                   ClientAuth clientAuth) throws SSLException {
-        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, mode, keyCertChain, clientAuth, false);
+                   ClientAuth clientAuth, boolean startTls) throws SSLException {
+        super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, mode, keyCertChain, clientAuth, startTls,
+              false);
     }
 
     @Override

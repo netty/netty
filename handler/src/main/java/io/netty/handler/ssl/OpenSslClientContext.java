@@ -185,7 +185,7 @@ public final class OpenSslClientContext extends OpenSslContext {
                                 long sessionCacheSize, long sessionTimeout)
             throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT, keyCertChain,
-                ClientAuth.NONE);
+                ClientAuth.NONE, false);
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,

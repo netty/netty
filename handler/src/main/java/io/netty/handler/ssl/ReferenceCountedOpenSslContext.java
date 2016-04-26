@@ -198,16 +198,18 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                                    ApplicationProtocolConfig apnCfg, long sessionCacheSize, long sessionTimeout,
-                                   int mode, Certificate[] keyCertChain, ClientAuth clientAuth, boolean leakDetection)
-            throws SSLException {
+                                   int mode, Certificate[] keyCertChain, ClientAuth clientAuth, boolean startTls,
+                                   boolean leakDetection) throws SSLException {
         this(ciphers, cipherFilter, toNegotiator(apnCfg), sessionCacheSize, sessionTimeout, mode, keyCertChain,
-                clientAuth, leakDetection);
+                clientAuth, startTls, leakDetection);
     }
 
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                                    OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
                                    long sessionTimeout, int mode, Certificate[] keyCertChain,
-                                   ClientAuth clientAuth, boolean leakDetection) throws SSLException {
+                                   ClientAuth clientAuth, boolean startTls, boolean leakDetection) throws SSLException {
+        super(startTls);
+
         OpenSsl.ensureAvailability();
 
         if (mode != SSL.SSL_MODE_SERVER && mode != SSL.SSL_MODE_CLIENT) {

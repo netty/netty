@@ -49,18 +49,18 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth) throws SSLException {
+            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, boolean startTls) throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
-                cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth);
+                cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, startTls);
     }
 
     private ReferenceCountedOpenSslServerContext(
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
-            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth) throws SSLException {
+            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, boolean startTls) throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, keyCertChain,
-              clientAuth, true);
+              clientAuth, startTls, true);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
