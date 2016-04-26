@@ -340,16 +340,18 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * It's also possible for the hostname argument to be {@code null}.
      */
     protected void replaceHandler(ChannelHandlerContext ctx, String hostname, SslContext sslContext) throws Exception {
-        SSLEngine sslEngine = null;
+        SslHandler sslHandler = null;
         try {
-            sslEngine = sslContext.newEngine(ctx.alloc());
-            ctx.pipeline().replace(this, SslHandler.class.getName(), SslContext.newHandler(sslEngine));
-            sslEngine = null;
+            sslHandler = sslContext.newHandler(ctx.alloc());
+            ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
+            sslHandler = null;
         } finally {
             // Since the SslHandler was not inserted into the pipeline the ownership of the SSLEngine was not
             // transferred to the SslHandler.
             // See https://github.com/netty/netty/issues/5678
-            ReferenceCountUtil.safeRelease(sslEngine);
+            if (sslHandler != null) {
+                ReferenceCountUtil.safeRelease(sslHandler.engine());
+            }
         }
     }
 
