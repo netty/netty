@@ -18,11 +18,11 @@ package io.netty.handler.ssl;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -41,7 +41,6 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import javax.net.ssl.HandshakeCompletedEvent;
 import javax.xml.bind.DatatypeConverter;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -164,25 +163,15 @@ public class SniHandlerTest {
     @Test
     public void testSniWithApnHandler() throws Exception {
         SslContext nettyContext = makeSslContext();
-        SslContext leanContext = makeSslContext();
+        SslContext sniContext = makeSslContext();
         final SslContext clientContext = makeSslClientContext();
-        SslContext wrappedLeanContext = null;
         final CountDownLatch serverApnDoneLatch = new CountDownLatch(1);
         final CountDownLatch clientApnDoneLatch = new CountDownLatch(1);
 
         final DomainNameMapping<SslContext> mapping = new DomainMappingBuilder(nettyContext)
                                                          .add("*.netty.io", nettyContext)
-                                                         .add("*.LEANCLOUD.CN", leanContext).build();
-        // hex dump of a client hello packet, which contains hostname "CHAT4。LEANCLOUD。CN"
-        final String tlsHandshakeMessageHex1 = "16030100";
-        // part 2
-        final String tlsHandshakeMessageHex = "bd010000b90303a74225676d1814ba57faff3b366" +
-                "3656ed05ee9dbb2a4dbb1bb1c32d2ea5fc39e0000000100008c0000001700150000164348" +
-                "415434E380824C45414E434C4F5544E38082434E000b000403000102000a00340032000e0" +
-                "00d0019000b000c00180009000a0016001700080006000700140015000400050012001300" +
-                "0100020003000f0010001100230000000d0020001e0601060206030501050205030401040" +
-                "20403030103020303020102020203000f00010133740000";
-
+                                                         .add("sni.fake.site", sniContext).build();
+        final SniHandler handler = new SniHandler(mapping);
         EventLoopGroup group = new NioEventLoopGroup(2);
         Channel serverChannel = null;
         Channel clientChannel = null;
@@ -195,7 +184,7 @@ public class SniHandlerTest {
                 protected void initChannel(Channel ch) throws Exception {
                     ChannelPipeline p = ch.pipeline();
                     // Server side SNI.
-                    p.addLast(new SniHandler(mapping));
+                    p.addLast(handler);
                     // Catch the notification event that APN has completed successfully.
                     p.addLast(new ApplicationProtocolNegotiationHandler("foo") {
                         @Override
@@ -212,11 +201,8 @@ public class SniHandlerTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    // Simulate client side SNI (which is currently not supported).
-                    ch.write(Unpooled.wrappedBuffer(DatatypeConverter.parseHexBinary(tlsHandshakeMessageHex1)));
-                    ch.writeAndFlush(Unpooled.wrappedBuffer(DatatypeConverter.parseHexBinary(tlsHandshakeMessageHex)));
-                    // Add a SslHandler so we can do the client side of the handshake.
-                    ch.pipeline().addLast(clientContext.newHandler(ch.alloc()));
+                    ch.pipeline().addLast(new SslHandler(clientContext.newEngine(
+                            ch.alloc(), "sni.fake.site", -1)));
                     // Catch the notification event that APN has completed successfully.
                     ch.pipeline().addLast(new ApplicationProtocolNegotiationHandler("foo") {
                         @Override
@@ -235,6 +221,8 @@ public class SniHandlerTest {
 
             assertTrue(serverApnDoneLatch.await(5, TimeUnit.SECONDS));
             assertTrue(clientApnDoneLatch.await(5, TimeUnit.SECONDS));
+            assertThat(handler.hostname(), is("sni.fake.site"));
+            assertThat(handler.sslContext(), is(sniContext));
         } finally {
             if (serverChannel != null) {
                 serverChannel.close().sync();
