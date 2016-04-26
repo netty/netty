@@ -93,6 +93,8 @@ public abstract class SslContext {
         }
     }
 
+    private final boolean startTls;
+
     /**
      * Returns the default server-side implementation provider currently in use.
      *
@@ -382,7 +384,7 @@ public abstract class SslContext {
                                             toX509Certificates(keyCertChainFile),
                                             toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
-                                            sessionCacheSize, sessionTimeout, ClientAuth.NONE);
+                                            sessionCacheSize, sessionTimeout, ClientAuth.NONE, false);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -396,7 +398,7 @@ public abstract class SslContext {
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth) throws SSLException {
+            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, boolean startTls) throws SSLException {
 
         if (provider == null) {
             provider = defaultServerProvider();
@@ -407,17 +409,17 @@ public abstract class SslContext {
             return new JdkSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth);
+                    clientAuth, startTls);
         case OPENSSL:
             return new OpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth);
+                    clientAuth, startTls);
         case OPENSSL_REFCNT:
             return new ReferenceCountedOpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth);
+                    clientAuth, startTls);
         default:
             throw new Error(provider.toString());
         }
@@ -775,9 +777,18 @@ public abstract class SslContext {
     }
 
     /**
+     * Creates a new instance (startTls set to <code>false</code>).
+     */
+    protected SslContext() {
+        this(false);
+    }
+
+    /**
      * Creates a new instance.
      */
-    protected SslContext() { }
+    protected SslContext(boolean startTls) {
+        this.startTls = startTls;
+    }
 
     /**
      * Returns {@code true} if and only if this context is for server-side.
@@ -852,7 +863,7 @@ public abstract class SslContext {
      * @return a new {@link SslHandler}
      */
     public final SslHandler newHandler(ByteBufAllocator alloc) {
-        return newHandler(newEngine(alloc));
+        return new SslHandler(newEngine(alloc), startTls);
     }
 
     /**
@@ -866,11 +877,7 @@ public abstract class SslContext {
      * @return a new {@link SslHandler}
      */
     public final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort) {
-        return newHandler(newEngine(alloc, peerHost, peerPort));
-    }
-
-    static SslHandler newHandler(SSLEngine engine) {
-        return new SslHandler(engine);
+        return new SslHandler(newEngine(alloc, peerHost, peerPort), startTls);
     }
 
     /**
