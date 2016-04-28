@@ -33,6 +33,18 @@ public interface DuplexChannel extends Channel {
     boolean isInputShutdown();
 
     /**
+     * @see Socket#shutdownInput()
+     */
+    ChannelFuture shutdownInput();
+
+    /**
+     * Will shutdown the input and notify {@link ChannelPromise}.
+     *
+     * @see Socket#shutdownInput()
+     */
+    ChannelFuture shutdownInput(ChannelPromise promise);
+
+    /**
      * @see Socket#isOutputShutdown()
      */
     boolean isOutputShutdown();
@@ -43,9 +55,27 @@ public interface DuplexChannel extends Channel {
     ChannelFuture shutdownOutput();
 
     /**
-     * @see Socket#shutdownOutput()
+     * Will shutdown the output and notify {@link ChannelPromise}.
      *
-     * Will notify the given {@link ChannelPromise}
+     * @see Socket#shutdownOutput()
      */
     ChannelFuture shutdownOutput(ChannelPromise promise);
+
+    /**
+     * Determine if both the input and output of this channel have been shutdown.
+     */
+    boolean isShutdown();
+
+    /**
+     * Will shutdown the input and output sides of this channel.
+     * @return will be completed when both shutdown operations complete.
+     */
+    ChannelFuture shutdown();
+
+    /**
+     * Will shutdown the input and output sides of this channel.
+     * @param promise will be completed when both shutdown operations complete.
+     * @return will be completed when both shutdown operations complete.
+     */
+    ChannelFuture shutdown(ChannelPromise promise);
 }

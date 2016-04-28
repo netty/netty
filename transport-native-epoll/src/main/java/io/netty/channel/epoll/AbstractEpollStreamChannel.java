@@ -530,7 +530,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
-    protected void shutdownOutput0(final ChannelPromise promise) {
+    private void shutdownOutput0(final ChannelPromise promise) {
         try {
             fd().shutdown(false, true);
             promise.setSuccess();
@@ -539,14 +539,37 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
     }
 
+    private void shutdownInput0(final ChannelPromise promise) {
+        try {
+            fd().shutdown(true, false);
+            promise.setSuccess();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+        }
+    }
+
+    private void shutdown0(final ChannelPromise promise) {
+        try {
+            fd().shutdown(true, true);
+            promise.setSuccess();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+        }
+    }
+
+    @Override
+    public boolean isOutputShutdown() {
+        return fd().isOutputShutdown();
+    }
+
     @Override
     public boolean isInputShutdown() {
         return fd().isInputShutdown();
     }
 
     @Override
-    public boolean isOutputShutdown() {
-        return fd().isOutputShutdown();
+    public boolean isShutdown() {
+        return fd().isShutdown();
     }
 
     @Override
@@ -573,6 +596,68 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     @Override
                     public void run() {
                         shutdownOutput0(promise);
+                    }
+                });
+            }
+        }
+        return promise;
+    }
+
+    @Override
+    public ChannelFuture shutdownInput() {
+        return shutdownInput(newPromise());
+    }
+
+    @Override
+    public ChannelFuture shutdownInput(final ChannelPromise promise) {
+        Executor closeExecutor = ((EpollStreamUnsafe) unsafe()).prepareToClose();
+        if (closeExecutor != null) {
+            closeExecutor.execute(new OneTimeTask() {
+                @Override
+                public void run() {
+                    shutdownInput0(promise);
+                }
+            });
+        } else {
+            EventLoop loop = eventLoop();
+            if (loop.inEventLoop()) {
+                shutdownInput0(promise);
+            } else {
+                loop.execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        shutdownInput0(promise);
+                    }
+                });
+            }
+        }
+        return promise;
+    }
+
+    @Override
+    public ChannelFuture shutdown() {
+        return shutdown(newPromise());
+    }
+
+    @Override
+    public ChannelFuture shutdown(final ChannelPromise promise) {
+        Executor closeExecutor = ((EpollStreamUnsafe) unsafe()).prepareToClose();
+        if (closeExecutor != null) {
+            closeExecutor.execute(new OneTimeTask() {
+                @Override
+                public void run() {
+                    shutdown0(promise);
+                }
+            });
+        } else {
+            EventLoop loop = eventLoop();
+            if (loop.inEventLoop()) {
+                shutdown0(promise);
+            } else {
+                loop.execute(new OneTimeTask() {
+                    @Override
+                    public void run() {
+                        shutdown0(promise);
                     }
                 });
             }
