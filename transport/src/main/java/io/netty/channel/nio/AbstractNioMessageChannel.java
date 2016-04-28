@@ -33,6 +33,7 @@ import java.util.List;
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
  */
 public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
+    boolean inputShutdown;
 
     /**
      * @see {@link AbstractNioChannel#AbstractNioChannel(Channel, SelectableChannel, int)}
@@ -44,6 +45,14 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     @Override
     protected AbstractNioUnsafe newUnsafe() {
         return new NioMessageUnsafe();
+    }
+
+    @Override
+    protected void doBeginRead() throws Exception {
+        if (inputShutdown) {
+            return;
+        }
+        super.doBeginRead();
     }
 
     private final class NioMessageUnsafe extends AbstractNioUnsafe {
@@ -98,7 +107,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 }
 
                 if (closed) {
-                    setInputShutdown();
+                    inputShutdown = true;
                     if (isOpen()) {
                         close(voidPromise());
                     }
