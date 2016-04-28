@@ -60,7 +60,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final SelectableChannel ch;
     protected final int readInterestOp;
     volatile SelectionKey selectionKey;
-    private volatile boolean inputShutdown;
     boolean readPending;
     private final Runnable clearReadPendingRunnable = new Runnable() {
         @Override
@@ -195,20 +194,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private void clearReadPending0() {
         readPending = false;
         ((AbstractNioUnsafe) unsafe()).removeReadOp();
-    }
-
-    /**
-     * Return {@code true} if the input of this {@link Channel} is shutdown
-     */
-    protected boolean isInputShutdown() {
-        return inputShutdown;
-    }
-
-    /**
-     * Shutdown the input of this {@link Channel}.
-     */
-    void setInputShutdown() {
-        inputShutdown = true;
     }
 
     /**
@@ -422,10 +407,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     protected void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
-        if (inputShutdown) {
-            return;
-        }
-
         final SelectionKey selectionKey = this.selectionKey;
         if (!selectionKey.isValid()) {
             return;

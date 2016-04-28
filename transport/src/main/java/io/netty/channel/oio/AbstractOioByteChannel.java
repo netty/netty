@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -40,17 +41,11 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';
 
-    private volatile boolean inputShutdown;
-
     /**
      * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel)
      */
     protected AbstractOioByteChannel(Channel parent) {
         super(parent);
-    }
-
-    protected boolean isInputShutdown() {
-        return inputShutdown;
     }
 
     @Override
@@ -59,29 +54,21 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     }
 
     /**
-     * Check if the input was shutdown and if so return {@code true}. The default implementation sleeps also for
-     * {@link #SO_TIMEOUT} milliseconds to simulate some blocking.
+     * Determine if the input side of this channel is shutdown.
+     * @return {@code true} if the input side of this channel is shutdown.
      */
-    protected boolean checkInputShutdown() {
-        if (inputShutdown) {
-            try {
-                Thread.sleep(SO_TIMEOUT);
-            } catch (InterruptedException e) {
-                // ignore
-            }
-            return true;
-        }
-        return false;
-    }
+    protected abstract boolean isInputShutdown();
 
-    void setInputShutdown() {
-        inputShutdown = true;
-    }
+    /**
+     * Shutdown the input side of this channel.
+     * @return A channel future that will complete when the shutdown is complete.
+     */
+    protected abstract ChannelFuture shutdownInput();
 
     private void closeOnRead(ChannelPipeline pipeline) {
-        setInputShutdown();
         if (isOpen()) {
             if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                shutdownInput();
                 pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
             } else {
                 unsafe().close(unsafe().voidPromise());

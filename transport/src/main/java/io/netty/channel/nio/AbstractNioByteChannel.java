@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
@@ -52,6 +53,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         super(parent, ch, SelectionKey.OP_READ);
     }
 
+    /**
+     * Shutdown the input side of the channel.
+     */
+    protected abstract ChannelFuture shutdownInput();
+
     @Override
     protected AbstractNioUnsafe newUnsafe() {
         return new NioByteUnsafe();
@@ -60,10 +66,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected class NioByteUnsafe extends AbstractNioUnsafe {
 
         private void closeOnRead(ChannelPipeline pipeline) {
-            SelectionKey key = selectionKey();
-            setInputShutdown();
             if (isOpen()) {
                 if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                    shutdownInput();
+                    SelectionKey key = selectionKey();
                     key.interestOps(key.interestOps() & ~readInterestOp);
                     pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
