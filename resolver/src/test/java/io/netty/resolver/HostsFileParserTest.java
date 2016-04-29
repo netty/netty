@@ -38,16 +38,20 @@ public class HostsFileParserTest {
                 .append("192.168.0.2  host3  #comment").append("\n") // comment after hostname
                 .append("192.168.0.3  host4  host5 host6").append("\n") // multiple aliases
                 .append("192.168.0.4  host4").append("\n") // host mapped to a second address, must be ignored
+                .append("192.168.0.5  HOST7").append("\n") // uppercase host, should match lowercase host
+                .append("192.168.0.6  host7").append("\n") // should be ignored since we have the uppercase host already
                 .toString();
 
         Map<String, InetAddress> entries = HostsFileParser.parse(new BufferedReader(new StringReader(hostsString)));
 
-        assertEquals("Expected 6 entries", 6, entries.size());
+        assertEquals("Expected 7 entries", 7, entries.size());
         assertEquals("127.0.0.1", entries.get("host1").getHostAddress());
         assertEquals("192.168.0.1", entries.get("host2").getHostAddress());
         assertEquals("192.168.0.2", entries.get("host3").getHostAddress());
         assertEquals("192.168.0.3", entries.get("host4").getHostAddress());
         assertEquals("192.168.0.3", entries.get("host5").getHostAddress());
         assertEquals("192.168.0.3", entries.get("host6").getHostAddress());
+        assertNotNull("uppercase host doesn't resolve", entries.get("host7"));
+        assertEquals("192.168.0.5", entries.get("host7").getHostAddress());
     }
 }

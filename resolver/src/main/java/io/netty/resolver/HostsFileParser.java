@@ -29,6 +29,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -151,10 +152,11 @@ public final class HostsFileParser {
                 // loop over hostname and aliases
                 for (int i = 1; i < lineParts.size(); i ++) {
                     String hostname = lineParts.get(i);
-                    if (!entries.containsKey(hostname)) {
+                    String hostnameLower = hostname.toLowerCase(Locale.ENGLISH);
+                    if (!entries.containsKey(hostnameLower)) {
                         // trying to map a host to multiple IPs is wrong
                         // only the first entry is honored
-                        entries.put(hostname, InetAddress.getByAddress(hostname, ipBytes));
+                        entries.put(hostnameLower, InetAddress.getByAddress(hostname, ipBytes));
                     }
                 }
             }
