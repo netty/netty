@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,21 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+/**
+ * show issue https://github.com/netty/netty/issues/5182
+ * HostsFileParser tries to resolve hostnames as case-sensitive
+ */
 package io.netty.resolver;
 
-import java.net.InetAddress;
-import java.util.Locale;
-import java.util.Map;
+import org.junit.Test;
 
-/**
- * Default {@link HostsFileEntriesResolver} that resolves hosts file entries only once.
- */
-public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesResolver {
+import static org.junit.Assert.assertNotNull;
 
-    private final Map<String, InetAddress> entries = HostsFileParser.parseSilently();
+public class DefaultHostsFileEntriesResolverTest {
 
-    @Override
-    public InetAddress address(String inetHost) {
-        return entries.get(inetHost.toLowerCase(Locale.ENGLISH));
+    @Test
+    public void testLocalhost() {
+        DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver();
+        assertNotNull("localhost doesn't resolve", resolver.address("localhost"));
+        assertNotNull("LOCALHOST doesn't resolve", resolver.address("LOCALHOST"));
     }
 }
