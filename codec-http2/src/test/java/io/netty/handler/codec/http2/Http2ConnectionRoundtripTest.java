@@ -47,6 +47,8 @@ import org.mockito.stubbing.Answer;
 import java.io.ByteArrayOutputStream;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
@@ -62,6 +64,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyShort;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -81,6 +84,7 @@ public class Http2ConnectionRoundtripTest {
     private Http2FrameListener serverListener;
 
     private Http2ConnectionHandler http2Client;
+    private Http2ConnectionHandler http2Server;
     private ServerBootstrap sb;
     private Bootstrap cb;
     private Channel serverChannel;
@@ -115,6 +119,59 @@ public class Http2ConnectionRoundtripTest {
         serverGroup.sync();
         serverChildGroup.sync();
         clientGroup.sync();
+    }
+
+    @Test
+    public void inflightFrameAfterStreamResetShouldNotMakeConnectionUnsuable() throws Exception {
+        bootstrapEnv(1, 1, 2, 1);
+        final CountDownLatch latch = new CountDownLatch(1);
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                ChannelHandlerContext ctx = invocationOnMock.getArgumentAt(0, ChannelHandlerContext.class);
+                http2Server.encoder().writeHeaders(ctx,
+                        invocationOnMock.getArgumentAt(1, Integer.class),
+                        invocationOnMock.getArgumentAt(2, Http2Headers.class),
+                        0,
+                        false,
+                        ctx.newPromise());
+                http2Server.flush(ctx);
+                return null;
+            }
+        }).when(serverListener).onHeadersRead(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
+                anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                latch.countDown();
+                return null;
+            }
+        }).when(clientListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5), any(Http2Headers.class),
+                anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+
+        // Create a single stream by sending a HEADERS frame to the server.
+        final short weight = 16;
+        final Http2Headers headers = dummyHeaders();
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, weight, false, 0, false, newPromise());
+                http2Client.flush(ctx());
+                http2Client.encoder().writeRstStream(ctx(), 3, Http2Error.INTERNAL_ERROR.code(), newPromise());
+                http2Client.flush(ctx());
+            }
+        });
+
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, weight, false, 0, false, newPromise());
+                http2Client.flush(ctx());
+            }
+        });
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 
     @Test
@@ -473,6 +530,8 @@ public class Http2ConnectionRoundtripTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
+        final AtomicReference<Http2ConnectionHandler> serverHandlerRef = new AtomicReference<Http2ConnectionHandler>();
+        final CountDownLatch serverInitLatch = new CountDownLatch(1);
         sb.group(new DefaultEventLoopGroup());
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
@@ -482,11 +541,13 @@ public class Http2ConnectionRoundtripTest {
                 serverFrameCountDown =
                         new FrameCountDown(serverListener, serverSettingsAckLatch,
                                 requestLatch, dataLatch, trailersLatch, goAwayLatch);
-                p.addLast(new Http2ConnectionHandlerBuilder()
+                serverHandlerRef.set(new Http2ConnectionHandlerBuilder()
                         .server(true)
                         .frameListener(serverFrameCountDown)
                         .validateHeaders(false)
                         .build());
+                p.addLast(serverHandlerRef.get());
+                serverInitLatch.countDown();
             }
         });
 
@@ -500,6 +561,7 @@ public class Http2ConnectionRoundtripTest {
                         .server(false)
                         .frameListener(clientListener)
                         .validateHeaders(false)
+                        .gracefulShutdownTimeoutMillis(0)
                         .build());
             }
         });
@@ -510,6 +572,8 @@ public class Http2ConnectionRoundtripTest {
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
         http2Client = clientChannel.pipeline().get(Http2ConnectionHandler.class);
+        assertTrue(serverInitLatch.await(2, TimeUnit.SECONDS));
+        http2Server = serverHandlerRef.get();
     }
 
     private ChannelHandlerContext ctx() {
