@@ -93,13 +93,6 @@ public final class RedisBulkStringAggregator extends MessageAggregator<RedisMess
     @Override
     protected FullBulkStringRedisMessage beginAggregation(BulkStringHeaderRedisMessage start, ByteBuf content)
             throws Exception {
-        switch (start.bulkStringLength()) {
-        case RedisConstants.NULL_VALUE:
-            return FullBulkStringRedisMessage.NULL_INSTANCE;
-        case 0:
-            return FullBulkStringRedisMessage.EMPTY_INSTANCE;
-        default:
-            return new FullBulkStringRedisMessage(content);
-        }
+        return new FullBulkStringRedisMessage(content);
     }
 }

@@ -28,6 +28,9 @@ public class BulkStringHeaderRedisMessage implements RedisMessage {
      * @param bulkStringLength follow content length.
      */
     public BulkStringHeaderRedisMessage(int bulkStringLength) {
+        if (bulkStringLength <= 0) {
+            throw new RedisCodecException("bulkStringLength: " + bulkStringLength + " (expected: > 0)");
+        }
         this.bulkStringLength = bulkStringLength;
     }
 

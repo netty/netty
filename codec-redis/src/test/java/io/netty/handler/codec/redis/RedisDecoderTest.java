@@ -153,11 +153,20 @@ public class RedisDecoderTest {
         assertFalse(channel.writeInbound(byteBufOf(Integer.toString(-1))));
         assertTrue(channel.writeInbound(byteBufOf("\r\n")));
 
-        FullBulkStringRedisMessage msg = channel.readInbound();
+        assertTrue(channel.writeInbound(byteBufOf("$")));
+        assertTrue(channel.writeInbound(byteBufOf(Integer.toString(-1))));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
 
-        assertThat(msg.isNull(), is(true));
+        FullBulkStringRedisMessage msg1 = channel.readInbound();
+        assertThat(msg1.isNull(), is(true));
+        ReferenceCountUtil.release(msg1);
 
-        ReferenceCountUtil.release(msg);
+        FullBulkStringRedisMessage msg2 = channel.readInbound();
+        assertThat(msg2.isNull(), is(true));
+        ReferenceCountUtil.release(msg2);
+
+        FullBulkStringRedisMessage msg3 = channel.readInbound();
+        assertThat(msg3, is(nullValue()));
     }
 
     @Test
