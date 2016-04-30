@@ -192,8 +192,8 @@ public class DefaultPromiseTest {
      * <ol>
      * <li>A write is done</li>
      * <li>The write operation completes, and the promise state is changed to done</li>
-     * <li>A listener is added to the return from the write. The {@link FutureListener#operationComplete()} updates
-     * state which must be invoked before the response to the previous write is read.</li>
+     * <li>A listener is added to the return from the write. The {@link FutureListener#operationComplete(Future)}
+     * updates state which must be invoked before the response to the previous write is read.</li>
      * <li>The write operation</li>
      * </ol>
      */

@@ -837,6 +837,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private final class LateListeners extends ArrayDeque<GenericFutureListener<?>> implements Runnable {
 
         private static final long serialVersionUID = -687137418080392244L;
+        private boolean wasExecuted;
 
         LateListeners() {
             super(2);
@@ -845,7 +846,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         @Override
         public void run() {
             final EventExecutor executor = executor();
-            if (listeners == null || executor == ImmediateEventExecutor.INSTANCE) {
+            // We make an attempt to detect executors which execute immediately instead of allowing a context switch
+            // before executing again. If this task was previously executed then we just notify listeners now to prevent
+            // StackOverflowException. Note that the order of notification may not be well preserved under these
+            // circumstances.
+            if (listeners == null || wasExecuted) {
                 for (;;) {
                     GenericFutureListener<?> l = poll();
                     if (l == null) {
@@ -856,6 +861,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             } else {
                 // Reschedule until the initial notification is done to avoid the race condition
                 // where the notification is made in an incorrect order.
+                wasExecuted = true;
                 safeExecute(executor, this);
             }
         }
