@@ -163,15 +163,14 @@ public final class RedisDecoder extends ByteToMessageDecoder {
                                               RedisConstants.REDIS_MESSAGE_MAX_LENGTH + ")");
             }
             remainingBulkLength = (int) length; // range(int) is already checked.
-            out.add(new BulkStringHeaderRedisMessage(remainingBulkLength));
-            return decodeBulkString(remainingBulkLength, in, out);
+            return decodeBulkString(in, out);
         default:
             throw new RedisCodecException("bad type: " + type);
         }
     }
 
-    private boolean decodeBulkString(int length, ByteBuf in, List<Object> out) throws Exception {
-        switch (length) {
+    private boolean decodeBulkString(ByteBuf in, List<Object> out) throws Exception {
+        switch (remainingBulkLength) {
         case RedisConstants.NULL_VALUE: // $-1\r\n
             out.add(FullBulkStringRedisMessage.NULL_INSTANCE);
             resetDecoder();
@@ -180,6 +179,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
             state = State.DECODE_BULK_STRING_EOL;
             return decodeBulkStringEndOfLine(in, out);
         default: // expectedBulkLength is always positive.
+            out.add(new BulkStringHeaderRedisMessage(remainingBulkLength));
             state = State.DECODE_BULK_STRING_CONTENT;
             return decodeBulkStringContent(in, out);
         }
