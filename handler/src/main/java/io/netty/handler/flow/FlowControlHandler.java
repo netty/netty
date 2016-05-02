@@ -87,17 +87,11 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     }
 
     /**
-     * Returns a copy of the underlying {@link Queue}. This method exists for
+     * Determine if the underlying {@link Queue} is empty. This method exists for
      * testing, debugging and inspection purposes and it is not Thread safe!
      */
-    Queue<Object> queue() {
-        RecyclableArrayDeque queue = this.queue;
-
-        if (queue == null) {
-            return new ArrayDeque<Object>(0);
-        }
-
-        return new ArrayDeque<Object>(queue);
+    boolean isQueueEmpty() {
+        return queue.isEmpty();
     }
 
     /**
