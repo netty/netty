@@ -172,15 +172,16 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         }
 
         final Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
-        final Throwable resolveFailureCause = resolveFuture.cause();
-
-        if (resolveFailureCause != null) {
-            // Failed to resolve immediately
-            channel.close();
-            return channel.newFailedFuture(resolveFailureCause);
-        }
 
         if (resolveFuture.isDone()) {
+            final Throwable resolveFailureCause = resolveFuture.cause();
+
+            if (resolveFailureCause != null) {
+                // Failed to resolve immediately
+                channel.close();
+                return channel.newFailedFuture(resolveFailureCause);
+            }
+
             // Succeeded to resolve immediately; cached? (or did a blocking lookup)
             return doConnect(resolveFuture.getNow(), localAddress, regFuture, channel.newPromise());
         }
