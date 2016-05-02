@@ -71,6 +71,15 @@ public class CorsHandlerTest {
     }
 
     @Test
+    public void simpleRequestWithNullOrigin() {
+        final HttpResponse response = simpleRequest(forOrigin("http://test.com").allowNullOrigin()
+                .allowCredentials()
+                .build(), "null");
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is("null"));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS), is(equalTo("true")));
+    }
+
+    @Test
     public void simpleRequestWithOrigin() {
         final String origin = "http://localhost:8888";
         final HttpResponse response = simpleRequest(forOrigin(origin).build(), origin);
@@ -190,8 +199,8 @@ public class CorsHandlerTest {
                 .allowCredentials()
                 .build();
         final HttpResponse response = preflightRequest(config, origin, "content-type, xheader1");
-        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(equalTo("*")));
-        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS), is(nullValue()));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(equalTo("null")));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS), is(equalTo("true")));
     }
 
     @Test

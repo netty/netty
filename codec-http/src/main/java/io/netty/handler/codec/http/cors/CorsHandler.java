@@ -42,6 +42,7 @@ public class CorsHandler extends ChannelDuplexHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CorsHandler.class);
     private static final String ANY_ORIGIN = "*";
+    private static final String NULL_ORIGIN = "null";
     private final CorsConfig config;
 
     private HttpRequest request;
@@ -95,8 +96,8 @@ public class CorsHandler extends ChannelDuplexHandler {
     private boolean setOrigin(final HttpResponse response) {
         final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
         if (origin != null) {
-            if ("null".equals(origin) && config.isNullOriginAllowed()) {
-                setAnyOrigin(response);
+            if (NULL_ORIGIN.equals(origin) && config.isNullOriginAllowed()) {
+                setNullOrigin(response);
                 return true;
             }
             if (config.isAnyOriginSupported()) {
@@ -146,6 +147,10 @@ public class CorsHandler extends ChannelDuplexHandler {
 
     private static void setAnyOrigin(final HttpResponse response) {
         setOrigin(response, ANY_ORIGIN);
+    }
+
+    private static void setNullOrigin(final HttpResponse response) {
+        setOrigin(response, NULL_ORIGIN);
     }
 
     private static void setOrigin(final HttpResponse response, final String origin) {

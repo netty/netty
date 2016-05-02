@@ -80,7 +80,7 @@ public class HttpCorsServerInitializer extends ChannelInitializer<SocketChannel>
 
     @Override
     public void initChannel(SocketChannel ch) {
-        CorsConfig corsConfig = CorsConfigBuilder.forAnyOrigin().build();
+        CorsConfig corsConfig = CorsConfigBuilder.forAnyOrigin().allowNullOrigin().allowCredentials().build();
         ChannelPipeline pipeline = ch.pipeline();
         if (sslCtx != null) {
             pipeline.addLast(sslCtx.newHandler(ch.alloc()));
