@@ -25,7 +25,6 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.channels.DatagramChannel;
-import java.nio.channels.NetworkChannel;
 import java.util.Enumeration;
 
 /**
@@ -78,16 +77,28 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
                 throw new Error("cannot locate the IP_MULTICAST_LOOP field", e);
             }
 
+            Class<?> networkChannelClass = null;
             try {
-                getOption = NetworkChannel.class.getDeclaredMethod("getOption", socketOptionType);
-            } catch (Exception e) {
-                throw new Error("cannot locate the getOption() method", e);
+                networkChannelClass = Class.forName("java.nio.channels.NetworkChannel", true, classLoader);
+            } catch (Throwable ignore) {
+                // Not Java 7+
             }
 
-            try {
-                setOption = NetworkChannel.class.getDeclaredMethod("setOption", socketOptionType, Object.class);
-            } catch (Exception e) {
-                throw new Error("cannot locate the setOption() method", e);
+            if (networkChannelClass == null) {
+                getOption = null;
+                setOption = null;
+            } else {
+                try {
+                    getOption = networkChannelClass.getDeclaredMethod("getOption", socketOptionType);
+                } catch (Exception e) {
+                    throw new Error("cannot locate the getOption() method", e);
+                }
+
+                try {
+                    setOption = networkChannelClass.getDeclaredMethod("setOption", socketOptionType, Object.class);
+                } catch (Exception e) {
+                    throw new Error("cannot locate the setOption() method", e);
+                }
             }
         }
         IP_MULTICAST_TTL = ipMulticastTtl;
@@ -173,7 +184,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     }
 
     private Object getOption0(Object option) {
-        if (PlatformDependent.javaVersion() < 7) {
+        if (GET_OPTION == null) {
             throw new UnsupportedOperationException();
         } else {
             try {
@@ -185,7 +196,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     }
 
     private void setOption0(Object option, Object value) {
-        if (PlatformDependent.javaVersion() < 7) {
+        if (SET_OPTION == null) {
             throw new UnsupportedOperationException();
         } else {
             try {
@@ -195,5 +206,4 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
             }
         }
     }
-
 }
