@@ -15,25 +15,6 @@
  */
 package io.netty.handler.flow;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.net.SocketAddress;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Exchanger;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.hamcrest.collection.IsIterableContainingInOrder;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -53,6 +34,23 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import java.net.SocketAddress;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Exchanger;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class FlowControlHandlerTest {
     private static EventLoopGroup GROUP;
@@ -231,7 +229,7 @@ public class FlowControlHandlerTest {
 
             // We should receive 3 messages
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
-            assertTrue(flow.queue().isEmpty());
+            assertTrue(flow.isQueueEmpty());
         } finally {
             client.close();
             server.close();
@@ -284,7 +282,6 @@ public class FlowControlHandlerTest {
             assertTrue(latchRef.get().await(1L, TimeUnit.SECONDS));
             assertFalse(peer.config().isAutoRead());
             assertEquals(1, counter.get());
-            assertThat(flow.queue(), IsIterableContainingInOrder.<Object>contains("2", "3"));
 
             // channelRead(2)
             latchRef.set(new CountDownLatch(1));
@@ -292,7 +289,6 @@ public class FlowControlHandlerTest {
             assertTrue(latchRef.get().await(1L, TimeUnit.SECONDS));
             assertFalse(peer.config().isAutoRead());
             assertEquals(2, counter.get());
-            assertThat(flow.queue(), IsIterableContainingInOrder.<Object>contains("3"));
 
             // channelRead(3)
             latchRef.set(new CountDownLatch(1));
@@ -300,7 +296,7 @@ public class FlowControlHandlerTest {
             assertTrue(latchRef.get().await(1L, TimeUnit.SECONDS));
             assertFalse(peer.config().isAutoRead());
             assertEquals(3, counter.get());
-            assertTrue(flow.queue().isEmpty());
+            assertTrue(flow.isQueueEmpty());
         } finally {
             client.close();
             server.close();
@@ -350,21 +346,19 @@ public class FlowControlHandlerTest {
             peer.read();
             assertTrue(latchRef.get().await(1L, TimeUnit.SECONDS));
             assertEquals(1, counter.get());
-            assertThat(flow.queue(), IsIterableContainingInOrder.<Object>contains("2", "3"));
 
             // channelRead(2)
             latchRef.set(new CountDownLatch(1));
             peer.read();
             assertTrue(latchRef.get().await(1L, TimeUnit.SECONDS));
             assertEquals(2, counter.get());
-            assertThat(flow.queue(), IsIterableContainingInOrder.<Object>contains("3"));
 
             // channelRead(3)
             latchRef.set(new CountDownLatch(1));
             peer.read();
             assertTrue(latchRef.get().await(1L, TimeUnit.SECONDS));
             assertEquals(3, counter.get());
-            assertTrue(flow.queue().isEmpty());
+            assertTrue(flow.isQueueEmpty());
         } finally {
             client.close();
             server.close();
