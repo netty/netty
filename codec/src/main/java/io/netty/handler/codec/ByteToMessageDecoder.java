@@ -22,7 +22,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;
@@ -233,7 +232,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof ByteBuf) {
-            RecyclableArrayList out = RecyclableArrayList.newInstance();
+            CodecOutputList out = CodecOutputList.newInstance();
             try {
                 ByteBuf data = (ByteBuf) msg;
                 first = cumulation == null;
@@ -273,8 +272,21 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Get {@code numElements} out of the {@link List} and forward these through the pipeline.
      */
     static void fireChannelRead(ChannelHandlerContext ctx, List<Object> msgs, int numElements) {
+        if (msgs instanceof CodecOutputList) {
+            fireChannelRead(ctx, (CodecOutputList) msgs, numElements);
+        } else {
+            for (int i = 0; i < numElements; i++) {
+                ctx.fireChannelRead(msgs.get(i));
+            }
+        }
+    }
+
+    /**
+     * Get {@code numElements} out of the {@link CodecOutputList} and forward these through the pipeline.
+     */
+    static void fireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
         for (int i = 0; i < numElements; i ++) {
-            ctx.fireChannelRead(msgs.get(i));
+            ctx.fireChannelRead(msgs.getUnsafe(i));
         }
     }
 
@@ -321,7 +333,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     }
 
     private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) throws Exception {
-        RecyclableArrayList out = RecyclableArrayList.newInstance();
+        CodecOutputList out = CodecOutputList.newInstance();
         try {
             channelInputClosed(ctx, out);
         } catch (DecoderException e) {
@@ -344,7 +356,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     ctx.fireChannelInactive();
                 }
             } finally {
-                // recycle in all cases
+                // Recycle in all cases
                 out.recycle();
             }
         }

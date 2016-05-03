@@ -22,8 +22,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -62,6 +60,7 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         if (super.acceptOutboundMessage(msg)) {
+            @SuppressWarnings("rawtypes")
             AddressedEnvelope envelope = (AddressedEnvelope) msg;
             return encoder.acceptOutboundMessage(envelope.content())
                     && envelope.sender() instanceof InetSocketAddress
@@ -73,28 +72,20 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
     @Override
     protected void encode(
             ChannelHandlerContext ctx, AddressedEnvelope<M, InetSocketAddress> msg, List<Object> out) throws Exception {
-        RecyclableArrayList buffers = null;
-        try {
-            buffers = RecyclableArrayList.newInstance();
-            encoder.encode(ctx, msg.content(), buffers);
-            if (buffers.size() != 1) {
-                throw new EncoderException(
-                        StringUtil.simpleClassName(encoder) + " must produce only one message.");
-            }
-            Object content = buffers.get(0);
-            if (content instanceof ByteBuf) {
-                out.add(new DatagramPacket(((ByteBuf) content).retain(), msg.recipient(), msg.sender()));
-            } else {
-                throw new EncoderException(
-                        StringUtil.simpleClassName(encoder) + " must produce only ByteBuf.");
-            }
-        } finally {
-            if (buffers != null) {
-                for (Object o : buffers) {
-                    ReferenceCountUtil.release(o);
-                }
-                buffers.recycle();
-            }
+        assert out.isEmpty();
+
+        encoder.encode(ctx, msg.content(), out);
+        if (out.size() != 1) {
+            throw new EncoderException(
+                    StringUtil.simpleClassName(encoder) + " must produce only one message.");
+        }
+        Object content = out.get(0);
+        if (content instanceof ByteBuf) {
+            // Replace the ByteBuf with a DatagramPacket.
+            out.set(0, new DatagramPacket((ByteBuf) content, msg.recipient(), msg.sender()));
+        } else {
+            throw new EncoderException(
+                    StringUtil.simpleClassName(encoder) + " must produce only ByteBuf.");
         }
     }
 
