@@ -284,7 +284,6 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     }
 
     private FlowState state(Http2Stream stream) {
-        checkNotNull(stream, "stream");
         return stream.getProperty(stateKey);
     }
 

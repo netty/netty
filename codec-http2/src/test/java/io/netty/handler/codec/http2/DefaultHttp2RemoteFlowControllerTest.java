@@ -186,13 +186,15 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     @Test
     public void unflushedPayloadsShouldBeDroppedOnCancel() throws Http2Exception {
         FakeFlowControlled data = new FakeFlowControlled(5);
+        Http2Stream streamA = stream(STREAM_A);
         sendData(STREAM_A, data);
-        connection.stream(STREAM_A).close();
+        streamA.close();
         controller.writePendingBytes();
         data.assertNotWritten();
         controller.writePendingBytes();
         data.assertNotWritten();
-        verify(listener, times(1)).writabilityChanged(stream(STREAM_A));
+        verify(listener, times(1)).writabilityChanged(streamA);
+        assertFalse(controller.isWritable(streamA));
     }
 
     @Test
@@ -716,7 +718,14 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         verify(flowControlled, never()).writeComplete();
 
         assertEquals(90, windowBefore - window(STREAM_A));
-        assertWritabilityChanged(0, true);
+        verify(listener, times(1)).writabilityChanged(stream(STREAM_A));
+        verify(listener, never()).writabilityChanged(stream(STREAM_B));
+        verify(listener, never()).writabilityChanged(stream(STREAM_C));
+        verify(listener, never()).writabilityChanged(stream(STREAM_D));
+        assertFalse(controller.isWritable(stream(STREAM_A)));
+        assertTrue(controller.isWritable(stream(STREAM_B)));
+        assertTrue(controller.isWritable(stream(STREAM_C)));
+        assertTrue(controller.isWritable(stream(STREAM_D)));
     }
 
     @Test
@@ -755,6 +764,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     public void flowControlledWriteCompleteThrowsAnException() throws Exception {
         final Http2RemoteFlowController.FlowControlled flowControlled =
                 mock(Http2RemoteFlowController.FlowControlled.class);
+        Http2Stream streamA = stream(STREAM_A);
         final AtomicInteger size = new AtomicInteger(150);
         doAnswer(new Answer<Integer>() {
             @Override
@@ -780,19 +790,22 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
 
         int windowBefore = window(STREAM_A);
 
-        try {
-            controller.addFlowControlled(stream, flowControlled);
-            controller.writePendingBytes();
-        } catch (Exception e) {
-            fail();
-        }
+        controller.addFlowControlled(stream, flowControlled);
+        controller.writePendingBytes();
 
         verify(flowControlled, times(3)).write(any(ChannelHandlerContext.class), anyInt());
         verify(flowControlled, never()).error(any(ChannelHandlerContext.class), any(Throwable.class));
         verify(flowControlled).writeComplete();
 
         assertEquals(150, windowBefore - window(STREAM_A));
-        assertWritabilityChanged(0, true);
+        verify(listener, times(1)).writabilityChanged(streamA);
+        verify(listener, never()).writabilityChanged(stream(STREAM_B));
+        verify(listener, never()).writabilityChanged(stream(STREAM_C));
+        verify(listener, never()).writabilityChanged(stream(STREAM_D));
+        assertFalse(controller.isWritable(streamA));
+        assertTrue(controller.isWritable(stream(STREAM_B)));
+        assertTrue(controller.isWritable(stream(STREAM_C)));
+        assertTrue(controller.isWritable(stream(STREAM_D)));
     }
 
     @Test
@@ -817,11 +830,11 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         verify(flowControlled).write(any(ChannelHandlerContext.class), anyInt());
         verify(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
         verify(flowControlled, never()).writeComplete();
-        verify(listener, times(1)).writabilityChanged(stream(STREAM_A));
+        verify(listener, times(1)).writabilityChanged(stream);
         verify(listener, never()).writabilityChanged(stream(STREAM_B));
         verify(listener, never()).writabilityChanged(stream(STREAM_C));
         verify(listener, never()).writabilityChanged(stream(STREAM_D));
-        assertFalse(controller.isWritable(stream(STREAM_A)));
+        assertFalse(controller.isWritable(stream));
         assertTrue(controller.isWritable(stream(STREAM_B)));
         assertTrue(controller.isWritable(stream(STREAM_C)));
         assertTrue(controller.isWritable(stream(STREAM_D)));
