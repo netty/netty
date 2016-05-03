@@ -205,9 +205,10 @@ public final class RedisDecoder extends ByteToMessageDecoder {
 
         // if this is last frame.
         if (readableBytes >= remainingBulkLength + RedisConstants.EOL_LENGTH) {
-            ByteBuf content = in.readSlice(remainingBulkLength).retain();
+            ByteBuf content = in.readSlice(remainingBulkLength);
             readEndOfLine(in);
-            out.add(new DefaultLastBulkStringRedisContent(content));
+            // Only call retain after readEndOfLine(...) as the method may throw an exception.
+            out.add(new DefaultLastBulkStringRedisContent(content.retain()));
             resetDecoder();
             return true;
         }
