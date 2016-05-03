@@ -76,4 +76,11 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * @return the number of unconsumed bytes for the stream.
      */
     int unconsumedBytes(Http2Stream stream);
+
+    /**
+     * Get the initial flow control window size for the given stream. This quantity is measured in number of bytes. Note
+     * the unavailable window portion can be calculated by {@link #initialWindowSize()} - {@link
+     * #windowSize(Http2Stream)}.
+     */
+    int initialWindowSize(Http2Stream stream);
 }

@@ -798,7 +798,7 @@ public class WeightedFairQueueByteDistributorTest {
     }
 
     /**
-     * In this test, we close an internal stream in the priority tree but tree should not change.
+     * In this test, we close an internal stream in the priority tree.
      *
      * <pre>
      *         0
@@ -806,6 +806,13 @@ public class WeightedFairQueueByteDistributorTest {
      *       A   B
      *      / \
      *     C   D
+     * </pre>
+     *
+     * After the close:
+     * <pre>
+     *          0
+     *        / | \
+     *       C  D  B
      * </pre>
      */
     @Test
@@ -819,8 +826,7 @@ public class WeightedFairQueueByteDistributorTest {
 
         assertTrue(write(500));
         verifyNeverWrite(STREAM_A);
-        assertEquals(200, captureWrites(STREAM_B));
-        assertEquals(300, captureWrites(STREAM_C) + captureWrites(STREAM_D));
+        assertEquals(500, captureWrites(STREAM_B) + captureWrites(STREAM_C) + captureWrites(STREAM_D));
 
         assertFalse(write(1300));
         verifyNeverWrite(STREAM_A);
