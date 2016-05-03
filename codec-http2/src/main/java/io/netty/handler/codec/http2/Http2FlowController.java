@@ -57,13 +57,6 @@ public interface Http2FlowController {
     int windowSize(Http2Stream stream);
 
     /**
-     * Get the initial flow control window size for the given stream. This quantity is measured in number of bytes. Note
-     * the unavailable window portion can be calculated by {@link #initialWindowSize()} - {@link
-     * #windowSize(Http2Stream)}.
-     */
-    int initialWindowSize(Http2Stream stream);
-
-    /**
      * Increments the size of the stream's flow control window by the given delta.
      * <p>
      * In the case of a {@link Http2RemoteFlowController} this is called upon receipt of a

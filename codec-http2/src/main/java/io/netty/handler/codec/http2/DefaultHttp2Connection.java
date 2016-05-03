@@ -133,18 +133,24 @@ public class DefaultHttp2Connection implements Http2Connection {
             promise.trySuccess(null);
             return promise;
         }
+
         Iterator<PrimitiveEntry<Http2Stream>> itr = streamMap.entries().iterator();
         // We must take care while iterating the streamMap as to not modify while iterating in case there are other code
         // paths iterating over the active streams.
         if (activeStreams.allowModifications()) {
-            while (itr.hasNext()) {
-                DefaultStream stream = (DefaultStream) itr.next().value();
-                if (stream.id() != CONNECTION_STREAM_ID) {
-                    // If modifications of the activeStream map is allowed, then a stream close operation will also
-                    // modify the streamMap. Pass the iterator in so that remove will be called to prevent concurrent
-                    // modification exceptions.
-                    stream.close(itr);
+            activeStreams.incrementPendingIterations();
+            try {
+                while (itr.hasNext()) {
+                    DefaultStream stream = (DefaultStream) itr.next().value();
+                    if (stream.id() != CONNECTION_STREAM_ID) {
+                        // If modifications of the activeStream map is allowed, then a stream close operation will also
+                        // modify the streamMap. Pass the iterator in so that remove will be called to prevent
+                        // concurrent modification exceptions.
+                        stream.close(itr);
+                    }
                 }
+            } finally {
+                activeStreams.decrementPendingIterations();
             }
         } else {
             while (itr.hasNext()) {
@@ -220,8 +226,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         for (int i = 0; i < listeners.size(); ++i) {
             try {
                 listeners.get(i).onGoAwayReceived(lastKnownStream, errorCode, debugData);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onGoAwayReceived.", e);
+            } catch (Throwable cause) {
+                logger.error("Caught Throwable from listener onGoAwayReceived.", cause);
             }
         }
 
@@ -251,8 +257,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         for (int i = 0; i < listeners.size(); ++i) {
             try {
                 listeners.get(i).onGoAwaySent(lastKnownStream, errorCode, debugData);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onGoAwaySent.", e);
+            } catch (Throwable cause) {
+                logger.error("Caught Throwable from listener onGoAwaySent.", cause);
             }
         }
 
@@ -279,16 +285,12 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     /**
-     * Closed streams may stay in the priority tree if they have dependents that are in prioritizable states.
-     * When a stream is requested to be removed we can only actually remove that stream when there are no more
-     * prioritizable children.
-     * (see [1] {@link Http2Stream#prioritizableForTree()} and [2] {@link DefaultStream#removeChild(DefaultStream)}).
-     * When a priority tree edge changes we also have to re-evaluate viable nodes
-     * (see [3] {@link DefaultStream#takeChild(DefaultStream, boolean, List)}).
-     * @param stream The stream to remove.
+     * Remove a stream from the {@link #streamMap}.
+     * @param stream the stream to remove.
+     * @param itr an iterator that may be pointing to the stream during iteration and {@link Iterator#remove()} will be
+     * used if non-{@code null}.
      */
     void removeStream(DefaultStream stream, Iterator<?> itr) {
-        // [1] Check if this stream can be removed because it has no prioritizable descendants.
         if (stream.parent().removeChild(stream)) {
             if (itr == null) {
                 streamMap.remove(stream.id());
@@ -299,8 +301,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             for (int i = 0; i < listeners.size(); i++) {
                 try {
                     listeners.get(i).onStreamRemoved(stream);
-                } catch (RuntimeException e) {
-                    logger.error("Caught RuntimeException from listener onStreamRemoved.", e);
+                } catch (Throwable cause) {
+                    logger.error("Caught Throwable from listener onStreamRemoved.", cause);
                 }
             }
 
@@ -329,8 +331,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         for (int i = 0; i < listeners.size(); i++) {
             try {
                 listeners.get(i).onStreamHalfClosed(stream);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onStreamHalfClosed.", e);
+            } catch (Throwable cause) {
+                logger.error("Caught Throwable from listener onStreamHalfClosed.", cause);
             }
         }
     }
@@ -339,8 +341,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         for (int i = 0; i < listeners.size(); i++) {
             try {
                 listeners.get(i).onStreamClosed(stream);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onStreamClosed.", e);
+            } catch (Throwable cause) {
+                logger.error("Caught Throwable from listener onStreamClosed.", cause);
             }
         }
     }
@@ -371,7 +373,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         private short weight = DEFAULT_PRIORITY_WEIGHT;
         private DefaultStream parent;
         private IntObjectMap<DefaultStream> children = IntCollections.emptyMap();
-        private int prioritizableForTree = 1;
         private boolean resetSent;
 
         DefaultStream(int id, State state) {
@@ -428,11 +429,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public final DefaultStream parent() {
             return parent;
-        }
-
-        @Override
-        public final int prioritizableForTree() {
-            return prioritizableForTree;
         }
 
         @Override
@@ -521,7 +517,6 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
 
             state = CLOSED;
-            decrementPrioritizableForTree(1);
 
             activeStreams.deactivate(this, itr);
             return this;
@@ -564,59 +559,6 @@ public class DefaultHttp2Connection implements Http2Connection {
             return this;
         }
 
-        /**
-         * Recursively increment the {@link #prioritizableForTree} for this object up the parent links until
-         * either we go past the root or {@code oldParent} is encountered.
-         * @param amt The amount to increment by. This must be positive.
-         * @param oldParent The previous parent for this stream.
-         */
-        private void incrementPrioritizableForTree(int amt, Http2Stream oldParent) {
-            if (amt != 0) {
-                incrementPrioritizableForTree0(amt, oldParent);
-            }
-        }
-
-        /**
-         * Direct calls to this method are discouraged.
-         * Instead use {@link #incrementPrioritizableForTree(int, Http2Stream)}.
-         */
-        private void incrementPrioritizableForTree0(int amt, Http2Stream oldParent) {
-            assert amt > 0 && Integer.MAX_VALUE - amt >= prioritizableForTree;
-            prioritizableForTree += amt;
-            if (parent != null && parent != oldParent) {
-                parent.incrementPrioritizableForTree0(amt, oldParent);
-            }
-        }
-
-        /**
-         * Recursively increment the {@link #prioritizableForTree} for this object up the parent links until
-         * either we go past the root.
-         * @param amt The amount to decrement by. This must be positive.
-         */
-        private void decrementPrioritizableForTree(int amt) {
-            if (amt != 0) {
-                decrementPrioritizableForTree0(amt);
-            }
-        }
-
-        /**
-         * Direct calls to this method are discouraged. Instead use {@link #decrementPrioritizableForTree(int)}.
-         */
-        private void decrementPrioritizableForTree0(int amt) {
-            assert amt > 0 && prioritizableForTree >= amt;
-            prioritizableForTree -= amt;
-            if (parent != null) {
-                parent.decrementPrioritizableForTree0(amt);
-            }
-        }
-
-        /**
-         * Determine if this node by itself is considered to be valid in the priority tree.
-         */
-        private boolean isPrioritizable() {
-            return state != CLOSED;
-        }
-
         private void initChildrenIfEmpty() {
             if (children == IntCollections.<DefaultStream>emptyMap()) {
                 initChildren();
@@ -642,8 +584,8 @@ public class DefaultHttp2Connection implements Http2Connection {
                 for (int i = 0; i < listeners.size(); i++) {
                     try {
                         listeners.get(i).onWeightChanged(this, oldWeight);
-                    } catch (RuntimeException e) {
-                        logger.error("Caught RuntimeException from listener onWeightChanged.", e);
+                    } catch (Throwable cause) {
+                        logger.error("Caught Throwable from listener onWeightChanged.", cause);
                     }
                 }
             }
@@ -660,11 +602,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             // This map should be re-initialized in anticipation for the 1 exclusive child which will be added.
             // It will either be added directly in this method, or after this method is called...but it will be added.
             initChildren();
-            if (streamToRetain == null) {
-                prioritizableForTree = isPrioritizable() ? 1 : 0;
-            } else {
-                // prioritizableForTree does not change because it is assumed all children node will still be
-                // descendants through an exclusive priority tree operation.
+            if (streamToRetain != null) {
                 children.put(streamToRetain.id(), streamToRetain);
             }
             return prevChildren;
@@ -681,21 +619,11 @@ public class DefaultHttp2Connection implements Http2Connection {
                 events.add(new ParentChangedEvent(child, oldParent));
                 notifyParentChanging(child, this);
                 child.parent = this;
-                // We need the removal operation to happen first so the prioritizableForTree for the old parent to root
-                // path is updated with the correct child.prioritizableForTree() value. Note that the removal operation
-                // may not be successful and may return null. This is because when an exclusive dependency is processed
-                // the children are removed in a previous recursive call but the child's parent link is updated here.
-                if (oldParent != null && oldParent.children.remove(child.id()) != null &&
-                        !child.isDescendantOf(oldParent)) {
-                    oldParent.decrementPrioritizableForTree(child.prioritizableForTree());
-                    if (oldParent.prioritizableForTree() == 0) {
-                        // There are a few risks with immediately removing nodes from the priority tree:
-                        // 1. We are removing nodes while we are potentially shifting the tree. There are no
-                        // concrete cases known but is risky because it could invalidate the data structure.
-                        // 2. We are notifying listeners of the removal while the tree is in flux. Currently the
-                        // codec listeners make no assumptions about priority tree structure when being notified.
-                        removeStream(oldParent, null);
-                    }
+                // Note that the removal operation may not be successful and may return null. This is because when an
+                // exclusive dependency is processed the children are removed in a previous recursive call but the
+                // child's parent link is updated here.
+                if (oldParent != null) {
+                    oldParent.children.remove(child.id());
                 }
 
                 // Lazily initialize the children to save object allocations.
@@ -703,7 +631,6 @@ public class DefaultHttp2Connection implements Http2Connection {
 
                 final Http2Stream oldChild = children.put(child.id(), child);
                 assert oldChild == null : "A stream with the same stream ID was already in the child map.";
-                incrementPrioritizableForTree(child.prioritizableForTree(), oldParent);
             }
 
             if (exclusive && !children.isEmpty()) {
@@ -719,26 +646,17 @@ public class DefaultHttp2Connection implements Http2Connection {
          * Removes the child priority and moves any of its dependencies to being direct dependencies on this node.
          */
         final boolean removeChild(DefaultStream child) {
-            if (child.prioritizableForTree() == 0 && children.remove(child.id()) != null) {
+            if (children.remove(child.id()) != null) {
                 List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1 + child.numChildren());
                 events.add(new ParentChangedEvent(child, child.parent()));
                 notifyParentChanging(child, null);
                 child.parent = null;
-                decrementPrioritizableForTree(child.prioritizableForTree());
 
                 // Move up any grand children to be directly dependent on this node.
                 for (DefaultStream grandchild : child.children.values()) {
                     takeChild(grandchild, false, events);
                 }
 
-                if (prioritizableForTree() == 0) {
-                    // There are a few risks with immediately removing nodes from the priority tree:
-                    // 1. We are removing nodes while we are potentially shifting the tree. There are no
-                    // concrete cases known but is risky because it could invalidate the data structure.
-                    // 2. We are notifying listeners of the removal while the tree is in flux. Currently the
-                    // codec listeners make no assumptions about priority tree structure when being notified.
-                    removeStream(this, null);
-                }
                 notifyParentChanged(events);
                 return true;
             }
@@ -809,8 +727,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         public void notifyListener(Listener l) {
             try {
                 l.onPriorityTreeParentChanged(stream, oldParent);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onPriorityTreeParentChanged.", e);
+            } catch (Throwable cause) {
+                logger.error("Caught Throwable from listener onPriorityTreeParentChanged.", cause);
             }
         }
     }
@@ -832,8 +750,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         for (int i = 0; i < listeners.size(); i++) {
             try {
                 listeners.get(i).onPriorityTreeParentChanging(stream, newParent);
-            } catch (RuntimeException e) {
-                logger.error("Caught RuntimeException from listener onPriorityTreeParentChanging.", e);
+            } catch (Throwable cause) {
+                logger.error("Caught Throwable from listener onPriorityTreeParentChanging.", cause);
             }
         }
     }
@@ -1030,8 +948,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             for (int i = 0; i < listeners.size(); i++) {
                 try {
                     listeners.get(i).onStreamAdded(stream);
-                } catch (RuntimeException e) {
-                    logger.error("Caught RuntimeException from listener onStreamAdded.", e);
+                } catch (Throwable cause) {
+                    logger.error("Caught Throwable from listener onStreamAdded.", cause);
                 }
             }
 
@@ -1177,7 +1095,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         public void deactivate(final DefaultStream stream, final Iterator<?> itr) {
-            if (allowModifications()) {
+            if (allowModifications() || itr != null) {
                 removeFromActiveStreams(stream, itr);
             } else {
                 pendingEvents.add(new Event() {
@@ -1198,7 +1116,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         public Http2Stream forEachActiveStream(Http2StreamVisitor visitor) throws Http2Exception {
-            ++pendingIterations;
+            incrementPendingIterations();
             try {
                 for (Http2Stream stream : streams) {
                     if (!visitor.visit(stream)) {
@@ -1207,20 +1125,7 @@ public class DefaultHttp2Connection implements Http2Connection {
                 }
                 return null;
             } finally {
-                --pendingIterations;
-                if (allowModifications()) {
-                    for (;;) {
-                        Event event = pendingEvents.poll();
-                        if (event == null) {
-                            break;
-                        }
-                        try {
-                            event.process();
-                        } catch (RuntimeException e) {
-                            logger.error("Caught RuntimeException while processing pending ActiveStreams$Event.", e);
-                        }
-                    }
-                }
+                decrementPendingIterations();
             }
         }
 
@@ -1232,8 +1137,8 @@ public class DefaultHttp2Connection implements Http2Connection {
                 for (int i = 0; i < listeners.size(); i++) {
                     try {
                         listeners.get(i).onStreamActive(stream);
-                    } catch (RuntimeException e) {
-                        logger.error("Caught RuntimeException from listener onStreamActive.", e);
+                    } catch (Throwable cause) {
+                        logger.error("Caught Throwable from listener onStreamActive.", cause);
                     }
                 }
             }
@@ -1250,6 +1155,27 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         boolean allowModifications() {
             return pendingIterations == 0;
+        }
+
+        void incrementPendingIterations() {
+            ++pendingIterations;
+        }
+
+        void decrementPendingIterations() {
+            --pendingIterations;
+            if (allowModifications()) {
+                for (;;) {
+                    Event event = pendingEvents.poll();
+                    if (event == null) {
+                        break;
+                    }
+                    try {
+                        event.process();
+                    } catch (Throwable cause) {
+                        logger.error("Caught Throwable while processing pending ActiveStreams$Event.", cause);
+                    }
+                }
+            }
         }
     }
 
