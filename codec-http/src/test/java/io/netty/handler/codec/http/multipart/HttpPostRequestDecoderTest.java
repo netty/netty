@@ -23,6 +23,7 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -472,6 +473,23 @@ public class HttpPostRequestDecoderTest {
             assertTrue(e.getCause() instanceof UnsupportedCharsetException);
         } finally {
             req.release();
+        }
+    }
+
+    @Test
+    public void testFormEncodeIncorrect() throws Exception {
+        LastHttpContent content = new DefaultLastHttpContent(
+                Unpooled.copiedBuffer("project=netty&&project=netty", CharsetUtil.US_ASCII));
+        DefaultHttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req);
+        try {
+            decoder.offer(content);
+            fail();
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            assertTrue(e.getCause() instanceof IllegalArgumentException);
+        } finally {
+            decoder.destroy();
+            content.release();
         }
     }
 }
