@@ -190,9 +190,22 @@ public class JsonObjectDecoder extends ByteToMessageDecoder {
             // also contain braces/brackets and that could lead to incorrect results.
             if (!insideString) {
                 insideString = true;
-            // If the double quote wasn't escaped then this is the end of a string.
-            } else if (in.getByte(idx - 1) != '\\') {
-                insideString = false;
+            } else {
+                int backslashCount = 0;
+                idx--;
+                while (idx >= 0) {
+                    if (in.getByte(idx) == '\\') {
+                        backslashCount++;
+                        idx--;
+                    } else {
+                        break;
+                    }
+                }
+                // The double quote isn't escaped only if there are even "\"s.
+                if (backslashCount % 2 == 0) {
+                    // Since the double quote isn't escaped then this is the end of a string.
+                    insideString = false;
+                }
             }
         }
     }

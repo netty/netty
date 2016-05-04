@@ -88,6 +88,51 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
+    public void testBackslashInString1() {
+        EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
+        // {"foo" : "bar\""}
+        String json = "{\"foo\" : \"bar\\\"\"}";
+        System.out.println(json);
+        ch.writeInbound(Unpooled.copiedBuffer(json, CharsetUtil.UTF_8));
+
+        ByteBuf res = ch.readInbound();
+        assertEquals(json, res.toString(CharsetUtil.UTF_8));
+        res.release();
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testBackslashInString2() {
+        EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
+        // {"foo" : "bar\\"}
+        String json = "{\"foo\" : \"bar\\\\\"}";
+        System.out.println(json);
+        ch.writeInbound(Unpooled.copiedBuffer(json, CharsetUtil.UTF_8));
+
+        ByteBuf res = ch.readInbound();
+        assertEquals(json, res.toString(CharsetUtil.UTF_8));
+        res.release();
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testBackslashInString3() {
+        EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
+        // {"foo" : "bar\\\""}
+        String json = "{\"foo\" : \"bar\\\\\\\"\"}";
+        System.out.println(json);
+        ch.writeInbound(Unpooled.copiedBuffer(json, CharsetUtil.UTF_8));
+
+        ByteBuf res = ch.readInbound();
+        assertEquals(json, res.toString(CharsetUtil.UTF_8));
+        res.release();
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testMultipleJsonObjectsInOneWrite() {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
 
