@@ -628,6 +628,10 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
             // error while decoding
             undecodedChunk.readerIndex(firstpos);
             throw new ErrorDataDecoderException(e);
+        } catch (IllegalArgumentException e) {
+            // error while decoding
+            undecodedChunk.readerIndex(firstpos);
+            throw new ErrorDataDecoderException(e);
         }
     }
 
