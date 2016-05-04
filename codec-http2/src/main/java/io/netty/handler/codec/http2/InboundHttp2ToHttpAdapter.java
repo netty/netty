@@ -152,7 +152,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     protected FullHttpMessage newMessage(Http2Stream stream, Http2Headers headers, boolean validateHttpHeaders,
                                          ByteBufAllocator alloc)
             throws Http2Exception {
-        return connection.isServer() ? HttpConversionUtil.toHttpRequest(stream.id(), headers, alloc,
+        return connection.isServer() ? HttpConversionUtil.toFullHttpRequest(stream.id(), headers, alloc,
                 validateHttpHeaders) : HttpConversionUtil.toHttpResponse(stream.id(), headers, alloc,
                                                                          validateHttpHeaders);
     }

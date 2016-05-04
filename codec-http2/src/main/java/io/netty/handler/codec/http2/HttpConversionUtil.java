@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -230,7 +231,7 @@ public final class HttpConversionUtil {
      * @return A new request object which represents headers/data
      * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, boolean)}
      */
-    public static FullHttpRequest toHttpRequest(int streamId, Http2Headers http2Headers, ByteBufAllocator alloc,
+    public static FullHttpRequest toFullHttpRequest(int streamId, Http2Headers http2Headers, ByteBufAllocator alloc,
                                                 boolean validateHttpHeaders)
                     throws Http2Exception {
         // HTTP/2 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
@@ -247,6 +248,37 @@ public final class HttpConversionUtil {
             throw e;
         } catch (Throwable t) {
             msg.release();
+            throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
+        }
+        return msg;
+    }
+
+    /**
+     * Create a new object to contain the request data.
+     *
+     * @param streamId The stream associated with the request
+     * @param http2Headers The initial set of HTTP/2 headers to create the request with
+     * @param validateHttpHeaders <ul>
+     *        <li>{@code true} to validate HTTP headers in the http-codec</li>
+     *        <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     *        </ul>
+     * @return A new request object which represents headers for a chunked request
+     * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, boolean)}
+     */
+    public static HttpRequest toHttpRequest(int streamId, Http2Headers http2Headers, boolean validateHttpHeaders)
+                    throws Http2Exception {
+        // HTTP/2 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
+        final CharSequence method = checkNotNull(http2Headers.method(),
+                "method header cannot be null in conversion to HTTP/1.x");
+        final CharSequence path = checkNotNull(http2Headers.path(),
+                "path header cannot be null in conversion to HTTP/1.x");
+        HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method.toString()),
+                path.toString(), validateHttpHeaders);
+        try {
+            addHttp2ToHttpHeaders(streamId, http2Headers, msg.headers(), msg.protocolVersion(), false, true);
+        } catch (Http2Exception e) {
+            throw e;
+        } catch (Throwable t) {
             throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
         }
         return msg;
