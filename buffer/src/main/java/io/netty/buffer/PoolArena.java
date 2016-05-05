@@ -254,7 +254,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             int size = chunk.chunkSize();
             destroyChunk(chunk);
             activeBytesHuge.add(-size);
-            deallocationsHuge.decrement();
+            deallocationsHuge.increment();
         } else {
             SizeClass sizeClass = sizeClass(normCapacity);
             if (cache != null && cache.add(this, chunk, handle, normCapacity, sizeClass)) {
