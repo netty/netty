@@ -84,7 +84,7 @@ public class DefaultPromiseTest {
             p[i].addListener(new FutureListener<Void>() {
                 @Override
                 public void operationComplete(Future<Void> future) throws Exception {
-                    DefaultPromise.notifyListener(ImmediateEventExecutor.INSTANCE, future, new FutureListener<Void>() {
+                    future.addListener(new FutureListener<Void>() {
                         @Override
                         public void operationComplete(Future<Void> future) throws Exception {
                             if (finalI + 1 < p.length) {
@@ -192,8 +192,8 @@ public class DefaultPromiseTest {
      * <ol>
      * <li>A write is done</li>
      * <li>The write operation completes, and the promise state is changed to done</li>
-     * <li>A listener is added to the return from the write. The {@link FutureListener#operationComplete()} updates
-     * state which must be invoked before the response to the previous write is read.</li>
+     * <li>A listener is added to the return from the write. The {@link FutureListener#operationComplete(Future)}
+     * updates state which must be invoked before the response to the previous write is read.</li>
      * <li>The write operation</li>
      * </ol>
      */
