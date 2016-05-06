@@ -342,10 +342,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             try {
                 if (stream == null) {
                     if (connection.streamMayHaveExisted(streamId)) {
-                        if (logger.isInfoEnabled()) {
-                            logger.info("%s ignoring PRIORITY frame for stream %d. Stream doesn't exist but may " +
-                                        " have existed", ctx.channel(), streamId);
-                        }
+                        logger.info("{} ignoring PRIORITY frame for stream {}. Stream doesn't exist but may " +
+                                     " have existed", ctx.channel(), streamId);
                         return;
                     }
 
@@ -353,11 +351,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     // first frame to be received for a stream that we must create the stream.
                     stream = connection.remote().createIdleStream(streamId);
                 } else if (streamCreatedAfterGoAwaySent(streamId)) {
-                    if (logger.isInfoEnabled()) {
-                        logger.info("%s ignoring PRIORITY frame for stream %d. Stream created after GOAWAY sent. " +
-                                    "Last known stream by peer " + connection.remote().lastStreamKnownByPeer(),
-                                    ctx.channel(), streamId);
-                    }
+                    logger.info("{} ignoring PRIORITY frame for stream {}. Stream created after GOAWAY sent. " +
+                                    "Last known stream by peer {}",
+                            ctx.channel(), streamId, connection.remote().lastStreamKnownByPeer());
                     return;
                 }
 
@@ -555,10 +551,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 String frameName) throws Http2Exception {
             if (stream == null) {
                 if (streamCreatedAfterGoAwaySent(streamId)) {
-                    if (logger.isInfoEnabled()) {
-                        logger.info("%s ignoring %s frame for stream %d. Stream sent after GOAWAY sent",
-                                ctx.channel(), frameName, streamId);
-                    }
+                    logger.info("{} ignoring {} frame for stream {}. Stream sent after GOAWAY sent",
+                            ctx.channel(), frameName, streamId);
                     return true;
                 }
                 // Its possible that this frame would result in stream ID out of order creation (PROTOCOL ERROR) and its
@@ -568,7 +562,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                                   frameName, streamId);
             } else if (stream.isResetSent() || streamCreatedAfterGoAwaySent(streamId)) {
                 if (logger.isInfoEnabled()) {
-                    logger.info("%s ignoring %s frame for stream %d. %s", ctx.channel(), frameName,
+                    logger.info("{} ignoring {} frame for stream {} {}", ctx.channel(), frameName,
                             stream.isResetSent() ? "RST_STREAM sent." :
                                 ("Stream created after GOAWAY sent. Last known stream by peer " +
                                  connection.remote().lastStreamKnownByPeer()));
