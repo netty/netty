@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -42,6 +43,19 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.Assert.*;
 
 public class EmbeddedChannelTest {
+
+    @Test(timeout = 2000)
+    public void promiseDoesNotInfiniteLoop() throws InterruptedException {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.closeFuture().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                future.channel().close();
+            }
+        });
+
+        channel.close().syncUninterruptibly();
+    }
 
     @Test
     public void testConstructWithChannelInitializer() {
