@@ -517,16 +517,22 @@ public abstract class OpenSslContext extends SslContext {
                 try {
                     buffer.writeBytes(encodedBuf);
                 } finally {
-                    encodedBuf.release();
+                    zerooutAndRelease(encodedBuf);
                 }
             } finally {
-                wrappedBuf.release();
+                zerooutAndRelease(wrappedBuf);
             }
             buffer.writeBytes(END_PRIVATE_KEY);
             return newBIO(buffer);
         } finally {
-            buffer.release();
+            // Zero out the buffer and so the private key it held.
+            zerooutAndRelease(buffer);
         }
+    }
+
+    private static void zerooutAndRelease(ByteBuf buffer) {
+        buffer.setZero(0, buffer.capacity());
+        buffer.release();
     }
 
     /**
