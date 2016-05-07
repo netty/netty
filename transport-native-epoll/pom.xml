@@ -105,6 +105,13 @@
               <goal>jar</goal>
             </goals>
             <configuration>
+              <archive>
+                <manifest>
+                  <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                </manifest>
+                <index>true</index>
+                <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+              </archive>
               <classifier>${epoll.classifier}</classifier>
             </configuration>
           </execution>
