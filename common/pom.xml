@@ -138,6 +138,27 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>2.4.0</version>
+        <executions>
+          <execution>
+            <id>generate-manifest</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+            <configuration>
+              <instructions>
+                <!-- NativeLibraryLoader can be used to manually load native libraries from other bundles that this bundle does not depend on,
+                hence use DynamicImport-Package instruction to ensure the loading is successful -->
+                <DynamicImport-Package>*</DynamicImport-Package>
+              </instructions>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 </project>
