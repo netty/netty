@@ -403,8 +403,9 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
      * if necessary to not break conflict chains.
      *
      * @param index the index position of the element to remove.
+     * @return {@code true} if the next item was moved back. {@code false} otherwise.
      */
-    private void removeAt(int index) {
+    private boolean removeAt(final int index) {
         --size;
         // Clearing the key is not strictly necessary (for GC like in a regular collection),
         // but recommended for security. The memory location is still fresh in the cache anyway.
@@ -416,6 +417,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
         // entries and move them back if possible, optimizing future lookups.
         // Knuth Section 6.4 Algorithm R, also used by the JDK's IdentityHashMap.
 
+        boolean movedBack = false;
         int nextFree = index;
         for (int i = probeNext(index); values[i] != null; i = probeNext(i)) {
             int bucket = hashIndex(keys[i]);
@@ -424,12 +426,14 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
                 // Move the displaced entry "back" to the first available position.
                 keys[nextFree] = keys[i];
                 values[nextFree] = values[i];
+                movedBack = true;
                 // Put the first entry after the displaced entry
                 keys[i] = 0;
                 values[i] = null;
                 nextFree = i;
             }
         }
+        return movedBack;
     }
 
     /**
@@ -629,7 +633,12 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
             if (prevIndex < 0) {
                 throw new IllegalStateException("next must be called before each remove.");
             }
-            removeAt(prevIndex);
+            if (removeAt(prevIndex)) {
+                // removeAt may move elements "back" in the array if they have been displaced because their spot in the
+                // array was occupied when they were inserted. If this occurs then the nextIndex is now invalid and
+                // should instead point to the prevIndex which now holds an element which was "moved back".
+                nextIndex = prevIndex;
+            }
             prevIndex = -1;
         }
 

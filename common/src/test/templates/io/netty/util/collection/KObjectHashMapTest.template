@@ -14,6 +14,7 @@
  */
 package io.netty.util.collection;
 
+import io.netty.util.collection.@K@ObjectMap.PrimitiveEntry;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -75,6 +76,24 @@ public class @K@ObjectHashMapTest {
     @Before
     public void setup() {
         map = new @K@ObjectHashMap<Value>();
+    }
+
+    @Test
+    public void iteartorRemoveShouldNotNPE() {
+        map = new @K@ObjectHashMap<Value>(4, 1);
+        map.put((@O@)(@k@) 0, new Value("A"));
+        map.put((@O@)(@k@) 1, new Value("B"));
+        map.put((@O@)(@k@) 4, new Value("C"));
+        map.remove((@O@)(@k@) 1);
+        Iterator<PrimitiveEntry<Value>> itr = map.entries().iterator();
+        while (itr.hasNext()) {
+            PrimitiveEntry<Value> entry = itr.next();
+            assertNotNull(entry.key());
+            assertNotNull(entry.value());
+            itr.remove();
+        }
+        assertTrue(map.isEmpty());
+        assertEquals(0, map.size());
     }
 
     @Test
