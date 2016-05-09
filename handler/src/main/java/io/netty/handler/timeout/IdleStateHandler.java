@@ -343,6 +343,22 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         ctx.fireUserEventTriggered(evt);
     }
 
+    /**
+     * Returns a {@link IdleStateEvent}.
+     */
+    protected IdleStateEvent newIdleStateEvent(IdleState state, boolean first) {
+        switch (state) {
+            case ALL_IDLE:
+                return first ? IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT : IdleStateEvent.ALL_IDLE_STATE_EVENT;
+            case READER_IDLE:
+                return first ? IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT : IdleStateEvent.READER_IDLE_STATE_EVENT;
+            case WRITER_IDLE:
+                return first ? IdleStateEvent.FIRST_WRITER_IDLE_STATE_EVENT : IdleStateEvent.WRITER_IDLE_STATE_EVENT;
+            default:
+                throw new Error();
+        }
+    }
+
     private final class ReaderIdleTimeoutTask implements Runnable {
 
         private final ChannelHandlerContext ctx;
@@ -367,13 +383,11 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 readerIdleTimeout =
                     ctx.executor().schedule(this, readerIdleTimeNanos, TimeUnit.NANOSECONDS);
                 try {
-                    IdleStateEvent event;
+                    IdleStateEvent event = newIdleStateEvent(IdleState.READER_IDLE, firstReaderIdleEvent);
                     if (firstReaderIdleEvent) {
                         firstReaderIdleEvent = false;
-                        event = IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT;
-                    } else {
-                        event = IdleStateEvent.READER_IDLE_STATE_EVENT;
                     }
+
                     channelIdle(ctx, event);
                 } catch (Throwable t) {
                     ctx.fireExceptionCaught(t);
@@ -406,13 +420,11 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 writerIdleTimeout = ctx.executor().schedule(
                         this, writerIdleTimeNanos, TimeUnit.NANOSECONDS);
                 try {
-                    IdleStateEvent event;
+                    IdleStateEvent event = newIdleStateEvent(IdleState.WRITER_IDLE, firstWriterIdleEvent);
                     if (firstWriterIdleEvent) {
                         firstWriterIdleEvent = false;
-                        event = IdleStateEvent.FIRST_WRITER_IDLE_STATE_EVENT;
-                    } else {
-                        event = IdleStateEvent.WRITER_IDLE_STATE_EVENT;
                     }
+
                     channelIdle(ctx, event);
                 } catch (Throwable t) {
                     ctx.fireExceptionCaught(t);
@@ -448,13 +460,11 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 allIdleTimeout = ctx.executor().schedule(
                         this, allIdleTimeNanos, TimeUnit.NANOSECONDS);
                 try {
-                    IdleStateEvent event;
+                    IdleStateEvent event = newIdleStateEvent(IdleState.ALL_IDLE, firstAllIdleEvent);
                     if (firstAllIdleEvent) {
                         firstAllIdleEvent = false;
-                        event = IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT;
-                    } else {
-                        event = IdleStateEvent.ALL_IDLE_STATE_EVENT;
                     }
+
                     channelIdle(ctx, event);
                 } catch (Throwable t) {
                     ctx.fireExceptionCaught(t);
