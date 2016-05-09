@@ -53,6 +53,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private static final AddressResolverGroup<?> DEFAULT_RESOLVER = DefaultAddressResolverGroup.INSTANCE;
 
+    private final BootstrapConfig config = new BootstrapConfig(this);
+
     @SuppressWarnings("unchecked")
     private volatile AddressResolverGroup<SocketAddress> resolver =
             (AddressResolverGroup<SocketAddress>) DEFAULT_RESOLVER;
@@ -113,7 +115,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             throw new IllegalStateException("remoteAddress not set");
         }
 
-        return doResolveAndConnect(remoteAddress, localAddress());
+        return doResolveAndConnect(remoteAddress, config.localAddress());
     }
 
     /**
@@ -139,7 +141,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         }
 
         validate();
-        return doResolveAndConnect(remoteAddress, localAddress());
+        return doResolveAndConnect(remoteAddress, config.localAddress());
     }
 
     /**
@@ -256,9 +258,9 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     @SuppressWarnings("unchecked")
     void init(Channel channel) throws Exception {
         ChannelPipeline p = channel.pipeline();
-        p.addLast(handler());
+        p.addLast(config.handler());
 
-        final Map<ChannelOption<?>, Object> options = options();
+        final Map<ChannelOption<?>, Object> options = options0();
         synchronized (options) {
             for (Entry<ChannelOption<?>, Object> e: options.entrySet()) {
                 try {
@@ -271,7 +273,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             }
         }
 
-        final Map<AttributeKey<?>, Object> attrs = attrs();
+        final Map<AttributeKey<?>, Object> attrs = attrs0();
         synchronized (attrs) {
             for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
                 channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
@@ -282,7 +284,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     @Override
     public Bootstrap validate() {
         super.validate();
-        if (handler() == null) {
+        if (config.handler() == null) {
             throw new IllegalStateException("handler not set");
         }
         return this;
@@ -306,17 +308,15 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     }
 
     @Override
-    public String toString() {
-        if (remoteAddress == null) {
-            return super.toString();
-        }
+    public final BootstrapConfig config() {
+        return config;
+    }
 
-        StringBuilder buf = new StringBuilder(super.toString());
-        buf.setLength(buf.length() - 1);
+    final SocketAddress remoteAddress() {
+        return remoteAddress;
+    }
 
-        return buf.append(", remoteAddress: ")
-                  .append(remoteAddress)
-                  .append(')')
-                  .toString();
+    final AddressResolverGroup<?> resolver() {
+        return resolver;
     }
 }

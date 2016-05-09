@@ -35,6 +35,7 @@ import io.netty.util.internal.StringUtil;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -314,7 +315,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     final ChannelFuture initAndRegister() {
-        final Channel channel = channelFactory().newChannel();
+        final Channel channel = channelFactory.newChannel();
         try {
             init(channel);
         } catch (Throwable t) {
@@ -376,6 +377,41 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         return (B) this;
     }
 
+    /**
+     * Returns the configured {@link EventLoopGroup} or {@code null} if non is configured yet.
+     *
+     * @deprecated Use {@link #config()} instead.
+     */
+    @Deprecated
+    public final EventLoopGroup group() {
+        return group;
+    }
+
+    /**
+     * Returns the {@link AbstractBootstrapConfig} object that can be used to obtain the current config
+     * of the bootstrap.
+     */
+    public abstract AbstractBootstrapConfig<B, C> config();
+
+    static <K, V> Map<K, V> copiedMap(Map<K, V> map) {
+        final Map<K, V> copied;
+        synchronized (map) {
+            if (map.isEmpty()) {
+                return Collections.emptyMap();
+            }
+            copied = new LinkedHashMap<K, V>(map);
+        }
+        return Collections.unmodifiableMap(copied);
+    }
+
+    final Map<ChannelOption<?>, Object> options0() {
+        return options;
+    }
+
+    final Map<AttributeKey<?>, Object> attrs0() {
+        return attrs;
+    }
+
     final SocketAddress localAddress() {
         return localAddress;
     }
@@ -389,66 +425,19 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         return handler;
     }
 
-    /**
-     * Return the configured {@link EventLoopGroup} or {@code null} if non is configured yet.
-     */
-    public EventLoopGroup group() {
-        return group;
-    }
-
     final Map<ChannelOption<?>, Object> options() {
-        return options;
+        return copiedMap(options);
     }
 
     final Map<AttributeKey<?>, Object> attrs() {
-        return attrs;
+        return copiedMap(attrs);
     }
 
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder()
             .append(StringUtil.simpleClassName(this))
-            .append('(');
-        if (group != null) {
-            buf.append("group: ")
-               .append(StringUtil.simpleClassName(group))
-               .append(", ");
-        }
-        if (channelFactory != null) {
-            buf.append("channelFactory: ")
-               .append(channelFactory)
-               .append(", ");
-        }
-        if (localAddress != null) {
-            buf.append("localAddress: ")
-               .append(localAddress)
-               .append(", ");
-        }
-        synchronized (options) {
-            if (!options.isEmpty()) {
-                buf.append("options: ")
-                   .append(options)
-                   .append(", ");
-            }
-        }
-        synchronized (attrs) {
-            if (!attrs.isEmpty()) {
-                buf.append("attrs: ")
-                   .append(attrs)
-                   .append(", ");
-            }
-        }
-        if (handler != null) {
-            buf.append("handler: ")
-               .append(handler)
-               .append(", ");
-        }
-        if (buf.charAt(buf.length() - 1) == '(') {
-            buf.append(')');
-        } else {
-            buf.setCharAt(buf.length() - 2, ')');
-            buf.setLength(buf.length() - 1);
-        }
+            .append('(').append(config()).append(')');
         return buf.toString();
     }
 
