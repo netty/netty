@@ -110,6 +110,13 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     private final long writerIdleTimeNanos;
     private final long allIdleTimeNanos;
 
+    private final IdleStateEvent firstReaderIdleStateEvent = new IdleStateEvent(IdleState.READER_IDLE, true, this);
+    private final IdleStateEvent readerIdleStateEvent = new IdleStateEvent(IdleState.READER_IDLE, false, this);
+    private final IdleStateEvent firstWriterIdleStateEvent = new IdleStateEvent(IdleState.WRITER_IDLE, true, this);
+    private final IdleStateEvent writerIdleStateEvent = new IdleStateEvent(IdleState.WRITER_IDLE, false, this);
+    private final IdleStateEvent firstAllIdleStateEvent = new IdleStateEvent(IdleState.ALL_IDLE, true, this);
+    private final IdleStateEvent allIdleStateEvent = new IdleStateEvent(IdleState.ALL_IDLE, false, this);
+
     volatile ScheduledFuture<?> readerIdleTimeout;
     volatile long lastReadTime;
     private boolean firstReaderIdleEvent = true;
@@ -370,9 +377,9 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                     IdleStateEvent event;
                     if (firstReaderIdleEvent) {
                         firstReaderIdleEvent = false;
-                        event = IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT;
+                        event = firstReaderIdleStateEvent;
                     } else {
-                        event = IdleStateEvent.READER_IDLE_STATE_EVENT;
+                        event = readerIdleStateEvent;
                     }
                     channelIdle(ctx, event);
                 } catch (Throwable t) {
@@ -409,9 +416,9 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                     IdleStateEvent event;
                     if (firstWriterIdleEvent) {
                         firstWriterIdleEvent = false;
-                        event = IdleStateEvent.FIRST_WRITER_IDLE_STATE_EVENT;
+                        event = firstWriterIdleStateEvent;
                     } else {
-                        event = IdleStateEvent.WRITER_IDLE_STATE_EVENT;
+                        event = writerIdleStateEvent;
                     }
                     channelIdle(ctx, event);
                 } catch (Throwable t) {
@@ -451,9 +458,9 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                     IdleStateEvent event;
                     if (firstAllIdleEvent) {
                         firstAllIdleEvent = false;
-                        event = IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT;
+                        event = firstAllIdleStateEvent;
                     } else {
-                        event = IdleStateEvent.ALL_IDLE_STATE_EVENT;
+                        event = allIdleStateEvent;
                     }
                     channelIdle(ctx, event);
                 } catch (Throwable t) {
