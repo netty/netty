@@ -1286,7 +1286,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             // We check for channel().isRegistered and handlerAdded because even if isRegistered() is false we
             // can safely access the invoker() if handlerAdded is true. This is because in this case the Channel
             // was previously registered and so we can still access the old EventLoop to dispatch things.
-            return channel.isRegistered() || registered ? channel.unsafe().invoker().executor() : null;
+            return channel.isRegistered() || registered ? channel.eventLoop() : null;
         }
         return invoker.executor();
     }
