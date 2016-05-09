@@ -145,10 +145,6 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
         }
     }
 
-    private int probeNext(int index) {
-        return index == values.length - 1 ? 0 : index + 1;
-    }
-
     @Override
     public void putAll(Map<? extends @O@, ? extends V> sourceMap) {
         if (sourceMap instanceof @K@ObjectHashMap) {
@@ -367,6 +363,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
      * Returns the hashed index for the given key.
      */
     private int hashIndex(@k@ key) {
+        // The array lengths are always a power of two, so we can use a bitmask to stay inside the array bounds.
         return hashCode(key) & mask;
     }
 
@@ -375,6 +372,14 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
      */
     private static int hashCode(@k@ key) {
        return @HASH_CODE@;
+    }
+
+    /**
+     * Get the next sequential index after {@code index} and wraps if necessary.
+     */
+    private int probeNext(int index) {
+        // The array lengths are always a power of two, so we can use a bitmask to stay inside the array bounds.
+        return (index + 1) & mask;
     }
 
     /**
