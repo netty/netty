@@ -53,6 +53,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
     static final NameValidator<CharSequence> HttpNameValidator = new NameValidator<CharSequence>() {
         @Override
         public void validateName(CharSequence name) {
+            if (name == null || name.length() == 0) {
+                throw new IllegalArgumentException("empty headers are not allowed [" + name + "]");
+            }
             if (name instanceof AsciiString) {
                 try {
                     ((AsciiString) name).forEachByte(HEADER_NAME_VALIDATOR);

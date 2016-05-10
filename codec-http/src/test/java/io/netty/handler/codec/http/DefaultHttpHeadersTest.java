@@ -36,6 +36,16 @@ import static org.junit.Assert.assertTrue;
 public class DefaultHttpHeadersTest {
     private static final CharSequence HEADER_NAME = "testHeader";
 
+    @Test(expected = IllegalArgumentException.class)
+    public void nullHeaderNameNotAllowed() {
+        new DefaultHttpHeaders().add(null, "foo");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void emtpyHeaderNameNotAllowed() {
+        new DefaultHttpHeaders().add("", "foo");
+    }
+
     @Test
     public void keysShouldBeCaseInsensitive() {
         DefaultHttpHeaders headers = new DefaultHttpHeaders();

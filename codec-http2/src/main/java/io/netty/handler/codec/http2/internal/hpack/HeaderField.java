@@ -31,8 +31,8 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.ISO_8859_1;
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.requireNonNull;
+import static io.netty.util.CharsetUtil.ISO_8859_1;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 class HeaderField implements Comparable<HeaderField> {
 
@@ -54,8 +54,8 @@ class HeaderField implements Comparable<HeaderField> {
     }
 
     HeaderField(byte[] name, byte[] value) {
-        this.name = requireNonNull(name);
-        this.value = requireNonNull(value);
+        this.name = checkNotNull(name, "name");
+        this.value = checkNotNull(value, "value");
     }
 
     int size() {

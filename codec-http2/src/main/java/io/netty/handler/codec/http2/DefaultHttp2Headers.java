@@ -37,6 +37,10 @@ public class DefaultHttp2Headers
     private static final NameValidator<CharSequence> HTTP2_NAME_VALIDATOR = new NameValidator<CharSequence>() {
         @Override
         public void validateName(CharSequence name) {
+            if (name == null || name.length() == 0) {
+                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
+                        "empty headers are not allowed [%s]", name));
+            }
             if (name instanceof AsciiString) {
                 final int index;
                 try {

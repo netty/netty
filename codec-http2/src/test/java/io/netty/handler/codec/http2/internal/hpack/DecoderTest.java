@@ -31,6 +31,14 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
+import io.netty.util.CharsetUtil;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+
+import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -39,12 +47,6 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-
-import org.junit.Before;
-import org.junit.Test;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 
 public class DecoderTest {
 
@@ -59,12 +61,17 @@ public class DecoderTest {
     }
 
     private static byte[] getBytes(String s) {
-        return s.getBytes(HpackUtil.ISO_8859_1);
+        return s.getBytes(CharsetUtil.ISO_8859_1);
     }
 
     private void decode(String encoded) throws IOException {
         byte[] b = Hex.decodeHex(encoded.toCharArray());
-        decoder.decode(new ByteArrayInputStream(b), mockListener);
+        ByteArrayInputStream in = new ByteArrayInputStream(b);
+        try {
+            decoder.decode(in, mockListener);
+        } finally {
+            in.close();
+        }
     }
 
     @Before
@@ -74,14 +81,63 @@ public class DecoderTest {
     }
 
     @Test
+    public void testLiteralHuffmanEncodedWithEmptyNameAndValue() throws IOException {
+        byte[] input = {0, (byte) 0x80, 0};
+        ByteArrayInputStream in = new ByteArrayInputStream(input);
+        try {
+            decoder.decode(in, mockListener);
+            verify(mockListener, times(1)).addHeader(EMPTY_BYTES, EMPTY_BYTES, false);
+        } finally {
+            in.close();
+        }
+    }
+
+    @Test(expected = IOException.class)
+    public void testLiteralHuffmanEncodedWithPaddingGreaterThan7Throws() throws IOException {
+        byte[] input = {0, (byte) 0x81, -1};
+        ByteArrayInputStream in = new ByteArrayInputStream(input);
+        try {
+            decoder.decode(in, mockListener);
+        } finally {
+            in.close();
+        }
+    }
+
+    @Test(expected = IOException.class)
+    public void testLiteralHuffmanEncodedWithDecodingEOSThrows() throws IOException {
+        byte[] input = {0, (byte) 0x84, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
+        ByteArrayInputStream in = new ByteArrayInputStream(input);
+        try {
+            decoder.decode(in, mockListener);
+        } finally {
+            in.close();
+        }
+    }
+
+    @Test(expected = IOException.class)
+    public void testLiteralHuffmanEncodedWithPaddingNotCorrespondingToMSBThrows() throws IOException {
+        byte[] input = {0, (byte) 0x81, 0};
+        ByteArrayInputStream in = new ByteArrayInputStream(input);
+        try {
+            decoder.decode(in, mockListener);
+        } finally {
+            in.close();
+        }
+    }
+
+    @Test
     public void testIncompleteIndex() throws IOException {
         // Verify incomplete indices are unread
         byte[] compressed = Hex.decodeHex("FFF0".toCharArray());
         ByteArrayInputStream in = new ByteArrayInputStream(compressed);
-        decoder.decode(in, mockListener);
-        assertEquals(1, in.available());
-        decoder.decode(in, mockListener);
-        assertEquals(1, in.available());
+        try {
+            decoder.decode(in, mockListener);
+            assertEquals(1, in.available());
+            decoder.decode(in, mockListener);
+            assertEquals(1, in.available());
+        } finally {
+            in.close();
+        }
     }
 
     @Test(expected = IOException.class)
@@ -150,9 +206,10 @@ public class DecoderTest {
         decode("81");
     }
 
-    @Test(expected = IOException.class)
+    @Test
     public void testLiteralWithIncrementalIndexingWithEmptyName() throws Exception {
-        decode("000005" + hex("value"));
+        decode("400005" + hex("value"));
+        verify(mockListener, times(1)).addHeader(EMPTY_BYTES, getBytes("value"), false);
     }
 
     @Test
@@ -228,9 +285,10 @@ public class DecoderTest {
         verifyNoMoreInteractions(mockListener);
     }
 
-    @Test(expected = IOException.class)
+    @Test
     public void testLiteralWithoutIndexingWithEmptyName() throws Exception {
         decode("000005" + hex("value"));
+        verify(mockListener, times(1)).addHeader(EMPTY_BYTES, getBytes("value"), false);
     }
 
     @Test(expected = IOException.class)
@@ -272,9 +330,10 @@ public class DecoderTest {
         decode("BE");
     }
 
-    @Test(expected = IOException.class)
+    @Test
     public void testLiteralNeverIndexedWithEmptyName() throws Exception {
         decode("100005" + hex("value"));
+        verify(mockListener, times(1)).addHeader(EMPTY_BYTES, getBytes("value"), true);
     }
 
     @Test(expected = IOException.class)
