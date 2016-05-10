@@ -72,12 +72,54 @@ public class HuffmanTest {
         Huffman.DECODER.decode(buf);
     }
 
-    @Test//(expected = IOException.class) TODO(jpinner) fix me
+    @Test(expected = IOException.class)
     public void testDecodeExtraPadding() throws IOException {
-        byte[] buf = new byte[2];
-        buf[0] = 0x0F; // '1', 'EOS'
-        buf[1] = (byte) 0xFF; // 'EOS'
+        byte[] buf = makeBuf(0x0f, 0xFF); // '1', 'EOS'
         Huffman.DECODER.decode(buf);
+    }
+
+    @Test(expected = IOException.class)
+    public void testDecodeExtraPadding1byte() throws IOException {
+        byte[] buf = makeBuf(0xFF);
+        Huffman.DECODER.decode(buf);
+    }
+
+    @Test(expected = IOException.class)
+    public void testDecodeExtraPadding2byte() throws IOException {
+        byte[] buf = makeBuf(0x1F, 0xFF); // 'a'
+        Huffman.DECODER.decode(buf);
+    }
+
+    @Test(expected = IOException.class)
+    public void testDecodeExtraPadding3byte() throws IOException {
+        byte[] buf = makeBuf(0x1F, 0xFF, 0xFF); // 'a'
+        Huffman.DECODER.decode(buf);
+    }
+
+    @Test(expected = IOException.class)
+    public void testDecodeExtraPadding4byte() throws IOException {
+        byte[] buf = makeBuf(0x1F, 0xFF, 0xFF, 0xFF); // 'a'
+        Huffman.DECODER.decode(buf);
+    }
+
+    @Test(expected = IOException.class)
+    public void testDecodeExtraPadding29bit() throws IOException {
+        byte[] buf = makeBuf(0xFF, 0x9F, 0xFF, 0xFF, 0xFF);  // '|'
+        Huffman.DECODER.decode(buf);
+    }
+
+    @Test(expected = IOException.class)
+    public void testDecodePartialSymbol() throws IOException {
+        byte[] buf = makeBuf(0x52, 0xBC, 0x30, 0xFF, 0xFF, 0xFF, 0xFF); // " pFA\x00", 31 bits of padding, a.k.a. EOS
+        Huffman.DECODER.decode(buf);
+    }
+
+    private byte[] makeBuf(int ... bytes) {
+        byte[] buf = new byte[bytes.length];
+        for (int i = 0; i < buf.length; i++) {
+            buf[i] = (byte) bytes[i];
+        }
+        return buf;
     }
 
     private void roundTrip(String s) throws IOException {

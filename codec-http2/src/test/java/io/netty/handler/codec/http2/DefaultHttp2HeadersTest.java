@@ -17,6 +17,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
+import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
 import java.util.Map.Entry;
@@ -29,6 +30,16 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class DefaultHttp2HeadersTest {
+
+    @Test(expected = Http2Exception.class)
+    public void nullHeaderNameNotAllowed() {
+        new DefaultHttp2Headers().add(null, "foo");
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void emtpyHeaderNameNotAllowed() {
+        new DefaultHttp2Headers().add(StringUtil.EMPTY_STRING, "foo");
+    }
 
     @Test
     public void testPseudoHeadersMustComeFirstWhenIterating() {

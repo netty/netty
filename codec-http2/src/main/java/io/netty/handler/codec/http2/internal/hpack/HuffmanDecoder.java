@@ -31,13 +31,20 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
+import io.netty.util.internal.EmptyArrays;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 final class HuffmanDecoder {
 
-    private static final IOException EOS_DECODED = new IOException("EOS Decoded");
-    private static final IOException INVALID_PADDING = new IOException("Invalid Padding");
+    private static final IOException EOS_DECODED = new IOException("HPACK - EOS Decoded");
+    private static final IOException INVALID_PADDING = new IOException("HPACK - Invalid Padding");
+
+    static {
+        EOS_DECODED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        INVALID_PADDING.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
 
     private final Node root;
 
@@ -65,44 +72,77 @@ final class HuffmanDecoder {
     public byte[] decode(byte[] buf) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
+        /*
+         * The idea here is to consume whole bytes at a time rather than individual bits. node
+         * represents the Huffman tree, with all bit patterns denormalized as 256 children. Each
+         * child represents the last 8 bits of the huffman code. The parents of each child each
+         * represent the successive 8 bit chunks that lead up to the last most part. 8 bit bytes
+         * from buf are used to traverse these tree until a terminal node is found.
+         *
+         * current is a bit buffer. The low order bits represent how much of the huffman code has
+         * not been used to traverse the tree. Thus, the high order bits are just garbage.
+         * currentBits represents how many of the low order bits of current are actually valid.
+         * currentBits will vary between 0 and 15.
+         *
+         * symbolBits is the number of bits of the the symbol being decoded, *including* all those
+         * of the parent nodes. symbolBits tells how far down the tree we are. For example, when
+         * decoding the invalid sequence {0xff, 0xff}, currentBits will be 0, but symbolBits will be
+         * 16. This is used to know if buf ended early (before consuming a whole symbol) or if
+         * there is too much padding.
+         */
         Node node = root;
         int current = 0;
-        int bits = 0;
+        int currentBits = 0;
+        int symbolBits = 0;
         for (int i = 0; i < buf.length; i++) {
             int b = buf[i] & 0xFF;
             current = (current << 8) | b;
-            bits += 8;
-            while (bits >= 8) {
-                int c = (current >>> (bits - 8)) & 0xFF;
+            currentBits += 8;
+            symbolBits += 8;
+            // While there are unconsumed bits in current, keep consuming symbols.
+            while (currentBits >= 8) {
+                int c = (current >>> (currentBits - 8)) & 0xFF;
                 node = node.children[c];
-                bits -= node.bits;
+                currentBits -= node.bits;
                 if (node.isTerminal()) {
                     if (node.symbol == HpackUtil.HUFFMAN_EOS) {
                         throw EOS_DECODED;
                     }
                     baos.write(node.symbol);
                     node = root;
+                    // Upon consuming a whole symbol, reset the symbol bits to the number of bits
+                    // left over in the byte.
+                    symbolBits = currentBits;
                 }
             }
         }
 
-        while (bits > 0) {
-            int c = (current << (8 - bits)) & 0xFF;
+        /*
+         * We have consumed all the bytes in buf, but haven't consumed all the symbols. We may be on
+         * a partial symbol, so consume until there is nothing left. This will loop at most 2 times.
+         */
+        while (currentBits > 0) {
+            int c = (current << (8 - currentBits)) & 0xFF;
             node = node.children[c];
-            if (node.isTerminal() && node.bits <= bits) {
-                bits -= node.bits;
+            if (node.isTerminal() && node.bits <= currentBits) {
+                if (node.symbol == HpackUtil.HUFFMAN_EOS) {
+                    throw EOS_DECODED;
+                }
+                currentBits -= node.bits;
                 baos.write(node.symbol);
                 node = root;
+                symbolBits = currentBits;
             } else {
                 break;
             }
         }
 
         // Section 5.2. String Literal Representation
+        // A padding strictly longer than 7 bits MUST be treated as a decoding error.
         // Padding not corresponding to the most significant bits of the code
         // for the EOS symbol (0xFF) MUST be treated as a decoding error.
-        int mask = (1 << bits) - 1;
-        if ((current & mask) != mask) {
+        int mask = (1 << symbolBits) - 1;
+        if (symbolBits > 7 || (current & mask) != mask) {
             throw INVALID_PADDING;
         }
 
