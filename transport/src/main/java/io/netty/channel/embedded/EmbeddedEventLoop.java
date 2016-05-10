@@ -26,6 +26,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
@@ -126,9 +127,17 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
 
     @Override
     public ChannelFuture register(Channel channel) {
-        return register(channel, new DefaultChannelPromise(channel, this));
+        return register(new DefaultChannelPromise(channel, this));
     }
 
+    @Override
+    public ChannelFuture register(ChannelPromise promise) {
+        ObjectUtil.checkNotNull(promise, "promise");
+        promise.channel().unsafe().register(this, promise);
+        return promise;
+    }
+
+    @Deprecated
     @Override
     public ChannelFuture register(Channel channel, ChannelPromise promise) {
         channel.unsafe().register(this, promise);
