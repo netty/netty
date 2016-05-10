@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 
 import org.junit.Test;
 
@@ -246,6 +247,7 @@ public class Http2ServerDowngraderTest {
         assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers, true)));
 
         FullHttpRequest request = ch.readInbound();
+        ReferenceCountUtil.releaseLater(request);
         assertThat(request.uri(), is("/"));
         assertThat(request.method(), is(HttpMethod.GET));
         assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
