@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.handler.codec.http.HttpHeadersTestUtils.HeaderValue;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -35,6 +36,16 @@ import static org.junit.Assert.assertTrue;
 
 public class DefaultHttpHeadersTest {
     private static final CharSequence HEADER_NAME = "testHeader";
+
+    @Test(expected = IllegalArgumentException.class)
+    public void nullHeaderNameNotAllowed() {
+        new DefaultHttpHeaders().add(null, "foo");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void emtpyHeaderNameNotAllowed() {
+        new DefaultHttpHeaders().add(StringUtil.EMPTY_STRING, "foo");
+    }
 
     @Test
     public void keysShouldBeCaseInsensitive() {

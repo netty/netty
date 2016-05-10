@@ -36,6 +36,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static io.netty.util.CharsetUtil.ISO_8859_1;
+
 final class StaticTable {
 
     private static final String EMPTY = "";
@@ -125,7 +127,7 @@ final class StaticTable {
      * -1 if the header field name is not in the static table.
      */
     static int getIndex(byte[] name) {
-        String nameString = new String(name, 0, name.length, HpackUtil.ISO_8859_1);
+        String nameString = new String(name, 0, name.length, ISO_8859_1);
         Integer index = STATIC_INDEX_BY_NAME.get(nameString);
         if (index == null) {
             return -1;
@@ -166,7 +168,7 @@ final class StaticTable {
         // save the smallest index for a given name in the map.
         for (int index = length; index > 0; index--) {
             HeaderField entry = getEntry(index);
-            String name = new String(entry.name, 0, entry.name.length, HpackUtil.ISO_8859_1);
+            String name = new String(entry.name, 0, entry.name.length, ISO_8859_1);
             ret.put(name, index);
         }
         return ret;

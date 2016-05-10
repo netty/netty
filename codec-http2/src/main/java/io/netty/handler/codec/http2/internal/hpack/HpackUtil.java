@@ -34,9 +34,6 @@ package io.netty.handler.codec.http2.internal.hpack;
 import java.nio.charset.Charset;
 
 final class HpackUtil {
-
-    static final Charset ISO_8859_1 = Charset.forName("ISO-8859-1");
-
     /**
      * A string compare that doesn't leak timing information.
      */
@@ -49,16 +46,6 @@ final class HpackUtil {
             c |= s1[i] ^ s2[i];
         }
         return c == 0;
-    }
-
-    /**
-     * Checks that the specified object reference is not {@code null}.
-     */
-    static <T> T requireNonNull(T obj) {
-        if (obj == null) {
-            throw new NullPointerException();
-        }
-        return obj;
     }
 
     // Section 6.2. Literal Header Field Representation
