@@ -32,22 +32,30 @@
 package io.netty.handler.codec.http2.internal.hpack;
 
 import io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType;
+import io.netty.util.internal.EmptyArrays;
 
 import java.io.IOException;
 import java.io.InputStream;
 
+import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
+
 public final class Decoder {
 
     private static final IOException DECOMPRESSION_EXCEPTION =
-            new IOException("decompression failure");
+            new IOException("HPACK - decompression failure");
     private static final IOException ILLEGAL_INDEX_VALUE =
-            new IOException("illegal index value");
+            new IOException("HPACK - illegal index value");
     private static final IOException INVALID_MAX_DYNAMIC_TABLE_SIZE =
-            new IOException("invalid max dynamic table size");
+            new IOException("HPACK - invalid max dynamic table size");
     private static final IOException MAX_DYNAMIC_TABLE_SIZE_CHANGE_REQUIRED =
-            new IOException("max dynamic table size change required");
+            new IOException("HPACK - max dynamic table size change required");
 
-    private static final byte[] EMPTY = {};
+    static {
+        DECOMPRESSION_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        ILLEGAL_INDEX_VALUE.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        INVALID_MAX_DYNAMIC_TABLE_SIZE.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        MAX_DYNAMIC_TABLE_SIZE_CHANGE_REQUIRED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
 
     private final DynamicTable dynamicTable;
 
@@ -214,17 +222,12 @@ public final class Decoder {
                     } else {
                         nameLength = index;
 
-                        // Disallow empty names -- they cannot be represented in HTTP/1.x
-                        if (nameLength == 0) {
-                            throw DECOMPRESSION_EXCEPTION;
-                        }
-
                         // Check name length against max header size
                         if (exceedsMaxHeaderSize(nameLength)) {
 
                             if (indexType == IndexType.NONE) {
                                 // Name is unused so skip bytes
-                                name = EMPTY;
+                                name = EMPTY_BYTES;
                                 skipLength = nameLength;
                                 state = State.SKIP_LITERAL_HEADER_NAME;
                                 break;
@@ -233,7 +236,7 @@ public final class Decoder {
                             // Check name length against max dynamic table size
                             if (nameLength + HeaderField.HEADER_ENTRY_OVERHEAD > dynamicTable.capacity()) {
                                 dynamicTable.clear();
-                                name = EMPTY;
+                                name = EMPTY_BYTES;
                                 skipLength = nameLength;
                                 state = State.SKIP_LITERAL_HEADER_NAME;
                                 break;
@@ -260,7 +263,7 @@ public final class Decoder {
                     if (exceedsMaxHeaderSize(nameLength)) {
                         if (indexType == IndexType.NONE) {
                             // Name is unused so skip bytes
-                            name = EMPTY;
+                            name = EMPTY_BYTES;
                             skipLength = nameLength;
                             state = State.SKIP_LITERAL_HEADER_NAME;
                             break;
@@ -269,7 +272,7 @@ public final class Decoder {
                         // Check name length against max dynamic table size
                         if (nameLength + HeaderField.HEADER_ENTRY_OVERHEAD > dynamicTable.capacity()) {
                             dynamicTable.clear();
-                            name = EMPTY;
+                            name = EMPTY_BYTES;
                             skipLength = nameLength;
                             state = State.SKIP_LITERAL_HEADER_NAME;
                             break;
@@ -327,7 +330,7 @@ public final class Decoder {
                         }
 
                         if (valueLength == 0) {
-                            insertHeader(headerListener, name, EMPTY, indexType);
+                            insertHeader(headerListener, name, EMPTY_BYTES, indexType);
                             state = State.READ_HEADER_REPRESENTATION;
                         } else {
                             state = State.READ_LITERAL_HEADER_VALUE;
@@ -502,9 +505,6 @@ public final class Decoder {
 
     private void addHeader(HeaderListener headerListener, byte[] name, byte[] value,
                            boolean sensitive) {
-        if (name.length == 0) {
-            throw new AssertionError("name is empty");
-        }
         long newSize = headerSize + name.length + value.length;
         if (newSize <= maxHeaderSize) {
             headerListener.addHeader(name, value, sensitive);
