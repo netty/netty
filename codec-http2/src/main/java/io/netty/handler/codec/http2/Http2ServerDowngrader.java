@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -40,6 +41,7 @@ import java.util.List;
  * HttpObject}, and back.  For simplicity, it converts to chunked encoding
  * unless the entire stream is a single header.
  */
+@UnstableApi
 public class Http2ServerDowngrader extends MessageToMessageCodec<Http2StreamFrame, HttpObject> {
 
     private final boolean validateHeaders;
