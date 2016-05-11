@@ -49,7 +49,6 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     final Executor executor;
     final Set<EventLoop> activeChildren =
             Collections.newSetFromMap(PlatformDependent.<EventLoop, Boolean>newConcurrentHashMap());
-    private final Set<EventLoop> readOnlyActiveChildren = Collections.unmodifiableSet(activeChildren);
     final Queue<EventLoop> idleChildren = new ConcurrentLinkedQueue<EventLoop>();
     private final ChannelException tooManyChannels;
 
@@ -145,12 +144,6 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     @Override
     public Iterator<EventExecutor> iterator() {
         return new ReadOnlyIterator<EventExecutor>(activeChildren.iterator());
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <E extends EventExecutor> Set<E> children() {
-        return (Set<E>) readOnlyActiveChildren;
     }
 
     @Override

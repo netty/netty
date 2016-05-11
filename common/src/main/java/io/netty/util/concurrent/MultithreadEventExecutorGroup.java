@@ -130,7 +130,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     @Override
     public Iterator<EventExecutor> iterator() {
-        return children().iterator();
+        return readonlyChildren.iterator();
     }
 
     /**
@@ -139,12 +139,6 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
      */
     public final int executorCount() {
         return children.length;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public final <E extends EventExecutor> Set<E> children() {
-        return (Set<E>) readonlyChildren;
     }
 
     /**

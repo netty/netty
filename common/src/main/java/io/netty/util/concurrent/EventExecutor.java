@@ -33,12 +33,6 @@ public interface EventExecutor extends EventExecutorGroup {
     EventExecutor next();
 
     /**
-     * Returns an unmodifiable singleton set which contains itself.
-     */
-    @Override
-    <E extends EventExecutor> Set<E> children();
-
-    /**
      * Return the {@link EventExecutorGroup} which is the parent of this {@link EventExecutor},
      */
     EventExecutorGroup parent();
