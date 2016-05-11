@@ -84,17 +84,8 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
      */
     EventExecutor next();
 
-    /**
-     * @deprecated Use {@link #children()} instead.
-     */
     @Override
-    @Deprecated
     Iterator<EventExecutor> iterator();
-
-    /**
-     * Returns the unmodifiable set of {@link EventExecutor}s managed by this {@link EventExecutorGroup}.
-     */
-    <E extends EventExecutor> Set<E> children();
 
     @Override
     Future<?> submit(Runnable task);

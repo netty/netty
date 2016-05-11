@@ -106,7 +106,7 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
      * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
      */
     public void setIoRatio(int ioRatio) {
-        for (EventExecutor e: children()) {
+        for (EventExecutor e: this) {
             ((EpollEventLoop) e).setIoRatio(ioRatio);
         }
     }
