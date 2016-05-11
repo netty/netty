@@ -232,24 +232,24 @@ static jint netty_epoll_native_epollCtlDel0(JNIEnv* env, jclass clazz, jint efd,
 
 static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jobjectArray packets, jint offset, jint len) {
     struct mmsghdr msg[len];
+    struct sockaddr_storage addr[len];
     int i;
 
     memset(msg, 0, sizeof(msg));
 
     for (i = 0; i < len; i++) {
-        struct sockaddr_storage addr;
 
         jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
         jbyteArray address = (jbyteArray) (*env)->GetObjectField(env, packet, packetAddrFieldId);
         jint scopeId = (*env)->GetIntField(env, packet, packetScopeIdFieldId);
         jint port = (*env)->GetIntField(env, packet, packetPortFieldId);
 
-        if (netty_unix_socket_initSockaddr(env, address, scopeId, port, &addr) == -1) {
+        if (netty_unix_socket_initSockaddr(env, address, scopeId, port, &addr[i]) == -1) {
             return -1;
         }
 
-        msg[i].msg_hdr.msg_name = &addr;
-        msg[i].msg_hdr.msg_namelen = sizeof(addr);
+        msg[i].msg_hdr.msg_name = &addr[i];
+        msg[i].msg_hdr.msg_namelen = sizeof(addr[i]);
 
         msg[i].msg_hdr.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
         msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);;
