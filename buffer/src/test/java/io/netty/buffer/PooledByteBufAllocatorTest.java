@@ -126,7 +126,7 @@ public class PooledByteBufAllocatorTest {
     }
 
     @Test
-    public void testNumThreadCachesWithNoDirectArenas() {
+    public void testNumThreadCachesWithNoDirectArenas() throws InterruptedException {
         int numHeapArenas = 1;
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numHeapArenas, 0, 8192, 1);
@@ -188,17 +188,20 @@ public class PooledByteBufAllocatorTest {
         LockSupport.parkNanos(MILLISECONDS.toNanos(100));
     }
 
-    private static CountDownLatch createNewThreadCache(final PooledByteBufAllocator allocator) {
+    private static CountDownLatch createNewThreadCache(final PooledByteBufAllocator allocator)
+            throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
-
+        final CountDownLatch cacheLatch = new CountDownLatch(1);
         Thread t = new FastThreadLocalThread(new Runnable() {
 
             @Override
             public void run() {
                 ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
-                for (int i = 0; i < buf.capacity(); i++) {
-                    buf.writeByte(0);
-                }
+
+                // Countdown the latch after we allocated a buffer. At this point the cache must exists.
+                cacheLatch.countDown();
+
+                buf.writeZero(buf.capacity());
 
                 try {
                     latch.await();
@@ -213,8 +216,8 @@ public class PooledByteBufAllocatorTest {
         });
         t.start();
 
-        // Wait a bit for the thread & thread cache to be created.
-        LockSupport.parkNanos(MILLISECONDS.toNanos(100));
+        // Wait until we allocated a buffer and so be sure the thread was started and the cache exists.
+        cacheLatch.await();
 
         return latch;
     }
