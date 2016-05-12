@@ -303,7 +303,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
                     } else {
                         // Registration was successful, so set the correct executor to use.
                         // See https://github.com/netty/netty/issues/2586
-                        promise.executor = channel.eventLoop();
+                        promise.registered();
 
                         doBind0(regFuture, channel, localAddress, promise);
                     }
@@ -452,23 +452,27 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         return buf.toString();
     }
 
-    private static final class PendingRegistrationPromise extends DefaultChannelPromise {
+    static final class PendingRegistrationPromise extends DefaultChannelPromise {
+
         // Is set to the correct EventExecutor once the registration was successful. Otherwise it will
         // stay null and so the GlobalEventExecutor.INSTANCE will be used for notifications.
-        private volatile EventExecutor executor;
+        private volatile boolean registered;
 
-        private PendingRegistrationPromise(Channel channel) {
+        PendingRegistrationPromise(Channel channel) {
             super(channel);
+        }
+
+        void registered() {
+            registered = true;
         }
 
         @Override
         protected EventExecutor executor() {
-            EventExecutor executor = this.executor;
-            if (executor != null) {
+            if (registered) {
                 // If the registration was a success executor is set.
                 //
                 // See https://github.com/netty/netty/issues/2586
-                return executor;
+                return super.executor();
             }
             // The registration failed so we can only use the GlobalEventExecutor as last resort to notify.
             return GlobalEventExecutor.INSTANCE;
