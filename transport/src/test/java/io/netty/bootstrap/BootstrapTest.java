@@ -17,6 +17,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -24,6 +25,7 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
@@ -40,6 +42,7 @@ import io.netty.util.internal.OneTimeTask;
 import org.junit.AfterClass;
 import org.junit.Test;
 
+import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -217,6 +220,20 @@ public class BootstrapTest {
         }
     }
 
+    @Test(expected = ChannelException.class, timeout = 10000)
+    public void testLateRegistrationConnect() throws Exception {
+        EventLoopGroup group = new DelayedEventLoopGroup();
+        try {
+            final Bootstrap bootstrapA = new Bootstrap();
+            bootstrapA.group(group);
+            bootstrapA.channel(LocalChannel.class);
+            bootstrapA.handler(dummyHandler);
+            bootstrapA.connect(LocalAddress.ANY).syncUninterruptibly();
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
     @Test
     public void testAsyncResolutionSuccess() throws Exception {
 
@@ -258,6 +275,20 @@ public class BootstrapTest {
         assertThat(connectFuture.await(10000), is(true));
         assertThat(connectFuture.cause(), is(instanceOf(UnknownHostException.class)));
         assertThat(connectFuture.channel().isOpen(), is(false));
+    }
+
+    private static final class DelayedEventLoopGroup extends DefaultEventLoop {
+        @Override
+        public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
+            // Delay registration
+            execute(new Runnable() {
+                @Override
+                public void run() {
+                    DelayedEventLoopGroup.super.register(channel, promise);
+                }
+            });
+            return promise;
+        }
     }
 
     private static final class TestEventLoopGroup extends DefaultEventLoopGroup {
