@@ -16,15 +16,15 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
+import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
 
-abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
+abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
+        implements ChannelHandlerContext, ResourceLeakHint {
 
     volatile AbstractChannelHandlerContext next;
     volatile AbstractChannelHandlerContext prev;
@@ -85,16 +85,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public String name() {
         return name;
-    }
-
-    @Override
-    public <T> Attribute<T> attr(AttributeKey<T> key) {
-        return channel().attr(key);
-    }
-
-    @Override
-    public <T> boolean hasAttr(AttributeKey<T> key) {
-        return channel().hasAttr(key);
     }
 
     @Override
