@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
 import io.netty.util.concurrent.EventExecutor;
@@ -493,5 +494,19 @@ public interface ChannelHandlerContext extends AttributeMap {
      * <strong>Be aware this is an expert feature and should be used with care!</strong>
      */
     ChannelPromise voidPromise();
+
+    /**
+     * @deprecated Use {@link Channel#attr(AttributeKey)}
+     */
+    @Deprecated
+    @Override
+    <T> Attribute<T> attr(AttributeKey<T> key);
+
+    /**
+     * @deprecated Use {@link Channel#hasAttr(AttributeKey)}
+     */
+    @Deprecated
+    @Override
+    <T> boolean hasAttr(AttributeKey<T> key);
 
 }
