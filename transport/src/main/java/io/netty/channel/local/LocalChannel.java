@@ -34,6 +34,7 @@ import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 
+import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
@@ -481,7 +482,7 @@ public class LocalChannel extends AbstractChannel {
 
             Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
             if (!(boundChannel instanceof LocalServerChannel)) {
-                Exception cause = new ChannelException("connection refused");
+                Exception cause = new ConnectException("connection refused: " + remoteAddress);
                 safeSetFailure(promise, cause);
                 close(voidPromise());
                 return;
