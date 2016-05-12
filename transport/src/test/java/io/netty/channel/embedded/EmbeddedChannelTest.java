@@ -18,6 +18,7 @@ package io.netty.channel.embedded;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -385,6 +386,50 @@ public class EmbeddedChannelTest {
             if (buffer.refCnt() > 0) {
                 buffer.release();
             }
+        }
+    }
+
+    @Test
+    public void channelRegisteredShouldFireOnAddFirstHandler() {
+        DummyHandler handler1 = new DummyHandler(),
+                handler2 = new DummyHandler(),
+                handler3 = new DummyHandler();
+
+        new EmbeddedChannel()
+                .pipeline()
+                .addFirst(handler1, handler2, handler3)
+                .firstContext()
+                .fireChannelRegistered();
+
+        assertTrue(handler3.fired);
+        assertTrue(handler2.fired);
+        assertFalse(handler1.fired);
+    }
+
+    @Test
+    public void channelRegisteredShouldFireOnAddLastHandler() {
+        DummyHandler handler1 = new DummyHandler(),
+                handler2 = new DummyHandler(),
+                handler3 = new DummyHandler();
+
+        new EmbeddedChannel()
+                .pipeline()
+                .addLast(handler1, handler2, handler3)
+                .firstContext()
+                .fireChannelRegistered();
+
+        assertFalse(handler1.fired);
+        assertTrue(handler2.fired);
+        assertTrue(handler3.fired);
+    }
+
+    private static final class DummyHandler extends ChannelDuplexHandler {
+        boolean fired;
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) {
+            fired = true;
+            ctx.fireChannelRegistered(); // forward event to next handler
         }
     }
 

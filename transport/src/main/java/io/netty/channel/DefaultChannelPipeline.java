@@ -1299,9 +1299,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     static final class TailContext extends AbstractChannelHandlerContext implements ChannelInboundHandler {
 
         private static final String TAIL_NAME = generateName0(TailContext.class);
-
+        private final AbstractChannel.AbstractUnsafe unsafe;
         TailContext(DefaultChannelPipeline pipeline) {
             super(pipeline, null, TAIL_NAME, true, false);
+            unsafe = pipeline.channel.unsafe;
         }
 
         @Override
@@ -1339,25 +1340,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            try {
-                logger.warn(
-                        "An exceptionCaught() event was fired, and it reached at the tail of the pipeline. " +
-                                "It usually means the last handler in the pipeline did not handle the exception.",
-                                cause);
-            } finally {
-                ReferenceCountUtil.release(cause);
-            }
+            unsafe.unhandledInboundException(cause);
         }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            try {
-                logger.debug(
-                        "Discarded inbound message {} that reached at the tail of the pipeline. " +
-                                "Please check your pipeline configuration.", msg);
-            } finally {
-                ReferenceCountUtil.release(msg);
-            }
+            unsafe.unhandledInboundMessage(msg);
         }
 
         @Override
