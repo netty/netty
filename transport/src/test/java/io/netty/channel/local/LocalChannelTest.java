@@ -42,6 +42,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.net.ConnectException;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -861,6 +862,15 @@ public class LocalChannelTest {
             closeChannel(cc);
             closeChannel(sc);
         }
+    }
+
+    @Test(expected = ConnectException.class)
+    public void testConnectionRefused() {
+        Bootstrap sb = new Bootstrap();
+        sb.group(group1)
+        .channel(LocalChannel.class)
+        .handler(new TestHandler())
+        .connect(LocalAddress.ANY).syncUninterruptibly();
     }
 
     private static final class LatchChannelFutureListener extends CountDownLatch implements ChannelFutureListener {
