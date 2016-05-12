@@ -61,6 +61,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     final AbstractChannelHandlerContext head;
     final AbstractChannelHandlerContext tail;
 
+    private final ChannelFuture succeededFuture;
+    private final VoidChannelPromise voidPromise;
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
     /**
@@ -89,6 +91,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             throw new NullPointerException("channel");
         }
         this.channel = channel;
+        succeededFuture = new SucceededChannelFuture(channel, null);
+        voidPromise =  new VoidChannelPromise(channel, true);
 
         tail = new TailContext(this);
         head = new HeadContext(this);
@@ -1184,6 +1188,31 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelFuture writeAndFlush(Object msg) {
         return tail.writeAndFlush(msg);
+    }
+
+    @Override
+    public ChannelPromise newPromise() {
+        return new DefaultChannelPromise(channel);
+    }
+
+    @Override
+    public ChannelProgressivePromise newProgressivePromise() {
+        return new DefaultChannelProgressivePromise(channel);
+    }
+
+    @Override
+    public ChannelFuture newSucceededFuture() {
+        return succeededFuture;
+    }
+
+    @Override
+    public ChannelFuture newFailedFuture(Throwable cause) {
+        return new FailedChannelFuture(channel, null, cause);
+    }
+
+    @Override
+    public ChannelPromise voidPromise() {
+        return voidPromise;
     }
 
     private String filterName(String name, ChannelHandler handler) {

@@ -56,8 +56,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final ChannelId id;
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
-    private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
-    private final VoidChannelPromise voidPromise = new VoidChannelPromise(this, true);
     private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
     private final CloseFuture closeFuture = new CloseFuture(this);
 
@@ -293,22 +291,22 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelPromise newPromise() {
-        return new DefaultChannelPromise(this);
+        return pipeline.newPromise();
     }
 
     @Override
     public ChannelProgressivePromise newProgressivePromise() {
-        return new DefaultChannelProgressivePromise(this);
+        return pipeline.newProgressivePromise();
     }
 
     @Override
     public ChannelFuture newSucceededFuture() {
-        return succeededFuture;
+        return pipeline.newSucceededFuture();
     }
 
     @Override
     public ChannelFuture newFailedFuture(Throwable cause) {
-        return new FailedChannelFuture(this, null, cause);
+        return pipeline.newFailedFuture(cause);
     }
 
     @Override
@@ -400,7 +398,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public final ChannelPromise voidPromise() {
-        return voidPromise;
+        return pipeline.voidPromise();
     }
 
     final MessageSizeEstimator.Handle estimatorHandle() {
