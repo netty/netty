@@ -201,6 +201,14 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 break;
             }
 
+            // If a task was submitted when wakenUp value was 1, the task didn't get a chance to produce wakeup event.
+            // So we need to check task queue again before calling epoll_wait. If we don't, the task might be pended
+            // until epoll_wait was timed out. It might be pended until idle timeout if IdleStateHandler existed
+            // in pipeline.
+            if (hasTasks() && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
+                return Native.epollWait(epollFd.intValue(), events, 0);
+            }
+
             int selectedKeys = Native.epollWait(epollFd.intValue(), events, (int) timeoutMillis);
             selectCnt ++;
 
