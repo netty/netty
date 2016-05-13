@@ -29,4 +29,17 @@ public class DefaultByteBufHolderTest {
         assertTrue(holder.release());
         assertNotNull(holder.toString());
     }
+
+    @Test
+    public void testEqualsAndHashCode() {
+        ByteBufHolder holder = new DefaultByteBufHolder(Unpooled.EMPTY_BUFFER);
+        ByteBufHolder copy = holder.copy();
+        try {
+            assertEquals(holder, copy);
+            assertEquals(holder.hashCode(), copy.hashCode());
+        } finally {
+            holder.release();
+            copy.release();
+        }
+    }
 }
