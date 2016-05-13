@@ -90,4 +90,20 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     public String toString() {
         return StringUtil.simpleClassName(this) + '(' + contentToString() + ')';
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o instanceof ByteBufHolder) {
+            return data.equals(((ByteBufHolder) o).content());
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return data.hashCode();
+    }
 }
