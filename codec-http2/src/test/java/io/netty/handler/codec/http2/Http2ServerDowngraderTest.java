@@ -346,12 +346,18 @@ public class Http2ServerDowngraderTest {
         Http2ResetFrame reset = new DefaultHttp2ResetFrame(0);
         Http2GoAwayFrame goaway = new DefaultHttp2GoAwayFrame(0);
         assertTrue(ch.writeInbound(reset));
-        assertTrue(ch.writeInbound(goaway));
+        assertTrue(ch.writeInbound(goaway.retain()));
 
         assertEquals(reset, ch.readInbound());
-        assertEquals(goaway, ch.readInbound());
 
-        assertThat(ch.readInbound(), is(nullValue()));
-        assertFalse(ch.finish());
+        Http2GoAwayFrame frame = ch.readInbound();
+        try {
+            assertEquals(goaway, frame);
+            assertThat(ch.readInbound(), is(nullValue()));
+            assertFalse(ch.finish());
+        } finally {
+            goaway.release();
+            frame.release();
+        }
     }
 }
