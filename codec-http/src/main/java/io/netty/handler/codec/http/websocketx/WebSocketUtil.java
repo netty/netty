@@ -17,12 +17,15 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Set;
 
 /**
  * A utility class mainly for use by web sockets
@@ -122,6 +125,44 @@ final class WebSocketUtil {
      */
     static int randomNumber(int minimum, int maximum) {
         return (int) (Math.random() * maximum + minimum);
+    }
+
+    static void addIfNotNull(Set<ChannelHandler> handlers, ChannelPipeline pipeline,
+                             Class<? extends ChannelHandler> handlerType) {
+        ChannelHandler handler = pipeline.get(handlerType);
+        if (handler != null) {
+            handlers.add(handler);
+        }
+    }
+
+    static ChannelHandler encoder(Set<? extends ChannelHandler> handlers, Class<? extends ChannelHandler> encoder,
+                                  Class<? extends ChannelHandler> codec) {
+        for (ChannelHandler handler: handlers) {
+            if (encoder.isInstance(handler) || codec.isInstance(handler)) {
+                return handler;
+            }
+        }
+        return null;
+    }
+
+    static ChannelHandler decoder(Set<? extends ChannelHandler> handlers, Class<? extends ChannelHandler> decoder,
+                                  Class<? extends ChannelHandler> codec) {
+        for (ChannelHandler handler: handlers) {
+            if (decoder.isInstance(handler) || codec.isInstance(handler)) {
+                return handler;
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T extends ChannelHandler> T handler(Set<? extends ChannelHandler> handlers, Class<T> handlerType) {
+        for (ChannelHandler h: handlers) {
+            if (handlerType.isInstance(h)) {
+                return (T) h;
+            }
+        }
+        return null;
     }
 
     /**

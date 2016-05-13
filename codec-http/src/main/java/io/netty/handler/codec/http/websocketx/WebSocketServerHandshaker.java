@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -33,14 +34,20 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
+
+import static io.netty.handler.codec.http.websocketx.WebSocketUtil.addIfNotNull;
+import static io.netty.handler.codec.http.websocketx.WebSocketUtil.decoder;
+import static io.netty.handler.codec.http.websocketx.WebSocketUtil.handler;
 
 /**
  * Base class for server side web socket opening and closing handshakes
@@ -140,9 +147,30 @@ public abstract class WebSocketServerHandshaker {
      *              HTTP Request
      * @return future
      *              The {@link ChannelFuture} which is notified once the opening handshake completes
+     * @deprecated use {@link #handshake(Channel, FullHttpRequest, Set)}
      */
+    @Deprecated
     public ChannelFuture handshake(Channel channel, FullHttpRequest req) {
         return handshake(channel, req, null, channel.newPromise());
+    }
+
+    /**
+     * Performs the opening handshake. When call this method you <strong>MUST NOT</strong> retain the
+     * {@link FullHttpRequest} which is passed in.
+     *
+     * @param channel
+     *              Channel
+     * @param req
+     *              HTTP Request
+     * @param handlers
+     *            the HTTP specific {@link ChannelHandler}s to remove. This must contain either at least
+     *            {@link HttpServerCodec} or {@link HttpRequestDecoder} and {@link HttpResponseEncoder}. Other handlers
+     *            like {@link HttpObjectAggregator} and {@link HttpContentCompressor} may be present as well.
+     * @return future
+     *              The {@link ChannelFuture} which is notified once the opening handshake completes
+     */
+    public ChannelFuture handshake(Channel channel, FullHttpRequest req, Set<? extends ChannelHandler> handlers) {
+        return handshake(channel, req, null, handlers, channel.newPromise());
     }
 
     /**
@@ -160,31 +188,68 @@ public abstract class WebSocketServerHandshaker {
      *            the {@link ChannelPromise} to be notified when the opening handshake is done
      * @return future
      *            the {@link ChannelFuture} which is notified when the opening handshake is done
+     * @deprecated use {@link #handshake(Channel, FullHttpRequest, HttpHeaders, Set, ChannelPromise)}
+     */
+    @Deprecated
+    public final ChannelFuture handshake(Channel channel, FullHttpRequest req,
+                                         HttpHeaders responseHeaders, final ChannelPromise promise) {
+        return handshake(channel, req, responseHeaders, newHandlersSet(channel.pipeline()), promise);
+    }
+
+    /**
+     * Performs the opening handshake
+     *
+     * When call this method you <strong>MUST NOT</strong> retain the {@link FullHttpRequest} which is passed in.
+     *
+     * @param channel
+     *            Channel
+     * @param req
+     *            HTTP Request
+     * @param responseHeaders
+     *            Extra headers to add to the handshake response or {@code null} if no extra headers should be added
+     * @param handlers
+     *            the HTTP specific {@link ChannelHandler}s to remove. This must contain either at least
+     *            {@link HttpServerCodec} or {@link HttpRequestDecoder} and {@link HttpResponseEncoder}. Other handlers
+     *            like {@link HttpObjectAggregator} and {@link HttpContentCompressor} may be present as well.
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the opening handshake is done
+     * @return future
+     *            the {@link ChannelFuture} which is notified when the opening handshake is done
      */
     public final ChannelFuture handshake(Channel channel, FullHttpRequest req,
-                                            HttpHeaders responseHeaders, final ChannelPromise promise) {
+                                            HttpHeaders responseHeaders, Set<? extends ChannelHandler> handlers,
+                                         final ChannelPromise promise) {
+        if (!isValidSet(ObjectUtil.checkNotNull(handlers, "handlers"))) {
+            promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+                    "a HttpRequestDecoder or HttpServerCodec"));
+            return promise;
+        }
 
         if (logger.isDebugEnabled()) {
             logger.debug("{} WebSocket version {} server handshake", channel, version());
         }
+
         FullHttpResponse response = newHandshakeResponse(req, responseHeaders);
         ChannelPipeline p = channel.pipeline();
-        if (p.get(HttpObjectAggregator.class) != null) {
-            p.remove(HttpObjectAggregator.class);
+        HttpObjectAggregator aggregator = handler(handlers, HttpObjectAggregator.class);
+        if (aggregator != null) {
+            p.remove(aggregator);
         }
-        if (p.get(HttpContentCompressor.class) != null) {
-            p.remove(HttpContentCompressor.class);
+        HttpContentCompressor compressor = handler(handlers, HttpContentCompressor.class);
+        if (compressor != null) {
+            p.remove(compressor);
         }
-        ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
-        final String encoderName;
+
+        ChannelHandler decoder = decoder(handlers, HttpRequestDecoder.class, HttpServerCodec.class);
+        ChannelHandlerContext ctx = p.context(decoder);
         if (ctx == null) {
-            // this means the user use a HttpServerCodec
-            ctx = p.context(HttpServerCodec.class);
-            if (ctx == null) {
-                promise.setFailure(
-                        new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
-                return promise;
-            }
+            promise.setFailure(
+                    new IllegalStateException("No HttpRequestDecoder and no HttpServerCodec in the pipeline"));
+            return promise;
+        }
+
+        final String encoderName;
+        if (decoder instanceof HttpServerCodec) {
             p.addBefore(ctx.name(), "wsdecoder", newWebsocketDecoder());
             p.addBefore(ctx.name(), "wsencoder", newWebSocketEncoder());
             encoderName = ctx.name();
@@ -219,9 +284,30 @@ public abstract class WebSocketServerHandshaker {
      *              HTTP Request
      * @return future
      *              The {@link ChannelFuture} which is notified once the opening handshake completes
+     * @deprecated use {@link #handshake(Channel, HttpRequest, Set)}
      */
+    @Deprecated
     public ChannelFuture handshake(Channel channel, HttpRequest req) {
         return handshake(channel, req, null, channel.newPromise());
+    }
+
+    /**
+     * Performs the opening handshake. When call this method you <strong>MUST NOT</strong> retain the
+     * {@link FullHttpRequest} which is passed in.
+     *
+     * @param channel
+     *              Channel
+     * @param req
+     *              HTTP Request
+     * @param handlers
+     *            the HTTP specific {@link ChannelHandler}s to remove. This must contain either at least
+     *            {@link HttpServerCodec} or {@link HttpRequestDecoder} and {@link HttpResponseEncoder}. Other handlers
+     *            like {@link HttpObjectAggregator} and {@link HttpContentCompressor} may be present as well.
+     * @return future
+     *              The {@link ChannelFuture} which is notified once the opening handshake completes
+     */
+    public ChannelFuture handshake(Channel channel, HttpRequest req, Set<? extends ChannelHandler> handlers) {
+        return handshake(channel, req, null, handlers, channel.newPromise());
     }
 
     /**
@@ -239,26 +325,55 @@ public abstract class WebSocketServerHandshaker {
      *            the {@link ChannelPromise} to be notified when the opening handshake is done
      * @return future
      *            the {@link ChannelFuture} which is notified when the opening handshake is done
+     * @deprecated use {@link #handshake(Channel, HttpRequest, HttpHeaders, Set, ChannelPromise)}
      */
+    @Deprecated
     public final ChannelFuture handshake(final Channel channel, HttpRequest req,
                                          final HttpHeaders responseHeaders, final ChannelPromise promise) {
+        return handshake(channel, req, responseHeaders, newHandlersSet(channel.pipeline()), promise);
+    }
 
+    /**
+     * Performs the opening handshake
+     *
+     * When call this method you <strong>MUST NOT</strong> retain the {@link HttpRequest} which is passed in.
+     *
+     * @param channel
+     *            Channel
+     * @param req
+     *            HTTP Request
+     * @param responseHeaders
+     *            Extra headers to add to the handshake response or {@code null} if no extra headers should be added
+     * @param handlers
+     *            the HTTP specific {@link ChannelHandler}s to remove. This must contain either at least
+     *            {@link HttpServerCodec} or {@link HttpRequestDecoder} and {@link HttpResponseEncoder}. Other handlers
+     *            like {@link HttpObjectAggregator} and {@link HttpContentCompressor} may be present as well.
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the opening handshake is done
+     * @return future
+     *            the {@link ChannelFuture} which is notified when the opening handshake is done
+     */
+    public final ChannelFuture handshake(final Channel channel, HttpRequest req, final HttpHeaders responseHeaders,
+                                         final Set<? extends ChannelHandler> handlers, final ChannelPromise promise) {
         if (req instanceof FullHttpRequest) {
-            return handshake(channel, (FullHttpRequest) req, responseHeaders, promise);
+            return handshake(channel, (FullHttpRequest) req, responseHeaders, handlers, promise);
         }
+        if (!isValidSet(ObjectUtil.checkNotNull(handlers, "handlers"))) {
+            promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+                    "a HttpRequestDecoder or HttpServerCodec"));
+            return promise;
+        }
+
         if (logger.isDebugEnabled()) {
             logger.debug("{} WebSocket version {} server handshake", channel, version());
         }
         ChannelPipeline p = channel.pipeline();
-        ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
+        ChannelHandler handler = decoder(handlers, HttpRequestDecoder.class, HttpServerCodec.class);
+        ChannelHandlerContext ctx = p.context(handler);
         if (ctx == null) {
-            // this means the user use a HttpServerCodec
-            ctx = p.context(HttpServerCodec.class);
-            if (ctx == null) {
-                promise.setFailure(
-                        new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
-                return promise;
-            }
+            promise.setFailure(
+                    new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
+            return promise;
         }
         // Add aggregator and ensure we feed the HttpRequest so it is aggregated. A limit o 8192 should be more then
         // enough for the websockets handshake payload.
@@ -271,7 +386,7 @@ public abstract class WebSocketServerHandshaker {
             protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
                 // Remove ourself and do the actual handshake
                 ctx.pipeline().remove(this);
-                handshake(channel, msg, responseHeaders, promise);
+                handshake(channel, msg, responseHeaders, handlers, promise);
             }
 
             @Override
@@ -383,4 +498,19 @@ public abstract class WebSocketServerHandshaker {
      */
     protected abstract WebSocketFrameEncoder newWebSocketEncoder();
 
+    private static Set<? extends ChannelHandler> newHandlersSet(ChannelPipeline pipeline) {
+        Set<ChannelHandler> handlers = new HashSet<ChannelHandler>();
+        addIfNotNull(handlers, pipeline, HttpRequestDecoder.class);
+        addIfNotNull(handlers, pipeline, HttpResponseEncoder.class);
+        addIfNotNull(handlers, pipeline, HttpServerCodec.class);
+        addIfNotNull(handlers, pipeline, HttpObjectAggregator.class);
+        addIfNotNull(handlers, pipeline, HttpContentCompressor.class);
+        return handlers;
+    }
+
+    private static boolean isValidSet(Set<? extends ChannelHandler> handlers) {
+        return handler(handlers, HttpServerCodec.class) != null
+                || (handler(handlers, HttpResponseEncoder.class) != null
+                && handler(handlers, HttpRequestDecoder.class) != null);
+    }
 }

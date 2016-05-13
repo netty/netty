@@ -18,6 +18,7 @@ package io.netty.example.http.websocketx.client;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -41,6 +42,8 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * This is an example of a WebSocket client.
@@ -92,13 +95,20 @@ public final class WebSocketClient {
 
         EventLoopGroup group = new NioEventLoopGroup();
         try {
+            final HttpClientCodec codec = new HttpClientCodec();
+            final HttpObjectAggregator aggregator = new HttpObjectAggregator(8192);
+
+            Set<ChannelHandler> httpHandlers = new HashSet<ChannelHandler>(2);
+            httpHandlers.add(codec);
+            httpHandlers.add(aggregator);
+
             // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
             // If you change it to V00, ping is not supported and remember to change
             // HttpResponseDecoder to WebSocketHttpResponseDecoder in the pipeline.
             final WebSocketClientHandler handler =
                     new WebSocketClientHandler(
                             WebSocketClientHandshakerFactory.newHandshaker(
-                                    uri, WebSocketVersion.V13, null, false, new DefaultHttpHeaders()));
+                                    uri, WebSocketVersion.V13, null, false, new DefaultHttpHeaders()), httpHandlers);
 
             Bootstrap b = new Bootstrap();
             b.group(group)
@@ -111,8 +121,8 @@ public final class WebSocketClient {
                          p.addLast(sslCtx.newHandler(ch.alloc(), host, port));
                      }
                      p.addLast(
-                             new HttpClientCodec(),
-                             new HttpObjectAggregator(8192),
+                             codec,
+                             aggregator,
                              WebSocketClientCompressionHandler.INSTANCE,
                              handler);
                  }

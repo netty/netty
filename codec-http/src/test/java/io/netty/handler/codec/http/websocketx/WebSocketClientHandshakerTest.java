@@ -52,12 +52,12 @@ public abstract class WebSocketClientHandshakerTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test(timeout = 300000)
     public void testHttpResponseAndFrameInSameBuffer() {
         testHttpResponseAndFrameInSameBuffer(false);
     }
 
-    @Test(timeout = 3000)
+    @Test(timeout = 300000)
     public void testHttpResponseAndFrameInSameBufferCodec() {
         testHttpResponseAndFrameInSameBuffer(true);
     }
@@ -127,7 +127,7 @@ public abstract class WebSocketClientHandshakerTest {
         }
         // We need to first write the request as HttpClientCodec will fail if we receive a response before a request
         // was written.
-        shaker.handshake(ch).syncUninterruptibly();
+        handshaker.handshake(ch).syncUninterruptibly();
         for (;;) {
             // Just consume the bytes, we are not interested in these.
             ByteBuf buf = ch.readOutbound();

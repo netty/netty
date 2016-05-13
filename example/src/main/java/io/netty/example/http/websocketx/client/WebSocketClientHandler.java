@@ -39,6 +39,7 @@ package io.netty.example.http.websocketx.client;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -50,13 +51,17 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.util.CharsetUtil;
 
+import java.util.Set;
+
 public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {
 
     private final WebSocketClientHandshaker handshaker;
+    private final Set<ChannelHandler> httpHandlers;
     private ChannelPromise handshakeFuture;
 
-    public WebSocketClientHandler(WebSocketClientHandshaker handshaker) {
+    public WebSocketClientHandler(WebSocketClientHandshaker handshaker, Set<ChannelHandler> httpHandlers) {
         this.handshaker = handshaker;
+        this.httpHandlers = httpHandlers;
     }
 
     public ChannelFuture handshakeFuture() {
@@ -70,7 +75,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        handshaker.handshake(ctx.channel());
+        handshaker.handshake(ctx.channel(), httpHandlers);
     }
 
     @Override

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -36,6 +37,8 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.CharsetUtil;
 
+import java.util.Set;
+
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
@@ -47,7 +50,12 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
 
     private static final String WEBSOCKET_PATH = "/websocket";
 
+    private final Set<ChannelHandler> httpHandlers;
     private WebSocketServerHandshaker handshaker;
+
+    public WebSocketServerHandler(Set<ChannelHandler> httpHandlers) {
+        this.httpHandlers = httpHandlers;
+    }
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Object msg) {
@@ -100,7 +108,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         if (handshaker == null) {
             WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
         } else {
-            handshaker.handshake(ctx.channel(), req);
+            handshaker.handshake(ctx.channel(), req, httpHandlers);
         }
     }
 
