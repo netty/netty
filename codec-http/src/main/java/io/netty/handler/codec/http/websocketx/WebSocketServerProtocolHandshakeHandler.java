@@ -71,9 +71,9 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                             allowExtensions, maxFramePayloadSize, allowMaskMismatch);
             final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
             if (handshaker == null) {
-                WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
+                WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx);
             } else {
-                final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
+                final ChannelFuture handshakeFuture = handshaker.handshake(ctx, req);
                 handshakeFuture.addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {

@@ -129,10 +129,10 @@ public class WebSocketServerProtocolHandlerTest {
 
     private EmbeddedChannel createChannel(ChannelHandler handler) {
         return new EmbeddedChannel(
-                new WebSocketServerProtocolHandler("/test", null, false),
                 new HttpRequestDecoder(),
                 new HttpResponseEncoder(),
                 new MockOutboundHandler(),
+                new WebSocketServerProtocolHandler("/test", null, false),
                 handler);
     }
 

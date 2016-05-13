@@ -144,7 +144,9 @@ public abstract class WebSocketClientHandshaker {
      *
      * @param channel
      *            Channel
+     * @deprecated Use {@link #handshake(ChannelHandlerContext)}.
      */
+    @Deprecated
     public ChannelFuture handshake(Channel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
@@ -152,20 +154,44 @@ public abstract class WebSocketClientHandshaker {
         return handshake(channel, channel.newPromise());
     }
 
-    /**
+    /***
      * Begins the opening handshake
      *
+     * @deprecated Use {@link #handshake(ChannelHandlerContext, ChannelPromise)}.
      * @param channel
      *            Channel
      * @param promise
      *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
+    @Deprecated
     public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
+        return handshake(channel.pipeline().lastContext(), promise);
+    }
+
+    /**
+     * Begins the opening handshake
+     *
+     * @param ctx
+     *            ChannelHandlerContext
+     */
+    public final ChannelFuture handshake(ChannelHandlerContext ctx) {
+        return handshake(ctx, ctx.newPromise());
+    }
+
+    /**
+     * Begins the opening handshake
+     *
+     * @param ctx
+     *            ChannelHandlerContext
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the opening handshake is sent
+     */
+    public final ChannelFuture handshake(final ChannelHandlerContext ctx, final ChannelPromise promise) {
         FullHttpRequest request =  newHandshakeRequest();
 
-        HttpResponseDecoder decoder = channel.pipeline().get(HttpResponseDecoder.class);
+        HttpResponseDecoder decoder = ctx.pipeline().getBefore(ctx, HttpResponseDecoder.class);
         if (decoder == null) {
-            HttpClientCodec codec = channel.pipeline().get(HttpClientCodec.class);
+            HttpClientCodec codec = ctx.pipeline().getBefore(ctx, HttpClientCodec.class);
             if (codec == null) {
                promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
                        "a HttpResponseDecoder or HttpClientCodec"));
@@ -173,21 +199,21 @@ public abstract class WebSocketClientHandshaker {
             }
         }
 
-        channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
+        ctx.writeAndFlush(request).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
                 if (future.isSuccess()) {
                     ChannelPipeline p = future.channel().pipeline();
-                    ChannelHandlerContext ctx = p.context(HttpRequestEncoder.class);
-                    if (ctx == null) {
-                        ctx = p.context(HttpClientCodec.class);
+                    ChannelHandlerContext context = p.contextBefore(ctx, HttpRequestEncoder.class);
+                    if (context == null) {
+                        context = p.contextBefore(ctx, HttpClientCodec.class);
                     }
-                    if (ctx == null) {
+                    if (context == null) {
                         promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
                                 "a HttpRequestEncoder or HttpClientCodec"));
                         return;
                     }
-                    p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
+                    p.addAfter(context.name(), "ws-encoder", newWebSocketEncoder());
 
                     promise.setSuccess();
                 } else {
@@ -206,12 +232,26 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.
      *
+     * @deprecated Use {@link #finishHandshake(ChannelHandlerContext, FullHttpResponse)}.
      * @param channel
      *            Channel
      * @param response
      *            HTTP response containing the closing handshake details
      */
+    @Deprecated
     public final void finishHandshake(Channel channel, FullHttpResponse response) {
+        finishHandshake(channel.pipeline().lastContext(), response);
+    }
+
+    /**
+     * Validates and finishes the opening handshake initiated by {@link #handshake}}.
+     *
+     * @param ctx
+     *            ChannelHandlerContext
+     * @param response
+     *            HTTP response containing the closing handshake details
+     */
+    public final void finishHandshake(ChannelHandlerContext ctx, FullHttpResponse response) {
         verify(response);
 
         // Verify the subprotocol that we received from the server.
@@ -244,56 +284,57 @@ public abstract class WebSocketClientHandshaker {
 
         setHandshakeComplete();
 
-        final ChannelPipeline p = channel.pipeline();
+        final ChannelPipeline p = ctx.pipeline();
         // Remove decompressor from pipeline if its in use
-        HttpContentDecompressor decompressor = p.get(HttpContentDecompressor.class);
+        HttpContentDecompressor decompressor = p.getBefore(ctx, HttpContentDecompressor.class);
         if (decompressor != null) {
             p.remove(decompressor);
         }
 
         // Remove aggregator if present before
-        HttpObjectAggregator aggregator = p.get(HttpObjectAggregator.class);
+        HttpObjectAggregator aggregator = p.getBefore(ctx, HttpObjectAggregator.class);
         if (aggregator != null) {
             p.remove(aggregator);
         }
 
-        ChannelHandlerContext ctx = p.context(HttpResponseDecoder.class);
-        if (ctx == null) {
-            ctx = p.context(HttpClientCodec.class);
-            if (ctx == null) {
+        ChannelHandlerContext context = p.contextBefore(ctx, HttpResponseDecoder.class);
+        if (context == null) {
+            context = p.contextBefore(ctx, HttpClientCodec.class);
+            if (context == null) {
                 throw new IllegalStateException("ChannelPipeline does not contain " +
                         "a HttpRequestEncoder or HttpClientCodec");
             }
-            final HttpClientCodec codec =  (HttpClientCodec) ctx.handler();
+            final HttpClientCodec codec =  (HttpClientCodec) context.handler();
             // Remove the encoder part of the codec as the user may start writing frames after this method returns.
             codec.removeOutboundHandler();
 
-            p.addAfter(ctx.name(), "ws-decoder", newWebsocketDecoder());
+            p.addAfter(context.name(), "ws-decoder", newWebsocketDecoder());
 
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
             // See https://github.com/netty/netty/issues/4533
-            channel.eventLoop().execute(new OneTimeTask() {
+            ctx.executor().execute(new OneTimeTask() {
                 @Override
                 public void run() {
                     p.remove(codec);
                 }
             });
         } else {
-            if (p.get(HttpRequestEncoder.class) != null) {
+            HttpRequestEncoder encoder = p.getBefore(ctx, HttpRequestEncoder.class);
+            if (encoder != null) {
                 // Remove the encoder part of the codec as the user may start writing frames after this method returns.
-                p.remove(HttpRequestEncoder.class);
+                p.remove(encoder);
             }
-            final ChannelHandlerContext context = ctx;
-            p.addAfter(context.name(), "ws-decoder", newWebsocketDecoder());
+            final ChannelHandlerContext contextFinal = context;
+            p.addAfter(contextFinal.name(), "ws-decoder", newWebsocketDecoder());
 
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
             // See https://github.com/netty/netty/issues/4533
-            channel.eventLoop().execute(new OneTimeTask() {
+            context.executor().execute(new OneTimeTask() {
                 @Override
                 public void run() {
-                    p.remove(context.handler());
+                    p.remove(contextFinal.handler());
                 }
             });
         }
@@ -302,6 +343,7 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Process the opening handshake initiated by {@link #handshake}}.
      *
+     * @deprecated Use {@link #processHandshake(ChannelHandlerContext, HttpResponse)}.
      * @param channel
      *            Channel
      * @param response
@@ -309,6 +351,7 @@ public abstract class WebSocketClientHandshaker {
      * @return future
      *            the {@link ChannelFuture} which is notified once the handshake completes.
      */
+    @Deprecated
     public final ChannelFuture processHandshake(final Channel channel, HttpResponse response) {
         return processHandshake(channel, response, channel.newPromise());
     }
@@ -316,6 +359,7 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Process the opening handshake initiated by {@link #handshake}}.
      *
+     * @deprecated Use {@link #processHandshake(ChannelHandlerContext, HttpResponse, ChannelPromise)}.
      * @param channel
      *            Channel
      * @param response
@@ -325,21 +369,53 @@ public abstract class WebSocketClientHandshaker {
      * @return future
      *            the {@link ChannelFuture} which is notified once the handshake completes.
      */
+    @Deprecated
     public final ChannelFuture processHandshake(final Channel channel, HttpResponse response,
+                                                final ChannelPromise promise) {
+        return processHandshake(channel.pipeline().lastContext(), response, promise);
+    }
+
+    /**
+     * Process the opening handshake initiated by {@link #handshake}}.
+     *
+     * @param ctx
+     *            ChannelHandlerContext
+     * @param response
+     *            HTTP response containing the closing handshake details
+     * @return future
+     *            the {@link ChannelFuture} which is notified once the handshake completes.
+     */
+    public final ChannelFuture processHandshake(final ChannelHandlerContext ctx, HttpResponse response) {
+        return processHandshake(ctx, response, ctx.newPromise());
+    }
+
+    /**
+     * Process the opening handshake initiated by {@link #handshake}}.
+     *
+     * @param ctx
+     *            ChannelHandlerContext
+     * @param response
+     *            HTTP response containing the closing handshake details
+     * @param promise
+     *            the {@link ChannelPromise} to notify once the handshake completes.
+     * @return future
+     *            the {@link ChannelFuture} which is notified once the handshake completes.
+     */
+    public final ChannelFuture processHandshake(final ChannelHandlerContext ctx, HttpResponse response,
                                                 final ChannelPromise promise) {
         if (response instanceof FullHttpResponse) {
             try {
-                finishHandshake(channel, (FullHttpResponse) response);
+                finishHandshake(ctx, (FullHttpResponse) response);
                 promise.setSuccess();
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
         } else {
-            ChannelPipeline p = channel.pipeline();
-            ChannelHandlerContext ctx = p.context(HttpResponseDecoder.class);
-            if (ctx == null) {
-                ctx = p.context(HttpClientCodec.class);
-                if (ctx == null) {
+            ChannelPipeline p = ctx.pipeline();
+            ChannelHandlerContext context = p.contextBefore(ctx, HttpResponseDecoder.class);
+            if (context == null) {
+                context = p.contextBefore(ctx, HttpClientCodec.class);
+                if (context == null) {
                     return promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
                             "a HttpResponseDecoder or HttpClientCodec"));
                 }
@@ -349,14 +425,14 @@ public abstract class WebSocketClientHandshaker {
             //
             // TODO: Make handshake work without HttpObjectAggregator at all.
             String aggregatorName = "httpAggregator";
-            p.addAfter(ctx.name(), aggregatorName, new HttpObjectAggregator(8192));
+            p.addAfter(context.name(), aggregatorName, new HttpObjectAggregator(8192));
             p.addAfter(aggregatorName, "handshaker", new SimpleChannelInboundHandler<FullHttpResponse>() {
                 @Override
-                protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
+                protected void channelRead0(ChannelHandlerContext context, FullHttpResponse msg) throws Exception {
                     // Remove ourself and do the actual handshake
                     ctx.pipeline().remove(this);
                     try {
-                        finishHandshake(channel, msg);
+                        finishHandshake(ctx, msg);
                         promise.setSuccess();
                     } catch (Throwable cause) {
                         promise.setFailure(cause);
@@ -378,7 +454,7 @@ public abstract class WebSocketClientHandshaker {
                 }
             });
             try {
-                ctx.fireChannelRead(ReferenceCountUtil.retain(response));
+                context.fireChannelRead(ReferenceCountUtil.retain(response));
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
@@ -404,11 +480,13 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Performs the closing handshake
      *
+     * @deprecated Use {@link #close(ChannelHandlerContext, CloseWebSocketFrame)}.
      * @param channel
      *            Channel
      * @param frame
      *            Closing Frame that was received
      */
+    @Deprecated
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
         if (channel == null) {
             throw new NullPointerException("channel");
@@ -419,6 +497,7 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Performs the closing handshake
      *
+     * @deprecated Use {@link #close(ChannelHandlerContext, CloseWebSocketFrame, ChannelPromise)}.
      * @param channel
      *            Channel
      * @param frame
@@ -426,11 +505,38 @@ public abstract class WebSocketClientHandshaker {
      * @param promise
      *            the {@link ChannelPromise} to be notified when the closing handshake is done
      */
+    @Deprecated
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
         return channel.writeAndFlush(frame, promise);
+    }
+
+    /**
+     * Performs the closing handshake
+     *
+     * @param ctx
+     *            ChannelHandlerContext
+     * @param frame
+     *            Closing Frame that was received
+     */
+    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
+        return close(ctx, frame, ctx.newPromise());
+    }
+
+    /**
+     * Performs the closing handshake
+     *
+     * @param ctx
+     *            ChannelHandlerContext
+     * @param frame
+     *            Closing Frame that was received
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the closing handshake is done
+     */
+    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, ChannelPromise promise) {
+        return ctx.writeAndFlush(frame, promise);
     }
 
     /**

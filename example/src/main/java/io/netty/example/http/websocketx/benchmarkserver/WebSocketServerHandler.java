@@ -98,9 +98,9 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
                 getWebSocketLocation(req), null, true, 5 * 1024 * 1024);
         handshaker = wsFactory.newHandshaker(req);
         if (handshaker == null) {
-            WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
+            WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx);
         } else {
-            handshaker.handshake(ctx.channel(), req);
+            handshaker.handshake(ctx, req);
         }
     }
 
@@ -108,7 +108,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
 
         // Check for closing frame
         if (frame instanceof CloseWebSocketFrame) {
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame.retain());
+            handshaker.close(ctx, (CloseWebSocketFrame) frame.retain());
             return;
         }
         if (frame instanceof PingWebSocketFrame) {
@@ -123,7 +123,6 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         if (frame instanceof BinaryWebSocketFrame) {
             // Echo the frame
             ctx.write(frame.retain());
-            return;
         }
     }
 

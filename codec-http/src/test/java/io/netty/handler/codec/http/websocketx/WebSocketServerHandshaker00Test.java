@@ -64,10 +64,12 @@ public class WebSocketServerHandshaker00Test {
 
         if (subProtocol) {
             new WebSocketServerHandshaker00(
-                    "ws://example.com/chat", "chat", Integer.MAX_VALUE).handshake(ch, req);
+                    "ws://example.com/chat", "chat", Integer.MAX_VALUE).handshake(
+                    ch.pipeline().lastContext(), req);
         } else {
             new WebSocketServerHandshaker00(
-                    "ws://example.com/chat", null, Integer.MAX_VALUE).handshake(ch, req);
+                    "ws://example.com/chat", null, Integer.MAX_VALUE).handshake(
+                    ch.pipeline().lastContext(), req);
         }
 
         EmbeddedChannel ch2 = new EmbeddedChannel(new HttpResponseDecoder());

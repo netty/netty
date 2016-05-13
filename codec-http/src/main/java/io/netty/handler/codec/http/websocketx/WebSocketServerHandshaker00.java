@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -170,17 +171,15 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         return res;
     }
 
-    /**
-     * Echo back the closing frame
-     *
-     * @param channel
-     *            Channel
-     * @param frame
-     *            Web Socket frame that was received
-     */
     @Override
+    @Deprecated
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
         return channel.writeAndFlush(frame, promise);
+    }
+
+    @Override
+    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, ChannelPromise promise) {
+        return ctx.writeAndFlush(frame, promise);
     }
 
     @Override

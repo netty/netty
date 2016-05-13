@@ -21,6 +21,7 @@ import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -792,11 +793,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelHandler first() {
-        ChannelHandlerContext first = firstContext();
-        if (first == null) {
-            return null;
-        }
-        return first.handler();
+        return handler(firstContext());
     }
 
     @Override
@@ -810,11 +807,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelHandler last() {
-        AbstractChannelHandlerContext last = tail.prev;
-        if (last == head) {
-            return null;
-        }
-        return last.handler();
+        return handler(lastContext());
     }
 
     @Override
@@ -828,18 +821,26 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelHandler get(String name) {
-        ChannelHandlerContext ctx = context(name);
-        if (ctx == null) {
-            return null;
-        } else {
-            return ctx.handler();
-        }
+        return handler(context(name));
+    }
+
+    @Override
+    public <T extends ChannelHandler> T get(Class<T> handlerType) {
+        return handler(context(handlerType));
+    }
+
+    @Override
+    public <T extends ChannelHandler> T getBefore(ChannelHandlerContext ctx, Class<T> handlerType) {
+        return handler(contextBefore(ctx, handlerType));
+    }
+
+    @Override
+    public <T extends ChannelHandler> T getAfter(ChannelHandlerContext ctx, Class<T> handlerType) {
+        return handler(contextAfter(ctx, handlerType));
     }
 
     @SuppressWarnings("unchecked")
-    @Override
-    public <T extends ChannelHandler> T get(Class<T> handlerType) {
-        ChannelHandlerContext ctx = context(handlerType);
+    private static <T extends ChannelHandler> T handler(ChannelHandlerContext ctx) {
         if (ctx == null) {
             return null;
         } else {
@@ -864,7 +865,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {
-
             if (ctx == null) {
                 return null;
             }
@@ -872,27 +872,55 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             if (ctx.handler() == handler) {
                 return ctx;
             }
-
             ctx = ctx.next;
         }
     }
 
     @Override
     public ChannelHandlerContext context(Class<? extends ChannelHandler> handlerType) {
-        if (handlerType == null) {
-            throw new NullPointerException("handlerType");
-        }
+        return contextAfter(head, handlerType);
+    }
 
-        AbstractChannelHandlerContext ctx = head.next;
+    @Override
+    public ChannelHandlerContext contextBefore(ChannelHandlerContext ctx, Class<? extends ChannelHandler> handlerType) {
+        ObjectUtil.checkNotNull(handlerType, "handlerType");
+        AbstractChannelHandlerContext context = verifyPipeline(ctx).prev;
         for (;;) {
-            if (ctx == null) {
+            if (context == null) {
                 return null;
             }
-            if (handlerType.isAssignableFrom(ctx.handler().getClass())) {
-                return ctx;
+            if (isHandlerType(context, handlerType)) {
+                return context;
             }
-            ctx = ctx.next;
+            context = context.prev;
         }
+    }
+
+    @Override
+    public ChannelHandlerContext contextAfter(ChannelHandlerContext ctx,
+                                              Class<? extends ChannelHandler> handlerType) {
+        ObjectUtil.checkNotNull(handlerType, "handlerType");
+        AbstractChannelHandlerContext context = verifyPipeline(ctx).next;
+        for (;;) {
+            if (context == null) {
+                return null;
+            }
+            if (isHandlerType(context, handlerType)) {
+                return context;
+            }
+            context = context.next;
+        }
+    }
+
+    private AbstractChannelHandlerContext verifyPipeline(ChannelHandlerContext ctx) {
+        if (ctx.pipeline() != this) {
+            throw new IllegalArgumentException("ctx not part of this pipeline");
+        }
+        return (AbstractChannelHandlerContext) ctx;
+    }
+
+    private static boolean isHandlerType(ChannelHandlerContext context, Class<? extends ChannelHandler> handlerType) {
+        return handlerType.isAssignableFrom(context.handler().getClass());
     }
 
     @Override
