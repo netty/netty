@@ -21,9 +21,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -154,7 +152,6 @@ public class EmbeddedChannel extends AbstractChannel {
 
         ChannelFuture future = loop.register(this);
         assert future.isDone();
-        p.addLast(new LastInboundHandler());
     }
 
     @Override
@@ -541,21 +538,19 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private class DefaultUnsafe extends AbstractUnsafe {
+    private final class DefaultUnsafe extends AbstractUnsafe {
         @Override
         public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
             safeSetSuccess(promise);
         }
-    }
 
-    private final class LastInboundHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected void unhandledInboundMessage(Object msg) throws Exception {
             inboundMessages().add(msg);
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        protected void unhandledInboundException(Throwable cause) throws Exception {
             recordException(cause);
         }
     }

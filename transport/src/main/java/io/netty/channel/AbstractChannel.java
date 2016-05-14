@@ -21,6 +21,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -54,10 +55,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private final Channel parent;
     private final ChannelId id;
-    private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
     private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
     private final CloseFuture closeFuture = new CloseFuture(this);
+
+    // Package private as we access it from DefaultChannelPipeline.
+    final AbstractUnsafe unsafe;
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
@@ -963,6 +966,37 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          */
         protected Executor prepareToClose() {
             return null;
+        }
+
+        /**
+         * Called once a {@link Throwable} hit the end of the {@link ChannelPipeline} without been handled by the user
+         * in {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}.
+         */
+        @UnstableApi
+        protected void unhandledInboundException(Throwable cause) throws Exception {
+            try {
+                logger.warn(
+                        "An exceptionCaught() event was fired, and it reached at the tail of the pipeline. " +
+                                "It usually means the last handler in the pipeline did not handle the exception.",
+                        cause);
+            } finally {
+                ReferenceCountUtil.release(cause);
+            }
+        }
+
+        /**
+         * Called once a message hit the end of the {@link ChannelPipeline} without been handled by the user
+         * in {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}.
+         */
+        @UnstableApi
+        protected void unhandledInboundMessage(Object msg) throws Exception {
+            try {
+                logger.debug(
+                        "Discarded inbound message {} that reached at the tail of the pipeline. " +
+                                "Please check your pipeline configuration.", msg);
+            } finally {
+                ReferenceCountUtil.release(msg);
+            }
         }
     }
 
