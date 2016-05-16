@@ -652,6 +652,16 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     break;
                 }
 
+                // If a task was submitted when wakenUp value was true, the task didn't get a chance to call
+                // Selector#wakeup. So we need to check task queue again before executing select operation.
+                // If we don't, the task might be pended until select operation was timed out.
+                // It might be pended until idle timeout if IdleStateHandler existed in pipeline.
+                if (hasTasks() && wakenUp.compareAndSet(false, true)) {
+                    selector.selectNow();
+                    selectCnt = 1;
+                    break;
+                }
+
                 int selectedKeys = selector.select(timeoutMillis);
                 selectCnt ++;
 
