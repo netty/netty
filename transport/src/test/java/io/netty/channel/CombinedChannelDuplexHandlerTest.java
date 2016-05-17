@@ -363,11 +363,11 @@ public class CombinedChannelDuplexHandlerTest {
         ChannelPipeline pipeline = ch.pipeline();
 
         ChannelPromise promise = ch.newPromise();
-        pipeline.connect(null, null, promise);
+        pipeline.connect(new InetSocketAddress(0), null, promise);
         promise.syncUninterruptibly();
 
         promise = ch.newPromise();
-        pipeline.bind(null, promise);
+        pipeline.bind(new InetSocketAddress(0), promise);
         promise.syncUninterruptibly();
 
         promise = ch.newPromise();
