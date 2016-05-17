@@ -80,7 +80,7 @@ final class ThreadLocalPooledDirectByteBuf {
                 super.deallocate();
             } else {
                 clear();
-                RECYCLER.recycle(this, handle);
+                handle.recycle(this);
             }
         }
     }
@@ -113,7 +113,7 @@ final class ThreadLocalPooledDirectByteBuf {
                 super.deallocate();
             } else {
                 clear();
-                RECYCLER.recycle(this, handle);
+                handle.recycle(this);
             }
         }
     }
