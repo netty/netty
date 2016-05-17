@@ -19,9 +19,11 @@ package io.netty.util;
 import io.netty.util.internal.StringUtil;
 
 import java.net.IDN;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.commonSuffixOfLength;
@@ -130,6 +132,13 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
             }
         }
         return defaultValue;
+    }
+
+    /**
+     * Returns a read-only {@link Set} of the domain mapping patterns and their associated value objects.
+     */
+    public Set<Map.Entry<String, V>> entries() {
+        return Collections.unmodifiableSet(map.entrySet());
     }
 
     @Override
