@@ -387,6 +387,30 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
+    public CompositeByteBuf addComponent(boolean increaseWriterIndex, ByteBuf buffer) {
+        wrapped.addComponent(increaseWriterIndex, buffer);
+        return this;
+    }
+
+    @Override
+    public CompositeByteBuf addComponents(boolean increaseWriterIndex, ByteBuf... buffers) {
+        wrapped.addComponents(increaseWriterIndex, buffers);
+        return this;
+    }
+
+    @Override
+    public CompositeByteBuf addComponents(boolean increaseWriterIndex, Iterable<ByteBuf> buffers) {
+        wrapped.addComponents(increaseWriterIndex, buffers);
+        return this;
+    }
+
+    @Override
+    public CompositeByteBuf addComponent(boolean increaseWriterIndex, int cIndex, ByteBuf buffer) {
+        wrapped.addComponent(increaseWriterIndex, cIndex, buffer);
+        return this;
+    }
+
+    @Override
     public CompositeByteBuf removeComponent(int cIndex) {
         wrapped.removeComponent(cIndex);
         return this;

@@ -723,15 +723,39 @@ final class AdvancedLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     }
 
     @Override
-    public CompositeByteBuf removeComponent(int cIndex) {
-        recordLeakNonRefCountingOperation(leak);
-        return super.removeComponent(cIndex);
-    }
-
-    @Override
     public CompositeByteBuf addComponents(int cIndex, Iterable<ByteBuf> buffers) {
         recordLeakNonRefCountingOperation(leak);
         return super.addComponents(cIndex, buffers);
+    }
+
+    @Override
+    public CompositeByteBuf addComponent(boolean increaseWriterIndex, ByteBuf buffer) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.addComponent(increaseWriterIndex, buffer);
+    }
+
+    @Override
+    public CompositeByteBuf addComponents(boolean increaseWriterIndex, ByteBuf... buffers) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.addComponents(increaseWriterIndex, buffers);
+    }
+
+    @Override
+    public CompositeByteBuf addComponents(boolean increaseWriterIndex, Iterable<ByteBuf> buffers) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.addComponents(increaseWriterIndex, buffers);
+    }
+
+    @Override
+    public CompositeByteBuf addComponent(boolean increaseWriterIndex, int cIndex, ByteBuf buffer) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.addComponent(increaseWriterIndex, cIndex, buffer);
+    }
+
+    @Override
+    public CompositeByteBuf removeComponent(int cIndex) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.removeComponent(cIndex);
     }
 
     @Override

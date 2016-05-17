@@ -94,8 +94,7 @@ public class SnappyFramedEncoderTest {
             if (m == null) {
                 break;
             }
-            actual.addComponent(m);
-            actual.writerIndex(actual.writerIndex() + m.readableBytes());
+            actual.addComponent(true, m);
         }
         assertEquals(releaseLater(expected), releaseLater(actual));
         in.release();
