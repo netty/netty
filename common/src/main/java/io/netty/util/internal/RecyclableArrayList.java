@@ -152,6 +152,7 @@ public final class RecyclableArrayList extends ArrayList<Object> {
     public boolean recycle() {
         clear();
         insertSinceRecycled = false;
-        return RECYCLER.recycle(this, handle);
+        handle.recycle(this);
+        return true;
     }
 }
