@@ -16,6 +16,8 @@
 
 package io.netty.util;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -135,6 +137,16 @@ public final class DomainMappingBuilder<V> {
             }
 
             return defaultValue;
+        }
+
+        @Override
+        public Set<Map.Entry<String, V>> entries() {
+            int length = domainNamePatterns.length;
+            Map<String, V> map = new HashMap<String, V>(length);
+            for (int index = 0; index < length; ++index) {
+                map.put(domainNamePatterns[index], values[index]);
+            }
+            return Collections.unmodifiableSet(map.entrySet());
         }
 
         @Override
