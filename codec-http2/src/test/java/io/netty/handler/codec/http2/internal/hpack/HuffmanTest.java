@@ -72,7 +72,7 @@ public class HuffmanTest {
         Huffman.DECODER.decode(buf);
     }
 
-    @Test//(expected = IOException.class) TODO(jpinner) fix me
+    @Test(expected = IOException.class)
     public void testDecodeExtraPadding() throws IOException {
         byte[] buf = new byte[2];
         buf[0] = 0x0F; // '1', 'EOS'

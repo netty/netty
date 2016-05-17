@@ -30,6 +30,16 @@ import static org.junit.Assert.fail;
 
 public class DefaultHttp2HeadersTest {
 
+    @Test(expected = Http2Exception.class)
+    public void nullHeaderNameNotAllowed() {
+        new DefaultHttp2Headers().add(null, "foo");
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void emtpyHeaderNameNotAllowed() {
+        new DefaultHttp2Headers().add("", "foo");
+    }
+
     @Test
     public void testPseudoHeadersMustComeFirstWhenIterating() {
         Http2Headers headers = newHeaders();

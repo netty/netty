@@ -31,13 +31,20 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
+import io.netty.util.internal.EmptyArrays;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 final class HuffmanDecoder {
 
-    private static final IOException EOS_DECODED = new IOException("EOS Decoded");
-    private static final IOException INVALID_PADDING = new IOException("Invalid Padding");
+    private static final IOException EOS_DECODED = new IOException("HPACK - EOS Decoded");
+    private static final IOException INVALID_PADDING = new IOException("HPACK - Invalid Padding");
+
+    static {
+        EOS_DECODED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        INVALID_PADDING.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
 
     private final Node root;
 
@@ -68,6 +75,7 @@ final class HuffmanDecoder {
         Node node = root;
         int current = 0;
         int bits = 0;
+        int trailingPadBits = 0;
         for (int i = 0; i < buf.length; i++) {
             int b = buf[i] & 0xFF;
             current = (current << 8) | b;
@@ -82,6 +90,9 @@ final class HuffmanDecoder {
                     }
                     baos.write(node.symbol);
                     node = root;
+                    trailingPadBits = bits;
+                } else {
+                    trailingPadBits += node.bits;
                 }
             }
         }
@@ -93,16 +104,18 @@ final class HuffmanDecoder {
                 bits -= node.bits;
                 baos.write(node.symbol);
                 node = root;
+                trailingPadBits = bits;
             } else {
                 break;
             }
         }
 
         // Section 5.2. String Literal Representation
+        // A padding strictly longer than 7 bits MUST be treated as a decoding error.
         // Padding not corresponding to the most significant bits of the code
         // for the EOS symbol (0xFF) MUST be treated as a decoding error.
         int mask = (1 << bits) - 1;
-        if ((current & mask) != mask) {
+        if (trailingPadBits > 7 || (current & mask) != mask) {
             throw INVALID_PADDING;
         }
 
