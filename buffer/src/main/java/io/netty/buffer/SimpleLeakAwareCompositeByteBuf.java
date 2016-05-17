@@ -96,4 +96,9 @@ final class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     public ByteBuf readRetainedSlice(int length) {
         return new SimpleLeakAwareByteBuf(super.readRetainedSlice(length), leak);
     }
+
+    @Override
+    public ByteBuf asReadOnly() {
+        return new SimpleLeakAwareByteBuf(super.asReadOnly(), leak);
+    }
 }
