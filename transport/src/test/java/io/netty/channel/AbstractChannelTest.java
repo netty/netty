@@ -32,8 +32,6 @@ public class AbstractChannelTest {
         EventLoop eventLoop = createNiceMock(EventLoop.class);
         // This allows us to have a single-threaded test
         expect(eventLoop.inEventLoop()).andReturn(true).anyTimes();
-        ChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(eventLoop);
-        expect(eventLoop.asInvoker()).andReturn(invoker).anyTimes();
 
         TestChannel channel = new TestChannel();
         ChannelInboundHandler handler = createMock(ChannelInboundHandler.class);
@@ -65,8 +63,6 @@ public class AbstractChannelTest {
                 return null;
             }
         }).once();
-        ChannelHandlerInvoker invoker = new DefaultChannelHandlerInvoker(eventLoop);
-        expect(eventLoop.asInvoker()).andReturn(invoker).anyTimes();
 
         final TestChannel channel = new TestChannel();
         ChannelInboundHandler handler = createMock(ChannelInboundHandler.class);

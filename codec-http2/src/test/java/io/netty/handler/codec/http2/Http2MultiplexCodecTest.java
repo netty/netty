@@ -38,6 +38,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
@@ -68,7 +69,7 @@ public class Http2MultiplexCodecTest {
 
     @Before
     public void setUp() throws Exception {
-        channel.connect(null);
+        channel.connect(new InetSocketAddress(0));
         channel.pipeline().addLast(serverCodec);
         http2HandlerCtx = channel.pipeline().context(serverCodec.connectionHandler());
 

@@ -27,10 +27,4 @@ import io.netty.util.concurrent.EventExecutor;
 public interface EventLoop extends EventExecutor, EventLoopGroup {
     @Override
     EventLoopGroup parent();
-
-    /**
-     * Creates a new default {@link ChannelHandlerInvoker} implementation that uses this {@link EventLoop} to
-     * invoke event handler methods.
-     */
-    ChannelHandlerInvoker asInvoker();
 }

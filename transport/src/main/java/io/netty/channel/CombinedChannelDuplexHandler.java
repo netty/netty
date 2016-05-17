@@ -373,11 +373,6 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public ChannelHandlerInvoker invoker() {
-            return ctx.invoker();
-        }
-
-        @Override
         public String name() {
             return ctx.name();
         }

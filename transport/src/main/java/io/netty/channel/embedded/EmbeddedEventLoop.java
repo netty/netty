@@ -17,24 +17,18 @@ package io.netty.channel.embedded;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerInvoker;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty.util.concurrent.Future;
 
-import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.channel.ChannelHandlerInvokerUtil.*;
-
-final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements ChannelHandlerInvoker, EventLoop {
+final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
 
@@ -143,102 +137,5 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     @Override
     public boolean inEventLoop(Thread thread) {
         return true;
-    }
-
-    @Override
-    public ChannelHandlerInvoker asInvoker() {
-        return this;
-    }
-
-    @Override
-    public EventExecutor executor() {
-        return this;
-    }
-
-    @Override
-    public void invokeChannelRegistered(ChannelHandlerContext ctx) {
-        invokeChannelRegisteredNow(ctx);
-    }
-
-    @Override
-    public void invokeChannelUnregistered(ChannelHandlerContext ctx) {
-        invokeChannelUnregisteredNow(ctx);
-    }
-
-    @Override
-    public void invokeChannelActive(ChannelHandlerContext ctx) {
-        invokeChannelActiveNow(ctx);
-    }
-
-    @Override
-    public void invokeChannelInactive(ChannelHandlerContext ctx) {
-        invokeChannelInactiveNow(ctx);
-    }
-
-    @Override
-    public void invokeExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        invokeExceptionCaughtNow(ctx, cause);
-    }
-
-    @Override
-    public void invokeUserEventTriggered(ChannelHandlerContext ctx, Object event) {
-        invokeUserEventTriggeredNow(ctx, event);
-    }
-
-    @Override
-    public void invokeChannelRead(ChannelHandlerContext ctx, Object msg) {
-        invokeChannelReadNow(ctx, msg);
-    }
-
-    @Override
-    public void invokeChannelReadComplete(ChannelHandlerContext ctx) {
-        invokeChannelReadCompleteNow(ctx);
-    }
-
-    @Override
-    public void invokeChannelWritabilityChanged(ChannelHandlerContext ctx) {
-        invokeChannelWritabilityChangedNow(ctx);
-    }
-
-    @Override
-    public void invokeBind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-        invokeBindNow(ctx, localAddress, promise);
-    }
-
-    @Override
-    public void invokeConnect(
-            ChannelHandlerContext ctx,
-            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        invokeConnectNow(ctx, remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public void invokeDisconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
-        invokeDisconnectNow(ctx, promise);
-    }
-
-    @Override
-    public void invokeClose(ChannelHandlerContext ctx, ChannelPromise promise) {
-        invokeCloseNow(ctx, promise);
-    }
-
-    @Override
-    public void invokeDeregister(ChannelHandlerContext ctx, ChannelPromise promise) {
-        invokeDeregisterNow(ctx, promise);
-    }
-
-    @Override
-    public void invokeRead(ChannelHandlerContext ctx) {
-        invokeReadNow(ctx);
-    }
-
-    @Override
-    public void invokeWrite(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        invokeWriteNow(ctx, msg, promise);
-    }
-
-    @Override
-    public void invokeFlush(ChannelHandlerContext ctx) {
-        invokeFlushNow(ctx);
     }
 }
