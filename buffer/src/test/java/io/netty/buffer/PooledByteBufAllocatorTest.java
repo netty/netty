@@ -125,7 +125,7 @@ public class PooledByteBufAllocatorTest {
         assertTrue(threadCachesCreated.get());
     }
 
-    @Test
+    @Test(timeout = 3000)
     public void testNumThreadCachesWithNoDirectArenas() throws InterruptedException {
         int numHeapArenas = 1;
         final PooledByteBufAllocator allocator =
@@ -144,7 +144,7 @@ public class PooledByteBufAllocatorTest {
         assertEquals(0, allocator.numThreadLocalCaches());
     }
 
-    @Test
+    @Test(timeout = 3000)
     public void testThreadCacheToArenaMappings() throws InterruptedException {
         int numArenas = 2;
         final PooledByteBufAllocator allocator =
