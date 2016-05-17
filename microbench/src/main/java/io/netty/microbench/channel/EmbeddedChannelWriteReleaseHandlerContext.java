@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerInvoker;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
@@ -50,7 +49,7 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext implements Chann
         this.alloc = checkNotNull(alloc, "alloc");
         this.channel = checkNotNull(channel, "channel");
         this.handler = checkNotNull(handler, "handler");
-        this.eventLoop = checkNotNull(channel.eventLoop(), "eventLoop");
+        eventLoop = checkNotNull(channel.eventLoop(), "eventLoop");
     }
 
     protected abstract void handleException(Throwable t);
@@ -73,11 +72,6 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext implements Chann
     @Override
     public EventExecutor executor() {
         return eventLoop;
-    }
-
-    @Override
-    public ChannelHandlerInvoker invoker() {
-        return eventLoop.asInvoker();
     }
 
     @Override
