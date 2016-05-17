@@ -17,10 +17,10 @@ package io.netty.channel.udt.nio;
 
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
@@ -34,7 +34,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import static java.nio.channels.SelectionKey.*;
+import static java.nio.channels.SelectionKey.OP_CONNECT;
 
 /**
  * Byte Channel Connector for UDT Streams.
@@ -147,6 +147,11 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
     protected int doWriteBytes(final ByteBuf byteBuf) throws Exception {
         final int expectedWrittenBytes = byteBuf.readableBytes();
         return byteBuf.readBytes(javaChannel(), expectedWrittenBytes);
+    }
+
+    @Override
+    protected ChannelFuture shutdownInput() {
+        return newFailedFuture(new UnsupportedOperationException("shutdownInput"));
     }
 
     @Override
