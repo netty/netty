@@ -99,7 +99,7 @@ public class ChannelOutboundBufferTest {
         CompositeByteBuf comp = compositeBuffer(256);
         ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
         for (int i = 0; i < 65; i++) {
-            comp.addComponent(buf.copy()).writerIndex(comp.writerIndex() + buf.readableBytes());
+            comp.addComponent(true, buf.copy());
         }
         buffer.addMessage(comp, comp.readableBytes(), channel.voidPromise());
 

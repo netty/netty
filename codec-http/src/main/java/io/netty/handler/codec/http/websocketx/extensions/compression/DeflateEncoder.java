@@ -87,9 +87,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
                 partCompressedContent.release();
                 continue;
             }
-            fullCompressedContent.addComponent(partCompressedContent);
-            fullCompressedContent.writerIndex(fullCompressedContent.writerIndex() +
-                    partCompressedContent.readableBytes());
+            fullCompressedContent.addComponent(true, partCompressedContent);
         }
         if (fullCompressedContent.numComponents() <= 0) {
             fullCompressedContent.release();

@@ -150,8 +150,7 @@ public abstract class AbstractIntegrationTest {
         final CompositeByteBuf compressed = Unpooled.compositeBuffer();
         ByteBuf msg;
         while ((msg = encoder.readOutbound()) != null) {
-            compressed.addComponent(msg);
-            compressed.writerIndex(compressed.writerIndex() + msg.readableBytes());
+            compressed.addComponent(true, msg);
         }
         assertThat(compressed, is(notNullValue()));
 
@@ -159,8 +158,7 @@ public abstract class AbstractIntegrationTest {
         assertFalse(compressed.isReadable());
         final CompositeByteBuf decompressed = Unpooled.compositeBuffer();
         while ((msg = decoder.readInbound()) != null) {
-            decompressed.addComponent(msg);
-            decompressed.writerIndex(decompressed.writerIndex() + msg.readableBytes());
+            decompressed.addComponent(true, msg);
         }
         assertEquals(in.resetReaderIndex(), decompressed);
 

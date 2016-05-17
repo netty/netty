@@ -103,15 +103,13 @@ public abstract class WebSocketClientHandshakerTest {
         byte[] bytes = "HTTP/1.1 101 Switching Protocols\r\nContent-Length: 0\r\n\r\n".getBytes(CharsetUtil.US_ASCII);
 
         CompositeByteBuf compositeByteBuf = Unpooled.compositeBuffer();
-        compositeByteBuf.addComponent(Unpooled.wrappedBuffer(bytes));
-        compositeByteBuf.writerIndex(compositeByteBuf.writerIndex() + bytes.length);
+        compositeByteBuf.addComponent(true, Unpooled.wrappedBuffer(bytes));
         for (;;) {
             ByteBuf frameBytes = websocketChannel.readOutbound();
             if (frameBytes == null) {
                 break;
             }
-            compositeByteBuf.addComponent(frameBytes);
-            compositeByteBuf.writerIndex(compositeByteBuf.writerIndex() + frameBytes.readableBytes());
+            compositeByteBuf.addComponent(true, frameBytes);
         }
 
         EmbeddedChannel ch = new EmbeddedChannel(new HttpObjectAggregator(Integer.MAX_VALUE),
