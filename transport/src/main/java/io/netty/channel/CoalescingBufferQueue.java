@@ -152,16 +152,15 @@ public final class CoalescingBufferQueue {
         }
         if (current instanceof CompositeByteBuf) {
             CompositeByteBuf composite = (CompositeByteBuf) current;
-            composite.addComponent(next);
-            composite.writerIndex(composite.writerIndex() + next.readableBytes());
+            composite.addComponent(true, next);
             return composite;
         }
         // Create a composite buffer to accumulate this pair and potentially all the buffers
         // in the queue. Using +2 as we have already dequeued current and next.
         CompositeByteBuf composite = channel.alloc().compositeBuffer(bufAndListenerPairs.size() + 2);
-        composite.addComponent(current);
-        composite.addComponent(next);
-        return composite.writerIndex(current.readableBytes() + next.readableBytes());
+        composite.addComponent(true, current);
+        composite.addComponent(true, next);
+        return composite;
     }
 
     /**

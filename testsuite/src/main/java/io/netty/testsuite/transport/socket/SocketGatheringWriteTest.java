@@ -127,7 +127,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
                 buf.writerIndex(split);
                 ByteBuf buf2 = Unpooled.buffer(size).writeBytes(buf, split, oldIndex - split);
                 CompositeByteBuf comp = Unpooled.compositeBuffer();
-                comp.addComponent(buf).addComponent(buf2).writerIndex(length);
+                comp.addComponent(true, buf).addComponent(true, buf2);
                 cc.write(comp);
             } else {
                 cc.write(buf);

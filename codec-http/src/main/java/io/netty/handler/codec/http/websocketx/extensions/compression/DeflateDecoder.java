@@ -80,9 +80,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
                 partUncompressedContent.release();
                 continue;
             }
-            compositeUncompressedContent.addComponent(partUncompressedContent);
-            compositeUncompressedContent.writerIndex(compositeUncompressedContent.writerIndex() +
-                    partUncompressedContent.readableBytes());
+            compositeUncompressedContent.addComponent(true, partUncompressedContent);
         }
         // Correctly handle empty frames
         // See https://github.com/netty/netty/issues/4348

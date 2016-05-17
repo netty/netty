@@ -320,8 +320,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     private static void appendPartialContent(CompositeByteBuf content, ByteBuf partialContent) {
         if (partialContent.isReadable()) {
             partialContent.retain();
-            content.addComponent(partialContent);
-            content.writerIndex(content.writerIndex() + partialContent.readableBytes());
+            content.addComponent(true, partialContent);
         }
     }
 
