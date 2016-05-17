@@ -63,15 +63,13 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
     public void testSimpleSendCompositeDirectByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
         CompositeByteBuf buf = Unpooled.compositeBuffer();
-        buf.addComponent(Unpooled.directBuffer().writeBytes(BYTES, 0, 2));
-        buf.addComponent(Unpooled.directBuffer().writeBytes(BYTES, 2, 2));
-        buf.writerIndex(4);
+        buf.addComponent(true, Unpooled.directBuffer().writeBytes(BYTES, 0, 2));
+        buf.addComponent(true, Unpooled.directBuffer().writeBytes(BYTES, 2, 2));
         testSimpleSend0(sb, cb, buf, true, BYTES, 1);
 
         CompositeByteBuf buf2 = Unpooled.compositeBuffer();
-        buf2.addComponent(Unpooled.directBuffer().writeBytes(BYTES, 0, 2));
-        buf2.addComponent(Unpooled.directBuffer().writeBytes(BYTES, 2, 2));
-        buf2.writerIndex(4);
+        buf2.addComponent(true, Unpooled.directBuffer().writeBytes(BYTES, 0, 2));
+        buf2.addComponent(true, Unpooled.directBuffer().writeBytes(BYTES, 2, 2));
         testSimpleSend0(sb, cb, buf2, true, BYTES, 4);
     }
 
@@ -82,15 +80,13 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
     public void testSimpleSendCompositeHeapByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
         CompositeByteBuf buf = Unpooled.compositeBuffer();
-        buf.addComponent(Unpooled.buffer().writeBytes(BYTES, 0, 2));
-        buf.addComponent(Unpooled.buffer().writeBytes(BYTES, 2, 2));
-        buf.writerIndex(4);
+        buf.addComponent(true, Unpooled.buffer().writeBytes(BYTES, 0, 2));
+        buf.addComponent(true, Unpooled.buffer().writeBytes(BYTES, 2, 2));
         testSimpleSend0(sb, cb, buf, true, BYTES, 1);
 
         CompositeByteBuf buf2 = Unpooled.compositeBuffer();
-        buf2.addComponent(Unpooled.buffer().writeBytes(BYTES, 0, 2));
-        buf2.addComponent(Unpooled.buffer().writeBytes(BYTES, 2, 2));
-        buf2.writerIndex(4);
+        buf2.addComponent(true, Unpooled.buffer().writeBytes(BYTES, 0, 2));
+        buf2.addComponent(true, Unpooled.buffer().writeBytes(BYTES, 2, 2));
         testSimpleSend0(sb, cb, buf2, true, BYTES, 4);
     }
 
@@ -101,15 +97,13 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
     public void testSimpleSendCompositeMixedByteBuf(Bootstrap sb, Bootstrap cb) throws Throwable {
         CompositeByteBuf buf = Unpooled.compositeBuffer();
-        buf.addComponent(Unpooled.directBuffer().writeBytes(BYTES, 0, 2));
-        buf.addComponent(Unpooled.buffer().writeBytes(BYTES, 2, 2));
-        buf.writerIndex(4);
+        buf.addComponent(true, Unpooled.directBuffer().writeBytes(BYTES, 0, 2));
+        buf.addComponent(true, Unpooled.buffer().writeBytes(BYTES, 2, 2));
         testSimpleSend0(sb, cb, buf, true, BYTES, 1);
 
         CompositeByteBuf buf2 = Unpooled.compositeBuffer();
-        buf2.addComponent(Unpooled.directBuffer().writeBytes(BYTES, 0, 2));
-        buf2.addComponent(Unpooled.buffer().writeBytes(BYTES, 2, 2));
-        buf2.writerIndex(4);
+        buf2.addComponent(true, Unpooled.directBuffer().writeBytes(BYTES, 0, 2));
+        buf2.addComponent(true, Unpooled.buffer().writeBytes(BYTES, 2, 2));
         testSimpleSend0(sb, cb, buf2, true, BYTES, 4);
     }
 

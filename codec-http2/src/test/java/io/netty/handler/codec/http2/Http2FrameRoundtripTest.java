@@ -446,8 +446,7 @@ public class Http2FrameRoundtripTest {
         CompositeByteBuf composite = releaseLater(Unpooled.compositeBuffer());
         for (ByteBuf buf : captor.getAllValues()) {
             buf = releaseLater(buf.retain());
-            composite.addComponent(buf);
-            composite.writerIndex(composite.writerIndex() + buf.readableBytes());
+            composite.addComponent(true, buf);
         }
         return composite;
     }

@@ -287,7 +287,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             int length = Math.min(random.nextInt(1024 * 64), data.length - clientSendCounterVal);
             ByteBuf buf = Unpooled.wrappedBuffer(data, clientSendCounterVal, length);
             if (useCompositeByteBuf) {
-                buf = Unpooled.compositeBuffer().addComponent(buf).writerIndex(buf.writerIndex());
+                buf = Unpooled.compositeBuffer().addComponent(true, buf);
             }
 
             ChannelFuture future = clientChannel.writeAndFlush(buf);
@@ -520,7 +520,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
             ByteBuf buf = Unpooled.wrappedBuffer(actual);
             if (useCompositeByteBuf) {
-                buf = Unpooled.compositeBuffer().addComponent(buf).writerIndex(buf.writerIndex());
+                buf = Unpooled.compositeBuffer().addComponent(true, buf);
             }
             ctx.write(buf);
 

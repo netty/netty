@@ -846,11 +846,11 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     public void testAddEmptyBufferInMiddle() {
         CompositeByteBuf cbuf = compositeBuffer();
         ByteBuf buf1 = buffer().writeByte((byte) 1);
-        cbuf.addComponent(buf1).writerIndex(cbuf.writerIndex() + buf1.readableBytes());
+        cbuf.addComponent(true, buf1);
         ByteBuf buf2 = EMPTY_BUFFER;
-        cbuf.addComponent(buf2).writerIndex(cbuf.writerIndex() + buf2.readableBytes());
+        cbuf.addComponent(true, buf2);
         ByteBuf buf3 = buffer().writeByte((byte) 2);
-        cbuf.addComponent(buf3).writerIndex(cbuf.writerIndex() + buf3.readableBytes());
+        cbuf.addComponent(true, buf3);
 
         assertEquals(2, cbuf.readableBytes());
         assertEquals((byte) 1, cbuf.readByte());

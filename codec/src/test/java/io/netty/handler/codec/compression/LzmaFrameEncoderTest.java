@@ -68,8 +68,7 @@ public class LzmaFrameEncoderTest extends AbstractEncoderTest {
         int i = 0;
         while ((msg = channel.readOutbound()) != null) {
             ByteBuf decompressedMsg = decompress(msg, originalLengths.get(i++));
-            decompressed.addComponent(decompressedMsg);
-            decompressed.writerIndex(decompressed.writerIndex() + decompressedMsg.readableBytes());
+            decompressed.addComponent(true, decompressedMsg);
             msg.release();
         }
         assertEquals(originalLengths.size(), i);

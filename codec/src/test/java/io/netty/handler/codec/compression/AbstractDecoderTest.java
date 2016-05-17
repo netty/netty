@@ -126,8 +126,7 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
         CompositeByteBuf decompressed = Unpooled.compositeBuffer();
         ByteBuf msg;
         while ((msg = channel.readInbound()) != null) {
-            decompressed.addComponent(msg);
-            decompressed.writerIndex(decompressed.writerIndex() + msg.readableBytes());
+            decompressed.addComponent(true, msg);
         }
         return decompressed;
     }
