@@ -54,7 +54,8 @@ public final class PendingWrite {
     public boolean recycle() {
         msg = null;
         promise = null;
-        return RECYCLER.recycle(this, handle);
+        handle.recycle(this);
+        return true;
     }
 
     /**

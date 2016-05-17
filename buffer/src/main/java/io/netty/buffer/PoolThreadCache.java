@@ -457,18 +457,18 @@ final class PoolThreadCache {
         }
 
         static final class Entry<T> {
-            final Handle recyclerHandle;
+            final Handle<Entry<?>> recyclerHandle;
             PoolChunk<T> chunk;
             long handle = -1;
 
-            Entry(Handle recyclerHandle) {
+            Entry(Handle<Entry<?>> recyclerHandle) {
                 this.recyclerHandle = recyclerHandle;
             }
 
             void recycle() {
                 chunk = null;
                 handle = -1;
-                RECYCLER.recycle(this, recyclerHandle);
+                recyclerHandle.recycle(this);
             }
         }
 
@@ -482,8 +482,9 @@ final class PoolThreadCache {
 
         @SuppressWarnings("rawtypes")
         private static final Recycler<Entry> RECYCLER = new Recycler<Entry>() {
+            @SuppressWarnings("unchecked")
             @Override
-            protected Entry newObject(Handle handle) {
+            protected Entry newObject(Handle<Entry> handle) {
                 return new Entry(handle);
             }
         };

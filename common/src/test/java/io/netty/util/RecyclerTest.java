@@ -69,7 +69,7 @@ public class RecyclerTest {
         }
 
         public void recycle() {
-            RECYCLER.recycle(this, handle);
+            handle.recycle(this);
         }
     }
 
@@ -77,14 +77,14 @@ public class RecyclerTest {
 
         private static final Recycler<DisabledRecyclableObject> RECYCLER = new Recycler<DisabledRecyclableObject>(-1) {
             @Override
-            protected DisabledRecyclableObject newObject(Handle handle) {
+            protected DisabledRecyclableObject newObject(Handle<DisabledRecyclableObject> handle) {
                 return new DisabledRecyclableObject(handle);
             }
         };
 
-        private final Recycler.Handle handle;
+        private final Recycler.Handle<DisabledRecyclableObject> handle;
 
-        private DisabledRecyclableObject(Recycler.Handle handle) {
+        private DisabledRecyclableObject(Recycler.Handle<DisabledRecyclableObject> handle) {
             this.handle = handle;
         }
 
@@ -93,7 +93,7 @@ public class RecyclerTest {
         }
 
         public void recycle() {
-            RECYCLER.recycle(this, handle);
+            handle.recycle(this);
         }
     }
 
@@ -125,7 +125,7 @@ public class RecyclerTest {
         }
 
         for (int i = 0; i < objects.length; i++) {
-            recycler.recycle(objects[i], objects[i].handle);
+            objects[i].recycle();
             objects[i] = null;
         }
 
@@ -136,7 +136,7 @@ public class RecyclerTest {
     public void testRecycleAtDifferentThread() throws Exception {
         final Recycler<HandledObject> recycler = new Recycler<HandledObject>(256) {
             @Override
-            protected HandledObject newObject(Recycler.Handle handle) {
+            protected HandledObject newObject(Recycler.Handle<HandledObject> handle) {
                 return new HandledObject(handle);
             }
         };
@@ -145,7 +145,7 @@ public class RecyclerTest {
         final Thread thread = new Thread() {
             @Override
             public void run() {
-                recycler.recycle(o, o.handle);
+                o.recycle();
             }
         };
         thread.start();
@@ -174,14 +174,14 @@ public class RecyclerTest {
         }
 
         for (int i = 0; i < maxCapacity; i ++) {
-            recycler.recycle(array[i], array[i].handle);
+            array[i].recycle();
         }
 
         final Thread thread = new Thread() {
             @Override
             public void run() {
                 for (int i = maxCapacity; i < array.length; i ++) {
-                    recycler.recycle(array[i], array[i].handle);
+                    array[i].recycle();
                 }
             }
         };
@@ -204,6 +204,10 @@ public class RecyclerTest {
 
         HandledObject(Recycler.Handle<HandledObject> handle) {
             this.handle = handle;
+        }
+
+        void recycle() {
+            handle.recycle(this);
         }
     }
 }
