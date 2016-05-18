@@ -16,10 +16,9 @@
 
 package io.netty.util;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.junit.Test;
+
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
@@ -186,15 +185,12 @@ public class DomainNameMappingTest {
     }
 
     @Test
-    public void testEntries() {
+    public void testAsMap() {
         DomainNameMapping<String> mapping = new DomainNameMapping<String>("NotFound")
             .add("netty.io", "Netty")
             .add("downloads.netty.io", "Netty-Downloads");
 
-        Map<String, String> entries = new HashMap<String, String>();
-        for (Map.Entry<String, String> entry: mapping.entries()) {
-            entries.put(entry.getKey(), entry.getValue());
-        }
+        Map<String, String> entries = mapping.asMap();
 
         assertEquals(2, entries.size());
         assertEquals("Netty", entries.get("netty.io"));
@@ -202,16 +198,13 @@ public class DomainNameMappingTest {
     }
 
     @Test
-    public void testEntriesWithImmutableDomainNameMapping() {
+    public void testAsMapWithImmutableDomainNameMapping() {
         DomainNameMapping<String> mapping = new DomainMappingBuilder<String>("NotFound")
             .add("netty.io", "Netty")
             .add("downloads.netty.io", "Netty-Downloads")
             .build();
 
-        Map<String, String> entries = new HashMap<String, String>();
-        for (Map.Entry<String, String> entry: mapping.entries()) {
-            entries.put(entry.getKey(), entry.getValue());
-        }
+        Map<String, String> entries = mapping.asMap();
 
         assertEquals(2, entries.size());
         assertEquals("Netty", entries.get("netty.io"));
