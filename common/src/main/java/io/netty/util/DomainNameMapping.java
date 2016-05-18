@@ -135,10 +135,10 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
     }
 
     /**
-     * Returns a read-only {@link Set} of the domain mapping patterns and their associated value objects.
+     * Returns a read-only {@link Map} of the domain mapping patterns and their associated value objects.
      */
-    public Set<Map.Entry<String, V>> entries() {
-        return Collections.unmodifiableSet(map.entrySet());
+    public Map<String, V> asMap() {
+        return Collections.unmodifiableMap(map);
     }
 
     @Override
