@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.commonSuffixOfLength;
@@ -39,13 +38,14 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
 
     final V defaultValue;
     private final Map<String, V> map;
+    private final Map<String, V> unmodifiableMap;
 
     /**
      * Creates a default, order-sensitive mapping. If your hostnames are in conflict, the mapping
      * will choose the one you add first.
      *
      * @param defaultValue the default value for {@link #map(String)} to return when nothing matches the input
-     * @deprecated use {@link DomainMappingBuilder} to create and fill the mapping instead
+     * @deprecated use {@link DomainNameMappingBuilder} to create and fill the mapping instead
      */
     @Deprecated
     public DomainNameMapping(V defaultValue) {
@@ -58,7 +58,7 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
      *
      * @param initialCapacity initial capacity for the internal map
      * @param defaultValue    the default value for {@link #map(String)} to return when nothing matches the input
-     * @deprecated use {@link DomainMappingBuilder} to create and fill the mapping instead
+     * @deprecated use {@link DomainNameMappingBuilder} to create and fill the mapping instead
      */
     @Deprecated
     public DomainNameMapping(int initialCapacity, V defaultValue) {
@@ -68,6 +68,7 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
     DomainNameMapping(Map<String, V> map, V defaultValue) {
         this.defaultValue = checkNotNull(defaultValue, "defaultValue");
         this.map = map;
+        unmodifiableMap = Collections.unmodifiableMap(map);
     }
 
     /**
@@ -80,7 +81,7 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
      * @param hostname the host name (optionally wildcard)
      * @param output   the output value that will be returned by {@link #map(String)} when the specified host name
      *                 matches the specified input host name
-     * @deprecated use {@link DomainMappingBuilder} to create and fill the mapping instead
+     * @deprecated use {@link DomainNameMappingBuilder} to create and fill the mapping instead
      */
     @Deprecated
     public DomainNameMapping<V> add(String hostname, V output) {
@@ -135,10 +136,10 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
     }
 
     /**
-     * Returns a read-only {@link Set} of the domain mapping patterns and their associated value objects.
+     * Returns a read-only {@link Map} of the domain mapping patterns and their associated value objects.
      */
     public Map<String, V> asMap() {
-        return Collections.unmodifiableMap(map);
+        return unmodifiableMap;
     }
 
     @Override
