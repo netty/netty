@@ -18,7 +18,6 @@ package io.netty.handler.ssl;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -31,17 +30,16 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.DecoderException;
-import io.netty.util.DomainMappingBuilder;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
+import javax.xml.bind.DatatypeConverter;
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import javax.xml.bind.DatatypeConverter;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -80,15 +78,14 @@ public class SniHandlerTest {
         SslContext leanContext = makeSslContext();
         SslContext leanContext2 = makeSslContext();
 
-        DomainNameMapping<SslContext> mapping = new DomainNameMapping<SslContext>(nettyContext);
-        mapping.add("*.netty.io", nettyContext);
-
-        // input with custom cases
-        mapping.add("*.LEANCLOUD.CN", leanContext);
-
-        // a hostname conflict with previous one, since we are using order-sensitive config, the engine won't
-        // be used with the handler.
-        mapping.add("chat4.leancloud.cn", leanContext2);
+        DomainNameMapping<SslContext> mapping = new DomainNameMappingBuilder<SslContext>(nettyContext)
+                .add("*.netty.io", nettyContext)
+                // input with custom cases
+                .add("*.LEANCLOUD.CN", leanContext)
+                // a hostname conflict with previous one, since we are using order-sensitive config, the engine won't
+                // be used with the handler.
+                .add("chat4.leancloud.cn", leanContext2)
+                .build();
 
         SniHandler handler = new SniHandler(mapping);
         EmbeddedChannel ch = new EmbeddedChannel(handler);
@@ -132,15 +129,14 @@ public class SniHandlerTest {
         SslContext leanContext = makeSslContext();
         SslContext leanContext2 = makeSslContext();
 
-        DomainNameMapping<SslContext> mapping = new DomainNameMapping<SslContext>(nettyContext);
-        mapping.add("*.netty.io", nettyContext);
-
-        // input with custom cases
-        mapping.add("*.LEANCLOUD.CN", leanContext);
-
-        // a hostname conflict with previous one, since we are using order-sensitive config, the engine won't
-        // be used with the handler.
-        mapping.add("chat4.leancloud.cn", leanContext2);
+        DomainNameMapping<SslContext> mapping = new DomainNameMappingBuilder<SslContext>(nettyContext)
+                .add("*.netty.io", nettyContext)
+                // input with custom cases
+                .add("*.LEANCLOUD.CN", leanContext)
+                // a hostname conflict with previous one, since we are using order-sensitive config, the engine won't
+                // be used with the handler.
+                .add("chat4.leancloud.cn", leanContext2)
+                .build();
 
         SniHandler handler = new SniHandler(mapping);
         EmbeddedChannel ch = new EmbeddedChannel(handler);
@@ -168,7 +164,7 @@ public class SniHandlerTest {
         final CountDownLatch serverApnDoneLatch = new CountDownLatch(1);
         final CountDownLatch clientApnDoneLatch = new CountDownLatch(1);
 
-        final DomainNameMapping<SslContext> mapping = new DomainMappingBuilder(nettyContext)
+        final DomainNameMapping<SslContext> mapping = new DomainNameMappingBuilder<SslContext>(nettyContext)
                                                          .add("*.netty.io", nettyContext)
                                                          .add("sni.fake.site", sniContext).build();
         final SniHandler handler = new SniHandler(mapping);
