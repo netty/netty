@@ -68,7 +68,8 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
     DomainNameMapping(Map<String, V> map, V defaultValue) {
         this.defaultValue = checkNotNull(defaultValue, "defaultValue");
         this.map = map;
-        unmodifiableMap = Collections.unmodifiableMap(map);
+        unmodifiableMap = map != null ? Collections.unmodifiableMap(map)
+                                      : null;
     }
 
     /**
