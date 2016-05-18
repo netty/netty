@@ -17,7 +17,6 @@
 package io.netty.util;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -53,7 +52,7 @@ public final class DomainMappingBuilder<V> {
      */
     public DomainMappingBuilder(int initialCapacity, V defaultValue) {
         this.defaultValue = checkNotNull(defaultValue, "defaultValue");
-        this.map = new LinkedHashMap<String, V>(initialCapacity);
+        map = new LinkedHashMap<String, V>(initialCapacity);
     }
 
     /**
@@ -80,7 +79,7 @@ public final class DomainMappingBuilder<V> {
      * @return new {@link DomainNameMapping} instance
      */
     public DomainNameMapping<V> build() {
-        return new ImmutableDomainNameMapping<V>(this.defaultValue, this.map);
+        return new ImmutableDomainNameMapping<V>(defaultValue, map);
     }
 
     /**
@@ -98,6 +97,7 @@ public final class DomainMappingBuilder<V> {
 
         private final String[] domainNamePatterns;
         private final V[] values;
+        private final Map<String, V> map;
 
         @SuppressWarnings("unchecked")
         private ImmutableDomainNameMapping(V defaultValue, Map<String, V> map) {
@@ -108,12 +108,18 @@ public final class DomainMappingBuilder<V> {
             domainNamePatterns = new String[numberOfMappings];
             values = (V[]) new Object[numberOfMappings];
 
+            final Map<String, V> mapCopy = new LinkedHashMap<String, V>(map.size());
             int index = 0;
             for (Map.Entry<String, V> mapping : mappings) {
-                domainNamePatterns[index] = normalizeHostname(mapping.getKey());
-                values[index] = mapping.getValue();
+                final String hostname = normalizeHostname(mapping.getKey());
+                final V value = mapping.getValue();
+                domainNamePatterns[index] = hostname;
+                values[index] = value;
+                mapCopy.put(hostname, value);
                 ++index;
             }
+
+            this.map = Collections.unmodifiableMap(mapCopy);
         }
 
         @Override
@@ -140,13 +146,8 @@ public final class DomainMappingBuilder<V> {
         }
 
         @Override
-        public Set<Map.Entry<String, V>> entries() {
-            int length = domainNamePatterns.length;
-            Map<String, V> map = new HashMap<String, V>(length);
-            for (int index = 0; index < length; ++index) {
-                map.put(domainNamePatterns[index], values[index]);
-            }
-            return Collections.unmodifiableSet(map.entrySet());
+        public Map<String, V> asMap() {
+            return map;
         }
 
         @Override
