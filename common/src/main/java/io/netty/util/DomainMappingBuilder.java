@@ -16,22 +16,16 @@
 
 package io.netty.util;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 /**
  * Builder for immutable {@link DomainNameMapping} instances.
  *
  * @param <V> concrete type of value objects
+ * @deprecated Use {@link DomainNameMappingBuilder} instead.
  */
+@Deprecated
 public final class DomainMappingBuilder<V> {
 
-    private final V defaultValue;
-    private final Map<String, V> map;
+    private final DomainNameMappingBuilder<V> builder;
 
     /**
      * Constructor with default initial capacity of the map holding the mappings
@@ -40,7 +34,7 @@ public final class DomainMappingBuilder<V> {
      *                     when nothing matches the input
      */
     public DomainMappingBuilder(V defaultValue) {
-        this(4, defaultValue);
+        builder = new DomainNameMappingBuilder<V>(defaultValue);
     }
 
     /**
@@ -51,8 +45,7 @@ public final class DomainMappingBuilder<V> {
      *                        when nothing matches the input
      */
     public DomainMappingBuilder(int initialCapacity, V defaultValue) {
-        this.defaultValue = checkNotNull(defaultValue, "defaultValue");
-        map = new LinkedHashMap<String, V>(initialCapacity);
+        builder = new DomainNameMappingBuilder<V>(initialCapacity, defaultValue);
     }
 
     /**
@@ -68,7 +61,7 @@ public final class DomainMappingBuilder<V> {
      *                 when the specified host name matches the specified input host name
      */
     public DomainMappingBuilder<V> add(String hostname, V output) {
-        map.put(checkNotNull(hostname, "hostname"), checkNotNull(output, "output"));
+        builder.add(hostname, output);
         return this;
     }
 
@@ -79,126 +72,6 @@ public final class DomainMappingBuilder<V> {
      * @return new {@link DomainNameMapping} instance
      */
     public DomainNameMapping<V> build() {
-        return new ImmutableDomainNameMapping<V>(defaultValue, map);
-    }
-
-    /**
-     * Immutable mapping from domain name pattern to its associated value object.
-     * Mapping is represented by two arrays: keys and values. Key domainNamePatterns[i] is associated with values[i].
-     *
-     * @param <V> concrete type of value objects
-     */
-    private static final class ImmutableDomainNameMapping<V> extends DomainNameMapping<V> {
-        private static final String REPR_HEADER = "ImmutableDomainNameMapping(default: ";
-        private static final String REPR_MAP_OPENING = ", map: {";
-        private static final String REPR_MAP_CLOSING = "})";
-        private static final int REPR_CONST_PART_LENGTH =
-            REPR_HEADER.length() + REPR_MAP_OPENING.length() + REPR_MAP_CLOSING.length();
-
-        private final String[] domainNamePatterns;
-        private final V[] values;
-        private final Map<String, V> map;
-
-        @SuppressWarnings("unchecked")
-        private ImmutableDomainNameMapping(V defaultValue, Map<String, V> map) {
-            super(null, defaultValue);
-
-            Set<Map.Entry<String, V>> mappings = map.entrySet();
-            int numberOfMappings = mappings.size();
-            domainNamePatterns = new String[numberOfMappings];
-            values = (V[]) new Object[numberOfMappings];
-
-            final Map<String, V> mapCopy = new LinkedHashMap<String, V>(map.size());
-            int index = 0;
-            for (Map.Entry<String, V> mapping : mappings) {
-                final String hostname = normalizeHostname(mapping.getKey());
-                final V value = mapping.getValue();
-                domainNamePatterns[index] = hostname;
-                values[index] = value;
-                mapCopy.put(hostname, value);
-                ++index;
-            }
-
-            this.map = Collections.unmodifiableMap(mapCopy);
-        }
-
-        @Override
-        @Deprecated
-        public DomainNameMapping<V> add(String hostname, V output) {
-            throw new UnsupportedOperationException(
-                "Immutable DomainNameMapping does not support modification after initial creation");
-        }
-
-        @Override
-        public V map(String hostname) {
-            if (hostname != null) {
-                hostname = normalizeHostname(hostname);
-
-                int length = domainNamePatterns.length;
-                for (int index = 0; index < length; ++index) {
-                    if (matches(domainNamePatterns[index], hostname)) {
-                        return values[index];
-                    }
-                }
-            }
-
-            return defaultValue;
-        }
-
-        @Override
-        public Map<String, V> asMap() {
-            return map;
-        }
-
-        @Override
-        public String toString() {
-            String defaultValueStr = defaultValue.toString();
-
-            int numberOfMappings = domainNamePatterns.length;
-            if (numberOfMappings == 0) {
-                return REPR_HEADER + defaultValueStr + REPR_MAP_OPENING + REPR_MAP_CLOSING;
-            }
-
-            String pattern0 = domainNamePatterns[0];
-            String value0 = values[0].toString();
-            int oneMappingLength = pattern0.length() + value0.length() + 3; // 2 for separator ", " and 1 for '='
-            int estimatedBufferSize = estimateBufferSize(defaultValueStr.length(), numberOfMappings, oneMappingLength);
-
-            StringBuilder sb = new StringBuilder(estimatedBufferSize)
-                .append(REPR_HEADER).append(defaultValueStr).append(REPR_MAP_OPENING);
-
-            appendMapping(sb, pattern0, value0);
-            for (int index = 1; index < numberOfMappings; ++index) {
-                sb.append(", ");
-                appendMapping(sb, index);
-            }
-
-            return sb.append(REPR_MAP_CLOSING).toString();
-        }
-
-        /**
-         * Estimates the length of string representation of the given instance:
-         * est = lengthOfConstantComponents + defaultValueLength + (estimatedMappingLength * numOfMappings) * 1.10
-         *
-         * @param defaultValueLength     length of string representation of {@link #defaultValue}
-         * @param numberOfMappings       number of mappings the given instance holds,
-         *                               e.g. {@link #domainNamePatterns#length}
-         * @param estimatedMappingLength estimated size taken by one mapping
-         * @return estimated length of string returned by {@link #toString()}
-         */
-        private static int estimateBufferSize(int defaultValueLength,
-                                              int numberOfMappings,
-                                              int estimatedMappingLength) {
-            return REPR_CONST_PART_LENGTH + defaultValueLength
-                + (int) (estimatedMappingLength * numberOfMappings * 1.10);
-        }
-
-        private StringBuilder appendMapping(StringBuilder sb, int mappingIndex) {
-            return appendMapping(sb, domainNamePatterns[mappingIndex], values[mappingIndex].toString());
-        }
-
-        private static StringBuilder appendMapping(StringBuilder sb, String domainNamePattern, String value) {
-            return sb.append(domainNamePattern).append('=').append(value);
-        }
+        return builder.build();
     }
 }
