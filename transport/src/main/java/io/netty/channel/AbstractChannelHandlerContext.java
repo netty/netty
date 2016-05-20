@@ -1011,7 +1011,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
                 // Check for null as it may be set to null if the channel is closed already
                 if (buffer != null) {
-                    task.size = ((AbstractChannel) ctx.channel()).estimatorHandle().size(msg) + WRITE_TASK_OVERHEAD;
+                    task.size = ctx.pipeline.estimatorHandle().size(msg) + WRITE_TASK_OVERHEAD;
                     buffer.incrementPendingOutboundBytes(task.size);
                 } else {
                     task.size = 0;
