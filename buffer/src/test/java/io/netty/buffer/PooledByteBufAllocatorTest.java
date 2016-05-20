@@ -37,6 +37,42 @@ import static org.junit.Assert.assertTrue;
 public class PooledByteBufAllocatorTest {
 
     @Test
+    public void testArenaMetricsNoCache() {
+        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0), 100, 0, 100, 100);
+    }
+
+    @Test
+    public void testArenaMetricsCache() {
+        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 1000, 1000, 1000), 100, 1, 1, 0);
+    }
+
+    private static void testArenaMetrics0(
+            PooledByteBufAllocator allocator, int num, int expectedActive, int expectedAlloc, int expectedDealloc) {
+        for (int i = 0; i < num; i++) {
+            assertTrue(allocator.directBuffer().release());
+            assertTrue(allocator.heapBuffer().release());
+        }
+
+        assertArenaMetrics(allocator.directArenas(), expectedActive, expectedAlloc, expectedDealloc);
+        assertArenaMetrics(allocator.heapArenas(), expectedActive, expectedAlloc, expectedDealloc);
+    }
+
+    private static void assertArenaMetrics(
+            List<PoolArenaMetric> arenaMetrics, int expectedActive, int expectedAlloc, int expectedDealloc) {
+        int active = 0;
+        int alloc = 0;
+        int dealloc = 0;
+        for (PoolArenaMetric arena : arenaMetrics) {
+            active += arena.numActiveAllocations();
+            alloc += arena.numAllocations();
+            dealloc += arena.numDeallocations();
+        }
+        assertEquals(expectedActive, active);
+        assertEquals(expectedAlloc, alloc);
+        assertEquals(expectedDealloc, dealloc);
+    }
+
+    @Test
     public void testPoolChunkListMetric() {
         for (PoolArenaMetric arenaMetric: PooledByteBufAllocator.DEFAULT.heapArenas()) {
             assertPoolChunkListMetric(arenaMetric);
