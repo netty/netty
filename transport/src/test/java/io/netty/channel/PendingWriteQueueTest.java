@@ -197,9 +197,14 @@ public class PendingWriteQueueTest {
         assertNull(channel.readOutbound());
     }
 
+    private static EmbeddedChannel newChannel() {
+        // Add a handler so we can access a ChannelHandlerContext via the ChannelPipeline.
+        return new EmbeddedChannel(new ChannelHandlerAdapter() { });
+    }
+
     @Test
     public void testRemoveAndFailAllReentrantFailAll() {
-        EmbeddedChannel channel = new EmbeddedChannel();
+        EmbeddedChannel channel = newChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         ChannelPromise promise = channel.newPromise();
@@ -224,7 +229,7 @@ public class PendingWriteQueueTest {
     @Test
     public void testRemoveAndFailAllReentrantWrite() {
         final List<Integer> failOrder = Collections.synchronizedList(new ArrayList<Integer>());
-        EmbeddedChannel channel = new EmbeddedChannel();
+        EmbeddedChannel channel = newChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         ChannelPromise promise = channel.newPromise();
@@ -267,7 +272,7 @@ public class PendingWriteQueueTest {
 
     @Test
     public void testRemoveAndWriteAllReentrance() {
-        EmbeddedChannel channel = new EmbeddedChannel();
+        EmbeddedChannel channel = newChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         ChannelPromise promise = channel.newPromise();
@@ -296,7 +301,7 @@ public class PendingWriteQueueTest {
     // See https://github.com/netty/netty/issues/3967
     @Test
     public void testCloseChannelOnCreation() {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        EmbeddedChannel channel = newChannel();
         ChannelHandlerContext context = channel.pipeline().firstContext();
         channel.close().syncUninterruptibly();
 
