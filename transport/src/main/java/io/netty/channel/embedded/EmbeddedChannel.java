@@ -21,15 +21,14 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
@@ -154,7 +153,11 @@ public class EmbeddedChannel extends AbstractChannel {
 
         ChannelFuture future = loop.register(this);
         assert future.isDone();
-        p.addLast(new LastInboundHandler());
+    }
+
+    @Override
+    protected final DefaultChannelPipeline newChannelPipeline() {
+        return new EmbeddedChannelPipeline(this);
     }
 
     @Override
@@ -548,15 +551,19 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private final class LastInboundHandler extends ChannelInboundHandlerAdapter {
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            inboundMessages().add(msg);
+    private final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
+        public EmbeddedChannelPipeline(EmbeddedChannel channel) {
+            super(channel);
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        protected void onUnhandledInboundException(Throwable cause) {
             recordException(cause);
+        }
+
+        @Override
+        protected void onUnhandledInboundMessage(Object msg) {
+            inboundMessages().add(msg);
         }
     }
 }
