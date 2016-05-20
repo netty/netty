@@ -23,6 +23,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.RecyclableMpscLinkedQueueNode;
 import io.netty.util.internal.StringUtil;
@@ -117,7 +118,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelRegistered() {
-        final AbstractChannelHandlerContext next = findContextInbound();
+        invokeChannelRegistered(findContextInbound());
+        return this;
+    }
+
+    static void invokeChannelRegistered(final AbstractChannelHandlerContext next) {
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeChannelRegistered();
@@ -129,7 +134,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 }
             });
         }
-        return this;
     }
 
     private void invokeChannelRegistered() {
@@ -146,7 +150,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelUnregistered() {
-        final AbstractChannelHandlerContext next = findContextInbound();
+        invokeChannelUnregistered(findContextInbound());
+        return this;
+    }
+
+    static void invokeChannelUnregistered(final AbstractChannelHandlerContext next) {
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeChannelUnregistered();
@@ -158,7 +166,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 }
             });
         }
-        return this;
     }
 
     private void invokeChannelUnregistered() {
@@ -176,6 +183,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     @Override
     public ChannelHandlerContext fireChannelActive() {
         final AbstractChannelHandlerContext next = findContextInbound();
+        invokeChannelActive(next);
+        return this;
+    }
+
+    static void invokeChannelActive(final AbstractChannelHandlerContext next) {
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeChannelActive();
@@ -187,7 +199,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 }
             });
         }
-        return this;
     }
 
     private void invokeChannelActive() {
@@ -204,7 +215,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelInactive() {
-        final AbstractChannelHandlerContext next = findContextInbound();
+        invokeChannelInactive(findContextInbound());
+        return this;
+    }
+
+    static void invokeChannelInactive(final AbstractChannelHandlerContext next) {
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeChannelInactive();
@@ -216,7 +231,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 }
             });
         }
-        return this;
     }
 
     private void invokeChannelInactive() {
@@ -233,12 +247,12 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireExceptionCaught(final Throwable cause) {
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
+        invokeExceptionCaught(next, cause);
+        return this;
+    }
 
-        final AbstractChannelHandlerContext next = this.next;
-
+    static void invokeExceptionCaught(final AbstractChannelHandlerContext next, final Throwable cause) {
+        ObjectUtil.checkNotNull(cause, "cause");
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeExceptionCaught(cause);
@@ -257,7 +271,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 }
             }
         }
-        return this;
     }
 
     private void invokeExceptionCaught(final Throwable cause) {
@@ -278,11 +291,12 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireUserEventTriggered(final Object event) {
-        if (event == null) {
-            throw new NullPointerException("event");
-        }
+        invokeUserEventTriggered(findContextInbound(), event);
+        return this;
+    }
 
-        final AbstractChannelHandlerContext next = findContextInbound();
+    static void invokeUserEventTriggered(final AbstractChannelHandlerContext next, final Object event) {
+        ObjectUtil.checkNotNull(event, "event");
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeUserEventTriggered(event);
@@ -294,7 +308,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 }
             });
         }
-        return this;
     }
 
     private void invokeUserEventTriggered(Object event) {
@@ -311,12 +324,12 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelRead(final Object msg) {
-        if (msg == null) {
-            throw new NullPointerException("msg");
-        }
+        invokeChannelRead(findContextInbound(), msg);
+        return this;
+    }
 
-        final AbstractChannelHandlerContext next = findContextInbound();
-        final Object m = pipeline.touch(msg, next);
+    static void invokeChannelRead(final AbstractChannelHandlerContext next, Object msg) {
+        final Object m = next.pipeline.touch(ObjectUtil.checkNotNull(msg, "msg"), next);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeChannelRead(m);
@@ -328,7 +341,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 }
             });
         }
-        return this;
     }
 
     private void invokeChannelRead(Object msg) {
@@ -345,7 +357,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelReadComplete() {
-        final AbstractChannelHandlerContext next = findContextInbound();
+        invokeChannelReadComplete(findContextInbound());
+        return this;
+    }
+
+    static void invokeChannelReadComplete(final AbstractChannelHandlerContext next) {
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeChannelReadComplete();
@@ -361,7 +377,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             }
             executor.execute(task);
         }
-        return this;
     }
 
     private void invokeChannelReadComplete() {
@@ -378,7 +393,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelWritabilityChanged() {
-        final AbstractChannelHandlerContext next = findContextInbound();
+        invokeChannelWritabilityChanged(findContextInbound());
+        return this;
+    }
+
+    static void invokeChannelWritabilityChanged(final AbstractChannelHandlerContext next) {
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeChannelWritabilityChanged();
@@ -394,7 +413,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             }
             executor.execute(task);
         }
-        return this;
     }
 
     private void invokeChannelWritabilityChanged() {

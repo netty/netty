@@ -494,12 +494,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 neverRegistered = false;
                 registered = true;
 
-                if (firstRegistration) {
-                    // We are now registered to the EventLoop. It's time to call the callbacks for the ChannelHandlers,
-                    // that were added before the registration was done.
-                    pipeline.callHandlerAddedForAllHandlers();
-                }
-
                 safeSetSuccess(promise);
                 pipeline.fireChannelRegistered();
                 // Only fire a channelActive if the channel has never been registered. This prevents firing

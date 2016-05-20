@@ -84,10 +84,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      */
     private boolean registered;
 
-    // - protected as this should only be called from within the same package or if someone extends
-    //   DefaultChannelPipeline.
-    // - Tied to AbstractChannel as we need to ensure that callHandlerAddedForAllHandlers() is correctly called.
-    protected DefaultChannelPipeline(AbstractChannel channel) {
+    protected DefaultChannelPipeline(Channel channel) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
         succeededFuture = new SucceededChannelFuture(channel, null);
         voidPromise =  new VoidChannelPromise(channel, true);
@@ -810,18 +807,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelRegistered() {
-        head.fireChannelRegistered();
+        AbstractChannelHandlerContext.invokeChannelRegistered(head);
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelUnregistered() {
-        head.fireChannelUnregistered();
-
-        // Remove all handlers sequentially if channel is closed and unregistered.
-        if (!channel.isOpen()) {
-            destroy();
-        }
+        AbstractChannelHandlerContext.invokeChannelUnregistered(head);
         return this;
     }
 
@@ -897,51 +889,43 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelActive() {
-        head.fireChannelActive();
-
-        if (channel.config().isAutoRead()) {
-            channel.read();
-        }
-
+        AbstractChannelHandlerContext.invokeChannelActive(head);
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelInactive() {
-        head.fireChannelInactive();
+        AbstractChannelHandlerContext.invokeChannelInactive(head);
         return this;
     }
 
     @Override
     public final ChannelPipeline fireExceptionCaught(Throwable cause) {
-        head.fireExceptionCaught(cause);
+        AbstractChannelHandlerContext.invokeExceptionCaught(head, cause);
         return this;
     }
 
     @Override
     public final ChannelPipeline fireUserEventTriggered(Object event) {
-        head.fireUserEventTriggered(event);
+        AbstractChannelHandlerContext.invokeUserEventTriggered(head, event);
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelRead(Object msg) {
-        head.fireChannelRead(msg);
+        AbstractChannelHandlerContext.invokeChannelRead(head, msg);
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelReadComplete() {
-        head.fireChannelReadComplete();
-        if (channel.config().isAutoRead()) {
-            read();
-        }
+        AbstractChannelHandlerContext.invokeChannelReadComplete(head);
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelWritabilityChanged() {
-        head.fireChannelWritabilityChanged();
+        AbstractChannelHandlerContext.invokeChannelWritabilityChanged(head);
         return this;
     }
 
@@ -1107,13 +1091,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    /**
-     * Must be called before {@link #fireChannelRegistered()} is called the first time.
-     */
-    final void callHandlerAddedForAllHandlers() {
-        // This should only called from within the EventLoop.
-        assert channel.eventLoop().inEventLoop();
-
+    private void callHandlerAddedForAllHandlers() {
         final PendingHandlerCallback pendingHandlerCallbackHead;
         synchronized (this) {
             assert !registered;
@@ -1247,10 +1225,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception { }
     }
 
-    static final class HeadContext extends AbstractChannelHandlerContext
-            implements ChannelOutboundHandler {
+    final class HeadContext extends AbstractChannelHandlerContext
+            implements ChannelOutboundHandler, ChannelInboundHandler {
 
         private final Unsafe unsafe;
+        private boolean firstRegistration = true;
 
         HeadContext(DefaultChannelPipeline pipeline) {
             super(pipeline, null, HEAD_NAME, false, true);
@@ -1321,6 +1300,68 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             ctx.fireExceptionCaught(cause);
+        }
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+            if (firstRegistration) {
+                firstRegistration = false;
+                // We are now registered to the EventLoop. It's time to call the callbacks for the ChannelHandlers,
+                // that were added before the registration was done.
+                callHandlerAddedForAllHandlers();
+            }
+
+            ctx.fireChannelRegistered();
+        }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireChannelUnregistered();
+
+            // Remove all handlers sequentially if channel is closed and unregistered.
+            if (!channel.isOpen()) {
+                destroy();
+            }
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireChannelActive();
+
+            readIfIsAutoRead();
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireChannelInactive();
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            ctx.fireChannelRead(msg);
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireChannelReadComplete();
+
+            readIfIsAutoRead();
+        }
+
+        private void readIfIsAutoRead() {
+            if (channel.config().isAutoRead()) {
+                channel.read();
+            }
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            ctx.fireUserEventTriggered(evt);
+        }
+
+        @Override
+        public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireChannelWritabilityChanged();
         }
     }
 
