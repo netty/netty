@@ -280,18 +280,18 @@ public final class PendingWriteQueue {
     static final class PendingWrite {
         private static final Recycler<PendingWrite> RECYCLER = new Recycler<PendingWrite>() {
             @Override
-            protected PendingWrite newObject(Handle handle) {
+            protected PendingWrite newObject(Handle<PendingWrite> handle) {
                 return new PendingWrite(handle);
             }
         };
 
-        private final Recycler.Handle handle;
+        private final Recycler.Handle<PendingWrite> handle;
         private PendingWrite next;
         private long size;
         private ChannelPromise promise;
         private Object msg;
 
-        private PendingWrite(Recycler.Handle handle) {
+        private PendingWrite(Recycler.Handle<PendingWrite> handle) {
             this.handle = handle;
         }
 
@@ -308,7 +308,7 @@ public final class PendingWriteQueue {
             next = null;
             msg = null;
             promise = null;
-            RECYCLER.recycle(this, handle);
+            handle.recycle(this);
         }
     }
 }

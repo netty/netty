@@ -937,7 +937,7 @@ public final class ByteBufUtil {
         private static final Recycler<ThreadLocalUnsafeDirectByteBuf> RECYCLER =
                 new Recycler<ThreadLocalUnsafeDirectByteBuf>() {
                     @Override
-                    protected ThreadLocalUnsafeDirectByteBuf newObject(Handle handle) {
+                    protected ThreadLocalUnsafeDirectByteBuf newObject(Handle<ThreadLocalUnsafeDirectByteBuf> handle) {
                         return new ThreadLocalUnsafeDirectByteBuf(handle);
                     }
                 };
@@ -948,9 +948,9 @@ public final class ByteBufUtil {
             return buf;
         }
 
-        private final Handle handle;
+        private final Handle<ThreadLocalUnsafeDirectByteBuf> handle;
 
-        private ThreadLocalUnsafeDirectByteBuf(Handle handle) {
+        private ThreadLocalUnsafeDirectByteBuf(Handle<ThreadLocalUnsafeDirectByteBuf> handle) {
             super(UnpooledByteBufAllocator.DEFAULT, 256, Integer.MAX_VALUE);
             this.handle = handle;
         }
@@ -961,7 +961,7 @@ public final class ByteBufUtil {
                 super.deallocate();
             } else {
                 clear();
-                RECYCLER.recycle(this, handle);
+                handle.recycle(this);
             }
         }
     }
@@ -970,7 +970,7 @@ public final class ByteBufUtil {
 
         private static final Recycler<ThreadLocalDirectByteBuf> RECYCLER = new Recycler<ThreadLocalDirectByteBuf>() {
             @Override
-            protected ThreadLocalDirectByteBuf newObject(Handle handle) {
+            protected ThreadLocalDirectByteBuf newObject(Handle<ThreadLocalDirectByteBuf> handle) {
                 return new ThreadLocalDirectByteBuf(handle);
             }
         };
@@ -981,9 +981,9 @@ public final class ByteBufUtil {
             return buf;
         }
 
-        private final Handle handle;
+        private final Handle<ThreadLocalDirectByteBuf> handle;
 
-        private ThreadLocalDirectByteBuf(Handle handle) {
+        private ThreadLocalDirectByteBuf(Handle<ThreadLocalDirectByteBuf> handle) {
             super(UnpooledByteBufAllocator.DEFAULT, 256, Integer.MAX_VALUE);
             this.handle = handle;
         }
@@ -994,7 +994,7 @@ public final class ByteBufUtil {
                 super.deallocate();
             } else {
                 clear();
-                RECYCLER.recycle(this, handle);
+                handle.recycle(this);
             }
         }
     }

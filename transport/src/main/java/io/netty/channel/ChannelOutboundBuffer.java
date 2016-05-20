@@ -798,7 +798,7 @@ public final class ChannelOutboundBuffer {
             }
         };
 
-        private final Handle handle;
+        private final Handle<Entry> handle;
         Entry next;
         Object msg;
         ByteBuffer[] bufs;
@@ -810,7 +810,7 @@ public final class ChannelOutboundBuffer {
         int count = -1;
         boolean cancelled;
 
-        private Entry(Handle handle) {
+        private Entry(Handle<Entry> handle) {
             this.handle = handle;
         }
 
@@ -853,7 +853,7 @@ public final class ChannelOutboundBuffer {
             pendingSize = 0;
             count = -1;
             cancelled = false;
-            RECYCLER.recycle(this, handle);
+            handle.recycle(this);
         }
 
         Entry recycleAndGetNext() {
