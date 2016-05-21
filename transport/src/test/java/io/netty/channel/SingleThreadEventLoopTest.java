@@ -381,7 +381,7 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            ChannelFuture f = loopA.register(ch, promise);
+            ChannelFuture f = loopA.register(promise);
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));

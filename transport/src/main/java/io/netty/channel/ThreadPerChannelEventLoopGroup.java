@@ -77,7 +77,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
      *                          a new {@link Channel} and the maximum is exceed it will throw an
      *                          {@link ChannelException}. on the {@link #register(Channel)} and
-     *                          {@link #register(Channel, ChannelPromise)} method.
+     *                          {@link #register(ChannelPromise)} method.
      *                          Use {@code 0} to use no limit
      */
     protected ThreadPerChannelEventLoopGroup(int maxChannels) {
@@ -90,7 +90,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
      *                          a new {@link Channel} and the maximum is exceed it will throw an
      *                          {@link ChannelException} on the {@link #register(Channel)} and
-     *                          {@link #register(Channel, ChannelPromise)} method.
+     *                          {@link #register(ChannelPromise)} method.
      *                          Use {@code 0} to use no limit
      * @param threadFactory     the {@link ThreadFactory} used to create new {@link Thread} instances that handle the
      *                          registered {@link Channel}s
@@ -106,7 +106,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      * @param maxChannels       the maximum number of channels to handle with this instance. Once you try to register
      *                          a new {@link Channel} and the maximum is exceed it will throw an
      *                          {@link ChannelException} on the {@link #register(Channel)} and
-     *                          {@link #register(Channel, ChannelPromise)} method.
+     *                          {@link #register(ChannelPromise)} method.
      *                          Use {@code 0} to use no limit
      * @param executor          the {@link Executor} used to create new {@link Thread} instances that handle the
      *                          registered {@link Channel}s
@@ -274,12 +274,23 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         }
         try {
             EventLoop l = nextChild();
-            return l.register(channel, new DefaultChannelPromise(channel, l));
+            return l.register(new DefaultChannelPromise(channel, l));
         } catch (Throwable t) {
             return new FailedChannelFuture(channel, GlobalEventExecutor.INSTANCE, t);
         }
     }
 
+    @Override
+    public ChannelFuture register(ChannelPromise promise) {
+        try {
+            return nextChild().register(promise);
+        } catch (Throwable t) {
+            promise.setFailure(t);
+            return promise;
+        }
+    }
+
+    @Deprecated
     @Override
     public ChannelFuture register(Channel channel, ChannelPromise promise) {
         if (channel == null) {

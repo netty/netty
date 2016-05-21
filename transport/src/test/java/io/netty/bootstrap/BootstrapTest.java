@@ -307,6 +307,11 @@ public class BootstrapTest {
         }
 
         @Override
+        public ChannelFuture register(ChannelPromise promise) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public ChannelFuture register(Channel channel, final ChannelPromise promise) {
             throw new UnsupportedOperationException();
         }

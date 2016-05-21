@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.util.concurrent.SingleThreadEventExecutor;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -46,9 +47,17 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
     @Override
     public ChannelFuture register(Channel channel) {
-        return register(channel, new DefaultChannelPromise(channel, this));
+        return register(new DefaultChannelPromise(channel, this));
     }
 
+    @Override
+    public ChannelFuture register(final ChannelPromise promise) {
+        ObjectUtil.checkNotNull(promise, "promise");
+        promise.channel().unsafe().register(this, promise);
+        return promise;
+    }
+
+    @Deprecated
     @Override
     public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
         if (channel == null) {
