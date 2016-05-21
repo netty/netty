@@ -53,16 +53,16 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     };
 
-    final AbstractChannel channel;
-
     final AbstractChannelHandlerContext head;
     final AbstractChannelHandlerContext tail;
 
+    private final Channel channel;
     private final ChannelFuture succeededFuture;
     private final VoidChannelPromise voidPromise;
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
     private Map<EventExecutorGroup, EventExecutor> childExecutors;
+    private MessageSizeEstimator.Handle estimatorHandle;
 
     /**
      * This is the head of a linked list that is processed by {@link #callHandlerAddedForAllHandlers()} and so process
@@ -93,6 +93,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         head.next = tail;
         tail.prev = head;
+    }
+
+    MessageSizeEstimator.Handle estimatorHandle() {
+        if (estimatorHandle == null) {
+            estimatorHandle = channel.config().getMessageSizeEstimator().newHandle();
+        }
+        return estimatorHandle;
     }
 
     Object touch(Object msg, AbstractChannelHandlerContext next) {

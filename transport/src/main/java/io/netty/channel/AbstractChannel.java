@@ -50,8 +50,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         NOT_YET_CONNECTED_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
-    private MessageSizeEstimator.Handle estimatorHandle;
-
     private final Channel parent;
     private final ChannelId id;
     private final Unsafe unsafe;
@@ -399,13 +397,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public final ChannelPromise voidPromise() {
         return pipeline.voidPromise();
-    }
-
-    final MessageSizeEstimator.Handle estimatorHandle() {
-        if (estimatorHandle == null) {
-            estimatorHandle = config().getMessageSizeEstimator().newHandle();
-        }
-        return estimatorHandle;
     }
 
     /**
@@ -793,7 +784,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             int size;
             try {
                 msg = filterOutboundMessage(msg);
-                size = estimatorHandle().size(msg);
+                size = pipeline.estimatorHandle().size(msg);
                 if (size < 0) {
                     size = 0;
                 }
