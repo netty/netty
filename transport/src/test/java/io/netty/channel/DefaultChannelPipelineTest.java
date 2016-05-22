@@ -769,9 +769,10 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test(timeout = 3000)
-    public void testHandlerAddedThrowsAndRemovedThrowsException() {
+    public void testHandlerAddedThrowsAndRemovedThrowsException() throws InterruptedException {
         final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
         try {
+            final CountDownLatch latch = new CountDownLatch(1);
             final Promise<Void> promise = group1.next().newPromise();
             final Exception exceptionAdded = new RuntimeException();
             final Exception exceptionRemoved = new RuntimeException();
@@ -785,11 +786,13 @@ public class DefaultChannelPipelineTest {
 
                 @Override
                 public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+                    latch.countDown();
                     throw exceptionRemoved;
                 }
             });
             pipeline.addLast(group1, new CheckExceptionHandler(exceptionAdded, promise));
             group.register(pipeline.channel()).syncUninterruptibly();
+            latch.await();
             assertNull(pipeline.context(handlerName));
             promise.syncUninterruptibly();
         } finally {
