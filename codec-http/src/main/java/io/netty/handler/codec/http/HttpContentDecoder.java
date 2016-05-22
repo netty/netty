@@ -47,6 +47,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
     static final String IDENTITY = HttpHeaderValues.IDENTITY.toString();
 
+    protected ChannelHandlerContext ctx;
     private EmbeddedChannel decoder;
     private boolean continueResponse;
 
@@ -197,6 +198,12 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         cleanup();
         super.channelInactive(ctx);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+        super.handlerAdded(ctx);
     }
 
     private void cleanup() {
