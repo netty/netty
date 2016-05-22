@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
@@ -32,6 +33,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final int compressionLevel;
     private final int windowBits;
     private final int memLevel;
+    private ChannelHandlerContext ctx;
 
     /**
      * Creates a new handler with the default compression level (<tt>6</tt>),
@@ -93,6 +95,11 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+    }
+
+    @Override
     protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
         String contentEncoding = headers.headers().get(HttpHeaderNames.CONTENT_ENCODING);
         if (contentEncoding != null &&
@@ -119,7 +126,8 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
         return new Result(
                 targetContentEncoding,
-                new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(
+                new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                        ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
                         wrapper, compressionLevel, windowBits, memLevel)));
     }
 

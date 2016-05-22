@@ -142,14 +142,14 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                     boolean endStream) throws Http2Exception {
-        initDecompressor(streamId, headers, endStream);
+        initDecompressor(ctx, streamId, headers, endStream);
         listener.onHeadersRead(ctx, streamId, headers, padding, endStream);
     }
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
                     short weight, boolean exclusive, int padding, boolean endStream) throws Http2Exception {
-        initDecompressor(streamId, headers, endStream);
+        initDecompressor(ctx, streamId, headers, endStream);
         listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endStream);
     }
 
@@ -162,14 +162,17 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      *         (alternatively, you can throw a {@link Http2Exception} to block unknown encoding).
      * @throws Http2Exception If the specified encoding is not not supported and warrants an exception
      */
-    protected EmbeddedChannel newContentDecompressor(CharSequence contentEncoding) throws Http2Exception {
+    protected EmbeddedChannel newContentDecompressor(final ChannelHandlerContext ctx, CharSequence contentEncoding)
+            throws Http2Exception {
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) || X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
+            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                    ctx.channel().config(), ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         }
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) || X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
-            return new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(wrapper));
+            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                    ctx.channel().config(), ZlibCodecFactory.newZlibDecoder(wrapper));
         }
         // 'identity' or unsupported
         return null;
@@ -192,12 +195,14 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * Checks if a new decompressor object is needed for the stream identified by {@code streamId}.
      * This method will modify the {@code content-encoding} header contained in {@code headers}.
      *
+     * @param ctx The context
      * @param streamId The identifier for the headers inside {@code headers}
      * @param headers Object representing headers which have been read
      * @param endOfStream Indicates if the stream has ended
      * @throws Http2Exception If the {@code content-encoding} is not supported
      */
-    private void initDecompressor(int streamId, Http2Headers headers, boolean endOfStream) throws Http2Exception {
+    private void initDecompressor(ChannelHandlerContext ctx, int streamId, Http2Headers headers, boolean endOfStream)
+            throws Http2Exception {
         final Http2Stream stream = connection.stream(streamId);
         if (stream == null) {
             return;
@@ -210,7 +215,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             if (contentEncoding == null) {
                 contentEncoding = IDENTITY;
             }
-            final EmbeddedChannel channel = newContentDecompressor(contentEncoding);
+            final EmbeddedChannel channel = newContentDecompressor(ctx, contentEncoding);
             if (channel != null) {
                 decompressor = new Http2Decompressor(channel);
                 stream.setProperty(propertyKey, decompressor);
