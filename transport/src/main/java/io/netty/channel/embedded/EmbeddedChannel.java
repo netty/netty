@@ -88,10 +88,34 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(boolean hasDisconnect, final ChannelHandler... handlers) {
         super(null);
-        ObjectUtil.checkNotNull(handlers, "handlers");
-        metadata = hasDisconnect ? METADATA_DISCONNECT : METADATA_NO_DISCONNECT;
+        metadata = metadata(hasDisconnect);
         config = new DefaultChannelConfig(this);
+        setup(handlers);
+    }
 
+    /**
+     * Create a new instance with the channel ID set to the given ID and the pipeline
+     * initialized with the specified handlers.
+     *
+     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
+     *                      to {@link #close()}, {@link false} otherwise.
+     * @param config the {@link ChannelConfig} which will be returned by {@link #config()}.
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(boolean hasDisconnect, final ChannelConfig config,
+                           final ChannelHandler... handlers) {
+        super(null);
+        metadata = metadata(hasDisconnect);
+        this.config = ObjectUtil.checkNotNull(config, "config");
+        setup(handlers);
+    }
+
+    private static ChannelMetadata metadata(boolean hasDisconnect) {
+        return hasDisconnect ? METADATA_DISCONNECT : METADATA_NO_DISCONNECT;
+    }
+
+    private void setup(final ChannelHandler... handlers) {
+        ObjectUtil.checkNotNull(handlers, "handlers");
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
