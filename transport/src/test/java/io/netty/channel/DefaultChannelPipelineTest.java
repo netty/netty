@@ -879,6 +879,20 @@ public class DefaultChannelPipelineTest {
         }
     }
 
+    @Test
+    public void testNullName() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        pipeline.addLast(newHandler());
+        pipeline.addLast(null, newHandler());
+        pipeline.addFirst(newHandler());
+        pipeline.addFirst(null, newHandler());
+
+        pipeline.addLast("test", newHandler());
+        pipeline.addAfter("test", null, newHandler());
+
+        pipeline.addBefore("test", null, newHandler());
+    }
+
     private static final class TestTask implements Runnable {
 
         private final ChannelPipeline pipeline;
