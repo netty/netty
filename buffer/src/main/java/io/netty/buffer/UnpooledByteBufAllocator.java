@@ -63,7 +63,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
         ByteBuf buf = PlatformDependent.hasUnsafe() ?
-                new UnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity) :
+                UnsafeByteBufUtil.newUnsafeDirectByteBuf(this, initialCapacity, maxCapacity) :
                 new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
 
         return disableLeakDetector ? buf : toLeakAwareBuffer(buf);
