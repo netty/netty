@@ -33,6 +33,7 @@ import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
  */
 final class UnsafeByteBufUtil {
     private static final boolean UNALIGNED = PlatformDependent.isUnaligned();
+    private static final byte ZERO = 0;
 
     static byte getByte(long address) {
         return PlatformDependent.getByte(address);
@@ -451,6 +452,13 @@ final class UnsafeByteBufUtil {
         }
     }
 
+    static void setZero(byte[] array, int index, int length) {
+        if (length == 0) {
+            return;
+        }
+        PlatformDependent.setMemory(array, index, length, ZERO);
+    }
+
     static ByteBuf copy(AbstractByteBuf buf, long addr, int index, int length) {
         buf.checkIndex(index, length);
         ByteBuf copy = buf.alloc().directBuffer(length, buf.maxCapacity());
@@ -600,6 +608,15 @@ final class UnsafeByteBufUtil {
                 tmpBuf.release();
             }
         }
+    }
+
+    static void setZero(AbstractByteBuf buf, long addr, int index, int length) {
+        if (length == 0) {
+            return;
+        }
+
+        buf.checkIndex(index, length);
+        PlatformDependent.setMemory(addr, length, ZERO);
     }
 
     private UnsafeByteBufUtil() { }
