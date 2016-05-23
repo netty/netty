@@ -36,10 +36,10 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     private final ByteBufAllocator alloc;
 
     private long memoryAddress;
-    private ByteBuffer buffer;
     private ByteBuffer tmpNioBuf;
     private int capacity;
     private boolean doNotFree;
+    ByteBuffer buffer;
 
     /**
      * Creates a new direct buffer.
@@ -64,7 +64,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         }
 
         this.alloc = alloc;
-        setByteBuffer(allocateDirect(initialCapacity));
+        setByteBuffer(allocateDirect(initialCapacity), false);
     }
 
     /**
@@ -95,7 +95,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
         this.alloc = alloc;
         doNotFree = true;
-        setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN));
+        setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN), false);
         writerIndex(initialCapacity);
     }
 
@@ -113,16 +113,17 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         PlatformDependent.freeDirectBuffer(buffer);
     }
 
-    private void setByteBuffer(ByteBuffer buffer) {
-        ByteBuffer oldBuffer = this.buffer;
-        if (oldBuffer != null) {
-            if (doNotFree) {
-                doNotFree = false;
-            } else {
-                freeDirect(oldBuffer);
+    final void setByteBuffer(ByteBuffer buffer, boolean tryFree) {
+        if (tryFree) {
+            ByteBuffer oldBuffer = this.buffer;
+            if (oldBuffer != null) {
+                if (doNotFree) {
+                    doNotFree = false;
+                } else {
+                    freeDirect(oldBuffer);
+                }
             }
         }
-
         this.buffer = buffer;
         memoryAddress = PlatformDependent.directBufferAddress(buffer);
         tmpNioBuf = null;
@@ -157,7 +158,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
             newBuffer.position(0).limit(oldBuffer.capacity());
             newBuffer.put(oldBuffer);
             newBuffer.clear();
-            setByteBuffer(newBuffer);
+            setByteBuffer(newBuffer, true);
         } else if (newCapacity < oldCapacity) {
             ByteBuffer oldBuffer = buffer;
             ByteBuffer newBuffer = allocateDirect(newCapacity);
@@ -172,7 +173,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
             } else {
                 setIndex(newCapacity, newCapacity);
             }
-            setByteBuffer(newBuffer);
+            setByteBuffer(newBuffer, true);
         }
         return this;
     }
