@@ -496,6 +496,14 @@ public final class PlatformDependent {
         PlatformDependent0.copyMemory(null, srcAddr, dst, BYTE_ARRAY_BASE_OFFSET + dstIndex, length);
     }
 
+    public static void setMemory(byte[] dst, int dstIndex, long bytes, byte value) {
+        PlatformDependent0.setMemory(dst, BYTE_ARRAY_BASE_OFFSET + dstIndex, bytes, value);
+    }
+
+    public static void setMemory(long address, long bytes, byte value) {
+        PlatformDependent0.setMemory(address, bytes, value);
+    }
+
     /**
      * Compare two {@code byte} arrays for equality. For performance reasons no bounds checking on the
      * parameters is performed.
