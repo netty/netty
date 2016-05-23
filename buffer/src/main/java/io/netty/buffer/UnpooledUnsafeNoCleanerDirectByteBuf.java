@@ -34,4 +34,38 @@ final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByt
     protected void freeDirect(ByteBuffer buffer) {
         PlatformDependent.freeDirectNoCleaner(buffer);
     }
+
+    @Override
+    public ByteBuf capacity(int newCapacity) {
+        ensureAccessible();
+        if (newCapacity < 0 || newCapacity > maxCapacity()) {
+            throw new IllegalArgumentException("newCapacity: " + newCapacity);
+        }
+
+        int readerIndex = readerIndex();
+        int writerIndex = writerIndex();
+
+        int oldCapacity = capacity();
+        if (newCapacity > oldCapacity) {
+            ByteBuffer oldBuffer = buffer;
+            ByteBuffer newBuffer = PlatformDependent.reallocateDirectNoCleaner(oldBuffer, newCapacity);
+            setByteBuffer(newBuffer, false);
+        } else if (newCapacity < oldCapacity) {
+            ByteBuffer oldBuffer = buffer;
+            ByteBuffer newBuffer = allocateDirect(newCapacity);
+            if (readerIndex < newCapacity) {
+                if (writerIndex > newCapacity) {
+                    writerIndex(writerIndex = newCapacity);
+                }
+                oldBuffer.position(readerIndex).limit(writerIndex);
+                newBuffer.position(readerIndex).limit(writerIndex);
+                newBuffer.put(oldBuffer);
+                newBuffer.clear();
+            } else {
+                setIndex(newCapacity, newCapacity);
+            }
+            setByteBuffer(newBuffer, true);
+        }
+        return this;
+    }
 }

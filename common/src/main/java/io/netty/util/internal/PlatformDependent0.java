@@ -228,9 +228,15 @@ final class PlatformDependent0 {
         return DIRECT_BUFFER_CONSTRUCTOR != null;
     }
 
+    static ByteBuffer reallocateDirectNoCleaner(ByteBuffer buffer, int capacity) {
+        return newDirectBuffer(UNSAFE.reallocateMemory(directBufferAddress(buffer), capacity), capacity);
+    }
+
     static ByteBuffer allocateDirectNoCleaner(int capacity) {
-        assert DIRECT_BUFFER_CONSTRUCTOR != null;
-        long address = UNSAFE.allocateMemory(capacity);
+        return newDirectBuffer(UNSAFE.allocateMemory(capacity), capacity);
+    }
+
+    private static ByteBuffer newDirectBuffer(long address, int capacity) {
         try {
             return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(address, capacity);
         } catch (Throwable cause) {

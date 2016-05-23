@@ -508,25 +508,23 @@ public final class PlatformDependent {
     }
 
     public static ByteBuffer allocateDirectNoCleaner(int capacity) {
-        if (DIRECT_MEMORY_COUNTER != null) {
-            for (;;) {
-                long usedMemory = DIRECT_MEMORY_COUNTER.get();
-                long newUsedMemory = usedMemory + capacity;
-                if (newUsedMemory > maxDirectMemory()) {
-                    throw new OutOfDirectMemoryError("failed to allocate " + capacity
-                            + " byte(s) of direct memory (used: " + usedMemory + ", max: " + maxDirectMemory() + ')');
-                }
-                if (DIRECT_MEMORY_COUNTER.compareAndSet(usedMemory, newUsedMemory)) {
-                    break;
-                }
-            }
-        }
+        incrementMemoryCounter(capacity);
         try {
             return PlatformDependent0.allocateDirectNoCleaner(capacity);
         } catch (Throwable e) {
-            if (DIRECT_MEMORY_COUNTER != null) {
-                DIRECT_MEMORY_COUNTER.addAndGet(-capacity);
-            }
+            decrementMemoryCounter(capacity);
+            throwException(e);
+            return null;
+        }
+    }
+
+    public static ByteBuffer reallocateDirectNoCleaner(ByteBuffer buffer, int capacity) {
+        int len = capacity - buffer.capacity();
+        incrementMemoryCounter(len);
+        try {
+            return PlatformDependent0.reallocateDirectNoCleaner(buffer, capacity);
+        } catch (Throwable e) {
+            decrementMemoryCounter(len);
             throwException(e);
             return null;
         }
@@ -535,8 +533,26 @@ public final class PlatformDependent {
     public static void freeDirectNoCleaner(ByteBuffer buffer) {
         int capacity = buffer.capacity();
         PlatformDependent0.freeMemory(PlatformDependent0.directBufferAddress(buffer));
+        decrementMemoryCounter(capacity);
+    }
+
+    private static void incrementMemoryCounter(int capacity) {
+        for (;;) {
+            long usedMemory = DIRECT_MEMORY_COUNTER.get();
+            long newUsedMemory = usedMemory + capacity;
+            if (newUsedMemory > maxDirectMemory()) {
+                throw new OutOfDirectMemoryError("failed to allocate " + capacity
+                        + " byte(s) of direct memory (used: " + usedMemory + ", max: " + maxDirectMemory() + ')');
+            }
+            if (DIRECT_MEMORY_COUNTER.compareAndSet(usedMemory, newUsedMemory)) {
+                return;
+            }
+        }
+    }
+
+    private static void decrementMemoryCounter(int len) {
         if (DIRECT_MEMORY_COUNTER != null) {
-            DIRECT_MEMORY_COUNTER.addAndGet(-capacity);
+            DIRECT_MEMORY_COUNTER.addAndGet(-len);
         }
     }
 
