@@ -92,6 +92,9 @@ public final class PlatformDependent {
     private static final int BIT_MODE = bitMode0();
 
     private static final int ADDRESS_SIZE = addressSize0();
+    private static final boolean USE_DIRECT_BUFFER_NO_CLEANER = useDirectBufferNoCleaner0();
+    private static final AtomicLong DIRECT_MEMORY_COUNTER = newDirectMemoryCounter0();
+
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
     static {
@@ -502,6 +505,52 @@ public final class PlatformDependent {
 
     public static void setMemory(long address, long bytes, byte value) {
         PlatformDependent0.setMemory(address, bytes, value);
+    }
+
+    public static ByteBuffer allocateDirectNoCleaner(int capacity) {
+        if (DIRECT_MEMORY_COUNTER != null) {
+            for (;;) {
+                long usedMemory = DIRECT_MEMORY_COUNTER.get();
+                long newUsedMemory = usedMemory + capacity;
+                if (newUsedMemory > maxDirectMemory()) {
+                    throw new OutOfDirectMemoryError("failed to allocate " + capacity
+                            + " byte(s) of direct memory (used: " + usedMemory + ", max: " + maxDirectMemory() + ')');
+                }
+                if (DIRECT_MEMORY_COUNTER.compareAndSet(usedMemory, newUsedMemory)) {
+                    break;
+                }
+            }
+        }
+        try {
+            return PlatformDependent0.allocateDirectNoCleaner(capacity);
+        } catch (Throwable e) {
+            if (DIRECT_MEMORY_COUNTER != null) {
+                DIRECT_MEMORY_COUNTER.addAndGet(-capacity);
+            }
+            throwException(e);
+            return null;
+        }
+    }
+
+    public static void freeDirectNoCleaner(ByteBuffer buffer) {
+        int capacity = buffer.capacity();
+        PlatformDependent0.freeMemory(PlatformDependent0.directBufferAddress(buffer));
+        if (DIRECT_MEMORY_COUNTER != null) {
+            DIRECT_MEMORY_COUNTER.addAndGet(-capacity);
+        }
+    }
+
+    public static boolean useDirectBufferNoCleaner() {
+        return USE_DIRECT_BUFFER_NO_CLEANER;
+    }
+
+    private static boolean useDirectBufferNoCleaner0() {
+        return hasUnsafe() && !SystemPropertyUtil.getBoolean("io.netty.noDirectBufferNoCleaner", false)
+                && PlatformDependent0.hasDirectBufferNoCleanerConstructor();
+    }
+
+    private static AtomicLong newDirectMemoryCounter0() {
+        return maxDirectMemory() > 0 ? new AtomicLong() : null;
     }
 
     /**
