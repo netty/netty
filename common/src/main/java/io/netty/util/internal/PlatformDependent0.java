@@ -19,6 +19,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import sun.misc.Unsafe;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.Buffer;
@@ -40,6 +41,7 @@ final class PlatformDependent0 {
     static final Unsafe UNSAFE;
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
+    private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
 
     /**
      * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to allow safepoint polling
@@ -68,6 +70,7 @@ final class PlatformDependent0 {
             // Failed to access the address field.
             addressField = null;
         }
+
         logger.debug("java.nio.Buffer.address: {}", addressField != null? "available" : "unavailable");
 
         Unsafe unsafe;
@@ -110,7 +113,26 @@ final class PlatformDependent0 {
             BYTE_ARRAY_BASE_OFFSET = -1;
             ADDRESS_FIELD_OFFSET = -1;
             UNALIGNED = false;
+            DIRECT_BUFFER_CONSTRUCTOR = null;
         } else {
+            Constructor<?> directBufferConstructor;
+            long address = -1;
+            try {
+                directBufferConstructor = direct.getClass().getDeclaredConstructor(long.class, int.class);
+                directBufferConstructor.setAccessible(true);
+                address = UNSAFE.allocateMemory(1);
+
+                // Try to use the constructor now
+                directBufferConstructor.newInstance(address, 1);
+            } catch (Throwable t) {
+                directBufferConstructor = null;
+            } finally {
+                if (address != -1) {
+                    UNSAFE.freeMemory(address);
+                }
+            }
+            DIRECT_BUFFER_CONSTRUCTOR = directBufferConstructor;
+
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
             boolean unaligned;
             try {
@@ -129,6 +151,9 @@ final class PlatformDependent0 {
             logger.debug("java.nio.Bits.unaligned: {}", UNALIGNED);
             BYTE_ARRAY_BASE_OFFSET = arrayBaseOffset();
         }
+
+        logger.debug("java.nio.DirectByteBuffer.<init>(long, int): {}",
+                DIRECT_BUFFER_CONSTRUCTOR != null? "available" : "unavailable");
     }
 
     static boolean isUnaligned() {
@@ -142,6 +167,24 @@ final class PlatformDependent0 {
     static void throwException(Throwable cause) {
         // JVM has been observed to crash when passing a null argument. See https://github.com/netty/netty/issues/4131.
         UNSAFE.throwException(checkNotNull(cause, "cause"));
+    }
+
+    static boolean hasDirectBufferNoCleanerConstructor() {
+        return DIRECT_BUFFER_CONSTRUCTOR != null;
+    }
+
+    static ByteBuffer allocateDirectNoCleaner(int capacity) {
+        assert DIRECT_BUFFER_CONSTRUCTOR != null;
+        long address = UNSAFE.allocateMemory(capacity);
+        try {
+            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(address, capacity);
+        } catch (Throwable cause) {
+            // Not expected to ever throw!
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            throw new Error(cause);
+        }
     }
 
     static void freeDirectBuffer(ByteBuffer buffer) {
