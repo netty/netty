@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -65,7 +66,12 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             return Native.epollWait(epollFd.intValue(), events, 0);
         }
     };
-
+    private final Callable<Integer> pendingTasksCallable = new Callable<Integer>() {
+        @Override
+        public Integer call() throws Exception {
+            return EpollEventLoop.super.pendingTasks();
+        }
+    };
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
 
@@ -167,6 +173,17 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         return PlatformDependent.newMpscQueue();
     }
 
+    @Override
+    public int pendingTasks() {
+        // As we use a MpscQueue we need to ensure pendingTasks() is only executed from within the EventLoop as
+        // otherwise we may see unexpected behavior (as size() is only allowed to be called by a single consumer).
+        // See https://github.com/netty/netty/issues/5297
+        if (inEventLoop()) {
+            return super.pendingTasks();
+        } else {
+            return submit(pendingTasksCallable).syncUninterruptibly().getNow();
+        }
+    }
     /**
      * Returns the percentage of the desired amount of time spent for I/O in the event loop.
      */
