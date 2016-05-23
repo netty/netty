@@ -619,5 +619,13 @@ final class UnsafeByteBufUtil {
         PlatformDependent.setMemory(addr, length, ZERO);
     }
 
+    static UnpooledUnsafeDirectByteBuf newUnsafeDirectByteBuf(
+            ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        if (PlatformDependent.useDirectBufferNoCleaner()) {
+            return new UnpooledUnsafeNoCleanerDirectByteBuf(alloc, initialCapacity, maxCapacity);
+        }
+        return new UnpooledUnsafeDirectByteBuf(alloc, initialCapacity, maxCapacity);
+    }
+
     private UnsafeByteBufUtil() { }
 }

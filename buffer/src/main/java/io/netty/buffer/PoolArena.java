@@ -686,17 +686,27 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         @Override
         protected PoolChunk<ByteBuffer> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             return new PoolChunk<ByteBuffer>(
-                    this, ByteBuffer.allocateDirect(chunkSize), pageSize, maxOrder, pageShifts, chunkSize);
+                    this, allocateDirect(chunkSize),
+                    pageSize, maxOrder, pageShifts, chunkSize);
         }
 
         @Override
         protected PoolChunk<ByteBuffer> newUnpooledChunk(int capacity) {
-            return new PoolChunk<ByteBuffer>(this, ByteBuffer.allocateDirect(capacity), capacity);
+            return new PoolChunk<ByteBuffer>(this, allocateDirect(capacity), capacity);
+        }
+
+        private static ByteBuffer allocateDirect(int capacity) {
+            return PlatformDependent.useDirectBufferNoCleaner() ?
+                    PlatformDependent.allocateDirectNoCleaner(capacity) : ByteBuffer.allocateDirect(capacity);
         }
 
         @Override
         protected void destroyChunk(PoolChunk<ByteBuffer> chunk) {
-            PlatformDependent.freeDirectBuffer(chunk.memory);
+            if (PlatformDependent.useDirectBufferNoCleaner()) {
+                PlatformDependent.freeDirectNoCleaner(chunk.memory);
+            } else {
+                PlatformDependent.freeDirectBuffer(chunk.memory);
+            }
         }
 
         @Override
