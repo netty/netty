@@ -322,6 +322,14 @@ final class PlatformDependent0 {
         }
     }
 
+    static void setMemory(long address, long bytes, byte value) {
+        UNSAFE.setMemory(address, bytes, value);
+    }
+
+    static void setMemory(Object o, long offset, long bytes, byte value) {
+        UNSAFE.setMemory(o, offset, bytes, value);
+    }
+
     static boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
         if (length == 0) {
             return true;
