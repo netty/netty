@@ -40,6 +40,7 @@ import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -65,6 +66,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         @Override
         public int get() throws Exception {
             return selectNow();
+        }
+    };
+    private final Callable<Integer> pendingTasksCallable = new Callable<Integer>() {
+        @Override
+        public Integer call() throws Exception {
+            return NioEventLoop.super.pendingTasks();
         }
     };
 
@@ -181,6 +188,18 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     protected Queue<Runnable> newTaskQueue() {
         // This event loop never calls takeTask()
         return PlatformDependent.newMpscQueue();
+    }
+
+    @Override
+    public int pendingTasks() {
+        // As we use a MpscQueue we need to ensure pendingTasks() is only executed from within the EventLoop as
+        // otherwise we may see unexpected behavior (as size() is only allowed to be called by a single consumer).
+        // See https://github.com/netty/netty/issues/5297
+        if (inEventLoop()) {
+            return super.pendingTasks();
+        } else {
+            return submit(pendingTasksCallable).syncUninterruptibly().getNow();
+        }
     }
 
     /**
