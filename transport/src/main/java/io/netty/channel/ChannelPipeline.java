@@ -227,7 +227,7 @@ public interface ChannelPipeline
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified name or handler is {@code null}
+     *         if the specified handler is {@code null}
      */
     ChannelPipeline addFirst(String name, ChannelHandler handler);
 
@@ -242,7 +242,7 @@ public interface ChannelPipeline
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified name or handler is {@code null}
+     *         if the specified handler is {@code null}
      */
     ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler);
 
@@ -255,7 +255,7 @@ public interface ChannelPipeline
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified name or handler is {@code null}
+     *         if the specified handler is {@code null}
      */
     ChannelPipeline addLast(String name, ChannelHandler handler);
 
@@ -270,7 +270,7 @@ public interface ChannelPipeline
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified name or handler is {@code null}
+     *         if the specified handler is {@code null}
      */
     ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler);
 
@@ -287,7 +287,7 @@ public interface ChannelPipeline
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified baseName, name, or handler is {@code null}
+     *         if the specified baseName or handler is {@code null}
      */
     ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler);
 
@@ -306,7 +306,7 @@ public interface ChannelPipeline
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified baseName, name, or handler is {@code null}
+     *         if the specified baseName or handler is {@code null}
      */
     ChannelPipeline addBefore(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
@@ -323,7 +323,7 @@ public interface ChannelPipeline
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified baseName, name, or handler is {@code null}
+     *         if the specified baseName or handler is {@code null}
      */
     ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler);
 
@@ -342,7 +342,7 @@ public interface ChannelPipeline
      * @throws IllegalArgumentException
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
-     *         if the specified baseName, name, or handler is {@code null}
+     *         if the specified baseName or handler is {@code null}
      */
     ChannelPipeline addAfter(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
@@ -458,7 +458,7 @@ public interface ChannelPipeline
      *         if a handler with the specified new name already exists in this
      *         pipeline, except for the handler to be replaced
      * @throws NullPointerException
-     *         if the specified old handler, new name, or new handler is
+     *         if the specified old handler or new handler is
      *         {@code null}
      */
     ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler);
@@ -478,7 +478,7 @@ public interface ChannelPipeline
      *         if a handler with the specified new name already exists in this
      *         pipeline, except for the handler to be replaced
      * @throws NullPointerException
-     *         if the specified old handler, new name, or new handler is
+     *         if the specified old handler or new handler is
      *         {@code null}
      */
     ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler);
@@ -499,7 +499,7 @@ public interface ChannelPipeline
      *         if a handler with the specified new name already exists in this
      *         pipeline, except for the handler to be replaced
      * @throws NullPointerException
-     *         if the specified old handler, new name, or new handler is
+     *         if the specified old handler or new handler is
      *         {@code null}
      */
     <T extends ChannelHandler> T replace(Class<T> oldHandlerType, String newName,

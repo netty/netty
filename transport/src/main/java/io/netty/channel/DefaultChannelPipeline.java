@@ -134,8 +134,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         final AbstractChannelHandlerContext newCtx;
         final EventExecutor executor;
         synchronized (this) {
-            checkDuplicateName(name);
             checkMultiplicity(handler);
+            name = filterName(name, handler);
 
             newCtx = newContext(group, name, handler);
             executor = executorSafe(newCtx.executor);
@@ -182,10 +182,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         final EventExecutor executor;
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
-            checkDuplicateName(name);
             checkMultiplicity(handler);
 
-            newCtx = newContext(group, name, handler);
+            newCtx = newContext(group, filterName(name, handler), handler);
             executor = executorSafe(newCtx.executor);
 
             addLast0(newCtx);
@@ -232,8 +231,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         final AbstractChannelHandlerContext ctx;
         synchronized (this) {
             checkMultiplicity(handler);
+            name = filterName(name, handler);
             ctx = getContextOrDie(baseName);
-            checkDuplicateName(name);
 
             newCtx = newContext(group, name, handler);
             executor = executorSafe(newCtx.executor);
@@ -269,6 +268,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         ctx.prev = newCtx;
     }
 
+    private String filterName(String name, ChannelHandler handler) {
+        if (name == null) {
+            return generateName(handler);
+        }
+        checkDuplicateName(name);
+        return name;
+    }
+
     @Override
     public final ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler) {
         return addAfter(null, baseName, name, handler);
@@ -276,15 +283,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addAfter(
-            EventExecutorGroup group, String baseName, final String name, ChannelHandler handler) {
+            EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
         final EventExecutor executor;
         final AbstractChannelHandlerContext newCtx;
         final AbstractChannelHandlerContext ctx;
 
         synchronized (this) {
             checkMultiplicity(handler);
+            name = filterName(name, handler);
             ctx = getContextOrDie(baseName);
-            checkDuplicateName(name);
 
             newCtx = newContext(group, name, handler);
             executor = executorSafe(newCtx.executor);
@@ -342,7 +349,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         for (int i = size - 1; i >= 0; i --) {
             ChannelHandler h = handlers[i];
-            addFirst(executor, generateName(h), h);
+            addFirst(executor, null, h);
         }
 
         return this;
@@ -363,7 +370,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (h == null) {
                 break;
             }
-            addLast(executor, generateName(h), h);
+            addLast(executor, null, h);
         }
 
         return this;
