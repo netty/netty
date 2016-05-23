@@ -64,7 +64,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private short waiters;
 
     /**
-     * Threading - EventExecutor. Only accessed inside the EventExecutor thread while notifying listeners.
+     * Threading - synchronized(this). We must prevent concurrent notification and FIFO listener notification if the
+     * executor changes.
      */
     private boolean notifyingListeners;
 
@@ -432,23 +433,30 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     private void notifyListeners0() {
         Object listeners;
-        while (!notifyingListeners) {
+        synchronized (this) {
+            // Only proceed if there are listeners to notify and we are not already notifying listeners.
+            if (notifyingListeners || this.listeners == null) {
+                return;
+            }
+            notifyingListeners = true;
+            listeners = this.listeners;
+            this.listeners = null;
+        }
+        for (;;) {
+            if (listeners instanceof DefaultFutureListeners) {
+                notifyListeners0((DefaultFutureListeners) listeners);
+            } else {
+                notifyListener0(this, (GenericFutureListener<? extends Future<V>>) listeners);
+            }
             synchronized (this) {
                 if (this.listeners == null) {
+                    // Nothing can throw from within this method, so setting notifyingListeners back to false does not
+                    // need to be in a finally block.
+                    notifyingListeners = false;
                     return;
                 }
                 listeners = this.listeners;
                 this.listeners = null;
-            }
-            notifyingListeners = true;
-            try {
-                if (listeners instanceof DefaultFutureListeners) {
-                    notifyListeners0((DefaultFutureListeners) listeners);
-                } else {
-                    notifyListener0(this, (GenericFutureListener<? extends Future<V>>) listeners);
-                }
-            } finally {
-                notifyingListeners = false;
             }
         }
     }
