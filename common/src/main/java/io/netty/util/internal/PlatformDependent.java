@@ -30,7 +30,6 @@ import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
@@ -407,6 +406,14 @@ public final class PlatformDependent {
 
     public static void copyMemory(long srcAddr, byte[] dst, int dstIndex, long length) {
         PlatformDependent0.copyMemory(null, srcAddr, dst, ARRAY_BASE_OFFSET + dstIndex, length);
+    }
+
+    public static void setMemory(byte[] dst, int dstIndex, long bytes, byte value) {
+        PlatformDependent0.setMemory(dst, ARRAY_BASE_OFFSET + dstIndex, bytes, value);
+    }
+
+    public static void setMemory(long address, long bytes, byte value) {
+        PlatformDependent0.setMemory(address, bytes, value);
     }
 
     /**

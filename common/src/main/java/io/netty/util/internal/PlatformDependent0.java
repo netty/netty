@@ -268,6 +268,14 @@ final class PlatformDependent0 {
         }
     }
 
+    static void setMemory(long address, long bytes, byte value) {
+        UNSAFE.setMemory(address, bytes, value);
+    }
+
+    static void setMemory(Object o, long offset, long bytes, byte value) {
+        UNSAFE.setMemory(o, offset, bytes, value);
+    }
+
     static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
             Class<? super U> tclass, String fieldName) throws Exception {
         return new UnsafeAtomicReferenceFieldUpdater<U, W>(UNSAFE, tclass, fieldName);
