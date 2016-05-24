@@ -24,6 +24,8 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -40,6 +42,26 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final Signal SUCCESS = Signal.valueOf(DefaultPromise.class, "SUCCESS");
     private static final Signal UNCANCELLABLE = Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE");
     private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(new CancellationException());
+    private static final FastThreadLocal<Queue<DefaultPromise<?>>> STACK_OVERFLOW_DELAYED_PROMISES =
+            new FastThreadLocal<Queue<DefaultPromise<?>>>() {
+        @Override
+        protected Queue<DefaultPromise<?>> initialValue() throws Exception {
+            return new ArrayDeque<DefaultPromise<?>>(2);
+        }
+    };
+    /**
+     * This queue will hold pairs of {@code <Future, GenericFutureListener>} which are always inserted sequentially.
+     * <p>
+     * This is only used for static utility method {@link #notifyListener(EventExecutor, Future, GenericFutureListener)}
+     * and not instances of {@link DefaultPromise}.
+     */
+    private static final FastThreadLocal<Queue<Object>> STACK_OVERFLOW_DELAYED_FUTURES =
+            new FastThreadLocal<Queue<Object>>() {
+        @Override
+        protected Queue<Object> initialValue() throws Exception {
+            return new ArrayDeque<Object>(2);
+        }
+    };
 
     static {
         AtomicReferenceFieldUpdater<DefaultPromise, Object> updater =
@@ -385,32 +407,24 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * <p>
      * This method has a fixed depth of {@link #MAX_LISTENER_STACK_DEPTH} that will limit recursion to prevent
      * {@link StackOverflowError} and will stop notifying listeners added after this threshold is exceeded.
-     * @param eventExecutor the executor to use to notify the listener {@code l}.
+     * @param eventExecutor the executor to use to notify the listener {@code listener}.
      * @param future the future that is complete.
-     * @param l the listener to notify.
+     * @param listener the listener to notify.
      */
     protected static void notifyListener(
-            EventExecutor eventExecutor, final Future<?> future, final GenericFutureListener<?> l) {
+            EventExecutor eventExecutor, final Future<?> future, final GenericFutureListener<?> listener) {
+        checkNotNull(future, "future");
+        checkNotNull(listener, "listener");
         if (eventExecutor.inEventLoop()) {
-            final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
-            final int stackDepth = threadLocals.futureListenerStackDepth();
-            if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
-                threadLocals.setFutureListenerStackDepth(stackDepth + 1);
-                try {
-                    notifyListener0(future, l);
-                } finally {
-                    threadLocals.setFutureListenerStackDepth(stackDepth);
+            notifyListenerWithStackOverFlowProtection(future, listener);
+        } else {
+            safeExecute(eventExecutor, new OneTimeTask() {
+                @Override
+                public void run() {
+                    notifyListenerWithStackOverFlowProtection(future, listener);
                 }
-                return;
-            }
+            });
         }
-
-        safeExecute(eventExecutor, new OneTimeTask() {
-            @Override
-            public void run() {
-                notifyListener0(future, l);
-            }
-        });
     }
 
     private void notifyListeners() {
@@ -420,18 +434,88 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            notifyListeners0();
-            return;
+            notifyListenersWithStackOverFlowProtection();
+        } else {
+            safeExecute(executor, new OneTimeTask() {
+                @Override
+                public void run() {
+                    notifyListenersWithStackOverFlowProtection();
+                }
+            });
         }
-        safeExecute(executor, new OneTimeTask() {
-            @Override
-            public void run() {
-                notifyListeners0();
-            }
-        });
     }
 
-    private void notifyListeners0() {
+    private void notifyListenersWithStackOverFlowProtection() {
+        final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+        final int stackDepth = threadLocals.futureListenerStackDepth();
+        if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
+            threadLocals.setFutureListenerStackDepth(stackDepth + 1);
+            try {
+                notifyListenersNow();
+            } finally {
+                threadLocals.setFutureListenerStackDepth(stackDepth);
+                if (stackDepth == 0) {
+                    // We want to force all notifications to occur at the same depth on the stack as the initial method
+                    // invocation. If we leave the stackDepth at 0 then notifyListeners could occur from a
+                    // delayedPromise's stack which could lead to a stack overflow. So force the stack depth to 1 here,
+                    // and later set it back to 0 after all delayedPromises have been notified.
+                    threadLocals.setFutureListenerStackDepth(1);
+                    try {
+                        Queue<DefaultPromise<?>> delayedPromiseQueue = STACK_OVERFLOW_DELAYED_PROMISES.get();
+                        DefaultPromise<?> delayedPromise;
+                        while ((delayedPromise = delayedPromiseQueue.poll()) != null) {
+                            delayedPromise.notifyListenersWithStackOverFlowProtection();
+                        }
+                    } finally {
+                        threadLocals.setFutureListenerStackDepth(0);
+                    }
+                }
+            }
+        } else {
+            STACK_OVERFLOW_DELAYED_PROMISES.get().add(this);
+        }
+    }
+
+    /**
+     * The logic in this method should be identical to {@link #notifyListenersWithStackOverFlowProtection()} but
+     * cannot share code because the listener(s) can not be queued for an instance of {@link DefaultPromise} since the
+     * listener(s) may be changed and is protected by a synchronized operation.
+     */
+    private static void notifyListenerWithStackOverFlowProtection(Future<?> future, GenericFutureListener<?> listener) {
+        final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+        final int stackDepth = threadLocals.futureListenerStackDepth();
+        if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
+            threadLocals.setFutureListenerStackDepth(stackDepth + 1);
+            try {
+                notifyListener0(future, listener);
+            } finally {
+                threadLocals.setFutureListenerStackDepth(stackDepth);
+                if (stackDepth == 0) {
+                    // We want to force all notifications to occur at the same depth on the stack as the initial method
+                    // invocation. If we leave the stackDepth at 0 then notifyListeners could occur from a
+                    // delayedPromise's stack which could lead to a stack overflow. So force the stack depth to 1 here,
+                    // and later set it back to 0 after all delayedPromises have been notified.
+                    threadLocals.setFutureListenerStackDepth(1);
+                    try {
+                        Queue<Object> delayedFutureQueue = STACK_OVERFLOW_DELAYED_FUTURES.get();
+                        Object delayedFuture;
+                        while ((delayedFuture = delayedFutureQueue.poll()) != null) {
+                            notifyListenerWithStackOverFlowProtection((Future<?>) delayedFuture,
+                                    (GenericFutureListener<?>) delayedFutureQueue.poll());
+                        }
+                    } finally {
+                        threadLocals.setFutureListenerStackDepth(0);
+                    }
+                }
+            }
+        } else {
+            Queue<Object> delayedFutureQueue = STACK_OVERFLOW_DELAYED_FUTURES.get();
+            delayedFutureQueue.add(future);
+            delayedFutureQueue.add(listener);
+        }
+    }
+
+    private void notifyListenersNow() {
         Object listeners;
         synchronized (this) {
             // Only proceed if there are listeners to notify and we are not already notifying listeners.
