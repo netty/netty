@@ -455,19 +455,21 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             } finally {
                 threadLocals.setFutureListenerStackDepth(stackDepth);
                 if (stackDepth == 0) {
-                    // We want to force all notifications to occur at the same depth on the stack as the initial method
-                    // invocation. If we leave the stackDepth at 0 then notifyListeners could occur from a
-                    // delayedPromise's stack which could lead to a stack overflow. So force the stack depth to 1 here,
-                    // and later set it back to 0 after all delayedPromises have been notified.
-                    threadLocals.setFutureListenerStackDepth(1);
-                    try {
-                        Queue<DefaultPromise<?>> delayedPromiseQueue = STACK_OVERFLOW_DELAYED_PROMISES.get();
-                        DefaultPromise<?> delayedPromise;
-                        while ((delayedPromise = delayedPromiseQueue.poll()) != null) {
-                            delayedPromise.notifyListenersWithStackOverFlowProtection();
+                    Queue<DefaultPromise<?>> delayedPromiseQueue = STACK_OVERFLOW_DELAYED_PROMISES.get();
+                    DefaultPromise<?> delayedPromise = delayedPromiseQueue.poll();
+                    if (delayedPromise != null) {
+                        // We want to force all notifications to occur at the same depth on the stack as the initial
+                        // method invocation. If we leave the stackDepth at 0 then notifyListeners could occur from a
+                        // delayedPromise's stack which could lead to a stack overflow. So force the stack depth to 1
+                        // here, and later set it back to 0 after all delayedPromises have been notified.
+                        threadLocals.setFutureListenerStackDepth(1);
+                        try {
+                            do {
+                                delayedPromise.notifyListenersWithStackOverFlowProtection();
+                            } while ((delayedPromise = delayedPromiseQueue.poll()) != null);
+                        } finally {
+                            threadLocals.setFutureListenerStackDepth(0);
                         }
-                    } finally {
-                        threadLocals.setFutureListenerStackDepth(0);
                     }
                 }
             }
@@ -491,20 +493,22 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             } finally {
                 threadLocals.setFutureListenerStackDepth(stackDepth);
                 if (stackDepth == 0) {
-                    // We want to force all notifications to occur at the same depth on the stack as the initial method
-                    // invocation. If we leave the stackDepth at 0 then notifyListeners could occur from a
-                    // delayedPromise's stack which could lead to a stack overflow. So force the stack depth to 1 here,
-                    // and later set it back to 0 after all delayedPromises have been notified.
-                    threadLocals.setFutureListenerStackDepth(1);
-                    try {
-                        Queue<Object> delayedFutureQueue = STACK_OVERFLOW_DELAYED_FUTURES.get();
-                        Object delayedFuture;
-                        while ((delayedFuture = delayedFutureQueue.poll()) != null) {
-                            notifyListenerWithStackOverFlowProtection((Future<?>) delayedFuture,
-                                    (GenericFutureListener<?>) delayedFutureQueue.poll());
+                    Queue<Object> delayedFutureQueue = STACK_OVERFLOW_DELAYED_FUTURES.get();
+                    Object delayedFuture = delayedFutureQueue.poll();
+                    if (delayedFuture != null) {
+                        // We want to force all notifications to occur at the same depth on the stack as the initial
+                        // method invocation. If we leave the stackDepth at 0 then notifyListeners could occur from a
+                        // delayedPromise's stack which could lead to a stack overflow. So force the stack depth to 1
+                        // here, and later set it back to 0 after all delayedPromises have been notified.
+                        threadLocals.setFutureListenerStackDepth(1);
+                        try {
+                            do {
+                                notifyListenerWithStackOverFlowProtection((Future<?>) delayedFuture,
+                                        (GenericFutureListener<?>) delayedFutureQueue.poll());
+                            } while ((delayedFuture = delayedFutureQueue.poll()) != null);
+                        } finally {
+                            threadLocals.setFutureListenerStackDepth(0);
                         }
-                    } finally {
-                        threadLocals.setFutureListenerStackDepth(0);
                     }
                 }
             }
