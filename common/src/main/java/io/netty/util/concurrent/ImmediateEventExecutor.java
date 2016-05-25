@@ -15,63 +15,69 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
 /**
- * {@link AbstractEventExecutor} which execute tasks in the callers thread.
+ * {@link AbstractEventExecutor} which execute tasks in the caller's thread.
+ * <p>
+ * This class does not provide any protection against re-entry or {@link StackOverflowError}.
+ * Use {@link ReentrantImmediateEventExecutor} if these protections are necessary.
  */
-public final class ImmediateEventExecutor extends AbstractEventExecutor {
+public class ImmediateEventExecutor extends AbstractEventExecutor {
 
     public static final ImmediateEventExecutor INSTANCE = new ImmediateEventExecutor();
 
     private final Future<?> terminationFuture = new FailedFuture<Object>(
             GlobalEventExecutor.INSTANCE, new UnsupportedOperationException());
 
-    private ImmediateEventExecutor() {
-        // Singleton
-    }
+    ImmediateEventExecutor() { }
 
     @Override
-    public boolean inEventLoop() {
+    public final boolean inEventLoop() {
         return true;
     }
 
     @Override
-    public boolean inEventLoop(Thread thread) {
+    public final boolean inEventLoop(Thread thread) {
         return true;
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public final Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         return terminationFuture();
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public final Future<?> terminationFuture() {
         return terminationFuture;
     }
 
     @Override
     @Deprecated
-    public void shutdown() { }
+    public final void shutdown() { }
 
     @Override
-    public boolean isShuttingDown() {
+    public final boolean isShuttingDown() {
         return false;
     }
 
     @Override
-    public boolean isShutdown() {
+    public final boolean isShutdown() {
         return false;
     }
 
     @Override
-    public boolean isTerminated() {
+    public final boolean isTerminated() {
         return false;
     }
 
     @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit) {
+    public final boolean awaitTermination(long timeout, TimeUnit unit) {
         return false;
     }
 
@@ -84,12 +90,12 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public <V> Promise<V> newPromise() {
+    public final <V> Promise<V> newPromise() {
         return new ImmediatePromise<V>(this);
     }
 
     @Override
-    public <V> ProgressivePromise<V> newProgressivePromise() {
+    public final <V> ProgressivePromise<V> newProgressivePromise() {
         return new ImmediateProgressivePromise<V>(this);
     }
 
