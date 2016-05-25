@@ -17,6 +17,7 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -49,6 +50,7 @@ public abstract class Recycler<T> {
     private static final int DEFAULT_INITIAL_MAX_CAPACITY = 262144;
     private static final int DEFAULT_MAX_CAPACITY;
     private static final int INITIAL_CAPACITY;
+    private static final int LINK_CAPACITY;
 
     static {
         // In the future, we might have different maxCapacity for different object types.
@@ -56,16 +58,21 @@ public abstract class Recycler<T> {
         //      io.netty.recycler.maxCapacity.outboundBuffer
         int maxCapacity = SystemPropertyUtil.getInt("io.netty.recycler.maxCapacity", DEFAULT_INITIAL_MAX_CAPACITY);
         if (maxCapacity < 0) {
-            // TODO: Some arbitrary large number - should adjust as we get more production experience.
-            maxCapacity = 262144;
+            maxCapacity = DEFAULT_INITIAL_MAX_CAPACITY;
         }
 
         DEFAULT_MAX_CAPACITY = maxCapacity;
+
+        LINK_CAPACITY = MathUtil.findNextPositivePowerOfTwo(
+                Math.max(SystemPropertyUtil.getInt("io.netty.recycler.linkCapacity", 16), 16));
+
         if (logger.isDebugEnabled()) {
             if (DEFAULT_MAX_CAPACITY == 0) {
                 logger.debug("-Dio.netty.recycler.maxCapacity: disabled");
+                logger.debug("-Dio.netty.recycler.linkCapacity: disabled");
             } else {
                 logger.debug("-Dio.netty.recycler.maxCapacity: {}", DEFAULT_MAX_CAPACITY);
+                logger.debug("-Dio.netty.recycler.linkCapacity: {}", LINK_CAPACITY);
             }
         }
 
@@ -178,7 +185,6 @@ public abstract class Recycler<T> {
     // a queue that makes only moderate guarantees about visibility: items are seen in the correct order,
     // but we aren't absolutely guaranteed to ever see anything at all, thereby keeping the queue cheap to maintain
     private static final class WeakOrderQueue {
-        private static final int LINK_CAPACITY = 16;
 
         // Let Link extend AtomicInteger for intrinsics. The Link itself will be used as writerIndex.
         @SuppressWarnings("serial")
