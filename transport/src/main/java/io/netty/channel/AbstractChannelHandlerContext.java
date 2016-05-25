@@ -66,12 +66,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     private int handlerState = INIT;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
-    // These needs to be volatile as otherwise an other Thread may see an half initialized instance.
-    // See the JMM for more details
-    private volatile Runnable invokeChannelReadCompleteTask;
-    private volatile Runnable invokeReadTask;
-    private volatile Runnable invokeChannelWritableStateChangedTask;
-    private volatile Runnable invokeFlushTask;
+    // There is no need to make this volatile as at worse it will just create a few more instances then needed.
+    private Runnable invokeChannelReadCompleteTask;
+    private Runnable invokeReadTask;
+    private Runnable invokeChannelWritableStateChangedTask;
+    private Runnable invokeFlushTask;
 
     AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutor executor, String name,
                                   boolean inbound, boolean outbound) {
