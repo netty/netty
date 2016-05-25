@@ -641,7 +641,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 }
             });
 
-            if (delta > 0) {
+            if (delta > 0 && isChannelWritable()) {
                 // The window size increased, send any pending frames for all streams.
                 writePendingBytes();
             }
