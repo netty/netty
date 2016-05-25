@@ -45,7 +45,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 import io.netty.util.concurrent.EventExecutor;
+
 import junit.framework.AssertionFailedError;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -901,6 +903,9 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     public void initialWindowSizeWithNoContextShouldNotThrow() throws Exception {
         // Re-initialize the controller so we can ensure the context hasn't been set yet.
         initConnectionAndController();
+
+        // This should not throw.
+        controller.initialWindowSize(1024 * 100);
 
         FakeFlowControlled dataA = new FakeFlowControlled(1);
         final Http2Stream stream = stream(STREAM_A);
