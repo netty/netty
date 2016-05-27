@@ -18,23 +18,14 @@ package io.netty.handler.codec.http2;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * HTTP/2 HEADERS frame.
+ * An event describing a state change of a particular HTTP/2 stream. Such events
+ * are typically emitted by channel handlers to exchange stream state information.
  */
 @UnstableApi
-public interface Http2HeadersFrame extends Http2StreamFrame {
+public interface Http2StreamStateEvent {
 
     /**
-     * A complete header list. CONTINUATION frames are automatically handled.
+     * Returns the HTTP/2 stream identifier for this event.
      */
-    Http2Headers headers();
-
-    /**
-     * {@code true} if this frame is the last one in this direction of the stream.
-     */
-    boolean isEndStream();
-
-    /**
-     * Frame padding to use. Must be non-negative and less than 256.
-     */
-    int padding();
+    int streamId();
 }
