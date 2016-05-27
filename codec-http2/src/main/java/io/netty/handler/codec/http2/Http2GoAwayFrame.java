@@ -20,8 +20,14 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * HTTP/2 GOAWAY frame. Last-Stream-Id is not exposed directly, but instead via the relative {@link
- * #extraStreamIds()}.
+ * HTTP/2 GOAWAY frame.
+ *
+ * <p>The last stream identifier <em>must not</em> be set by the application, but instead the
+ * relative {@link #extraStreamIds()} should be used. The {@link #lastStreamId()} will only be
+ * set for incoming GOAWAY frames by the HTTP/2 codec.
+ *
+ * <p>Graceful shutdown as described in the HTTP/2 spec can be accomplished by calling
+ * {@code #setExtraStreamIds(Integer.MAX_VALUE)}.
  */
 @UnstableApi
 public interface Http2GoAwayFrame extends Http2Frame, ByteBufHolder {
@@ -44,6 +50,11 @@ public interface Http2GoAwayFrame extends Http2Frame, ByteBufHolder {
      * @return {@code this}
      */
     Http2GoAwayFrame setExtraStreamIds(int extraStreamIds);
+
+    /**
+     * Returns the last stream identifier if set, or {@code -1} else.
+     */
+    int lastStreamId();
 
     /**
      * Optional debugging information describing cause the GOAWAY. Will not be {@code null}, but may

@@ -19,24 +19,26 @@ import io.netty.util.internal.UnstableApi;
 
 /**
  * A frame whose meaning <em>may</em> apply to a particular stream, instead of the entire
- * connection. It is still possibly for this frame type to apply to the entire connection. In such
- * cases, the {@code stream} reference should be {@code null} or an object referring to the
- * connection.
- *
- * <p>The meaning of {@code stream} is context-dependent and may change as a frame is processed in
- * the pipeline.
+ * connection. It is still possible for this frame type to apply to the entire connection. In such
+ * cases, the {@link #streamId()} must return {@code 0}. If the frame applies to a stream, the
+ * {@link #streamId()} must be greater than zero.
  */
 @UnstableApi
 public interface Http2StreamFrame extends Http2Frame {
+
     /**
-     * Set the stream identifier for this message.
+     * Sets the identifier of the stream this frame applies to.
      *
      * @return {@code this}
      */
-    Http2StreamFrame setStream(Object stream);
+    Http2StreamFrame setStreamId(int streamId);
 
     /**
-     * The stream this frame applies to.
+     * The identifier of the stream this frame applies to.
+     *
+     * @return {@code 0} if the frame applies to the entire connection, a value greater than {@code 0} if the frame
+     * applies to a particular stream, or a value less than {@code 0} if the frame has yet to be associated with
+     * the connection or a stream.
      */
-    Object stream();
+    int streamId();
 }

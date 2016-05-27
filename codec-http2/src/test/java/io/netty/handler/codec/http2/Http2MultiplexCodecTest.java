@@ -12,30 +12,22 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty.handler.codec.http2;
-
-import static io.netty.util.ReferenceCountUtil.releaseLater;
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.*;
-import static org.mockito.Mockito.*;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
+import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.AsciiString;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetSocketAddress;
@@ -45,160 +37,197 @@ import java.util.Queue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
+
+import static io.netty.util.ReferenceCountUtil.release;
+import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static org.junit.Assert.*;
 
 /**
  * Unit tests for {@link Http2MultiplexCodec}.
  */
 public class Http2MultiplexCodecTest {
-    private final TestChannelInitializer streamInit = new TestChannelInitializer();
-    // For verifying outbound frames
-    private final Http2FrameWriter frameWriter = spy(new VerifiableHttp2FrameWriter());
-    private final Http2MultiplexCodec serverCodec = new Http2MultiplexCodec(true, streamInit, null, frameWriter);
-    private final EmbeddedChannel channel = new EmbeddedChannel();
-    // For injecting inbound frames
-    private final Http2FrameListener frameListener
-            = ((DefaultHttp2ConnectionDecoder) serverCodec.connectionHandler().decoder())
-            .internalFrameListener();
-    private ChannelHandlerContext http2HandlerCtx;
-    private Http2Headers request = new DefaultHttp2Headers()
+
+    private EmbeddedChannel parentChannel;
+
+    private TestChannelInitializer childChannelInitializer;
+
+    private static final Http2Headers request = new DefaultHttp2Headers()
             .method(HttpMethod.GET.asciiName()).scheme(HttpScheme.HTTPS.name())
             .authority(new AsciiString("example.org")).path(new AsciiString("/foo"));
-    private Http2Headers response = new DefaultHttp2Headers()
-            .status(HttpResponseStatus.OK.codeAsText());
+
+    private static final int streamId = 3;
 
     @Before
-    public void setUp() throws Exception {
-        channel.connect(new InetSocketAddress(0));
-        channel.pipeline().addLast(serverCodec);
-        http2HandlerCtx = channel.pipeline().context(serverCodec.connectionHandler());
-
-        // Handshake
-        verify(frameWriter).writeSettings(eq(http2HandlerCtx),
-            anyHttp2Settings(), anyChannelPromise());
-        verifyNoMoreInteractions(frameWriter);
-        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
-        frameListener.onSettingsRead(http2HandlerCtx, new Http2Settings());
-        verify(frameWriter).writeSettingsAck(eq(http2HandlerCtx), anyChannelPromise());
-        frameListener.onSettingsAckRead(http2HandlerCtx);
+    public void setUp() {
+        childChannelInitializer = new TestChannelInitializer();
+        parentChannel = new EmbeddedChannel();
+        parentChannel.connect(new InetSocketAddress(0));
+        parentChannel.pipeline().addLast(new Http2MultiplexCodec(true, null, childChannelInitializer));
     }
 
     @After
-    public void tearDown() {
-        Object o;
-        while ((o = channel.readOutbound()) != null) {
-            ReferenceCountUtil.release(o);
+    public void tearDown() throws Exception {
+        if (childChannelInitializer.handler != null) {
+            ((LastInboundHandler) childChannelInitializer.handler).finishAndReleaseAll();
         }
+        parentChannel.finishAndReleaseAll();
+    }
+
+    // TODO(buchgr): Thread model of child channel
+    // TODO(buchgr): Flush from child channel
+    // TODO(buchgr): ChildChannel.childReadComplete()
+    // TODO(buchgr): GOAWAY Logic
+    // TODO(buchgr): Reset frame on close
+    // TODO(buchgr): Test ChannelConfig.setMaxMessagesPerRead
+
+    @Test
+    public void headerAndDataFramesShouldBeDelivered() {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        childChannelInitializer.handler = inboundHandler;
+
+        Http2StreamActiveEvent streamActive = new Http2StreamActiveEvent(streamId);
+        Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(request).setStreamId(streamId);
+        Http2DataFrame dataFrame1 = releaseLater(new DefaultHttp2DataFrame(bb("hello")).setStreamId(streamId));
+        Http2DataFrame dataFrame2 = releaseLater(new DefaultHttp2DataFrame(bb("world")).setStreamId(streamId));
+
+        assertFalse(inboundHandler.channelActive);
+        parentChannel.pipeline().fireUserEventTriggered(streamActive);
+        assertTrue(inboundHandler.channelActive);
+        // Make sure the stream active event is not delivered as a user event on the child channel.
+        assertNull(inboundHandler.readUserEvent());
+        parentChannel.pipeline().fireChannelRead(headersFrame);
+        parentChannel.pipeline().fireChannelRead(dataFrame1);
+        parentChannel.pipeline().fireChannelRead(dataFrame2);
+
+        assertEquals(headersFrame, inboundHandler.readInbound());
+        assertEquals(dataFrame1, inboundHandler.readInbound());
+        assertEquals(dataFrame2, inboundHandler.readInbound());
+        assertNull(inboundHandler.readInbound());
     }
 
     @Test
-    public void startStop() throws Exception {
-        assertTrue(channel.isActive());
-        channel.close();
-        verify(frameWriter).writeGoAway(
-                eq(http2HandlerCtx), eq(0), eq(0L), eq(Unpooled.EMPTY_BUFFER), anyChannelPromise());
-        assertTrue(!channel.isActive());
+    public void framesShouldBeMultiplexed() {
+        LastInboundHandler inboundHandler3 = streamActiveAndWriteHeaders(3);
+        LastInboundHandler inboundHandler11 = streamActiveAndWriteHeaders(11);
+        LastInboundHandler inboundHandler5 = streamActiveAndWriteHeaders(5);
+
+        verifyFramesMultiplexedToCorrectChannel(3, inboundHandler3, 1);
+        verifyFramesMultiplexedToCorrectChannel(5, inboundHandler5, 1);
+        verifyFramesMultiplexedToCorrectChannel(11, inboundHandler11, 1);
+
+        parentChannel.pipeline().fireChannelRead(new DefaultHttp2DataFrame(bb("hello"), false).setStreamId(5));
+        parentChannel.pipeline().fireChannelRead(new DefaultHttp2DataFrame(bb("foo"), true).setStreamId(3));
+        parentChannel.pipeline().fireChannelRead(new DefaultHttp2DataFrame(bb("world"), true).setStreamId(5));
+        parentChannel.pipeline().fireChannelRead(new DefaultHttp2DataFrame(bb("bar"), true).setStreamId(11));
+        verifyFramesMultiplexedToCorrectChannel(5, inboundHandler5, 2);
+        verifyFramesMultiplexedToCorrectChannel(3, inboundHandler3, 1);
+        verifyFramesMultiplexedToCorrectChannel(11, inboundHandler11, 1);
     }
 
     @Test
-    public void headerRequestHeaderResponse() throws Exception {
-        LastInboundHandler stream = new LastInboundHandler();
-        streamInit.handler = stream;
-        frameListener.onHeadersRead(http2HandlerCtx, 1, request, 31, true);
-        assertNull(streamInit.handler);
-        assertEquals(new DefaultHttp2HeadersFrame(request, true, 31), stream.readInbound());
-        assertNull(stream.readInbound());
-        assertTrue(stream.channel().isActive());
+    public void inboundDataFrameShouldEmitWindowUpdateFrame() {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(streamId);
+        ByteBuf tenBytes = bb("0123456789");
+        parentChannel.pipeline().fireChannelRead(new DefaultHttp2DataFrame(tenBytes, true).setStreamId(streamId));
+        parentChannel.pipeline().flush();
 
-        stream.writeOutbound(new DefaultHttp2HeadersFrame(response, true, 27));
-        verify(frameWriter).writeHeaders(
-                eq(http2HandlerCtx), eq(1), eq(response), anyInt(), anyShort(), anyBoolean(),
-                eq(27), eq(true), anyChannelPromise());
-        verify(frameWriter, never()).writeRstStream(
-            any(ChannelHandlerContext.class), anyInt(), anyLong(), anyChannelPromise());
-        assertFalse(stream.channel().isActive());
-        assertTrue(channel.isActive());
+        Http2WindowUpdateFrame windowUpdate = parentChannel.readOutbound();
+        assertNotNull(windowUpdate);
+        assertEquals(streamId, windowUpdate.streamId());
+        assertEquals(10, windowUpdate.windowSizeIncrement());
+
+        // headers and data frame
+        verifyFramesMultiplexedToCorrectChannel(streamId, inboundHandler, 2);
     }
 
     @Test
-    public void entityRequestEntityResponse() throws Exception {
-        LastInboundHandler stream = new LastInboundHandler();
-        streamInit.handler = stream;
-        frameListener.onHeadersRead(http2HandlerCtx, 1, request, 0, false);
-        assertEquals(new DefaultHttp2HeadersFrame(request, false), stream.readInbound());
-        assertNull(stream.readInbound());
-        assertTrue(stream.channel().isActive());
+    public void channelReadShouldRespectAutoRead() {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(streamId);
+        Channel childChannel = inboundHandler.channel();
+        assertTrue(childChannel.config().isAutoRead());
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
 
-        ByteBuf hello = bb("hello");
-        frameListener.onDataRead(http2HandlerCtx, 1, hello, 31, true);
-        // Release hello to emulate ByteToMessageDecoder
-        hello.release();
-        Http2DataFrame inboundData = stream.readInbound();
-        assertEquals(releaseLater(new DefaultHttp2DataFrame(bb("hello"), true, 31)), inboundData);
-        assertEquals(1, inboundData.refCnt());
-        assertNull(stream.readInbound());
-        assertTrue(stream.channel().isActive());
+        childChannel.config().setAutoRead(false);
+        parentChannel.pipeline().fireChannelRead(
+                new DefaultHttp2DataFrame(bb("hello world"), false).setStreamId(streamId));
+        parentChannel.pipeline().fireChannelReadComplete();
+        Http2DataFrame dataFrame0 = inboundHandler.readInbound();
+        assertNotNull(dataFrame0);
+        release(dataFrame0);
 
-        stream.writeOutbound(new DefaultHttp2HeadersFrame(response, false));
-        verify(frameWriter).writeHeaders(eq(http2HandlerCtx), eq(1), eq(response), anyInt(),
-            anyShort(), anyBoolean(), eq(0), eq(false), anyChannelPromise());
-        assertTrue(stream.channel().isActive());
+        parentChannel.pipeline().fireChannelRead(new DefaultHttp2DataFrame(bb("foo"), false).setStreamId(streamId));
+        parentChannel.pipeline().fireChannelRead(new DefaultHttp2DataFrame(bb("bar"), true).setStreamId(streamId));
+        parentChannel.pipeline().fireChannelReadComplete();
 
-        stream.writeOutbound(new DefaultHttp2DataFrame(bb("world"), true, 27));
-        ArgumentCaptor<ByteBuf> outboundData = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter).writeData(eq(http2HandlerCtx), eq(1), outboundData.capture(), eq(27),
-            eq(true), anyChannelPromise());
-        assertEquals(releaseLater(bb("world")), outboundData.getValue());
-        assertEquals(1, outboundData.getValue().refCnt());
-        verify(frameWriter, never()).writeRstStream(
-            any(ChannelHandlerContext.class), anyInt(), anyLong(), anyChannelPromise());
-        assertFalse(stream.channel().isActive());
-        assertTrue(channel.isActive());
+        dataFrame0 = inboundHandler.readInbound();
+        assertNull(dataFrame0);
+
+        childChannel.config().setAutoRead(true);
+        verifyFramesMultiplexedToCorrectChannel(streamId, inboundHandler, 2);
     }
 
     @Test
-    public void closeCausesReset() throws Exception {
-        LastInboundHandler stream = new LastInboundHandler();
-        streamInit.handler = stream;
-        frameListener.onHeadersRead(http2HandlerCtx, 3, request, 31, true);
+    public void streamClosedShouldFireChannelInactive() {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(streamId);
+        assertTrue(inboundHandler.channelActive);
 
-        stream.channel().close();
-        channel.runPendingTasks();
-        channel.checkException();
-        stream.checkException();
-        verify(frameWriter).writeRstStream(
-            eq(http2HandlerCtx), eq(3), eq(8L), anyChannelPromise());
-        assertFalse(stream.channel().isActive());
-        assertTrue(channel.isActive());
+        parentChannel.pipeline().fireUserEventTriggered(new Http2StreamClosedEvent(streamId));
+
+        parentChannel.runPendingTasks();
+        parentChannel.checkException();
+
+        assertFalse(inboundHandler.channelActive);
+    }
+
+    @Test(expected = StreamException.class)
+    public void streamExceptionTriggersChildChannelExceptionCaught() throws Exception {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(streamId);
+
+        StreamException e = new StreamException(streamId, Http2Error.PROTOCOL_ERROR, "baaam!");
+        parentChannel.pipeline().fireExceptionCaught(e);
+
+        inboundHandler.checkException();
     }
 
     @Test
-    public void sendRstStream() throws Exception {
-        LastInboundHandler stream = new LastInboundHandler();
-        streamInit.handler = stream;
-        frameListener.onHeadersRead(http2HandlerCtx, 5, request, 31, true);
+    public void streamExceptionClosesChildChannel() {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(streamId);
 
-        stream.writeOutbound(new DefaultHttp2ResetFrame(314 /* non-standard error */));
-        verify(frameWriter).writeRstStream(
-            eq(http2HandlerCtx), eq(5), eq(314L), anyChannelPromise());
-        assertFalse(stream.channel().isActive());
-        assertTrue(channel.isActive());
+        assertTrue(inboundHandler.channelActive);
+        StreamException e = new StreamException(streamId, Http2Error.PROTOCOL_ERROR, "baaam!");
+        parentChannel.pipeline().fireExceptionCaught(e);
+
+        parentChannel.runPendingTasks();
+        parentChannel.checkException();
+
+        assertFalse(inboundHandler.channelActive);
     }
 
-    private static ChannelPromise anyChannelPromise() {
-        return any(ChannelPromise.class);
+    private LastInboundHandler streamActiveAndWriteHeaders(int streamId) {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        childChannelInitializer.handler = inboundHandler;
+        assertFalse(inboundHandler.channelActive);
+        parentChannel.pipeline().fireUserEventTriggered(new Http2StreamActiveEvent(streamId));
+        assertTrue(inboundHandler.channelActive);
+        parentChannel.pipeline().fireChannelRead(new DefaultHttp2HeadersFrame(request).setStreamId(streamId));
+        parentChannel.pipeline().fireChannelReadComplete();
+
+        return inboundHandler;
     }
 
-    private static Http2Settings anyHttp2Settings() {
-        return any(Http2Settings.class);
+    private static void verifyFramesMultiplexedToCorrectChannel(int streamId, LastInboundHandler inboundHandler,
+                                                                int numFrames) {
+        for (int i = 0; i < numFrames; i++) {
+            Http2StreamFrame frame = inboundHandler.readInbound();
+            assertNotNull(frame);
+            assertEquals(streamId, frame.streamId());
+            release(frame);
+        }
+        assertNull(inboundHandler.readInbound());
     }
 
-    private static ByteBuf bb(String s) {
-        ByteBuf buf = Unpooled.buffer(s.length() * 4);
-        ByteBufUtil.writeUtf8(buf, s);
-        return buf;
-    }
-
+    @Sharable
     static class TestChannelInitializer extends ChannelInitializer<Channel> {
         ChannelHandler handler;
 
@@ -211,11 +240,28 @@ public class Http2MultiplexCodecTest {
         }
     }
 
-    static class LastInboundHandler extends ChannelDuplexHandler {
+    private static ByteBuf bb(String s) {
+        return ByteBufUtil.writeUtf8(UnpooledByteBufAllocator.DEFAULT, s);
+    }
+
+    static final class LastInboundHandler extends ChannelDuplexHandler {
         private final Queue<Object> inboundMessages = new ArrayDeque<Object>();
         private final Queue<Object> userEvents = new ArrayDeque<Object>();
         private Throwable lastException;
         private ChannelHandlerContext ctx;
+        private boolean channelActive;
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            channelActive = true;
+            super.channelActive(ctx);
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            channelActive = false;
+            super.channelInactive(ctx);
+        }
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) {
@@ -260,28 +306,19 @@ public class Http2MultiplexCodecTest {
             return (T) userEvents.poll();
         }
 
-        public void writeOutbound(Object... msgs) throws Exception {
-            for (Object msg : msgs) {
-                ctx.write(msg);
-            }
-            ctx.flush();
-            EmbeddedChannel parent = (EmbeddedChannel) ctx.channel().parent();
-            parent.runPendingTasks();
-            parent.checkException();
-            checkException();
-        }
-
         public Channel channel() {
             return ctx.channel();
         }
-    }
 
-    public static class VerifiableHttp2FrameWriter extends DefaultHttp2FrameWriter {
-        @Override
-        public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                int padding, boolean endStream, ChannelPromise promise) {
-            // duplicate 'data' to prevent readerIndex from being changed, to ease verification
-            return super.writeData(ctx, streamId, data.duplicate(), padding, endStream, promise);
+        public void finishAndReleaseAll() throws Exception {
+            checkException();
+            Object o;
+            while ((o = readInbound()) != null) {
+                release(o);
+            }
+            while ((o = readUserEvent()) != null) {
+                release(o);
+            }
         }
     }
 }

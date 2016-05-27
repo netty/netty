@@ -15,26 +15,20 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
-/**
- * HTTP/2 HEADERS frame.
- */
 @UnstableApi
-public interface Http2HeadersFrame extends Http2StreamFrame {
+public abstract class AbstractHttp2StreamStateEvent implements Http2StreamStateEvent {
 
-    /**
-     * A complete header list. CONTINUATION frames are automatically handled.
-     */
-    Http2Headers headers();
+    private final int streamId;
 
-    /**
-     * {@code true} if this frame is the last one in this direction of the stream.
-     */
-    boolean isEndStream();
+    protected AbstractHttp2StreamStateEvent(int streamId) {
+        this.streamId = ObjectUtil.checkPositiveOrZero(streamId, "streamId");
+    }
 
-    /**
-     * Frame padding to use. Must be non-negative and less than 256.
-     */
-    int padding();
+    @Override
+    public int streamId() {
+        return streamId;
+    }
 }
