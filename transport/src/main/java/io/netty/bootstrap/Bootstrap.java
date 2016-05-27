@@ -194,44 +194,47 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private ChannelFuture doResolveAndConnect0(final Channel channel, SocketAddress remoteAddress,
                                                final SocketAddress localAddress, final ChannelPromise promise) {
-        final EventLoop eventLoop = channel.eventLoop();
-        final AddressResolver<SocketAddress> resolver = this.resolver.getResolver(eventLoop);
+        try {
+            final EventLoop eventLoop = channel.eventLoop();
+            final AddressResolver<SocketAddress> resolver = this.resolver.getResolver(eventLoop);
 
-        if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
-            // Resolver has no idea about what to do with the specified remote address or it's resolved already.
-            doConnect(remoteAddress, localAddress, promise);
-            return promise;
-        }
-
-        final Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
-
-        if (resolveFuture.isDone()) {
-            final Throwable resolveFailureCause = resolveFuture.cause();
-
-            if (resolveFailureCause != null) {
-                // Failed to resolve immediately
-                channel.close();
-                promise.setFailure(resolveFailureCause);
-            } else {
-                // Succeeded to resolve immediately; cached? (or did a blocking lookup)
-                doConnect(resolveFuture.getNow(), localAddress, promise);
+            if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
+                // Resolver has no idea about what to do with the specified remote address or it's resolved already.
+                doConnect(remoteAddress, localAddress, promise);
+                return promise;
             }
-            return promise;
-        }
 
-        // Wait until the name resolution is finished.
-        resolveFuture.addListener(new FutureListener<SocketAddress>() {
-            @Override
-            public void operationComplete(Future<SocketAddress> future) throws Exception {
-                if (future.cause() != null) {
+            final Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
+
+            if (resolveFuture.isDone()) {
+                final Throwable resolveFailureCause = resolveFuture.cause();
+
+                if (resolveFailureCause != null) {
+                    // Failed to resolve immediately
                     channel.close();
-                    promise.setFailure(future.cause());
+                    promise.setFailure(resolveFailureCause);
                 } else {
-                    doConnect(future.getNow(), localAddress, promise);
+                    // Succeeded to resolve immediately; cached? (or did a blocking lookup)
+                    doConnect(resolveFuture.getNow(), localAddress, promise);
                 }
+                return promise;
             }
-        });
 
+            // Wait until the name resolution is finished.
+            resolveFuture.addListener(new FutureListener<SocketAddress>() {
+                @Override
+                public void operationComplete(Future<SocketAddress> future) throws Exception {
+                    if (future.cause() != null) {
+                        channel.close();
+                        promise.setFailure(future.cause());
+                    } else {
+                        doConnect(future.getNow(), localAddress, promise);
+                    }
+                }
+            });
+        } catch (Throwable cause) {
+            promise.tryFailure(cause);
+        }
         return promise;
     }
 
