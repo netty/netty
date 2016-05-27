@@ -45,9 +45,14 @@ public final class DefaultHttp2ResetFrame extends AbstractHttp2StreamFrame imple
     }
 
     @Override
-    public DefaultHttp2ResetFrame setStream(Object stream) {
-      super.setStream(stream);
-      return this;
+    public DefaultHttp2ResetFrame setStreamId(int streamId) {
+        super.setStreamId(streamId);
+        return this;
+    }
+
+    @Override
+    public String name() {
+        return "RST_STREAM";
     }
 
     @Override
@@ -57,7 +62,7 @@ public final class DefaultHttp2ResetFrame extends AbstractHttp2StreamFrame imple
 
     @Override
     public String toString() {
-        return "DefaultHttp2ResetFrame(stream=" + stream() + "errorCode=" + errorCode + ")";
+        return "DefaultHttp2ResetFrame(stream=" + streamId() + "errorCode=" + errorCode + ")";
     }
 
     @Override

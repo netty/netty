@@ -19,4 +19,11 @@ import io.netty.util.internal.UnstableApi;
 
 /** An HTTP/2 frame. */
 @UnstableApi
-public interface Http2Frame { }
+public interface Http2Frame {
+
+    /**
+     * Returns the name of the HTTP/2 frame e.g. DATA, GOAWAY, etc.
+     */
+    String name();
+
+}
