@@ -313,6 +313,7 @@
             <configuration>
               <classifier>sources</classifier>
               <includes>io/netty/**</includes>
+              <includeScope>runtime</includeScope>
               <includeGroupIds>${project.groupId}</includeGroupIds>
               <outputDirectory>${generatedSourceDir}</outputDirectory>
             </configuration>
@@ -328,6 +329,7 @@
             <configuration>
               <excludes>io/netty/example/**,META-INF/native/libnetty-tcnative*</excludes>
               <includes>io/netty/**,META-INF/native/**</includes>
+              <includeScope>runtime</includeScope>
               <includeGroupIds>${project.groupId}</includeGroupIds>
               <outputDirectory>${project.build.outputDirectory}</outputDirectory>
             </configuration>
