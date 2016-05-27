@@ -412,25 +412,23 @@ abstract class DnsNameResolverContext<T> {
         final int tries = maxAllowedQueries - allowedQueries;
         final StringBuilder buf = new StringBuilder(64);
 
-        buf.append("failed to resolve ");
-        buf.append(hostname);
-
+        buf.append("failed to resolve '")
+           .append(hostname).append('\'');
         if (tries > 1) {
-            buf.append(" after ");
-            buf.append(tries);
-            if (trace != null) {
-                buf.append(" queries:");
-                buf.append(trace);
+            if (tries < maxAllowedQueries) {
+                buf.append(" after ")
+                   .append(tries)
+                   .append(" queries ");
             } else {
-                buf.append(" queries");
-            }
-        } else {
-            if (trace != null) {
-                buf.append(':');
-                buf.append(trace);
+                buf.append(". Exceeded max queries per resolve ")
+                .append(maxAllowedQueries)
+                .append(' ');
             }
         }
-
+        if (trace != null) {
+            buf.append(':')
+               .append(trace);
+        }
         final UnknownHostException cause = new UnknownHostException(buf.toString());
 
         resolveCache.cache(hostname, cause, parent.ch.eventLoop());
