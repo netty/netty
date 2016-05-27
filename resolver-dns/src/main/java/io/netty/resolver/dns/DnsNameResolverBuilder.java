@@ -48,7 +48,7 @@ public final class DnsNameResolverBuilder {
     private long queryTimeoutMillis = 5000;
     private InternetProtocolFamily[] resolvedAddressTypes = DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
     private boolean recursionDesired = true;
-    private int maxQueriesPerResolve = 3;
+    private int maxQueriesPerResolve = 16;
     private boolean traceEnabled;
     private int maxPayloadSize = 4096;
     private boolean optResourceEnabled = true;
