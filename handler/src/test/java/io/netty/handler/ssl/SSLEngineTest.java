@@ -28,11 +28,13 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.After;
 import org.junit.Before;
@@ -41,20 +43,27 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLSession;
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.cert.CertificateException;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLSession;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
 
 public abstract class SSLEngineTest {
@@ -109,18 +118,35 @@ public abstract class SSLEngineTest {
 
     @After
     public void tearDown() throws InterruptedException {
+        if (clientChannel != null) {
+            clientChannel.close();
+            clientChannel = null;
+        }
+        if (serverConnectedChannel != null) {
+            serverConnectedChannel.close();
+            serverConnectedChannel = null;
+        }
         if (serverChannel != null) {
             serverChannel.close().sync();
-            Future<?> serverGroup = sb.config().group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-            Future<?> serverChildGroup = sb.config().childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-            Future<?> clientGroup = cb.config().group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-            serverGroup.sync();
-            serverChildGroup.sync();
-            clientGroup.sync();
+            serverChannel = null;
         }
-        clientChannel = null;
-        serverChannel = null;
-        serverConnectedChannel = null;
+        Future<?> serverGroupShutdownFuture = null;
+        Future<?> serverChildGroupShutdownFuture = null;
+        Future<?> clientGroupShutdownFuture = null;
+        if (sb != null) {
+            serverGroupShutdownFuture = sb.config().group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+            serverChildGroupShutdownFuture = sb.config().childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        }
+        if (cb != null) {
+            clientGroupShutdownFuture = cb.config().group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        }
+        if (serverGroupShutdownFuture != null) {
+            serverGroupShutdownFuture.sync();
+            serverChildGroupShutdownFuture.sync();
+        }
+        if (clientGroupShutdownFuture != null) {
+            clientGroupShutdownFuture.sync();
+        }
         serverException = null;
     }
 
@@ -355,6 +381,111 @@ public abstract class SSLEngineTest {
         assertNotEquals(0, clientEngine.getSession().getId().length);
         assertNotEquals(0, serverEngine.getSession().getId().length);
         assertArrayEquals(clientEngine.getSession().getId(), serverEngine.getSession().getId());
+    }
+
+    @Test(timeout = 3000)
+    public void clientInitiatedRenegotiationWithFatalAlertDoesNotInfiniteLoopServer()
+            throws CertificateException, SSLException, InterruptedException, ExecutionException {
+        final SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslProvider()).build();
+        sb = new ServerBootstrap()
+                .group(new NioEventLoopGroup(1))
+                .channel(NioServerSocketChannel.class)
+                .childHandler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    public void initChannel(SocketChannel ch) {
+                        ChannelPipeline p = ch.pipeline();
+                        p.addLast(serverSslCtx.newHandler(ch.alloc()));
+                        p.addLast(new ChannelInboundHandlerAdapter() {
+                            @Override
+                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                if (evt instanceof SslHandshakeCompletionEvent &&
+                                        ((SslHandshakeCompletionEvent) evt).isSuccess()) {
+                                    // This data will be sent to the client before any of the re-negotiation data can be
+                                    // sent. The client will read this, detect that it is not the response to
+                                    // renegotiation which was expected, and respond with a fatal alert.
+                                    ctx.writeAndFlush(ctx.alloc().buffer(1).writeByte(100));
+                                }
+                                ctx.fireUserEventTriggered(evt);
+                            }
+
+                            @Override
+                            public void channelRead(final ChannelHandlerContext ctx, Object msg) {
+                                ReferenceCountUtil.release(msg);
+                                // The server then attempts to trigger a flush operation once the application data is
+                                // received from the client. The flush will encrypt all data and should not result in
+                                // deadlock.
+                                ctx.channel().eventLoop().schedule(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        ctx.writeAndFlush(ctx.alloc().buffer(1).writeByte(101));
+                                    }
+                                }, 500, TimeUnit.MILLISECONDS);
+                            }
+
+                            @Override
+                            public void channelInactive(ChannelHandlerContext ctx) {
+                                serverLatch.countDown();
+                            }
+                        });
+                        serverConnectedChannel = ch;
+                    }
+                });
+
+        serverChannel = sb.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+        clientSslCtx = SslContextBuilder.forClient()
+                .sslProvider(SslProvider.JDK) // OpenSslEngine doesn't support renegotiation on client side
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+
+        cb = new Bootstrap();
+        cb.group(new NioEventLoopGroup(1))
+                .channel(NioSocketChannel.class)
+                .handler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    public void initChannel(SocketChannel ch) {
+                        ChannelPipeline p = ch.pipeline();
+                        SslHandler sslHandler = clientSslCtx.newHandler(ch.alloc());
+                        // The renegotiate is not expected to succeed, so we should stop trying in a timely manner so
+                        // the unit test can terminate relativley quicly.
+                        sslHandler.setHandshakeTimeout(1, TimeUnit.SECONDS);
+                        p.addLast(sslHandler);
+                        p.addLast(new ChannelInboundHandlerAdapter() {
+                            private int handshakeCount;
+                            @Override
+                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                // OpenSSL SSLEngine sends a fatal alert for the renegotiation handshake because the
+                                // user data read as part of the handshake. The client receives this fatal alert and is
+                                // expected to shutdown the connection. The "invalid data" during the renegotiation
+                                // handshake is also delivered to channelRead(..) on the server.
+                                // JDK SSLEngine completes the renegotiation handshake and delivers the "invalid data"
+                                // is also delivered to channelRead(..) on the server. JDK SSLEngine does not send a
+                                // fatal error and so for testing purposes we close the connection after we have
+                                // completed the first renegotiation handshake (which is the second handshake).
+                                if (evt instanceof SslHandshakeCompletionEvent && ++handshakeCount == 2) {
+                                    ctx.close();
+                                    return;
+                                }
+                                ctx.fireUserEventTriggered(evt);
+                            }
+
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                ReferenceCountUtil.release(msg);
+                                // Simulate a request that the server's application logic will think is invalid.
+                                ctx.writeAndFlush(ctx.alloc().buffer(1).writeByte(102));
+                                ctx.pipeline().get(SslHandler.class).renegotiate();
+                            }
+                        });
+                    }
+                });
+
+        ChannelFuture ccf = cb.connect(serverChannel.localAddress());
+        assertTrue(ccf.syncUninterruptibly().isSuccess());
+        clientChannel = ccf.channel();
+
+        serverLatch.await();
     }
 
     protected void testEnablingAnAlreadyDisabledSslProtocol(String[] protocols1, String[] protocols2) throws Exception {
