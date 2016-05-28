@@ -27,18 +27,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.apache.tomcat.jni.Buffer;
 import org.apache.tomcat.jni.SSL;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLEngineResult.HandshakeStatus;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSessionBindingEvent;
-import javax.net.ssl.SSLSessionBindingListener;
-import javax.net.ssl.SSLSessionContext;
-import javax.security.cert.X509Certificate;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.security.Principal;
@@ -51,11 +39,29 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSessionBindingEvent;
+import javax.net.ssl.SSLSessionBindingListener;
+import javax.net.ssl.SSLSessionContext;
+import javax.security.cert.X509Certificate;
+
 import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import static io.netty.handler.ssl.OpenSsl.memoryAddress;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static javax.net.ssl.SSLEngineResult.HandshakeStatus.*;
-import static javax.net.ssl.SSLEngineResult.Status.*;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_UNWRAP;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_WRAP;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING;
+import static javax.net.ssl.SSLEngineResult.Status.BUFFER_OVERFLOW;
+import static javax.net.ssl.SSLEngineResult.Status.CLOSED;
+import static javax.net.ssl.SSLEngineResult.Status.OK;
 
 /**
  * Implements a {@link SSLEngine} using
@@ -501,9 +507,8 @@ public final class OpenSslEngine extends SSLEngine {
             }
         }
 
-        int bytesProduced = 0;
-
         // There was no pending data in the network BIO -- encrypt any application data
+        int bytesProduced = 0;
         int bytesConsumed = 0;
         int endOffset = offset + length;
         for (int i = offset; i < endOffset; ++ i) {
@@ -512,11 +517,16 @@ public final class OpenSslEngine extends SSLEngine {
                 throw new IllegalArgumentException("srcs[" + i + "] is null");
             }
             while (src.hasRemaining()) {
-
+                final SSLEngineResult pendingNetResult;
                 // Write plaintext application data to the SSL engine
                 int result = writePlaintextData(src);
                 if (result > 0) {
                     bytesConsumed += result;
+
+                    pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced, status);
+                    if (pendingNetResult != null) {
+                        return pendingNetResult;
+                    }
                 } else {
                     int sslError = SSL.getError(ssl, result);
                     switch (sslError) {
@@ -525,20 +535,33 @@ public final class OpenSslEngine extends SSLEngine {
                         if (!receivedShutdown) {
                             closeAll();
                         }
-                        // fall-trough!
+                        pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced, status);
+                        return pendingNetResult != null ? pendingNetResult : CLOSED_NOT_HANDSHAKING;
                     case SSL.SSL_ERROR_WANT_READ:
+                        // If there is no pending data to read from BIO we should go back to event loop and try to read
+                        // more data [1]. It is also possible that event loop will detect the socket has been closed.
+                        // [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
+                        pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced, status);
+                        return pendingNetResult != null ? pendingNetResult :
+                                new SSLEngineResult(getEngineStatus(), NEED_UNWRAP, bytesConsumed, bytesProduced);
                     case SSL.SSL_ERROR_WANT_WRITE:
-                        // Break here as this means we need check if there is something pending in the BIO
-                        break;
+                        // SSL_ERROR_WANT_WRITE typically means that the underlying transport is not writable and we
+                        // should set the "want write" flag on the selector and try again when the underlying transport
+                        // is writable [1]. However we are not directly writing to the underlying transport and instead
+                        // writing to a BIO buffer. The OpenSsl documentation says we should do the following [1]:
+                        //
+                        // "When using a buffering BIO, like a BIO pair, data must be written into or retrieved out of
+                        // the BIO before being able to continue."
+                        //
+                        // So we attempt to drain the BIO buffer below, but if there is no data this condition is
+                        // undefined and we assume their is a fatal error with the openssl engine and close.
+                        // [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
+                        pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced, status);
+                        return pendingNetResult != null ? pendingNetResult : NEED_WRAP_CLOSED;
                     default:
                         // Everything else is considered as error
                         throw shutdownWithError("SSL_write");
                     }
-                }
-
-                SSLEngineResult pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced, status);
-                if (pendingNetResult != null) {
-                    return pendingNetResult;
                 }
             }
         }
