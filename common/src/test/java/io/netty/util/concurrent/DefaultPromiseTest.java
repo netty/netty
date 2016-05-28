@@ -25,7 +25,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -79,16 +78,11 @@ public class DefaultPromiseTest {
 
     @Test
     public void testNoStackOverflowErrorWithDefaultEventExecutorA() throws Exception {
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        EventExecutor executor = new DefaultEventExecutor(null, new DefaultThreadFactory("test"));
         try {
-            EventExecutor executor = new DefaultEventExecutor(executorService);
-            try {
-                testStackOverFlowErrorChainedFuturesA(Math.min(stackOverflowDepth << 1, Integer.MAX_VALUE), executor);
-            } finally {
-                executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-            }
+            testStackOverFlowErrorChainedFuturesA(Math.min(stackOverflowDepth << 1, Integer.MAX_VALUE), executor);
         } finally {
-            executorService.shutdown();
+            executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -100,16 +94,11 @@ public class DefaultPromiseTest {
 
     @Test
     public void testNoStackOverflowErrorWithDefaultEventExecutorB() throws Exception {
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        EventExecutor executor = new DefaultEventExecutor(null, new DefaultThreadFactory("test"));
         try {
-            EventExecutor executor = new DefaultEventExecutor(executorService);
-            try {
-                testStackOverFlowErrorChainedFuturesB(Math.min(stackOverflowDepth << 1, Integer.MAX_VALUE), executor);
-            } finally {
-                executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-            }
+            testStackOverFlowErrorChainedFuturesB(Math.min(stackOverflowDepth << 1, Integer.MAX_VALUE), executor);
         } finally {
-            executorService.shutdown();
+            executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         }
     }
 
