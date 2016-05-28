@@ -439,6 +439,7 @@ public final class OpenSslServerContext extends OpenSslContext {
                 }
             }
             sessionContext = new OpenSslServerSessionContext(ctx);
+            sessionContext.setSessionIdContext("netty".getBytes());
             success = true;
         } finally {
             if (!success) {
