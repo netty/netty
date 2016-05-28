@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
+import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
@@ -525,7 +526,10 @@ public final class OpenSslEngine extends SSLEngine {
 
                     pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced, status);
                     if (pendingNetResult != null) {
-                        return pendingNetResult;
+                        if (pendingNetResult.getStatus() != OK) {
+                            return pendingNetResult;
+                        }
+                        bytesProduced = pendingNetResult.bytesProduced();
                     }
                 } else {
                     int sslError = SSL.getError(ssl, result);
@@ -1257,7 +1261,7 @@ public final class OpenSslEngine extends SSLEngine {
         return FINISHED;
     }
 
-    private SSLEngineResult.Status getEngineStatus() {
+    private Status getEngineStatus() {
         return engineClosed? CLOSED : OK;
     }
 
