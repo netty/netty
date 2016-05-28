@@ -36,6 +36,7 @@ import static io.netty.util.internal.ObjectUtil.*;
  * A server-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
  */
 public final class OpenSslServerContext extends OpenSslContext {
+    private static final byte[] ID = new byte[] {'n', 'e', 't', 't', 'y'};
     private final OpenSslServerSessionContext sessionContext;
 
     /**
@@ -439,6 +440,7 @@ public final class OpenSslServerContext extends OpenSslContext {
                 }
             }
             sessionContext = new OpenSslServerSessionContext(ctx);
+            sessionContext.setSessionIdContext(ID);
             success = true;
         } finally {
             if (!success) {
