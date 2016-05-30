@@ -88,4 +88,9 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
                     }
                 });
     }
+
+    @Override
+    public void close() {
+        nameResolver.close();
+    }
 }
