@@ -31,6 +31,9 @@
  */
 package io.netty.microbench.http2.internal.hpack;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 
@@ -56,7 +59,7 @@ public enum HeadersSize {
         return Header.createHeaders(numHeaders, nameLength, valueLength, limitAscii);
     }
 
-    public ByteArrayOutputStream newOutputStream() {
-        return new ByteArrayOutputStream(numHeaders * (nameLength + valueLength));
+    public ByteBuf newOutBuffer() {
+        return Unpooled.buffer(numHeaders * (nameLength + valueLength));
     }
 }

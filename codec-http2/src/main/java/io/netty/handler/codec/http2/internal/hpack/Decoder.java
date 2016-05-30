@@ -31,13 +31,13 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.EmptyArrays;
 
 import java.io.IOException;
-import java.io.InputStream;
-
-import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 
 public final class Decoder {
 
@@ -58,8 +58,8 @@ public final class Decoder {
     }
 
     private final DynamicTable dynamicTable;
-
-    private int maxHeaderSize;
+    private final HuffmanDecoder huffmanDecoder;
+    private final int maxHeaderSize;
     private int maxDynamicTableSize;
     private int encoderMaxDynamicTableSize;
     private boolean maxDynamicTableSizeChangeRequired;
@@ -72,7 +72,7 @@ public final class Decoder {
     private int skipLength;
     private int nameLength;
     private int valueLength;
-    private byte[] name;
+    private CharSequence name;
 
     private enum State {
         READ_HEADER_REPRESENTATION,
@@ -92,12 +92,13 @@ public final class Decoder {
     /**
      * Creates a new decoder.
      */
-    public Decoder(int maxHeaderSize, int maxHeaderTableSize) {
+    public Decoder(int maxHeaderSize, int maxHeaderTableSize, int initialCapacity) {
         dynamicTable = new DynamicTable(maxHeaderTableSize);
         this.maxHeaderSize = maxHeaderSize;
         maxDynamicTableSize = maxHeaderTableSize;
         encoderMaxDynamicTableSize = maxHeaderTableSize;
         maxDynamicTableSizeChangeRequired = false;
+        huffmanDecoder = new HuffmanDecoder(initialCapacity);
         reset();
     }
 
@@ -110,11 +111,11 @@ public final class Decoder {
     /**
      * Decode the header block into header fields.
      */
-    public void decode(InputStream in, HeaderListener headerListener) throws IOException {
-        while (in.available() > 0) {
+    public void decode(ByteBuf in, Http2Headers headers) throws IOException {
+        while (in.isReadable()) {
             switch (state) {
                 case READ_HEADER_REPRESENTATION:
-                    byte b = (byte) in.read();
+                    byte b = in.readByte();
                     if (maxDynamicTableSizeChangeRequired && (b & 0xE0) != 0x20) {
                         // Encoder MUST signal maximum dynamic table size change
                         throw MAX_DYNAMIC_TABLE_SIZE_CHANGE_REQUIRED;
@@ -127,7 +128,7 @@ public final class Decoder {
                         } else if (index == 0x7F) {
                             state = State.READ_INDEXED_HEADER;
                         } else {
-                            indexHeader(index, headerListener);
+                            indexHeader(index, headers);
                         }
                     } else if ((b & 0x40) == 0x40) {
                         // Literal Header Field with Incremental Indexing
@@ -193,7 +194,7 @@ public final class Decoder {
                         throw DECOMPRESSION_EXCEPTION;
                     }
 
-                    indexHeader(index + headerIndex, headerListener);
+                    indexHeader(index + headerIndex, headers);
                     state = State.READ_HEADER_REPRESENTATION;
                     break;
 
@@ -214,7 +215,7 @@ public final class Decoder {
                     break;
 
                 case READ_LITERAL_HEADER_NAME_LENGTH_PREFIX:
-                    b = (byte) in.read();
+                    b = in.readByte();
                     huffmanEncoded = (b & 0x80) == 0x80;
                     index = b & 0x7F;
                     if (index == 0x7f) {
@@ -227,7 +228,7 @@ public final class Decoder {
 
                             if (indexType == IndexType.NONE) {
                                 // Name is unused so skip bytes
-                                name = EMPTY_BYTES;
+                                name = AsciiString.EMPTY_STRING;
                                 skipLength = nameLength;
                                 state = State.SKIP_LITERAL_HEADER_NAME;
                                 break;
@@ -236,7 +237,7 @@ public final class Decoder {
                             // Check name length against max dynamic table size
                             if (nameLength + HeaderField.HEADER_ENTRY_OVERHEAD > dynamicTable.capacity()) {
                                 dynamicTable.clear();
-                                name = EMPTY_BYTES;
+                                name = AsciiString.EMPTY_STRING;
                                 skipLength = nameLength;
                                 state = State.SKIP_LITERAL_HEADER_NAME;
                                 break;
@@ -263,7 +264,7 @@ public final class Decoder {
                     if (exceedsMaxHeaderSize(nameLength)) {
                         if (indexType == IndexType.NONE) {
                             // Name is unused so skip bytes
-                            name = EMPTY_BYTES;
+                            name = AsciiString.EMPTY_STRING;
                             skipLength = nameLength;
                             state = State.SKIP_LITERAL_HEADER_NAME;
                             break;
@@ -272,7 +273,7 @@ public final class Decoder {
                         // Check name length against max dynamic table size
                         if (nameLength + HeaderField.HEADER_ENTRY_OVERHEAD > dynamicTable.capacity()) {
                             dynamicTable.clear();
-                            name = EMPTY_BYTES;
+                            name = AsciiString.EMPTY_STRING;
                             skipLength = nameLength;
                             state = State.SKIP_LITERAL_HEADER_NAME;
                             break;
@@ -283,7 +284,7 @@ public final class Decoder {
 
                 case READ_LITERAL_HEADER_NAME:
                     // Wait until entire name is readable
-                    if (in.available() < nameLength) {
+                    if (in.readableBytes() < nameLength) {
                         return;
                     }
 
@@ -293,7 +294,9 @@ public final class Decoder {
                     break;
 
                 case SKIP_LITERAL_HEADER_NAME:
-                    skipLength -= in.skip(skipLength);
+                    int skip = Math.min(in.readableBytes(), skipLength);
+                    in.skipBytes(skip);
+                    skipLength -= skip;
 
                     if (skipLength == 0) {
                         state = State.READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
@@ -301,7 +304,7 @@ public final class Decoder {
                     break;
 
                 case READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX:
-                    b = (byte) in.read();
+                    b = in.readByte();
                     huffmanEncoded = (b & 0x80) == 0x80;
                     index = b & 0x7F;
                     if (index == 0x7f) {
@@ -330,7 +333,7 @@ public final class Decoder {
                         }
 
                         if (valueLength == 0) {
-                            insertHeader(headerListener, name, EMPTY_BYTES, indexType);
+                            insertHeader(headers, name, AsciiString.EMPTY_STRING, indexType);
                             state = State.READ_HEADER_REPRESENTATION;
                         } else {
                             state = State.READ_LITERAL_HEADER_VALUE;
@@ -376,18 +379,19 @@ public final class Decoder {
 
                 case READ_LITERAL_HEADER_VALUE:
                     // Wait until entire value is readable
-                    if (in.available() < valueLength) {
+                    if (in.readableBytes() < valueLength) {
                         return;
                     }
 
-                    byte[] value = readStringLiteral(in, valueLength);
-                    insertHeader(headerListener, name, value, indexType);
+                    CharSequence value = readStringLiteral(in, valueLength);
+                    insertHeader(headers, name, value, indexType);
                     state = State.READ_HEADER_REPRESENTATION;
                     break;
 
                 case SKIP_LITERAL_HEADER_VALUE:
-                    valueLength -= in.skip(valueLength);
-
+                    int skipBytes = Math.min(in.readableBytes(), valueLength);
+                    in.skipBytes(skipBytes);
+                    valueLength -= skipBytes;
                     if (valueLength == 0) {
                         state = State.READ_HEADER_REPRESENTATION;
                     }
@@ -473,21 +477,21 @@ public final class Decoder {
         }
     }
 
-    private void indexHeader(int index, HeaderListener headerListener) throws IOException {
+    private void indexHeader(int index, Http2Headers headers) throws IOException {
         if (index <= StaticTable.length) {
             HeaderField headerField = StaticTable.getEntry(index);
-            addHeader(headerListener, headerField.name, headerField.value, false);
+            addHeader(headers, headerField.name, headerField.value);
         } else if (index - StaticTable.length <= dynamicTable.length()) {
             HeaderField headerField = dynamicTable.getEntry(index - StaticTable.length);
-            addHeader(headerListener, headerField.name, headerField.value, false);
+            addHeader(headers, headerField.name, headerField.value);
         } else {
             throw ILLEGAL_INDEX_VALUE;
         }
     }
 
-    private void insertHeader(HeaderListener headerListener, byte[] name, byte[] value,
+    private void insertHeader(Http2Headers headers, CharSequence name, CharSequence value,
                               IndexType indexType) {
-        addHeader(headerListener, name, value, indexType == IndexType.NEVER);
+        addHeader(headers, name, value);
 
         switch (indexType) {
             case NONE:
@@ -503,11 +507,10 @@ public final class Decoder {
         }
     }
 
-    private void addHeader(HeaderListener headerListener, byte[] name, byte[] value,
-                           boolean sensitive) {
-        long newSize = headerSize + name.length + value.length;
+    private void addHeader(Http2Headers headers, CharSequence name, CharSequence value) {
+        long newSize = headerSize + name.length() + value.length();
         if (newSize <= maxHeaderSize) {
-            headerListener.addHeader(name, value, sensitive);
+            headers.add(name, value);
             headerSize = (int) newSize;
         } else {
             // truncation will be reported during endHeaderBlock
@@ -526,32 +529,29 @@ public final class Decoder {
         return true;
     }
 
-    private byte[] readStringLiteral(InputStream in, int length) throws IOException {
-        byte[] buf = new byte[length];
-        if (in.read(buf) != length) {
-            throw DECOMPRESSION_EXCEPTION;
-        }
-
+    private CharSequence readStringLiteral(ByteBuf in, int length) throws IOException {
         if (huffmanEncoded) {
-            return Huffman.DECODER.decode(buf);
+            return huffmanDecoder.decode(in, length);
         } else {
-            return buf;
+            byte[] buf = new byte[length];
+            in.readBytes(buf);
+            return new AsciiString(buf, false);
         }
     }
 
     // Unsigned Little Endian Base 128 Variable-Length Integer Encoding
-    private static int decodeULE128(InputStream in) throws IOException {
-        in.mark(5);
+    private static int decodeULE128(ByteBuf in) throws IOException {
+        in.markReaderIndex();
         int result = 0;
         int shift = 0;
         while (shift < 32) {
-            if (in.available() == 0) {
+            if (!in.isReadable()) {
                 // Buffer does not contain entire integer,
                 // reset reader index and return -1.
-                in.reset();
+                in.resetReaderIndex();
                 return -1;
             }
-            byte b = (byte) in.read();
+            byte b = in.readByte();
             if (shift == 28 && (b & 0xF8) != 0) {
                 break;
             }
@@ -562,7 +562,7 @@ public final class Decoder {
             shift += 7;
         }
         // Value exceeds Integer.MAX_VALUE
-        in.reset();
+        in.resetReaderIndex();
         throw DECOMPRESSION_EXCEPTION;
     }
 }

@@ -31,11 +31,12 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.AsciiString;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
@@ -62,59 +63,59 @@ public class HuffmanTest {
         for (int i = 0; i < 4; i++) {
             buf[i] = (byte) 0xFF;
         }
-        Huffman.DECODER.decode(buf);
+        decode(new HuffmanDecoder(32), buf);
     }
 
     @Test(expected = IOException.class)
     public void testDecodeIllegalPadding() throws IOException {
         byte[] buf = new byte[1];
         buf[0] = 0x00; // '0', invalid padding
-        Huffman.DECODER.decode(buf);
+        decode(new HuffmanDecoder(32), buf);
     }
 
     @Test(expected = IOException.class)
     public void testDecodeExtraPadding() throws IOException {
         byte[] buf = makeBuf(0x0f, 0xFF); // '1', 'EOS'
-        Huffman.DECODER.decode(buf);
+        decode(new HuffmanDecoder(32), buf);
     }
 
     @Test(expected = IOException.class)
     public void testDecodeExtraPadding1byte() throws IOException {
         byte[] buf = makeBuf(0xFF);
-        Huffman.DECODER.decode(buf);
+        decode(new HuffmanDecoder(32), buf);
     }
 
     @Test(expected = IOException.class)
     public void testDecodeExtraPadding2byte() throws IOException {
         byte[] buf = makeBuf(0x1F, 0xFF); // 'a'
-        Huffman.DECODER.decode(buf);
+        decode(new HuffmanDecoder(32), buf);
     }
 
     @Test(expected = IOException.class)
     public void testDecodeExtraPadding3byte() throws IOException {
         byte[] buf = makeBuf(0x1F, 0xFF, 0xFF); // 'a'
-        Huffman.DECODER.decode(buf);
+        decode(new HuffmanDecoder(32), buf);
     }
 
     @Test(expected = IOException.class)
     public void testDecodeExtraPadding4byte() throws IOException {
         byte[] buf = makeBuf(0x1F, 0xFF, 0xFF, 0xFF); // 'a'
-        Huffman.DECODER.decode(buf);
+        decode(new HuffmanDecoder(32), buf);
     }
 
     @Test(expected = IOException.class)
     public void testDecodeExtraPadding29bit() throws IOException {
         byte[] buf = makeBuf(0xFF, 0x9F, 0xFF, 0xFF, 0xFF);  // '|'
-        Huffman.DECODER.decode(buf);
+        decode(new HuffmanDecoder(32), buf);
     }
 
     @Test(expected = IOException.class)
     public void testDecodePartialSymbol() throws IOException {
         byte[] buf = makeBuf(0x52, 0xBC, 0x30, 0xFF, 0xFF, 0xFF, 0xFF); // " pFA\x00", 31 bits of padding, a.k.a. EOS
-        Huffman.DECODER.decode(buf);
+        decode(new HuffmanDecoder(32), buf);
     }
 
-    private byte[] makeBuf(int ... bytes) {
+    private static byte[] makeBuf(int ... bytes) {
         byte[] buf = new byte[bytes.length];
         for (int i = 0; i < buf.length; i++) {
             buf[i] = (byte) bytes[i];
@@ -122,8 +123,8 @@ public class HuffmanTest {
         return buf;
     }
 
-    private void roundTrip(String s) throws IOException {
-        roundTrip(Huffman.ENCODER, Huffman.DECODER, s);
+    private static void roundTrip(String s) throws IOException {
+        roundTrip(new HuffmanEncoder(), new HuffmanDecoder(32), s);
     }
 
     private static void roundTrip(HuffmanEncoder encoder, HuffmanDecoder decoder, String s)
@@ -131,19 +132,34 @@ public class HuffmanTest {
         roundTrip(encoder, decoder, s.getBytes());
     }
 
-    private void roundTrip(byte[] buf) throws IOException {
-        roundTrip(Huffman.ENCODER, Huffman.DECODER, buf);
+    private static void roundTrip(byte[] buf) throws IOException {
+        roundTrip(new HuffmanEncoder(), new HuffmanDecoder(32), buf);
     }
 
     private static void roundTrip(HuffmanEncoder encoder, HuffmanDecoder decoder, byte[] buf)
             throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(baos);
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            encoder.encode(buffer, new AsciiString(buf, false));
+            byte[] bytes = new byte[buffer.readableBytes()];
+            buffer.readBytes(bytes);
 
-        encoder.encode(dos, buf);
+            byte[] actualBytes = decode(decoder, bytes);
 
-        byte[] actualBytes = decoder.decode(baos.toByteArray());
+            Assert.assertTrue(Arrays.equals(buf, actualBytes));
+        } finally {
+            buffer.release();
+        }
+    }
 
-        Assert.assertTrue(Arrays.equals(buf, actualBytes));
+    private static byte[] decode(HuffmanDecoder decoder, byte[] bytes) throws IOException {
+        ByteBuf buffer = Unpooled.wrappedBuffer(bytes);
+        try {
+            AsciiString decoded = decoder.decode(buffer, buffer.readableBytes());
+            Assert.assertFalse(buffer.isReadable());
+            return decoded.toByteArray();
+        } finally {
+            buffer.release();
+        }
     }
 }
