@@ -843,8 +843,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (inEventLoop || executor.inEventLoop(currentThread)) {
                 synchronized (this) {
                     remove0(ctx);
-                    callHandlerRemoved0(ctx);
                 }
+                callHandlerRemoved0(ctx);
             } else {
                 final AbstractChannelHandlerContext finalCtx = ctx;
                 executor.execute(new OneTimeTask() {
