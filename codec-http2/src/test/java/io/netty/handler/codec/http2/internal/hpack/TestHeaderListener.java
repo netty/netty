@@ -31,9 +31,11 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
+
 import java.util.List;
 
-final class TestHeaderListener implements HeaderListener {
+final class TestHeaderListener extends DefaultHttp2Headers {
 
     private final List<HeaderField> headers;
 
@@ -42,7 +44,8 @@ final class TestHeaderListener implements HeaderListener {
     }
 
     @Override
-    public void addHeader(byte[] name, byte[] value, boolean sensitive) {
+    public TestHeaderListener add(CharSequence name, CharSequence value) {
         headers.add(new HeaderField(name, value));
+        return this;
     }
 }
