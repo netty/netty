@@ -39,9 +39,10 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.AsciiString;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -169,31 +170,39 @@ final class TestCase {
             maxHeaderTableSize = Integer.MAX_VALUE;
         }
 
-        return new Decoder(8192, maxHeaderTableSize);
+        return new Decoder(8192, maxHeaderTableSize, 32);
     }
 
     private static byte[] encode(Encoder encoder, List<HeaderField> headers, int maxHeaderTableSize,
-                                 boolean sensitive)
-            throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                 boolean sensitive) {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            if (maxHeaderTableSize != -1) {
+                encoder.setMaxHeaderTableSize(buffer, maxHeaderTableSize);
+            }
 
-        if (maxHeaderTableSize != -1) {
-            encoder.setMaxHeaderTableSize(baos, maxHeaderTableSize);
+            for (HeaderField e : headers) {
+                encoder.encodeHeader(buffer, AsciiString.of(e.name), AsciiString.of(e.value), sensitive);
+            }
+            byte[] bytes = new byte[buffer.readableBytes()];
+            buffer.readBytes(bytes);
+            return bytes;
+        } finally {
+            buffer.release();
         }
-
-        for (HeaderField e : headers) {
-            encoder.encodeHeader(baos, e.name, e.value, sensitive);
-        }
-
-        return baos.toByteArray();
     }
 
     private static List<HeaderField> decode(Decoder decoder, byte[] expected) throws IOException {
-        List<HeaderField> headers = new ArrayList<HeaderField>();
-        TestHeaderListener listener = new TestHeaderListener(headers);
-        decoder.decode(new ByteArrayInputStream(expected), listener);
-        decoder.endHeaderBlock();
-        return headers;
+        ByteBuf in = Unpooled.wrappedBuffer(expected);
+        try {
+            List<HeaderField> headers = new ArrayList<HeaderField>();
+            TestHeaderListener listener = new TestHeaderListener(headers);
+            decoder.decode(in, listener);
+            decoder.endHeaderBlock();
+            return headers;
+        } finally {
+            in.release();
+        }
     }
 
     private static String concat(List<String> l) {
@@ -237,8 +246,7 @@ final class TestCase {
 
         @Override
         public HeaderField deserialize(JsonElement json, Type typeOfT,
-                                       JsonDeserializationContext context)
-                throws JsonParseException {
+                                       JsonDeserializationContext context) {
             JsonObject jsonObject = json.getAsJsonObject();
             Set<Map.Entry<String, JsonElement>> entrySet = jsonObject.entrySet();
             if (entrySet.size() != 1) {

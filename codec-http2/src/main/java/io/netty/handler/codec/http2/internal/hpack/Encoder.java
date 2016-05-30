@@ -31,8 +31,10 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import io.netty.buffer.ByteBuf;
+import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
+
 import java.util.Arrays;
 
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.INCREMENTAL;
@@ -42,16 +44,17 @@ import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NO
 public final class Encoder {
 
     private static final int BUCKET_SIZE = 17;
-    private static final byte[] EMPTY = {};
 
     // for testing
     private final boolean useIndexing;
     private final boolean forceHuffmanOn;
     private final boolean forceHuffmanOff;
+    private final HuffmanEncoder huffmanEncoder = new HuffmanEncoder();
 
     // a linked hash map of header fields
     private final HeaderEntry[] headerFields = new HeaderEntry[BUCKET_SIZE];
-    private final HeaderEntry head = new HeaderEntry(-1, EMPTY, EMPTY, Integer.MAX_VALUE, null);
+    private final HeaderEntry head = new HeaderEntry(-1, AsciiString.EMPTY_STRING,
+            AsciiString.EMPTY_STRING, Integer.MAX_VALUE, null);
     private int size;
     private int capacity;
 
@@ -77,15 +80,16 @@ public final class Encoder {
         this.useIndexing = useIndexing;
         this.forceHuffmanOn = forceHuffmanOn;
         this.forceHuffmanOff = forceHuffmanOff;
-        this.capacity = maxHeaderTableSize;
+        capacity = maxHeaderTableSize;
         head.before = head.after = head;
     }
 
     /**
      * Encode the header field into the header block.
+     *
+     * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
-    public void encodeHeader(OutputStream out, byte[] name, byte[] value, boolean sensitive)
-            throws IOException {
+    public void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive) {
 
         // If the header value is sensitive then it must never be indexed
         if (sensitive) {
@@ -143,7 +147,7 @@ public final class Encoder {
     /**
      * Set the maximum table size.
      */
-    public void setMaxHeaderTableSize(OutputStream out, int maxHeaderTableSize) throws IOException {
+    public void setMaxHeaderTableSize(ByteBuf out, int maxHeaderTableSize) {
         if (maxHeaderTableSize < 0) {
             throw new IllegalArgumentException("Illegal Capacity: " + maxHeaderTableSize);
         }
@@ -165,22 +169,22 @@ public final class Encoder {
     /**
      * Encode integer according to Section 5.1.
      */
-    private static void encodeInteger(OutputStream out, int mask, int n, int i) throws IOException {
+    private static void encodeInteger(ByteBuf out, int mask, int n, int i) {
         if (n < 0 || n > 8) {
             throw new IllegalArgumentException("N: " + n);
         }
         int nbits = 0xFF >>> (8 - n);
         if (i < nbits) {
-            out.write(mask | i);
+            out.writeByte(mask | i);
         } else {
-            out.write(mask | nbits);
+            out.writeByte(mask | nbits);
             int length = i - nbits;
-            while (true) {
+            for (;;) {
                 if ((length & ~0x7F) == 0) {
-                    out.write(length);
+                    out.writeByte(length);
                     return;
                 } else {
-                    out.write((length & 0x7F) | 0x80);
+                    out.writeByte((length & 0x7F) | 0x80);
                     length >>>= 7;
                 }
             }
@@ -190,23 +194,30 @@ public final class Encoder {
     /**
      * Encode string literal according to Section 5.2.
      */
-    private void encodeStringLiteral(OutputStream out, byte[] string) throws IOException {
-        int huffmanLength = Huffman.ENCODER.getEncodedLength(string);
-        if ((huffmanLength < string.length && !forceHuffmanOff) || forceHuffmanOn) {
+    private void encodeStringLiteral(ByteBuf out, CharSequence string) {
+        int huffmanLength = huffmanEncoder.getEncodedLength(string);
+        if ((huffmanLength < string.length() && !forceHuffmanOff) || forceHuffmanOn) {
             encodeInteger(out, 0x80, 7, huffmanLength);
-            Huffman.ENCODER.encode(out, string);
+            huffmanEncoder.encode(out, string);
         } else {
-            encodeInteger(out, 0x00, 7, string.length);
-            out.write(string, 0, string.length);
+            encodeInteger(out, 0x00, 7, string.length());
+            if (string instanceof AsciiString) {
+                // Fast-path
+                AsciiString asciiString = (AsciiString) string;
+                out.writeBytes(asciiString.array(), asciiString.arrayOffset(), asciiString.length());
+            } else {
+                // Only ASCII is allowed in http2 headers, so its fine to use this.
+                // https://tools.ietf.org/html/rfc7540#section-8.1.2
+                out.writeCharSequence(string, CharsetUtil.ISO_8859_1);
+            }
         }
     }
 
     /**
      * Encode literal header field according to Section 6.2.
      */
-    private void encodeLiteral(OutputStream out, byte[] name, byte[] value, HpackUtil.IndexType indexType,
-                               int nameIndex)
-            throws IOException {
+    private void encodeLiteral(ByteBuf out, CharSequence name, CharSequence value, HpackUtil.IndexType indexType,
+                               int nameIndex) {
         int mask;
         int prefixBits;
         switch (indexType) {
@@ -232,7 +243,7 @@ public final class Encoder {
         encodeStringLiteral(out, value);
     }
 
-    private int getNameIndex(byte[] name) {
+    private int getNameIndex(CharSequence name) {
         int index = StaticTable.getIndex(name);
         if (index == -1) {
             index = getIndex(name);
@@ -247,7 +258,7 @@ public final class Encoder {
      * Ensure that the dynamic table has enough room to hold 'headerSize' more bytes. Removes the
      * oldest entry from the dynamic table until sufficient space is available.
      */
-    private void ensureCapacity(int headerSize) throws IOException {
+    private void ensureCapacity(int headerSize) {
         while (size + headerSize > capacity) {
             int index = length();
             if (index == 0) {
@@ -286,7 +297,7 @@ public final class Encoder {
      * Returns the header entry with the lowest index value for the header field. Returns null if
      * header field is not in the dynamic table.
      */
-    private HeaderEntry getEntry(byte[] name, byte[] value) {
+    private HeaderEntry getEntry(CharSequence name, CharSequence value) {
         if (length() == 0 || name == null || value == null) {
             return null;
         }
@@ -306,7 +317,7 @@ public final class Encoder {
      * Returns the lowest index value for the header field name in the dynamic table. Returns -1 if
      * the header field name is not in the dynamic table.
      */
-    private int getIndex(byte[] name) {
+    private int getIndex(CharSequence name) {
         if (length() == 0 || name == null) {
             return -1;
         }
@@ -327,7 +338,7 @@ public final class Encoder {
      */
     private int getIndex(int index) {
         if (index == -1) {
-            return index;
+            return -1;
         }
         return index - head.before.index + 1;
     }
@@ -337,7 +348,7 @@ public final class Encoder {
      * the size of the table and the new header field is less than the table's capacity. If the size
      * of the new entry is larger than the table's capacity, the dynamic table will be cleared.
      */
-    private void add(byte[] name, byte[] value) {
+    private void add(CharSequence name, CharSequence value) {
         int headerSize = HeaderField.sizeOf(name, value);
 
         // Clear the table if the header field size is larger than the capacity.
@@ -350,10 +361,6 @@ public final class Encoder {
         while (size + headerSize > capacity) {
             remove();
         }
-
-        // Copy name and value that modifications of original do not affect the dynamic table.
-        name = Arrays.copyOf(name, name.length);
-        value = Arrays.copyOf(value, value.length);
 
         int h = hash(name);
         int i = index(h);
@@ -400,16 +407,16 @@ public final class Encoder {
     private void clear() {
         Arrays.fill(headerFields, null);
         head.before = head.after = head;
-        this.size = 0;
+        size = 0;
     }
 
     /**
      * Returns the hash code for the given header field name.
      */
-    private static int hash(byte[] name) {
+    private static int hash(CharSequence name) {
         int h = 0;
-        for (int i = 0; i < name.length; i++) {
-            h = 31 * h + name[i];
+        for (int i = 0; i < name.length(); i++) {
+            h = 31 * h + name.charAt(i);
         }
         if (h > 0) {
             return h;
@@ -444,7 +451,7 @@ public final class Encoder {
         /**
          * Creates new entry.
          */
-        HeaderEntry(int hash, byte[] name, byte[] value, int index, HeaderEntry next) {
+        HeaderEntry(int hash, CharSequence name, CharSequence value, int index, HeaderEntry next) {
             super(name, value);
             this.index = index;
             this.hash = hash;

@@ -31,6 +31,8 @@
  */
 package io.netty.microbench.http2.internal.hpack;
 
+import io.netty.util.AsciiString;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -42,12 +44,12 @@ class Header {
     private static final String ALPHABET =
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
 
-    final byte[] name;
-    final byte[] value;
+    final CharSequence name;
+    final CharSequence value;
 
     Header(byte[] name, byte[] value) {
-        this.name = name;
-        this.value = value;
+        this.name = new AsciiString(name, false);
+        this.value = new AsciiString(value, false);
     }
 
     /**
