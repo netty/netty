@@ -716,14 +716,14 @@ public class DefaultChannelPipelineTest {
             final AtomicBoolean handlerAdded = new AtomicBoolean();
             final Exception exception = new RuntimeException();
             ChannelPipeline pipeline = new LocalChannel().pipeline();
-            pipeline.addLast(new ChannelHandlerAdapter() {
+            pipeline.addLast(group1, new CheckExceptionHandler(exception, promise));
+            pipeline.addFirst(new ChannelHandlerAdapter() {
                 @Override
                 public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                     handlerAdded.set(true);
                     throw exception;
                 }
             });
-            pipeline.addLast(group1, new CheckExceptionHandler(exception, promise));
             assertFalse(handlerAdded.get());
             group.register(pipeline.channel());
             promise.syncUninterruptibly();
@@ -765,7 +765,8 @@ public class DefaultChannelPipelineTest {
             final Exception exceptionRemoved = new RuntimeException();
             String handlerName = "foo";
             ChannelPipeline pipeline = new LocalChannel().pipeline();
-            pipeline.addLast(handlerName, new ChannelHandlerAdapter() {
+            pipeline.addLast(group1, new CheckExceptionHandler(exceptionAdded, promise));
+            pipeline.addFirst(handlerName, new ChannelHandlerAdapter() {
                 @Override
                 public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                     throw exceptionAdded;
@@ -773,11 +774,16 @@ public class DefaultChannelPipelineTest {
 
                 @Override
                 public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-                    latch.countDown();
+                    // Execute this later so we are sure the exception is handled first.
+                    ctx.executor().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            latch.countDown();
+                        }
+                    });
                     throw exceptionRemoved;
                 }
             });
-            pipeline.addLast(group1, new CheckExceptionHandler(exceptionAdded, promise));
             group.register(pipeline.channel()).syncUninterruptibly();
             latch.await();
             assertNull(pipeline.context(handlerName));
