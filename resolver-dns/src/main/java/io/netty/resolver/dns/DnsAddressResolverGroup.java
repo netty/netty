@@ -74,6 +74,7 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
         this.nameServerAddresses = nameServerAddresses;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected final AddressResolver<InetSocketAddress> newResolver(EventExecutor executor) throws Exception {
         if (!(executor instanceof EventLoop)) {
@@ -86,23 +87,34 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
     }
 
     /**
-     * Creates a new {@link DnsNameResolver}. Override this method to create an alternative {@link DnsNameResolver}
-     * implementation or override the default configuration.
+     * @deprecated Override {@link #newNameResolver(EventLoop, ChannelFactory, InetSocketAddress, DnsServerAddresses)}.
      */
+    @Deprecated
     protected AddressResolver<InetSocketAddress> newResolver(
             EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
             InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) throws Exception {
 
         final NameResolver<InetAddress> resolver = new InflightNameResolver<InetAddress>(
                 eventLoop,
-                new DnsNameResolverBuilder(eventLoop)
-                        .channelFactory(channelFactory)
-                        .localAddress(localAddress)
-                        .nameServerAddresses(nameServerAddresses)
-                        .build(),
+                newNameResolver(eventLoop, channelFactory, localAddress, nameServerAddresses),
                 resolvesInProgress,
                 resolveAllsInProgress);
 
         return new InetSocketAddressResolver(eventLoop, resolver);
+    }
+
+    /**
+     * Creates a new {@link NameResolver}. Override this method to create an alternative {@link NameResolver}
+     * implementation or override the default configuration.
+     */
+    protected NameResolver<InetAddress> newNameResolver(EventLoop eventLoop,
+                                                        ChannelFactory<? extends DatagramChannel> channelFactory,
+                                                        InetSocketAddress localAddress,
+                                                        DnsServerAddresses nameServerAddresses) throws Exception {
+        return new DnsNameResolverBuilder(eventLoop)
+                .channelFactory(channelFactory)
+                .localAddress(localAddress)
+                .nameServerAddresses(nameServerAddresses)
+                .build();
     }
 }
