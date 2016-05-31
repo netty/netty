@@ -340,6 +340,7 @@ public abstract class Recycler<T> {
             }
             size --;
             DefaultHandle ret = elements[size];
+            elements[size] = null;
             if (ret.lastRecycledId != ret.recycleId) {
                 throw new IllegalStateException("recycled multiple times");
             }
