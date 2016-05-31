@@ -151,7 +151,7 @@ public class EmbeddedChannel extends AbstractChannel {
                            final ChannelHandler... handlers) {
         super(null, channelId);
         metadata = metadata(hasDisconnect);
-        this.config = config;
+        this.config = ObjectUtil.checkNotNull(config, "config");
         setup(handlers);
     }
 
