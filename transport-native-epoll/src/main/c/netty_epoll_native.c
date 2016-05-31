@@ -93,7 +93,7 @@ struct mmsghdr {
 
 // Those are initialized in the init(...) method and cached for performance reasons
 jfieldID fileChannelFieldId = NULL;
-jfieldID transferedFieldId = NULL;
+jfieldID transferredFieldId = NULL;
 jfieldID fdFieldId = NULL;
 jfieldID fileDescriptorFieldId = NULL;
 
@@ -377,8 +377,8 @@ static jlong netty_epoll_native_sendfile0(JNIEnv* env, jclass clazz, jint fd, jo
         return -err;
     }
     if (res > 0) {
-        // update the transfered field in DefaultFileRegion
-        (*env)->SetLongField(env, fileRegion, transferedFieldId, off + res);
+        // update the transferred field in DefaultFileRegion
+        (*env)->SetLongField(env, fileRegion, transferredFieldId, off + res);
     }
 
     return res;
@@ -826,9 +826,9 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.file");
         return JNI_ERR;
     }
-    transferedFieldId = (*env)->GetFieldID(env, fileRegionCls, "transferred", "J");
-    if (transferedFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.transfered");
+    transferredFieldId = (*env)->GetFieldID(env, fileRegionCls, "transferred", "J");
+    if (transferredFieldId == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.transferred");
         return JNI_ERR;
     }
 
