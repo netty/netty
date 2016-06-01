@@ -76,20 +76,10 @@ public class DefaultPromiseTest {
         promise.get(1, TimeUnit.SECONDS);
     }
 
-    @Test(expected = AssertionError.class) // DefaultPromise will swallow the StackOverflowError
-    public void testNoStackOverflowExecuteInsideImmediateEventExecutorA() throws Exception {
-        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, true);
-    }
-
-    @Test(expected = AssertionError.class) // DefaultPromise will swallow the StackOverflowError
-    public void testStackOverflowExecuteOutsideImmediateEventExecutorA() throws Exception {
-        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, false);
-    }
-
     @Test
-    public void testStackOverflowWithReentrantImmediateEventExecutorA() throws Exception {
-        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), ReentrantImmediateEventExecutor.INSTANCE, true);
-        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), ReentrantImmediateEventExecutor.INSTANCE, false);
+    public void testStackOverflowWithImmediateEventExecutorA() throws Exception {
+        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, true);
+        testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, false);
     }
 
     @Test
@@ -108,20 +98,10 @@ public class DefaultPromiseTest {
         }
     }
 
-    @Test(expected = AssertionError.class) // DefaultPromise will swallow the StackOverflowError
-    public void testStackOverflowExecuteInsideImmediateEventExecutorB() throws Exception {
-        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, true);
-    }
-
-    @Test(expected = AssertionError.class) // DefaultPromise will swallow the StackOverflowError
-    public void testStackOverflowExecuteOutsideImmediateEventExecutorB() throws Exception {
-        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, false);
-    }
-
     @Test
-    public void testNoStackOverflowWithReentrantImmediateEventExecutorB() throws Exception {
-        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), ReentrantImmediateEventExecutor.INSTANCE, true);
-        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), ReentrantImmediateEventExecutor.INSTANCE, false);
+    public void testNoStackOverflowWithImmediateEventExecutorB() throws Exception {
+        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, true);
+        testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), ImmediateEventExecutor.INSTANCE, false);
     }
 
     @Test

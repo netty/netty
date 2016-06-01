@@ -23,61 +23,80 @@ import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
 /**
- * {@link AbstractEventExecutor} which execute tasks in the caller's thread.
+ * Executes {@link Runnable} objects in the caller's thread. If the {@link #execute(Runnable)} is reentrant it will be
+ * queued until the original {@link Runnable} finishes execution.
  * <p>
- * This class does not provide any protection against re-entry or {@link StackOverflowError}.
- * Use {@link ReentrantImmediateEventExecutor} if these protections are necessary.
+ * All {@link Throwable} objects thrown from {@link #execute(Runnable)} will be swallowed and logged. This is to ensure
+ * that all queued {@link Runnable} objects have the chance to be run.
  */
-public class ImmediateEventExecutor extends AbstractEventExecutor {
-
+public final class ImmediateEventExecutor extends AbstractEventExecutor {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ImmediateEventExecutor.class);
     public static final ImmediateEventExecutor INSTANCE = new ImmediateEventExecutor();
+    /**
+     * A Runnable will be queued if we are executing a Runnable. This is to prevent a {@link StackOverflowError}.
+     */
+    private static final FastThreadLocal<Queue<Runnable>> DELAYED_RUNNABLES = new FastThreadLocal<Queue<Runnable>>() {
+        @Override
+        protected Queue<Runnable> initialValue() throws Exception {
+            return new ArrayDeque<Runnable>();
+        }
+    };
+    /**
+     * Set to {@code true} if we are executing a runnable.
+     */
+    private static final FastThreadLocal<Boolean> RUNNING = new FastThreadLocal<Boolean>() {
+        @Override
+        protected Boolean initialValue() throws Exception {
+            return false;
+        }
+    };
 
     private final Future<?> terminationFuture = new FailedFuture<Object>(
             GlobalEventExecutor.INSTANCE, new UnsupportedOperationException());
 
-    ImmediateEventExecutor() { }
+    private ImmediateEventExecutor() { }
 
     @Override
-    public final boolean inEventLoop() {
+    public boolean inEventLoop() {
         return true;
     }
 
     @Override
-    public final boolean inEventLoop(Thread thread) {
+    public boolean inEventLoop(Thread thread) {
         return true;
     }
 
     @Override
-    public final Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         return terminationFuture();
     }
 
     @Override
-    public final Future<?> terminationFuture() {
+    public Future<?> terminationFuture() {
         return terminationFuture;
     }
 
     @Override
     @Deprecated
-    public final void shutdown() { }
+    public void shutdown() { }
 
     @Override
-    public final boolean isShuttingDown() {
+    public boolean isShuttingDown() {
         return false;
     }
 
     @Override
-    public final boolean isShutdown() {
+    public boolean isShutdown() {
         return false;
     }
 
     @Override
-    public final boolean isTerminated() {
+    public boolean isTerminated() {
         return false;
     }
 
     @Override
-    public final boolean awaitTermination(long timeout, TimeUnit unit) {
+    public boolean awaitTermination(long timeout, TimeUnit unit) {
         return false;
     }
 
@@ -86,16 +105,36 @@ public class ImmediateEventExecutor extends AbstractEventExecutor {
         if (command == null) {
             throw new NullPointerException("command");
         }
-        command.run();
+        if (!RUNNING.get()) {
+            RUNNING.set(true);
+            try {
+                command.run();
+            } catch (Throwable cause) {
+                logger.info("Throwable caught while executing Runnable {}", command, cause);
+            } finally {
+                Queue<Runnable> delayedRunnables = DELAYED_RUNNABLES.get();
+                Runnable runnable;
+                while ((runnable = delayedRunnables.poll()) != null) {
+                    try {
+                        runnable.run();
+                    } catch (Throwable cause) {
+                        logger.info("Throwable caught while executing Runnable {}", runnable, cause);
+                    }
+                }
+                RUNNING.set(false);
+            }
+        } else {
+            DELAYED_RUNNABLES.get().add(command);
+        }
     }
 
     @Override
-    public final <V> Promise<V> newPromise() {
+    public <V> Promise<V> newPromise() {
         return new ImmediatePromise<V>(this);
     }
 
     @Override
-    public final <V> ProgressivePromise<V> newProgressivePromise() {
+    public <V> ProgressivePromise<V> newProgressivePromise() {
         return new ImmediateProgressivePromise<V>(this);
     }
 
