@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.buffer.ByteBufUtil.hexDump;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Exception;
@@ -417,17 +418,22 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             return;
         }
 
-        ChannelFuture future = goAway(ctx, null);
+        // If the user has already sent a GO_AWAY frame they may be attempting to do a graceful shutdown which requires
+        // sending multiple GO_AWAY frames. We should only send a GO_AWAY here if one has not already been sent. If
+        // a GO_AWAY has been sent we send a empty buffer just so we can wait to close until all other data has been
+        // flushed to the OS.
+        // https://github.com/netty/netty/issues/5307
+        final ChannelFuture future = connection().goAwaySent() ? ctx.write(EMPTY_BUFFER) : goAway(ctx, null);
         ctx.flush();
         doGracefulShutdown(ctx, future, promise);
     }
 
     private void doGracefulShutdown(ChannelHandlerContext ctx, ChannelFuture future, ChannelPromise promise) {
-        // If there are no active streams, close immediately after the send is complete.
-        // Otherwise wait until all streams are inactive.
         if (isGracefulShutdownComplete()) {
+            // If there are no active streams, close immediately after the GO_AWAY write completes.
             future.addListener(new ClosingChannelFutureListener(ctx, promise));
         } else {
+            // If there are active streams we should wait until they are all closed before closing the connection.
             closeListener = new ClosingChannelFutureListener(ctx, promise,
                                         gracefulShutdownTimeoutMillis, MILLISECONDS);
         }
