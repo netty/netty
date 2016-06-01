@@ -26,6 +26,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.security.SecureRandom;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
@@ -68,34 +70,56 @@ public final class ThreadLocalRandom extends Random {
             SystemPropertyUtil.getLong("io.netty.initialSeedUniquifier", 0);
 
     private static final Thread seedGeneratorThread;
-    private static final BlockingQueue<byte[]> seedQueue;
+    private static final BlockingQueue<Long> seedQueue;
     private static final long seedGeneratorStartTime;
     private static volatile long seedGeneratorEndTime;
 
     static {
         if (initialSeedUniquifier == 0) {
-            // Try to generate a real random number from /dev/random.
-            // Get from a different thread to avoid blocking indefinitely on a machine without much entropy.
-            seedGeneratorThread = new Thread("initialSeedUniquifierGenerator") {
+            boolean secureRandom = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
                 @Override
-                public void run() {
-                    final SecureRandom random = new SecureRandom(); // Get the real random seed from /dev/random
-                    final byte[] seed = random.generateSeed(8);
-                    seedGeneratorEndTime = System.nanoTime();
-                    seedQueue.add(seed);
-                }
-            };
-            seedGeneratorThread.setDaemon(true);
-            seedGeneratorThread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-                @Override
-                public void uncaughtException(Thread t, Throwable e) {
-                    logger.debug("An exception has been raised by {}", t.getName(), e);
+                public Boolean run() {
+                    return SystemPropertyUtil.getBoolean("java.util.secureRandomSeed", false);
                 }
             });
 
-            seedQueue = new LinkedBlockingQueue<byte[]>();
-            seedGeneratorStartTime = System.nanoTime();
-            seedGeneratorThread.start();
+            if (secureRandom) {
+                seedQueue = new LinkedBlockingQueue<Long>();
+                seedGeneratorStartTime = System.nanoTime();
+
+                // Try to generate a real random number from /dev/random.
+                // Get from a different thread to avoid blocking indefinitely on a machine without much entropy.
+                seedGeneratorThread = new Thread("initialSeedUniquifierGenerator") {
+                    @Override
+                    public void run() {
+                        final SecureRandom random = new SecureRandom(); // Get the real random seed from /dev/random
+                        final byte[] seed = random.generateSeed(8);
+                        seedGeneratorEndTime = System.nanoTime();
+                        long s = ((long) seed[0] & 0xff) << 56 |
+                                 ((long) seed[1] & 0xff) << 48 |
+                                 ((long) seed[2] & 0xff) << 40 |
+                                 ((long) seed[3] & 0xff) << 32 |
+                                 ((long) seed[4] & 0xff) << 24 |
+                                 ((long) seed[5] & 0xff) << 16 |
+                                 ((long) seed[6] & 0xff) <<  8 |
+                                 (long) seed[7] & 0xff;
+                        seedQueue.add(s);
+                    }
+                };
+                seedGeneratorThread.setDaemon(true);
+                seedGeneratorThread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+                    @Override
+                    public void uncaughtException(Thread t, Throwable e) {
+                        logger.debug("An exception has been raised by {}", t.getName(), e);
+                    }
+                });
+                seedGeneratorThread.start();
+            } else {
+                initialSeedUniquifier = mix64(System.currentTimeMillis()) ^ mix64(System.nanoTime());
+                seedGeneratorThread = null;
+                seedQueue = null;
+                seedGeneratorStartTime = 0L;
+            }
         } else {
             seedGeneratorThread = null;
             seedQueue = null;
@@ -127,7 +151,7 @@ public final class ThreadLocalRandom extends Random {
             for (;;) {
                 final long waitTime = deadLine - System.nanoTime();
                 try {
-                    final byte[] seed;
+                    final Long seed;
                     if (waitTime <= 0) {
                         seed = seedQueue.poll();
                     } else {
@@ -135,15 +159,7 @@ public final class ThreadLocalRandom extends Random {
                     }
 
                     if (seed != null) {
-                        initialSeedUniquifier =
-                                ((long) seed[0] & 0xff) << 56 |
-                                ((long) seed[1] & 0xff) << 48 |
-                                ((long) seed[2] & 0xff) << 40 |
-                                ((long) seed[3] & 0xff) << 32 |
-                                ((long) seed[4] & 0xff) << 24 |
-                                ((long) seed[5] & 0xff) << 16 |
-                                ((long) seed[6] & 0xff) <<  8 |
-                                (long) seed[7] & 0xff;
+                        initialSeedUniquifier = seed;
                         break;
                     }
                 } catch (InterruptedException e) {
@@ -207,6 +223,14 @@ public final class ThreadLocalRandom extends Random {
                 return next ^ System.nanoTime();
             }
         }
+    }
+
+    // Borrowed from
+    // http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/main/java/util/concurrent/ThreadLocalRandom.java
+    private static long mix64(long z) {
+        z = (z ^ (z >>> 33)) * 0xff51afd7ed558ccdL;
+        z = (z ^ (z >>> 33)) * 0xc4ceb9fe1a85ec53L;
+        return z ^ (z >>> 33);
     }
 
     // same constants as Random, but must be redeclared because private
