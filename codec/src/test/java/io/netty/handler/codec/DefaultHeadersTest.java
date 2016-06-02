@@ -450,4 +450,26 @@ public class DefaultHeadersTest {
         headers.set(headers);
         assertEquals(1, headers.size());
     }
+
+    @Test
+    public void testToString() {
+        TestDefaultHeaders headers = newInstance();
+        headers.add(of("name1"), of("value1"));
+        headers.add(of("name1"), of("value2"));
+        headers.add(of("name2"), of("value3"));
+        assertEquals("TestDefaultHeaders[name1: value1, name1: value2, name2: value3]", headers.toString());
+
+        headers = newInstance();
+        headers.add(of("name1"), of("value1"));
+        headers.add(of("name2"), of("value2"));
+        headers.add(of("name3"), of("value3"));
+        assertEquals("TestDefaultHeaders[name1: value1, name2: value2, name3: value3]", headers.toString());
+
+        headers = newInstance();
+        headers.add(of("name1"), of("value1"));
+        assertEquals("TestDefaultHeaders[name1: value1]", headers.toString());
+
+        headers = newInstance();
+        assertEquals("TestDefaultHeaders[]", headers.toString());
+    }
 }

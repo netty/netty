@@ -899,8 +899,8 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             for (int i = 0; i < values.size(); ++i) {
                 builder.append(separator);
                 builder.append(name).append(": ").append(values.get(i));
+                separator = ", ";
             }
-            separator = ", ";
         }
         return builder.append(']').toString();
     }
