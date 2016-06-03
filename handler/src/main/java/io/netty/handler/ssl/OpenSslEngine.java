@@ -686,8 +686,6 @@ public final class OpenSslEngine extends SSLEngine {
             } while (srcsOffset < srcsEndOffset);
         }
 
-        rejectRemoteInitiatedRenegation();
-
         // Number of produced bytes
         int bytesProduced = 0;
 
