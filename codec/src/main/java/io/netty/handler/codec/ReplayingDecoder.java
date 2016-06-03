@@ -21,7 +21,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.Signal;
-import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;

@@ -207,18 +207,23 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        ByteBuf buf = internalBuffer();
-        int readable = buf.readableBytes();
-        if (readable > 0) {
-            ByteBuf bytes = buf.readBytes(readable);
-            buf.release();
-            ctx.fireChannelRead(bytes);
-        } else {
-            buf.release();
+        ByteBuf buf = cumulation;
+        if (buf != null) {
+            // Directly set this to null so we are sure we not access it in any other method here anymore.
+            cumulation = null;
+
+            int readable = buf.readableBytes();
+            if (readable > 0) {
+                ByteBuf bytes = buf.readBytes(readable);
+                buf.release();
+                ctx.fireChannelRead(bytes);
+            } else {
+                buf.release();
+            }
+
+            numReads = 0;
+            ctx.fireChannelReadComplete();
         }
-        cumulation = null;
-        numReads = 0;
-        ctx.fireChannelReadComplete();
         handlerRemoved0(ctx);
     }
 
