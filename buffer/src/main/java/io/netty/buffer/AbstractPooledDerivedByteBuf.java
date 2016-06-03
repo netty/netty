@@ -66,8 +66,12 @@ abstract class AbstractPooledDerivedByteBuf<T> extends AbstractReferenceCountedB
 
     @Override
     protected final void deallocate() {
+        // We need to first store a reference to the wrapped buffer before recycle this instance. This is needed as
+        // otherwise it is possible that the same AbstractPooledDerivedByteBuf is again obtained and init(...) is
+        // called before we actually have a chance to call release(). This leads to call release() on the wrong buffer.
+        ByteBuf wrapped = unwrap();
         recyclerHandle.recycle(this);
-        unwrap().release();
+        wrapped.release();
     }
 
     @Override
