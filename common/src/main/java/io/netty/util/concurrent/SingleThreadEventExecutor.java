@@ -39,7 +39,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  * Abstract base class for {@link EventExecutor}'s that execute all its submitted tasks in a single thread.
  *
  */
-public abstract class SingleThreadEventExecutor extends AbstractScheduledEventExecutor {
+public abstract class SingleThreadEventExecutor extends AbstractScheduledEventExecutor
+        implements InstrumentedEventExecutor {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);
@@ -264,12 +265,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return !taskQueue.isEmpty();
     }
 
-    /**
-     * Return the number of tasks that are pending for processing.
-     *
-     * <strong>Be aware that this operation may be expensive as it depends on the internal implementation of the
-     * SingleThreadEventExecutor. So use it was care!</strong>
-     */
+    @Override
     public int pendingTasks() {
         return taskQueue.size();
     }

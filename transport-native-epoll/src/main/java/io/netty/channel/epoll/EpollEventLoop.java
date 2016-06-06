@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.InstrumentedEventLoop;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.epoll.AbstractEpollChannel.AbstractEpollUnsafe;
@@ -35,12 +36,14 @@ import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * {@link EventLoop} which uses epoll under the covers. Only works on Linux!
  */
-final class EpollEventLoop extends SingleThreadEventLoop {
+final class EpollEventLoop extends SingleThreadEventLoop implements InstrumentedEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
     private static final AtomicIntegerFieldUpdater<EpollEventLoop> WAKEN_UP_UPDATER;
 
@@ -72,6 +75,16 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             return EpollEventLoop.super.pendingTasks();
         }
     };
+
+    /**
+     * Metrics exposed to the user.
+     */
+    private final AtomicLong lastIoProcessingTime = new AtomicLong();
+    private final AtomicLong lastTaskProcessingTime = new AtomicLong();
+    private final AtomicInteger lastProcessedChannels = new AtomicInteger();
+    private final AtomicInteger registeredChannels = new AtomicInteger();
+    private final AtomicLong lastBlockingAmount = new AtomicLong();
+
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
 
@@ -117,6 +130,31 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    @Override
+    public int registeredChannels() {
+        return registeredChannels.get();
+    }
+
+    @Override
+    public long lastIoProcessingTime() {
+        return lastIoProcessingTime.get();
+    }
+
+    @Override
+    public long lastTaskProcessingTime() {
+        return lastTaskProcessingTime.get();
+    }
+
+    @Override
+    public int lastProcessedChannels() {
+        return lastProcessedChannels.get();
+    }
+
+    @Override
+    public long lastBlockingAmount() {
+        return lastBlockingAmount.get();
+    }
+
     /**
      * Return a cleared {@link IovArray} that can be used for writes in this {@link EventLoop}.
      */
@@ -134,10 +172,12 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     /**
-     * Register the given epoll with this {@link io.netty.channel.EventLoop}.
+     * Register the given epoll with this {@link EventLoop}.
      */
     void add(AbstractEpollChannel ch) throws IOException {
         assert inEventLoop();
+        registeredChannels.incrementAndGet();
+
         int fd = ch.fd().intValue();
         Native.epollCtlAdd(epollFd.intValue(), fd, ch.flags);
         channels.put(fd, ch);
@@ -156,6 +196,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
      */
     void remove(AbstractEpollChannel ch) throws IOException {
         assert inEventLoop();
+
+        registeredChannels.decrementAndGet();
 
         if (ch.isOpen()) {
             int fd = ch.fd().intValue();
@@ -245,6 +287,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     protected void run() {
         for (;;) {
             try {
+                long runStartTime = System.nanoTime();
                 int strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
                 switch (strategy) {
                     case SelectStrategy.CONTINUE:
@@ -286,23 +329,21 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     default:
                         // fallthrough
                 }
-
+                lastBlockingAmount.lazySet(System.nanoTime() - runStartTime);
                 final int ioRatio = this.ioRatio;
+                final long ioStartTime = System.nanoTime();
+                lastProcessedChannels.lazySet(tryProcessReady(events, strategy));
+                final long ioEndTime = System.nanoTime();
+                final long ioTime = ioEndTime - ioStartTime;
                 if (ioRatio == 100) {
-                    if (strategy > 0) {
-                        processReady(events, strategy);
-                    }
                     runAllTasks();
                 } else {
-                    final long ioStartTime = System.nanoTime();
-
-                    if (strategy > 0) {
-                        processReady(events, strategy);
-                    }
-
-                    final long ioTime = System.nanoTime() - ioStartTime;
                     runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                 }
+                final long taskTime = System.nanoTime() - ioTime;
+                lastIoProcessingTime.lazySet(ioTime * 1000);
+                lastTaskProcessingTime.lazySet(taskTime * 1000);
+
                 if (allowGrowing && strategy == events.length()) {
                     //increase the size of the array as we needed the whole space for the events
                     events.increase();
@@ -325,6 +366,13 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 }
             }
         }
+    }
+
+    private int tryProcessReady(EpollEventArray events, int ready) {
+        if (ready > 0) {
+            processReady(events, ready);
+        }
+        return ready;
     }
 
     private void closeAll() {

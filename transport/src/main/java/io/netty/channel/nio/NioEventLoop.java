@@ -17,8 +17,12 @@ package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopException;
+import io.netty.channel.InstrumentedEventLoop;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.IntSupplier;
@@ -44,13 +48,15 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * {@link SingleThreadEventLoop} implementation which register the {@link Channel}'s to a
  * {@link Selector} and so does the multi-plexing of these in the event loop.
  *
  */
-public final class NioEventLoop extends SingleThreadEventLoop {
+public final class NioEventLoop extends SingleThreadEventLoop implements InstrumentedEventLoop {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
 
@@ -122,6 +128,24 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      */
     private final AtomicBoolean wakenUp = new AtomicBoolean();
 
+    /**
+     * Metrics exposed to the user.
+     */
+    private final AtomicLong lastIoProcessingTime = new AtomicLong();
+    private final AtomicLong lastTaskProcessingTime = new AtomicLong();
+    private final AtomicInteger lastProcessedChannels = new AtomicInteger();
+    private final AtomicInteger registeredChannels = new AtomicInteger();
+    private final AtomicLong lastBlockingAmount = new AtomicLong();
+
+    private final ChannelFutureListener registeredChannelsListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (future.isSuccess()) {
+                registeredChannels.incrementAndGet();
+            }
+        }
+    };
+
     private final SelectStrategy selectStrategy;
 
     private volatile int ioRatio = 50;
@@ -140,6 +164,42 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         provider = selectorProvider;
         selector = openSelector();
         selectStrategy = strategy;
+    }
+
+    @Override
+    public int registeredChannels() {
+        return registeredChannels.get();
+    }
+
+    @Override
+    public long lastIoProcessingTime() {
+        return lastIoProcessingTime.get();
+    }
+
+    @Override
+    public long lastTaskProcessingTime() {
+        return lastTaskProcessingTime.get();
+    }
+
+    @Override
+    public int lastProcessedChannels() {
+        return lastProcessedChannels.get();
+    }
+
+    @Override
+    public long lastBlockingAmount() {
+        return lastBlockingAmount.get();
+    }
+
+    @Override
+    public ChannelFuture register(ChannelPromise promise) {
+        ChannelFuture future = super.register(promise);
+        if (future.isSuccess()) {
+            registeredChannels.incrementAndGet();
+        } else {
+            future.addListener(registeredChannelsListener);
+        }
+        return future;
     }
 
     private Selector openSelector() {
@@ -319,6 +379,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             break;
         }
 
+        registeredChannels.lazySet(nChannels);
         selector = newSelector;
 
         try {
@@ -337,6 +398,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     protected void run() {
         for (;;) {
             try {
+                long runStartTime = System.nanoTime();
                 switch (selectStrategy.calculateStrategy(selectNowSupplier, hasTasks())) {
                     case SelectStrategy.CONTINUE:
                         continue;
@@ -377,22 +439,24 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     default:
                         // fallthrough
                 }
-
+                lastBlockingAmount.lazySet(System.nanoTime() - runStartTime);
                 cancelledKeys = 0;
                 needsToSelectAgain = false;
                 final int ioRatio = this.ioRatio;
+                final long ioStartTime = System.nanoTime();
+                lastProcessedChannels.lazySet(processSelectedKeys());
+                final long ioEndTime = System.nanoTime();
+                final long ioTime = ioEndTime - ioStartTime;
+
                 if (ioRatio == 100) {
-                    processSelectedKeys();
                     runAllTasks();
                 } else {
-                    final long ioStartTime = System.nanoTime();
-
-                    processSelectedKeys();
-
-                    final long ioTime = System.nanoTime() - ioStartTime;
                     runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                 }
+                final long taskTime = System.nanoTime() - ioTime;
 
+                lastIoProcessingTime.lazySet(ioTime * 1000);
+                lastTaskProcessingTime.lazySet(taskTime * 1000);
                 if (isShuttingDown()) {
                     closeAll();
                     if (confirmShutdown()) {
@@ -413,12 +477,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private void processSelectedKeys() {
-        if (selectedKeys != null) {
-            processSelectedKeysOptimized(selectedKeys.flip());
-        } else {
-            processSelectedKeysPlain(selector.selectedKeys());
-        }
+    private int processSelectedKeys() {
+        return selectedKeys != null ? processSelectedKeysOptimized(selectedKeys.flip())
+                : processSelectedKeysPlain(selector.selectedKeys());
     }
 
     @Override
@@ -432,6 +493,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     void cancel(SelectionKey key) {
         key.cancel();
+
+        registeredChannels.decrementAndGet();
+
         cancelledKeys ++;
         if (cancelledKeys >= CLEANUP_INTERVAL) {
             cancelledKeys = 0;
@@ -448,16 +512,17 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         return task;
     }
 
-    private void processSelectedKeysPlain(Set<SelectionKey> selectedKeys) {
+    private int processSelectedKeysPlain(Set<SelectionKey> selectedKeys) {
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
         // See https://github.com/netty/netty/issues/597
         if (selectedKeys.isEmpty()) {
-            return;
+            return 0;
         }
 
         Iterator<SelectionKey> i = selectedKeys.iterator();
-        for (;;) {
+        int processed = 0;
+        for (;; processed ++) {
             final SelectionKey k = i.next();
             final Object a = k.attachment();
             i.remove();
@@ -486,10 +551,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
             }
         }
+        return processed;
     }
 
-    private void processSelectedKeysOptimized(SelectionKey[] selectedKeys) {
-        for (int i = 0;; i ++) {
+    private int processSelectedKeysOptimized(SelectionKey[] selectedKeys) {
+        int i = 0;
+        for (;; i ++) {
             final SelectionKey k = selectedKeys[i];
             if (k == null) {
                 break;
@@ -529,6 +596,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 i = -1;
             }
         }
+        return i;
     }
 
     private void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
