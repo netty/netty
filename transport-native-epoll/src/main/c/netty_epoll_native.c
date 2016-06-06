@@ -35,6 +35,7 @@
 #include <limits.h>
 #include <inttypes.h>
 #include <link.h>
+#include <time.h>
 #include "netty_unix_filedescriptor.h"
 #include "netty_unix_socket.h"
 #include "netty_unix_errors.h"
@@ -103,7 +104,49 @@ jfieldID packetPortFieldId = NULL;
 jfieldID packetMemoryAddressFieldId = NULL;
 jfieldID packetCountFieldId = NULL;
 
+clockid_t epollWaitClock = 0; // initialized in initializeEpollWaitClock
+
 // util methods
+static jboolean initializeEpollWaitClock() {
+  struct timespec ts;
+  // First try to get a monotonic clock, as we effectively measure execution time and don't want the underlying clock
+  // moving unexpectedly/abruptly.
+  #ifdef CLOCK_MONOTONIC_COARSE
+  epollWaitClock = CLOCK_MONOTONIC_COARSE;
+  if (clock_gettime(epollWaitClock, &ts) != EINVAL) {
+    return JNI_TRUE;
+  }
+  #endif
+  #ifdef CLOCK_MONOTONIC_RAW
+  epollWaitClock = CLOCK_MONOTONIC_RAW;
+  if (clock_gettime(epollWaitClock, &ts) != EINVAL) {
+    return JNI_TRUE;
+  }
+  #endif
+  #ifdef CLOCK_MONOTONIC
+  epollWaitClock = CLOCK_MONOTONIC;
+  if (clock_gettime(epollWaitClock, &ts) != EINVAL) {
+    return JNI_TRUE;
+  }
+  #endif
+
+  // Fallback to realtime ... in this case we are subject to clock movements on the system.
+  #ifdef CLOCK_REALTIME_COARSE
+  epollWaitClock = CLOCK_REALTIME_COARSE;
+  if (clock_gettime(epollWaitClock, &ts) != EINVAL) {
+    return JNI_TRUE;
+  }
+  #endif
+  #ifdef CLOCK_REALTIME
+  epollWaitClock = CLOCK_REALTIME;
+  if (clock_gettime(epollWaitClock, &ts) != EINVAL) {
+    return JNI_TRUE;
+  }
+  #endif
+  fprintf(stderr, "FATAL: could not find a clock for clock_gettime!\n");
+  return JNI_FALSE;
+}
+
 static int getSysctlValue(const char * property, int* returnValue) {
     int rc = -1;
     FILE *fd=fopen(property, "r");
@@ -186,23 +229,40 @@ static jint netty_epoll_native_epollCreate(JNIEnv* env, jclass clazz) {
 
 static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timeout) {
     struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
-    int ready;
-    int err;
+    struct timespec ts;
+    jlong timeBeforeWait, timeNow;
+    int timeDiff, result, err;
 
     if (timeout > MAX_EPOLL_TIMEOUT_MSEC) {
         // Workaround for bug in older linux kernels that can not handle bigger timeout then MAX_EPOLL_TIMEOUT_MSEC.
         timeout = MAX_EPOLL_TIMEOUT_MSEC;
     }
 
-    do {
-       ready = epoll_wait(efd, ev, len, timeout);
-       // was interrupted try again.
-    } while (ready == -1 && ((err = errno) == EINTR));
+    clock_gettime(epollWaitClock, &ts);
+    timeBeforeWait = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 
-    if (ready < 0) {
-         return -err;
+    for (;;) {
+      result = epoll_wait(efd, ev, len, timeout);
+      if (result >= 0) {
+        return result;
+      }
+      if ((err = errno) == EINTR) {
+        if (timeout > 0) {
+          clock_gettime(epollWaitClock, &ts);
+          timeNow = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+          timeDiff = timeNow - timeBeforeWait;
+          timeout -= timeDiff;
+          if (timeDiff < 0 || timeout <= 0) {
+            return 0;
+          }
+          timeBeforeWait = timeNow;
+        } else if (timeout == 0) {
+          return 0;
+        }
+      } else {
+        return -err;
+      }
     }
-    return ready;
 }
 
 static jint netty_epoll_native_epollCtlAdd0(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags) {
@@ -888,6 +948,10 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     if (packetCountFieldId == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.count");
         return JNI_ERR;
+    }
+
+    if (!initializeEpollWaitClock()) {
+      return JNI_ERR;
     }
 
     return JNI_VERSION_1_6;
