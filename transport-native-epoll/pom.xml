@@ -26,6 +26,10 @@
   <name>Netty/Transport/Native/Epoll</name>
   <packaging>jar</packaging>
 
+  <properties>
+    <jni.compiler.args.ldflags>LDFLAGS=-Wl,--no-as-needed -lrt</jni.compiler.args.ldflags>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.netty</groupId>
@@ -74,7 +78,8 @@
               <forceConfigure>true</forceConfigure>
               <forceAutogen>true</forceAutogen>
               <configureArgs>
-                <arg>${jni.compiler.args}</arg>
+                <arg>${jni.compiler.args.ldflags}</arg>
+                <arg>${jni.compiler.args.cflags}</arg>
               </configureArgs>
             </configuration>
             <goals>
@@ -187,7 +192,7 @@
               <goal>regex-property</goal>
             </goals>
             <configuration>
-              <name>jni.compiler.args</name>
+              <name>jni.compiler.args.cflags</name>
               <value>${linux.sendmmsg.support}${glibc.sendmmsg.support}</value>
               <!-- If glibc and linux kernel are both not sufficient...then define the CFLAGS -->
               <regex>.*IO_NETTY_SENDMSSG_NOT_FOUND.*</regex>
@@ -203,8 +208,8 @@
               <goal>regex-property</goal>
             </goals>
             <configuration>
-              <name>jni.compiler.args</name>
-              <value>${jni.compiler.args}</value>
+              <name>jni.compiler.args.cflags</name>
+              <value>${jni.compiler.args.cflags}</value>
               <!-- If glibc and linux kernel are both not sufficient...then define the CFLAGS -->
               <regex>^((?!CFLAGS=).)*$</regex>
               <replacement>CFLAGS=-O3 -Werror</replacement>
