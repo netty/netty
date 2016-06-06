@@ -63,7 +63,7 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     Future<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
 
     /**
-     * Removes the specified listener from this future.
+     * Removes the first occurrence of the specified listener from this future.
      * The specified listener is no longer notified when this
      * future is {@linkplain #isDone() done}.  If the specified
      * listener is not associated with this future, this method
@@ -72,7 +72,7 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     Future<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener);
 
     /**
-     * Removes the specified listeners from this future.
+     * Removes the first occurrence for each of the listeners from this future.
      * The specified listeners are no longer notified when this
      * future is {@linkplain #isDone() done}.  If the specified
      * listeners are not associated with this future, this method
