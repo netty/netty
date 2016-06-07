@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderResult;
+import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.AppendableCharSequence;
@@ -411,9 +412,19 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (currentState == State.READ_VARIABLE_LENGTH_CONTENT && !in.isReadable() && !chunked) {
                 // End of connection.
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
-                reset();
+                resetNow();
                 return;
             }
+
+            if (currentState == State.READ_HEADER) {
+                // If we are still in the state of reading headers we need to create a new invalid message that
+                // signals that the connection was closed before we received the headers.
+                out.add(invalidMessage(Unpooled.EMPTY_BUFFER,
+                        new PrematureChannelClosureException("Connection closed before received headers")));
+                resetNow();
+                return;
+            }
+
             // Check if the closure of the connection signifies the end of the content.
             boolean prematureClosure;
             if (isDecodingRequest() || chunked) {
@@ -425,11 +436,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 // connection, so it is perfectly fine.
                 prematureClosure = contentLength() > 0;
             }
-            resetNow();
 
             if (!prematureClosure) {
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
             }
+            resetNow();
         }
     }
 
