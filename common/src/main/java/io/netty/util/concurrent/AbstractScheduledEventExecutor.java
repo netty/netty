@@ -31,8 +31,12 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     Queue<ScheduledFutureTask<?>> scheduledTaskQueue;
 
+    /**
+     * @deprecated use {@link System#nanoTime()}.
+     */
+    @Deprecated
     protected static long nanoTime() {
-        return ScheduledFutureTask.nanoTime();
+        return System.nanoTime();
     }
 
     Queue<ScheduledFutureTask<?>> scheduledTaskQueue() {
@@ -72,12 +76,12 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      * @see {@link #pollScheduledTask(long)}
      */
     protected final Runnable pollScheduledTask() {
-        return pollScheduledTask(nanoTime());
+        return pollScheduledTask(System.nanoTime());
     }
 
     /**
      * Return the {@link Runnable} which is ready to be executed with the given {@code nanoTime}.
-     * You should use {@link #nanoTime()} to retrieve the the correct {@code nanoTime}.
+     * You should use {@link System#nanoTime()} to retrieve the the correct {@code nanoTime}.
      */
     protected final Runnable pollScheduledTask(long nanoTime) {
         assert inEventLoop();
@@ -88,7 +92,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
             return null;
         }
 
-        if (scheduledTask.deadlineNanos() <= nanoTime) {
+        if (scheduledTask.deadlineNanos() - nanoTime <= 0) {
             scheduledTaskQueue.remove();
             return scheduledTask;
         }
@@ -104,7 +108,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (scheduledTask == null) {
             return -1;
         }
-        return Math.max(0, scheduledTask.deadlineNanos() - nanoTime());
+        return Math.max(0, scheduledTask.deadlineNanos() - System.nanoTime());
     }
 
     final ScheduledFutureTask<?> peekScheduledTask() {
@@ -121,7 +125,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     protected final boolean hasScheduledTasks() {
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
-        return scheduledTask != null && scheduledTask.deadlineNanos() <= nanoTime();
+        return scheduledTask != null && scheduledTask.deadlineNanos() - System.nanoTime() <= 0;
     }
 
     @Override
