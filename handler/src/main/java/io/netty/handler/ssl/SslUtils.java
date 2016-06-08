@@ -16,7 +16,10 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.base64.Base64;
+import io.netty.handler.codec.base64.Base64Dialect;
 
 /**
  * Constants for SSL packets.
@@ -123,6 +126,35 @@ final class SslUtils {
         ctx.flush();
         ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
         ctx.close();
+    }
+
+    /**
+     * Fills the {@link ByteBuf} with zero bytes.
+     */
+    static void zeroout(ByteBuf buffer) {
+        if (!buffer.isReadOnly()) {
+            buffer.setZero(0, buffer.capacity());
+        }
+    }
+
+    /**
+     * Fills the {@link ByteBuf} with zero bytes and releases it.
+     */
+    static void zerooutAndRelease(ByteBuf buffer) {
+        zeroout(buffer);
+        buffer.release();
+    }
+
+    /**
+     * Same as {@link Base64#encode(ByteBuf, boolean)} but allows the use of a custom {@link ByteBufAllocator}.
+     *
+     * @see Base64#encode(ByteBuf, boolean)
+     */
+    static ByteBuf toBase64(ByteBufAllocator allocator, ByteBuf src) {
+        ByteBuf dst = Base64.encode(src, src.readerIndex(),
+                src.readableBytes(), true, Base64Dialect.STANDARD, allocator);
+        src.readerIndex(src.writerIndex());
+        return dst;
     }
 
     private SslUtils() {
