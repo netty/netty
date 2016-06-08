@@ -247,24 +247,18 @@ public final class OpenSslClientContext extends OpenSslContext {
                     }
                     final X509TrustManager manager = chooseTrustManager(trustManagerFactory.getTrustManagers());
 
+                    // IMPORTANT: The callbacks set for verification must be static to prevent memory leak as
+                    //            otherwise the context can never be collected. This is because the JNI code holds
+                    //            a global reference to the callbacks.
+                    //
+                    //            See https://github.com/netty/netty/issues/5372
+
                     // Use this to prevent an error when running on java < 7
                     if (useExtendedTrustManager(manager)) {
-                        final X509ExtendedTrustManager extendedManager = (X509ExtendedTrustManager) manager;
-                        SSLContext.setCertVerifyCallback(ctx, new AbstractCertificateVerifier() {
-                            @Override
-                            void verify(OpenSslEngine engine, X509Certificate[] peerCerts, String auth)
-                                    throws Exception {
-                                extendedManager.checkServerTrusted(peerCerts, auth, engine);
-                            }
-                        });
+                        SSLContext.setCertVerifyCallback(ctx,
+                                new ExtendedTrustManagerVerifyCallback(engineMap, (X509ExtendedTrustManager) manager));
                     } else {
-                        SSLContext.setCertVerifyCallback(ctx, new AbstractCertificateVerifier() {
-                            @Override
-                            void verify(OpenSslEngine engine, X509Certificate[] peerCerts, String auth)
-                                    throws Exception {
-                                manager.checkServerTrusted(peerCerts, auth);
-                            }
-                        });
+                        SSLContext.setCertVerifyCallback(ctx, new TrustManagerVerifyCallback(engineMap, manager));
                     }
                 } catch (Exception e) {
                     throw new SSLException("unable to setup trustmanager", e);
@@ -322,6 +316,36 @@ public final class OpenSslClientContext extends OpenSslContext {
         @Override
         public boolean isSessionCacheEnabled() {
             return false;
+        }
+    }
+
+    private static final class TrustManagerVerifyCallback extends AbstractCertificateVerifier {
+        private final X509TrustManager manager;
+
+        TrustManagerVerifyCallback(OpenSslEngineMap engineMap, X509TrustManager manager) {
+            super(engineMap);
+            this.manager = manager;
+        }
+
+        @Override
+        void verify(OpenSslEngine engine, X509Certificate[] peerCerts, String auth)
+                throws Exception {
+            manager.checkServerTrusted(peerCerts, auth);
+        }
+    }
+
+    private static final class ExtendedTrustManagerVerifyCallback extends AbstractCertificateVerifier {
+        private final X509ExtendedTrustManager manager;
+
+        ExtendedTrustManagerVerifyCallback(OpenSslEngineMap engineMap, X509ExtendedTrustManager manager) {
+            super(engineMap);
+            this.manager = manager;
+        }
+
+        @Override
+        void verify(OpenSslEngine engine, X509Certificate[] peerCerts, String auth)
+                throws Exception {
+            manager.checkServerTrusted(peerCerts, auth, engine);
         }
     }
 }

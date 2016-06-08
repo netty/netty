@@ -78,6 +78,7 @@ public abstract class OpenSslContext extends SslContext {
 
     /** The OpenSSL SSL_CTX object */
     protected volatile long ctx;
+    final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
     long aprPool;
     @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile int aprPoolDestroyed;
@@ -85,7 +86,6 @@ public abstract class OpenSslContext extends SslContext {
     private final List<String> unmodifiableCiphers;
     private final long sessionCacheSize;
     private final long sessionTimeout;
-    private final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
     private final OpenSslApplicationProtocolNegotiator apn;
     private final int mode;
     private final Certificate[] keyCertChain;
@@ -453,7 +453,13 @@ public abstract class OpenSslContext extends SslContext {
          return PlatformDependent.javaVersion() >= 7 && trustManager instanceof X509ExtendedTrustManager;
     }
 
-    abstract class AbstractCertificateVerifier implements CertificateVerifier {
+    abstract static class AbstractCertificateVerifier implements CertificateVerifier {
+        private final OpenSslEngineMap engineMap;
+
+        AbstractCertificateVerifier(OpenSslEngineMap engineMap) {
+            this.engineMap = engineMap;
+        }
+
         @Override
         public final int verify(long ssl, byte[][] chain, String auth) {
             X509Certificate[] peerCerts = certificates(chain);
