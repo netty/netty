@@ -17,9 +17,6 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.base64.Base64;
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -36,10 +33,8 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
-import java.io.File;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateRevokedException;
@@ -55,11 +50,6 @@ import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBeha
 import static io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 
 public abstract class OpenSslContext extends SslContext {
-    private static final byte[] BEGIN_CERT = "-----BEGIN CERTIFICATE-----\n".getBytes(CharsetUtil.US_ASCII);
-    private static final byte[] END_CERT = "\n-----END CERTIFICATE-----\n".getBytes(CharsetUtil.US_ASCII);
-    private static final byte[] BEGIN_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\n".getBytes(CharsetUtil.US_ASCII);
-    private static final byte[] END_PRIVATE_KEY = "\n-----END PRIVATE KEY-----\n".getBytes(CharsetUtil.US_ASCII);
-
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslContext.class);
     /**
      * To make it easier for users to replace JDK implemention with OpenSsl version we also use
@@ -513,32 +503,14 @@ public abstract class OpenSslContext extends SslContext {
         if (key == null) {
             return 0;
         }
-        ByteBuf buffer = Unpooled.directBuffer();
-        try {
-            buffer.writeBytes(BEGIN_PRIVATE_KEY);
-            ByteBuf wrappedBuf = Unpooled.wrappedBuffer(key.getEncoded());
-            final ByteBuf encodedBuf;
-            try {
-                encodedBuf = Base64.encode(wrappedBuf, true);
-                try {
-                    buffer.writeBytes(encodedBuf);
-                } finally {
-                    zerooutAndRelease(encodedBuf);
-                }
-            } finally {
-                zerooutAndRelease(wrappedBuf);
-            }
-            buffer.writeBytes(END_PRIVATE_KEY);
-            return newBIO(buffer);
-        } finally {
-            // Zero out the buffer and so the private key it held.
-            zerooutAndRelease(buffer);
-        }
-    }
 
-    private static void zerooutAndRelease(ByteBuf buffer) {
-        buffer.setZero(0, buffer.capacity());
-        buffer.release();
+        ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
+        PemEncoded pem = PemPrivateKey.toPEM(allocator, true, key);
+        try {
+            return toBIO(allocator, pem.retain());
+        } finally {
+            pem.release();
+        }
     }
 
     /**
@@ -549,37 +521,62 @@ public abstract class OpenSslContext extends SslContext {
         if (certChain == null) {
             return 0;
         }
-        ByteBuf buffer = Unpooled.directBuffer();
+
+        if (certChain.length == 0) {
+            throw new IllegalArgumentException("certChain can't be empty");
+        }
+
+        ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
+        PemEncoded pem = PemX509Certificate.toPEM(allocator, true, certChain);
         try {
-            for (X509Certificate cert: certChain) {
-                buffer.writeBytes(BEGIN_CERT);
-                ByteBuf wrappedBuf = Unpooled.wrappedBuffer(cert.getEncoded());
+            return toBIO(allocator, pem.retain());
+        } finally {
+            pem.release();
+        }
+    }
+
+    private static long toBIO(ByteBufAllocator allocator, PemEncoded pem) throws Exception {
+        try {
+            // We can turn direct buffers straight into BIOs. No need to
+            // make a yet another copy.
+            ByteBuf content = pem.content();
+
+            if (content.isDirect()) {
+                return newBIO(content.retainedSlice());
+            }
+
+            ByteBuf buffer = allocator.directBuffer(content.readableBytes());
+            try {
+                buffer.writeBytes(content);
+                return newBIO(buffer.retainedSlice());
+            } finally {
                 try {
-                    ByteBuf encodedBuf = Base64.encode(wrappedBuf, true);
-                    try {
-                        buffer.writeBytes(encodedBuf);
-                    } finally {
-                        encodedBuf.release();
+                    // If the contents of the ByteBuf is sensitive (e.g. a PrivateKey) we
+                    // need to zero out the bytes of the copy before we're releasing it.
+                    if (pem.isSensitive()) {
+                        SslUtils.zeroout(buffer);
                     }
                 } finally {
-                    wrappedBuf.release();
+                    buffer.release();
                 }
-                buffer.writeBytes(END_CERT);
             }
-            return newBIO(buffer);
-        }  finally {
-            buffer.release();
+        } finally {
+            pem.release();
         }
     }
 
     private static long newBIO(ByteBuf buffer) throws Exception {
-        long bio = SSL.newMemBIO();
-        int readable = buffer.readableBytes();
-        if (SSL.writeToBIO(bio, OpenSsl.memoryAddress(buffer), readable) != readable) {
-            SSL.freeBIO(bio);
-            throw new IllegalStateException("Could not write data to memory BIO");
+        try {
+            long bio = SSL.newMemBIO();
+            int readable = buffer.readableBytes();
+            if (SSL.writeToBIO(bio, OpenSsl.memoryAddress(buffer), readable) != readable) {
+                SSL.freeBIO(bio);
+                throw new IllegalStateException("Could not write data to memory BIO");
+            }
+            return bio;
+        } finally {
+            buffer.release();
         }
-        return bio;
     }
 
     static void checkKeyManagerFactory(KeyManagerFactory keyManagerFactory) {
