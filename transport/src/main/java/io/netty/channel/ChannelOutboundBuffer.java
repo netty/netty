@@ -25,12 +25,10 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThrowableUtils;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
@@ -679,7 +677,7 @@ public final class ChannelOutboundBuffer {
             } else {
                 logger.warn(
                         "Failed to mark a promise as success because it has failed already: {}, unnotified cause {}",
-                        promise, stackTraceToString(err));
+                        promise, ThrowableUtils.stackTraceToString(err));
             }
         }
     }
@@ -692,23 +690,7 @@ public final class ChannelOutboundBuffer {
             } else {
                 logger.warn(
                         "Failed to mark a promise as failure because it hass failed already: {}, unnotified cause {}",
-                        promise, stackTraceToString(err), cause);
-            }
-        }
-    }
-
-    private static String stackTraceToString(Throwable cause) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PrintStream pout = new PrintStream(out);
-        cause.printStackTrace(pout);
-        pout.flush();
-        try {
-            return new String(out.toByteArray());
-        } finally {
-            try {
-                out.close();
-            } catch (IOException ignore) {
-                // ignore as should never happen
+                        promise, ThrowableUtils.stackTraceToString(err), cause);
             }
         }
     }
