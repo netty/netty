@@ -20,6 +20,7 @@ import io.netty.util.DefaultAttributeMap;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.ThrowableUtils;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -269,11 +270,18 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
         if (isAdded()) {
             try {
                 handler().exceptionCaught(this, cause);
-            } catch (Throwable t) {
-                if (logger.isWarnEnabled()) {
+            } catch (Throwable error) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug(
+                        "An exception {}" +
+                        "was thrown by a user handler's exceptionCaught() " +
+                        "method while handling the following exception:",
+                        ThrowableUtils.stackTraceToString(error), cause);
+                } else if (logger.isWarnEnabled()) {
                     logger.warn(
-                            "An exception was thrown by a user handler's " +
-                                    "exceptionCaught() method while handling the following exception:", cause);
+                        "An exception '{}' [enable DEBUG level for full stacktrace] " +
+                        "was thrown by a user handler's exceptionCaught() " +
+                        "method while handling the following exception:", error, cause);
                 }
             }
         } else {

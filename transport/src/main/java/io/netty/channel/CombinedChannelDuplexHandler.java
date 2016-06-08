@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.ThrowableUtils;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -142,10 +143,17 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
                         // as well
                         outboundHandler.exceptionCaught(outboundCtx, cause);
                     } catch (Throwable error) {
-                        if (logger.isWarnEnabled()) {
+                        if (logger.isDebugEnabled()) {
+                            logger.debug(
+                                    "An exception {}" +
+                                    "was thrown by a user handler's exceptionCaught() " +
+                                    "method while handling the following exception:",
+                                    ThrowableUtils.stackTraceToString(error), cause);
+                        } else if (logger.isWarnEnabled()) {
                             logger.warn(
-                                    "An exception was thrown by a user handler's " +
-                                            "exceptionCaught() method while handling the following exception:", error);
+                                    "An exception '{}' [enable DEBUG level for full stacktrace] " +
+                                    "was thrown by a user handler's exceptionCaught() " +
+                                    "method while handling the following exception:", error, cause);
                         }
                     }
                 } else {
