@@ -70,13 +70,15 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     /**
      * Sets the {@link NameResolver} which will resolve the address of the unresolved named address.
+     *
+     * @param resolver the {@link NameResolver} for this {@code Bootstrap}; may be {@code null}, in which case a default
+     *                 resolver will be used
+     *
+     * @see io.netty.resolver.DefaultAddressResolverGroup
      */
     @SuppressWarnings("unchecked")
     public Bootstrap resolver(AddressResolverGroup<?> resolver) {
-        if (resolver == null) {
-            throw new NullPointerException("resolver");
-        }
-        this.resolver = (AddressResolverGroup<SocketAddress>) resolver;
+        this.resolver = (AddressResolverGroup<SocketAddress>) (resolver == null ? DEFAULT_RESOLVER : resolver);
         return this;
     }
 
