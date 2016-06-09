@@ -53,16 +53,6 @@ public final class Errors {
      */
     private static final String[] ERRORS = new String[512];
 
-    // Pre-instantiated exceptions which does not need any stacktrace and
-    // can be thrown multiple times for performance reasons.
-    static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION;
-    static final NativeIoException CONNECTION_NOT_CONNECTED_SHUTDOWN_EXCEPTION;
-    static final NativeIoException CONNECTION_RESET_EXCEPTION_WRITE;
-    static final NativeIoException CONNECTION_RESET_EXCEPTION_WRITEV;
-    static final NativeIoException CONNECTION_RESET_EXCEPTION_READ;
-    static final NativeIoException CONNECTION_RESET_EXCEPTION_SENDTO;
-    static final NativeIoException CONNECTION_RESET_EXCEPTION_SENDMSG;
-
     /**
      * <strong>Internal usage only!</strong>
      */
@@ -84,21 +74,6 @@ public final class Errors {
             // This is ok as strerror returns 'Unknown error i' when the message is not known.
             ERRORS[i] = strError(i);
         }
-
-        CONNECTION_RESET_EXCEPTION_READ = newConnectionResetException("syscall:read(...)",
-                ERRNO_ECONNRESET_NEGATIVE);
-        CONNECTION_RESET_EXCEPTION_WRITE = newConnectionResetException("syscall:write(...)",
-                ERRNO_EPIPE_NEGATIVE);
-        CONNECTION_RESET_EXCEPTION_WRITEV = newConnectionResetException("syscall:writev(...)",
-                ERRNO_EPIPE_NEGATIVE);
-        CONNECTION_RESET_EXCEPTION_SENDTO = newConnectionResetException("syscall:sendto(...)",
-                ERRNO_EPIPE_NEGATIVE);
-        CONNECTION_RESET_EXCEPTION_SENDMSG = newConnectionResetException("syscall:sendmsg(...)",
-                ERRNO_EPIPE_NEGATIVE);
-        CONNECTION_NOT_CONNECTED_SHUTDOWN_EXCEPTION = newConnectionResetException("syscall:shutdown(...)",
-                ERRNO_ENOTCONN_NEGATIVE);
-        CLOSED_CHANNEL_EXCEPTION = new ClosedChannelException();
-        CLOSED_CHANNEL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
     static ConnectException newConnectException(String method, int err) {
@@ -115,7 +90,8 @@ public final class Errors {
         return new NativeIoException(method + "() failed: " + ERRORS[-err], err);
     }
 
-    public static int ioResult(String method, int err, NativeIoException resetCause) throws IOException {
+    public static int ioResult(String method, int err, NativeIoException resetCause,
+                               ClosedChannelException closedCause) throws IOException {
         // network stack saturated... try again later
         if (err == ERRNO_EAGAIN_NEGATIVE || err == ERRNO_EWOULDBLOCK_NEGATIVE) {
             return 0;
@@ -124,7 +100,7 @@ public final class Errors {
             throw resetCause;
         }
         if (err == ERRNO_EBADF_NEGATIVE || err == ERRNO_ENOTCONN_NEGATIVE) {
-            throw CLOSED_CHANNEL_EXCEPTION;
+            throw closedCause;
         }
         // TODO: We could even go further and use a pre-instantiated IOException for the other error codes, but for
         //       all other errors it may be better to just include a stack trace.
