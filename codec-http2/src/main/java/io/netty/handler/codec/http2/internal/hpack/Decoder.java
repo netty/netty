@@ -32,7 +32,7 @@
 package io.netty.handler.codec.http2.internal.hpack;
 
 import io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType;
-import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,21 +41,22 @@ import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 
 public final class Decoder {
 
-    private static final IOException DECOMPRESSION_EXCEPTION =
-            new IOException("HPACK - decompression failure");
-    private static final IOException ILLEGAL_INDEX_VALUE =
-            new IOException("HPACK - illegal index value");
-    private static final IOException INVALID_MAX_DYNAMIC_TABLE_SIZE =
-            new IOException("HPACK - invalid max dynamic table size");
-    private static final IOException MAX_DYNAMIC_TABLE_SIZE_CHANGE_REQUIRED =
-            new IOException("HPACK - max dynamic table size change required");
-
-    static {
-        DECOMPRESSION_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-        ILLEGAL_INDEX_VALUE.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-        INVALID_MAX_DYNAMIC_TABLE_SIZE.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-        MAX_DYNAMIC_TABLE_SIZE_CHANGE_REQUIRED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-    }
+    private static final IOException DECODE_DECOMPRESSION_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new IOException("HPACK - decompression failure"), Decoder.class, "decode(...)");
+    private static final IOException DECODE_ULE_128_DECOMPRESSION_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new IOException("HPACK - decompression failure"), Decoder.class, "decodeULE128(...)");
+    private static final IOException READ_STRING_LITERAL_DECOMPRESSION_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new IOException("HPACK - decompression failure"), Decoder.class, "readStringLiteral(...)");
+    private static final IOException DECODE_ILLEGAL_INDEX_VALUE = ThrowableUtil.unknownStackTrace(
+            new IOException("HPACK - illegal index value"), Decoder.class, "decode(...)");
+    private static final IOException INDEX_HEADER_ILLEGAL_INDEX_VALUE = ThrowableUtil.unknownStackTrace(
+            new IOException("HPACK - illegal index value"), Decoder.class, "indexHeader(...)");
+    private static final IOException READ_NAME_ILLEGAL_INDEX_VALUE = ThrowableUtil.unknownStackTrace(
+            new IOException("HPACK - illegal index value"), Decoder.class, "readName(...)");
+    private static final IOException INVALID_MAX_DYNAMIC_TABLE_SIZE = ThrowableUtil.unknownStackTrace(
+            new IOException("HPACK - invalid max dynamic table size"), Decoder.class, "setDynamicTableSize(...)");
+    private static final IOException MAX_DYNAMIC_TABLE_SIZE_CHANGE_REQUIRED = ThrowableUtil.unknownStackTrace(
+            new IOException("HPACK - max dynamic table size change required"), Decoder.class, "decode(...)");
 
     private final DynamicTable dynamicTable;
 
@@ -123,7 +124,7 @@ public final class Decoder {
                         // Indexed Header Field
                         index = b & 0x7F;
                         if (index == 0) {
-                            throw ILLEGAL_INDEX_VALUE;
+                            throw DECODE_ILLEGAL_INDEX_VALUE;
                         } else if (index == 0x7F) {
                             state = State.READ_INDEXED_HEADER;
                         } else {
@@ -175,7 +176,7 @@ public final class Decoder {
 
                     // Check for numerical overflow
                     if (maxSize > Integer.MAX_VALUE - index) {
-                        throw DECOMPRESSION_EXCEPTION;
+                        throw DECODE_DECOMPRESSION_EXCEPTION;
                     }
 
                     setDynamicTableSize(index + maxSize);
@@ -190,7 +191,7 @@ public final class Decoder {
 
                     // Check for numerical overflow
                     if (headerIndex > Integer.MAX_VALUE - index) {
-                        throw DECOMPRESSION_EXCEPTION;
+                        throw DECODE_DECOMPRESSION_EXCEPTION;
                     }
 
                     indexHeader(index + headerIndex, headerListener);
@@ -206,7 +207,7 @@ public final class Decoder {
 
                     // Check for numerical overflow
                     if (nameIndex > Integer.MAX_VALUE - index) {
-                        throw DECOMPRESSION_EXCEPTION;
+                        throw DECODE_DECOMPRESSION_EXCEPTION;
                     }
 
                     readName(index + nameIndex);
@@ -255,7 +256,7 @@ public final class Decoder {
 
                     // Check for numerical overflow
                     if (nameLength > Integer.MAX_VALUE - index) {
-                        throw DECOMPRESSION_EXCEPTION;
+                        throw DECODE_DECOMPRESSION_EXCEPTION;
                     }
                     nameLength += index;
 
@@ -348,7 +349,7 @@ public final class Decoder {
 
                     // Check for numerical overflow
                     if (valueLength > Integer.MAX_VALUE - index) {
-                        throw DECOMPRESSION_EXCEPTION;
+                        throw DECODE_DECOMPRESSION_EXCEPTION;
                     }
                     valueLength += index;
 
@@ -469,7 +470,7 @@ public final class Decoder {
             HeaderField headerField = dynamicTable.getEntry(index - StaticTable.length);
             name = headerField.name;
         } else {
-            throw ILLEGAL_INDEX_VALUE;
+            throw READ_NAME_ILLEGAL_INDEX_VALUE;
         }
     }
 
@@ -481,7 +482,7 @@ public final class Decoder {
             HeaderField headerField = dynamicTable.getEntry(index - StaticTable.length);
             addHeader(headerListener, headerField.name, headerField.value, false);
         } else {
-            throw ILLEGAL_INDEX_VALUE;
+            throw INDEX_HEADER_ILLEGAL_INDEX_VALUE;
         }
     }
 
@@ -529,7 +530,7 @@ public final class Decoder {
     private byte[] readStringLiteral(InputStream in, int length) throws IOException {
         byte[] buf = new byte[length];
         if (in.read(buf) != length) {
-            throw DECOMPRESSION_EXCEPTION;
+            throw READ_STRING_LITERAL_DECOMPRESSION_EXCEPTION;
         }
 
         if (huffmanEncoded) {
@@ -563,6 +564,6 @@ public final class Decoder {
         }
         // Value exceeds Integer.MAX_VALUE
         in.reset();
-        throw DECOMPRESSION_EXCEPTION;
+        throw DECODE_ULE_128_DECOMPRESSION_EXCEPTION;
     }
 }

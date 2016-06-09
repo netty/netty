@@ -17,6 +17,7 @@ package io.netty.channel.unix;
 
 import io.netty.channel.ChannelException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -24,10 +25,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 
-import static io.netty.channel.unix.Errors.CONNECTION_NOT_CONNECTED_SHUTDOWN_EXCEPTION;
-import static io.netty.channel.unix.Errors.CONNECTION_RESET_EXCEPTION_SENDMSG;
-import static io.netty.channel.unix.Errors.CONNECTION_RESET_EXCEPTION_SENDTO;
 import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EWOULDBLOCK_NEGATIVE;
@@ -42,6 +41,26 @@ import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
  * <strong>Internal usage only!</strong>
  */
 public final class Socket extends FileDescriptor {
+    private static final ClosedChannelException SHUTDOWN_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new ClosedChannelException(), Socket.class, "shutdown(...)");
+    private static final ClosedChannelException SEND_TO_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new ClosedChannelException(), Socket.class, "sendTo(...)");
+    private static final ClosedChannelException SEND_TO_ADDRESS_CLOSED_CHANNEL_EXCEPTION =
+            ThrowableUtil.unknownStackTrace(new ClosedChannelException(), Socket.class, "sendToAddress(...)");
+    private static final ClosedChannelException SEND_TO_ADDRESSES_CLOSED_CHANNEL_EXCEPTION =
+            ThrowableUtil.unknownStackTrace(new ClosedChannelException(), Socket.class, "sendToAddresses(...)");
+    private static final Errors.NativeIoException SEND_TO_CONNECTION_RESET_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            Errors.newConnectionResetException("syscall:sendto(...)", Errors.ERRNO_EPIPE_NEGATIVE),
+            Socket.class, "sendTo(...)");
+    private static final Errors.NativeIoException SEND_TO_ADDRESS_CONNECTION_RESET_EXCEPTION =
+            ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:sendto(...)",
+                    Errors.ERRNO_EPIPE_NEGATIVE), Socket.class, "sendToAddress(...)");
+    private static final Errors.NativeIoException CONNECTION_RESET_EXCEPTION_SENDMSG = ThrowableUtil.unknownStackTrace(
+            Errors.newConnectionResetException("syscall:sendmsg(...)",
+            Errors.ERRNO_EPIPE_NEGATIVE), Socket.class, "sendToAddresses(...)");
+    private static final Errors.NativeIoException CONNECTION_NOT_CONNECTED_SHUTDOWN_EXCEPTION =
+            ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:shutdown(...)",
+                    Errors.ERRNO_ENOTCONN_NEGATIVE), Socket.class, "shutdown(...)");
     public Socket(int fd) {
         super(fd);
     }
@@ -75,7 +94,7 @@ public final class Socket extends FileDescriptor {
         }
         int res = shutdown(fd, read, write);
         if (res < 0) {
-            ioResult("shutdown", res, CONNECTION_NOT_CONNECTED_SHUTDOWN_EXCEPTION);
+            ioResult("shutdown", res, CONNECTION_NOT_CONNECTED_SHUTDOWN_EXCEPTION, SHUTDOWN_CLOSED_CHANNEL_EXCEPTION);
         }
     }
 
@@ -109,7 +128,7 @@ public final class Socket extends FileDescriptor {
         if (res >= 0) {
             return res;
         }
-        return ioResult("sendTo", res, CONNECTION_RESET_EXCEPTION_SENDTO);
+        return ioResult("sendTo", res, SEND_TO_CONNECTION_RESET_EXCEPTION, SEND_TO_CLOSED_CHANNEL_EXCEPTION);
     }
 
     public int sendToAddress(long memoryAddress, int pos, int limit, InetAddress addr, int port)
@@ -130,7 +149,8 @@ public final class Socket extends FileDescriptor {
         if (res >= 0) {
             return res;
         }
-        return ioResult("sendToAddress", res, CONNECTION_RESET_EXCEPTION_SENDTO);
+        return ioResult("sendToAddress", res,
+                SEND_TO_ADDRESS_CONNECTION_RESET_EXCEPTION, SEND_TO_ADDRESS_CLOSED_CHANNEL_EXCEPTION);
     }
 
     public int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port) throws IOException {
@@ -150,7 +170,8 @@ public final class Socket extends FileDescriptor {
         if (res >= 0) {
             return res;
         }
-        return ioResult("sendToAddresses", res, CONNECTION_RESET_EXCEPTION_SENDMSG);
+        return ioResult("sendToAddresses", res,
+                CONNECTION_RESET_EXCEPTION_SENDMSG, SEND_TO_ADDRESSES_CLOSED_CHANNEL_EXCEPTION);
     }
 
     public DatagramSocketAddress recvFrom(ByteBuffer buf, int pos, int limit) throws IOException {

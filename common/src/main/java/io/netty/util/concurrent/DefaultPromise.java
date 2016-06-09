@@ -16,10 +16,10 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.Signal;
-import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -39,7 +39,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER;
     private static final Signal SUCCESS = Signal.valueOf(DefaultPromise.class, "SUCCESS");
     private static final Signal UNCANCELLABLE = Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE");
-    private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(new CancellationException());
+    private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(ThrowableUtil.unknownStackTrace(
+            new CancellationException(), DefaultPromise.class, "cancel(...)"));
 
     static {
         @SuppressWarnings("rawtypes")
@@ -47,7 +48,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 PlatformDependent.newAtomicReferenceFieldUpdater(DefaultPromise.class, "result");
         RESULT_UPDATER = updater == null ? AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class,
                                                                                   Object.class, "result") : updater;
-        CANCELLATION_CAUSE_HOLDER.cause.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
     private volatile Object result;

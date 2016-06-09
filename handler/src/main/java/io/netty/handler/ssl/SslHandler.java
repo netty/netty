@@ -40,8 +40,8 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -177,15 +177,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * {@link #unwrap(ChannelHandlerContext, ByteBuf, int,  int)}.  Using this static instance reduce object
      * creation as {@link Unpooled#EMPTY_BUFFER#nioBuffer()} creates a new {@link ByteBuffer} everytime.
      */
-    private static final SSLException SSLENGINE_CLOSED = new SSLException("SSLEngine closed already");
-    private static final SSLException HANDSHAKE_TIMED_OUT = new SSLException("handshake timed out");
-    private static final ClosedChannelException CHANNEL_CLOSED = new ClosedChannelException();
-
-    static {
-        SSLENGINE_CLOSED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-        HANDSHAKE_TIMED_OUT.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-        CHANNEL_CLOSED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-    }
+    private static final SSLException SSLENGINE_CLOSED = ThrowableUtil.unknownStackTrace(
+            new SSLException("SSLEngine closed already"), SslHandler.class, "wrap(...)");
+    private static final SSLException HANDSHAKE_TIMED_OUT = ThrowableUtil.unknownStackTrace(
+            new SSLException("handshake timed out"), SslHandler.class, "handshake(...)");
+    private static final ClosedChannelException CHANNEL_CLOSED = ThrowableUtil.unknownStackTrace(
+            new ClosedChannelException(), SslHandler.class, "channelInactive(...)");
 
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
