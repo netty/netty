@@ -715,8 +715,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     // The selector returned prematurely many times in a row.
                     // Rebuild the selector to work around the problem.
                     logger.warn(
-                            "Selector.select() returned prematurely {} times in a row; rebuilding selector.",
-                            selectCnt);
+                            "Selector.select() returned prematurely {} times in a row; rebuilding Selector {}.",
+                            selectCnt, selector);
 
                     rebuildSelector();
                     selector = this.selector;
@@ -732,12 +732,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
             if (selectCnt > MIN_PREMATURE_SELECTOR_RETURNS) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Selector.select() returned prematurely {} times in a row.", selectCnt - 1);
+                    logger.debug("Selector.select() returned prematurely {} times in a row for Selector {}.",
+                            selectCnt - 1, selector);
                 }
             }
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
-                logger.debug(CancelledKeyException.class.getSimpleName() + " raised by a Selector - JDK bug?", e);
+                logger.debug(CancelledKeyException.class.getSimpleName() + " raised by a Selector {} - JDK bug?",
+                        selector, e);
             }
             // Harmless exception - log anyway
         }
