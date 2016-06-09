@@ -22,9 +22,11 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.NativeInetAddress;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.channels.ClosedChannelException;
 import java.util.Locale;
 
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollerr;
@@ -78,16 +80,22 @@ public final class Native {
     public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
     public static final String KERNEL_VERSION = kernelVersion();
 
-    private static final NativeIoException CONNECTION_RESET_EXCEPTION_SENDFILE;
-    private static final NativeIoException CONNECTION_RESET_EXCEPTION_SENDMMSG;
-    private static final NativeIoException CONNECTION_RESET_EXCEPTION_SPLICE;
+    private static final NativeIoException SENDFILE_CONNECTION_RESET_EXCEPTION;
+    private static final NativeIoException SENDMMSG_CONNECTION_RESET_EXCEPTION;
+    private static final NativeIoException SPLICE_CONNECTION_RESET_EXCEPTION;
+    private static final ClosedChannelException SENDFILE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new ClosedChannelException(), Native.class, "sendfile(...)");
+    private static final ClosedChannelException SENDMMSG_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new ClosedChannelException(), Native.class, "sendmmsg(...)");
+    private static final ClosedChannelException SPLICE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new ClosedChannelException(), Native.class, "splice(...)");
 
     static {
-        CONNECTION_RESET_EXCEPTION_SENDFILE = newConnectionResetException("syscall:sendfile(...)",
+        SENDFILE_CONNECTION_RESET_EXCEPTION = newConnectionResetException("syscall:sendfile(...)",
                 ERRNO_EPIPE_NEGATIVE);
-        CONNECTION_RESET_EXCEPTION_SENDMMSG = newConnectionResetException("syscall:sendmmsg(...)",
+        SENDMMSG_CONNECTION_RESET_EXCEPTION = newConnectionResetException("syscall:sendmmsg(...)",
                 ERRNO_EPIPE_NEGATIVE);
-        CONNECTION_RESET_EXCEPTION_SPLICE = newConnectionResetException("syscall:splice(...)",
+        SPLICE_CONNECTION_RESET_EXCEPTION = newConnectionResetException("syscall:splice(...)",
                 ERRNO_EPIPE_NEGATIVE);
     }
 
@@ -144,7 +152,7 @@ public final class Native {
         if (res >= 0) {
             return res;
         }
-        return ioResult("splice", res, CONNECTION_RESET_EXCEPTION_SPLICE);
+        return ioResult("splice", res, SPLICE_CONNECTION_RESET_EXCEPTION, SPLICE_CLOSED_CHANNEL_EXCEPTION);
     }
 
     private static native int splice0(int fd, long offIn, int fdOut, long offOut, long len);
@@ -159,7 +167,7 @@ public final class Native {
         if (res >= 0) {
             return res;
         }
-        return ioResult("sendfile", (int) res, CONNECTION_RESET_EXCEPTION_SENDFILE);
+        return ioResult("sendfile", (int) res, SENDFILE_CONNECTION_RESET_EXCEPTION, SENDFILE_CLOSED_CHANNEL_EXCEPTION);
     }
 
     private static native long sendfile0(
@@ -171,7 +179,7 @@ public final class Native {
         if (res >= 0) {
             return res;
         }
-        return ioResult("sendmmsg", res, CONNECTION_RESET_EXCEPTION_SENDMMSG);
+        return ioResult("sendmmsg", res, SENDMMSG_CONNECTION_RESET_EXCEPTION, SENDMMSG_CLOSED_CHANNEL_EXCEPTION);
     }
 
     private static native int sendmmsg0(
