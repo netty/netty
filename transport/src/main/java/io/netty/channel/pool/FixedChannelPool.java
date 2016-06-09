@@ -21,7 +21,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
@@ -35,15 +35,12 @@ import java.util.concurrent.TimeoutException;
  * number of concurrent connections.
  */
 public final class FixedChannelPool extends SimpleChannelPool {
-    private static final IllegalStateException FULL_EXCEPTION =
-            new IllegalStateException("Too many outstanding acquire operations");
-    private static final TimeoutException TIMEOUT_EXCEPTION =
-            new TimeoutException("Acquire operation took longer then configured maximum time");
-
-    static {
-        FULL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-        TIMEOUT_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-    }
+    private static final IllegalStateException FULL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new IllegalStateException("Too many outstanding acquire operations"),
+            FixedChannelPool.class, "acquire0(...)");
+    private static final TimeoutException TIMEOUT_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new TimeoutException("Acquire operation took longer then configured maximum time"),
+            FixedChannelPool.class, "<init>(...)");
 
     public enum AcquireTimeoutAction {
         /**

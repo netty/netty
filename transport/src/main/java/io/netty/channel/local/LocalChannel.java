@@ -28,9 +28,9 @@ import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
-import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
@@ -52,7 +52,10 @@ public class LocalChannel extends AbstractChannel {
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER;
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private static final int MAX_READER_STACK_DEPTH = 8;
-    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = new ClosedChannelException();
+    private static final ClosedChannelException DO_WRITE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new ClosedChannelException(), LocalChannel.class, "doWrite(...)");
+    private static final ClosedChannelException DO_CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new ClosedChannelException(), LocalChannel.class, "doClose()");
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
     // To further optimize this we could write our own SPSC queue.
@@ -97,7 +100,6 @@ public class LocalChannel extends AbstractChannel {
                 AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");
         }
         FINISH_READ_FUTURE_UPDATER = finishReadFutureUpdater;
-        CLOSED_CHANNEL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
     public LocalChannel() {
@@ -240,7 +242,7 @@ public class LocalChannel extends AbstractChannel {
             ChannelPromise promise = connectPromise;
             if (promise != null) {
                 // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
+                promise.tryFailure(DO_CLOSE_CLOSED_CHANNEL_EXCEPTION);
                 connectPromise = null;
             }
 
@@ -335,7 +337,7 @@ public class LocalChannel extends AbstractChannel {
         case BOUND:
             throw new NotYetConnectedException();
         case CLOSED:
-            throw CLOSED_CHANNEL_EXCEPTION;
+            throw DO_WRITE_CLOSED_CHANNEL_EXCEPTION;
         case CONNECTED:
             break;
         }
@@ -356,7 +358,7 @@ public class LocalChannel extends AbstractChannel {
                         peer.inboundBuffer.add(ReferenceCountUtil.retain(msg));
                         in.remove();
                     } else {
-                        in.remove(CLOSED_CHANNEL_EXCEPTION);
+                        in.remove(DO_WRITE_CLOSED_CHANNEL_EXCEPTION);
                     }
                 } catch (Throwable cause) {
                     in.remove(cause);
