@@ -184,6 +184,13 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         return selector;
     }
 
+    /**
+     * Returns the {@link SelectorProvider} used by this {@link NioEventLoop} to obtain the {@link Selector}.
+     */
+    public SelectorProvider selectorProvider() {
+        return provider;
+    }
+
     @Override
     protected Queue<Runnable> newTaskQueue() {
         // This event loop never calls takeTask()
