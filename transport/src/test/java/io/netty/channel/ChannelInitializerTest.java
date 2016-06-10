@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
@@ -25,9 +26,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class ChannelInitializerTest {
     private static final int TIMEOUT_MILLIS = 1000;
@@ -74,6 +77,38 @@ public class ChannelInitializerTest {
                 channel.pipeline().addLast(testHandler);
             }
         });
+    }
+
+    @Test
+    public void testAddFirstChannelInitializer() {
+        testAddChannelInitializer(true);
+    }
+
+    @Test
+    public void testAddLastChannelInitializer() {
+        testAddChannelInitializer(false);
+    }
+
+    private static void testAddChannelInitializer(final boolean first) {
+        final AtomicBoolean called = new AtomicBoolean();
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ChannelHandler handler = new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) throws Exception {
+                        called.set(true);
+                    }
+                };
+                if (first) {
+                    ch.pipeline().addFirst(handler);
+                } else {
+                    ch.pipeline().addLast(handler);
+                }
+            }
+        });
+        channel.finish();
+        assertTrue(called.get());
     }
 
     private void testChannelRegisteredEventPropagation(ChannelInitializer<LocalChannel> init) {
