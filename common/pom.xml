@@ -17,7 +17,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
-  
+
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
@@ -47,6 +47,8 @@
     <dependency>
       <groupId>org.jctools</groupId>
       <artifactId>jctools-core</artifactId>
+      <!-- Need compile scope to be taken into account by shade plugin -->
+      <scope>compile</scope>
       <!-- Mark as optional as otherwise the bundle plugin will add strict import statements and so fail in OSGI containers-->
       <optional>true</optional>
     </dependency>
@@ -182,7 +184,6 @@
             </goals>
             <configuration>
               <instructions>
-                <!-- Exclude org.jctools.* as we shade it -->
                 <!-- NativeLibraryLoader can be used to manually load native libraries from other bundles that this bundle does not depend on,
                 hence use DynamicImport-Package instruction to ensure the loading is successful -->
                 <DynamicImport-Package>*</DynamicImport-Package>
