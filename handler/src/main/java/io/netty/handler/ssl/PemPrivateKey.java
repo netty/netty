@@ -132,34 +132,12 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
 
     @Override
     public PemPrivateKey copy() {
-        return replace(content.copy());
+        return new PemPrivateKey(content.copy());
     }
 
     @Override
     public PemPrivateKey duplicate() {
-        return replace(content.duplicate());
-    }
-
-    @Override
-    public PemPrivateKey retainedDuplicate() {
-        return replace(content.retainedDuplicate());
-    }
-
-    @Override
-    public PemPrivateKey replace(ByteBuf content) {
-        return new PemPrivateKey(content);
-    }
-
-    @Override
-    public PemPrivateKey touch() {
-        content.touch();
-        return this;
-    }
-
-    @Override
-    public PemPrivateKey touch(Object hint) {
-        content.touch(hint);
-        return this;
+        return new PemPrivateKey(content.duplicate());
     }
 
     @Override

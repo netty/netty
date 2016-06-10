@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ReadOnlyByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
@@ -132,7 +133,7 @@ final class SslUtils {
      * Fills the {@link ByteBuf} with zero bytes.
      */
     static void zeroout(ByteBuf buffer) {
-        if (!buffer.isReadOnly()) {
+        if (!(buffer instanceof ReadOnlyByteBuf)) {
             buffer.setZero(0, buffer.capacity());
         }
     }

@@ -15,7 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 
 /**
@@ -34,22 +33,9 @@ interface PemEncoded extends ByteBufHolder {
 
     @Override
     PemEncoded duplicate();
-
-    @Override
-    PemEncoded retainedDuplicate();
-
-    @Override
-    PemEncoded replace(ByteBuf content);
-
     @Override
     PemEncoded retain();
 
     @Override
     PemEncoded retain(int increment);
-
-    @Override
-    PemEncoded touch();
-
-    @Override
-    PemEncoded touch(Object hint);
 }

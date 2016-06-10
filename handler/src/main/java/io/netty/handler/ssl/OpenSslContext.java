@@ -32,8 +32,10 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.io.File;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateRevokedException;
@@ -541,13 +543,13 @@ public abstract class OpenSslContext extends SslContext {
             ByteBuf content = pem.content();
 
             if (content.isDirect()) {
-                return newBIO(content.retainedSlice());
+                return newBIO(content.slice().retain());
             }
 
             ByteBuf buffer = allocator.directBuffer(content.readableBytes());
             try {
                 buffer.writeBytes(content);
-                return newBIO(buffer.retainedSlice());
+                return newBIO(buffer.slice().retain());
             } finally {
                 try {
                     // If the contents of the ByteBuf is sensitive (e.g. a PrivateKey) we

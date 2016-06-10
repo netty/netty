@@ -56,33 +56,12 @@ class PemValue extends AbstractReferenceCounted implements PemEncoded {
 
     @Override
     public PemValue copy() {
-        return replace(content.copy());
+        return new PemValue(content.copy(), sensitive);
     }
 
     @Override
     public PemValue duplicate() {
-        return replace(content.duplicate());
-    }
-
-    @Override
-    public PemValue retainedDuplicate() {
-        return replace(content.retainedDuplicate());
-    }
-
-    @Override
-    public PemValue replace(ByteBuf content) {
-        return new PemValue(content, sensitive);
-    }
-
-    @Override
-    public PemValue touch() {
-        return (PemValue) super.touch();
-    }
-
-    @Override
-    public PemValue touch(Object hint) {
-        content.touch(hint);
-        return this;
+        return new PemValue(content.duplicate(), sensitive);
     }
 
     @Override

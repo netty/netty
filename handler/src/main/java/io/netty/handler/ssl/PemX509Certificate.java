@@ -208,22 +208,12 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
 
     @Override
     public PemX509Certificate copy() {
-        return replace(content.copy());
+        return new PemX509Certificate(content.copy());
     }
 
     @Override
     public PemX509Certificate duplicate() {
-        return replace(content.duplicate());
-    }
-
-    @Override
-    public PemX509Certificate retainedDuplicate() {
-        return replace(content.retainedDuplicate());
-    }
-
-    @Override
-    public PemX509Certificate replace(ByteBuf content) {
-        return new PemX509Certificate(content);
+        return new PemX509Certificate(content.duplicate());
     }
 
     @Override
@@ -235,18 +225,6 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     @Override
     public PemX509Certificate retain(int increment) {
         content.retain(increment);
-        return this;
-    }
-
-    @Override
-    public PemX509Certificate touch() {
-        content.touch();
-        return this;
-    }
-
-    @Override
-    public PemX509Certificate touch(Object hint) {
-        content.touch(hint);
         return this;
     }
 
