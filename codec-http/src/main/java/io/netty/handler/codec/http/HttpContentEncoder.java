@@ -120,9 +120,11 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                  * The HEAD method is identical to GET except that the server MUST NOT return a message-body
                  * in the response.
                  *
-                 * This code is now inline with HttpClientDecoder.Decoder
+                 * Also we should pass through HTTP/1.0 as transfer-encoding: chunked is not supported.
+                 *
+                 * See https://github.com/netty/netty/issues/5382
                  */
-                if (isPassthru(code, acceptEncoding)) {
+                if (isPassthru(res.protocolVersion(), code, acceptEncoding)) {
                     if (isFull) {
                         out.add(ReferenceCountUtil.retain(res));
                     } else {
@@ -203,9 +205,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private static boolean isPassthru(int code, CharSequence httpMethod) {
+    private static boolean isPassthru(HttpVersion version, int code, CharSequence httpMethod) {
         return code < 200 || code == 204 || code == 304 ||
-               (httpMethod == ZERO_LENGTH_HEAD || (httpMethod == ZERO_LENGTH_CONNECT && code == 200));
+               (httpMethod == ZERO_LENGTH_HEAD || (httpMethod == ZERO_LENGTH_CONNECT && code == 200)) ||
+                version == HttpVersion.HTTP_1_0;
     }
 
     private static void ensureHeaders(HttpObject msg) {
