@@ -329,6 +329,31 @@ public class HttpContentEncoderTest {
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
+    @Test
+    public void testHttp1_0() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/");
+        assertTrue(ch.writeInbound(req));
+
+        HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.OK);
+        res.headers().set(HttpHeaders.Names.CONTENT_LENGTH, 0);
+        assertTrue(ch.writeOutbound(res));
+        assertTrue(ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertTrue(ch.finish());
+
+        FullHttpRequest request = (FullHttpRequest) ch.readInbound();
+        assertTrue(request.release());
+        assertNull(ch.readInbound());
+
+        HttpResponse response = (HttpResponse) ch.readOutbound();
+        assertSame(res, response);
+
+        LastHttpContent content = (LastHttpContent) ch.readOutbound();
+        assertSame(LastHttpContent.EMPTY_LAST_CONTENT, content);
+        content.release();
+        assertNull(ch.readOutbound());
+    }
+
     private static void assertEmptyResponse(EmbeddedChannel ch) {
         Object o = ch.readOutbound();
         assertThat(o, is(instanceOf(HttpResponse.class)));
