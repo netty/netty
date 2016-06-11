@@ -689,7 +689,7 @@ public final class ChannelOutboundBuffer {
                 logger.warn("Failed to mark a promise as failure because it has succeeded already: {}", promise, cause);
             } else {
                 logger.warn(
-                        "Failed to mark a promise as failure because it hass failed already: {}, unnotified cause {}",
+                        "Failed to mark a promise as failure because it has failed already: {}, unnotified cause {}",
                         promise, ThrowableUtils.stackTraceToString(err), cause);
             }
         }
