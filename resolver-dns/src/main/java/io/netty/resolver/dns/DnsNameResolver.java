@@ -40,6 +40,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -61,6 +62,8 @@ import static io.netty.util.internal.ObjectUtil.*;
 public class DnsNameResolver extends InetNameResolver {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
+    private static final String LOCALHOST = "localhost";
+    private static final InetAddress LOCALHOST_ADDRESS;
 
     static final InetSocketAddress ANY_LOCAL_ADDR = new InetSocketAddress(0);
 
@@ -71,10 +74,12 @@ public class DnsNameResolver extends InetNameResolver {
         if (Boolean.getBoolean("java.net.preferIPv6Addresses")) {
             DEFAULT_RESOLVE_ADDRESS_TYPES[0] = InternetProtocolFamily.IPv6;
             DEFAULT_RESOLVE_ADDRESS_TYPES[1] = InternetProtocolFamily.IPv4;
+            LOCALHOST_ADDRESS = NetUtil.LOCALHOST6;
             logger.debug("-Djava.net.preferIPv6Addresses: true");
         } else {
             DEFAULT_RESOLVE_ADDRESS_TYPES[0] = InternetProtocolFamily.IPv4;
             DEFAULT_RESOLVE_ADDRESS_TYPES[1] = InternetProtocolFamily.IPv6;
+            LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
             logger.debug("-Djava.net.preferIPv6Addresses: false");
         }
     }
@@ -282,7 +287,18 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     private InetAddress resolveHostsFileEntry(String hostname) {
-        return hostsFileEntriesResolver != null ? hostsFileEntriesResolver.address(hostname) : null;
+        if (hostsFileEntriesResolver == null) {
+            return null;
+        } else {
+            InetAddress address = hostsFileEntriesResolver.address(hostname);
+            if (address == null && PlatformDependent.isWindows() && LOCALHOST.equalsIgnoreCase(hostname)) {
+                // If we tried to resolve localhost we need workaround that windows removed localhost from its
+                // hostfile in later versions.
+                // See https://github.com/netty/netty/issues/5386
+                return LOCALHOST_ADDRESS;
+            }
+            return address;
+        }
     }
 
     @Override
