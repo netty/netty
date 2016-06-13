@@ -34,7 +34,7 @@ public class DefaultThreadFactory implements ThreadFactory {
     private final String prefix;
     private final boolean daemon;
     private final int priority;
-    private final ThreadGroup threadGroup;
+    protected final ThreadGroup threadGroup;
 
     public DefaultThreadFactory(Class<?> poolType) {
         this(poolType, false, Thread.NORM_PRIORITY);
