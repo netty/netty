@@ -67,8 +67,10 @@ import static javax.net.ssl.SSLEngineResult.Status.OK;
 /**
  * Implements a {@link SSLEngine} using
  * <a href="https://www.openssl.org/docs/crypto/BIO_s_bio.html#EXAMPLE">OpenSSL BIO abstractions</a>.
+ *
+ * <strong>Extending this class is strightly forbidden from external projects.</strong>
  */
-public final class OpenSslEngine extends SSLEngine {
+public class OpenSslEngine extends SSLEngine {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslEngine.class);
 
@@ -602,7 +604,7 @@ public final class OpenSslEngine extends SSLEngine {
         return new SSLHandshakeException(err);
     }
 
-    public synchronized SSLEngineResult unwrap(
+    public final synchronized SSLEngineResult unwrap(
             final ByteBuffer[] srcs, int srcsOffset, final int srcsLength,
             final ByteBuffer[] dsts, final int dstsOffset, final int dstsLength) throws SSLException {
 
@@ -831,7 +833,7 @@ public final class OpenSslEngine extends SSLEngine {
         }
     }
 
-    public SSLEngineResult unwrap(final ByteBuffer[] srcs, final ByteBuffer[] dsts) throws SSLException {
+    public final SSLEngineResult unwrap(final ByteBuffer[] srcs, final ByteBuffer[] dsts) throws SSLException {
         return unwrap(srcs, 0, srcs.length, dsts, 0, dsts.length);
     }
 
@@ -854,7 +856,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public synchronized SSLEngineResult unwrap(
+    public final synchronized SSLEngineResult unwrap(
             final ByteBuffer src, final ByteBuffer[] dsts, final int offset, final int length) throws SSLException {
         try {
             return unwrap(singleSrcBuffer(src), 0, 1, dsts, offset, length);
@@ -864,7 +866,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public synchronized SSLEngineResult wrap(ByteBuffer src, ByteBuffer dst) throws SSLException {
+    public final synchronized SSLEngineResult wrap(ByteBuffer src, ByteBuffer dst) throws SSLException {
         try {
             return wrap(singleSrcBuffer(src), dst);
         } finally {
@@ -873,7 +875,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public synchronized SSLEngineResult unwrap(ByteBuffer src, ByteBuffer dst) throws SSLException {
+    public final synchronized SSLEngineResult unwrap(ByteBuffer src, ByteBuffer dst) throws SSLException {
         try {
             return unwrap(singleSrcBuffer(src), singleDstBuffer(dst));
         } finally {
@@ -883,7 +885,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public synchronized SSLEngineResult unwrap(ByteBuffer src, ByteBuffer[] dsts) throws SSLException {
+    public final synchronized SSLEngineResult unwrap(ByteBuffer src, ByteBuffer[] dsts) throws SSLException {
         try {
             return unwrap(singleSrcBuffer(src), dsts);
         } finally {
@@ -900,7 +902,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public synchronized void closeInbound() throws SSLException {
+    public final synchronized void closeInbound() throws SSLException {
         if (isInboundDone) {
             return;
         }
@@ -917,12 +919,12 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public synchronized boolean isInboundDone() {
+    public final synchronized boolean isInboundDone() {
         return isInboundDone || engineClosed;
     }
 
     @Override
-    public synchronized void closeOutbound() {
+    public final synchronized void closeOutbound() {
         if (isOutboundDone) {
             return;
         }
@@ -967,18 +969,18 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public synchronized boolean isOutboundDone() {
+    public final synchronized boolean isOutboundDone() {
         return isOutboundDone;
     }
 
     @Override
-    public String[] getSupportedCipherSuites() {
+    public final String[] getSupportedCipherSuites() {
         Set<String> availableCipherSuites = OpenSsl.availableCipherSuites();
         return availableCipherSuites.toArray(new String[availableCipherSuites.size()]);
     }
 
     @Override
-    public String[] getEnabledCipherSuites() {
+    public final String[] getEnabledCipherSuites() {
         final String[] enabled;
         synchronized (this) {
             if (!isDestroyed()) {
@@ -1001,7 +1003,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public void setEnabledCipherSuites(String[] cipherSuites) {
+    public final void setEnabledCipherSuites(String[] cipherSuites) {
         checkNotNull(cipherSuites, "cipherSuites");
 
         final StringBuilder buf = new StringBuilder();
@@ -1044,12 +1046,12 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public String[] getSupportedProtocols() {
+    public final String[] getSupportedProtocols() {
         return SUPPORTED_PROTOCOLS.clone();
     }
 
     @Override
-    public String[] getEnabledProtocols() {
+    public final String[] getEnabledProtocols() {
         List<String> enabled = InternalThreadLocalMap.get().arrayList();
         // Seems like there is no way to explict disable SSLv2Hello in openssl so it is always enabled
         enabled.add(PROTOCOL_SSL_V2_HELLO);
@@ -1081,7 +1083,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public void setEnabledProtocols(String[] protocols) {
+    public final void setEnabledProtocols(String[] protocols) {
         if (protocols == null) {
             // This is correct from the API docs
             throw new IllegalArgumentException();
@@ -1142,12 +1144,12 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public SSLSession getSession() {
+    public final SSLSession getSession() {
         return session;
     }
 
     @Override
-    public synchronized void beginHandshake() throws SSLException {
+    public final synchronized void beginHandshake() throws SSLException {
         switch (handshakeState) {
             case STARTED_IMPLICITLY:
                 checkEngineClosed();
@@ -1276,7 +1278,7 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public synchronized SSLEngineResult.HandshakeStatus getHandshakeStatus() {
+    public final synchronized SSLEngineResult.HandshakeStatus getHandshakeStatus() {
         // Check if we are in the initial handshake phase or shutdown phase
         return needPendingStatus() ? pendingStatus(SSL.pendingWrittenBytesInBIO(networkBIO)) : NOT_HANDSHAKING;
     }
@@ -1325,34 +1327,34 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public void setUseClientMode(boolean clientMode) {
+    public final void setUseClientMode(boolean clientMode) {
         if (clientMode != this.clientMode) {
             throw new UnsupportedOperationException();
         }
     }
 
     @Override
-    public boolean getUseClientMode() {
+    public final boolean getUseClientMode() {
         return clientMode;
     }
 
     @Override
-    public void setNeedClientAuth(boolean b) {
+    public final void setNeedClientAuth(boolean b) {
         setClientAuth(b ? ClientAuth.REQUIRE : ClientAuth.NONE);
     }
 
     @Override
-    public boolean getNeedClientAuth() {
+    public final boolean getNeedClientAuth() {
         return clientAuth == ClientAuth.REQUIRE;
     }
 
     @Override
-    public void setWantClientAuth(boolean b) {
+    public final void setWantClientAuth(boolean b) {
         setClientAuth(b ? ClientAuth.OPTIONAL : ClientAuth.NONE);
     }
 
     @Override
-    public boolean getWantClientAuth() {
+    public final boolean getWantClientAuth() {
         return clientAuth == ClientAuth.OPTIONAL;
     }
 
@@ -1381,19 +1383,19 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public void setEnableSessionCreation(boolean b) {
+    public final void setEnableSessionCreation(boolean b) {
         if (b) {
             throw new UnsupportedOperationException();
         }
     }
 
     @Override
-    public boolean getEnableSessionCreation() {
+    public final boolean getEnableSessionCreation() {
         return false;
     }
 
     @Override
-    public SSLParameters getSSLParameters() {
+    public final SSLParameters getSSLParameters() {
         SSLParameters sslParameters = super.getSSLParameters();
 
         if (PlatformDependent.javaVersion() >= 7) {
@@ -1404,21 +1406,13 @@ public final class OpenSslEngine extends SSLEngine {
     }
 
     @Override
-    public void setSSLParameters(SSLParameters sslParameters) {
+    public final void setSSLParameters(SSLParameters sslParameters) {
         super.setSSLParameters(sslParameters);
 
         if (PlatformDependent.javaVersion() >= 7) {
             endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
             algorithmConstraints = sslParameters.getAlgorithmConstraints();
         }
-    }
-
-    @Override
-    @SuppressWarnings("FinalizeDeclaration")
-    protected void finalize() throws Throwable {
-        super.finalize();
-        // Call shutdown as the user may have created the OpenSslEngine and not used it at all.
-        shutdown();
     }
 
     private boolean isDestroyed() {
