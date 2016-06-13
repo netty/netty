@@ -100,6 +100,9 @@ public class HttpChunkedInput implements ChunkedInput<HttpContent> {
             }
         } else {
             ByteBuf buf = input.readChunk(allocator);
+            if (buf == null) {
+                return null;
+            }
             return new DefaultHttpContent(buf);
         }
     }
