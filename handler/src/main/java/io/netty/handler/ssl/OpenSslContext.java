@@ -547,7 +547,7 @@ public abstract class OpenSslContext extends SslContext {
 
             ByteBuf buffer = allocator.directBuffer(content.readableBytes());
             try {
-                buffer.writeBytes(content);
+                buffer.writeBytes(content, content.readerIndex(), content.readableBytes());
                 return newBIO(buffer.retainedSlice());
             } finally {
                 try {
