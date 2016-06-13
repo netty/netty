@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.handler.stream.ChunkedInput;
@@ -24,6 +25,7 @@ import io.netty.handler.stream.ChunkedNioStream;
 import io.netty.handler.stream.ChunkedStream;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -82,6 +84,28 @@ public class HttpChunkedInputTest {
         check(new HttpChunkedInput(new ChunkedNioFile(TMP)));
     }
 
+    @Test
+    public void testWrappedReturnNull() throws Exception {
+        ChannelHandlerContext ctx = Mockito.mock(ChannelHandlerContext.class);
+        HttpChunkedInput input = new HttpChunkedInput(new ChunkedInput<ByteBuf>() {
+            @Override
+            public boolean isEndOfInput() throws Exception {
+                return false;
+            }
+
+            @Override
+            public void close() throws Exception {
+                // NOOP
+            }
+
+            @Override
+            public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
+                return null;
+            }
+        });
+        assertNull(input.readChunk(ctx));
+    }
+
     private static void check(ChunkedInput<?>... inputs) {
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
 
@@ -118,6 +142,7 @@ public class HttpChunkedInputTest {
         }
 
         assertEquals(BYTES.length * inputs.length, read);
-        assertSame("Last chunk must be DefaultLastHttpContent", LastHttpContent.EMPTY_LAST_CONTENT, lastHttpContent);
+        assertSame("Last chunk must be LastHttpContent.EMPTY_LAST_CONTENT",
+                LastHttpContent.EMPTY_LAST_CONTENT, lastHttpContent);
     }
 }
