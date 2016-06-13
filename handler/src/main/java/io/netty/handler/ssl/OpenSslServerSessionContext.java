@@ -23,7 +23,7 @@ import org.apache.tomcat.jni.SSLContext;
  * {@link OpenSslSessionContext} implementation which offers extra methods which are only useful for the server-side.
  */
 public final class OpenSslServerSessionContext extends OpenSslSessionContext {
-    OpenSslServerSessionContext(long context) {
+    OpenSslServerSessionContext(OpenSslContext context) {
         super(context);
     }
 
@@ -32,12 +32,12 @@ public final class OpenSslServerSessionContext extends OpenSslSessionContext {
         if (seconds < 0) {
             throw new IllegalArgumentException();
         }
-        SSLContext.setSessionCacheTimeout(context, seconds);
+        SSLContext.setSessionCacheTimeout(context.ctx, seconds);
     }
 
     @Override
     public int getSessionTimeout() {
-        return (int) SSLContext.getSessionCacheTimeout(context);
+        return (int) SSLContext.getSessionCacheTimeout(context.ctx);
     }
 
     @Override
@@ -45,23 +45,23 @@ public final class OpenSslServerSessionContext extends OpenSslSessionContext {
         if (size < 0) {
             throw new IllegalArgumentException();
         }
-        SSLContext.setSessionCacheSize(context, size);
+        SSLContext.setSessionCacheSize(context.ctx, size);
     }
 
     @Override
     public int getSessionCacheSize() {
-        return (int) SSLContext.getSessionCacheSize(context);
+        return (int) SSLContext.getSessionCacheSize(context.ctx);
     }
 
     @Override
     public void setSessionCacheEnabled(boolean enabled) {
         long mode = enabled ? SSL.SSL_SESS_CACHE_SERVER : SSL.SSL_SESS_CACHE_OFF;
-        SSLContext.setSessionCacheMode(context, mode);
+        SSLContext.setSessionCacheMode(context.ctx, mode);
     }
 
     @Override
     public boolean isSessionCacheEnabled() {
-        return SSLContext.getSessionCacheMode(context) == SSL.SSL_SESS_CACHE_SERVER;
+        return SSLContext.getSessionCacheMode(context.ctx) == SSL.SSL_SESS_CACHE_SERVER;
     }
 
     /**
@@ -74,6 +74,6 @@ public final class OpenSslServerSessionContext extends OpenSslSessionContext {
      * @return {@code true} if success, {@code false} otherwise.
      */
     public boolean setSessionIdContext(byte[] sidCtx) {
-        return SSLContext.setSessionIdContext(context, sidCtx);
+        return SSLContext.setSessionIdContext(context.ctx, sidCtx);
     }
 }
