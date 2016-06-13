@@ -17,11 +17,19 @@
 package io.netty.handler.ssl;
 
 import org.junit.Assume;
+import org.junit.BeforeClass;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
 
+import static org.junit.Assume.assumeTrue;
+
 public class OpenSslServerContextTest extends SslContextTest {
+
+    @BeforeClass
+    public static void checkOpenSsl() {
+        assumeTrue(OpenSsl.isAvailable());
+    }
 
     @Override
     protected SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException {

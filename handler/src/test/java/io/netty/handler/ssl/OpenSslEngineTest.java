@@ -19,6 +19,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.internal.ThreadLocalRandom;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -37,9 +38,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
 
+    @BeforeClass
+    public static void checkOpenSsl() {
+        assumeTrue(OpenSsl.isAvailable());
+    }
+
     @Test
     public void testNpn() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
         ApplicationProtocolConfig apn = acceptingNegotiator(Protocol.NPN,
                 PREFERRED_APPLICATION_LEVEL_PROTOCOL);
         setupHandlers(apn);
@@ -48,7 +53,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Test
     public void testAlpn() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
         assumeTrue(OpenSsl.isAlpnSupported());
         ApplicationProtocolConfig apn = acceptingNegotiator(Protocol.ALPN,
                 PREFERRED_APPLICATION_LEVEL_PROTOCOL);
@@ -58,7 +62,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Test
     public void testAlpnCompatibleProtocolsDifferentClientOrder() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
         assumeTrue(OpenSsl.isAlpnSupported());
         ApplicationProtocolConfig clientApn = acceptingNegotiator(Protocol.ALPN,
                 FALLBACK_APPLICATION_LEVEL_PROTOCOL, PREFERRED_APPLICATION_LEVEL_PROTOCOL);
@@ -71,50 +74,11 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Test
     public void testEnablingAnAlreadyDisabledSslProtocol() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
         testEnablingAnAlreadyDisabledSslProtocol(new String[]{PROTOCOL_SSL_V2_HELLO},
             new String[]{PROTOCOL_SSL_V2_HELLO, PROTOCOL_TLS_V1_2});
     }
-
-    @Override
-    public void testMutualAuthSameCerts() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
-        super.testMutualAuthSameCerts();
-    }
-
-    @Override
-    public void testMutualAuthDiffCerts() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
-        super.testMutualAuthDiffCerts();
-    }
-
-    @Override
-    public void testMutualAuthDiffCertsServerFailure() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
-        super.testMutualAuthDiffCertsServerFailure();
-    }
-
-    @Override
-    public void testMutualAuthDiffCertsClientFailure() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
-        super.testMutualAuthDiffCertsClientFailure();
-    }
-
-    @Override
-    public void testGetCreationTime() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
-        super.testGetCreationTime();
-    }
-
-    @Override
-    public void testSessionInvalidate() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
-        super.testSessionInvalidate();
-    }
-
     @Test
     public void testWrapHeapBuffersNoWritePendingError() throws Exception {
-        assumeTrue(OpenSsl.isAvailable());
         final SslContext clientContext = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslProvider())
