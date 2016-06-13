@@ -314,11 +314,15 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     final ChannelFuture initAndRegister() {
-        final Channel channel = channelFactory.newChannel();
+        Channel channel = null;
         try {
+            channel = channelFactory.newChannel();
             init(channel);
         } catch (Throwable t) {
-            channel.unsafe().closeForcibly();
+            if (channel != null) {
+                // channel can be null if newChannel crashed (eg SocketException("too many open files"))
+                channel.unsafe().closeForcibly();
+            }
             // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
             return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE).setFailure(t);
         }
