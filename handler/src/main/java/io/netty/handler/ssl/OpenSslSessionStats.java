@@ -25,9 +25,13 @@ import org.apache.tomcat.jni.SSLContext;
  */
 public final class OpenSslSessionStats {
 
-    private final long context;
+    private final OpenSslContext context;
 
-    OpenSslSessionStats(long context) {
+    // IMPORTANT: We take the OpenSslContext and not just the long (which points the native instance) to prevent
+    //            the GC to collect OpenSslContext as this would also free the pointer and so could result in a
+    //            segfault when the user calls any of the methods here that try to pass the pointer down to the native
+    //            level.
+    OpenSslSessionStats(OpenSslContext context) {
         this.context = context;
     }
 
@@ -35,49 +39,49 @@ public final class OpenSslSessionStats {
      * Returns the current number of sessions in the internal session cache.
      */
     public long number() {
-        return SSLContext.sessionNumber(context);
+        return SSLContext.sessionNumber(context.ctx);
     }
 
     /**
      * Returns the number of started SSL/TLS handshakes in client mode.
      */
     public long connect() {
-        return SSLContext.sessionConnect(context);
+        return SSLContext.sessionConnect(context.ctx);
     }
 
     /**
      * Returns the number of successfully established SSL/TLS sessions in client mode.
      */
     public long connectGood() {
-        return SSLContext.sessionConnectGood(context);
+        return SSLContext.sessionConnectGood(context.ctx);
     }
 
     /**
      * Returns the number of start renegotiations in client mode.
      */
     public long connectRenegotiate() {
-        return SSLContext.sessionConnectRenegotiate(context);
+        return SSLContext.sessionConnectRenegotiate(context.ctx);
     }
 
     /**
      * Returns the number of started SSL/TLS handshakes in server mode.
      */
     public long accept() {
-        return SSLContext.sessionAccept(context);
+        return SSLContext.sessionAccept(context.ctx);
     }
 
     /**
      * Returns the number of successfully established SSL/TLS sessions in server mode.
      */
     public long acceptGood() {
-        return SSLContext.sessionAcceptGood(context);
+        return SSLContext.sessionAcceptGood(context.ctx);
     }
 
     /**
      * Returns the number of start renegotiations in server mode.
      */
     public long acceptRenegotiate() {
-        return SSLContext.sessionAcceptRenegotiate(context);
+        return SSLContext.sessionAcceptRenegotiate(context.ctx);
     }
 
     /**
@@ -86,14 +90,14 @@ public final class OpenSslSessionStats {
      * external cache is counted as a hit.
      */
     public long hits() {
-        return SSLContext.sessionHits(context);
+        return SSLContext.sessionHits(context.ctx);
     }
 
     /**
      * Returns the number of successfully retrieved sessions from the external session cache in server mode.
      */
     public long cbHits() {
-        return SSLContext.sessionCbHits(context);
+        return SSLContext.sessionCbHits(context.ctx);
     }
 
     /**
@@ -101,7 +105,7 @@ public final class OpenSslSessionStats {
      * in server mode.
      */
     public long misses() {
-        return SSLContext.sessionMisses(context);
+        return SSLContext.sessionMisses(context.ctx);
     }
 
     /**
@@ -110,13 +114,13 @@ public final class OpenSslSessionStats {
      * count.
      */
     public long timeouts() {
-        return SSLContext.sessionTimeouts(context);
+        return SSLContext.sessionTimeouts(context.ctx);
     }
 
     /**
      * Returns the number of sessions that were removed because the maximum session cache size was exceeded.
      */
     public long cacheFull() {
-        return SSLContext.sessionCacheFull(context);
+        return SSLContext.sessionCacheFull(context.ctx);
     }
 }

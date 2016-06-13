@@ -433,7 +433,7 @@ public final class OpenSslServerContext extends OpenSslContext {
                     throw new SSLException("unable to setup trustmanager", e);
                 }
             }
-            sessionContext = new OpenSslServerSessionContext(ctx);
+            sessionContext = new OpenSslServerSessionContext(this);
             sessionContext.setSessionIdContext(ID);
             success = true;
         } finally {
