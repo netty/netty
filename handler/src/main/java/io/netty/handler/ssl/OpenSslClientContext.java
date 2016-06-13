@@ -264,7 +264,7 @@ public final class OpenSslClientContext extends OpenSslContext {
                     throw new SSLException("unable to setup trustmanager", e);
                 }
             }
-            sessionContext = new OpenSslClientSessionContext(ctx);
+            sessionContext = new OpenSslClientSessionContext(this);
             success = true;
         } finally {
             if (!success) {
@@ -280,7 +280,7 @@ public final class OpenSslClientContext extends OpenSslContext {
 
     // No cache is currently supported for client side mode.
     private static final class OpenSslClientSessionContext extends OpenSslSessionContext {
-        private OpenSslClientSessionContext(long context) {
+        private OpenSslClientSessionContext(OpenSslContext context) {
             super(context);
         }
 

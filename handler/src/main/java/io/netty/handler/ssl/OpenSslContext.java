@@ -365,7 +365,10 @@ public abstract class OpenSslContext extends SslContext {
         return ctx;
     }
 
-    protected final void destroy() {
+    // IMPORTANT: This method must only be called from either the constructor or the finalizer as a user MUST never
+    //            get access to an OpenSslSessionContext after this method was called to prevent the user from
+    //            producing a segfault.
+    final void destroy() {
         synchronized (OpenSslContext.class) {
             if (ctx != 0) {
                 SSLContext.free(ctx);
