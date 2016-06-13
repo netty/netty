@@ -69,7 +69,6 @@ public class BootstrapTest {
 
     @Test(timeout = 10000)
     public void testBindDeadLock() throws Exception {
-
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.group(groupA);
         bootstrapA.channel(LocalChannel.class);
@@ -106,7 +105,6 @@ public class BootstrapTest {
 
     @Test(timeout = 10000)
     public void testConnectDeadLock() throws Exception {
-
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.group(groupA);
         bootstrapA.channel(LocalChannel.class);
@@ -234,7 +232,6 @@ public class BootstrapTest {
 
     @Test
     public void testAsyncResolutionSuccess() throws Exception {
-
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.group(groupA);
         bootstrapA.channel(LocalChannel.class);
@@ -253,7 +250,6 @@ public class BootstrapTest {
 
     @Test
     public void testAsyncResolutionFailure() throws Exception {
-
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.group(groupA);
         bootstrapA.channel(LocalChannel.class);
@@ -273,6 +269,28 @@ public class BootstrapTest {
         assertThat(connectFuture.await(10000), is(true));
         assertThat(connectFuture.cause(), is(instanceOf(UnknownHostException.class)));
         assertThat(connectFuture.channel().isOpen(), is(false));
+    }
+
+    @Test
+    public void testChannelFactoryFailureNotifiesPromise() throws Exception {
+        final RuntimeException exception = new RuntimeException("newChannel crash");
+
+        final Bootstrap bootstrap = new Bootstrap()
+                .handler(dummyHandler)
+                .group(groupA)
+                .channelFactory(new ChannelFactory<Channel>() {
+            @Override
+            public Channel newChannel() {
+                throw exception;
+            }
+        });
+
+        ChannelFuture connectFuture = bootstrap.connect(LocalAddress.ANY);
+
+        // Should fail with the RuntimeException.
+        assertThat(connectFuture.await(10000), is(true));
+        assertThat(connectFuture.cause(), sameInstance((Throwable) exception));
+        assertThat(connectFuture.channel(), is(nullValue()));
     }
 
     private static final class DelayedEventLoopGroup extends DefaultEventLoop {
