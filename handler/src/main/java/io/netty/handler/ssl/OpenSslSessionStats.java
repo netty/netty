@@ -123,4 +123,33 @@ public final class OpenSslSessionStats {
     public long cacheFull() {
         return SSLContext.sessionCacheFull(context.ctx);
     }
+
+    /**
+     * Returns the number of times a client presented a ticket that did not match any key in the list.
+     */
+    public long ticketKeyFail() {
+        return SSLContext.sessionTicketKeyFail(context.ctx);
+    }
+
+    /**
+     * Returns the number of times a client did not present a ticket and we issued a new one
+     */
+    public long ticketKeyNew() {
+        return SSLContext.sessionTicketKeyNew(context.ctx);
+    }
+
+    /**
+     * Returns the number of times a client presented a ticket derived from an older key,
+     * and we upgraded to the primary key.
+     */
+    public long ticketKeyRenew() {
+        return SSLContext.sessionTicketKeyRenew(context.ctx);
+    }
+
+    /**
+     * Returns the number of times a client presented a ticket derived from the primary key.
+     */
+    public long ticketKeyResume() {
+        return SSLContext.sessionTicketKeyResume(context.ctx);
+    }
 }
