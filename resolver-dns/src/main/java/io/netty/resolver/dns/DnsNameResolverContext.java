@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsRecordDecoder;
 import io.netty.handler.codec.dns.DnsResponseCode;
@@ -29,7 +30,6 @@ import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -438,53 +438,15 @@ abstract class DnsNameResolverContext<T> {
     protected abstract boolean finishResolve(
             Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries);
 
-    /**
-     * Adapted from {@link DefaultDnsRecordDecoder#decodeName(ByteBuf)}.
-     */
-    static String decodeDomainName(ByteBuf buf) {
-        buf.markReaderIndex();
+    static String decodeDomainName(ByteBuf in) {
+        in.markReaderIndex();
         try {
-            int position = -1;
-            int checked = 0;
-            final int end = buf.writerIndex();
-            final StringBuilder name = new StringBuilder(buf.readableBytes() << 1);
-            for (int len = buf.readUnsignedByte(); buf.isReadable() && len != 0; len = buf.readUnsignedByte()) {
-                boolean pointer = (len & 0xc0) == 0xc0;
-                if (pointer) {
-                    if (position == -1) {
-                        position = buf.readerIndex() + 1;
-                    }
-
-                    final int next = (len & 0x3f) << 8 | buf.readUnsignedByte();
-                    if (next >= end) {
-                        // Should not happen.
-                        return null;
-                    }
-                    buf.readerIndex(next);
-
-                    // check for loops
-                    checked += 2;
-                    if (checked >= end) {
-                        // Name contains a loop; give up.
-                        return null;
-                    }
-                } else {
-                    name.append(buf.toString(buf.readerIndex(), len, CharsetUtil.UTF_8)).append('.');
-                    buf.skipBytes(len);
-                }
-            }
-
-            if (position != -1) {
-                buf.readerIndex(position);
-            }
-
-            if (name.length() == 0) {
-                return null;
-            }
-
-            return name.substring(0, name.length() - 1);
+            return DefaultDnsRecordDecoder.decodeName(in);
+        } catch (CorruptedFrameException e) {
+            // In this case we just return null.
+            return null;
         } finally {
-            buf.resetReaderIndex();
+            in.resetReaderIndex();
         }
     }
 
