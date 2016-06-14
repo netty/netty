@@ -71,7 +71,7 @@ public class MqttCodecTest {
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
 
-        assertEquals("Expected one object bout got " + out.size(), 1, out.size());
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
 
         final MqttConnectMessage decodedMessage = (MqttConnectMessage) out.get(0);
 
@@ -88,7 +88,7 @@ public class MqttCodecTest {
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
 
-        assertEquals("Expected one object bout got " + out.size(), 1, out.size());
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
 
         final MqttConnectMessage decodedMessage = (MqttConnectMessage) out.get(0);
 
@@ -107,7 +107,7 @@ public class MqttCodecTest {
             final List<Object> out = new LinkedList<Object>();
             mqttDecoder.decode(ctx, byteBuf, out);
 
-            assertEquals("Expected one object bout got " + out.size(), 1, out.size());
+            assertEquals("Expected one object but got " + out.size(), 1, out.size());
 
             final MqttMessage decodedMessage = (MqttMessage) out.get(0);
             assertTrue(decodedMessage.decoderResult().isFailure());
@@ -127,7 +127,7 @@ public class MqttCodecTest {
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
 
-        assertEquals("Expected one object bout got " + out.size(), 1, out.size());
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
 
         final MqttConnAckMessage decodedMessage = (MqttConnAckMessage) out.get(0);
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
@@ -142,7 +142,7 @@ public class MqttCodecTest {
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
 
-        assertEquals("Expected one object bout got " + out.size(), 1, out.size());
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
 
         final MqttPublishMessage decodedMessage = (MqttPublishMessage) out.get(0);
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
@@ -178,7 +178,7 @@ public class MqttCodecTest {
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
 
-        assertEquals("Expected one object bout got " + out.size(), 1, out.size());
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
 
         final MqttSubscribeMessage decodedMessage = (MqttSubscribeMessage) out.get(0);
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
@@ -194,7 +194,7 @@ public class MqttCodecTest {
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
 
-        assertEquals("Expected one object bout got " + out.size(), 1, out.size());
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
 
         final MqttSubAckMessage decodedMessage = (MqttSubAckMessage) out.get(0);
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
@@ -210,7 +210,7 @@ public class MqttCodecTest {
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
 
-        assertEquals("Expected one object bout got " + out.size(), 1, out.size());
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
 
         final MqttUnsubscribeMessage decodedMessage = (MqttUnsubscribeMessage) out.get(0);
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
@@ -245,7 +245,7 @@ public class MqttCodecTest {
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
 
-        assertEquals("Expected one object bout got " + out.size(), 1, out.size());
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
 
         final MqttMessage decodedMessage = (MqttMessage) out.get(0);
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
@@ -260,7 +260,7 @@ public class MqttCodecTest {
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
 
-        assertEquals("Expected one object bout got " + out.size(), 1, out.size());
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
 
         final MqttMessage decodedMessage = (MqttMessage) out.get(0);
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
