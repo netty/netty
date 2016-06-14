@@ -359,10 +359,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     @Deprecated
     public static final class Values {
         /**
-         * {@code "application/json"}
-         */
-        public static final String APPLICATION_JSON = "application/json";
-        /**
          * {@code "application/x-www-form-urlencoded"}
          */
         public static final String APPLICATION_X_WWW_FORM_URLENCODED =
@@ -411,10 +407,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
          * {@code "gzip"}
          */
         public static final String GZIP = "gzip";
-        /**
-         * {@code "gzip,deflate"}
-         */
-        public static final String GZIP_DEFLATE = "gzip,deflate";
         /**
          * {@code "identity"}
          */
