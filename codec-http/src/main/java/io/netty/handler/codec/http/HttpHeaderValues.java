@@ -23,6 +23,10 @@ import io.netty.util.AsciiString;
  */
 public final class HttpHeaderValues {
     /**
+     * {@code "application/json"}
+     */
+    public static final AsciiString APPLICATION_JSON = new AsciiString("application/json");
+    /**
      * {@code "application/x-www-form-urlencoded"}
      */
     public static final AsciiString APPLICATION_X_WWW_FORM_URLENCODED =
@@ -99,6 +103,10 @@ public final class HttpHeaderValues {
      * {@code "gzip"}
      */
     public static final AsciiString GZIP = new AsciiString("gzip");
+    /**
+     * {@code "gzip,deflate"}
+     */
+    public static final AsciiString GZIP_DEFLATE = new AsciiString("gzip,deflate");
     /**
      * {@code "x-gzip"}
      */
