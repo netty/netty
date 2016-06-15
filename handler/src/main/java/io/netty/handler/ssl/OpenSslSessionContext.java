@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.ObjectUtil;
+import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 import org.apache.tomcat.jni.SessionTicketKey;
 
@@ -60,9 +62,8 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
      */
     @Deprecated
     public void setTicketKeys(byte[] keys) {
-        if (keys == null) {
-            throw new NullPointerException("keys");
-        }
+        ObjectUtil.checkNotNull(keys, "keys");
+        SSLContext.clearOptions(context.ctx, SSL.SSL_OP_NO_TICKET);
         SSLContext.setSessionTicketKeys(context.ctx, keys);
     }
 
@@ -70,9 +71,8 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
      * Sets the SSL session ticket keys of this context.
      */
     public void setTicketKeys(OpenSslSessionTicketKey... keys) {
-        if (keys == null) {
-            throw new NullPointerException("keys");
-        }
+        ObjectUtil.checkNotNull(keys, "keys");
+        SSLContext.clearOptions(context.ctx, SSL.SSL_OP_NO_TICKET);
         SessionTicketKey[] ticketKeys = new SessionTicketKey[keys.length];
         for (int i = 0; i < ticketKeys.length; i++) {
             ticketKeys[i] = keys[i].key;
