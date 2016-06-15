@@ -332,6 +332,31 @@ public abstract class SSLEngineTest {
         assertFalse(session.isValid());
     }
 
+    @Test
+    public void testSSLSessionId() throws Exception {
+        final SslContext clientContext = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslProvider())
+                .build();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SslContext serverContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslProvider())
+                .build();
+        SSLEngine clientEngine = clientContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine serverEngine = serverContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        // Before the handshake the id should have length == 0
+        assertEquals(0, clientEngine.getSession().getId().length);
+        assertEquals(0, serverEngine.getSession().getId().length);
+
+        handshake(clientEngine, serverEngine);
+
+        // After the handshake the id should have length > 0
+        assertNotEquals(0, clientEngine.getSession().getId().length);
+        assertNotEquals(0, serverEngine.getSession().getId().length);
+        assertArrayEquals(clientEngine.getSession().getId(), serverEngine.getSession().getId());
+    }
+
     protected void testEnablingAnAlreadyDisabledSslProtocol(String[] protocols1, String[] protocols2) throws Exception {
         SSLEngine sslEngine = null;
         try {
