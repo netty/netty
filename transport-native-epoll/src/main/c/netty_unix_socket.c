@@ -147,34 +147,6 @@ static jbyteArray createInetSocketAddressArray(JNIEnv* env, const struct sockadd
     return bArray;
 }
 
-static jobject createInetSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr) {
-    char ipstr[INET6_ADDRSTRLEN];
-    int port;
-    jstring ipString;
-    if (addr->ss_family == AF_INET) {
-        struct sockaddr_in* s = (struct sockaddr_in*) addr;
-        port = ntohs(s->sin_port);
-        inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
-        ipString = (*env)->NewStringUTF(env, ipstr);
-    } else {
-        struct sockaddr_in6* s = (struct sockaddr_in6*) addr;
-        port = ntohs(s->sin6_port);
-        inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
-        if (strncasecmp(ipstr, ip4prefix, 7) == 0) {
-            // IPv4-mapped-on-IPv6.
-            // Cut of ::ffff: prefix to workaround performance issues when parsing these
-            // addresses in InetAddress.getByName(...).
-            //
-            // See https://github.com/netty/netty/issues/2867
-            ipString = (*env)->NewStringUTF(env, &ipstr[7]);
-        } else {
-            ipString = (*env)->NewStringUTF(env, ipstr);
-        }
-    }
-    jobject socketAddr = (*env)->NewObject(env, inetSocketAddressClass, inetSocketAddrMethodId, ipString, port);
-    return socketAddr;
-}
-
 static int socket_type(JNIEnv* env) {
     jboolean ipv4Preferred = (*env)->CallStaticBooleanMethod(env, netUtilClass, netUtilClassIpv4PreferredMethodId);
 
