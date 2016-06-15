@@ -18,7 +18,9 @@ package io.netty.handler.timeout;
 /**
  * A {@link TimeoutException} raised by {@link ReadTimeoutHandler} when no data
  * was read within a certain period of time.
+ * @deprecated No more used, since {@link ReadTimeoutHandler} has been deprecated.
  */
+@Deprecated
 public final class ReadTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = 169287984113283421L;

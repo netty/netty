@@ -60,7 +60,9 @@ import java.util.concurrent.TimeUnit;
  * </pre>
  * @see WriteTimeoutHandler
  * @see IdleStateHandler
+ * @deprecated Use {@link IdleStateHandler} instead.
  */
+@Deprecated
 public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
     private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
