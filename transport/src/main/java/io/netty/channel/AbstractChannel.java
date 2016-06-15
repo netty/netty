@@ -418,6 +418,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private boolean inFlush0;
         /** true if the channel has never been registered, false otherwise */
         private boolean neverRegistered = true;
+        private AutoFlushTask autoFlushTask;
 
         private void assertEventLoop() {
             assert !registered || eventLoop.inEventLoop();
@@ -799,6 +800,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             outboundBuffer.addMessage(msg, size, promise);
+
+            if (config().isAutoFlush()) {
+                if (autoFlushTask == null) {
+                    autoFlushTask = new AutoFlushTask(AbstractChannel.this);
+                }
+                autoFlushTask.onWrite();
+            }
         }
 
         @Override
@@ -1051,6 +1059,35 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         boolean setClosed() {
             return super.trySuccess();
+        }
+    }
+
+    private static final class AutoFlushTask implements Runnable {
+
+        private final Channel channel;
+        private boolean writePending;
+
+        AutoFlushTask(Channel channel) {
+            this.channel = channel;
+        }
+
+        @Override
+        public void run() {
+            if (writePending) {
+                writePending = false;
+                channel.flush();
+
+                if (channel.isActive() && channel.config().isAutoFlush()) {
+                    channel.eventLoop().onEventLoopIteration(this);
+                }
+            }
+        }
+
+        void onWrite() {
+            if (!writePending) {
+                writePending = true;
+                channel.eventLoop().onEventLoopIteration(this);
+            }
         }
     }
 }

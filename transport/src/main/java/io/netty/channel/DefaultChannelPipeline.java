@@ -22,6 +22,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -36,6 +37,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -82,6 +84,23 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      * change.
      */
     private boolean registered;
+
+    private static final AtomicIntegerFieldUpdater<DefaultChannelPipeline> ENQUEUE_WAKEUP_TASK_UPDATER;
+
+    static {
+        AtomicIntegerFieldUpdater<DefaultChannelPipeline> enqueueWakeupTaskUpdater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(DefaultChannelPipeline.class, "enqueueWakeupTask");
+        if (enqueueWakeupTaskUpdater == null) {
+            enqueueWakeupTaskUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultChannelPipeline.class,
+                                                                            "enqueueWakeupTask");
+        }
+        ENQUEUE_WAKEUP_TASK_UPDATER = enqueueWakeupTaskUpdater;
+    }
+
+    private volatile int enqueueWakeupTask;
+    private boolean autoFlush;
+
+    private Runnable wakeupTask;
 
     protected DefaultChannelPipeline(Channel channel) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
@@ -877,6 +896,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelActive() {
+        autoFlush = channel.config().isAutoFlush(); // TODO: Have callback when changed.
         AbstractChannelHandlerContext.invokeChannelActive(head);
         return this;
     }
@@ -992,12 +1012,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelFuture write(Object msg) {
-        return tail.write(msg);
+        ChannelFuture f = tail.write(msg);
+        wakeUpForAutoFlush();
+        return f;
     }
 
     @Override
     public final ChannelFuture write(Object msg, ChannelPromise promise) {
-        return tail.write(msg, promise);
+        ChannelFuture f = tail.write(msg, promise);
+        wakeUpForAutoFlush();
+        return f;
     }
 
     @Override
@@ -1115,6 +1139,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 pending = pending.next;
             }
             pending.next = task;
+        }
+    }
+
+    private void wakeUpForAutoFlush() {
+        if (autoFlush && ENQUEUE_WAKEUP_TASK_UPDATER.compareAndSet(this, 0, 1)) {
+            if (null == wakeupTask) {
+                wakeupTask = new Runnable() {
+                    @Override
+                    public void run() {
+                        ENQUEUE_WAKEUP_TASK_UPDATER.set(DefaultChannelPipeline.this, 0);
+                    }
+                };
+            }
+            channel().eventLoop().execute(wakeupTask);
         }
     }
 

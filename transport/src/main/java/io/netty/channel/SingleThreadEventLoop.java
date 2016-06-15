@@ -17,7 +17,10 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
@@ -27,12 +30,19 @@ import java.util.concurrent.ThreadFactory;
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SingleThreadEventLoop.class);
+
+    private final Queue<Runnable> tailTasks;
+    private boolean lastRunTimedOut;
+
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
         super(parent, threadFactory, addTaskWakesUp);
+        tailTasks = newTaskQueue();
     }
 
     protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
+        tailTasks = newTaskQueue();
     }
 
     @Override
@@ -72,8 +82,92 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     }
 
     @Override
+    public void onEventLoopIteration(Runnable task) {
+        ObjectUtil.checkNotNull(task, "task");
+        if (isShutdown() || isShuttingDown() || isTerminated()) {
+            reject();
+        }
+
+        tailTasks.add(task);
+
+        if (wakesUpForTask(task)) {
+            wakeup(inEventLoop());
+        }
+    }
+
+    @Override
+    public boolean removeOnEventLoopIterationTask(Runnable task) {
+        ObjectUtil.checkNotNull(task, "task");
+        return tailTasks.remove(task);
+    }
+
+    @Override
     protected boolean wakesUpForTask(Runnable task) {
         return !(task instanceof NonWakeupRunnable);
+    }
+
+    @Override
+    protected boolean runAllTasks(long timeoutNanos) {
+        if (lastRunTimedOut) {
+            lastRunTimedOut = false;
+            Runnable task = pollTask();
+            if (task != null) {
+                long startNanos = nanoTime();
+                final long deadline = startNanos + timeoutNanos;
+                long runTasks = 0;
+                long lastExecutionTime;
+                for (;;) {
+                    try {
+                        task.run();
+                    } catch (Throwable t) {
+                        logger.warn("A task raised an exception.", t);
+                    }
+
+                    runTasks ++;
+
+                    // Check timeout every 64 tasks because nanoTime() is relatively expensive.
+                    // XXX: Hard-coded value - will make it configurable if it is really a problem.
+                    if ((runTasks & 0x3F) == 0) {
+                        lastExecutionTime = nanoTime();
+                        if (lastExecutionTime >= deadline) {
+                            break;
+                        }
+                    }
+
+                    task = pollTask();
+                    if (task == null) {
+                        break;
+                    }
+                }
+                timeoutNanos -= nanoTime() - startNanos;
+            }
+        }
+
+        return super.runAllTasks(timeoutNanos);
+    }
+
+    @Override
+    protected void afterRunningAllTasks(boolean timedOut) {
+        if (timedOut) {
+            lastRunTimedOut = timedOut;
+            return;
+        }
+        for (;;) {
+            Runnable task = tailTasks.poll();
+            if (null == task) {
+                break;
+            }
+            try {
+                task.run();
+            } catch (Throwable t) {
+                logger.warn("A task executed after event loop iteration raised an exception.", t);
+            }
+        }
+    }
+
+    @Override
+    protected boolean hasTasks() {
+        return super.hasTasks() || !tailTasks.isEmpty();
     }
 
     /**

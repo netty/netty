@@ -331,6 +331,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
         } while (!fetchedAll); // keep on processing until we fetched all scheduled tasks.
 
+        afterRunningAllTasks(false);
         lastExecutionTime = ScheduledFutureTask.nanoTime();
         return true;
     }
@@ -343,12 +344,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         fetchFromScheduledTaskQueue();
         Runnable task = pollTask();
         if (task == null) {
+            afterRunningAllTasks(false);
             return false;
         }
 
         final long deadline = ScheduledFutureTask.nanoTime() + timeoutNanos;
         long runTasks = 0;
         long lastExecutionTime;
+        boolean timedOut = false;
         for (;;) {
             try {
                 task.run();
@@ -363,6 +366,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if ((runTasks & 0x3F) == 0) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 if (lastExecutionTime >= deadline) {
+                    timedOut = true;
                     break;
                 }
             }
@@ -375,8 +379,18 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
 
         this.lastExecutionTime = lastExecutionTime;
+        afterRunningAllTasks(timedOut);
         return true;
     }
+
+    /**
+     * Invoked before returning from {@link #runAllTasks()} and {@link #runAllTasks(long)} if and only if atleast one
+     * task was processed.
+     *
+     * @param timedOut {@code true} if and only if called from {@link #runAllTasks(long)} and the run timed out before
+     * running all eligible tasks.
+     */
+    protected void afterRunningAllTasks(boolean timedOut) { }
 
     /**
      * Returns the amount of time left until the scheduled task with the closest dead line is executed.

@@ -183,6 +183,17 @@ public interface ChannelConfig {
     ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 
     /**
+     * Returns {@code true} if {@link ChannelOption#AUTO_FLUSH} option is set to {@code true}.
+     */
+    boolean isAutoFlush();
+
+    /**
+     * Sets if explicit flushes are not required for this channel. If set to {@code true} every eventloop iteration
+     * will flush all pending writes. Explicit flushes will still be honored. The default value is {@code false}.
+     */
+    ChannelConfig setAutoFlush(boolean autoFlush);
+
+    /**
      * Returns {@code true} if and only if {@link ChannelHandlerContext#read()} will be invoked automatically so that
      * a user application doesn't need to call it at all. The default value is {@code true}.
      */

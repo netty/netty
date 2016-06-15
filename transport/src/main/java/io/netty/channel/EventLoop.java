@@ -27,4 +27,8 @@ import io.netty.util.concurrent.EventExecutor;
 public interface EventLoop extends EventExecutor, EventLoopGroup {
     @Override
     EventLoopGroup parent();
+
+    void onEventLoopIteration(Runnable task);
+
+    boolean removeOnEventLoopIterationTask(Runnable task);
 }

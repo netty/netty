@@ -451,6 +451,12 @@ public class EmbeddedChannel extends AbstractChannel {
         } catch (Exception e) {
             recordException(e);
         }
+
+        try {
+            loop.runOnEveryIterationTasks();
+        } catch (Exception e) {
+            recordException(e);
+        }
     }
 
     /**
@@ -464,6 +470,17 @@ public class EmbeddedChannel extends AbstractChannel {
         } catch (Exception e) {
             recordException(e);
             return loop.nextScheduledTask();
+        }
+    }
+
+    /**
+     * Run all tasks that are required to be run on every iteration of an {@link EventLoop}.
+     */
+    public void runOnEveryIterationTasks() {
+        try {
+            loop.runOnEveryIterationTasks();
+        } catch (Exception e) {
+            recordException(e);
         }
     }
 
