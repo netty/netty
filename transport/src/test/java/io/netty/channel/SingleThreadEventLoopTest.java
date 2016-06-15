@@ -20,6 +20,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,38 +52,22 @@ public class SingleThreadEventLoopTest {
 
     private SingleThreadEventLoopA loopA;
     private SingleThreadEventLoopB loopB;
+    private SingleThreadEventLoopC loopC;
 
     @Before
     public void newEventLoop() {
         loopA = new SingleThreadEventLoopA();
         loopB = new SingleThreadEventLoopB();
+        loopC = new SingleThreadEventLoopC(100);
     }
 
     @After
     public void stopEventLoop() {
-        if (!loopA.isShuttingDown()) {
-            loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        }
-        if (!loopB.isShuttingDown()) {
-            loopB.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-        }
-
-        while (!loopA.isTerminated()) {
-            try {
-                loopA.awaitTermination(1, TimeUnit.DAYS);
-            } catch (InterruptedException e) {
-                // Ignore
-            }
-        }
+        stopEventLoop(loopA);
         assertEquals(1, loopA.cleanedUp.get());
-
-        while (!loopB.isTerminated()) {
-            try {
-                loopB.awaitTermination(1, TimeUnit.DAYS);
-            } catch (InterruptedException e) {
-                // Ignore
-            }
-        }
+        stopEventLoop(loopB);
+        loopC.signalShutdown();
+        stopEventLoop(loopC);
     }
 
     @Test
@@ -124,6 +109,19 @@ public class SingleThreadEventLoopTest {
             fail("A task must be rejected after shutdown() is called.");
         } catch (RejectedExecutionException e) {
             // Expected
+        }
+    }
+
+    private static void stopEventLoop(EventLoop toStop) {
+        if (!toStop.isShuttingDown()) {
+            toStop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        }
+        while (!toStop.isTerminated()) {
+            try {
+                toStop.awaitTermination(1, TimeUnit.DAYS);
+            } catch (InterruptedException e) {
+                // Ignore
+            }
         }
     }
 
@@ -442,7 +440,68 @@ public class SingleThreadEventLoopTest {
         assertThat(loopA.isShutdown(), is(true));
     }
 
-    private static class SingleThreadEventLoopA extends SingleThreadEventLoop {
+    @Test(timeout = 10000)
+    public void testOnEventLoopIteration() throws Exception {
+        CountingRunnable onIteration = new CountingRunnable();
+        loopC.executeAfterEventLoopIteration(onIteration);
+        CountingRunnable noopTask = new CountingRunnable();
+        loopC.submit(noopTask).sync();
+        loopC.iterationEndSignal.take();
+        MatcherAssert.assertThat("Unexpected invocation count for regular task.",
+                                 noopTask.getInvocationCount(), is(1));
+        MatcherAssert.assertThat("Unexpected invocation count for on every eventloop iteration task.",
+                                 onIteration.getInvocationCount(), is(1));
+    }
+
+    @Test(timeout = 10000)
+    public void testRemoveOnEventLoopIteration() throws Exception {
+        CountingRunnable onIteration1 = new CountingRunnable();
+        loopC.executeAfterEventLoopIteration(onIteration1);
+        CountingRunnable onIteration2 = new CountingRunnable();
+        loopC.executeAfterEventLoopIteration(onIteration2);
+        loopC.removeAfterEventLoopIterationTask(onIteration1);
+        CountingRunnable noopTask = new CountingRunnable();
+        loopC.submit(noopTask).sync();
+
+        loopC.iterationEndSignal.take();
+        MatcherAssert.assertThat("Unexpected invocation count for regular task.",
+                                 noopTask.getInvocationCount(), is(1));
+        MatcherAssert.assertThat("Unexpected invocation count for on every eventloop iteration task.",
+                                 onIteration2.getInvocationCount(), is(1));
+        MatcherAssert.assertThat("Unexpected invocation count for on every eventloop iteration task.",
+                                 onIteration1.getInvocationCount(), is(0));
+    }
+
+    @Test(timeout = 10000)
+    public void testExecutionTimeout() throws Exception {
+        loopC.setIgnoreWakeup(true);
+        DelayTask wait1 = new DelayTask();
+        loopC.execute(wait1);
+        for (int i = 0; i < 63; i++) {
+            // Deadline is checked every 64 tasks.
+            loopC.execute(NOOP);
+        }
+        loopC.runNextIteration();
+        wait1.resumeAfter(110); // Resume after deadline.
+        CountingRunnable tail = new CountingRunnable();
+        loopC.executeAfterEventLoopIteration(tail);
+        loopC.iterationEndSignal.take();
+        MatcherAssert.assertThat("Delay task did not execute.", wait1.getInvocationCount(), is(1));
+        MatcherAssert.assertThat("Run did not timeout.", loopC.runtTimedOutCount.get(), is(1));
+        MatcherAssert.assertThat("Tail task ran inspite of timeout.", tail.getInvocationCount(), is(0));
+
+        loopC.runNextIteration();
+        loopC.iterationEndSignal.take();
+        MatcherAssert.assertThat("Tail task did not run.", tail.getInvocationCount(), is(1));
+
+        tail.resetInvocationCount();
+        loopC.executeAfterEventLoopIteration(tail);
+        loopC.runNextIteration();
+        loopC.iterationEndSignal.take();
+        MatcherAssert.assertThat("Tail task did not run.", tail.getInvocationCount(), is(1));
+    }
+
+    private static final class SingleThreadEventLoopA extends SingleThreadEventLoop {
 
         final AtomicInteger cleanedUp = new AtomicInteger();
 
@@ -471,7 +530,7 @@ public class SingleThreadEventLoopTest {
         }
     }
 
-    private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
+    private static final class SingleThreadEventLoopB extends SingleThreadEventLoop {
 
         SingleThreadEventLoopB() {
             super(null, Executors.defaultThreadFactory(), false);
@@ -497,6 +556,111 @@ public class SingleThreadEventLoopTest {
         @Override
         protected void wakeup(boolean inEventLoop) {
             interruptThread();
+        }
+    }
+
+    private static final class SingleThreadEventLoopC extends SingleThreadEventLoop {
+
+        final LinkedBlockingQueue<Boolean> iterationEndSignal = new LinkedBlockingQueue<Boolean>(1);
+        final AtomicInteger runtTimedOutCount = new AtomicInteger();
+        private final LinkedBlockingQueue<Boolean> runSignal = new LinkedBlockingQueue<Boolean>(1);
+        private final int timeoutNanos;
+        private volatile boolean ignoreWakeup;
+        private volatile boolean shutdown;
+
+        SingleThreadEventLoopC(int timeoutNanos) {
+            super(null, Executors.defaultThreadFactory(), false);
+            this.timeoutNanos = timeoutNanos;
+        }
+
+        @Override
+        protected void run() {
+            while (!shutdown) {
+                try {
+                    runSignal.take();
+                } catch (InterruptedException e) {
+                    // Waken up by interruptThread()
+                }
+
+                runAllTasks(timeoutNanos);
+                iterationEndSignal.offer(true);
+            }
+
+            confirmShutdown();
+        }
+
+        @Override
+        protected void wakeup(boolean inEventLoop) {
+            if (!ignoreWakeup) {
+                runNextIteration();
+            }
+        }
+
+        public void runNextIteration() {
+            runSignal.offer(true);
+        }
+
+        public void signalShutdown() {
+            shutdown = true;
+            setIgnoreWakeup(false);
+            wakeup(false);
+        }
+
+        public void setIgnoreWakeup(boolean ignore) {
+            ignoreWakeup = ignore;
+        }
+
+        @Override
+        protected void afterRunningAllTasks(boolean timedOut) {
+            if (timedOut) {
+                runtTimedOutCount.incrementAndGet();
+            }
+            super.afterRunningAllTasks(timedOut);
+        }
+    }
+
+    private static class CountingRunnable implements Runnable {
+
+        private final AtomicInteger invocationCount = new AtomicInteger();
+
+        @Override
+        public void run() {
+            invocationCount.incrementAndGet();
+        }
+
+        public int getInvocationCount() {
+            return invocationCount.get();
+        }
+
+        public void resetInvocationCount() {
+            invocationCount.set(0);
+        }
+    }
+
+    private static final class DelayTask extends CountingRunnable {
+
+        private final LinkedBlockingQueue<Boolean> resumeSignal = new LinkedBlockingQueue<Boolean>(1);
+        private final LinkedBlockingQueue<Boolean> runningSignal = new LinkedBlockingQueue<Boolean>(1);
+
+        @Override
+        public void run() {
+            runningSignal.offer(true);
+            try {
+                resumeSignal.take();
+            } catch (InterruptedException e) {
+                // Waken up by interruptThread()
+            }
+            super.run();
+        }
+
+        public void resumeAfter(int awaitNanos) {
+            try {
+                runningSignal.take();
+                Thread.sleep(0, awaitNanos);
+            } catch (InterruptedException e) {
+                // Waken up by interruptThread()
+            }
+            resumeSignal.offer(true);
         }
     }
 }

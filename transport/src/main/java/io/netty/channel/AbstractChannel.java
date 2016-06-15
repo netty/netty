@@ -418,6 +418,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private boolean inFlush0;
         /** true if the channel has never been registered, false otherwise */
         private boolean neverRegistered = true;
+        private AutoFlushTask autoFlushTask;
 
         private void assertEventLoop() {
             assert !registered || eventLoop.inEventLoop();
@@ -799,6 +800,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             outboundBuffer.addMessage(msg, size, promise);
+
+            if (pipeline.isAutoFlush()) {
+                if (eventLoop instanceof SingleThreadEventLoop) {
+                    if (autoFlushTask == null) {
+                        autoFlushTask = new AutoFlushTask(AbstractChannel.this);
+                    }
+                    autoFlushTask.onWrite();
+                } else {
+                    flush(outboundBuffer);
+                }
+            }
         }
 
         @Override
@@ -810,6 +822,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            flush(outboundBuffer);
+        }
+
+        private void flush(ChannelOutboundBuffer outboundBuffer) {
             outboundBuffer.addFlush();
             flush0();
         }
@@ -1051,6 +1067,55 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         boolean setClosed() {
             return super.trySuccess();
+        }
+    }
+
+    private static final class AutoFlushTask implements Runnable {
+
+        private final AbstractChannel channel;
+        private final SingleThreadEventLoop eventLoop;
+        private boolean writePending;
+        private boolean running;
+
+        AutoFlushTask(AbstractChannel channel) {
+            this.channel = channel;
+            assert channel.eventLoop() instanceof SingleThreadEventLoop;
+            eventLoop = (SingleThreadEventLoop) channel.eventLoop();
+        }
+
+        @Override
+        public void run() {
+            running = true;
+            try {
+                if (writePending) {
+                    writePending = false;
+                    channel.flush();
+                    if (writePending) {
+                        // There may be cases where a handler writes more data from within the flush() method and then
+                        // does not flush. In such a case, if we call flush() on the pipeline again, then it may end up
+                        // in an infinite loop. In order to prevent such an issue, we directly flush the unsafe.
+                        channel.unsafe.flush();
+                        writePending = false;
+                    }
+                }
+            } finally {
+                channel.pipeline.postAutoFlush();
+                if (writePending && channel.isActive() && channel.pipeline.isAutoFlush()) {
+                    eventLoop.executeAfterEventLoopIteration(this);
+                }
+                running = false;
+            }
+        }
+
+        void onWrite() {
+            if (!writePending) {
+                writePending = true;
+                if (!running) {
+                    // Re-entrant (write done from flush) should not enqueue the task again as it will be done at the
+                    // end of loop.
+                    eventLoop.executeAfterEventLoopIteration(this);
+                }
+            }
         }
     }
 }
