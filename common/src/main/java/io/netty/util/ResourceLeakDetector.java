@@ -34,7 +34,7 @@ import static io.netty.util.internal.StringUtil.EMPTY_STRING;
 import static io.netty.util.internal.StringUtil.NEWLINE;
 import static io.netty.util.internal.StringUtil.simpleClassName;
 
-public final class ResourceLeakDetector<T> {
+public class ResourceLeakDetector<T> {
 
     private static final String PROP_LEVEL_OLD = "io.netty.leakDetectionLevel";
     private static final String PROP_LEVEL = "io.netty.leakDetection.level";
@@ -234,9 +234,7 @@ public final class ResourceLeakDetector<T> {
         // Report too many instances.
         int samplingInterval = level == Level.PARANOID? 1 : this.samplingInterval;
         if (active * samplingInterval > maxActive && loggedTooManyActive.compareAndSet(false, true)) {
-            logger.error("LEAK: You are creating too many " + resourceType + " instances.  " +
-                    resourceType + " is a shared resource that must be reused across the JVM," +
-                    "so that only a few instances are created.");
+            reportInstancesLeak(resourceType);
         }
 
         // Detect and report previous leaks.
@@ -256,20 +254,46 @@ public final class ResourceLeakDetector<T> {
             String records = ref.toString();
             if (reportedLeaks.putIfAbsent(records, Boolean.TRUE) == null) {
                 if (records.isEmpty()) {
-                    logger.error("LEAK: {}.release() was not called before it's garbage-collected. " +
-                            "Enable advanced leak reporting to find out where the leak occurred. " +
-                            "To enable advanced leak reporting, " +
-                            "specify the JVM option '-D{}={}' or call {}.setLevel() " +
-                            "See http://netty.io/wiki/reference-counted-objects.html for more information.",
-                            resourceType, PROP_LEVEL, Level.ADVANCED.name().toLowerCase(), simpleClassName(this));
+                    reportUntracedLeak(resourceType);
                 } else {
-                    logger.error(
-                            "LEAK: {}.release() was not called before it's garbage-collected. " +
-                            "See http://netty.io/wiki/reference-counted-objects.html for more information.{}",
-                            resourceType, records);
+                    reportTracedLeak(resourceType, records);
                 }
             }
         }
+    }
+
+    /**
+     * This method is called when a traced leak is detected. It can be overridden for tracking how many times leaks
+     * have been detected.
+     */
+    protected void reportTracedLeak(String resourceType, String records) {
+        logger.error(
+                "LEAK: {}.release() was not called before it's garbage-collected. " +
+                "See http://netty.io/wiki/reference-counted-objects.html for more information.{}",
+                resourceType, records);
+    }
+
+    /**
+     * This method is called when an untraced leak is detected. It can be overridden for tracking how many times leaks
+     * have been detected.
+     */
+    protected void reportUntracedLeak(String resourceType) {
+        logger.error("LEAK: {}.release() was not called before it's garbage-collected. " +
+                "Enable advanced leak reporting to find out where the leak occurred. " +
+                "To enable advanced leak reporting, " +
+                "specify the JVM option '-D{}={}' or call {}.setLevel() " +
+                "See http://netty.io/wiki/reference-counted-objects.html for more information.",
+                resourceType, PROP_LEVEL, Level.ADVANCED.name().toLowerCase(), simpleClassName(this));
+    }
+
+    /**
+     * This method is called when instance leaks are detected. It can be overridden for tracking how many times leaks
+     * have been detected.
+     */
+    protected void reportInstancesLeak(String resourceType) {
+        logger.error("LEAK: You are creating too many " + resourceType + " instances.  " +
+                resourceType + " is a shared resource that must be reused across the JVM," +
+                "so that only a few instances are created.");
     }
 
     private final class DefaultResourceLeak extends PhantomReference<Object> implements ResourceLeak {
