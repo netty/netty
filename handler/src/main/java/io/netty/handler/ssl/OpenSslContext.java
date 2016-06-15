@@ -191,6 +191,11 @@ public abstract class OpenSslContext extends SslContext {
                 SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_ECDH_USE);
                 SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_DH_USE);
                 SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
+                // Disable ticket support by default to be more inline with SSLEngineImpl of the JDK.
+                // This also let SSLSession.getId() work the same way for the JDK implementation and the OpenSSLEngine.
+                // If tickets are supported SSLSession.getId() will only return an ID on the server-side if it could
+                // make use of tickets.
+                SSLContext.setOptions(ctx, SSL.SSL_OP_NO_TICKET);
 
                 // We need to enable SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER as the memory address may change between
                 // calling OpenSSLEngine.wrap(...).
