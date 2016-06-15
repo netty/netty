@@ -18,6 +18,7 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -175,7 +176,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         this.addTaskWakesUp = addTaskWakesUp;
         this.maxPendingTasks = Math.max(16, maxPendingTasks);
         this.executor = ObjectUtil.checkNotNull(executor, "executor");
-        taskQueue = newTaskQueue();
+        taskQueue = newTaskQueue(this.maxPendingTasks);
         rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
     }
 
@@ -214,6 +215,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     protected Runnable pollTask() {
         assert inEventLoop();
+        return pollTaskFrom(taskQueue);
+    }
+
+    protected final Runnable pollTaskFrom(Queue<Runnable> taskQueue) {
         for (;;) {
             Runnable task = taskQueue.poll();
             if (task == WAKEUP_TASK) {
@@ -328,7 +333,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             throw new NullPointerException("task");
         }
         if (!offerTask(task)) {
-            rejectedExecutionHandler.rejected(task, this);
+            reject(task);
         }
     }
 
@@ -355,30 +360,43 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @return {@code true} if and only if at least one task was run
      */
     protected boolean runAllTasks() {
+        assert inEventLoop();
         boolean fetchedAll;
+        boolean ranAtLeastOne = false;
+
         do {
             fetchedAll = fetchFromScheduledTaskQueue();
-            Runnable task = pollTask();
-            if (task == null) {
-                return false;
-            }
-
-            for (;;) {
-                try {
-                    task.run();
-                } catch (Throwable t) {
-                    logger.warn("A task raised an exception.", t);
-                }
-
-                task = pollTask();
-                if (task == null) {
-                    break;
-                }
+            if (runAllTasksFrom(taskQueue)) {
+                ranAtLeastOne = true;
             }
         } while (!fetchedAll); // keep on processing until we fetched all scheduled tasks.
 
-        lastExecutionTime = ScheduledFutureTask.nanoTime();
-        return true;
+        if (ranAtLeastOne) {
+            lastExecutionTime = ScheduledFutureTask.nanoTime();
+        }
+        afterRunningAllTasks();
+        return ranAtLeastOne;
+    }
+
+    /**
+     * Runs all tasks from the passed {@code taskQueue}.
+     *
+     * @param taskQueue To poll and execute all tasks.
+     *
+     * @return {@code true} if atleast one task was executed.
+     */
+    protected final boolean runAllTasksFrom(Queue<Runnable> taskQueue) {
+        Runnable task = pollTaskFrom(taskQueue);
+        if (task == null) {
+            return false;
+        }
+        for (;;) {
+            safeExecute(task);
+            task = pollTaskFrom(taskQueue);
+            if (task == null) {
+                return true;
+            }
+        }
     }
 
     /**
@@ -389,6 +407,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         fetchFromScheduledTaskQueue();
         Runnable task = pollTask();
         if (task == null) {
+            afterRunningAllTasks();
             return false;
         }
 
@@ -396,11 +415,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         long runTasks = 0;
         long lastExecutionTime;
         for (;;) {
-            try {
-                task.run();
-            } catch (Throwable t) {
-                logger.warn("A task raised an exception.", t);
-            }
+            safeExecute(task);
 
             runTasks ++;
 
@@ -420,8 +435,23 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
         }
 
+        afterRunningAllTasks();
         this.lastExecutionTime = lastExecutionTime;
         return true;
+    }
+
+    /**
+     * Invoked before returning from {@link #runAllTasks()} and {@link #runAllTasks(long)}.
+     */
+    @UnstableApi
+    protected void afterRunningAllTasks() { }
+
+    private static void safeExecute(Runnable task) {
+        try {
+            task.run();
+        } catch (Throwable t) {
+            logger.warn("A task raised an exception. Task: {}", task, t);
+        }
     }
 
     /**
@@ -808,6 +838,15 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     protected static void reject() {
         throw new RejectedExecutionException("event executor terminated");
+    }
+
+    /**
+     * Offers the task to the associated {@link RejectedExecutionHandler}.
+     *
+     * @param task to reject.
+     */
+    protected final void reject(Runnable task) {
+        rejectedExecutionHandler.rejected(task, this);
     }
 
     // ScheduledExecutorService implementation
