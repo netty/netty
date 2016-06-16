@@ -32,10 +32,10 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
-import java.io.File;
+import java.security.AccessController;
 import java.security.PrivateKey;
+import java.security.PrivilegedAction;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateRevokedException;
@@ -63,6 +63,7 @@ public abstract class OpenSslContext extends SslContext {
     private static final boolean JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION =
             SystemPropertyUtil.getBoolean("jdk.tls.rejectClientInitiatedRenegotiation", false);
     private static final List<String> DEFAULT_CIPHERS;
+    private static final Integer DH_KEY_LENGTH;
 
     // TODO: Maybe make configurable ?
     protected static final int VERIFY_DEPTH = 10;
@@ -122,6 +123,28 @@ public abstract class OpenSslContext extends SslContext {
         if (logger.isDebugEnabled()) {
             logger.debug("Default cipher suite (OpenSSL): " + ciphers);
         }
+
+        Integer dhLen = null;
+
+        try {
+            String dhKeySize = AccessController.doPrivileged(new PrivilegedAction<String>() {
+                @Override
+                public String run() {
+                    return SystemPropertyUtil.get("jdk.tls.ephemeralDHKeySize");
+                }
+            });
+            if (dhKeySize != null) {
+                try {
+                    dhLen = Integer.parseInt(dhKeySize);
+                } catch (NumberFormatException e) {
+                    logger.debug("OpenSslContext only support -Djdk.tls.ephemeralDHKeySize={int}, but got: "
+                            + dhKeySize);
+                }
+            }
+        } catch (Throwable ignore) {
+            // ignore
+        }
+        DH_KEY_LENGTH = dhLen;
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
@@ -202,6 +225,10 @@ public abstract class OpenSslContext extends SslContext {
                 // calling OpenSSLEngine.wrap(...).
                 // See https://github.com/netty/netty-tcnative/issues/100
                 SSLContext.setMode(ctx, SSLContext.getMode(ctx) | SSL.SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+
+                if (DH_KEY_LENGTH != null) {
+                    SSLContext.setTmpDHLength(ctx, DH_KEY_LENGTH);
+                }
 
                 /* List the ciphers that are permitted to negotiate. */
                 try {
@@ -585,22 +612,6 @@ public abstract class OpenSslContext extends SslContext {
             return bio;
         } finally {
             buffer.release();
-        }
-    }
-
-    static PrivateKey toPrivateKeyInternal(File keyFile, String keyPassword) throws SSLException {
-        try {
-            return SslContext.toPrivateKey(keyFile, keyPassword);
-        } catch (Exception e) {
-            throw new SSLException(e);
-        }
-    }
-
-    static X509Certificate[] toX509CertificatesInternal(File file) throws SSLException {
-        try {
-            return SslContext.toX509Certificates(file);
-        } catch (CertificateException e) {
-            throw new SSLException(e);
         }
     }
 }
