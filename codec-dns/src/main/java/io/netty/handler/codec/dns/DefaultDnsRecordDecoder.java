@@ -166,10 +166,6 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             return ROOT;
         }
 
-        if (name.charAt(name.length() - 1) != '.') {
-            name.append('.');
-        }
-
         return name.toString();
     }
 }
