@@ -482,7 +482,7 @@ abstract class DnsNameResolverContext<T> {
                 return null;
             }
 
-            return name.substring(0, name.length() - 1);
+            return name.toString();
         } finally {
             buf.resetReaderIndex();
         }
