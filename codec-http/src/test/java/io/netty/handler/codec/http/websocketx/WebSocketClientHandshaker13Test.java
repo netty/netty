@@ -17,7 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import java.net.URI;
 
-public class WebSocketClientHandshaker13Test extends WebSocketClientHandshakerTest {
+public class WebSocketClientHandshaker13Test extends WebSocketClientHandshaker07Test {
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri) {
         return new WebSocketClientHandshaker13(uri, WebSocketVersion.V13, null, false, null, 1024);

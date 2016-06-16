@@ -15,11 +15,41 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import org.junit.Test;
+
 import java.net.URI;
+
+import static org.junit.Assert.assertEquals;
 
 public class WebSocketClientHandshaker07Test extends WebSocketClientHandshakerTest {
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri) {
         return new WebSocketClientHandshaker07(uri, WebSocketVersion.V07, null, false, null, 1024);
+    }
+
+    @Test
+    public void testSecOriginWss() {
+        URI uri = URI.create("wss://localhost/path%20with%20ws");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri);
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals("https://localhost", request.headers().get(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN));
+        } finally {
+            request.release();
+        }
+    }
+
+    @Test
+    public void testSecOriginWs() {
+        URI uri = URI.create("ws://localhost/path%20with%20ws");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri);
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals("http://localhost", request.headers().get(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN));
+        } finally {
+            request.release();
+        }
     }
 }
