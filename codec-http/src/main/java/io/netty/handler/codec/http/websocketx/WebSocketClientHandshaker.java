@@ -32,6 +32,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.handler.codec.http.HttpScheme;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.StringUtil;
@@ -443,5 +444,27 @@ public abstract class WebSocketClientHandshaker {
         }
 
         return path == null || path.isEmpty() ? "/" : path;
+    }
+
+    static int websocketPort(URI wsURL) {
+        // Format request
+        int wsPort = wsURL.getPort();
+        // check if the URI contained a port if not set the correct one depending on the schema.
+        // See https://github.com/netty/netty/pull/1558
+        if (wsPort == -1) {
+            return "wss".equals(wsURL.getScheme()) ? HttpScheme.HTTPS.port() : HttpScheme.HTTP.port();
+        }
+        return wsPort;
+    }
+
+    static CharSequence websocketOriginValue(String host, int wsPort) {
+        String originValue = (wsPort == HttpScheme.HTTPS.port() ?
+                HttpScheme.HTTPS.name() : HttpScheme.HTTP.name()) + "://" + host;
+        if (wsPort != HttpScheme.HTTP.port() && wsPort != HttpScheme.HTTPS.port()) {
+            // if the port is not standard (80/443) its needed to add the port to the header.
+            // See http://tools.ietf.org/html/rfc6454#section-6.2
+            return originValue + ':' + wsPort;
+        }
+        return originValue;
     }
 }
