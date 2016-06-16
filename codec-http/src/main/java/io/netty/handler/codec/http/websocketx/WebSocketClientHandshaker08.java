@@ -142,6 +142,9 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
                     key, expectedChallengeResponseString);
         }
 
+        int wsPort = websocketPort(wsURL);
+        String host = wsURL.getHost();
+
         // Format request
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
@@ -149,16 +152,8 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         headers.add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                .add(HttpHeaderNames.SEC_WEBSOCKET_KEY, key)
-               .add(HttpHeaderNames.HOST, wsURL.getHost());
-
-        int wsPort = wsURL.getPort();
-        String originValue = "http://" + wsURL.getHost();
-        if (wsPort != 80 && wsPort != 443) {
-            // if the port is not standard (80/443) its needed to add the port to the header.
-            // See http://tools.ietf.org/html/rfc6454#section-6.2
-            originValue = originValue + ':' + wsPort;
-        }
-        headers.add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, originValue);
+               .add(HttpHeaderNames.HOST, host)
+               .add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, websocketOriginValue(host, wsPort));
 
         String expectedSubprotocol = expectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
