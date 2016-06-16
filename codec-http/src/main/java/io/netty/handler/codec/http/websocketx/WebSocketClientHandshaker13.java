@@ -109,32 +109,15 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
 
         // Format request
-        int wsPort = wsURL.getPort();
-        // check if the URI contained a port if not set the correct one depending on the schema.
-        // See https://github.com/netty/netty/pull/1558
-        if (wsPort == -1) {
-            if ("wss".equals(wsURL.getScheme())) {
-                wsPort = 443;
-            } else {
-                wsPort = 80;
-            }
-        }
-
+        int wsPort = websocketPort(wsURL);
+        String host = wsURL.getHost();
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
-
-        headers.add(Names.UPGRADE, Values.WEBSOCKET.toLowerCase())
-               .add(Names.CONNECTION, Values.UPGRADE)
-               .add(Names.SEC_WEBSOCKET_KEY, key)
-               .add(Names.HOST, wsURL.getHost() + ':' + wsPort);
-
-        String originValue = "http://" + wsURL.getHost();
-        if (wsPort != 80 && wsPort != 443) {
-            // if the port is not standard (80/443) its needed to add the port to the header.
-            // See http://tools.ietf.org/html/rfc6454#section-6.2
-            originValue = originValue + ':' + wsPort;
-        }
-        headers.add(Names.SEC_WEBSOCKET_ORIGIN, originValue);
+        headers.add(HttpHeaders.Names.UPGRADE, HttpHeaders.Values.WEBSOCKET)
+               .add(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE)
+               .add(HttpHeaders.Names.SEC_WEBSOCKET_KEY, key)
+               .add(HttpHeaders.Names.HOST, host + ':' + wsPort)
+               .add(HttpHeaders.Names.SEC_WEBSOCKET_ORIGIN, websocketOriginValue(host, wsPort));
 
         String expectedSubprotocol = expectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {

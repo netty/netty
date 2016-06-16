@@ -443,4 +443,26 @@ public abstract class WebSocketClientHandshaker {
 
         return path == null || path.isEmpty() ? "/" : path;
     }
+
+    static int websocketPort(URI wsURL) {
+        // Format request
+        int wsPort = wsURL.getPort();
+        // check if the URI contained a port if not set the correct one depending on the schema.
+        // See https://github.com/netty/netty/pull/1558
+        if (wsPort == -1) {
+            return "wss".equals(wsURL.getScheme()) ? 443 : 80;
+        }
+        return wsPort;
+    }
+
+    static CharSequence websocketOriginValue(String host, int wsPort) {
+        String originValue = (wsPort == 443 ?
+                "https" : "http") + "://" + host;
+        if (wsPort != 80 && wsPort != 443) {
+            // if the port is not standard (80/443) its needed to add the port to the header.
+            // See http://tools.ietf.org/html/rfc6454#section-6.2
+            return originValue + ':' + wsPort;
+        }
+        return originValue;
+    }
 }
