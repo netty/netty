@@ -31,14 +31,16 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
-import io.netty.util.CharsetUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http2.Http2Headers;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
-import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
+import static io.netty.util.AsciiString.EMPTY_STRING;
+import static io.netty.util.AsciiString.of;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -54,74 +56,70 @@ public class DecoderTest {
     private static final int MAX_HEADER_TABLE_SIZE = 4096;
 
     private Decoder decoder;
-    private HeaderListener mockListener;
+    private Http2Headers mockHeaders;
 
     private static String hex(String s) {
         return Hex.encodeHexString(s.getBytes());
     }
 
-    private static byte[] getBytes(String s) {
-        return s.getBytes(CharsetUtil.ISO_8859_1);
-    }
-
     private void decode(String encoded) throws IOException {
         byte[] b = Hex.decodeHex(encoded.toCharArray());
-        ByteArrayInputStream in = new ByteArrayInputStream(b);
+        ByteBuf in = Unpooled.wrappedBuffer(b);
         try {
-            decoder.decode(in, mockListener);
+            decoder.decode(in, mockHeaders);
         } finally {
-            in.close();
+            in.release();
         }
     }
 
     @Before
     public void setUp() {
-        decoder = new Decoder(MAX_HEADER_SIZE, MAX_HEADER_TABLE_SIZE);
-        mockListener = mock(HeaderListener.class);
+        decoder = new Decoder(MAX_HEADER_SIZE, MAX_HEADER_TABLE_SIZE, 32);
+        mockHeaders = mock(Http2Headers.class);
     }
 
     @Test
     public void testLiteralHuffmanEncodedWithEmptyNameAndValue() throws IOException {
         byte[] input = {0, (byte) 0x80, 0};
-        ByteArrayInputStream in = new ByteArrayInputStream(input);
+        ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(in, mockListener);
-            verify(mockListener, times(1)).addHeader(EMPTY_BYTES, EMPTY_BYTES, false);
+            decoder.decode(in, mockHeaders);
+            verify(mockHeaders, times(1)).add(EMPTY_STRING, EMPTY_STRING);
         } finally {
-            in.close();
+            in.release();
         }
     }
 
     @Test(expected = IOException.class)
     public void testLiteralHuffmanEncodedWithPaddingGreaterThan7Throws() throws IOException {
         byte[] input = {0, (byte) 0x81, -1};
-        ByteArrayInputStream in = new ByteArrayInputStream(input);
+        ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(in, mockListener);
+            decoder.decode(in, mockHeaders);
         } finally {
-            in.close();
+            in.release();
         }
     }
 
     @Test(expected = IOException.class)
     public void testLiteralHuffmanEncodedWithDecodingEOSThrows() throws IOException {
         byte[] input = {0, (byte) 0x84, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
-        ByteArrayInputStream in = new ByteArrayInputStream(input);
+        ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(in, mockListener);
+            decoder.decode(in, mockHeaders);
         } finally {
-            in.close();
+            in.release();
         }
     }
 
     @Test(expected = IOException.class)
     public void testLiteralHuffmanEncodedWithPaddingNotCorrespondingToMSBThrows() throws IOException {
         byte[] input = {0, (byte) 0x81, 0};
-        ByteArrayInputStream in = new ByteArrayInputStream(input);
+        ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(in, mockListener);
+            decoder.decode(in, mockHeaders);
         } finally {
-            in.close();
+            in.release();
         }
     }
 
@@ -129,14 +127,14 @@ public class DecoderTest {
     public void testIncompleteIndex() throws IOException {
         // Verify incomplete indices are unread
         byte[] compressed = Hex.decodeHex("FFF0".toCharArray());
-        ByteArrayInputStream in = new ByteArrayInputStream(compressed);
+        ByteBuf in = Unpooled.wrappedBuffer(compressed);
         try {
-            decoder.decode(in, mockListener);
-            assertEquals(1, in.available());
-            decoder.decode(in, mockListener);
-            assertEquals(1, in.available());
+            decoder.decode(in, mockHeaders);
+            assertEquals(1, in.readableBytes());
+            decoder.decode(in, mockHeaders);
+            assertEquals(1, in.readableBytes());
         } finally {
-            in.close();
+            in.release();
         }
     }
 
@@ -209,21 +207,21 @@ public class DecoderTest {
     @Test
     public void testLiteralWithIncrementalIndexingWithEmptyName() throws Exception {
         decode("400005" + hex("value"));
-        verify(mockListener, times(1)).addHeader(EMPTY_BYTES, getBytes("value"), false);
+        verify(mockHeaders, times(1)).add(EMPTY_STRING, of("value"));
     }
 
     @Test
     public void testLiteralWithIncrementalIndexingCompleteEviction() throws Exception {
         // Verify indexed host header
         decode("4004" + hex("name") + "05" + hex("value"));
-        verify(mockListener).addHeader(getBytes("name"), getBytes("value"), false);
-        verifyNoMoreInteractions(mockListener);
+        verify(mockHeaders).add(of("name"), of("value"));
+        verifyNoMoreInteractions(mockHeaders);
         assertFalse(decoder.endHeaderBlock());
 
-        reset(mockListener);
+        reset(mockHeaders);
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 4096; i++) {
-            sb.append("a");
+            sb.append('a');
         }
         String value = sb.toString();
         sb = new StringBuilder();
@@ -232,14 +230,14 @@ public class DecoderTest {
             sb.append("61"); // 'a'
         }
         decode(sb.toString());
-        verify(mockListener).addHeader(getBytes(":authority"), getBytes(value), false);
-        verifyNoMoreInteractions(mockListener);
+        verify(mockHeaders).add(of(":authority"), of(value));
+        verifyNoMoreInteractions(mockHeaders);
         assertFalse(decoder.endHeaderBlock());
 
         // Verify next header is inserted at index 62
         decode("4004" + hex("name") + "05" + hex("value") + "BE");
-        verify(mockListener, times(2)).addHeader(getBytes("name"), getBytes("value"), false);
-        verifyNoMoreInteractions(mockListener);
+        verify(mockHeaders, times(2)).add(of("name"), of("value"));
+        verifyNoMoreInteractions(mockHeaders);
     }
 
     @Test
@@ -252,15 +250,15 @@ public class DecoderTest {
         }
         sb.append("00");
         decode(sb.toString());
-        verifyNoMoreInteractions(mockListener);
+        verifyNoMoreInteractions(mockHeaders);
 
         // Verify header block is reported as truncated
         assertTrue(decoder.endHeaderBlock());
 
         // Verify next header is inserted at index 62
         decode("4004" + hex("name") + "05" + hex("value") + "BE");
-        verify(mockListener, times(2)).addHeader(getBytes("name"), getBytes("value"), false);
-        verifyNoMoreInteractions(mockListener);
+        verify(mockHeaders, times(2)).add(of("name"), of("value"));
+        verifyNoMoreInteractions(mockHeaders);
     }
 
     @Test
@@ -274,21 +272,21 @@ public class DecoderTest {
             sb.append("61"); // 'a'
         }
         decode(sb.toString());
-        verifyNoMoreInteractions(mockListener);
+        verifyNoMoreInteractions(mockHeaders);
 
         // Verify header block is reported as truncated
         assertTrue(decoder.endHeaderBlock());
 
         // Verify next header is inserted at index 62
         decode("4004" + hex("name") + "05" + hex("value") + "BE");
-        verify(mockListener, times(2)).addHeader(getBytes("name"), getBytes("value"), false);
-        verifyNoMoreInteractions(mockListener);
+        verify(mockHeaders, times(2)).add(of("name"), of("value"));
+        verifyNoMoreInteractions(mockHeaders);
     }
 
     @Test
     public void testLiteralWithoutIndexingWithEmptyName() throws Exception {
         decode("000005" + hex("value"));
-        verify(mockListener, times(1)).addHeader(EMPTY_BYTES, getBytes("value"), false);
+        verify(mockHeaders, times(1)).add(EMPTY_STRING, of("value"));
     }
 
     @Test(expected = IOException.class)
@@ -301,7 +299,7 @@ public class DecoderTest {
         }
         sb.append("00");
         decode(sb.toString());
-        verifyNoMoreInteractions(mockListener);
+        verifyNoMoreInteractions(mockHeaders);
 
         // Verify header block is reported as truncated
         assertTrue(decoder.endHeaderBlock());
@@ -321,7 +319,7 @@ public class DecoderTest {
             sb.append("61"); // 'a'
         }
         decode(sb.toString());
-        verifyNoMoreInteractions(mockListener);
+        verifyNoMoreInteractions(mockHeaders);
 
         // Verify header block is reported as truncated
         assertTrue(decoder.endHeaderBlock());
@@ -333,7 +331,7 @@ public class DecoderTest {
     @Test
     public void testLiteralNeverIndexedWithEmptyName() throws Exception {
         decode("100005" + hex("value"));
-        verify(mockListener, times(1)).addHeader(EMPTY_BYTES, getBytes("value"), true);
+        verify(mockHeaders, times(1)).add(EMPTY_STRING, of("value"));
     }
 
     @Test(expected = IOException.class)
@@ -346,7 +344,7 @@ public class DecoderTest {
         }
         sb.append("00");
         decode(sb.toString());
-        verifyNoMoreInteractions(mockListener);
+        verifyNoMoreInteractions(mockHeaders);
 
         // Verify header block is reported as truncated
         assertTrue(decoder.endHeaderBlock());
@@ -366,7 +364,7 @@ public class DecoderTest {
             sb.append("61"); // 'a'
         }
         decode(sb.toString());
-        verifyNoMoreInteractions(mockListener);
+        verifyNoMoreInteractions(mockHeaders);
 
         // Verify header block is reported as truncated
         assertTrue(decoder.endHeaderBlock());

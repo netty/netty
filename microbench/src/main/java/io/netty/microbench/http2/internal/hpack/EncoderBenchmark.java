@@ -31,6 +31,7 @@
  */
 package io.netty.microbench.http2.internal.hpack;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -39,9 +40,9 @@ import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -63,31 +64,36 @@ public class EncoderBenchmark extends AbstractMicrobenchmark {
     public boolean limitToAscii;
 
     private List<Header> headers;
-    private ByteArrayOutputStream outputStream;
+    private ByteBuf output;
 
     @Setup(Level.Trial)
     public void setup() {
         headers = Util.headers(size, limitToAscii);
-        outputStream = size.newOutputStream();
+        output = size.newOutBuffer();
+    }
+
+    @TearDown(Level.Trial)
+    public void tearDown() {
+        output.release();
     }
 
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     public void encode(Blackhole bh) throws IOException {
         Encoder encoder = new Encoder(maxTableSize);
-        outputStream.reset();
+        output.clear();
         if (duplicates) {
             // If duplicates is set, re-add the same header each time.
             Header header = headers.get(0);
             for (int i = 0; i < headers.size(); ++i) {
-                encoder.encodeHeader(outputStream, header.name, header.value, sensitive);
+                encoder.encodeHeader(output, header.name, header.value, sensitive);
             }
         } else {
             for (int i = 0; i < headers.size(); ++i) {
                 Header header = headers.get(i);
-                encoder.encodeHeader(outputStream, header.name, header.value, sensitive);
+                encoder.encodeHeader(output, header.name, header.value, sensitive);
             }
         }
-        bh.consume(outputStream);
+        bh.consume(output);
     }
 }

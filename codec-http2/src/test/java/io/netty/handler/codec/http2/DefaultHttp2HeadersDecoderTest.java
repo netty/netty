@@ -22,8 +22,6 @@ import io.netty.util.AsciiString;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
-
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomBytes;
@@ -73,12 +71,12 @@ public class DefaultHttp2HeadersDecoderTest {
 
     private static ByteBuf encode(byte[]... entries) throws Exception {
         Encoder encoder = new Encoder(MAX_HEADER_TABLE_SIZE);
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        ByteBuf out = Unpooled.buffer();
         for (int ix = 0; ix < entries.length;) {
             byte[] key = entries[ix++];
             byte[] value = entries[ix++];
-            encoder.encodeHeader(stream, key, value, false);
+            encoder.encodeHeader(out, new AsciiString(key, false), new AsciiString(value, false), false);
         }
-        return Unpooled.wrappedBuffer(stream.toByteArray());
+        return out;
     }
 }

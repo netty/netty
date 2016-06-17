@@ -16,20 +16,15 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.http2.internal.hpack.Decoder;
-import io.netty.handler.codec.http2.internal.hpack.HeaderListener;
-import io.netty.util.AsciiString;
 import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
-import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
@@ -53,14 +48,15 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     }
 
     public DefaultHttp2HeadersDecoder(boolean validateHeaders) {
-        this(DEFAULT_MAX_HEADER_SIZE, DEFAULT_HEADER_TABLE_SIZE, validateHeaders);
+        this(DEFAULT_MAX_HEADER_SIZE, DEFAULT_HEADER_TABLE_SIZE, validateHeaders, 32);
     }
 
-    public DefaultHttp2HeadersDecoder(int maxHeaderSize, int maxHeaderTableSize, boolean validateHeaders) {
+    public DefaultHttp2HeadersDecoder(int maxHeaderSize, int maxHeaderTableSize, boolean validateHeaders,
+                                      int initialCapacity) {
         if (maxHeaderSize <= 0) {
             throw new IllegalArgumentException("maxHeaderSize must be positive: " + maxHeaderSize);
         }
-        decoder = new Decoder(maxHeaderSize, maxHeaderTableSize);
+        decoder = new Decoder(maxHeaderSize, maxHeaderTableSize, initialCapacity);
         headerTable = new Http2HeaderTableDecoder();
         this.maxHeaderSize = maxHeaderSize;
         this.validateHeaders = validateHeaders;
@@ -91,17 +87,9 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
 
     @Override
     public Http2Headers decodeHeaders(ByteBuf headerBlock) throws Http2Exception {
-        InputStream in = new ByteBufInputStream(headerBlock);
         try {
             final Http2Headers headers = new DefaultHttp2Headers(validateHeaders, (int) headerArraySizeAccumulator);
-            HeaderListener listener = new HeaderListener() {
-                @Override
-                public void addHeader(byte[] key, byte[] value, boolean sensitive) {
-                    headers.add(new AsciiString(key, false), new AsciiString(value, false));
-                }
-            };
-
-            decoder.decode(in, listener);
+            decoder.decode(headerBlock, headers);
             if (decoder.endHeaderBlock()) {
                 maxHeaderSizeExceeded();
             }
@@ -123,12 +111,6 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
             // the the Header builder throws IllegalArgumentException if the key or value was invalid
             // for any reason (e.g. the key was an invalid pseudo-header).
             throw connectionError(COMPRESSION_ERROR, e, e.getMessage());
-        } finally {
-            try {
-                in.close();
-            } catch (IOException e) {
-                throw connectionError(INTERNAL_ERROR, e, e.getMessage());
-            }
         }
     }
 

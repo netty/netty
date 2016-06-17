@@ -31,6 +31,8 @@
  */
 
 /**
- * <a href="http://tools.ietf.org/html/rfc7541">HPACK: Header Compression for HTTP/2</a>
+ * <a href="http://tools.ietf.org/html/rfc7541">HPACK: Header Compression for HTTP/2</a>.
+ * Please note this implementation is only compliant when used with HTTP/2 and so not meant to be used outside of
+ * this scope.
  */
 package io.netty.handler.codec.http2.internal.hpack;
