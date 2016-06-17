@@ -35,6 +35,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
+import java.nio.charset.CodingErrorAction;
 import java.util.Arrays;
 import java.util.Locale;
 
@@ -997,6 +998,203 @@ public final class ByteBufUtil {
                 handle.recycle(this);
             }
         }
+    }
+
+    /**
+     * Returns {@code true} if the given {@link ByteBuf} is valid text using the given {@link Charset},
+     * otherwise return {@code false}.
+     *
+     * @param buf The given {@link ByteBuf}.
+     * @param charset The specified {@link Charset}.
+     */
+    public static boolean isText(ByteBuf buf, Charset charset) {
+        return isText(buf, buf.readerIndex(), buf.readableBytes(), charset);
+    }
+
+    /**
+     * Returns {@code true} if the specified {@link ByteBuf} starting at {@code index} with {@code length} is valid
+     * text using the given {@link Charset}, otherwise return {@code false}.
+     *
+     * @param buf The given {@link ByteBuf}.
+     * @param index The start index of the specified buffer.
+     * @param length The length of the specified buffer.
+     * @param charset The specified {@link Charset}.
+     *
+     * @throws IndexOutOfBoundsException if {@code index} + {@code length} is greater than {@code buf.readableBytes}
+     */
+    public static boolean isText(ByteBuf buf, int index, int length, Charset charset) {
+        checkNotNull(buf, "buf");
+        checkNotNull(charset, "charset");
+        final int maxIndex = buf.readerIndex() + buf.readableBytes();
+        if (index < 0 || length < 0 || index > maxIndex - length) {
+            throw new IndexOutOfBoundsException("index: " + index + " length: " + length);
+        }
+        if (charset.equals(CharsetUtil.UTF_8)) {
+            return isUtf8(buf, index, length);
+        } else if (charset.equals(CharsetUtil.US_ASCII)) {
+            return isAscii(buf, index, length);
+        } else {
+            CharsetDecoder decoder = CharsetUtil.decoder(charset, CodingErrorAction.REPORT, CodingErrorAction.REPORT);
+            try {
+                if (buf.nioBufferCount() == 1) {
+                    decoder.decode(buf.internalNioBuffer(index, length));
+                } else {
+                    ByteBuf heapBuffer =  buf.alloc().heapBuffer(length);
+                    try {
+                        heapBuffer.writeBytes(buf, index, length);
+                        decoder.decode(heapBuffer.internalNioBuffer(0, length));
+                    } finally {
+                        heapBuffer.release();
+                    }
+                }
+                return true;
+            } catch (CharacterCodingException ignore) {
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Aborts on a byte which is not a valid ASCII character.
+     */
+    private static final ByteProcessor FIND_NON_ASCII = new ByteProcessor() {
+        @Override
+        public boolean process(byte value) {
+            return value >= 0;
+        }
+    };
+
+    /**
+     * Returns {@code true} if the specified {@link ByteBuf} starting at {@code index} with {@code length} is valid
+     * ASCII text, otherwise return {@code false}.
+     *
+     * @param buf    The given {@link ByteBuf}.
+     * @param index  The start index of the specified buffer.
+     * @param length The length of the specified buffer.
+     */
+    private static boolean isAscii(ByteBuf buf, int index, int length) {
+        return buf.forEachByte(index, length, FIND_NON_ASCII) == -1;
+    }
+
+    /**
+     * Returns {@code true} if the specified {@link ByteBuf} starting at {@code index} with {@code length} is valid
+     * UTF8 text, otherwise return {@code false}.
+     *
+     * @param buf The given {@link ByteBuf}.
+     * @param index The start index of the specified buffer.
+     * @param length The length of the specified buffer.
+     *
+     * @see
+     * <a href=http://www.ietf.org/rfc/rfc3629.txt>UTF-8 Definition</a>
+     *
+     * <pre>
+     * 1. Bytes format of UTF-8
+     *
+     * The table below summarizes the format of these different octet types.
+     * The letter x indicates bits available for encoding bits of the character number.
+     *
+     * Char. number range  |        UTF-8 octet sequence
+     *    (hexadecimal)    |              (binary)
+     * --------------------+---------------------------------------------
+     * 0000 0000-0000 007F | 0xxxxxxx
+     * 0000 0080-0000 07FF | 110xxxxx 10xxxxxx
+     * 0000 0800-0000 FFFF | 1110xxxx 10xxxxxx 10xxxxxx
+     * 0001 0000-0010 FFFF | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+     * </pre>
+     *
+     * <pre>
+     * 2. Syntax of UTF-8 Byte Sequences
+     *
+     * UTF8-octets = *( UTF8-char )
+     * UTF8-char   = UTF8-1 / UTF8-2 / UTF8-3 / UTF8-4
+     * UTF8-1      = %x00-7F
+     * UTF8-2      = %xC2-DF UTF8-tail
+     * UTF8-3      = %xE0 %xA0-BF UTF8-tail /
+     *               %xE1-EC 2( UTF8-tail ) /
+     *               %xED %x80-9F UTF8-tail /
+     *               %xEE-EF 2( UTF8-tail )
+     * UTF8-4      = %xF0 %x90-BF 2( UTF8-tail ) /
+     *               %xF1-F3 3( UTF8-tail ) /
+     *               %xF4 %x80-8F 2( UTF8-tail )
+     * UTF8-tail   = %x80-BF
+     * </pre>
+     */
+    private static boolean isUtf8(ByteBuf buf, int index, int length) {
+        final int endIndex = index + length;
+        while (index < endIndex) {
+            byte b1 = buf.getByte(index++);
+            byte b2, b3, b4;
+            if ((b1 & 0x80) == 0) {
+                // 1 byte
+                continue;
+            }
+            if ((b1 & 0xE0) == 0xC0) {
+                // 2 bytes
+                //
+                // Bit/Byte pattern
+                // 110xxxxx    10xxxxxx
+                // C2..DF      80..BF
+                if (index >= endIndex) { // no enough bytes
+                    return false;
+                }
+                b2 = buf.getByte(index++);
+                if ((b2 & 0xC0) != 0x80) { // 2nd byte not starts with 10
+                    return false;
+                }
+                if ((b1 & 0xFF) < 0xC2) { // out of lower bound
+                    return false;
+                }
+            } else if ((b1 & 0xF0) == 0xE0) {
+                // 3 bytes
+                //
+                // Bit/Byte pattern
+                // 1110xxxx    10xxxxxx    10xxxxxx
+                // E0          A0..BF      80..BF
+                // E1..EC      80..BF      80..BF
+                // ED          80..9F      80..BF
+                // E1..EF      80..BF      80..BF
+                if (index > endIndex - 2) { // no enough bytes
+                    return false;
+                }
+                b2 = buf.getByte(index++);
+                b3 = buf.getByte(index++);
+                if ((b2 & 0xC0) != 0x80 || (b3 & 0xC0) != 0x80) { // 2nd or 3rd bytes not start with 10
+                    return false;
+                }
+                if ((b1 & 0x0F) == 0x00 && (b2 & 0xFF) < 0xA0) { // out of lower bound
+                    return false;
+                }
+                if ((b1 & 0x0F) == 0x0D && (b2 & 0xFF) > 0x9F) { // out of upper bound
+                    return false;
+                }
+            } else if ((b1 & 0xF8) == 0xF0) {
+                // 4 bytes
+                //
+                // Bit/Byte pattern
+                // 11110xxx    10xxxxxx    10xxxxxx    10xxxxxx
+                // F0          90..BF      80..BF      80..BF
+                // F1..F3      80..BF      80..BF      80..BF
+                // F4          80..8F      80..BF      80..BF
+                if (index > endIndex - 3) { // no enough bytes
+                    return false;
+                }
+                b2 = buf.getByte(index++);
+                b3 = buf.getByte(index++);
+                b4 = buf.getByte(index++);
+                if ((b2 & 0xC0) != 0x80 || (b3 & 0xC0) != 0x80 || (b4 & 0xC0) != 0x80) {
+                    // 2nd, 3rd or 4th bytes not start with 10
+                    return false;
+                }
+                if ((b1 & 0xFF) > 0xF4 // b1 invalid
+                        || (b1 & 0xFF) == 0xF0 && (b2 & 0xFF) < 0x90    // b2 out of lower bound
+                        || (b1 & 0xFF) == 0xF4 && (b2 & 0xFF) > 0x8F) { // b2 out of upper bound
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+        return true;
     }
 
     private ByteBufUtil() { }
