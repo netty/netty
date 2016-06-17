@@ -97,8 +97,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         ENQUEUE_WAKEUP_TASK_UPDATER = enqueueWakeupTaskUpdater;
     }
 
+    @SuppressWarnings("unused")
     private volatile int enqueueWakeupTask;
-    private boolean autoFlush;
+    private volatile boolean autoFlush;
 
     private Runnable wakeupTask;
 
@@ -896,7 +897,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelActive() {
-        autoFlush = channel.config().isAutoFlush(); // TODO: Have callback when changed.
+        autoFlush = channel.config().getOption(ChannelOption.AUTO_FLUSH); // TODO: Have callback when changed.
         AbstractChannelHandlerContext.invokeChannelActive(head);
         return this;
     }
@@ -1184,6 +1185,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } finally {
             ReferenceCountUtil.release(msg);
         }
+    }
+
+    protected void autoFlushModified(boolean autoFlush) {
+        this.autoFlush = autoFlush;
     }
 
     // A special catch-all handler that handles both bytes and messages.

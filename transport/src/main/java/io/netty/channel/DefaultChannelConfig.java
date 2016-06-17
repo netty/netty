@@ -46,6 +46,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
+    private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOFLUSH_UPDATER;
     private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOREAD_UPDATER;
     private static final AtomicReferenceFieldUpdater<DefaultChannelConfig, WriteBufferWaterMark> WATERMARK_UPDATER;
 
@@ -56,6 +57,13 @@ public class DefaultChannelConfig implements ChannelConfig {
             autoReadUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultChannelConfig.class, "autoRead");
         }
         AUTOREAD_UPDATER = autoReadUpdater;
+
+        AtomicIntegerFieldUpdater<DefaultChannelConfig> autoFlushUpdater =
+            PlatformDependent.newAtomicIntegerFieldUpdater(DefaultChannelConfig.class, "autoFlush");
+        if (autoFlushUpdater == null) {
+            autoFlushUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultChannelConfig.class, "autoFlush");
+        }
+        AUTOFLUSH_UPDATER = autoFlushUpdater;
 
         AtomicReferenceFieldUpdater<DefaultChannelConfig, WriteBufferWaterMark> watermarkUpdater =
                 PlatformDependent.newAtomicReferenceFieldUpdater(DefaultChannelConfig.class, "writeBufferWaterMark");
@@ -76,7 +84,9 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int writeSpinCount = 16;
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int autoRead = 1;
-    private volatile boolean autoFlush;
+
+    @SuppressWarnings("FieldMayBeFinal")
+    private volatile int autoFlush;
     private volatile boolean autoClose = true;
     private volatile WriteBufferWaterMark writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
 
@@ -309,15 +319,34 @@ public class DefaultChannelConfig implements ChannelConfig {
         return this;
     }
 
-    @Override
     public boolean isAutoFlush() {
-        return autoFlush;
+        return autoFlush == 1;
     }
 
-    @Override
     public ChannelConfig setAutoFlush(boolean autoFlush) {
-        this.autoFlush = autoFlush;
+        // Auto-flush requires a change in API of EventLoop which can not be done in 4.1, so the SingleThreadEventLoop
+        // is the only implementation that supports it.
+        if (autoFlush && channel.isRegistered() && !(channel.eventLoop() instanceof SingleThreadEventLoop)) {
+            throw new UnsupportedOperationException("Auto flush is only supported for channels using "
+                                                    + SingleThreadEventLoop.class.getName() + " eventloop. Found: "
+                                                    + channel.eventLoop().getClass().getName());
+        }
+        final boolean oldAutoFlush = AUTOFLUSH_UPDATER.getAndSet(this, autoFlush? 1 : 0) == 1;
+        if (autoFlush != oldAutoFlush) {
+            autoFlushModified(autoFlush);
+        }
         return this;
+    }
+
+    /**
+     * Called when {@link #setAutoFlush(boolean)} is called with a value different than what currently exists.
+     *
+     * @param autoFlush Value of {@code autoFlush} after modification.
+     */
+    protected void autoFlushModified(boolean autoFlush) {
+        if (channel instanceof AbstractChannel) {
+            ((AbstractChannel) channel).autoFlushModified(autoFlush);
+        }
     }
 
     /**

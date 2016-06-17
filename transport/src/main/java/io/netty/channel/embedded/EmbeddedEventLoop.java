@@ -32,21 +32,10 @@ import java.util.concurrent.TimeUnit;
 final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
-    private final Queue<Runnable> tailTasks = new ArrayDeque<Runnable>(2);
 
     @Override
     public EventLoopGroup parent() {
         return (EventLoopGroup) super.parent();
-    }
-
-    @Override
-    public void onEventLoopIteration(Runnable task) {
-        tailTasks.add(task);
-    }
-
-    @Override
-    public boolean removeOnEventLoopIterationTask(Runnable task) {
-        return tailTasks.remove(task);
     }
 
     @Override
@@ -65,17 +54,6 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     void runTasks() {
         for (;;) {
             Runnable task = tasks.poll();
-            if (task == null) {
-                break;
-            }
-
-            task.run();
-        }
-    }
-
-    void runOnEveryIterationTasks() {
-        for (;;) {
-            Runnable task = tailTasks.poll();
             if (task == null) {
                 break;
             }

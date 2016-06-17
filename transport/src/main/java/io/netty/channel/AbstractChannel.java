@@ -63,6 +63,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile SocketAddress remoteAddress;
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
+    private volatile boolean autoFlush;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -406,6 +407,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public final ChannelPromise voidPromise() {
         return pipeline.voidPromise();
+    }
+
+    protected void autoFlushModified(boolean autoFlush) {
+        this.autoFlush = autoFlush;
+        pipeline.autoFlushModified(autoFlush);
     }
 
     /**
@@ -801,7 +807,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             outboundBuffer.addMessage(msg, size, promise);
 
-            if (config().isAutoFlush()) {
+            if (isAutoFlushEnabled()) {
                 if (autoFlushTask == null) {
                     autoFlushTask = new AutoFlushTask(AbstractChannel.this);
                 }
@@ -965,6 +971,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
+    protected boolean isAutoFlushEnabled() {
+        return autoFlush;
+    }
+
     /**
      * Return {@code true} if the given {@link EventLoop} is compatible with this instance.
      */
@@ -1064,11 +1074,19 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private static final class AutoFlushTask implements Runnable {
 
-        private final Channel channel;
+        private final AbstractChannel channel;
+        private final SingleThreadEventLoop eventLoop;
         private boolean writePending;
 
-        AutoFlushTask(Channel channel) {
+        AutoFlushTask(AbstractChannel channel) {
             this.channel = channel;
+            if (channel.eventLoop() instanceof SingleThreadEventLoop) {
+                eventLoop = (SingleThreadEventLoop) channel.eventLoop();
+            } else {
+                throw new UnsupportedOperationException("Auto flush is only supported for channels using "
+                                                        + SingleThreadEventLoop.class.getName() + " eventloop. Found: "
+                                                        + channel.eventLoop().getClass().getName());
+            }
         }
 
         @Override
@@ -1077,8 +1095,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 writePending = false;
                 channel.flush();
 
-                if (channel.isActive() && channel.config().isAutoFlush()) {
-                    channel.eventLoop().onEventLoopIteration(this);
+                if (channel.isActive() && channel.isAutoFlushEnabled()) {
+                    eventLoop.onEventLoopIteration(this);
                 }
             }
         }
@@ -1086,7 +1104,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         void onWrite() {
             if (!writePending) {
                 writePending = true;
-                channel.eventLoop().onEventLoopIteration(this);
+                eventLoop.onEventLoopIteration(this);
             }
         }
     }

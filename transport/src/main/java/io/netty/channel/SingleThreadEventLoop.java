@@ -81,7 +81,11 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         return promise;
     }
 
-    @Override
+    /**
+     * Adds a task to be run once at the end of next (or current) {@code eventloop} iteration.
+     *
+     * @param task to be added.
+     */
     public void onEventLoopIteration(Runnable task) {
         ObjectUtil.checkNotNull(task, "task");
         if (isShutdown() || isShuttingDown() || isTerminated()) {
@@ -95,10 +99,15 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         }
     }
 
-    @Override
+    /**
+     * Removes a task that was added previously via {@link #onEventLoopIteration(Runnable)}.
+     *
+     * @param task to be removed.
+     *
+     * @return {@code true} if the task was removed as a result of this call.
+     */
     public boolean removeOnEventLoopIterationTask(Runnable task) {
-        ObjectUtil.checkNotNull(task, "task");
-        return tailTasks.remove(task);
+        return tailTasks.remove(ObjectUtil.checkNotNull(task, "task"));
     }
 
     @Override
@@ -154,7 +163,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         }
         for (;;) {
             Runnable task = tailTasks.poll();
-            if (null == task) {
+            if (task == null) {
                 break;
             }
             try {

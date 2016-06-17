@@ -34,6 +34,7 @@ import io.netty.microbench.util.AbstractSharedExecutorMicrobenchmark;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.ThreadLocalRandom;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
@@ -43,7 +44,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
 import java.net.SocketAddress;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
@@ -158,7 +158,7 @@ public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
     }
 
     @Benchmark
-    public void measureWritesWithFlushOnEach() throws InterruptedException {
+    public void compareWithFlushOnEach() throws InterruptedException {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
         if (flush) {
             for (int i = 0; i < writeCount; i++) {
@@ -174,7 +174,7 @@ public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
     }
 
     @Benchmark
-    public void measureWritesWithFlushAtEnd() throws InterruptedException {
+    public void compareWithFlushAtEnd() throws InterruptedException {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
         if (flush) {
             for (int i = 0; i < writeCount; i++) {
@@ -191,7 +191,7 @@ public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
     }
 
     @Benchmark
-    public void measureWritesWithFlushEvery5() throws InterruptedException {
+    public void compareWithFlushEvery5() throws InterruptedException {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
         if (flush) {
             for (int i = 0; i < writeCount; i++) {
@@ -211,7 +211,7 @@ public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
     }
 
     @Benchmark
-    public void measureWritesWithFlushEverySecond() throws InterruptedException {
+    public void compareWithFlushEverySecond() throws InterruptedException {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
         if (flush) {
             pipeline.channel().eventLoop().scheduleWithFixedDelay(new Runnable() {
@@ -236,7 +236,7 @@ public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
 
     private static ByteBuf createData(int length) {
         byte[] result = new byte[length];
-        new Random().nextBytes(result);
+        ThreadLocalRandom.current().nextBytes(result);
         return Unpooled.wrappedBuffer(result);
     }
 }

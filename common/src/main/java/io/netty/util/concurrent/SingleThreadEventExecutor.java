@@ -314,6 +314,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             fetchedAll = fetchFromScheduledTaskQueue();
             Runnable task = pollTask();
             if (task == null) {
+                afterRunningAllTasks(false);
                 return false;
             }
 
@@ -384,8 +385,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * Invoked before returning from {@link #runAllTasks()} and {@link #runAllTasks(long)} if and only if atleast one
-     * task was processed.
+     * Invoked before returning from {@link #runAllTasks()} and {@link #runAllTasks(long)}.
      *
      * @param timedOut {@code true} if and only if called from {@link #runAllTasks(long)} and the run timed out before
      * running all eligible tasks.
