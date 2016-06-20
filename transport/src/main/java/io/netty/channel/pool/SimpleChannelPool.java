@@ -103,7 +103,7 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public final Future<Channel> acquire() {
-        return acquire(bootstrap.group().next().<Channel>newPromise());
+        return acquire(bootstrap.config().group().next().<Channel>newPromise());
     }
 
     @Override
