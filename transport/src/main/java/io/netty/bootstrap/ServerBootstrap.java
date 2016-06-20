@@ -188,7 +188,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         }
         if (childGroup == null) {
             logger.warn("childGroup is not set. Using parentGroup instead.");
-            childGroup = group();
+            childGroup = config.group();
         }
         return this;
     }

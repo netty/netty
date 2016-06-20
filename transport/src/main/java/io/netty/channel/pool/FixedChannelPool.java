@@ -187,7 +187,7 @@ public final class FixedChannelPool extends SimpleChannelPool {
                 throw new Error();
             }
         }
-        executor = bootstrap.group().next();
+        executor = bootstrap.config().group().next();
         this.maxConnections = maxConnections;
         this.maxPendingAcquires = maxPendingAcquires;
     }

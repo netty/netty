@@ -111,9 +111,9 @@ public abstract class SSLEngineTest {
     public void tearDown() throws InterruptedException {
         if (serverChannel != null) {
             serverChannel.close().sync();
-            Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-            Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-            Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+            Future<?> serverGroup = sb.config().group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+            Future<?> serverChildGroup = sb.config().childGroup().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+            Future<?> clientGroup = cb.config().group().shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
             serverGroup.sync();
             serverChildGroup.sync();
             clientGroup.sync();

@@ -126,9 +126,9 @@ public class DataCompressionHttp2Test {
             serverChannel.close().sync();
             serverChannel = null;
         }
-        Future<?> serverGroup = sb.group().shutdownGracefully(0, 0, MILLISECONDS);
-        Future<?> serverChildGroup = sb.childGroup().shutdownGracefully(0, 0, MILLISECONDS);
-        Future<?> clientGroup = cb.group().shutdownGracefully(0, 0, MILLISECONDS);
+        Future<?> serverGroup = sb.config().group().shutdownGracefully(0, 0, MILLISECONDS);
+        Future<?> serverChildGroup = sb.config().childGroup().shutdownGracefully(0, 0, MILLISECONDS);
+        Future<?> clientGroup = cb.config().group().shutdownGracefully(0, 0, MILLISECONDS);
         serverGroup.sync();
         serverChildGroup.sync();
         clientGroup.sync();
