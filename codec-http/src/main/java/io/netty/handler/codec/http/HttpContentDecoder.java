@@ -97,6 +97,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             // If buffering is not an issue, add HttpObjectAggregator down the chain, it will set the header.
             // Otherwise, rely on LastHttpContent message.
             headers.remove(HttpHeaders.Names.CONTENT_LENGTH);
+            headers.set(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
 
             // set new content encoding,
             CharSequence targetContentEncoding = getTargetContentEncoding(contentEncoding);
