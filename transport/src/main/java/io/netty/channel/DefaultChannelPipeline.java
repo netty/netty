@@ -897,7 +897,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelActive() {
-        autoFlush = channel.config().getOption(ChannelOption.AUTO_FLUSH); // TODO: Have callback when changed.
+        autoFlush = channel.config().getOption(ChannelOption.AUTO_FLUSH);
         AbstractChannelHandlerContext.invokeChannelActive(head);
         return this;
     }
@@ -1013,16 +1013,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelFuture write(Object msg) {
-        ChannelFuture f = tail.write(msg);
-        wakeUpForAutoFlush();
-        return f;
+        return tail.write(msg);
     }
 
     @Override
     public final ChannelFuture write(Object msg, ChannelPromise promise) {
-        ChannelFuture f = tail.write(msg, promise);
-        wakeUpForAutoFlush();
-        return f;
+        return tail.write(msg, promise);
     }
 
     @Override
@@ -1143,7 +1139,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void wakeUpForAutoFlush() {
+    void wakeUpForAutoFlushIfRequired() {
         if (autoFlush && ENQUEUE_WAKEUP_TASK_UPDATER.compareAndSet(this, 0, 1)) {
             if (null == wakeupTask) {
                 wakeupTask = new Runnable() {

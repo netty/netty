@@ -815,6 +815,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 task = WriteTask.newInstance(next, m, promise);
             }
             safeExecute(executor, task, promise, m);
+            if (!flush) {
+                pipeline.wakeUpForAutoFlushIfRequired();
+            }
         }
     }
 

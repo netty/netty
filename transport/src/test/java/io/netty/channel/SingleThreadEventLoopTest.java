@@ -476,7 +476,7 @@ public class SingleThreadEventLoopTest {
                                  onIteration1.invocationCount.get(), is(0));
     }
 
-    private static class SingleThreadEventLoopA extends SingleThreadEventLoop {
+    private static final class SingleThreadEventLoopA extends SingleThreadEventLoop {
 
         final AtomicInteger cleanedUp = new AtomicInteger();
 
@@ -505,7 +505,7 @@ public class SingleThreadEventLoopTest {
         }
     }
 
-    private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
+    private static final class SingleThreadEventLoopB extends SingleThreadEventLoop {
 
         final LinkedBlockingQueue<Boolean> iterationEndSignal = new LinkedBlockingQueue<Boolean>(1);
 
@@ -542,7 +542,7 @@ public class SingleThreadEventLoopTest {
         }
     }
 
-    private static class CountingRunnable implements Runnable {
+    private static final class CountingRunnable implements Runnable {
 
         private final AtomicInteger invocationCount = new AtomicInteger();
 
