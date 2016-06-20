@@ -507,7 +507,7 @@ public class SingleThreadEventLoopTest {
 
     private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
 
-        final LinkedBlockingQueue<Boolean> iterationEndSignal = new LinkedBlockingQueue<Boolean>(32);
+        final LinkedBlockingQueue<Boolean> iterationEndSignal = new LinkedBlockingQueue<Boolean>(1);
 
         SingleThreadEventLoopB() {
             super(null, Executors.defaultThreadFactory(), false);
@@ -538,7 +538,7 @@ public class SingleThreadEventLoopTest {
         @Override
         protected void afterRunningAllTasks(boolean timedOut) {
             super.afterRunningAllTasks(timedOut);
-            iterationEndSignal.add(true);
+            iterationEndSignal.offer(true);
         }
     }
 

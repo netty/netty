@@ -95,6 +95,7 @@ public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
           .childHandler(new ChannelInitializer<Channel>() {
               @Override
               protected void initChannel(Channel ch) throws Exception {
+                  // Noop
               }
           });
 
