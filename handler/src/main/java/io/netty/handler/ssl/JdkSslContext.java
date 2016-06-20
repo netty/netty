@@ -341,17 +341,6 @@ public class JdkSslContext extends SslContext {
         return buildKeyManagerFactory(certChainFile, algorithm, keyFile, keyPassword, kmf);
     }
 
-    static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChain, PrivateKey key, String keyPassword,
-                                                              KeyManagerFactory kmf)
-            throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
-                   CertificateException, IOException {
-        String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
-        if (algorithm == null) {
-            algorithm = "SunX509";
-        }
-        return buildKeyManagerFactory(certChain, algorithm, key, keyPassword, kmf);
-    }
-
     /**
      * Build a {@link KeyManagerFactory} based upon a key algorithm, key file, key file password,
      * and a certificate chain.
@@ -374,21 +363,5 @@ public class JdkSslContext extends SslContext {
                     CertificateException, KeyException, UnrecoverableKeyException {
         return buildKeyManagerFactory(toX509Certificates(certChainFile), keyAlgorithm,
                                       toPrivateKey(keyFile, keyPassword), keyPassword, kmf);
-    }
-
-    static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChainFile,
-                                                              String keyAlgorithm, PrivateKey key,
-                                                              String keyPassword, KeyManagerFactory kmf)
-            throws KeyStoreException, NoSuchAlgorithmException, IOException,
-                   CertificateException, UnrecoverableKeyException {
-        char[] keyPasswordChars = keyPassword == null ? EmptyArrays.EMPTY_CHARS : keyPassword.toCharArray();
-        KeyStore ks = buildKeyStore(certChainFile, key, keyPasswordChars);
-        // Set up key manager factory to use our key store
-        if (kmf == null) {
-            kmf = KeyManagerFactory.getInstance(keyAlgorithm);
-        }
-        kmf.init(ks, keyPasswordChars);
-
-        return kmf;
     }
 }

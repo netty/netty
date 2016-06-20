@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
+import io.netty.util.internal.EmptyArrays;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -51,6 +52,8 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.Security;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -1033,5 +1036,39 @@ public abstract class SslContext {
         } catch (CertificateException e) {
             throw new SSLException(e);
         }
+    }
+
+    static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChain, PrivateKey key, String keyPassword,
+                                                    KeyManagerFactory kmf)
+            throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
+            CertificateException, IOException {
+        String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
+        if (algorithm == null) {
+            algorithm = "SunX509";
+        }
+        return buildKeyManagerFactory(certChain, algorithm, key, keyPassword, kmf);
+    }
+
+    static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChainFile,
+                                                    String keyAlgorithm, PrivateKey key,
+                                                    String keyPassword, KeyManagerFactory kmf)
+            throws KeyStoreException, NoSuchAlgorithmException, IOException,
+            CertificateException, UnrecoverableKeyException {
+        char[] keyPasswordChars = keyPassword == null ? EmptyArrays.EMPTY_CHARS : keyPassword.toCharArray();
+        KeyStore ks = buildKeyStore(certChainFile, key, keyPasswordChars);
+        // Set up key manager factory to use our key store
+        if (kmf == null) {
+            kmf = KeyManagerFactory.getInstance(keyAlgorithm);
+        }
+        kmf.init(ks, keyPasswordChars);
+
+        return kmf;
+    }
+
+    static KeyManagerFactory buildDefaultKeyManagerFactory()
+            throws NoSuchAlgorithmException, KeyStoreException, UnrecoverableKeyException {
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagerFactory.init(null, null);
+        return keyManagerFactory;
     }
 }
