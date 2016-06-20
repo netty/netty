@@ -20,7 +20,7 @@ import io.netty.util.DefaultAttributeMap;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.ThrowableUtils;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -276,7 +276,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
                         "An exception {}" +
                         "was thrown by a user handler's exceptionCaught() " +
                         "method while handling the following exception:",
-                        ThrowableUtils.stackTraceToString(error), cause);
+                        ThrowableUtil.stackTraceToString(error), cause);
                 } else if (logger.isWarnEnabled()) {
                     logger.warn(
                         "An exception '{}' [enable DEBUG level for full stacktrace] " +
