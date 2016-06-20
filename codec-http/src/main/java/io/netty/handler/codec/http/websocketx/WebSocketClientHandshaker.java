@@ -33,8 +33,8 @@ import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
@@ -43,11 +43,8 @@ import java.nio.channels.ClosedChannelException;
  * Base class for web socket client handshake implementations
  */
 public abstract class WebSocketClientHandshaker {
-    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = new ClosedChannelException();
-
-    static {
-        CLOSED_CHANNEL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-    }
+    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new ClosedChannelException(), WebSocketClientHandshaker.class, "processHandshake(...)");
 
     private final URI uri;
 

@@ -22,6 +22,7 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.apache.tomcat.jni.Buffer;
@@ -75,14 +76,16 @@ public final class OpenSslEngine extends SSLEngine {
     private static final Certificate[] EMPTY_CERTIFICATES = EmptyArrays.EMPTY_CERTIFICATES;
     private static final X509Certificate[] EMPTY_X509_CERTIFICATES = EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
 
-    private static final SSLException ENGINE_CLOSED = new SSLException("engine closed");
-    private static final SSLException RENEGOTIATION_UNSUPPORTED = new SSLException("renegotiation unsupported");
-    private static final SSLException ENCRYPTED_PACKET_OVERSIZED = new SSLException("encrypted packet oversized");
-    static {
-        ENGINE_CLOSED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-        RENEGOTIATION_UNSUPPORTED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-        ENCRYPTED_PACKET_OVERSIZED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    private static final SSLException BEGIN_HANDSHAKE_ENGINE_CLOSED = ThrowableUtil.unknownStackTrace(
+            new SSLException("engine closed"), OpenSslEngine.class, "beginHandshake()");
+    private static final SSLException HANDSHAKE_ENGINE_CLOSED = ThrowableUtil.unknownStackTrace(
+            new SSLException("engine closed"), OpenSslEngine.class, "handshake()");
+    private static final SSLException RENEGOTIATION_UNSUPPORTED =  ThrowableUtil.unknownStackTrace(
+            new SSLException("renegotiation unsupported"), OpenSslEngine.class, "beginHandshake()");
+    private static final SSLException ENCRYPTED_PACKET_OVERSIZED = ThrowableUtil.unknownStackTrace(
+            new SSLException("encrypted packet oversized"), OpenSslEngine.class, "unwrap(...)");
 
+    static {
         AtomicIntegerFieldUpdater<OpenSslEngine> destroyedUpdater =
                 PlatformDependent.newAtomicIntegerFieldUpdater(OpenSslEngine.class, "destroyed");
         if (destroyedUpdater == null) {
@@ -1150,7 +1153,7 @@ public final class OpenSslEngine extends SSLEngine {
     public synchronized void beginHandshake() throws SSLException {
         switch (handshakeState) {
             case STARTED_IMPLICITLY:
-                checkEngineClosed();
+                checkEngineClosed(BEGIN_HANDSHAKE_ENGINE_CLOSED);
 
                 // A user did not start handshake by calling this method by him/herself,
                 // but handshake has been started already by wrap() or unwrap() implicitly.
@@ -1197,9 +1200,9 @@ public final class OpenSslEngine extends SSLEngine {
         }
     }
 
-    private void checkEngineClosed() throws SSLException {
+    private void checkEngineClosed(SSLException cause) throws SSLException {
         if (engineClosed || isDestroyed()) {
-            throw ENGINE_CLOSED;
+            throw cause;
         }
     }
 
@@ -1212,7 +1215,7 @@ public final class OpenSslEngine extends SSLEngine {
         if (handshakeState == HandshakeState.FINISHED) {
             return FINISHED;
         }
-        checkEngineClosed();
+        checkEngineClosed(HANDSHAKE_ENGINE_CLOSED);
 
         // Check if we have a pending handshakeException and if so see if we need to consume all pending data from the
         // BIO first or can just shutdown and throw it now.

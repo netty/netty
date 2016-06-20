@@ -31,20 +31,17 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
-import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 final class HuffmanDecoder {
 
-    private static final IOException EOS_DECODED = new IOException("HPACK - EOS Decoded");
-    private static final IOException INVALID_PADDING = new IOException("HPACK - Invalid Padding");
-
-    static {
-        EOS_DECODED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-        INVALID_PADDING.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-    }
+    private static final IOException EOS_DECODED = ThrowableUtil.unknownStackTrace(
+            new IOException("HPACK - EOS Decoded"), HuffmanDecoder.class, "decode(...)");
+    private static final IOException INVALID_PADDING = ThrowableUtil.unknownStackTrace(
+            new IOException("HPACK - Invalid Padding"), HuffmanDecoder.class, "decode(...)");
 
     private final Node root;
 
