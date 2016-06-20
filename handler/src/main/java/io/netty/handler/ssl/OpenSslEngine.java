@@ -85,6 +85,8 @@ public final class OpenSslEngine extends SSLEngine {
     private static final Method GET_SERVER_NAMES_METHOD;
     private static final Method SET_SERVER_NAMES_METHOD;
     private static final Method GET_ASCII_NAME_METHOD;
+    private static final Method GET_USE_CIPHER_SUITES_ORDER_METHOD;
+    private static final Method SET_USE_CIPHER_SUITES_ORDER_METHOD;
 
     static {
         ENGINE_CLOSED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
@@ -98,11 +100,25 @@ public final class OpenSslEngine extends SSLEngine {
         }
         DESTROYED_UPDATER = destroyedUpdater;
 
+        Method getUseCipherSuitesOrderMethod = null;
+        Method setUseCipherSuitesOrderMethod = null;
         Class<?> sniHostNameClass = null;
         Method getAsciiNameMethod = null;
         Method getServerNamesMethod = null;
         Method setServerNamesMethod = null;
         if (PlatformDependent.javaVersion() >= 8) {
+            try {
+                getUseCipherSuitesOrderMethod = SSLParameters.class.getDeclaredMethod("getUseCipherSuitesOrder");
+                SSLParameters parameters = new SSLParameters();
+                @SuppressWarnings("unused")
+                Boolean order = (Boolean) getUseCipherSuitesOrderMethod.invoke(parameters);
+                setUseCipherSuitesOrderMethod = SSLParameters.class.getDeclaredMethod("setUseCipherSuitesOrder",
+                        boolean.class);
+                setUseCipherSuitesOrderMethod.invoke(parameters, true);
+            } catch (Throwable ignore) {
+                getUseCipherSuitesOrderMethod = null;
+                setUseCipherSuitesOrderMethod = null;
+            }
             try {
                 sniHostNameClass = Class.forName("javax.net.ssl.SNIHostName", false,
                         PlatformDependent.getClassLoader(OpenSslEngine.class));
@@ -124,6 +140,8 @@ public final class OpenSslEngine extends SSLEngine {
                 setServerNamesMethod = null;
             }
         }
+        GET_USE_CIPHER_SUITES_ORDER_METHOD = getUseCipherSuitesOrderMethod;
+        SET_USE_CIPHER_SUITES_ORDER_METHOD = setUseCipherSuitesOrderMethod;
         SNI_HOSTNAME_CLASS = sniHostNameClass;
         GET_ASCII_NAME_METHOD = getAsciiNameMethod;
         GET_SERVER_NAMES_METHOD = getServerNamesMethod;
@@ -1440,13 +1458,25 @@ public final class OpenSslEngine extends SSLEngine {
         if (version >= 7) {
             sslParameters.setEndpointIdentificationAlgorithm(endPointIdentificationAlgorithm);
             SslParametersUtils.setAlgorithmConstraints(sslParameters, algorithmConstraints);
-            if (version >= 8 && SET_SERVER_NAMES_METHOD != null && sniHostNames != null) {
-                try {
-                    SET_SERVER_NAMES_METHOD.invoke(sslParameters, sniHostNames);
-                } catch (IllegalAccessException e) {
-                    throw new Error(e);
-                } catch (InvocationTargetException e) {
-                    throw new Error(e);
+            if (version >= 8) {
+                if (SET_SERVER_NAMES_METHOD != null && sniHostNames != null) {
+                    try {
+                        SET_SERVER_NAMES_METHOD.invoke(sslParameters, sniHostNames);
+                    } catch (IllegalAccessException e) {
+                        throw new Error(e);
+                    } catch (InvocationTargetException e) {
+                        throw new Error(e);
+                    }
+                }
+                if (SET_USE_CIPHER_SUITES_ORDER_METHOD != null && !isDestroyed()) {
+                    try {
+                        SET_USE_CIPHER_SUITES_ORDER_METHOD.invoke(sslParameters,
+                                (SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
+                    } catch (IllegalAccessException e) {
+                        throw new Error(e);
+                    } catch (InvocationTargetException e) {
+                        throw new Error(e);
+                    }
                 }
             }
         }
@@ -1461,25 +1491,39 @@ public final class OpenSslEngine extends SSLEngine {
         if (version >= 7) {
             endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
             algorithmConstraints = sslParameters.getAlgorithmConstraints();
-
-            if (version >= 8 && SNI_HOSTNAME_CLASS != null && clientMode && !isDestroyed()) {
-                assert GET_SERVER_NAMES_METHOD != null;
-                assert GET_ASCII_NAME_METHOD != null;
-                try {
-                    List<?> servernames = (List<?>) GET_SERVER_NAMES_METHOD.invoke(sslParameters);
-                    for (Object serverName : servernames) {
-                        if (SNI_HOSTNAME_CLASS.isInstance(serverName)) {
-                            SSL.setTlsExtHostName(ssl, (String) GET_ASCII_NAME_METHOD.invoke(serverName));
-                        } else {
-                            throw new IllegalArgumentException("Only " + SNI_HOSTNAME_CLASS.getName()
-                                    + " instances are supported, but found: " + serverName);
+            if (version >= 8) {
+                if (SNI_HOSTNAME_CLASS != null && clientMode && !isDestroyed()) {
+                    assert GET_SERVER_NAMES_METHOD != null;
+                    assert GET_ASCII_NAME_METHOD != null;
+                    try {
+                        List<?> servernames = (List<?>) GET_SERVER_NAMES_METHOD.invoke(sslParameters);
+                        for (Object serverName : servernames) {
+                            if (SNI_HOSTNAME_CLASS.isInstance(serverName)) {
+                                SSL.setTlsExtHostName(ssl, (String) GET_ASCII_NAME_METHOD.invoke(serverName));
+                            } else {
+                                throw new IllegalArgumentException("Only " + SNI_HOSTNAME_CLASS.getName()
+                                        + " instances are supported, but found: " + serverName);
+                            }
                         }
+                        sniHostNames = servernames;
+                    } catch (IllegalAccessException e) {
+                        throw new Error(e);
+                    } catch (InvocationTargetException e) {
+                        throw new Error(e);
                     }
-                    sniHostNames = servernames;
-                } catch (IllegalAccessException e) {
-                    throw new Error(e);
-                } catch (InvocationTargetException e) {
-                    throw new Error(e);
+                }
+                if (GET_USE_CIPHER_SUITES_ORDER_METHOD != null && !isDestroyed()) {
+                    try {
+                        if ((Boolean) GET_USE_CIPHER_SUITES_ORDER_METHOD.invoke(sslParameters)) {
+                            SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
+                        } else {
+                            SSL.clearOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
+                        }
+                    } catch (IllegalAccessException e) {
+                        throw new Error(e);
+                    } catch (InvocationTargetException e) {
+                        throw new Error(e);
+                    }
                 }
             }
         }
