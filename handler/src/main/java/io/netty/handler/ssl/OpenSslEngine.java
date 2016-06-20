@@ -172,6 +172,7 @@ public final class OpenSslEngine extends SSLEngine {
     // OpenSSL state
     private long ssl;
     private long networkBIO;
+    private boolean certificateSet;
 
     private enum HandshakeState {
         /**
@@ -221,64 +222,35 @@ public final class OpenSslEngine extends SSLEngine {
     private final Certificate[] localCerts;
     private final ByteBuffer[] singleSrcBuffer = new ByteBuffer[1];
     private final ByteBuffer[] singleDstBuffer = new ByteBuffer[1];
+    private final OpenSslKeyMaterialManager keyMaterialManager;
 
     // This is package-private as we set it from OpenSslContext if an exception is thrown during
     // the verification step.
     SSLHandshakeException handshakeException;
 
-    /**
-     * Creates a new instance
-     *
-     * @param sslCtx an OpenSSL {@code SSL_CTX} object
-     * @param alloc the {@link ByteBufAllocator} that will be used by this engine
-     */
-    @Deprecated
-    public OpenSslEngine(long sslCtx, ByteBufAllocator alloc,
-                         @SuppressWarnings("unused") String fallbackApplicationProtocol) {
-        this(sslCtx, alloc, false, null, OpenSslContext.NONE_PROTOCOL_NEGOTIATOR, OpenSslEngineMap.EMPTY, false,
-                ClientAuth.NONE);
-    }
-
-    OpenSslEngine(long sslCtx, ByteBufAllocator alloc,
-                  boolean clientMode, OpenSslSessionContext sessionContext,
-                  OpenSslApplicationProtocolNegotiator apn, OpenSslEngineMap engineMap,
-                  boolean rejectRemoteInitiatedRenegation,
-                  ClientAuth clientAuth) {
-        this(sslCtx, alloc, clientMode, sessionContext, apn, engineMap, rejectRemoteInitiatedRenegation, null, -1,
-                null, clientAuth);
-    }
-
-    OpenSslEngine(long sslCtx, ByteBufAllocator alloc,
-                  boolean clientMode, OpenSslSessionContext sessionContext,
-                  OpenSslApplicationProtocolNegotiator apn, OpenSslEngineMap engineMap,
-                  boolean rejectRemoteInitiatedRenegation, String peerHost, int peerPort,
-                  Certificate[] localCerts,
-                  ClientAuth clientAuth) {
+    OpenSslEngine(OpenSslContext context, ByteBufAllocator alloc, String peerHost, int peerPort) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
-        if (sslCtx == 0) {
-            throw new NullPointerException("sslCtx");
-        }
-
         this.alloc = checkNotNull(alloc, "alloc");
-        this.apn = checkNotNull(apn, "apn");
-        ssl = SSL.newSSL(sslCtx, !clientMode);
-        session = new OpenSslSession(sessionContext);
+        apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
+        ssl = SSL.newSSL(context.ctx, !context.isClient());
+        session = new OpenSslSession(context.sessionContext());
         networkBIO = SSL.makeNetworkBIO(ssl);
-        this.clientMode = clientMode;
-        this.engineMap = engineMap;
-        this.rejectRemoteInitiatedRenegation = rejectRemoteInitiatedRenegation;
-        this.localCerts = localCerts;
+        clientMode = context.isClient();
+        engineMap = context.engineMap;
+        rejectRemoteInitiatedRenegation = context.rejectRemoteInitiatedRenegotiation;
+        localCerts = context.keyCertChain;
 
         // Set the client auth mode, this needs to be done via setClientAuth(...) method so we actually call the
         // needed JNI methods.
-        setClientAuth(clientMode ? ClientAuth.NONE : checkNotNull(clientAuth, "clientAuth"));
+        setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
 
         // Use SNI if peerHost was specified
         // See https://github.com/netty/netty/issues/4746
         if (clientMode && peerHost != null) {
             SSL.setTlsExtHostName(ssl, peerHost);
         }
+        keyMaterialManager = context.keyMaterialManager();
     }
 
     @Override
@@ -1287,6 +1259,11 @@ public final class OpenSslEngine extends SSLEngine {
             lastAccessed = System.currentTimeMillis();
         }
 
+        if (!certificateSet && keyMaterialManager != null) {
+            certificateSet = true;
+            keyMaterialManager.setKeyMaterial(this);
+        }
+
         int code = SSL.doHandshake(ssl);
         if (code <= 0) {
             // Check if we have a pending exception that was created during the handshake and if so throw it after
@@ -1311,6 +1288,7 @@ public final class OpenSslEngine extends SSLEngine {
         }
         // if SSL_do_handshake returns > 0 or sslError == SSL.SSL_ERROR_NAME it means the handshake was finished.
         session.handshakeFinished();
+        engineMap.remove(ssl);
         return FINISHED;
     }
 

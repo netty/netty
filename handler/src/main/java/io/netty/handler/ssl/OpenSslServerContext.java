@@ -23,7 +23,9 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
+import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.security.KeyStore;
@@ -38,6 +40,7 @@ import static io.netty.util.internal.ObjectUtil.*;
 public final class OpenSslServerContext extends OpenSslContext {
     private static final byte[] ID = new byte[] {'n', 'e', 't', 't', 'y'};
     private final OpenSslServerSessionContext sessionContext;
+    private final OpenSslKeyMaterialManager keyMaterialManager;
 
     /**
      * Creates a new instance.
@@ -346,63 +349,43 @@ public final class OpenSslServerContext extends OpenSslContext {
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
-            checkKeyManagerFactory(keyManagerFactory);
             checkNotNull(keyCertChain, "keyCertChainFile");
             checkNotNull(key, "keyFile");
 
-            if (keyPassword == null) {
-                keyPassword = "";
-            }
-
             synchronized (OpenSslContext.class) {
-                /* Set certificate verification policy. */
-                SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
-                long keyCertChainBio = 0;
                 try {
-                    keyCertChainBio = toBIO(keyCertChain);
-                    /* Load the certificate chain. We must skip the first cert when server mode */
-                    if (!SSLContext.setCertificateChainBio(ctx, keyCertChainBio, true)) {
-                        long error = SSL.getLastErrorNumber();
-                        if (OpenSsl.isError(error)) {
-                            String err = SSL.getErrorString(error);
-                            throw new SSLException(
-                                    "failed to set certificate chain: " + err);
+                    SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
+                    if (!OpenSsl.supportsKeyManagerFactory()) {
+                        if (keyManagerFactory != null) {
+                            throw new IllegalArgumentException(
+                                    "KeyManagerFactory not supported");
                         }
-                    }
-                } catch (Exception e) {
-                    throw new SSLException(
-                            "failed to set certificate chain", e);
-                } finally {
-                    if (keyCertChainBio != 0) {
-                        SSL.freeBIO(keyCertChainBio);
-                    }
-                }
 
-                /* Load the certificate file and private key. */
-                long keyBio = 0;
-                keyCertChainBio = 0;
-                try {
-                    keyBio = toBIO(key);
-                    keyCertChainBio = toBIO(keyCertChain);
-                    if (!SSLContext.setCertificateBio(
-                            ctx, keyCertChainBio, keyBio, keyPassword, SSL.SSL_AIDX_RSA)) {
-                        long error = SSL.getLastErrorNumber();
-                        if (OpenSsl.isError(error)) {
-                            String err = SSL.getErrorString(error);
-                            throw new SSLException("failed to set certificate and key: " + err);
+                        /* Set certificate verification policy. */
+                        SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
+
+                        setKeyMaterial(ctx, keyCertChain, key, keyPassword);
+                        keyMaterialManager = null;
+                    } else {
+                        if (keyCertChain != null) {
+                            keyManagerFactory = buildKeyManagerFactory(
+                                    keyCertChain, key, keyPassword, keyManagerFactory);
+                        }
+
+                        if (keyManagerFactory != null) {
+                            X509KeyManager keyManager = chooseX509KeyManager(
+                                    buildKeyManagerFactory(keyCertChain, key, keyPassword, keyManagerFactory)
+                                            .getKeyManagers());
+                            keyMaterialManager = useExtendedKeyManager(keyManager) ?
+                                    new OpenSslExtendedKeyMaterialManager(
+                                            (X509ExtendedKeyManager) keyManager, keyPassword) :
+                                    new OpenSslKeyMaterialManager(keyManager, keyPassword);
+                        } else {
+                            keyMaterialManager = null;
                         }
                     }
-                } catch (SSLException e) {
-                    throw e;
                 } catch (Exception e) {
                     throw new SSLException("failed to set certificate and key", e);
-                } finally {
-                    if (keyBio != 0) {
-                        SSL.freeBIO(keyBio);
-                    }
-                    if (keyCertChainBio != 0) {
-                        SSL.freeBIO(keyCertChainBio);
-                    }
                 }
                 try {
                     if (trustCertCollection != null) {
@@ -446,6 +429,11 @@ public final class OpenSslServerContext extends OpenSslContext {
     @Override
     public OpenSslServerSessionContext sessionContext() {
         return sessionContext;
+    }
+
+    @Override
+    OpenSslKeyMaterialManager keyMaterialManager() {
+        return keyMaterialManager;
     }
 
     private static final class TrustManagerVerifyCallback extends AbstractCertificateVerifier {

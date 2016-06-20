@@ -17,6 +17,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -48,6 +49,7 @@ public final class OpenSsl {
     static final Set<String> AVAILABLE_CIPHER_SUITES;
     private static final Set<String> AVAILABLE_OPENSSL_CIPHER_SUITES;
     private static final Set<String> AVAILABLE_JAVA_CIPHER_SUITES;
+    private static final boolean SUPPORTS_KEYMANAGER_FACTORY;
 
     // Protocols
     static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
@@ -117,9 +119,12 @@ public final class OpenSsl {
 
         if (cause == null) {
             final Set<String> availableOpenSslCipherSuites = new LinkedHashSet<String>(128);
+            boolean supportsKeyManagerFactory = false;
             final long aprPool = Pool.create(0);
             try {
                 final long sslCtx = SSLContext.make(aprPool, SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
+                long privateKeyBio = 0;
+                long certBio = 0;
                 try {
                     SSLContext.setOptions(sslCtx, SSL.SSL_OP_ALL);
                     SSLContext.setCipherSuite(sslCtx, "ALL");
@@ -132,8 +137,22 @@ public final class OpenSsl {
                             }
                             availableOpenSslCipherSuites.add(c);
                         }
+                        try {
+                            SelfSignedCertificate cert = new SelfSignedCertificate();
+                            certBio = OpenSslContext.toBIO(cert.cert());
+                            SSL.setCertificateChainBio(ssl, certBio, false);
+                            supportsKeyManagerFactory = true;
+                        } catch (Throwable ignore) {
+                            logger.debug("KeyManagerFactory not supported.");
+                        }
                     } finally {
                         SSL.freeSSL(ssl);
+                        if (privateKeyBio != 0) {
+                            SSL.freeBIO(privateKeyBio);
+                        }
+                        if (certBio != 0) {
+                            SSL.freeBIO(certBio);
+                        }
                     }
                 } finally {
                     SSLContext.free(sslCtx);
@@ -163,10 +182,12 @@ public final class OpenSsl {
                 availableCipherSuites.add(cipher);
             }
             AVAILABLE_CIPHER_SUITES = availableCipherSuites;
+            SUPPORTS_KEYMANAGER_FACTORY = supportsKeyManagerFactory;
         } else {
             AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_JAVA_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_CIPHER_SUITES = Collections.emptySet();
+            SUPPORTS_KEYMANAGER_FACTORY = false;
         }
     }
 
@@ -266,6 +287,13 @@ public final class OpenSsl {
             cipherSuite = converted;
         }
         return AVAILABLE_OPENSSL_CIPHER_SUITES.contains(cipherSuite);
+    }
+
+    /**
+     * Returns {@code true} if {@link javax.net.ssl.KeyManagerFactory} is supported when using OpenSSL.
+     */
+    public static boolean supportsKeyManagerFactory() {
+        return SUPPORTS_KEYMANAGER_FACTORY;
     }
 
     static boolean isError(long errorCode) {
