@@ -25,7 +25,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.ThrowableUtils;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -677,7 +677,7 @@ public final class ChannelOutboundBuffer {
             } else {
                 logger.warn(
                         "Failed to mark a promise as success because it has failed already: {}, unnotified cause {}",
-                        promise, ThrowableUtils.stackTraceToString(err));
+                        promise, ThrowableUtil.stackTraceToString(err));
             }
         }
     }
@@ -690,7 +690,7 @@ public final class ChannelOutboundBuffer {
             } else {
                 logger.warn(
                         "Failed to mark a promise as failure because it has failed already: {}, unnotified cause {}",
-                        promise, ThrowableUtils.stackTraceToString(err), cause);
+                        promise, ThrowableUtil.stackTraceToString(err), cause);
             }
         }
     }
