@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.RejectedExecutionHandler;
+import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -28,25 +30,27 @@ import java.util.concurrent.ThreadFactory;
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
-    protected static final int MAX_PENDING_TASKS = Math.max(16,
+    protected static final int DEFAULT_MAX_PENDING_TASKS = Math.max(16,
             SystemPropertyUtil.getInt("io.netty.eventLoop.maxPendingTasks", Integer.MAX_VALUE));
 
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
-        this(parent, threadFactory, addTaskWakesUp, MAX_PENDING_TASKS);
+        this(parent, threadFactory, addTaskWakesUp, DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject());
     }
 
     protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
-        this(parent, executor, addTaskWakesUp, MAX_PENDING_TASKS);
+        this(parent, executor, addTaskWakesUp, DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject());
     }
 
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory,
-                                    boolean addTaskWakesUp, int maxPendingTasks) {
-        super(parent, threadFactory, addTaskWakesUp, maxPendingTasks);
+                                    boolean addTaskWakesUp, int maxPendingTasks,
+                                    RejectedExecutionHandler rejectedExecutionHandler) {
+        super(parent, threadFactory, addTaskWakesUp, maxPendingTasks, rejectedExecutionHandler);
     }
 
     protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor,
-                                    boolean addTaskWakesUp, int maxPendingTasks) {
-        super(parent, executor, addTaskWakesUp, maxPendingTasks);
+                                    boolean addTaskWakesUp, int maxPendingTasks,
+                                    RejectedExecutionHandler rejectedExecutionHandler) {
+        super(parent, executor, addTaskWakesUp, maxPendingTasks, rejectedExecutionHandler);
     }
 
     @Override

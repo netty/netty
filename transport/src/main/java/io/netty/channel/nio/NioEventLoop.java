@@ -22,6 +22,7 @@ import io.netty.channel.EventLoopException;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.IntSupplier;
+import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -129,8 +130,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private boolean needsToSelectAgain;
 
     NioEventLoop(NioEventLoopGroup parent, Executor executor, SelectorProvider selectorProvider,
-                 SelectStrategy strategy) {
-        super(parent, executor, false);
+                 SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
+        super(parent, executor, false, DEFAULT_MAX_PENDING_TASKS, rejectedExecutionHandler);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }

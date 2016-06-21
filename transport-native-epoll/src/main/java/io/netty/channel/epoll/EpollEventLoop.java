@@ -24,6 +24,7 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -75,8 +76,9 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
 
-    EpollEventLoop(EventLoopGroup parent, Executor executor, int maxEvents, SelectStrategy strategy) {
-        super(parent, executor, false);
+    EpollEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
+                   SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
+        super(parent, executor, false, DEFAULT_MAX_PENDING_TASKS, rejectedExecutionHandler);
         selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
         if (maxEvents == 0) {
             allowGrowing = true;
