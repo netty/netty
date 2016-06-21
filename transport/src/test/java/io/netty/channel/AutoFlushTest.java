@@ -59,6 +59,13 @@ public class AutoFlushTest {
     }
 
     @Test(timeout = 60000)
+    public void testAutoFlushWithWriteOnContext() throws Exception {
+        environment.connect();
+        ByteBuf data = newDataBuffer();
+        environment.pipeline.firstContext().write(data).sync();
+    }
+
+    @Test(timeout = 60000)
     public void testAutoFlushMultipleWrites() throws Exception {
         environment.connect();
         final ChannelPromise aggreggatedPromise = environment.clientChannel.newPromise();
@@ -124,7 +131,7 @@ public class AutoFlushTest {
                      .handler(new ChannelInitializer<Channel>() {
                          @Override
                          protected void initChannel(Channel ch) throws Exception {
-                             // Nothing to do.
+                             ch.pipeline().addFirst(new LoggingHandler());
                          }
                      });
         }

@@ -369,16 +369,19 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         assert inEventLoop();
         fetchFromScheduledTaskQueue();
 
-        switch (runAllTasksFrom(taskQueue, timeoutNanos, setLastExecutionTime)) {
-        case NoTasksFound:
+        DeadlineRunStatus status = runAllTasksFrom(taskQueue, timeoutNanos, setLastExecutionTime);
+        switch (status) {
+        case NO_TASKS_FOUND:
             afterRunningAllTasks(false);
             return false;
-        case TimedOut:
+        case TIMED_OUT:
             afterRunningAllTasks(true);
             break;
-        case RanAtleastOnce:
+        case RAN_AT_LEAST_ONCE:
             afterRunningAllTasks(false);
             break;
+        default:
+            throw new IllegalStateException("Unknown result: " + status);
         }
         return true;
     }
@@ -396,7 +399,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                                 Action<Long> lastExecutionTimeCallback) {
         Runnable task = pollTaskFrom(taskQueue);
         if (task == null) {
-            return DeadlineRunStatus.NoTasksFound;
+            return DeadlineRunStatus.NO_TASKS_FOUND;
         }
 
         final long deadline = ScheduledFutureTask.nanoTime() + timeoutNanos;
@@ -416,7 +419,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if ((runTasks & 0x3F) == 0) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 if (lastExecutionTime >= deadline) {
-                    return DeadlineRunStatus.TimedOut;
+                    return DeadlineRunStatus.TIMED_OUT;
                 }
             }
 
@@ -427,13 +430,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
         }
         lastExecutionTimeCallback.call(lastExecutionTime);
-        return DeadlineRunStatus.RanAtleastOnce;
+        return DeadlineRunStatus.RAN_AT_LEAST_ONCE;
     }
 
     protected enum DeadlineRunStatus {
-        NoTasksFound,
-        TimedOut,
-        RanAtleastOnce
+        NO_TASKS_FOUND,
+        TIMED_OUT,
+        RAN_AT_LEAST_ONCE
     }
 
     protected interface Action<T> {

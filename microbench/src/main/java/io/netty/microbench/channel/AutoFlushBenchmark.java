@@ -15,42 +15,23 @@
  */
 package io.netty.microbench.channel;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
-import io.netty.channel.SelectStrategy;
-import io.netty.channel.SelectStrategyFactory;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.microbench.util.AbstractSharedExecutorMicrobenchmark;
-import io.netty.util.IntSupplier;
-import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.concurrent.Future;
-import io.netty.util.internal.ThreadLocalRandom;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
 
-import java.net.SocketAddress;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
+import java.util.concurrent.TimeoutException;
 
 import static java.util.concurrent.TimeUnit.*;
 
 @State(Scope.Benchmark)
-public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
+public class AutoFlushBenchmark extends AbstractChannelBenchmark {
 
     @Param({ "true", "false" })
     public boolean flush;
@@ -58,108 +39,18 @@ public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
     @Param({ "1", "10", "100" })
     public int writeCount;
 
-    private ChannelPipeline pipeline;
-    private ByteBuf payload;
-    private Channel serverChannel;
-    private Channel clientChannel;
-    private NioEventLoopGroup serverEventloop;
-    private NioEventLoopGroup clientEventLoop;
-
     @Setup(Level.Trial)
     public void setup() {
-        serverEventloop = new NioEventLoopGroup(1, new DefaultThreadFactory("server", true));
-        clientEventLoop = new NioEventLoopGroup(1, new DefaultThreadFactory("client", true)) {
+        setup0(EMPTY_INITIALIZER, new ChannelInitializer<Channel>() {
             @Override
-            protected EventLoop newChild(Executor executor, Object... args) throws Exception {
-                return super.newChild(executor, args[0], new SelectStrategyFactory() {
-                    @Override
-                    public SelectStrategy newSelectStrategy() {
-                        return new SelectStrategy() {
-
-                            @Override
-                            public int calculateStrategy(IntSupplier selectSupplier, boolean hasTasks)
-                                    throws Exception {
-                                if (hasTasks) {
-                                    return selectSupplier.get();
-                                }
-                                return SELECT;
-                            }
-                        };
-                    }
-                });
+            protected void initChannel(Channel ch) throws Exception {
+                ch.config().setOption(ChannelOption.AUTO_FLUSH, !flush);
             }
-        };
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(serverEventloop)
-          .channel(NioServerSocketChannel.class)
-          .childHandler(new ChannelInitializer<Channel>() {
-              @Override
-              protected void initChannel(Channel ch) throws Exception {
-                  // Noop
-              }
-          });
-
-        payload = createData(1024);
-
-        final CountDownLatch latch = new CountDownLatch(1);
-        Bootstrap cb = new Bootstrap();
-        if (!flush) {
-            cb.option(ChannelOption.AUTO_FLUSH, true);
-        }
-
-        cb.group(clientEventLoop)
-          .channel(NioSocketChannel.class)
-          .handler(new ChannelInitializer<Channel>() {
-              @Override
-              protected void initChannel(Channel ch) throws Exception {
-                  pipeline = ch.pipeline();
-                  latch.countDown();
-              }
-          });
-
-        ChannelFuture bind = sb.bind(0);
-        SocketAddress serverAddr;
-        try {
-            bind.sync().await(1, MINUTES);
-            serverChannel = bind.channel();
-            serverAddr = serverChannel.localAddress();
-            ChannelFuture clientChannelFuture = cb.connect(serverAddr);
-            clientChannelFuture.sync().await(1, MINUTES);
-            clientChannel = clientChannelFuture.channel();
-        } catch (InterruptedException ie) {
-            throw new RuntimeException(ie);
-        }
-
-        AbstractSharedExecutorMicrobenchmark.executor(clientEventLoop.next());
-    }
-
-    @TearDown(Level.Trial)
-    public void teardown() throws Exception {
-        if (clientChannel != null) {
-            clientChannel.close();
-        }
-        if (serverChannel != null) {
-            serverChannel.close();
-        }
-        Future<?> serverGroup = null;
-        Future<?> clientGroup = null;
-
-        if (serverEventloop != null) {
-            serverGroup = serverEventloop.shutdownGracefully(0, 0, MILLISECONDS);
-        }
-        if (clientEventLoop != null) {
-            clientGroup = clientEventLoop.shutdownGracefully(0, 0, MILLISECONDS);
-        }
-        if (serverGroup != null) {
-            serverGroup.sync();
-        }
-        if (clientGroup != null) {
-            clientGroup.sync();
-        }
+        });
     }
 
     @Benchmark
-    public void compareWithFlushOnEach() throws InterruptedException {
+    public void compareWithFlushOnEach() throws InterruptedException, TimeoutException {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
         if (flush) {
             for (int i = 0; i < writeCount; i++) {
@@ -171,11 +62,11 @@ public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
             }
         }
 
-        lastWriteFuture.sync().await(10, SECONDS);
+        awaitCompletion(lastWriteFuture);
     }
 
     @Benchmark
-    public void compareWithFlushAtEnd() throws InterruptedException {
+    public void compareWithFlushAtEnd() throws InterruptedException, TimeoutException {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
         if (flush) {
             for (int i = 0; i < writeCount; i++) {
@@ -188,11 +79,11 @@ public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
             }
         }
 
-        lastWriteFuture.sync().await(10, SECONDS);
+        awaitCompletion(lastWriteFuture);
     }
 
     @Benchmark
-    public void compareWithFlushEvery5() throws InterruptedException {
+    public void compareWithFlushEvery5() throws InterruptedException, TimeoutException {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
         if (flush) {
             for (int i = 0; i < writeCount; i++) {
@@ -208,11 +99,11 @@ public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
             }
         }
 
-        lastWriteFuture.sync().await(10, SECONDS);
+        awaitCompletion(lastWriteFuture);
     }
 
     @Benchmark
-    public void compareWithFlushEverySecond() throws InterruptedException {
+    public void compareWithFlushEverySecond() throws InterruptedException, TimeoutException {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
         if (flush) {
             pipeline.channel().eventLoop().scheduleWithFixedDelay(new Runnable() {
@@ -232,12 +123,6 @@ public class AutoFlushBenchmark extends AbstractSharedExecutorMicrobenchmark {
             }
         }
 
-        lastWriteFuture.sync().await(10, SECONDS);
-    }
-
-    private static ByteBuf createData(int length) {
-        byte[] result = new byte[length];
-        ThreadLocalRandom.current().nextBytes(result);
-        return Unpooled.wrappedBuffer(result);
+        awaitCompletion(lastWriteFuture);
     }
 }
