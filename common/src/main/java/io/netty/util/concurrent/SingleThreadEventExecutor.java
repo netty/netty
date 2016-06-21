@@ -16,6 +16,7 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -38,6 +39,9 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  *
  */
 public abstract class SingleThreadEventExecutor extends AbstractScheduledEventExecutor {
+
+    static final int DEFAULT_MAX_PENDING_TASKS = Math.max(16,
+            SystemPropertyUtil.getInt("io.netty.eventexecutor.maxPendingTasks", Integer.MAX_VALUE));
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);
@@ -73,6 +77,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final Semaphore threadLock = new Semaphore(0);
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private final boolean addTaskWakesUp;
+    private final int maxPendingTasks;
 
     private long lastExecutionTime;
 
@@ -95,7 +100,21 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     protected SingleThreadEventExecutor(
             EventExecutorGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
+        this(parent, threadFactory, addTaskWakesUp, DEFAULT_MAX_PENDING_TASKS);
+    }
 
+    /**
+     * Create a new instance
+     *
+     * @param parent            the {@link EventExecutorGroup} which is the parent of this instance and belongs to it
+     * @param threadFactory     the {@link ThreadFactory} which will be used for the used {@link Thread}
+     * @param addTaskWakesUp    {@code true} if and only if invocation of {@link #addTask(Runnable)} will wake up the
+     *                          executor thread
+     * @param maxPendingTasks   the maximum number of pending tasks before new tasks will be rejected.
+     */
+    @SuppressWarnings("deprecation")
+    protected SingleThreadEventExecutor(
+            EventExecutorGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp, int maxPendingTasks) {
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
         }
@@ -155,7 +174,16 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
         });
         threadProperties = new DefaultThreadProperties(thread);
+        this.maxPendingTasks = Math.max(16, maxPendingTasks);
         taskQueue = newTaskQueue();
+    }
+
+    /**
+     * @deprecated Please use and override {@link #newTaskQueue(int)}.
+     */
+    @Deprecated
+    protected Queue<Runnable> newTaskQueue() {
+        return newTaskQueue(maxPendingTasks);
     }
 
     /**
@@ -164,8 +192,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * calls on the this {@link Queue} it may make sense to {@code @Override} this and return some more performant
      * implementation that does not support blocking operations at all.
      */
-    protected Queue<Runnable> newTaskQueue() {
-        return new LinkedBlockingQueue<Runnable>();
+    protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+        return new LinkedBlockingQueue<Runnable>(maxPendingTasks);
     }
 
     @Override
