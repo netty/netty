@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -27,12 +28,25 @@ import java.util.concurrent.ThreadFactory;
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
+    protected static final int MAX_PENDING_TASKS = Math.max(16,
+            SystemPropertyUtil.getInt("io.netty.eventLoop.maxPendingTasks", Integer.MAX_VALUE));
+
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
-        super(parent, threadFactory, addTaskWakesUp);
+        this(parent, threadFactory, addTaskWakesUp, MAX_PENDING_TASKS);
     }
 
     protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
-        super(parent, executor, addTaskWakesUp);
+        this(parent, executor, addTaskWakesUp, MAX_PENDING_TASKS);
+    }
+
+    protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory,
+                                    boolean addTaskWakesUp, int maxPendingTasks) {
+        super(parent, threadFactory, addTaskWakesUp, maxPendingTasks);
+    }
+
+    protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor,
+                                    boolean addTaskWakesUp, int maxPendingTasks) {
+        super(parent, executor, addTaskWakesUp, maxPendingTasks);
     }
 
     @Override
