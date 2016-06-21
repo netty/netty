@@ -48,8 +48,14 @@ public final class DefaultEventExecutor extends SingleThreadEventExecutor {
         super(parent, executor, true);
     }
 
-    public DefaultEventExecutor(EventExecutorGroup parent, Executor executor, int maxPendingTasks) {
-        super(parent, executor, true, maxPendingTasks);
+    public DefaultEventExecutor(EventExecutorGroup parent, ThreadFactory threadFactory, int maxPendingTasks,
+                                RejectedExecutionHandler rejectedExecutionHandler) {
+        super(parent, threadFactory, true, maxPendingTasks, rejectedExecutionHandler);
+    }
+
+    public DefaultEventExecutor(EventExecutorGroup parent, Executor executor, int maxPendingTasks,
+                                RejectedExecutionHandler rejectedExecutionHandler) {
+        super(parent, executor, true, maxPendingTasks, rejectedExecutionHandler);
     }
 
     @Override
