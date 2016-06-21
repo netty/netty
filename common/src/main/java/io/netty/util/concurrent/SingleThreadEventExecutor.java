@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -42,7 +43,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  */
 public abstract class SingleThreadEventExecutor extends AbstractScheduledEventExecutor {
 
-    static final int DEFAULT_MAX_PENDING_TASKS = Math.max(16,
+    static final int DEFAULT_MAX_PENDING_EXECUTOR_TASKS = Math.max(16,
             SystemPropertyUtil.getInt("io.netty.eventexecutor.maxPendingTasks", Integer.MAX_VALUE));
 
     private static final InternalLogger logger =
@@ -99,6 +100,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private final boolean addTaskWakesUp;
     private final int maxPendingTasks;
+    private final RejectedExecutionHandler rejectedExecutionHandler;
 
     private long lastExecutionTime;
 
@@ -132,10 +134,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @param addTaskWakesUp    {@code true} if and only if invocation of {@link #addTask(Runnable)} will wake up the
      *                          executor thread
      * @param maxPendingTasks   the maximum number of pending tasks before new tasks will be rejected.
+     * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
      */
     protected SingleThreadEventExecutor(
-            EventExecutorGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp, int maxPendingTasks) {
-        this(parent, new ThreadPerTaskExecutor(threadFactory), addTaskWakesUp, maxPendingTasks);
+            EventExecutorGroup parent, ThreadFactory threadFactory,
+            boolean addTaskWakesUp, int maxPendingTasks, RejectedExecutionHandler rejectedHandler) {
+        this(parent, new ThreadPerTaskExecutor(threadFactory), addTaskWakesUp, maxPendingTasks, rejectedHandler);
     }
 
     /**
@@ -147,7 +151,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      *                          executor thread
      */
     protected SingleThreadEventExecutor(EventExecutorGroup parent, Executor executor, boolean addTaskWakesUp) {
-        this(parent, executor, addTaskWakesUp, DEFAULT_MAX_PENDING_TASKS);
+        this(parent, executor, addTaskWakesUp, DEFAULT_MAX_PENDING_EXECUTOR_TASKS, RejectedExecutionHandlers.reject());
     }
 
     /**
@@ -158,20 +162,17 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @param addTaskWakesUp    {@code true} if and only if invocation of {@link #addTask(Runnable)} will wake up the
      *                          executor thread
      * @param maxPendingTasks   the maximum number of pending tasks before new tasks will be rejected.
+     * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
      */
-    @SuppressWarnings("deprecation")
     protected SingleThreadEventExecutor(EventExecutorGroup parent, Executor executor,
-                                        boolean addTaskWakesUp, int maxPendingTasks) {
+                                        boolean addTaskWakesUp, int maxPendingTasks,
+                                        RejectedExecutionHandler rejectedHandler) {
         super(parent);
-
-        if (executor == null) {
-            throw new NullPointerException("executor");
-        }
-
         this.addTaskWakesUp = addTaskWakesUp;
-        this.executor = executor;
         this.maxPendingTasks = Math.max(16, maxPendingTasks);
+        this.executor = ObjectUtil.checkNotNull(executor, "executor");
         taskQueue = newTaskQueue();
+        rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
     }
 
     /**
@@ -326,15 +327,16 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         if (task == null) {
             throw new NullPointerException("task");
         }
+        if (!offerTask(task)) {
+            rejectedExecutionHandler.rejected(task, this);
+        }
+    }
+
+    final boolean offerTask(Runnable task) {
         if (isShutdown()) {
             reject();
         }
-        try {
-            taskQueue.add(task);
-        } catch (IllegalStateException e) {
-            // Just use add and catch the exception as this should happen only very rarely.
-            throw new RejectedExecutionException("Internal task queue is full", e);
-        }
+        return taskQueue.offer(task);
     }
 
     /**
@@ -459,7 +461,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     protected void wakeup(boolean inEventLoop) {
         if (!inEventLoop || STATE_UPDATER.get(this) == ST_SHUTTING_DOWN) {
-            taskQueue.add(WAKEUP_TASK);
+            // Use offer as we actually only need this to unblock the thread and if offer fails we do not care as there
+            // is already something in the queue.
+            taskQueue.offer(WAKEUP_TASK);
         }
     }
 

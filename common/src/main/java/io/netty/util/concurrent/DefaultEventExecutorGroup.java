@@ -37,7 +37,8 @@ public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
      */
     public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory) {
-        this(nThreads, threadFactory, DefaultEventExecutor.DEFAULT_MAX_PENDING_TASKS);
+        this(nThreads, threadFactory, SingleThreadEventExecutor.DEFAULT_MAX_PENDING_EXECUTOR_TASKS,
+                RejectedExecutionHandlers.reject());
     }
 
     /**
@@ -46,13 +47,15 @@ public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
      * @param nThreads          the number of threads that will be used by this instance.
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
      * @param maxPendingTasks   the maximum number of pending tasks before new tasks will be rejected.
+     * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
      */
-    public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory, int maxPendingTasks) {
-        super(nThreads, threadFactory, maxPendingTasks);
+    public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory, int maxPendingTasks,
+                                     RejectedExecutionHandler rejectedHandler) {
+        super(nThreads, threadFactory, maxPendingTasks, rejectedHandler);
     }
 
     @Override
     protected EventExecutor newChild(Executor executor, Object... args) throws Exception {
-        return new DefaultEventExecutor(this, executor, (Integer) args[0]);
+        return new DefaultEventExecutor(this, executor, (Integer) args[0], (RejectedExecutionHandler) args[1]);
     }
 }
