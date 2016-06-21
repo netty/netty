@@ -48,6 +48,10 @@ public final class DefaultEventExecutor extends SingleThreadEventExecutor {
         super(parent, executor, true);
     }
 
+    public DefaultEventExecutor(EventExecutorGroup parent, Executor executor, int maxPendingTasks) {
+        super(parent, executor, true, maxPendingTasks);
+    }
+
     @Override
     protected void run() {
         for (;;) {

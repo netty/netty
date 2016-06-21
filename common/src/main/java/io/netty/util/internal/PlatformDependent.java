@@ -87,7 +87,12 @@ public final class PlatformDependent {
     private static final boolean DIRECT_BUFFER_PREFERRED =
             HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
-    private static final int MAX_MPSC_CAPACITY =  1024 * 1024; // TODO: Maybe make this configurable ?
+    private static final int MPSC_CHUNK_SIZE =  1024;
+    private static final int MIN_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * 2;
+    private static final int DEFAULT_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * MPSC_CHUNK_SIZE;
+    // This is currently the maximal allowed capacity in JCTools.
+    // See https://github.com/JCTools/JCTools/issues/115
+    private static final int MAX_ALLOWED_MPSC_CAPACITY =  Integer.MAX_VALUE >> 2;
 
     private static final long BYTE_ARRAY_BASE_OFFSET = PlatformDependent0.byteArrayBaseOffset();
 
@@ -727,7 +732,20 @@ public final class PlatformDependent {
      * consumer (one thread!).
      */
     public static <T> Queue<T> newMpscQueue() {
-        return hasUnsafe() ? new MpscChunkedArrayQueue<T>(1024, MAX_MPSC_CAPACITY, true)
+        return newMpscQueue(DEFAULT_MAX_MPSC_CAPACITY);
+    }
+
+    /**
+     * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and a single
+     * consumer (one thread!).
+     */
+    public static <T> Queue<T> newMpscQueue(int maxCapacity) {
+        return hasUnsafe() ?
+                new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE,
+                        // Calculate the max capacity which can not be bigger then MAX_ALLOWED_MPSC_CAPACITY.
+                        // This is forced by the MpscChunkedArrayQueue implementation as will try to round it
+                        // up to the next power of two and so will overflow otherwise.
+                        Math.max(Math.min(maxCapacity, MAX_ALLOWED_MPSC_CAPACITY), MIN_MAX_MPSC_CAPACITY), true)
                 : new MpscLinkedAtomicQueue<T>();
     }
 
