@@ -20,6 +20,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.RejectedExecutionHandler;
+import io.netty.util.concurrent.RejectedExecutionHandlers;
 
 import java.util.concurrent.ThreadFactory;
 
@@ -88,7 +90,13 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     @Deprecated
     public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce,
                                SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, threadFactory, maxEventsAtOnce, selectStrategyFactory);
+        super(nThreads, threadFactory, maxEventsAtOnce, selectStrategyFactory, RejectedExecutionHandlers.reject());
+    }
+
+    public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce,
+                               SelectStrategyFactory selectStrategyFactory,
+                               RejectedExecutionHandler rejectedExecutionHandler) {
+        super(nThreads, threadFactory, maxEventsAtOnce, selectStrategyFactory, rejectedExecutionHandler);
     }
 
     /**
@@ -104,6 +112,6 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     @Override
     protected EventExecutor newChild(ThreadFactory threadFactory, Object... args) throws Exception {
         return new EpollEventLoop(this, threadFactory, (Integer) args[0],
-                                  ((SelectStrategyFactory) args[1]).newSelectStrategy());
+                ((SelectStrategyFactory) args[1]).newSelectStrategy(), (RejectedExecutionHandler) args[2]);
     }
 }
