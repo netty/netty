@@ -31,6 +31,7 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
+import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.equalsConstantTime;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 class HeaderField {
@@ -72,9 +73,8 @@ class HeaderField {
             return false;
         }
         HeaderField other = (HeaderField) obj;
-        boolean nameEquals = HpackUtil.equals(name, other.name);
-        boolean valueEquals = HpackUtil.equals(value, other.value);
-        return nameEquals && valueEquals;
+        // To avoid short circuit behavior a bitwise operator is used instead of a boolean operator.
+        return (equalsConstantTime(name, other.name) & equalsConstantTime(value, other.value)) != 0;
     }
 
     @Override

@@ -40,6 +40,7 @@ import java.util.Arrays;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.INCREMENTAL;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NEVER;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NONE;
+import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.equalsConstantTime;
 
 public final class Encoder {
 
@@ -304,9 +305,8 @@ public final class Encoder {
         int h = hash(name);
         int i = index(h);
         for (HeaderEntry e = headerFields[i]; e != null; e = e.next) {
-            if (e.hash == h &&
-                    HpackUtil.equals(name, e.name) &&
-                    HpackUtil.equals(value, e.value)) {
+            // To avoid short circuit behavior a bitwise operator is used instead of a boolean operator.
+            if (e.hash == h && (equalsConstantTime(name, e.name) & equalsConstantTime(value, e.value)) != 0) {
                 return e;
             }
         }
@@ -325,7 +325,7 @@ public final class Encoder {
         int i = index(h);
         int index = -1;
         for (HeaderEntry e = headerFields[i]; e != null; e = e.next) {
-            if (e.hash == h && HpackUtil.equals(name, e.name)) {
+            if (e.hash == h && equalsConstantTime(name, e.name) != 0) {
                 index = e.index;
                 break;
             }

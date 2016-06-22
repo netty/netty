@@ -38,6 +38,8 @@ import io.netty.util.AsciiString;
 import java.util.Arrays;
 import java.util.List;
 
+import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.equalsConstantTime;
+
 final class StaticTable {
 
     // Appendix A: Static Table
@@ -153,10 +155,10 @@ final class StaticTable {
         // Note this assumes all entries for a given header field are sequential.
         while (index <= length) {
             HeaderField entry = getEntry(index);
-            if (!HpackUtil.equals(name, entry.name)) {
+            if (equalsConstantTime(name, entry.name) == 0) {
                 break;
             }
-            if (HpackUtil.equals(value, entry.value)) {
+            if (equalsConstantTime(value, entry.value) != 0) {
                 return index;
             }
             index++;

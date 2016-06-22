@@ -381,9 +381,6 @@ final class PlatformDependent0 {
     }
 
     static boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
-        if (length == 0) {
-            return true;
-        }
         final long baseOffset1 = BYTE_ARRAY_BASE_OFFSET + startPos1;
         final long baseOffset2 = BYTE_ARRAY_BASE_OFFSET + startPos2;
         final int remainingBytes = length & 7;
@@ -415,6 +412,47 @@ final class PlatformDependent0 {
             return UNSAFE.getByte(bytes1, baseOffset1) == UNSAFE.getByte(bytes2, baseOffset2);
         default:
             return true;
+        }
+    }
+
+    static int equalsConstantTime(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
+        long result = 0;
+        final long baseOffset1 = BYTE_ARRAY_BASE_OFFSET + startPos1;
+        final long baseOffset2 = BYTE_ARRAY_BASE_OFFSET + startPos2;
+        final int remainingBytes = length & 7;
+        final long end = baseOffset1 + remainingBytes;
+        for (long i = baseOffset1 - 8 + length, j = baseOffset2 - 8 + length; i >= end; i -= 8, j -= 8) {
+            result |= UNSAFE.getLong(bytes1, i) ^ UNSAFE.getLong(bytes2, j);
+        }
+        switch (remainingBytes) {
+            case 7:
+                return ConstantTimeUtils.equalsConstantTime(result |
+                        (UNSAFE.getInt(bytes1, baseOffset1 + 3) ^ UNSAFE.getInt(bytes2, baseOffset2 + 3)) |
+                        (UNSAFE.getChar(bytes1, baseOffset1 + 1) ^ UNSAFE.getChar(bytes2, baseOffset2 + 1)) |
+                        (UNSAFE.getByte(bytes1, baseOffset1) ^ UNSAFE.getByte(bytes2, baseOffset2)), 0);
+            case 6:
+                return ConstantTimeUtils.equalsConstantTime(result |
+                        (UNSAFE.getInt(bytes1, baseOffset1 + 2) ^ UNSAFE.getInt(bytes2, baseOffset2 + 2)) |
+                        (UNSAFE.getChar(bytes1, baseOffset1) ^ UNSAFE.getChar(bytes2, baseOffset2)), 0);
+            case 5:
+                return ConstantTimeUtils.equalsConstantTime(result |
+                        (UNSAFE.getInt(bytes1, baseOffset1 + 1) ^ UNSAFE.getInt(bytes2, baseOffset2 + 1)) |
+                        (UNSAFE.getByte(bytes1, baseOffset1) ^ UNSAFE.getByte(bytes2, baseOffset2)), 0);
+            case 4:
+                return ConstantTimeUtils.equalsConstantTime(result |
+                        (UNSAFE.getInt(bytes1, baseOffset1) ^ UNSAFE.getInt(bytes2, baseOffset2)), 0);
+            case 3:
+                return ConstantTimeUtils.equalsConstantTime(result |
+                        (UNSAFE.getChar(bytes1, baseOffset1 + 1) ^ UNSAFE.getChar(bytes2, baseOffset2 + 1)) |
+                        (UNSAFE.getByte(bytes1, baseOffset1) ^ UNSAFE.getByte(bytes2, baseOffset2)), 0);
+            case 2:
+                return ConstantTimeUtils.equalsConstantTime(result |
+                        (UNSAFE.getChar(bytes1, baseOffset1) ^ UNSAFE.getChar(bytes2, baseOffset2)), 0);
+            case 1:
+                return ConstantTimeUtils.equalsConstantTime(result |
+                        (UNSAFE.getByte(bytes1, baseOffset1) ^ UNSAFE.getByte(bytes2, baseOffset2)), 0);
+            default:
+                return ConstantTimeUtils.equalsConstantTime(result, 0);
         }
     }
 
