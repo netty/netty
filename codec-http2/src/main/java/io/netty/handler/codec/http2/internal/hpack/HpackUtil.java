@@ -31,19 +31,38 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
+import io.netty.util.AsciiString;
+import io.netty.util.internal.ConstantTimeUtils;
+import io.netty.util.internal.PlatformDependent;
+
 final class HpackUtil {
     /**
-     * A string compare that doesn't leak timing information.
+     * Compare two {@link CharSequence} objects without leaking timing information.
+     * <p>
+     * The {@code int} return type is intentional and is designed to allow cascading of constant time operations:
+     * <pre>
+     *     String s1 = "foo";
+     *     String s2 = "foo";
+     *     String s3 = "foo";
+     *     String s4 = "goo";
+     *     boolean equals = (equalsConstantTime(s1, s2) & equalsConstantTime(s3, s4)) != 0;
+     * </pre>
+     * @param s1 the first value.
+     * @param s2 the second value.
+     * @return {@code 0} if not equal. {@code 1} if equal.
      */
-    static boolean equals(CharSequence s1, CharSequence s2) {
-        if (s1.length() != s2.length()) {
-            return false;
+    static int equalsConstantTime(CharSequence s1, CharSequence s2) {
+        if (s1 instanceof AsciiString && s2 instanceof AsciiString) {
+            if (s1.length() != s2.length()) {
+                return 0;
+            }
+            AsciiString s1Ascii = (AsciiString) s1;
+            AsciiString s2Ascii = (AsciiString) s2;
+            return PlatformDependent.equalsConstantTime(s1Ascii.array(), s1Ascii.arrayOffset(),
+                                                        s2Ascii.array(), s2Ascii.arrayOffset(), s1.length());
         }
-        char c = 0;
-        for (int i = 0; i < s1.length(); i++) {
-            c |= s1.charAt(i) ^ s2.charAt(i);
-        }
-        return c == 0;
+
+        return ConstantTimeUtils.equalsConstantTime(s1, s2);
     }
 
     // Section 6.2. Literal Header Field Representation

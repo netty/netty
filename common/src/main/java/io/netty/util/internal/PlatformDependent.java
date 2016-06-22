@@ -59,6 +59,7 @@ import static io.netty.util.internal.PlatformDependent0.HASH_CODE_ASCII_SEED;
 import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiCompute;
 import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiSanitize;
 import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiSanitizeAsByte;
+import static io.netty.util.internal.PlatformDependent0.unalignedAccess;
 
 /**
  * Utility that detects various properties specific to the current runtime
@@ -633,10 +634,36 @@ public final class PlatformDependent {
      * by the caller.
      */
     public static boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
-        if (!hasUnsafe() || !PlatformDependent0.unalignedAccess()) {
-            return equalsSafe(bytes1, startPos1, bytes2, startPos2, length);
-        }
-        return PlatformDependent0.equals(bytes1, startPos1, bytes2, startPos2, length);
+        return !hasUnsafe() || !unalignedAccess() ?
+                  equalsSafe(bytes1, startPos1, bytes2, startPos2, length) :
+                  PlatformDependent0.equals(bytes1, startPos1, bytes2, startPos2, length);
+    }
+
+    /**
+     * Compare two {@code byte} arrays for equality without leaking timing information.
+     * For performance reasons no bounds checking on the parameters is performed.
+     * <p>
+     * The {@code int} return type is intentional and is designed to allow cascading of constant time operations:
+     * <pre>
+     *     byte[] s1 = new {1, 2, 3};
+     *     byte[] s2 = new {1, 2, 3};
+     *     byte[] s3 = new {1, 2, 3};
+     *     byte[] s4 = new {4, 5, 6};
+     *     boolean equals = (equalsConstantTime(s1, 0, s2, 0, s1.length) &
+     *                       equalsConstantTime(s3, 0, s4, 0, s3.length)) != 0;
+     * </pre>
+     * @param bytes1 the first byte array.
+     * @param startPos1 the position (inclusive) to start comparing in {@code bytes1}.
+     * @param bytes2 the second byte array.
+     * @param startPos2 the position (inclusive) to start comparing in {@code bytes2}.
+     * @param length the amount of bytes to compare. This is assumed to be validated as not going out of bounds
+     * by the caller.
+     * @return {@code 0} if not equal. {@code 1} if equal.
+     */
+    public static int equalsConstantTime(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
+        return !hasUnsafe() || !unalignedAccess() ?
+                  ConstantTimeUtils.equalsConstantTime(bytes1, startPos1, bytes2, startPos2, length) :
+                  PlatformDependent0.equalsConstantTime(bytes1, startPos1, bytes2, startPos2, length);
     }
 
     /**
@@ -649,7 +676,7 @@ public final class PlatformDependent {
      * The resulting hash code will be case insensitive.
      */
     public static int hashCodeAscii(byte[] bytes, int startPos, int length) {
-        if (!hasUnsafe() || !PlatformDependent0.unalignedAccess()) {
+        if (!hasUnsafe() || !unalignedAccess()) {
             return hashCodeAsciiSafe(bytes, startPos, length);
         }
         return PlatformDependent0.hashCodeAscii(bytes, startPos, length);
@@ -666,7 +693,7 @@ public final class PlatformDependent {
      * The resulting hash code will be case insensitive.
      */
     public static int hashCodeAscii(CharSequence bytes) {
-        if (!hasUnsafe() || !PlatformDependent0.unalignedAccess()) {
+        if (!hasUnsafe() || !unalignedAccess()) {
             return hashCodeAsciiSafe(bytes);
         } else if (PlatformDependent0.hasCharArray(bytes)) {
             return PlatformDependent0.hashCodeAscii(PlatformDependent0.charArray(bytes));
