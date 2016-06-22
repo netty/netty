@@ -37,10 +37,8 @@ import java.security.cert.Certificate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.net.ssl.SSLEngine;
@@ -153,24 +151,6 @@ public final class OpenSslEngine extends SSLEngine {
     private static final int MAX_PLAINTEXT_LENGTH = 16 * 1024; // 2^14
     private static final int MAX_COMPRESSED_LENGTH = MAX_PLAINTEXT_LENGTH + 1024;
     private static final int MAX_CIPHERTEXT_LENGTH = MAX_COMPRESSED_LENGTH + 1024;
-
-    // Protocols
-    private static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
-    private static final String PROTOCOL_SSL_V2 = "SSLv2";
-    private static final String PROTOCOL_SSL_V3 = "SSLv3";
-    private static final String PROTOCOL_TLS_V1 = "TLSv1";
-    private static final String PROTOCOL_TLS_V1_1 = "TLSv1.1";
-    private static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
-
-    private static final String[] SUPPORTED_PROTOCOLS = {
-            PROTOCOL_SSL_V2_HELLO,
-            PROTOCOL_SSL_V2,
-            PROTOCOL_SSL_V3,
-            PROTOCOL_TLS_V1,
-            PROTOCOL_TLS_V1_1,
-            PROTOCOL_TLS_V1_2
-    };
-    private static final Set<String> SUPPORTED_PROTOCOLS_SET = new HashSet<String>(Arrays.asList(SUPPORTED_PROTOCOLS));
 
     // Header (5) + Data (2^14) + Compression (1024) + Encryption (1024) + MAC (20) + Padding (256)
     static final int MAX_ENCRYPTED_PACKET_LENGTH = MAX_CIPHERTEXT_LENGTH + 5 + 20 + 256;
@@ -1038,8 +1018,7 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public String[] getSupportedCipherSuites() {
-        Set<String> availableCipherSuites = OpenSsl.availableCipherSuites();
-        return availableCipherSuites.toArray(new String[availableCipherSuites.size()]);
+        return OpenSsl.AVAILABLE_CIPHER_SUITES.toArray(new String[OpenSsl.AVAILABLE_CIPHER_SUITES.size()]);
     }
 
     @Override
@@ -1110,14 +1089,14 @@ public final class OpenSslEngine extends SSLEngine {
 
     @Override
     public String[] getSupportedProtocols() {
-        return SUPPORTED_PROTOCOLS.clone();
+        return OpenSsl.SUPPORTED_PROTOCOLS_SET.toArray(new String[OpenSsl.SUPPORTED_PROTOCOLS_SET.size()]);
     }
 
     @Override
     public String[] getEnabledProtocols() {
         List<String> enabled = InternalThreadLocalMap.get().arrayList();
         // Seems like there is no way to explict disable SSLv2Hello in openssl so it is always enabled
-        enabled.add(PROTOCOL_SSL_V2_HELLO);
+        enabled.add(OpenSsl.PROTOCOL_SSL_V2_HELLO);
 
         int opts;
         synchronized (this) {
@@ -1128,19 +1107,19 @@ public final class OpenSslEngine extends SSLEngine {
             }
         }
         if ((opts & SSL.SSL_OP_NO_TLSv1) == 0) {
-            enabled.add(PROTOCOL_TLS_V1);
+            enabled.add(OpenSsl.PROTOCOL_TLS_V1);
         }
         if ((opts & SSL.SSL_OP_NO_TLSv1_1) == 0) {
-            enabled.add(PROTOCOL_TLS_V1_1);
+            enabled.add(OpenSsl.PROTOCOL_TLS_V1_1);
         }
         if ((opts & SSL.SSL_OP_NO_TLSv1_2) == 0) {
-            enabled.add(PROTOCOL_TLS_V1_2);
+            enabled.add(OpenSsl.PROTOCOL_TLS_V1_2);
         }
         if ((opts & SSL.SSL_OP_NO_SSLv2) == 0) {
-            enabled.add(PROTOCOL_SSL_V2);
+            enabled.add(OpenSsl.PROTOCOL_SSL_V2);
         }
         if ((opts & SSL.SSL_OP_NO_SSLv3) == 0) {
-            enabled.add(PROTOCOL_SSL_V3);
+            enabled.add(OpenSsl.PROTOCOL_SSL_V3);
         }
         return enabled.toArray(new String[enabled.size()]);
     }
@@ -1157,18 +1136,18 @@ public final class OpenSslEngine extends SSLEngine {
         boolean tlsv1_1 = false;
         boolean tlsv1_2 = false;
         for (String p: protocols) {
-            if (!SUPPORTED_PROTOCOLS_SET.contains(p)) {
+            if (!OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(p)) {
                 throw new IllegalArgumentException("Protocol " + p + " is not supported.");
             }
-            if (p.equals(PROTOCOL_SSL_V2)) {
+            if (p.equals(OpenSsl.PROTOCOL_SSL_V2)) {
                 sslv2 = true;
-            } else if (p.equals(PROTOCOL_SSL_V3)) {
+            } else if (p.equals(OpenSsl.PROTOCOL_SSL_V3)) {
                 sslv3 = true;
-            } else if (p.equals(PROTOCOL_TLS_V1)) {
+            } else if (p.equals(OpenSsl.PROTOCOL_TLS_V1)) {
                 tlsv1 = true;
-            } else if (p.equals(PROTOCOL_TLS_V1_1)) {
+            } else if (p.equals(OpenSsl.PROTOCOL_TLS_V1_1)) {
                 tlsv1_1 = true;
-            } else if (p.equals(PROTOCOL_TLS_V1_2)) {
+            } else if (p.equals(OpenSsl.PROTOCOL_TLS_V1_2)) {
                 tlsv1_2 = true;
             }
         }

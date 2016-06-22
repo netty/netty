@@ -27,7 +27,9 @@ import org.apache.tomcat.jni.Pool;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -43,7 +45,28 @@ public final class OpenSsl {
     private static final String UNKNOWN = "unknown";
     private static final Throwable UNAVAILABILITY_CAUSE;
 
-    private static final Set<String> AVAILABLE_CIPHER_SUITES;
+    static final Set<String> AVAILABLE_CIPHER_SUITES;
+    private static final Set<String> AVAILABLE_OPENSSL_CIPHER_SUITES;
+    private static final Set<String> AVAILABLE_JAVA_CIPHER_SUITES;
+
+    // Protocols
+    static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
+    static final String PROTOCOL_SSL_V2 = "SSLv2";
+    static final String PROTOCOL_SSL_V3 = "SSLv3";
+    static final String PROTOCOL_TLS_V1 = "TLSv1";
+    static final String PROTOCOL_TLS_V1_1 = "TLSv1.1";
+    static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
+
+    private static final String[] SUPPORTED_PROTOCOLS = {
+            PROTOCOL_SSL_V2_HELLO,
+            PROTOCOL_SSL_V2,
+            PROTOCOL_SSL_V3,
+            PROTOCOL_TLS_V1,
+            PROTOCOL_TLS_V1_1,
+            PROTOCOL_TLS_V1_2
+    };
+    static final Set<String> SUPPORTED_PROTOCOLS_SET = Collections.unmodifiableSet(
+            new HashSet<String>(Arrays.asList(SUPPORTED_PROTOCOLS)));
 
     static {
         Throwable cause = null;
@@ -93,7 +116,7 @@ public final class OpenSsl {
         UNAVAILABILITY_CAUSE = cause;
 
         if (cause == null) {
-            final Set<String> availableCipherSuites = new LinkedHashSet<String>(128);
+            final Set<String> availableOpenSslCipherSuites = new LinkedHashSet<String>(128);
             final long aprPool = Pool.create(0);
             try {
                 final long sslCtx = SSLContext.make(aprPool, SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
@@ -104,10 +127,10 @@ public final class OpenSsl {
                     try {
                         for (String c: SSL.getCiphers(ssl)) {
                             // Filter out bad input.
-                            if (c == null || c.length() == 0 || availableCipherSuites.contains(c)) {
+                            if (c == null || c.length() == 0 || availableOpenSslCipherSuites.contains(c)) {
                                 continue;
                             }
-                            availableCipherSuites.add(c);
+                            availableOpenSslCipherSuites.add(c);
                         }
                     } finally {
                         SSL.freeSSL(ssl);
@@ -120,9 +143,29 @@ public final class OpenSsl {
             } finally {
                 Pool.destroy(aprPool);
             }
+            AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.unmodifiableSet(availableOpenSslCipherSuites);
 
-            AVAILABLE_CIPHER_SUITES = Collections.unmodifiableSet(availableCipherSuites);
+            final Set<String> availableJavaCipherSuites = new LinkedHashSet<String>(
+                    AVAILABLE_OPENSSL_CIPHER_SUITES.size() * 2);
+            for (String cipher: AVAILABLE_OPENSSL_CIPHER_SUITES) {
+                // Included converted but also openssl cipher name
+                availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "TLS"));
+                availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "SSL"));
+            }
+            AVAILABLE_JAVA_CIPHER_SUITES = Collections.unmodifiableSet(availableJavaCipherSuites);
+
+            final Set<String> availableCipherSuites = new LinkedHashSet<String>(
+                    AVAILABLE_OPENSSL_CIPHER_SUITES.size() + AVAILABLE_JAVA_CIPHER_SUITES.size());
+            for (String cipher: AVAILABLE_OPENSSL_CIPHER_SUITES) {
+                availableCipherSuites.add(cipher);
+            }
+            for (String cipher: AVAILABLE_JAVA_CIPHER_SUITES) {
+                availableCipherSuites.add(cipher);
+            }
+            AVAILABLE_CIPHER_SUITES = availableCipherSuites;
         } else {
+            AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.emptySet();
+            AVAILABLE_JAVA_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_CIPHER_SUITES = Collections.emptySet();
         }
     }
@@ -190,11 +233,27 @@ public final class OpenSsl {
     }
 
     /**
+     * @deprecated use {@link #availableOpenSslCipherSuites()}
+     */
+    @Deprecated
+    public static Set<String> availableCipherSuites() {
+        return availableOpenSslCipherSuites();
+    }
+
+    /**
      * Returns all the available OpenSSL cipher suites.
      * Please note that the returned array may include the cipher suites that are insecure or non-functional.
      */
-    public static Set<String> availableCipherSuites() {
-        return AVAILABLE_CIPHER_SUITES;
+    public static Set<String> availableOpenSslCipherSuites() {
+        return AVAILABLE_OPENSSL_CIPHER_SUITES;
+    }
+
+    /**
+     * Returns all the available cipher suites (Java-style).
+     * Please note that the returned array may include the cipher suites that are insecure or non-functional.
+     */
+    public static Set<String> availableJavaCipherSuites() {
+        return AVAILABLE_JAVA_CIPHER_SUITES;
     }
 
     /**
@@ -206,7 +265,7 @@ public final class OpenSsl {
         if (converted != null) {
             cipherSuite = converted;
         }
-        return AVAILABLE_CIPHER_SUITES.contains(cipherSuite);
+        return AVAILABLE_OPENSSL_CIPHER_SUITES.contains(cipherSuite);
     }
 
     static boolean isError(long errorCode) {
