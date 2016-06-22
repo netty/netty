@@ -119,16 +119,13 @@ public final class HttpProxyHandler extends ProxyHandler {
             rhost = raddr.getAddress().getHostAddress();
         }
 
+        final String host = rhost + ':' + raddr.getPort();
         FullHttpRequest req = new DefaultFullHttpRequest(
-                HttpVersion.HTTP_1_0, HttpMethod.CONNECT,
-                rhost + ':' + raddr.getPort(),
+                HttpVersion.HTTP_1_1, HttpMethod.CONNECT,
+                host,
                 Unpooled.EMPTY_BUFFER, false);
 
-        SocketAddress proxyAddress = proxyAddress();
-        if (proxyAddress instanceof InetSocketAddress) {
-            InetSocketAddress hostAddr = (InetSocketAddress) proxyAddress;
-            req.headers().set(HttpHeaderNames.HOST, hostAddr.getHostString() + ':' + hostAddr.getPort());
-        }
+        req.headers().set(HttpHeaderNames.HOST, host);
 
         if (authorization != null) {
             req.headers().set(HttpHeaderNames.PROXY_AUTHORIZATION, authorization);
