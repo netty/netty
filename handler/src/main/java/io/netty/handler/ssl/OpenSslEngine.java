@@ -219,6 +219,9 @@ public final class OpenSslEngine extends SSLEngine {
 
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
 
+    // Updated once a new handshake is started and so the SSLSession reused.
+    private volatile long lastAccessed = -1;
+
     private String endPointIdentificationAlgorithm;
     // Store as object as AlgorithmConstraints only exists since java 7.
     private Object algorithmConstraints;
@@ -1252,6 +1255,9 @@ public final class OpenSslEngine extends SSLEngine {
                 }
 
                 SSL.setState(ssl, SSL.SSL_ST_ACCEPT);
+
+                lastAccessed = System.currentTimeMillis();
+
                 // fall-through
             case NOT_STARTED:
                 handshakeState = HandshakeState.STARTED_EXPLICITLY;
@@ -1298,6 +1304,9 @@ public final class OpenSslEngine extends SSLEngine {
 
         // Adding the OpenSslEngine to the OpenSslEngineMap so it can be used in the AbstractCertificateVerifier.
         engineMap.add(this);
+        if (lastAccessed == -1) {
+            lastAccessed = System.currentTimeMillis();
+        }
 
         int code = SSL.doHandshake(ssl);
         if (code <= 0) {
@@ -1595,8 +1604,9 @@ public final class OpenSslEngine extends SSLEngine {
 
         @Override
         public long getLastAccessedTime() {
-            // TODO: Add proper implementation
-            return getCreationTime();
+            long lastAccessed = OpenSslEngine.this.lastAccessed;
+            // if lastAccessed is -1 we will just return the creation time as the handshake was not started yet.
+            return lastAccessed == -1 ? getCreationTime() : lastAccessed;
         }
 
         @Override
