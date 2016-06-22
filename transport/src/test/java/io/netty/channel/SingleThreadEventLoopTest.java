@@ -542,7 +542,7 @@ public class SingleThreadEventLoopTest {
         }
     }
 
-    private static final class CountingRunnable implements Runnable {
+    static final class CountingRunnable implements Runnable {
 
         private final AtomicInteger invocationCount = new AtomicInteger();
 

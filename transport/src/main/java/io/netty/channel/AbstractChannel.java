@@ -409,7 +409,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return pipeline.voidPromise();
     }
 
-    protected void autoFlushModified(boolean autoFlush) {
+    final void autoFlushModified(boolean autoFlush) {
         this.autoFlush = autoFlush;
         pipeline.autoFlushModified(autoFlush);
     }
@@ -807,7 +807,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             outboundBuffer.addMessage(msg, size, promise);
 
-            if (isAutoFlushEnabled()) {
+            if (isAutoFlush()) {
                 if (autoFlushTask == null) {
                     autoFlushTask = new AutoFlushTask(AbstractChannel.this);
                 }
@@ -971,7 +971,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
-    protected boolean isAutoFlushEnabled() {
+    private boolean isAutoFlush() {
         return autoFlush;
     }
 
@@ -1077,6 +1077,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private final AbstractChannel channel;
         private final SingleThreadEventLoop eventLoop;
         private boolean writePending;
+        private boolean running;
 
         AutoFlushTask(AbstractChannel channel) {
             this.channel = channel;
@@ -1091,20 +1092,26 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void run() {
+            running = true;
             if (writePending) {
-                writePending = false;
                 channel.flush();
+                writePending = false;
 
-                if (channel.isActive() && channel.isAutoFlushEnabled()) {
+                if (channel.isActive() && channel.isAutoFlush()) {
                     eventLoop.onEventLoopIteration(this);
                 }
             }
+            running = false;
         }
 
         void onWrite() {
             if (!writePending) {
                 writePending = true;
-                eventLoop.onEventLoopIteration(this);
+                if (!running) {
+                    // Re-entrant (write done from flush) should not enqueue the task again as it will be done at the
+                    // end of loop.
+                    eventLoop.onEventLoopIteration(this);
+                }
             }
         }
     }

@@ -50,20 +50,20 @@ public class ChannelWriteBenchmark extends AbstractChannelBenchmark {
     }
 
     @Benchmark
-    public void measureWriteWithFlushAtEnd() throws InterruptedException, TimeoutException {
+    public void measureWriteWithFlushAtEnd() throws Exception {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
         for (int i = 0; i < writeCount; i++) {
-            lastWriteFuture = pipeline.write(payload.retain());
+            lastWriteFuture = pipeline.write(payload.retainedDuplicate());
         }
         pipeline.flush();
         awaitCompletion(lastWriteFuture);
     }
 
     @Benchmark
-    public void measureWriteWithFlushOnEach() throws InterruptedException, TimeoutException {
+    public void measureWriteWithFlushOnEach() throws Exception {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
         for (int i = 0; i < writeCount; i++) {
-            lastWriteFuture = pipeline.writeAndFlush(payload.retain());
+            lastWriteFuture = pipeline.writeAndFlush(payload.retainedDuplicate());
         }
         awaitCompletion(lastWriteFuture);
     }

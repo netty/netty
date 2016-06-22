@@ -1183,7 +1183,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    protected void autoFlushModified(boolean autoFlush) {
+    final void autoFlushModified(boolean autoFlush) {
         this.autoFlush = autoFlush;
     }
 

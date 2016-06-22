@@ -17,8 +17,13 @@ package io.netty.microbench.channel;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.concurrent.ScheduledFuture;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
@@ -34,7 +39,7 @@ import static java.util.concurrent.TimeUnit.*;
 public class AutoFlushBenchmark extends AbstractChannelBenchmark {
 
     @Param({ "true", "false" })
-    public boolean flush;
+    public boolean autoFlush;
 
     @Param({ "1", "10", "100" })
     public int writeCount;
@@ -44,21 +49,21 @@ public class AutoFlushBenchmark extends AbstractChannelBenchmark {
         setup0(EMPTY_INITIALIZER, new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.config().setOption(ChannelOption.AUTO_FLUSH, !flush);
+                ch.config().setOption(ChannelOption.AUTO_FLUSH, autoFlush);
             }
         });
     }
 
     @Benchmark
-    public void compareWithFlushOnEach() throws InterruptedException, TimeoutException {
+    public void compareWithFlushOnEach() throws Exception {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
-        if (flush) {
+        if (!autoFlush) {
             for (int i = 0; i < writeCount; i++) {
-                lastWriteFuture = pipeline.writeAndFlush(payload.retain());
+                lastWriteFuture = pipeline.writeAndFlush(payload.retainedDuplicate());
             }
         } else {
             for (int i = 0; i < writeCount; i++) {
-                lastWriteFuture = pipeline.write(payload.retain());
+                lastWriteFuture = pipeline.write(payload.retainedDuplicate());
             }
         }
 
@@ -66,16 +71,16 @@ public class AutoFlushBenchmark extends AbstractChannelBenchmark {
     }
 
     @Benchmark
-    public void compareWithFlushAtEnd() throws InterruptedException, TimeoutException {
+    public void compareWithFlushAtEnd() throws Exception {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
-        if (flush) {
+        if (!autoFlush) {
             for (int i = 0; i < writeCount; i++) {
-                lastWriteFuture = pipeline.write(payload.retain());
+                lastWriteFuture = pipeline.write(payload.retainedDuplicate());
             }
             pipeline.flush();
         } else {
             for (int i = 0; i < writeCount; i++) {
-                lastWriteFuture = pipeline.write(payload.retain());
+                lastWriteFuture = pipeline.write(payload.retainedDuplicate());
             }
         }
 
@@ -83,11 +88,11 @@ public class AutoFlushBenchmark extends AbstractChannelBenchmark {
     }
 
     @Benchmark
-    public void compareWithFlushEvery5() throws InterruptedException, TimeoutException {
+    public void compareWithFlushEvery5() throws Exception {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
-        if (flush) {
+        if (!autoFlush) {
             for (int i = 0; i < writeCount; i++) {
-                lastWriteFuture = pipeline.write(payload.retain());
+                lastWriteFuture = pipeline.write(payload.retainedDuplicate());
                 if (i % 5 == 0) {
                     pipeline.flush();
                 }
@@ -95,7 +100,7 @@ public class AutoFlushBenchmark extends AbstractChannelBenchmark {
             pipeline.flush();
         } else {
             for (int i = 0; i < writeCount; i++) {
-                lastWriteFuture = pipeline.write(payload.retain());
+                lastWriteFuture = pipeline.write(payload.retainedDuplicate());
             }
         }
 
@@ -103,26 +108,30 @@ public class AutoFlushBenchmark extends AbstractChannelBenchmark {
     }
 
     @Benchmark
-    public void compareWithFlushEverySecond() throws InterruptedException, TimeoutException {
+    public void compareWithFlushEverySecond() throws Exception {
         ChannelFuture lastWriteFuture = clientChannel.voidPromise();
-        if (flush) {
-            pipeline.channel().eventLoop().scheduleWithFixedDelay(new Runnable() {
+        ScheduledFuture<?> scheduledFuture = null;
+        if (!autoFlush) {
+            scheduledFuture = pipeline.channel().eventLoop().scheduleWithFixedDelay(new Runnable() {
                 @Override
                 public void run() {
-                    pipeline.channel().flush();
+                    pipeline.flush();
                 }
-            }, 100, 100, SECONDS);
+            }, 1, 1, SECONDS);
 
             for (int i = 0; i < writeCount; i++) {
-                lastWriteFuture = pipeline.write(payload.retain());
+                lastWriteFuture = pipeline.write(payload.retainedDuplicate());
             }
             pipeline.flush();
         } else {
             for (int i = 0; i < writeCount; i++) {
-                lastWriteFuture = pipeline.write(payload.retain());
+                lastWriteFuture = pipeline.write(payload.retainedDuplicate());
             }
         }
 
         awaitCompletion(lastWriteFuture);
+        if (null != scheduledFuture) {
+            scheduledFuture.cancel(true);
+        }
     }
 }

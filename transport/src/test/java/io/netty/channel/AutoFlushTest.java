@@ -24,6 +24,10 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ThreadLocalRandom;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -31,42 +35,57 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.net.SocketAddress;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 
-@RunWith(Parameterized.class)
 public class AutoFlushTest {
 
-    @Parameters
-    public static Collection<TestEnvironment> parameters() {
-        List<TestEnvironment> toReturn = new ArrayList<TestEnvironment>();
-        TestEnvironment nioEnvironment = new TestEnvironment(new NioEventLoopGroup(), new NioEventLoopGroup(),
-                                                             NioServerSocketChannel.class, NioSocketChannel.class);
-        toReturn.add(nioEnvironment);
-        return toReturn;
+    public static TestEnvironment environment;
+
+    @BeforeClass
+    public static void setUp() throws Exception {
+        environment = new TestEnvironment((SingleThreadEventLoop) new NioEventLoopGroup().next(),
+                                          (SingleThreadEventLoop) new NioEventLoopGroup().next(),
+                                          NioServerSocketChannel.class, NioSocketChannel.class);
     }
 
-    @Parameter
-    public TestEnvironment environment;
+    @AfterClass
+    public static void tearDown() throws Exception {
+        environment.shutdown();
+    }
 
-    @Test(timeout = 60000)
-    public void testAutoFlushSingleWrite() throws Exception {
+    @Test(timeout = 20000)
+    public void testSingleWrite() throws Exception {
         environment.connect();
-        ByteBuf data = newDataBuffer();
-        environment.pipeline.write(data).sync();
+        environment.pipeline.write(newDataBuffer()).sync();
     }
 
-    @Test(timeout = 60000)
-    public void testAutoFlushWithWriteOnContext() throws Exception {
+    @Test(timeout = 20000)
+    public void testWithWriteOnContext() throws Exception {
         environment.connect();
-        ByteBuf data = newDataBuffer();
-        environment.pipeline.firstContext().write(data).sync();
+        environment.pipeline.firstContext().write(newDataBuffer()).sync();
     }
 
-    @Test(timeout = 60000)
-    public void testAutoFlushMultipleWrites() throws Exception {
+    @Test(timeout = 20000)
+    public void testWriteFromFlush() throws Exception {
+        environment.connect();
+        environment.clientChannel.pipeline().addLast(new ChannelDuplexHandler() {
+            private boolean written;
+            @Override
+            public void flush(ChannelHandlerContext ctx) throws Exception {
+                if (!written) {
+                    written = true;
+                    environment.pipeline.write(newDataBuffer());
+                }
+                super.flush(ctx);
+            }
+        });
+        environment.pipeline.write(newDataBuffer()).sync();
+    }
+
+    @Test(timeout = 20000)
+    public void testMultipleWrites() throws Exception {
         environment.connect();
         final ChannelPromise aggreggatedPromise = environment.clientChannel.newPromise();
         ByteBuf data = newDataBuffer();
@@ -74,14 +93,14 @@ public class AutoFlushTest {
         for (int i = 0; i < 10; i++) {
             ChannelPromise promise = environment.clientChannel.newPromise();
             promiseCombiner.add(promise);
-            environment.clientChannel.write(data.retain(), promise);
+            environment.clientChannel.write(data.retainedDuplicate(), promise);
         }
         promiseCombiner.finish(aggreggatedPromise);
         aggreggatedPromise.sync();
     }
 
-    @Test(timeout = 60000)
-    public void testAutoFlushWithinEventloop() throws Exception {
+    @Test(timeout = 20000)
+    public void testFromWithinEventloop() throws Exception {
         environment.connect();
         final AtomicReference<ChannelFuture> writeResult = new AtomicReference<ChannelFuture>();
         environment.clientChannel.eventLoop().submit(new Runnable() {
@@ -102,15 +121,15 @@ public class AutoFlushTest {
 
     public static final class TestEnvironment {
 
-        private final EventLoopGroup serverEventloop;
-        private final EventLoopGroup clientEventloop;
+        private final SingleThreadEventLoop serverEventloop;
+        private final SingleThreadEventLoop clientEventloop;
         private final ServerBootstrap serverBootstrap;
         private final Bootstrap bootstrap;
         private ChannelPipeline pipeline;
         private Channel clientChannel;
         private Channel serverChannel;
 
-        private TestEnvironment(EventLoopGroup serverEventloop, EventLoopGroup clientEventloop,
+        private TestEnvironment(SingleThreadEventLoop serverEventloop, SingleThreadEventLoop clientEventloop,
                                 Class<? extends ServerChannel> serverChannelClass,
                                 Class<? extends Channel> clientChannelClass) {
             this.serverEventloop = serverEventloop;
@@ -157,6 +176,7 @@ public class AutoFlushTest {
 
         private void shutdown() throws InterruptedException {
             clientChannel.close().sync();
+            serverChannel.close().sync();
             serverEventloop.shutdownGracefully();
             clientEventloop.shutdownGracefully();
         }

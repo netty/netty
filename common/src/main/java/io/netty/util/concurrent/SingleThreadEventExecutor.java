@@ -50,6 +50,18 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private static final int ST_SHUTDOWN = 4;
     private static final int ST_TERMINATED = 5;
 
+    /**
+     * Result of the method {@link #runAllTasksFrom(Queue, long, LongCallable)}.
+     */
+    protected enum DeadlineRunResult {
+        /*If the queue, from which the tasks were to be run, was empty.*/
+        NO_TASKS_FOUND,
+        /*If the method returned as a result of deadline expiry.*/
+        TIMED_OUT,
+        /*If the method ran at least one task and was not timed out.*/
+        RAN_AT_LEAST_ONCE
+    }
+
     private static final Runnable WAKEUP_TASK = new Runnable() {
         @Override
         public void run() {
@@ -104,9 +116,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private long gracefulShutdownStartTime;
 
     private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
-    private final Action<Long> setLastExecutionTime = new Action<Long>() {
+    private final LongCallable setLastExecutionTime = new LongCallable() {
         @Override
-        public void call(Long aLong) {
+        public void call(long aLong) {
             lastExecutionTime = aLong;
         }
     };
@@ -355,7 +367,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             try {
                 task.run();
             } catch (Throwable t) {
-                logger.warn("A task raised an exception.", t);
+                logger.warn("A task raised an exception. Task: " + task, t);
             }
         }
         return ranAtLeastOne;
@@ -369,7 +381,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         assert inEventLoop();
         fetchFromScheduledTaskQueue();
 
-        DeadlineRunStatus status = runAllTasksFrom(taskQueue, timeoutNanos, setLastExecutionTime);
+        DeadlineRunResult status = runAllTasksFrom(taskQueue, timeoutNanos, setLastExecutionTime);
         switch (status) {
         case NO_TASKS_FOUND:
             afterRunningAllTasks(false);
@@ -395,11 +407,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      *
      * @return Trinary result for this method.
      */
-    protected DeadlineRunStatus runAllTasksFrom(Queue<Runnable> taskQueue, long timeoutNanos,
-                                                Action<Long> lastExecutionTimeCallback) {
+    protected DeadlineRunResult runAllTasksFrom(Queue<Runnable> taskQueue, long timeoutNanos,
+                                                LongCallable lastExecutionTimeCallback) {
         Runnable task = pollTaskFrom(taskQueue);
         if (task == null) {
-            return DeadlineRunStatus.NO_TASKS_FOUND;
+            return DeadlineRunResult.NO_TASKS_FOUND;
         }
 
         final long deadline = ScheduledFutureTask.nanoTime() + timeoutNanos;
@@ -409,7 +421,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             try {
                 task.run();
             } catch (Throwable t) {
-                logger.warn("A task raised an exception.", t);
+                logger.warn("A task raised an exception. Task: " + task, t);
             }
 
             runTasks ++;
@@ -419,7 +431,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if ((runTasks & 0x3F) == 0) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 if (lastExecutionTime >= deadline) {
-                    return DeadlineRunStatus.TIMED_OUT;
+                    return DeadlineRunResult.TIMED_OUT;
                 }
             }
 
@@ -430,17 +442,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
         }
         lastExecutionTimeCallback.call(lastExecutionTime);
-        return DeadlineRunStatus.RAN_AT_LEAST_ONCE;
-    }
-
-    protected enum DeadlineRunStatus {
-        NO_TASKS_FOUND,
-        TIMED_OUT,
-        RAN_AT_LEAST_ONCE
-    }
-
-    protected interface Action<T> {
-        void call(T t);
+        return DeadlineRunResult.RAN_AT_LEAST_ONCE;
     }
 
     /**
@@ -872,6 +874,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
             }
         });
+    }
+
+    /**
+     * An interface that is called with a long argument.
+     */
+    protected interface LongCallable {
+        void call(long aLong);
     }
 
     private static final class DefaultThreadProperties implements ThreadProperties {

@@ -319,11 +319,26 @@ public class DefaultChannelConfig implements ChannelConfig {
         return this;
     }
 
-    public boolean isAutoFlush() {
+    /**
+     * Tells whether {@link ChannelOption#AUTO_FLUSH} is enabled for this channel.
+     *
+     * @return {@code true} if {@link ChannelOption#AUTO_FLUSH} is enabled for this channel.
+     */
+    private boolean isAutoFlush() {
         return autoFlush == 1;
     }
 
-    public ChannelConfig setAutoFlush(boolean autoFlush) {
+    /**
+     * Sets the {@link ChannelOption#AUTO_FLUSH} option for the associated channel.
+     *
+     * @param autoFlush Auto flush value to set for the option.
+     *
+     * @return {@code this}
+     *
+     * @throws UnsupportedOperationException If {@link EventLoop} for the channel is not an instance of
+     * {@link SingleThreadEventLoop}
+     */
+    private ChannelConfig setAutoFlush(boolean autoFlush) {
         // Auto-flush requires a change in API of EventLoop which can not be done in 4.1, so the SingleThreadEventLoop
         // is the only implementation that supports it.
         if (autoFlush && channel.isRegistered() && !(channel.eventLoop() instanceof SingleThreadEventLoop)) {
@@ -342,10 +357,15 @@ public class DefaultChannelConfig implements ChannelConfig {
      * Called when {@link #setAutoFlush(boolean)} is called with a value different than what currently exists.
      *
      * @param autoFlush Value of {@code autoFlush} after modification.
+     *
+     * @throws UnsupportedOperationException If the {@link Channel} is not an instance of {@link AbstractChannel}.
      */
     protected void autoFlushModified(boolean autoFlush) {
         if (channel instanceof AbstractChannel) {
             ((AbstractChannel) channel).autoFlushModified(autoFlush);
+        } else {
+            throw new UnsupportedOperationException(
+                    "Auto-Flush is only available for channels extending from " + AbstractChannel.class.getName());
         }
     }
 

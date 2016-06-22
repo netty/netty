@@ -34,11 +34,10 @@ import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.TearDown;
 
 import java.net.SocketAddress;
-import java.util.concurrent.TimeoutException;
 
 import static java.util.concurrent.TimeUnit.*;
 
-public class AbstractChannelBenchmark extends AbstractSharedExecutorMicrobenchmark {
+abstract class AbstractChannelBenchmark extends AbstractSharedExecutorMicrobenchmark {
 
     public static final ChannelInitializer<Channel> EMPTY_INITIALIZER = new ChannelInitializer<Channel>() {
         @Override
@@ -76,15 +75,15 @@ public class AbstractChannelBenchmark extends AbstractSharedExecutorMicrobenchma
         ChannelFuture bind = sb.bind(0);
         SocketAddress serverAddr;
         try {
-            bind.sync().await(1, MINUTES);
+            bind.sync();
             serverChannel = bind.channel();
             serverAddr = serverChannel.localAddress();
             ChannelFuture clientChannelFuture = cb.connect(serverAddr);
-            clientChannelFuture.sync().await(1, MINUTES);
+            clientChannelFuture.sync();
             clientChannel = clientChannelFuture.channel();
             pipeline = clientChannel.pipeline();
         } catch (InterruptedException ie) {
-            throw new RuntimeException(ie);
+            throw new IllegalStateException(ie);
         }
 
         AbstractSharedExecutorMicrobenchmark.executor(clientEventLoop.next());
@@ -113,17 +112,16 @@ public class AbstractChannelBenchmark extends AbstractSharedExecutorMicrobenchma
         if (clientGroup != null) {
             clientGroup.sync();
         }
+        payload.release();
     }
 
     protected static ByteBuf createData(int length) {
         byte[] result = new byte[length];
         ThreadLocalRandom.current().nextBytes(result);
-        return Unpooled.wrappedBuffer(result);
+        return Unpooled.directBuffer().writeBytes(result);
     }
 
-    protected void awaitCompletion(ChannelFuture lastWriteFuture) throws InterruptedException, TimeoutException {
-        if (!lastWriteFuture.sync().await(10, SECONDS)) {
-            throw new TimeoutException("Future timedout completed.");
-        }
+    protected void awaitCompletion(ChannelFuture lastWriteFuture) throws Exception {
+        lastWriteFuture.await();
     }
 }

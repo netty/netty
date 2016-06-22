@@ -29,14 +29,14 @@ import java.util.concurrent.ThreadFactory;
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
     private final Queue<Runnable> tailTasks;
-    private boolean lastRunTimedOut;
-    private long runTimeout;
-    private final Action<Long> runTimeoutUpdater = new Action<Long>() {
+    private final LongCallable runTimeoutUpdater = new LongCallable() {
         @Override
-        public void call(Long aLong) {
+        public void call(long aLong) {
             runTimeout = aLong;
         }
     };
+    private boolean lastRunTimedOut;
+    private long runTimeout;
 
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
         super(parent, threadFactory, addTaskWakesUp);
