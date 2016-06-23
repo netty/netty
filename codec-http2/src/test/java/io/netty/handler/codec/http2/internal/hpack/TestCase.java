@@ -161,7 +161,7 @@ final class TestCase {
             maxHeaderTableSize = Integer.MAX_VALUE;
         }
 
-        return new Encoder(maxHeaderTableSize, useIndexing, forceHuffmanOn, forceHuffmanOff);
+        return new Encoder(maxHeaderTableSize, useIndexing, forceHuffmanOn, forceHuffmanOff, 16);
     }
 
     private Decoder createDecoder() {
