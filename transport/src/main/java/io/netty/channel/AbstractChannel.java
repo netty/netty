@@ -1093,15 +1093,25 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void run() {
             running = true;
-            if (writePending) {
-                channel.flush();
-                writePending = false;
+            try {
+                if (writePending) {
+                    writePending = false;
+                    channel.flush();
+                    if (writePending) {
+                        // There may be cases where a handler writes more data from within the flush() method and then
+                        // does not flush. In such a case, if we call flush() on the pipeline again, then it may end up
+                        // in an infinite loop. In order to prevent such an issue, we directly flush the unsafe.
+                        channel.unsafe.flush();
+                        writePending = false;
+                    }
 
-                if (channel.isActive() && channel.isAutoFlush()) {
-                    eventLoop.onEventLoopIteration(this);
+                    if (channel.isActive() && channel.isAutoFlush()) {
+                        eventLoop.onEventLoopIteration(this);
+                    }
                 }
+            } finally {
+                running = false;
             }
-            running = false;
         }
 
         void onWrite() {
