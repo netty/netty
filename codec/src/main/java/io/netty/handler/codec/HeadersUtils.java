@@ -211,7 +211,7 @@ public final class HeadersUtils {
 
         @Override
         public Object[] toArray() {
-            Object[] arr = new String[size()];
+            Object[] arr = new Object[size()];
             fillArray(arr);
             return arr;
         }

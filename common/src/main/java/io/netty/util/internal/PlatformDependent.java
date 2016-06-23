@@ -56,9 +56,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static io.netty.util.internal.PlatformDependent0.HASH_CODE_ASCII_SEED;
-import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiCompute;
+import static io.netty.util.internal.PlatformDependent0.HASH_CODE_C1;
+import static io.netty.util.internal.PlatformDependent0.HASH_CODE_C2;
 import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiSanitize;
-import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiSanitizeAsByte;
 import static io.netty.util.internal.PlatformDependent0.unalignedAccess;
 
 /**
@@ -431,27 +431,6 @@ public final class PlatformDependent {
                 ((long) bytes[offset + 7] & 0xff) << 56;
     }
 
-    private static long getLongFromBytesSafe(CharSequence bytes, int offset) {
-        if (BIG_ENDIAN_NATIVE_ORDER) {
-            return (long) bytes.charAt(offset) << 56 |
-                    ((long) bytes.charAt(offset + 1) & 0xff) << 48 |
-                    ((long) bytes.charAt(offset + 2) & 0xff) << 40 |
-                    ((long) bytes.charAt(offset + 3) & 0xff) << 32 |
-                    ((long) bytes.charAt(offset + 4) & 0xff) << 24 |
-                    ((long) bytes.charAt(offset + 5) & 0xff) << 16 |
-                    ((long) bytes.charAt(offset + 6) & 0xff) <<  8 |
-                    (long) bytes.charAt(offset + 7) & 0xff;
-        }
-        return (long) bytes.charAt(offset) & 0xff |
-                ((long) bytes.charAt(offset + 1) & 0xff) << 8 |
-                ((long) bytes.charAt(offset + 2) & 0xff) << 16 |
-                ((long) bytes.charAt(offset + 3) & 0xff) << 24 |
-                ((long) bytes.charAt(offset + 4) & 0xff) << 32 |
-                ((long) bytes.charAt(offset + 5) & 0xff) << 40 |
-                ((long) bytes.charAt(offset + 6) & 0xff) << 48 |
-                ((long) bytes.charAt(offset + 7) & 0xff) << 56;
-    }
-
     private static int getIntSafe(byte[] bytes, int offset) {
         if (BIG_ENDIAN_NATIVE_ORDER) {
             return bytes[offset] << 24 |
@@ -465,19 +444,6 @@ public final class PlatformDependent {
                 bytes[offset + 3] << 24;
     }
 
-    private static int getIntFromBytesSafe(CharSequence bytes, int offset) {
-        if (BIG_ENDIAN_NATIVE_ORDER) {
-            return bytes.charAt(offset) << 24 |
-                    (bytes.charAt(offset + 1) & 0xff) << 16 |
-                    (bytes.charAt(offset + 2) & 0xff) << 8 |
-                    bytes.charAt(offset + 3) & 0xff;
-        }
-        return bytes.charAt(offset) & 0xff |
-                (bytes.charAt(offset + 1) & 0xff) << 8 |
-                (bytes.charAt(offset + 2) & 0xff) << 16 |
-                bytes.charAt(offset + 3) << 24;
-    }
-
     private static short getShortSafe(byte[] bytes, int offset) {
         if (BIG_ENDIAN_NATIVE_ORDER) {
             return (short) (bytes[offset] << 8 | (bytes[offset + 1] & 0xff));
@@ -485,11 +451,54 @@ public final class PlatformDependent {
         return (short) (bytes[offset] & 0xff | (bytes[offset + 1] << 8));
     }
 
-    private static short getShortFromBytesSafe(CharSequence bytes, int offset) {
+    /**
+     * Identical to {@link PlatformDependent0#hashCodeAsciiCompute(long, int)} but for {@link CharSequence}.
+     */
+    private static int hashCodeAsciiCompute(CharSequence value, int offset, int hash) {
+        // masking with 0x1f reduces the number of overall bits that impact the hash code but makes the hash
+        // code the same regardless of character case (upper case or lower case hash is the same).
+        return hash * HASH_CODE_C1 +
+                // Low order int
+                hashCodeAsciiSanitizeInt(value, offset) * HASH_CODE_C2 +
+                // High order int
+                hashCodeAsciiSanitizeInt(value, offset + 4);
+    }
+
+    /**
+     * Identical to {@link PlatformDependent0#hashCodeAsciiSanitize(int)} but for {@link CharSequence}.
+     */
+    private static int hashCodeAsciiSanitizeInt(CharSequence value, int offset) {
         if (BIG_ENDIAN_NATIVE_ORDER) {
-            return (short) (bytes.charAt(offset) << 8 | (bytes.charAt(offset + 1) & 0xff));
+            // mimic a unsafe.getInt call on a big endian machine
+            return (value.charAt(offset) & 0x1f) |
+                   (value.charAt(offset + 2) & 0x1f) << 8 |
+                   (value.charAt(offset + 1) & 0x1f) << 16 |
+                   (value.charAt(offset) & 0x1f) << 24;
         }
-        return (short) (bytes.charAt(offset) & 0xff | (bytes.charAt(offset + 1) << 8));
+        return (value.charAt(offset + 3) & 0x1f) << 24 |
+               (value.charAt(offset + 2) & 0x1f) << 16 |
+               (value.charAt(offset + 1) & 0x1f) << 8 |
+               (value.charAt(offset) & 0x1f);
+    }
+
+    /**
+     * Identical to {@link PlatformDependent0#hashCodeAsciiSanitize(short)} but for {@link CharSequence}.
+     */
+    private static int hashCodeAsciiSanitizeShort(CharSequence value, int offset) {
+        if (BIG_ENDIAN_NATIVE_ORDER) {
+            // mimic a unsafe.getShort call on a big endian machine
+            return (value.charAt(offset + 1) & 0x1f) |
+                    (value.charAt(offset) & 0x1f) << 8;
+        }
+        return (value.charAt(offset + 1) & 0x1f) << 8 |
+                (value.charAt(offset) & 0x1f);
+    }
+
+    /**
+     * Identical to {@link PlatformDependent0#hashCodeAsciiSanitize(byte)} but for {@link CharSequence}.
+     */
+    private static int hashCodeAsciiSanitizsByte(char value) {
+        return value & 0x1f;
     }
 
     public static void putOrderedObject(Object object, long address, Object value) {
@@ -676,10 +685,9 @@ public final class PlatformDependent {
      * The resulting hash code will be case insensitive.
      */
     public static int hashCodeAscii(byte[] bytes, int startPos, int length) {
-        if (!hasUnsafe() || !unalignedAccess()) {
-            return hashCodeAsciiSafe(bytes, startPos, length);
-        }
-        return PlatformDependent0.hashCodeAscii(bytes, startPos, length);
+        return !hasUnsafe() || !unalignedAccess() ?
+                hashCodeAsciiSafe(bytes, startPos, length) :
+                PlatformDependent0.hashCodeAscii(bytes, startPos, length);
     }
 
     /**
@@ -693,14 +701,83 @@ public final class PlatformDependent {
      * The resulting hash code will be case insensitive.
      */
     public static int hashCodeAscii(CharSequence bytes) {
-        if (!hasUnsafe() || !unalignedAccess()) {
-            return hashCodeAsciiSafe(bytes);
-        } else if (PlatformDependent0.hasCharArray(bytes)) {
-            return PlatformDependent0.hashCodeAscii(PlatformDependent0.charArray(bytes));
-        } else if (PlatformDependent0.hasByteArray(bytes)) {
-            return PlatformDependent0.hashCodeAscii(PlatformDependent0.byteArray(bytes));
+        int hash = HASH_CODE_ASCII_SEED;
+        final int remainingBytes = bytes.length() & 7;
+        // Benchmarking shows that by just naively looping for inputs 8~31 bytes long we incur a relatively large
+        // performance penalty (only achieve about 60% performance of loop which iterates over each char). So because
+        // of this we take special provisions to unroll the looping for these conditions.
+        switch (bytes.length()) {
+            case 31:
+            case 30:
+            case 29:
+            case 28:
+            case 27:
+            case 26:
+            case 25:
+            case 24:
+                hash = hashCodeAsciiCompute(bytes, bytes.length() - 24,
+                        hashCodeAsciiCompute(bytes, bytes.length() - 16,
+                          hashCodeAsciiCompute(bytes, bytes.length() - 8, hash)));
+                break;
+            case 23:
+            case 22:
+            case 21:
+            case 20:
+            case 19:
+            case 18:
+            case 17:
+            case 16:
+                hash = hashCodeAsciiCompute(bytes, bytes.length() - 16,
+                         hashCodeAsciiCompute(bytes, bytes.length() - 8, hash));
+                break;
+            case 15:
+            case 14:
+            case 13:
+            case 12:
+            case 11:
+            case 10:
+            case 9:
+            case 8:
+                hash = hashCodeAsciiCompute(bytes, bytes.length() - 8, hash);
+                break;
+            case 7:
+            case 6:
+            case 5:
+            case 4:
+            case 3:
+            case 2:
+            case 1:
+            case 0:
+                break;
+            default:
+                for (int i = bytes.length() - 8; i >= remainingBytes; i -= 8) {
+                    hash = hashCodeAsciiCompute(bytes, i, hash);
+                }
+                break;
         }
-        return hashCodeAsciiSafe(bytes);
+        switch(remainingBytes) {
+            case 7:
+                return ((hash * HASH_CODE_C1 + hashCodeAsciiSanitizsByte(bytes.charAt(0)))
+                              * HASH_CODE_C2 + hashCodeAsciiSanitizeShort(bytes, 1))
+                              * HASH_CODE_C1 + hashCodeAsciiSanitizeInt(bytes, 3);
+            case 6:
+                return (hash * HASH_CODE_C1 + hashCodeAsciiSanitizeShort(bytes, 0))
+                             * HASH_CODE_C2 + hashCodeAsciiSanitizeInt(bytes, 2);
+            case 5:
+                return (hash * HASH_CODE_C1 + hashCodeAsciiSanitizsByte(bytes.charAt(0)))
+                             * HASH_CODE_C2 + hashCodeAsciiSanitizeInt(bytes, 1);
+            case 4:
+                return hash * HASH_CODE_C1 + hashCodeAsciiSanitizeInt(bytes, 0);
+            case 3:
+                return (hash * HASH_CODE_C1 + hashCodeAsciiSanitizsByte(bytes.charAt(0)))
+                             * HASH_CODE_C2 + hashCodeAsciiSanitizeShort(bytes, 1);
+            case 2:
+                return hash * HASH_CODE_C1 + hashCodeAsciiSanitizeShort(bytes, 0);
+            case 1:
+                return hash * HASH_CODE_C1 + hashCodeAsciiSanitizsByte(bytes.charAt(0));
+            default:
+                return hash;
+        }
     }
 
     /**
@@ -1251,62 +1328,28 @@ public final class PlatformDependent {
         final int remainingBytes = length & 7;
         final int end = startPos + remainingBytes;
         for (int i = startPos - 8 + length; i >= end; i -= 8) {
-            hash = hashCodeAsciiCompute(getLongSafe(bytes, i), hash);
+            hash = PlatformDependent0.hashCodeAsciiCompute(getLongSafe(bytes, i), hash);
         }
         switch(remainingBytes) {
         case 7:
-            return ((hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 3)), 13))
-                     * 31 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos + 1)))
-                       * 31 + hashCodeAsciiSanitize(bytes[startPos]);
+            return ((hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]))
+                          * HASH_CODE_C2 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos + 1)))
+                          * HASH_CODE_C1 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 3));
         case 6:
-            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 2)), 13))
-                    * 31 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos));
+            return (hash * HASH_CODE_C1 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos)))
+                         * HASH_CODE_C2 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 2));
         case 5:
-            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 1)), 13))
-                    * 31 + hashCodeAsciiSanitize(bytes[startPos]);
+            return (hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]))
+                         * HASH_CODE_C2 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 1));
         case 4:
-            return hash * 31 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos));
+            return hash * HASH_CODE_C1 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos));
         case 3:
-            return (hash * 31 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos + 1)))
-                    * 31 + hashCodeAsciiSanitize(bytes[startPos]);
+            return (hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]))
+                         * HASH_CODE_C2 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos + 1));
         case 2:
-            return hash * 31 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos));
+            return hash * HASH_CODE_C1 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos));
         case 1:
-            return hash * 31 + hashCodeAsciiSanitize(bytes[startPos]);
-        default:
-            return hash;
-        }
-    }
-
-    /**
-     * Package private for testing purposes only!
-     */
-    static int hashCodeAsciiSafe(CharSequence bytes) {
-        int hash = HASH_CODE_ASCII_SEED;
-        final int remainingBytes = bytes.length() & 7;
-        for (int i = bytes.length() - 8; i >= remainingBytes; i -= 8) {
-            hash = hashCodeAsciiCompute(getLongFromBytesSafe(bytes, i), hash);
-        }
-        switch(remainingBytes) {
-        case 7:
-            return ((hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntFromBytesSafe(bytes, 3)), 13))
-                     * 31 + hashCodeAsciiSanitize(getShortFromBytesSafe(bytes, 1)))
-                       * 31 + hashCodeAsciiSanitizeAsByte(bytes.charAt(0));
-        case 6:
-            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntFromBytesSafe(bytes, 2)), 13))
-                    * 31 + hashCodeAsciiSanitize(getShortFromBytesSafe(bytes, 0));
-        case 5:
-            return (hash * 31 + Integer.rotateLeft(hashCodeAsciiSanitize(getIntFromBytesSafe(bytes, 1)), 13))
-                    * 31 + hashCodeAsciiSanitizeAsByte(bytes.charAt(0));
-        case 4:
-            return hash * 31 + hashCodeAsciiSanitize(getIntFromBytesSafe(bytes, 0));
-        case 3:
-            return (hash * 31 + hashCodeAsciiSanitize(getShortFromBytesSafe(bytes, 1)))
-                    * 31 + hashCodeAsciiSanitizeAsByte(bytes.charAt(0));
-        case 2:
-            return hash * 31 + hashCodeAsciiSanitize(getShortFromBytesSafe(bytes, 0));
-        case 1:
-            return hash * 31 + hashCodeAsciiSanitizeAsByte(bytes.charAt(0));
+            return hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]);
         default:
             return hash;
         }
