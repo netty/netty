@@ -1394,7 +1394,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return 0;
         }
         if (value.getClass() == AsciiString.class) {
-            return ((AsciiString) value).hashCode();
+            return value.hashCode();
         }
 
         return PlatformDependent.hashCodeAscii(value);

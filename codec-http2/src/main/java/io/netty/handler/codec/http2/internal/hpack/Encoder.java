@@ -41,21 +41,22 @@ import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.IN
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NEVER;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NONE;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.equalsConstantTime;
+import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 public final class Encoder {
-
-    private static final int BUCKET_SIZE = 17;
-
     // for testing
     private final boolean useIndexing;
     private final boolean forceHuffmanOn;
     private final boolean forceHuffmanOff;
-    private final HuffmanEncoder huffmanEncoder = new HuffmanEncoder();
 
     // a linked hash map of header fields
-    private final HeaderEntry[] headerFields = new HeaderEntry[BUCKET_SIZE];
+    private final HeaderEntry[] headerFields;
     private final HeaderEntry head = new HeaderEntry(-1, AsciiString.EMPTY_STRING,
             AsciiString.EMPTY_STRING, Integer.MAX_VALUE, null);
+    private final HuffmanEncoder huffmanEncoder = new HuffmanEncoder();
+    private final byte hashMask;
     private int size;
     private int capacity;
 
@@ -63,7 +64,14 @@ public final class Encoder {
      * Creates a new encoder.
      */
     public Encoder(int maxHeaderTableSize) {
-        this(maxHeaderTableSize, true, false, false);
+        this(maxHeaderTableSize, 16);
+    }
+
+    /**
+     * Creates a new encoder.
+     */
+    public Encoder(int maxHeaderTableSize, int arraySizeHint) {
+        this(maxHeaderTableSize, true, false, false, arraySizeHint);
     }
 
     /**
@@ -73,7 +81,8 @@ public final class Encoder {
             int maxHeaderTableSize,
             boolean useIndexing,
             boolean forceHuffmanOn,
-            boolean forceHuffmanOff
+            boolean forceHuffmanOff,
+            int arraySizeHint
     ) {
         if (maxHeaderTableSize < 0) {
             throw new IllegalArgumentException("Illegal Capacity: " + maxHeaderTableSize);
@@ -82,6 +91,10 @@ public final class Encoder {
         this.forceHuffmanOn = forceHuffmanOn;
         this.forceHuffmanOff = forceHuffmanOff;
         capacity = maxHeaderTableSize;
+        // Enforce a bound of [2, 128] because hashMask is a byte. The max possible value of hashMask is one less
+        // than the length of this array, and we want the mask to be > 0.
+        headerFields = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
+        hashMask = (byte) (headerFields.length - 1);
         head.before = head.after = head;
     }
 
@@ -302,7 +315,7 @@ public final class Encoder {
         if (length() == 0 || name == null || value == null) {
             return null;
         }
-        int h = hash(name);
+        int h = AsciiString.hashCode(name);
         int i = index(h);
         for (HeaderEntry e = headerFields[i]; e != null; e = e.next) {
             // To avoid short circuit behavior a bitwise operator is used instead of a boolean operator.
@@ -321,26 +334,21 @@ public final class Encoder {
         if (length() == 0 || name == null) {
             return -1;
         }
-        int h = hash(name);
+        int h = AsciiString.hashCode(name);
         int i = index(h);
-        int index = -1;
         for (HeaderEntry e = headerFields[i]; e != null; e = e.next) {
             if (e.hash == h && equalsConstantTime(name, e.name) != 0) {
-                index = e.index;
-                break;
+                return getIndex(e.index);
             }
         }
-        return getIndex(index);
+        return -1;
     }
 
     /**
      * Compute the index into the dynamic table given the index in the header entry.
      */
     private int getIndex(int index) {
-        if (index == -1) {
-            return -1;
-        }
-        return index - head.before.index + 1;
+        return index == -1 ? -1 : index - head.before.index + 1;
     }
 
     /**
@@ -362,7 +370,7 @@ public final class Encoder {
             remove();
         }
 
-        int h = hash(name);
+        int h = AsciiString.hashCode(name);
         int i = index(h);
         HeaderEntry old = headerFields[i];
         HeaderEntry e = new HeaderEntry(h, name, value, head.before.index - 1, old);
@@ -411,27 +419,10 @@ public final class Encoder {
     }
 
     /**
-     * Returns the hash code for the given header field name.
-     */
-    private static int hash(CharSequence name) {
-        int h = 0;
-        for (int i = 0; i < name.length(); i++) {
-            h = 31 * h + name.charAt(i);
-        }
-        if (h > 0) {
-            return h;
-        } else if (h == Integer.MIN_VALUE) {
-            return Integer.MAX_VALUE;
-        } else {
-            return -h;
-        }
-    }
-
-    /**
      * Returns the index into the hash table for the hash code h.
      */
-    private static int index(int h) {
-        return h % BUCKET_SIZE;
+    private int index(int h) {
+        return h & hashMask;
     }
 
     /**
