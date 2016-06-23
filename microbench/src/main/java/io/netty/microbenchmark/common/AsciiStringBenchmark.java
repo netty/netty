@@ -34,7 +34,7 @@ import java.util.Random;
 @Warmup(iterations = 5)
 public class AsciiStringBenchmark extends AbstractMicrobenchmark {
 
-    @Param({ "3", "5", "7", "8", "10", "20", "50" })
+    @Param({ "3", "5", "7", "8", "10", "20", "50", "100", "1000" })
     public int size;
 
     private AsciiString asciiString;
