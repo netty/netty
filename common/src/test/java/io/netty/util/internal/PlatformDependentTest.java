@@ -125,9 +125,6 @@ public class PlatformDependentTest {
                          hashCodeAsciiSafe(bytes, 0, bytes.length),
                          hashCodeAscii(bytes, 0, bytes.length));
             assertEquals("length=" + i,
-                    hashCodeAsciiSafe(string),
-                    hashCodeAscii(string));
-            assertEquals("length=" + i,
                     hashCodeAscii(bytes, 0, bytes.length),
                     hashCodeAscii(string));
         }
