@@ -51,7 +51,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param ctx the context to use for writing.
      * @param streamId the stream for which to send the frame.
      * @param headers the headers to be sent.
-     * @param padding the amount of padding to be added to the end of the frame
+     * @param padding additional bytes that should be added to obscure the true content size. Must be between 0 and
+     *                256 (inclusive).
      * @param endStream indicates if this is the last frame to be sent for the stream.
      * @param promise the promise for the write.
      * @return the future for the write.
@@ -69,7 +70,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      *            depend on the connection.
      * @param weight the weight for this stream.
      * @param exclusive whether this stream should be the exclusive dependant of its parent.
-     * @param padding the amount of padding to be added to the end of the frame
+     * @param padding additional bytes that should be added to obscure the true content size. Must be between 0 and
+     *                256 (inclusive).
      * @param endStream indicates if this is the last frame to be sent for the stream.
      * @param promise the promise for the write.
      * @return the future for the write.
@@ -145,7 +147,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param streamId the stream for which to send the frame.
      * @param promisedStreamId the ID of the promised stream.
      * @param headers the headers to be sent.
-     * @param padding the amount of padding to be added to the end of the frame
+     * @param padding additional bytes that should be added to obscure the true content size. Must be between 0 and
+     *                256 (inclusive).
      * @param promise the promise for the write.
      * @return the future for the write.
      */

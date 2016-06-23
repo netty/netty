@@ -39,7 +39,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.*;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.lang.Math.min;
@@ -148,17 +148,17 @@ public class Http2FrameRoundtripTest {
     @Test
     public void dataShouldMatch() throws Exception {
         final ByteBuf data = data(10);
-        writer.writeData(ctx, STREAM_ID, data.slice(), 0, false, ctx.newPromise());
+        writer.writeData(ctx, STREAM_ID, data.slice(), 1, false, ctx.newPromise());
         readFrames();
-        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(0), eq(false));
+        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(1), eq(false));
     }
 
     @Test
     public void dataWithPaddingShouldMatch() throws Exception {
         final ByteBuf data = data(10);
-        writer.writeData(ctx, STREAM_ID, data.slice(), 0xFF, true, ctx.newPromise());
+        writer.writeData(ctx, STREAM_ID, data.slice(), MAX_PADDING, true, ctx.newPromise());
         readFrames();
-        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(0xFF), eq(true));
+        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(data), eq(MAX_PADDING), eq(true));
     }
 
     @Test
@@ -210,9 +210,9 @@ public class Http2FrameRoundtripTest {
     @Test
     public void emptyHeadersWithPaddingShouldMatch() throws Exception {
         final Http2Headers headers = EmptyHttp2Headers.INSTANCE;
-        writer.writeHeaders(ctx, STREAM_ID, headers, 0xFF, true, ctx.newPromise());
+        writer.writeHeaders(ctx, STREAM_ID, headers, MAX_PADDING, true, ctx.newPromise());
         readFrames();
-        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0xFF), eq(true));
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(MAX_PADDING), eq(true));
     }
 
     @Test
@@ -243,18 +243,18 @@ public class Http2FrameRoundtripTest {
     @Test
     public void headersWithPaddingWithoutPriorityShouldMatch() throws Exception {
         final Http2Headers headers = headers();
-        writer.writeHeaders(ctx, STREAM_ID, headers, 0xFF, true, ctx.newPromise());
+        writer.writeHeaders(ctx, STREAM_ID, headers, MAX_PADDING, true, ctx.newPromise());
         readFrames();
-        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0xFF), eq(true));
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(MAX_PADDING), eq(true));
     }
 
     @Test
     public void headersWithPaddingWithPriorityShouldMatch() throws Exception {
         final Http2Headers headers = headers();
-        writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, 0xFF, true, ctx.newPromise());
+        writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, 1, true, ctx.newPromise());
         readFrames();
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(2), eq((short) 3), eq(true),
-                eq(0xFF), eq(true));
+                eq(1), eq(true));
     }
 
     @Test
@@ -269,16 +269,16 @@ public class Http2FrameRoundtripTest {
     @Test
     public void continuedHeadersWithPaddingShouldMatch() throws Exception {
         final Http2Headers headers = largeHeaders();
-        writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, 0xFF, true, ctx.newPromise());
+        writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, MAX_PADDING, true, ctx.newPromise());
         readFrames();
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(2), eq((short) 3), eq(true),
-                eq(0xFF), eq(true));
+                eq(MAX_PADDING), eq(true));
     }
 
     @Test
     public void headersThatAreTooBigShouldFail() throws Exception {
         final Http2Headers headers = headersOfSize(DEFAULT_MAX_HEADER_SIZE + 1);
-        writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, 0xFF, true, ctx.newPromise());
+        writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, MAX_PADDING, true, ctx.newPromise());
         try {
             readFrames();
             fail();
@@ -308,9 +308,9 @@ public class Http2FrameRoundtripTest {
     @Test
     public void pushPromiseWithPaddingShouldMatch() throws Exception {
         final Http2Headers headers = headers();
-        writer.writePushPromise(ctx, STREAM_ID, 2, headers, 0xFF, ctx.newPromise());
+        writer.writePushPromise(ctx, STREAM_ID, 2, headers, MAX_PADDING, ctx.newPromise());
         readFrames();
-        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(2), eq(headers), eq(0xFF));
+        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(2), eq(headers), eq(MAX_PADDING));
     }
 
     @Test
