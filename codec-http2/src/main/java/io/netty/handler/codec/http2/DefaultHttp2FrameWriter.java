@@ -46,6 +46,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.WINDOW_UPDATE_FRAME_LE
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeaderInternal;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedInt;
+import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedShort;
 import static io.netty.handler.codec.http2.Http2Error.FRAME_SIZE_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
@@ -71,7 +72,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     private static final String STREAM_ID = "Stream ID";
     private static final String STREAM_DEPENDENCY = "Stream Dependency";
     /**
-     * This buffer is allocated to the maximum padding size needed, and filled with padding.
+     * This buffer is allocated to the maximum size of the padding field, and filled with zeros.
      * When padding is needed it can be taken as a slice of this buffer. Users should call {@link ByteBuf#retain()}
      * before using their slice.
      */
@@ -163,8 +164,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 ctx.write(lastFrame ? frameData : frameData.retain(), promiseAggregator.newPromise());
 
                 // Write the frame padding.
-                if (framePaddingBytes > 0) {
-                    ctx.write(ZERO_BUFFER.slice(0, framePaddingBytes), promiseAggregator.newPromise());
+                if (paddingBytes(framePaddingBytes) > 0) {
+                    ctx.write(ZERO_BUFFER.slice(0, paddingBytes(framePaddingBytes)), promiseAggregator.newPromise());
                 }
             } while (!lastFrame);
         } catch (Throwable t) {
@@ -302,7 +303,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             // Read the first fragment (possibly everything).
             Http2Flags flags = new Http2Flags().paddingPresent(padding > 0);
             // INT_FIELD_LENGTH is for the length of the promisedStreamId
-            int nonFragmentLength = INT_FIELD_LENGTH + padding + flags.getPaddingPresenceFieldLength();
+            int nonFragmentLength = INT_FIELD_LENGTH + padding;
             int maxFragmentLength = maxFrameSize - nonFragmentLength;
             ByteBuf fragment = headerBlock.readRetainedSlice(min(headerBlock.readableBytes(), maxFragmentLength));
 
@@ -320,8 +321,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             // Write the first fragment.
             ctx.write(fragment, promiseAggregator.newPromise());
 
-            if (padding > 0) { // Write out the padding, if any.
-                ctx.write(ZERO_BUFFER.slice(0, padding), promiseAggregator.newPromise());
+            // Write out the padding, if any.
+            if (paddingBytes(padding) > 0) {
+                ctx.write(ZERO_BUFFER.slice(0, paddingBytes(padding)), promiseAggregator.newPromise());
             }
 
             if (!flags.endOfHeaders()) {
@@ -426,7 +428,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                     new Http2Flags().endOfStream(endStream).priorityPresent(hasPriority).paddingPresent(padding > 0);
 
             // Read the first fragment (possibly everything).
-            int nonFragmentBytes = padding + flags.getNumPriorityBytes() + flags.getPaddingPresenceFieldLength();
+            int nonFragmentBytes = padding + flags.getNumPriorityBytes();
             int maxFragmentLength = maxFrameSize - nonFragmentBytes;
             ByteBuf fragment = headerBlock.readRetainedSlice(min(headerBlock.readableBytes(), maxFragmentLength));
 
@@ -450,8 +452,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             // Write the first fragment.
             ctx.write(fragment, promiseAggregator.newPromise());
 
-            if (padding > 0) { // Write out the padding, if any.
-                ctx.write(ZERO_BUFFER.slice(0, padding), promiseAggregator.newPromise());
+            // Write out the padding, if any.
+            if (paddingBytes(padding) > 0) {
+                ctx.write(ZERO_BUFFER.slice(0, paddingBytes(padding)), promiseAggregator.newPromise());
             }
 
             if (!flags.endOfHeaders()) {
@@ -473,8 +476,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     private ChannelFuture writeContinuationFrames(ChannelHandlerContext ctx, int streamId,
             ByteBuf headerBlock, int padding, SimpleChannelPromiseAggregator promiseAggregator) {
         Http2Flags flags = new Http2Flags().paddingPresent(padding > 0);
-        int nonFragmentLength = padding + flags.getPaddingPresenceFieldLength();
-        int maxFragmentLength = maxFrameSize - nonFragmentLength;
+        int maxFragmentLength = maxFrameSize - padding;
         // TODO: same padding is applied to all frames, is this desired?
         if (maxFragmentLength <= 0) {
             return promiseAggregator.setFailure(new IllegalArgumentException(
@@ -484,7 +486,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         if (headerBlock.isReadable()) {
             // The frame header (and padding) only changes on the last frame, so allocate it once and re-use
             int fragmentReadableBytes = min(headerBlock.readableBytes(), maxFragmentLength);
-            int payloadLength = fragmentReadableBytes + nonFragmentLength;
+            int payloadLength = fragmentReadableBytes + padding;
             ByteBuf buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
             writeFrameHeaderInternal(buf, payloadLength, CONTINUATION, flags, streamId);
             writePaddingLength(buf, padding);
@@ -493,7 +495,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 fragmentReadableBytes = min(headerBlock.readableBytes(), maxFragmentLength);
                 ByteBuf fragment = headerBlock.readRetainedSlice(fragmentReadableBytes);
 
-                payloadLength = fragmentReadableBytes + nonFragmentLength;
+                payloadLength = fragmentReadableBytes + padding;
                 if (headerBlock.isReadable()) {
                     ctx.write(buf.retain(), promiseAggregator.newPromise());
                 } else {
@@ -509,18 +511,28 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 ctx.write(fragment, promiseAggregator.newPromise());
 
                 // Write out the padding, if any.
-                if (padding > 0) {
-                    ctx.write(ZERO_BUFFER.slice(0, padding), promiseAggregator.newPromise());
+                if (paddingBytes(padding) > 0) {
+                    ctx.write(ZERO_BUFFER.slice(0, paddingBytes(padding)), promiseAggregator.newPromise());
                 }
             } while(headerBlock.isReadable());
         }
         return promiseAggregator;
     }
 
-    private static void writePaddingLength(ByteBuf buf, int paddingLength) {
-        if (paddingLength > 0) {
+    /**
+     * Returns the number of padding bytes that should be appended to the end of a frame.
+     */
+    private static int paddingBytes(int padding) {
+        // The padding parameter contains the 1 byte pad length field as well as the trailing padding bytes.
+        // Subtract 1, so to only get the number of padding bytes that need to be appended to the end of a frame.
+        return padding - 1;
+    }
+
+    private static void writePaddingLength(ByteBuf buf, int padding) {
+        if (padding > 0) {
             // It is assumed that the padding length has been bounds checked before this
-            buf.writeByte(paddingLength);
+            // Minus 1, as the pad length field is included in the padding parameter and is 1 byte wide.
+            buf.writeByte(padding - 1);
         }
     }
 
@@ -533,12 +545,6 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     private static void verifyStreamOrConnectionId(int streamId, String argumentName) {
         if (streamId < 0) {
             throw new IllegalArgumentException(argumentName + " must be >= 0");
-        }
-    }
-
-    private static void verifyPadding(int padding) {
-        if (padding < 0 || padding > MAX_UNSIGNED_BYTE) {
-            throw new IllegalArgumentException("Invalid padding value: " + padding);
         }
     }
 
@@ -601,7 +607,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 flags.endOfStream(endOfStream);
                 frameHeader = buffer.readSlice(DATA_FRAME_HEADER_LENGTH).writerIndex(0);
 
-                int payloadLength = data + padding + flags.getPaddingPresenceFieldLength();
+                int payloadLength = data + padding;
                 writeFrameHeaderInternal(frameHeader, payloadLength, DATA, flags, streamId);
                 writePaddingLength(frameHeader, padding);
             }

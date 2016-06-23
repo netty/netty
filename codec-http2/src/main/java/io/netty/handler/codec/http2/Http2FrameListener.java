@@ -30,7 +30,8 @@ public interface Http2FrameListener {
      * @param ctx the context from the handler where the frame was read.
      * @param streamId the subject stream for the frame.
      * @param data payload buffer for the frame. This buffer will be released by the codec.
-     * @param padding the number of padding bytes found at the end of the frame.
+     * @param padding additional bytes that should be added to obscure the true content size. Must be between 0 and
+     *                256 (inclusive).
      * @param endOfStream Indicates whether this is the last frame to be sent from the remote endpoint for this stream.
      * @return the number of bytes that have been processed by the application. The returned bytes are used by the
      * inbound flow controller to determine the appropriate time to expand the inbound flow control window (i.e. send
@@ -60,7 +61,8 @@ public interface Http2FrameListener {
      * @param ctx the context from the handler where the frame was read.
      * @param streamId the subject stream for the frame.
      * @param headers the received headers.
-     * @param padding the number of padding bytes found at the end of the frame.
+     * @param padding additional bytes that should be added to obscure the true content size. Must be between 0 and
+     *                256 (inclusive).
      * @param endOfStream Indicates whether this is the last frame to be sent from the remote endpoint
      *            for this stream.
      */
@@ -89,7 +91,8 @@ public interface Http2FrameListener {
      *            connection.
      * @param weight the new weight for the stream.
      * @param exclusive whether or not the stream should be the exclusive dependent of its parent.
-     * @param padding the number of padding bytes found at the end of the frame.
+     * @param padding additional bytes that should be added to obscure the true content size. Must be between 0 and
+     *                256 (inclusive).
      * @param endOfStream Indicates whether this is the last frame to be sent from the remote endpoint
      *            for this stream.
      */
@@ -176,7 +179,8 @@ public interface Http2FrameListener {
      * @param streamId the stream the frame was sent on.
      * @param promisedStreamId the ID of the promised stream.
      * @param headers the received headers.
-     * @param padding the number of padding bytes found at the end of the frame.
+     * @param padding additional bytes that should be added to obscure the true content size. Must be between 0 and
+     *                256 (inclusive).
      */
     void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
             Http2Headers headers, int padding) throws Http2Exception;

@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.util.internal.UnstableApi;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -51,14 +52,13 @@ public final class DefaultHttp2HeadersFrame extends AbstractHttp2StreamFrame imp
      *
      * @param headers the non-{@code null} headers to send
      * @param endStream whether these headers should terminate the stream
-     * @param padding additional bytes that should be added to obscure the true content size
+     * @param padding additional bytes that should be added to obscure the true content size. Must be between 0 and
+     *                256 (inclusive).
      */
     public DefaultHttp2HeadersFrame(Http2Headers headers, boolean endStream, int padding) {
         this.headers = checkNotNull(headers, "headers");
         this.endStream = endStream;
-        if (padding < 0 || padding > Http2CodecUtil.MAX_UNSIGNED_BYTE) {
-            throw new IllegalArgumentException("padding must be non-negative and less than 256");
-        }
+        verifyPadding(padding);
         this.padding = padding;
     }
 

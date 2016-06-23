@@ -32,7 +32,10 @@ public interface Http2DataWriter {
      * @param ctx the context to use for writing.
      * @param streamId the stream for which to send the frame.
      * @param data the payload of the frame. This will be released by this method.
-     * @param padding the amount of padding to be added to the end of the frame
+     * @param padding additional bytes that should be added to obscure the true content size. Must be between 0 and
+     *                256 (inclusive). A 1 byte padding is encoded as just the pad length field with value 0.
+     *                A 256 byte padding is encoded as the pad length field with value 255 and 255 padding bytes
+     *                appended to the end of the frame.
      * @param endStream indicates if this is the last frame to be sent for the stream.
      * @param promise the promise for the write.
      * @return the future for the write.
