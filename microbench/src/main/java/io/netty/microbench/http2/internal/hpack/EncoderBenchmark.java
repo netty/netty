@@ -36,16 +36,24 @@ import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Threads;
+import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.IOException;
 import java.util.List;
 
+@Fork(1)
+@Threads(1)
+@Warmup(iterations = 5)
+@Measurement(iterations = 5)
 public class EncoderBenchmark extends AbstractMicrobenchmark {
 
     @Param
