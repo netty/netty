@@ -50,6 +50,18 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private static final int ST_SHUTDOWN = 4;
     private static final int ST_TERMINATED = 5;
 
+    /**
+     * Result of the method {@link #runAllTasksFrom(Queue, long, LongConsumer)}.
+     */
+    protected enum DeadlineRunResult {
+        /*If the queue, from which the tasks were to be run, was empty.*/
+        NO_TASKS_FOUND,
+        /*If the method returned as a result of deadline expiry.*/
+        TIMED_OUT,
+        /*If the method ran at least one task and was not timed out.*/
+        RAN_AT_LEAST_ONCE
+    }
+
     private static final Runnable WAKEUP_TASK = new Runnable() {
         @Override
         public void run() {
@@ -104,6 +116,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private long gracefulShutdownStartTime;
 
     private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
+    private final LongConsumer setLastExecutionTime = new LongConsumer() {
+        @Override
+        public void consume(long aLong) {
+            lastExecutionTime = aLong;
+        }
+    };
 
     /**
      * Create a new instance
@@ -165,6 +183,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     protected Runnable pollTask() {
         assert inEventLoop();
+        return pollTaskFrom(taskQueue);
+    }
+
+    protected Runnable pollTaskFrom(Queue<Runnable> taskQueue) {
         for (;;) {
             Runnable task = taskQueue.poll();
             if (task == WAKEUP_TASK) {
@@ -309,30 +331,46 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @return {@code true} if and only if at least one task was run
      */
     protected boolean runAllTasks() {
+        assert inEventLoop();
         boolean fetchedAll;
+        boolean ranAtLeastOne = false;
+
         do {
             fetchedAll = fetchFromScheduledTaskQueue();
-            Runnable task = pollTask();
-            if (task == null) {
-                return false;
-            }
-
-            for (;;) {
-                try {
-                    task.run();
-                } catch (Throwable t) {
-                    logger.warn("A task raised an exception.", t);
-                }
-
-                task = pollTask();
-                if (task == null) {
-                    break;
-                }
+            if (runAllTasksFrom(taskQueue)) {
+                ranAtLeastOne = true;
             }
         } while (!fetchedAll); // keep on processing until we fetched all scheduled tasks.
 
-        lastExecutionTime = ScheduledFutureTask.nanoTime();
-        return true;
+        if (ranAtLeastOne) {
+            lastExecutionTime = ScheduledFutureTask.nanoTime();
+        }
+        afterRunningAllTasks(false);
+        return ranAtLeastOne;
+    }
+
+    /**
+     * Runs all tasks from the passed {@code taskQueue}.
+     *
+     * @param taskQueue To poll and execute all tasks.
+     *
+     * @return {@code true} if atleast one task was executed.
+     */
+    protected boolean runAllTasksFrom(Queue<Runnable> taskQueue) {
+        boolean ranAtLeastOne = false;
+        for (;;) {
+            Runnable task = pollTaskFrom(taskQueue);
+            if (task == null) {
+                break;
+            }
+            ranAtLeastOne = true;
+            try {
+                task.run();
+            } catch (Throwable t) {
+                logger.warn("A task raised an exception. Task: {}", task, t);
+            }
+        }
+        return ranAtLeastOne;
     }
 
     /**
@@ -340,10 +378,39 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
      */
     protected boolean runAllTasks(long timeoutNanos) {
+        assert inEventLoop();
         fetchFromScheduledTaskQueue();
-        Runnable task = pollTask();
-        if (task == null) {
+
+        DeadlineRunResult status = runAllTasksFrom(taskQueue, timeoutNanos, setLastExecutionTime);
+        switch (status) {
+        case NO_TASKS_FOUND:
+            afterRunningAllTasks(false);
             return false;
+        case TIMED_OUT:
+            afterRunningAllTasks(true);
+            return true;
+        case RAN_AT_LEAST_ONCE:
+            afterRunningAllTasks(false);
+            return true;
+        default:
+            throw new IllegalStateException("Unknown result: " + status);
+        }
+    }
+
+    /**
+     * Runs all tasks from the passed {@code taskQueue}.
+     *
+     * @param taskQueue To poll and execute all tasks.
+     * @param timeoutNanos Time in nanos which is the deadline for this method.
+     * @param lastExecutionTimeCallback Callback to inform about the last execution time in nanos.
+     *
+     * @return Trinary result for this method.
+     */
+    protected DeadlineRunResult runAllTasksFrom(Queue<Runnable> taskQueue, long timeoutNanos,
+                                                LongConsumer lastExecutionTimeCallback) {
+        Runnable task = pollTaskFrom(taskQueue);
+        if (task == null) {
+            return DeadlineRunResult.NO_TASKS_FOUND;
         }
 
         final long deadline = ScheduledFutureTask.nanoTime() + timeoutNanos;
@@ -353,7 +420,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             try {
                 task.run();
             } catch (Throwable t) {
-                logger.warn("A task raised an exception.", t);
+                logger.warn("A task raised an exception. Task: " + task, t);
             }
 
             runTasks ++;
@@ -363,20 +430,27 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if ((runTasks & 0x3F) == 0) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 if (lastExecutionTime >= deadline) {
-                    break;
+                    return DeadlineRunResult.TIMED_OUT;
                 }
             }
 
-            task = pollTask();
+            task = pollTaskFrom(taskQueue);
             if (task == null) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 break;
             }
         }
-
-        this.lastExecutionTime = lastExecutionTime;
-        return true;
+        lastExecutionTimeCallback.consume(lastExecutionTime);
+        return DeadlineRunResult.RAN_AT_LEAST_ONCE;
     }
+
+    /**
+     * Invoked before returning from {@link #runAllTasks()} and {@link #runAllTasks(long)}.
+     *
+     * @param timedOut {@code true} if and only if called from {@link #runAllTasks(long)} and the run timed out before
+     * running all eligible tasks.
+     */
+    protected void afterRunningAllTasks(boolean timedOut) { }
 
     /**
      * Returns the amount of time left until the scheduled task with the closest dead line is executed.
@@ -799,6 +873,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
             }
         });
+    }
+
+    /**
+     * An interface that is called with a long argument.
+     */
+    protected interface LongConsumer {
+        void consume(long aLong);
     }
 
     private static final class DefaultThreadProperties implements ThreadProperties {

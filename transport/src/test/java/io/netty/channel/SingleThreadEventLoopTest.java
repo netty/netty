@@ -20,6 +20,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -442,7 +443,40 @@ public class SingleThreadEventLoopTest {
         assertThat(loopA.isShutdown(), is(true));
     }
 
-    private static class SingleThreadEventLoopA extends SingleThreadEventLoop {
+    @Test(timeout = 60000)
+    public void testOnEventLoopIteration() throws Exception {
+        CountingRunnable onIteration = new CountingRunnable();
+        loopB.onEventLoopIteration(onIteration);
+        CountingRunnable noopTask = new CountingRunnable();
+        loopB.submit(noopTask).sync();
+
+        loopB.iterationEndSignal.take();
+        MatcherAssert.assertThat("Unexpected invocation count for regular task.",
+                                 noopTask.invocationCount.get(), is(1));
+        MatcherAssert.assertThat("Unexpected invocation count for on every eventloop iteration task.",
+                                 onIteration.invocationCount.get(), is(1));
+    }
+
+    @Test(timeout = 60000)
+    public void testRemoveOnEventLoopIteration() throws Exception {
+        CountingRunnable onIteration1 = new CountingRunnable();
+        loopB.onEventLoopIteration(onIteration1);
+        CountingRunnable onIteration2 = new CountingRunnable();
+        loopB.onEventLoopIteration(onIteration2);
+        loopB.removeOnEventLoopIterationTask(onIteration1);
+        CountingRunnable noopTask = new CountingRunnable();
+        loopB.submit(noopTask).sync();
+
+        loopB.iterationEndSignal.take();
+        MatcherAssert.assertThat("Unexpected invocation count for regular task.",
+                                 noopTask.invocationCount.get(), is(1));
+        MatcherAssert.assertThat("Unexpected invocation count for on every eventloop iteration task.",
+                                 onIteration2.invocationCount.get(), is(1));
+        MatcherAssert.assertThat("Unexpected invocation count for on every eventloop iteration task.",
+                                 onIteration1.invocationCount.get(), is(0));
+    }
+
+    private static final class SingleThreadEventLoopA extends SingleThreadEventLoop {
 
         final AtomicInteger cleanedUp = new AtomicInteger();
 
@@ -471,7 +505,9 @@ public class SingleThreadEventLoopTest {
         }
     }
 
-    private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
+    private static final class SingleThreadEventLoopB extends SingleThreadEventLoop {
+
+        final LinkedBlockingQueue<Boolean> iterationEndSignal = new LinkedBlockingQueue<Boolean>(1);
 
         SingleThreadEventLoopB() {
             super(null, Executors.defaultThreadFactory(), false);
@@ -497,6 +533,22 @@ public class SingleThreadEventLoopTest {
         @Override
         protected void wakeup(boolean inEventLoop) {
             interruptThread();
+        }
+
+        @Override
+        protected void afterRunningAllTasks(boolean timedOut) {
+            super.afterRunningAllTasks(timedOut);
+            iterationEndSignal.offer(true);
+        }
+    }
+
+    static final class CountingRunnable implements Runnable {
+
+        private final AtomicInteger invocationCount = new AtomicInteger();
+
+        @Override
+        public void run() {
+            invocationCount.incrementAndGet();
         }
     }
 }

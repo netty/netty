@@ -35,6 +35,7 @@ import static io.netty.channel.ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_SPIN_COUNT;
+import static io.netty.channel.ChannelOption.AUTO_FLUSH;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -45,6 +46,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
+    private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOFLUSH_UPDATER;
     private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOREAD_UPDATER;
     private static final AtomicReferenceFieldUpdater<DefaultChannelConfig, WriteBufferWaterMark> WATERMARK_UPDATER;
 
@@ -55,6 +57,13 @@ public class DefaultChannelConfig implements ChannelConfig {
             autoReadUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultChannelConfig.class, "autoRead");
         }
         AUTOREAD_UPDATER = autoReadUpdater;
+
+        AtomicIntegerFieldUpdater<DefaultChannelConfig> autoFlushUpdater =
+            PlatformDependent.newAtomicIntegerFieldUpdater(DefaultChannelConfig.class, "autoFlush");
+        if (autoFlushUpdater == null) {
+            autoFlushUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultChannelConfig.class, "autoFlush");
+        }
+        AUTOFLUSH_UPDATER = autoFlushUpdater;
 
         AtomicReferenceFieldUpdater<DefaultChannelConfig, WriteBufferWaterMark> watermarkUpdater =
                 PlatformDependent.newAtomicReferenceFieldUpdater(DefaultChannelConfig.class, "writeBufferWaterMark");
@@ -75,6 +84,9 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int writeSpinCount = 16;
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int autoRead = 1;
+
+    @SuppressWarnings("FieldMayBeFinal")
+    private volatile int autoFlush;
     private volatile boolean autoClose = true;
     private volatile WriteBufferWaterMark writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
 
@@ -93,7 +105,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
+                ALLOCATOR, AUTO_FLUSH, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
                 WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR);
     }
 
@@ -147,6 +159,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == RCVBUF_ALLOCATOR) {
             return (T) getRecvByteBufAllocator();
         }
+        if (option == AUTO_FLUSH) {
+            return (T) Boolean.valueOf(isAutoFlush());
+        }
         if (option == AUTO_READ) {
             return (T) Boolean.valueOf(isAutoRead());
         }
@@ -183,6 +198,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setAllocator((ByteBufAllocator) value);
         } else if (option == RCVBUF_ALLOCATOR) {
             setRecvByteBufAllocator((RecvByteBufAllocator) value);
+        } else if (option == AUTO_FLUSH) {
+            setAutoFlush((Boolean) value);
         } else if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
         } else if (option == AUTO_CLOSE) {
@@ -300,6 +317,46 @@ public class DefaultChannelConfig implements ChannelConfig {
     public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
         rcvBufAllocator = checkNotNull(allocator, "allocator");
         return this;
+    }
+
+    /**
+     * Tells whether {@link ChannelOption#AUTO_FLUSH} is enabled for this channel.
+     *
+     * @return {@code true} if {@link ChannelOption#AUTO_FLUSH} is enabled for this channel.
+     */
+    private boolean isAutoFlush() {
+        return autoFlush == 1;
+    }
+
+    /**
+     * Sets the {@link ChannelOption#AUTO_FLUSH} option for the associated channel.
+     *
+     * @param autoFlush Auto flush value to set for the option.
+     *
+     * @return {@code this}
+     */
+    private ChannelConfig setAutoFlush(boolean autoFlush) {
+        final boolean oldAutoFlush = AUTOFLUSH_UPDATER.getAndSet(this, autoFlush? 1 : 0) == 1;
+        if (autoFlush != oldAutoFlush) {
+            autoFlushModified(autoFlush);
+        }
+        return this;
+    }
+
+    /**
+     * Called when {@link #setAutoFlush(boolean)} is called with a value different than what currently exists.
+     *
+     * @param autoFlush Value of {@code autoFlush} after modification.
+     *
+     * @throws UnsupportedOperationException If the {@link Channel} is not an instance of {@link AbstractChannel}.
+     */
+    private void autoFlushModified(boolean autoFlush) {
+        if (channel instanceof AbstractChannel) {
+            ((AbstractChannel) channel).autoFlushModified(autoFlush);
+        } else {
+            throw new UnsupportedOperationException(
+                    "Auto-Flush is only available for channels extending from " + AbstractChannel.class.getName());
+        }
     }
 
     /**

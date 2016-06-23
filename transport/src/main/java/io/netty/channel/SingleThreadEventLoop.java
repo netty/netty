@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
@@ -27,12 +28,24 @@ import java.util.concurrent.ThreadFactory;
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
+    private final Queue<Runnable> tailTasks;
+    private final LongConsumer runTimeoutUpdater = new LongConsumer() {
+        @Override
+        public void consume(long aLong) {
+            runTimeout = aLong;
+        }
+    };
+    private boolean lastRunTimedOut;
+    private long runTimeout;
+
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
         super(parent, threadFactory, addTaskWakesUp);
+        tailTasks = newTaskQueue();
     }
 
     protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
         super(parent, executor, addTaskWakesUp);
+        tailTasks = newTaskQueue();
     }
 
     @Override
@@ -71,9 +84,65 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         return promise;
     }
 
+    /**
+     * Adds a task to be run once at the end of next (or current) {@code eventloop} iteration.
+     *
+     * @param task to be added.
+     */
+    final void onEventLoopIteration(Runnable task) {
+        ObjectUtil.checkNotNull(task, "task");
+        if (isShutdown() || isShuttingDown() || isTerminated()) {
+            reject();
+        }
+
+        tailTasks.add(task);
+
+        if (wakesUpForTask(task)) {
+            wakeup(inEventLoop());
+        }
+    }
+
+    /**
+     * Removes a task that was added previously via {@link #onEventLoopIteration(Runnable)}.
+     *
+     * @param task to be removed.
+     *
+     * @return {@code true} if the task was removed as a result of this call.
+     */
+    final boolean removeOnEventLoopIterationTask(Runnable task) {
+        return tailTasks.remove(ObjectUtil.checkNotNull(task, "task"));
+    }
+
     @Override
     protected boolean wakesUpForTask(Runnable task) {
         return !(task instanceof NonWakeupRunnable);
+    }
+
+    @Override
+    protected boolean runAllTasks(long timeoutNanos) {
+        assert inEventLoop();
+        runTimeout = timeoutNanos;
+        if (lastRunTimedOut) {
+            lastRunTimedOut = false;
+            runAllTasksFrom(tailTasks, timeoutNanos, runTimeoutUpdater);
+        }
+
+        return super.runAllTasks(runTimeout);
+    }
+
+    @Override
+    protected void afterRunningAllTasks(boolean timedOut) {
+        if (timedOut) {
+            lastRunTimedOut = timedOut;
+            return;
+        }
+
+        runAllTasksFrom(tailTasks);
+    }
+
+    @Override
+    protected boolean hasTasks() {
+        return super.hasTasks() || !tailTasks.isEmpty();
     }
 
     /**

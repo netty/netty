@@ -22,6 +22,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -36,6 +37,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -82,6 +84,24 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      * change.
      */
     private boolean registered;
+
+    private static final AtomicIntegerFieldUpdater<DefaultChannelPipeline> ENQUEUE_WAKEUP_TASK_UPDATER;
+
+    static {
+        AtomicIntegerFieldUpdater<DefaultChannelPipeline> enqueueWakeupTaskUpdater =
+                PlatformDependent.newAtomicIntegerFieldUpdater(DefaultChannelPipeline.class, "enqueueWakeupTask");
+        if (enqueueWakeupTaskUpdater == null) {
+            enqueueWakeupTaskUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultChannelPipeline.class,
+                                                                            "enqueueWakeupTask");
+        }
+        ENQUEUE_WAKEUP_TASK_UPDATER = enqueueWakeupTaskUpdater;
+    }
+
+    @SuppressWarnings("unused")
+    private volatile int enqueueWakeupTask;
+    private volatile boolean autoFlush;
+
+    private Runnable wakeupTask;
 
     protected DefaultChannelPipeline(Channel channel) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
@@ -877,6 +897,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelActive() {
+        autoFlush = channel.config().getOption(ChannelOption.AUTO_FLUSH);
         AbstractChannelHandlerContext.invokeChannelActive(head);
         return this;
     }
@@ -1118,6 +1139,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    void wakeUpForAutoFlushIfRequired() {
+        if (autoFlush && ENQUEUE_WAKEUP_TASK_UPDATER.compareAndSet(this, 0, 1)) {
+            if (null == wakeupTask) {
+                wakeupTask = new Runnable() {
+                    @Override
+                    public void run() {
+                        ENQUEUE_WAKEUP_TASK_UPDATER.set(DefaultChannelPipeline.this, 0);
+                    }
+                };
+            }
+            channel().eventLoop().execute(wakeupTask);
+        }
+    }
+
     /**
      * Called once a {@link Throwable} hit the end of the {@link ChannelPipeline} without been handled by the user
      * in {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}.
@@ -1146,6 +1181,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } finally {
             ReferenceCountUtil.release(msg);
         }
+    }
+
+    final void autoFlushModified(boolean autoFlush) {
+        this.autoFlush = autoFlush;
     }
 
     // A special catch-all handler that handles both bytes and messages.
