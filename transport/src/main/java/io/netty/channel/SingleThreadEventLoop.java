@@ -29,9 +29,9 @@ import java.util.concurrent.ThreadFactory;
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
     private final Queue<Runnable> tailTasks;
-    private final LongCallable runTimeoutUpdater = new LongCallable() {
+    private final LongConsumer runTimeoutUpdater = new LongConsumer() {
         @Override
-        public void call(long aLong) {
+        public void consume(long aLong) {
             runTimeout = aLong;
         }
     };

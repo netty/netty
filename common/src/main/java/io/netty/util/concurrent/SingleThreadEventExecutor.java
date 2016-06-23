@@ -51,7 +51,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private static final int ST_TERMINATED = 5;
 
     /**
-     * Result of the method {@link #runAllTasksFrom(Queue, long, LongCallable)}.
+     * Result of the method {@link #runAllTasksFrom(Queue, long, LongConsumer)}.
      */
     protected enum DeadlineRunResult {
         /*If the queue, from which the tasks were to be run, was empty.*/
@@ -116,9 +116,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private long gracefulShutdownStartTime;
 
     private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
-    private final LongCallable setLastExecutionTime = new LongCallable() {
+    private final LongConsumer setLastExecutionTime = new LongConsumer() {
         @Override
-        public void call(long aLong) {
+        public void consume(long aLong) {
             lastExecutionTime = aLong;
         }
     };
@@ -367,7 +367,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             try {
                 task.run();
             } catch (Throwable t) {
-                logger.warn("A task raised an exception. Task: " + task, t);
+                logger.warn("A task raised an exception. Task: {}", task, t);
             }
         }
         return ranAtLeastOne;
@@ -388,14 +388,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             return false;
         case TIMED_OUT:
             afterRunningAllTasks(true);
-            break;
+            return true;
         case RAN_AT_LEAST_ONCE:
             afterRunningAllTasks(false);
-            break;
+            return true;
         default:
             throw new IllegalStateException("Unknown result: " + status);
         }
-        return true;
     }
 
     /**
@@ -408,7 +407,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @return Trinary result for this method.
      */
     protected DeadlineRunResult runAllTasksFrom(Queue<Runnable> taskQueue, long timeoutNanos,
-                                                LongCallable lastExecutionTimeCallback) {
+                                                LongConsumer lastExecutionTimeCallback) {
         Runnable task = pollTaskFrom(taskQueue);
         if (task == null) {
             return DeadlineRunResult.NO_TASKS_FOUND;
@@ -441,7 +440,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 break;
             }
         }
-        lastExecutionTimeCallback.call(lastExecutionTime);
+        lastExecutionTimeCallback.consume(lastExecutionTime);
         return DeadlineRunResult.RAN_AT_LEAST_ONCE;
     }
 
@@ -879,8 +878,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     /**
      * An interface that is called with a long argument.
      */
-    protected interface LongCallable {
-        void call(long aLong);
+    protected interface LongConsumer {
+        void consume(long aLong);
     }
 
     private static final class DefaultThreadProperties implements ThreadProperties {

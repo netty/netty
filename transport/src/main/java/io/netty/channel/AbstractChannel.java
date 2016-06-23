@@ -808,10 +808,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             outboundBuffer.addMessage(msg, size, promise);
 
             if (isAutoFlush()) {
-                if (autoFlushTask == null) {
-                    autoFlushTask = new AutoFlushTask(AbstractChannel.this);
+                if (eventLoop instanceof SingleThreadEventLoop) {
+                    if (autoFlushTask == null) {
+                        autoFlushTask = new AutoFlushTask(AbstractChannel.this);
+                    }
+                    autoFlushTask.onWrite();
+                } else {
+                    flush(outboundBuffer);
                 }
-                autoFlushTask.onWrite();
             }
         }
 
@@ -824,6 +828,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            flush(outboundBuffer);
+        }
+
+        private void flush(ChannelOutboundBuffer outboundBuffer) {
             outboundBuffer.addFlush();
             flush0();
         }
@@ -1081,13 +1089,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         AutoFlushTask(AbstractChannel channel) {
             this.channel = channel;
-            if (channel.eventLoop() instanceof SingleThreadEventLoop) {
-                eventLoop = (SingleThreadEventLoop) channel.eventLoop();
-            } else {
-                throw new UnsupportedOperationException("Auto flush is only supported for channels using "
-                                                        + SingleThreadEventLoop.class.getName() + " eventloop. Found: "
-                                                        + channel.eventLoop().getClass().getName());
-            }
+            assert channel.eventLoop() instanceof SingleThreadEventLoop;
+            eventLoop = (SingleThreadEventLoop) channel.eventLoop();
         }
 
         @Override

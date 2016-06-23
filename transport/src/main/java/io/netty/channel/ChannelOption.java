@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.AbstractConstant;
 import io.netty.util.ConstantPool;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -100,8 +101,11 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
 
     /**
      * Provides a way to eliminate explicit flushing of writes on this channel. If turned-on, any pending writes on the
-     * channel will be flushed on the next iteration of the eventloop. Explicit flushes will still be honored.
+     * channel will be flushed on the next iteration of the eventloop if possible or directly (depending on the
+     * implementation).
+     * Explicit flushes will still be honored.
      */
+   @UnstableApi
     public static final ChannelOption<Boolean> AUTO_FLUSH = valueOf("AUTO_FLUSH");
 
     /**
