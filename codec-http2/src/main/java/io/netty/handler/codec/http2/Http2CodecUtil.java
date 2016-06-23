@@ -46,6 +46,11 @@ public final class Http2CodecUtil {
 
     public static final int PING_FRAME_PAYLOAD_LENGTH = 8;
     public static final short MAX_UNSIGNED_BYTE = 0xFF;
+    /**
+     * The maximum number of padding bytes. That is the 255 padding bytes appended to the end of a frame and the 1 byte
+     * pad length field.
+     */
+    public static final int MAX_PADDING = 256;
     public static final int MAX_UNSIGNED_SHORT = 0xFFFF;
     public static final long MAX_UNSIGNED_INT = 0xFFFFFFFFL;
     public static final int FRAME_HEADER_LENGTH = 9;
@@ -340,5 +345,11 @@ public final class Http2CodecUtil {
         }
     }
 
+    public static void verifyPadding(int padding) {
+        if (padding < 0 || padding > MAX_PADDING) {
+            throw new IllegalArgumentException(String.format("Invalid padding '%d'. Padding must be between 0 and " +
+                                                             "%d (inclusive).", padding, MAX_PADDING));
+        }
+    }
     private Http2CodecUtil() { }
 }

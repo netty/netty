@@ -396,11 +396,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void readDataFrame(ChannelHandlerContext ctx, ByteBuf payload,
             Http2FrameListener listener) throws Http2Exception {
-        short padding = readPadding(payload);
+        int padding = readPadding(payload);
 
         // Determine how much data there is to read by removing the trailing
         // padding.
-        int dataLength = payload.readableBytes() - padding;
+        int dataLength = lengthWithoutTrailingPadding(payload.readableBytes(), padding);
         if (dataLength < 0) {
             throw streamError(streamId, FRAME_SIZE_ERROR,
                     "Frame payload too small for padding.");
@@ -424,7 +424,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             final boolean exclusive = (word1 & 0x80000000L) != 0;
             final int streamDependency = (int) (word1 & 0x7FFFFFFFL);
             final short weight = (short) (payload.readUnsignedByte() + 1);
-            final ByteBuf fragment = payload.readSlice(payload.readableBytes() - padding);
+            final ByteBuf fragment = payload.readSlice(lengthWithoutTrailingPadding(payload.readableBytes(), padding));
 
             // Create a handler that invokes the listener when the header block is complete.
             headersContinuation = new HeadersContinuation() {
@@ -471,7 +471,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         };
 
         // Process the initial fragment, invoking the listener's callback if end of headers.
-        final ByteBuf fragment = payload.readSlice(payload.readableBytes() - padding);
+        final ByteBuf fragment = payload.readSlice(lengthWithoutTrailingPadding(payload.readableBytes(), padding));
         headersContinuation.processFragment(flags.endOfHeaders(), fragment, listener);
     }
 
@@ -542,7 +542,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         };
 
         // Process the initial fragment, invoking the listener's callback if end of headers.
-        final ByteBuf fragment = payload.readSlice(payload.readableBytes() - padding);
+        final ByteBuf fragment = payload.readSlice(lengthWithoutTrailingPadding(payload.readableBytes(), padding));
         headersContinuation.processFragment(flags.endOfHeaders(), fragment, listener);
     }
 
@@ -589,13 +589,24 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     }
 
     /**
-     * If padding is present in the payload, reads the next byte as padding. Otherwise, returns zero.
+     * If padding is present in the payload, reads the next byte as padding. The padding also includes the one byte
+     * width of the pad length field. Otherwise, returns zero.
      */
-    private short readPadding(ByteBuf payload) {
+    private int readPadding(ByteBuf payload) {
         if (!flags.paddingPresent()) {
             return 0;
         }
-        return payload.readUnsignedByte();
+        return payload.readUnsignedByte() + 1;
+    }
+
+    /**
+     * The padding parameter consists of the 1 byte pad length field and the trailing padding bytes. This method
+     * returns the number of readable bytes without the trailing padding.
+     */
+    private static int lengthWithoutTrailingPadding(int readableBytes, int padding) {
+        return padding == 0
+                ? readableBytes
+                : readableBytes - (padding - 1);
     }
 
     /**
