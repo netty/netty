@@ -1,0 +1,88 @@
+/*
+ * Copyright 2016 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package io.netty.example.gsonecho;
+
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.example.echo.EchoClient;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.CharsetUtil;
+import java.util.Map;
+
+
+/**
+ * Modification of {@link EchoClient} which utilizes Gson serialization.
+ */
+public class GsonEchoClient {
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final String HOST = System.getProperty("host", "127.0.0.1");
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
+
+    public static void main(String[] args) throws Exception {
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            sslCtx = SslContextBuilder.forClient()
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+        } else {
+            sslCtx = null;
+        }
+
+        EventLoopGroup group = new NioEventLoopGroup();
+        try {
+            Bootstrap b = new Bootstrap();
+            b.group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) throws Exception {
+                            ChannelPipeline p = ch.pipeline();
+                            if (sslCtx != null) {
+                                p.addLast(sslCtx.newHandler(ch.alloc(), HOST, PORT));
+                            }
+                            p.addLast(
+                                    new LengthFieldPrepender(4),
+                                    new StringEncoder(CharsetUtil.UTF_8),
+                                    new GsonEncoder<Map>(Map.class),
+                                    new LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4),
+                                    new StringDecoder(CharsetUtil.UTF_8),
+                                    new LoggingHandler(),
+                                    new GsonDecoder<Map>(Map.class),
+                                    new LoggingHandler(),
+                                    new GsonEchoClientHandler());
+                        }
+                    });
+
+            // Start the connection attempt.
+            b.connect(HOST, PORT).sync().channel().closeFuture().sync();
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+}
