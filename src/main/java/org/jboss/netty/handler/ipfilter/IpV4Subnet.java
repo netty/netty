@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.handler.ipfilter;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.StringUtil;
 
 import java.net.InetAddress;
@@ -44,12 +42,7 @@ import java.util.StringTokenizer;
  */
 public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
 
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(IpV4Subnet.class);
-
     private static final int SUBNET_MASK = 0x80000000;
-
-    private static final int BYTE_ADDRESS_MASK = 0xFF;
 
     private InetAddress inetAddress;
 
@@ -142,13 +135,13 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
      * @return the integer representation
      */
     private static int toInt(InetAddress inetAddress1) {
-        byte[] address = inetAddress1.getAddress();
-        int net = 0;
-        for (byte addres : address) {
-            net <<= 8;
-            net |= addres & BYTE_ADDRESS_MASK;
-        }
-        return net;
+        byte[] octets = inetAddress1.getAddress();
+        assert octets.length == 4;
+
+        return (octets[0] & 0xff) << 24 |
+                (octets[1] & 0xff) << 16 |
+                (octets[2] & 0xff) << 8 |
+                octets[3] & 0xff;
     }
 
     /** Sets the BaseAdress of the Subnet. */
@@ -210,10 +203,6 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
      *         set network.
      */
     public boolean contains(InetAddress inetAddress1) {
-        if (mask == -1) {
-            // ANY
-            return true;
-        }
         return (toInt(inetAddress1) & mask) == subnet;
     }
 
