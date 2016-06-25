@@ -26,6 +26,7 @@ import org.jctools.queues.SpscLinkedQueue;
 import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscLinkedAtomicQueue;
 import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
+import org.jctools.util.Pow2;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -87,12 +88,11 @@ public final class PlatformDependent {
     private static final boolean DIRECT_BUFFER_PREFERRED =
             HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
+
     private static final int MPSC_CHUNK_SIZE =  1024;
     private static final int MIN_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * 2;
     private static final int DEFAULT_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * MPSC_CHUNK_SIZE;
-    // This is currently the maximal allowed capacity in JCTools.
-    // See https://github.com/JCTools/JCTools/issues/115
-    private static final int MAX_ALLOWED_MPSC_CAPACITY =  Integer.MAX_VALUE >> 2;
+    private static final int MAX_ALLOWED_MPSC_CAPACITY = Pow2.MAX_POW2;
 
     private static final long BYTE_ARRAY_BASE_OFFSET = PlatformDependent0.byteArrayBaseOffset();
 
