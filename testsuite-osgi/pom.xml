@@ -29,7 +29,7 @@
   <name>Netty/Testsuite/OSGI</name>
 
   <properties>
-    <exam.version>4.4.0</exam.version>
+    <exam.version>4.9.1</exam.version>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
   </properties>
 
@@ -197,19 +197,19 @@
     <dependency>
       <groupId>org.ops4j.pax.url</groupId>
       <artifactId>pax-url-wrap</artifactId>
-      <version>2.3.0</version>
+      <version>2.4.7</version>
     </dependency>
 
     <dependency>
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
-      <version>5.0.0</version>
+      <version>6.0.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.felix</groupId>
       <artifactId>org.apache.felix.framework</artifactId>
-      <version>4.6.0</version>
+      <version>5.4.0</version>
       <scope>test</scope>
     </dependency>
 
