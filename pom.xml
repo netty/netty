@@ -90,7 +90,7 @@
           <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.7.5.201505241946</version>
+            <version>0.7.7.201606060606</version>
             <executions>
               <execution>
                 <id>jacoco-prepare-agent</id>
@@ -202,9 +202,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>22</netty.build.version>
-    <jboss.marshalling.version>1.3.18.GA</jboss.marshalling.version>
-    <jetty.alpnAgent.version>1.0.1.Final</jetty.alpnAgent.version>
-    <jetty.alpnAgent.path>"${settings.localRepository}"/kr/motd/javaagent/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
+    <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
+    <jetty.alpnAgent.version>2.0.1</jetty.alpnAgent.version>
+    <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
@@ -229,6 +229,7 @@
     <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
+    <log4j2.version>2.6.1</log4j2.version>
   </properties>
 
   <modules>
@@ -325,7 +326,7 @@
       <dependency>
         <groupId>org.jctools</groupId>
         <artifactId>jctools-core</artifactId>
-        <version>1.2</version>
+        <version>1.2.1</version>
       </dependency>
 
       <dependency>
@@ -359,7 +360,7 @@
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
         <artifactId>log4j-api</artifactId>
-        <version>2.3</version>
+        <version>${log4j2.version}</version>
       </dependency>
       <dependency>
         <groupId>log4j</groupId>
@@ -415,7 +416,7 @@
       <dependency>
         <groupId>org.easymock</groupId>
         <artifactId>easymock</artifactId>
-        <version>3.2</version>
+        <version>3.4</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -482,7 +483,7 @@
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
         <artifactId>log4j-core</artifactId>
-        <version>2.3</version>
+        <version>${log4j2.version}</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
@@ -551,7 +552,7 @@
       <extension>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
-        <version>1.4.1.Final</version>
+        <version>1.5.0.Final</version>
       </extension>
     </extensions>
 
@@ -588,7 +589,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
+        <version>3.5.1</version>
         <configuration>
           <compilerVersion>1.7</compilerVersion>
           <fork>true</fork>
@@ -619,20 +620,20 @@
              be used even when compiling with java 1.7+ -->
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.9</version>
+        <version>1.11</version>
         <dependencies>
           <!-- Upgrade ASM and support Java 8 bytecode -->
           <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-all</artifactId>
-            <version>5.0.3</version>
+            <version>5.1</version>
           </dependency>
         </dependencies>
         <configuration>
           <signature>
             <groupId>org.codehaus.mojo.signature</groupId>
             <artifactId>java16</artifactId>
-            <version>1.0</version>
+            <version>1.1</version>
           </signature>
           <ignores>
             <ignore>sun.misc.Unsafe</ignore>
@@ -681,7 +682,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.10</version>
+        <version>2.12.1</version>
         <executions>
           <execution>
             <id>check-style</id>
@@ -743,7 +744,7 @@
               <goal>get</goal>
             </goals>
             <configuration>
-              <groupId>kr.motd.javaagent</groupId>
+              <groupId>org.mortbay.jetty.alpn</groupId>
               <artifactId>jetty-alpn-agent</artifactId>
               <version>${jetty.alpnAgent.version}</version>
             </configuration>
@@ -779,7 +780,7 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <version>2.4.0</version>
+        <version>2.5.4</version>
         <executions>
           <execution>
             <id>generate-manifest</id>
@@ -807,7 +808,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.8</version>
+        <version>1.10</version>
         <executions>
           <execution>
             <id>parse-version</id>
@@ -820,7 +821,7 @@
 
       <plugin>
         <artifactId>maven-source-plugin</artifactId>
-        <version>2.2.1</version>
+        <version>3.0.1</version>
         <!-- Eclipse-related OSGi manifests
              See https://github.com/netty/netty/issues/3886
              More information: http://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
@@ -861,7 +862,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.9.1</version>
+        <version>2.10.4</version>
         <configuration>
           <detectOfflineLinks>false</detectOfflineLinks>
           <breakiterator>true</breakiterator>
@@ -872,14 +873,15 @@
       </plugin>
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
-        <version>2.7</version>
+        <version>2.8.2</version>
         <configuration>
           <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
         </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.4.2</version>
+        <!-- Downgrade to 2.4.1 if release fails -->
+        <version>2.5.3</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
           <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
@@ -891,12 +893,12 @@
           <dependency>
             <groupId>org.apache.maven.scm</groupId>
             <artifactId>maven-scm-api</artifactId>
-            <version>1.8.1</version>
+            <version>1.9.4</version>
           </dependency>
           <dependency>
             <groupId>org.apache.maven.scm</groupId>
             <artifactId>maven-scm-provider-gitexe</artifactId>
-            <version>1.8.1</version>
+            <version>1.9.4</version>
           </dependency>
         </dependencies>
       </plugin>
@@ -979,12 +981,12 @@
           <dependency>
             <groupId>org.apache.ant</groupId>
             <artifactId>ant</artifactId>
-            <version>1.8.2</version>
+            <version>1.9.7</version>
           </dependency>
           <dependency>
             <groupId>org.apache.ant</groupId>
             <artifactId>ant-launcher</artifactId>
-            <version>1.8.2</version>
+            <version>1.9.7</version>
           </dependency>
           <dependency>
             <groupId>ant-contrib</groupId>
@@ -1005,33 +1007,33 @@
       <plugins>
         <plugin>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.3.1</version>
+          <version>1.4.1</version>
           <dependencies>
             <!-- Provides the 'requireFilesContent' enforcer rule. -->
             <dependency>
               <groupId>com.ceilfors.maven.plugin</groupId>
               <artifactId>enforcer-rules</artifactId>
-              <version>1.1.0</version>
+              <version>1.2.0</version>
             </dependency>
           </dependencies>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.15</version>
+          <version>2.19.1</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.15</version>
+          <version>2.19.1</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
-          <version>2.5</version>
+          <version>3.0.0</version>
         </plugin>
         <plugin>
           <artifactId>maven-resources-plugin</artifactId>
-          <version>2.6</version>
+          <version>3.0.1</version>
         </plugin>
         <plugin>
           <groupId>org.ops4j.pax.exam</groupId>
@@ -1040,7 +1042,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>2.5</version>
+          <version>3.0.2</version>
           <executions>
             <execution>
               <id>default-jar</id>
@@ -1058,11 +1060,11 @@
         </plugin>
         <plugin>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.8</version>
+          <version>2.10</version>
         </plugin>
         <plugin>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.4</version>
+          <version>2.6</version>
         </plugin>
         <plugin>
           <!-- Do NOT upgrade -->
@@ -1071,7 +1073,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
-          <version>1.7</version>
+          <version>1.8</version>
           <dependencies>
             <dependency>
               <groupId>ant-contrib</groupId>
@@ -1089,12 +1091,12 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.8</version>
+          <version>1.10</version>
         </plugin>
         <plugin>
           <groupId>org.fusesource.hawtjni</groupId>
           <artifactId>maven-hawtjni-plugin</artifactId>
-          <version>1.10</version>
+          <version>1.14</version>
         </plugin>
         <plugin>
           <groupId>kr.motd.maven</groupId>
