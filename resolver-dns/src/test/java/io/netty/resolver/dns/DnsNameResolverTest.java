@@ -278,6 +278,12 @@ public class DnsNameResolverTest {
                 .resolvedAddressTypes(resolvedAddressTypes);
     }
 
+    private static DnsNameResolverBuilder newNonCachedResolver(InternetProtocolFamily... resolvedAddressTypes) {
+        return newResolver()
+                .resolveCache(NoopDnsCache.INSTANCE)
+                .resolvedAddressTypes(resolvedAddressTypes);
+    }
+
     @BeforeClass
     public static void init() throws Exception {
         dnsServer.start();
@@ -344,6 +350,16 @@ public class DnsNameResolverTest {
         DnsNameResolver resolver = newResolver(InternetProtocolFamily.IPv6).build();
         try {
             testResolve0(resolver, EXCLUSIONS_RESOLVE_AAAA);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test
+    public void testNonCachedResolve() throws Exception {
+        DnsNameResolver resolver = newNonCachedResolver(InternetProtocolFamily.IPv4).build();
+        try {
+            testResolve0(resolver, EXCLUSIONS_RESOLVE_A);
         } finally {
             resolver.close();
         }
