@@ -337,7 +337,7 @@ public class DnsNameResolver extends InetNameResolver {
                                     Promise<InetAddress> promise,
                                     DnsCache resolveCache) {
         final List<DnsCacheEntry> cachedEntries = resolveCache.get(hostname);
-        if (cachedEntries == null) {
+        if (cachedEntries == null || cachedEntries.isEmpty()) {
             return false;
         }
 
@@ -443,7 +443,7 @@ public class DnsNameResolver extends InetNameResolver {
                                        Promise<List<InetAddress>> promise,
                                        DnsCache resolveCache) {
         final List<DnsCacheEntry> cachedEntries = resolveCache.get(hostname);
-        if (cachedEntries == null) {
+        if (cachedEntries == null || cachedEntries.isEmpty()) {
             return false;
         }
 
