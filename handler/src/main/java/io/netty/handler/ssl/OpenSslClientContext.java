@@ -15,24 +15,34 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.apache.tomcat.jni.CertificateRequestedCallback;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
+import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
+import javax.security.auth.x500.X500Principal;
 import java.io.File;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * A client-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
  */
 public final class OpenSslClientContext extends OpenSslContext {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(OpenSslClientContext.class);
     private final OpenSslSessionContext sessionContext;
 
     /**
@@ -188,51 +198,37 @@ public final class OpenSslClientContext extends OpenSslContext {
                 ClientAuth.NONE);
         boolean success = false;
         try {
-            checkKeyManagerFactory(keyManagerFactory);
             if (key == null && keyCertChain != null || key != null && keyCertChain == null) {
                 throw new IllegalArgumentException(
                         "Either both keyCertChain and key needs to be null or none of them");
             }
             synchronized (OpenSslContext.class) {
-                if (keyCertChain != null && key != null) {
-                    /* Load the certificate file and private key. */
-                    long keyBio = 0;
-                    long keyCertChainBio = 0;
-
-                    try {
-                        keyCertChainBio = toBIO(keyCertChain);
-
-                        keyBio = toBIO(key);
-
-                        if (!SSLContext.setCertificateBio(
-                                ctx, keyCertChainBio, keyBio, keyPassword, SSL.SSL_AIDX_RSA)) {
-                            long error = SSL.getLastErrorNumber();
-                            if (OpenSsl.isError(error)) {
-                                throw new SSLException("failed to set certificate and key: "
-                                                       + SSL.getErrorString(error));
-                            }
+                try {
+                    if (!OpenSsl.supportsKeyManagerFactory()) {
+                        if (keyManagerFactory != null) {
+                            throw new IllegalArgumentException(
+                                    "KeyManagerFactory not supported");
                         }
-                        // We may have more then one cert in the chain so add all of them now. We must NOT skip the
-                        // first cert when client mode.
-                        if (!SSLContext.setCertificateChainBio(ctx, keyCertChainBio, false)) {
-                            long error = SSL.getLastErrorNumber();
-                            if (OpenSsl.isError(error)) {
-                                throw new SSLException(
-                                        "failed to set certificate chain: " + SSL.getErrorString(error));
-                            }
+                        if (keyCertChain != null && key != null) {
+                            setKeyMaterial(ctx, keyCertChain, key, keyPassword);
                         }
-                    } catch (SSLException e) {
-                        throw e;
-                    } catch (Exception e) {
-                        throw new SSLException("failed to set certificate and key", e);
-                    } finally {
-                        if (keyBio != 0) {
-                            SSL.freeBIO(keyBio);
+                    } else {
+                        if (keyCertChain != null) {
+                            keyManagerFactory = buildKeyManagerFactory(
+                                    keyCertChain, key, keyPassword, keyManagerFactory);
                         }
-                        if (keyCertChainBio != 0) {
-                            SSL.freeBIO(keyCertChainBio);
+                        if (keyManagerFactory != null) {
+                            X509KeyManager keyManager = chooseX509KeyManager(keyManagerFactory.getKeyManagers());
+                            OpenSslKeyMaterialManager materialManager = useExtendedKeyManager(keyManager) ?
+                                    new OpenSslExtendedKeyMaterialManager(
+                                            (X509ExtendedKeyManager) keyManager, keyPassword) :
+                                    new OpenSslKeyMaterialManager(keyManager, keyPassword);
+                            SSLContext.setCertRequestedCallback(ctx, new OpenSslCertificateRequestedCallback(
+                                    engineMap, materialManager));
                         }
                     }
+                } catch (Exception e) {
+                    throw new SSLException("failed to set certificate and key", e);
                 }
 
                 SSLContext.setVerify(ctx, SSL.SSL_VERIFY_NONE, VERIFY_DEPTH);
@@ -276,6 +272,11 @@ public final class OpenSslClientContext extends OpenSslContext {
     @Override
     public OpenSslSessionContext sessionContext() {
         return sessionContext;
+    }
+
+    @Override
+    OpenSslKeyMaterialManager keyMaterialManager() {
+        return null;
     }
 
     // No cache is currently supported for client side mode.
@@ -346,6 +347,79 @@ public final class OpenSslClientContext extends OpenSslContext {
         void verify(OpenSslEngine engine, X509Certificate[] peerCerts, String auth)
                 throws Exception {
             manager.checkServerTrusted(peerCerts, auth, engine);
+        }
+    }
+
+    private static final class OpenSslCertificateRequestedCallback implements CertificateRequestedCallback {
+        private final OpenSslEngineMap engineMap;
+        private final OpenSslKeyMaterialManager keyManagerHolder;
+
+        OpenSslCertificateRequestedCallback(OpenSslEngineMap engineMap, OpenSslKeyMaterialManager keyManagerHolder) {
+            this.engineMap = engineMap;
+            this.keyManagerHolder = keyManagerHolder;
+        }
+
+        @Override
+        public void requested(long ssl, byte[] keyTypeBytes, byte[][] asn1DerEncodedPrincipals) {
+            final OpenSslEngine engine = engineMap.get(ssl);
+            try {
+                final Set<String> keyTypesSet = supportedClientKeyTypes(keyTypeBytes);
+                final String[] keyTypes = keyTypesSet.toArray(new String[keyTypesSet.size()]);
+                final X500Principal[] issuers;
+                if (asn1DerEncodedPrincipals == null) {
+                    issuers = null;
+                } else {
+                    issuers = new X500Principal[asn1DerEncodedPrincipals.length];
+                    for (int i = 0; i < asn1DerEncodedPrincipals.length; i++) {
+                        issuers[i] = new X500Principal(asn1DerEncodedPrincipals[i]);
+                    }
+                }
+                keyManagerHolder.setKeyMaterial(engine, keyTypes, issuers);
+            } catch (Throwable cause) {
+                logger.debug("request of key failed", cause);
+                SSLHandshakeException e = new SSLHandshakeException("General OpenSslEngine problem");
+                e.initCause(cause);
+                engine.handshakeException = e;
+            }
+        }
+
+        /**
+         * Gets the supported key types for client certificates.
+         *
+         * @param clientCertificateTypes {@code ClientCertificateType} values provided by the server.
+         *        See https://www.ietf.org/assignments/tls-parameters/tls-parameters.xml.
+         * @return supported key types that can be used in {@code X509KeyManager.chooseClientAlias} and
+         *         {@code X509ExtendedKeyManager.chooseEngineClientAlias}.
+         */
+        private static Set<String> supportedClientKeyTypes(byte[] clientCertificateTypes) {
+            Set<String> result = new HashSet<String>(clientCertificateTypes.length);
+            for (byte keyTypeCode : clientCertificateTypes) {
+                String keyType = clientKeyType(keyTypeCode);
+                if (keyType == null) {
+                    // Unsupported client key type -- ignore
+                    continue;
+                }
+                result.add(keyType);
+            }
+            return result;
+        }
+
+        private static String clientKeyType(byte clientCertificateType) {
+            // See also http://www.ietf.org/assignments/tls-parameters/tls-parameters.xml
+            switch (clientCertificateType) {
+                case CertificateRequestedCallback.TLS_CT_RSA_SIGN:
+                    return OpenSslKeyMaterialManager.KEY_TYPE_RSA; // RFC rsa_sign
+                case CertificateRequestedCallback.TLS_CT_RSA_FIXED_DH:
+                    return OpenSslKeyMaterialManager.KEY_TYPE_DH_RSA; // RFC rsa_fixed_dh
+                case CertificateRequestedCallback.TLS_CT_ECDSA_SIGN:
+                    return OpenSslKeyMaterialManager.KEY_TYPE_EC; // RFC ecdsa_sign
+                case CertificateRequestedCallback.TLS_CT_RSA_FIXED_ECDH:
+                    return OpenSslKeyMaterialManager.KEY_TYPE_EC_RSA; // RFC rsa_fixed_ecdh
+                case CertificateRequestedCallback.TLS_CT_ECDSA_FIXED_ECDH:
+                    return OpenSslKeyMaterialManager.KEY_TYPE_EC_EC; // RFC ecdsa_fixed_ecdh
+                default:
+                    return null;
+            }
         }
     }
 }
