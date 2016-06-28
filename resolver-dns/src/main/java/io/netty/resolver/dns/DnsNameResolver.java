@@ -17,12 +17,14 @@ package io.netty.resolver.dns;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
@@ -65,8 +67,6 @@ public class DnsNameResolver extends InetNameResolver {
     private static final String LOCALHOST = "localhost";
     private static final InetAddress LOCALHOST_ADDRESS;
 
-    static final InetSocketAddress ANY_LOCAL_ADDR = new InetSocketAddress(0);
-
     static final InternetProtocolFamily[] DEFAULT_RESOLVE_ADDRESS_TYPES = new InternetProtocolFamily[2];
 
     static {
@@ -88,7 +88,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static final DatagramDnsQueryEncoder ENCODER = new DatagramDnsQueryEncoder();
 
     final DnsServerAddresses nameServerAddresses;
-    final ChannelFuture bindFuture;
+    final Future<Channel> channelFuture;
     final DatagramChannel ch;
 
     /**
@@ -123,7 +123,6 @@ public class DnsNameResolver extends InetNameResolver {
      *
      * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
      * @param channelFactory the {@link ChannelFactory} that will create a {@link DatagramChannel}
-     * @param localAddress the local address of the {@link DatagramChannel}
      * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
      *                            this to determine which DNS server should be contacted for the next retry in case
      *                            of failure.
@@ -140,9 +139,8 @@ public class DnsNameResolver extends InetNameResolver {
     public DnsNameResolver(
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
-            InetSocketAddress localAddress,
             DnsServerAddresses nameServerAddresses,
-            DnsCache resolveCache,
+            final DnsCache resolveCache,
             long queryTimeoutMillis,
             InternetProtocolFamily[] resolvedAddressTypes,
             boolean recursionDesired,
@@ -154,7 +152,6 @@ public class DnsNameResolver extends InetNameResolver {
 
         super(eventLoop);
         checkNotNull(channelFactory, "channelFactory");
-        checkNotNull(localAddress, "localAddress");
         this.nameServerAddresses = checkNotNull(nameServerAddresses, "nameServerAddresses");
         this.queryTimeoutMillis = checkPositive(queryTimeoutMillis, "queryTimeoutMillis");
         this.resolvedAddressTypes = checkNonEmpty(resolvedAddressTypes, "resolvedAddressTypes");
@@ -166,18 +163,11 @@ public class DnsNameResolver extends InetNameResolver {
         this.hostsFileEntriesResolver = checkNotNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
         this.resolveCache = resolveCache;
 
-        bindFuture = newChannel(channelFactory, localAddress);
-        ch = (DatagramChannel) bindFuture.channel();
-        ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
-    }
-
-    private ChannelFuture newChannel(
-            ChannelFactory<? extends DatagramChannel> channelFactory, InetSocketAddress localAddress) {
-
         Bootstrap b = new Bootstrap();
         b.group(executor());
         b.channelFactory(channelFactory);
-        final DnsResponseHandler responseHandler = new DnsResponseHandler();
+        b.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
+        final DnsResponseHandler responseHandler = new DnsResponseHandler(executor().<Channel>newPromise());
         b.handler(new ChannelInitializer<DatagramChannel>() {
             @Override
             protected void initChannel(DatagramChannel ch) throws Exception {
@@ -185,15 +175,16 @@ public class DnsNameResolver extends InetNameResolver {
             }
         });
 
-        ChannelFuture bindFuture = b.bind(localAddress);
-        bindFuture.channel().closeFuture().addListener(new ChannelFutureListener() {
+        channelFuture = responseHandler.channelActivePromise;
+        ch = (DatagramChannel) b.register().channel();
+        ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
+
+        ch.closeFuture().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 resolveCache.clear();
             }
         });
-
-        return bindFuture;
     }
 
     /**
@@ -606,6 +597,13 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     private final class DnsResponseHandler extends ChannelInboundHandlerAdapter {
+
+        private final Promise<Channel> channelActivePromise;
+
+        DnsResponseHandler(Promise<Channel> channelActivePromise) {
+            this.channelActivePromise = channelActivePromise;
+        }
+
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             try {
@@ -626,6 +624,12 @@ public class DnsNameResolver extends InetNameResolver {
             } finally {
                 ReferenceCountUtil.safeRelease(msg);
             }
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            super.channelActive(ctx);
+            channelActivePromise.setSuccess(ctx.channel());
         }
 
         @Override
