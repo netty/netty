@@ -18,9 +18,9 @@ package io.netty.handler.ssl;
 import javax.net.ssl.SSLParameters;
 import java.security.AlgorithmConstraints;
 
-final class SslParametersUtils {
+final class Java7SslParametersUtils {
 
-    private SslParametersUtils() {
+    private Java7SslParametersUtils() {
         // Utility
     }
 
