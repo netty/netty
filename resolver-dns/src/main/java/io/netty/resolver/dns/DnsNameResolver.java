@@ -600,7 +600,7 @@ public class DnsNameResolver extends InetNameResolver {
 
         private final Promise<Channel> channelActivePromise;
 
-        public DnsResponseHandler(Promise<Channel> channelActivePromise) {
+        DnsResponseHandler(Promise<Channel> channelActivePromise) {
             this.channelActivePromise = channelActivePromise;
         }
 
