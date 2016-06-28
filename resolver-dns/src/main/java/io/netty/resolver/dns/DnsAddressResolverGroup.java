@@ -34,7 +34,6 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
-import static io.netty.resolver.dns.DnsNameResolver.ANY_LOCAL_ADDR;
 import static io.netty.util.internal.PlatformDependent.newConcurrentHashMap;
 
 /**
@@ -44,33 +43,21 @@ import static io.netty.util.internal.PlatformDependent.newConcurrentHashMap;
 public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
 
     private final ChannelFactory<? extends DatagramChannel> channelFactory;
-    private final InetSocketAddress localAddress;
     private final DnsServerAddresses nameServerAddresses;
 
     private final ConcurrentMap<String, Promise<InetAddress>> resolvesInProgress = newConcurrentHashMap();
     private final ConcurrentMap<String, Promise<List<InetAddress>>> resolveAllsInProgress = newConcurrentHashMap();
 
     public DnsAddressResolverGroup(
-            Class<? extends DatagramChannel> channelType, DnsServerAddresses nameServerAddresses) {
-        this(channelType, ANY_LOCAL_ADDR, nameServerAddresses);
-    }
-
-    public DnsAddressResolverGroup(
             Class<? extends DatagramChannel> channelType,
-            InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) {
-        this(new ReflectiveChannelFactory<DatagramChannel>(channelType), localAddress, nameServerAddresses);
-    }
-
-    public DnsAddressResolverGroup(
-            ChannelFactory<? extends DatagramChannel> channelFactory, DnsServerAddresses nameServerAddresses) {
-        this(channelFactory, ANY_LOCAL_ADDR, nameServerAddresses);
+            DnsServerAddresses nameServerAddresses) {
+        this(new ReflectiveChannelFactory<DatagramChannel>(channelType), nameServerAddresses);
     }
 
     public DnsAddressResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory,
-            InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) {
+            DnsServerAddresses nameServerAddresses) {
         this.channelFactory = channelFactory;
-        this.localAddress = localAddress;
         this.nameServerAddresses = nameServerAddresses;
     }
 
@@ -83,20 +70,20 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
                     " (expected: " + StringUtil.simpleClassName(EventLoop.class));
         }
 
-        return newResolver((EventLoop) executor, channelFactory, localAddress, nameServerAddresses);
+        return newResolver((EventLoop) executor, channelFactory, nameServerAddresses);
     }
 
     /**
-     * @deprecated Override {@link #newNameResolver(EventLoop, ChannelFactory, InetSocketAddress, DnsServerAddresses)}.
+     * @deprecated Override {@link #newNameResolver(EventLoop, ChannelFactory, DnsServerAddresses)}.
      */
     @Deprecated
     protected AddressResolver<InetSocketAddress> newResolver(
             EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
-            InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) throws Exception {
+            DnsServerAddresses nameServerAddresses) throws Exception {
 
         final NameResolver<InetAddress> resolver = new InflightNameResolver<InetAddress>(
                 eventLoop,
-                newNameResolver(eventLoop, channelFactory, localAddress, nameServerAddresses),
+                newNameResolver(eventLoop, channelFactory, nameServerAddresses),
                 resolvesInProgress,
                 resolveAllsInProgress);
 
@@ -109,11 +96,9 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
      */
     protected NameResolver<InetAddress> newNameResolver(EventLoop eventLoop,
                                                         ChannelFactory<? extends DatagramChannel> channelFactory,
-                                                        InetSocketAddress localAddress,
                                                         DnsServerAddresses nameServerAddresses) throws Exception {
         return new DnsNameResolverBuilder(eventLoop)
                 .channelFactory(channelFactory)
-                .localAddress(localAddress)
                 .nameServerAddresses(nameServerAddresses)
                 .build();
     }
