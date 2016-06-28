@@ -31,15 +31,12 @@ import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.security.Principal;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,63 +88,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             new SSLException("renegotiation unsupported"), ReferenceCountedOpenSslEngine.class, "beginHandshake()");
     private static final SSLException ENCRYPTED_PACKET_OVERSIZED = ThrowableUtil.unknownStackTrace(
             new SSLException("encrypted packet oversized"), ReferenceCountedOpenSslEngine.class, "unwrap(...)");
-    private static final Class<?> SNI_HOSTNAME_CLASS;
-    private static final Method GET_SERVER_NAMES_METHOD;
-    private static final Method SET_SERVER_NAMES_METHOD;
-    private static final Method GET_ASCII_NAME_METHOD;
-    private static final Method GET_USE_CIPHER_SUITES_ORDER_METHOD;
-    private static final Method SET_USE_CIPHER_SUITES_ORDER_METHOD;
     private static final ResourceLeakDetector<ReferenceCountedOpenSslEngine> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ReferenceCountedOpenSslEngine.class);
-
-    static {
-        Method getUseCipherSuitesOrderMethod = null;
-        Method setUseCipherSuitesOrderMethod = null;
-        Class<?> sniHostNameClass = null;
-        Method getAsciiNameMethod = null;
-        Method getServerNamesMethod = null;
-        Method setServerNamesMethod = null;
-        if (PlatformDependent.javaVersion() >= 8) {
-            try {
-                getUseCipherSuitesOrderMethod = SSLParameters.class.getDeclaredMethod("getUseCipherSuitesOrder");
-                SSLParameters parameters = new SSLParameters();
-                @SuppressWarnings("unused")
-                Boolean order = (Boolean) getUseCipherSuitesOrderMethod.invoke(parameters);
-                setUseCipherSuitesOrderMethod = SSLParameters.class.getDeclaredMethod("setUseCipherSuitesOrder",
-                        boolean.class);
-                setUseCipherSuitesOrderMethod.invoke(parameters, true);
-            } catch (Throwable ignore) {
-                getUseCipherSuitesOrderMethod = null;
-                setUseCipherSuitesOrderMethod = null;
-            }
-            try {
-                sniHostNameClass = Class.forName("javax.net.ssl.SNIHostName", false,
-                        PlatformDependent.getClassLoader(ReferenceCountedOpenSslEngine.class));
-                Object sniHostName = sniHostNameClass.getConstructor(String.class).newInstance("netty.io");
-                getAsciiNameMethod = sniHostNameClass.getDeclaredMethod("getAsciiName");
-                @SuppressWarnings("unused")
-                String name = (String) getAsciiNameMethod.invoke(sniHostName);
-
-                getServerNamesMethod = SSLParameters.class.getDeclaredMethod("getServerNames");
-                setServerNamesMethod = SSLParameters.class.getDeclaredMethod("setServerNames", List.class);
-                SSLParameters parameters = new SSLParameters();
-                @SuppressWarnings({ "rawtypes", "unused" })
-                List serverNames = (List) getServerNamesMethod.invoke(parameters);
-                setServerNamesMethod.invoke(parameters, Collections.emptyList());
-            } catch (Throwable ignore) {
-                sniHostNameClass = null;
-                getAsciiNameMethod = null;
-                getServerNamesMethod = null;
-                setServerNamesMethod = null;
-            }
-        }
-        GET_USE_CIPHER_SUITES_ORDER_METHOD = getUseCipherSuitesOrderMethod;
-        SET_USE_CIPHER_SUITES_ORDER_METHOD = setUseCipherSuitesOrderMethod;
-        SNI_HOSTNAME_CLASS = sniHostNameClass;
-        GET_ASCII_NAME_METHOD = getAsciiNameMethod;
-        GET_SERVER_NAMES_METHOD = getServerNamesMethod;
-        SET_SERVER_NAMES_METHOD = setServerNamesMethod;
-    }
 
     static final int MAX_PLAINTEXT_LENGTH = 16 * 1024; // 2^14
 
@@ -240,7 +182,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private String endPointIdentificationAlgorithm;
     // Store as object as AlgorithmConstraints only exists since java 7.
     private Object algorithmConstraints;
-    private List<?> sniHostNames;
+    private List<String> sniHostNames;
 
     // SSL Engine status variables
     private boolean isInboundDone;
@@ -1592,26 +1534,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         int version = PlatformDependent.javaVersion();
         if (version >= 7) {
             sslParameters.setEndpointIdentificationAlgorithm(endPointIdentificationAlgorithm);
-            SslParametersUtils.setAlgorithmConstraints(sslParameters, algorithmConstraints);
+            Java7SslParametersUtils.setAlgorithmConstraints(sslParameters, algorithmConstraints);
             if (version >= 8) {
-                if (SET_SERVER_NAMES_METHOD != null && sniHostNames != null) {
-                    try {
-                        SET_SERVER_NAMES_METHOD.invoke(sslParameters, sniHostNames);
-                    } catch (IllegalAccessException e) {
-                        throw new Error(e);
-                    } catch (InvocationTargetException e) {
-                        throw new Error(e);
-                    }
+                if (sniHostNames != null) {
+                    Java8SslParametersUtils.setSniHostNames(sslParameters, sniHostNames);
                 }
-                if (SET_USE_CIPHER_SUITES_ORDER_METHOD != null && !isDestroyed()) {
-                    try {
-                        SET_USE_CIPHER_SUITES_ORDER_METHOD.invoke(sslParameters,
-                                (SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
-                    } catch (IllegalAccessException e) {
-                        throw new Error(e);
-                    } catch (InvocationTargetException e) {
-                        throw new Error(e);
-                    }
+                if (!isDestroyed()) {
+                    Java8SslParametersUtils.setUseCipherSuitesOrder(
+                            sslParameters, (SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
                 }
             }
         }
@@ -1626,42 +1556,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (version >= 7) {
             endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
             algorithmConstraints = sslParameters.getAlgorithmConstraints();
-            if (version >= 8) {
-                if (SNI_HOSTNAME_CLASS != null && clientMode && !isDestroyed()) {
-                    assert GET_SERVER_NAMES_METHOD != null;
-                    assert GET_ASCII_NAME_METHOD != null;
-                    try {
-                        List<?> servernames = (List<?>) GET_SERVER_NAMES_METHOD.invoke(sslParameters);
-                        if (servernames != null) {
-                            for (Object serverName : servernames) {
-                                if (SNI_HOSTNAME_CLASS.isInstance(serverName)) {
-                                    SSL.setTlsExtHostName(ssl, (String) GET_ASCII_NAME_METHOD.invoke(serverName));
-                                } else {
-                                    throw new IllegalArgumentException("Only " + SNI_HOSTNAME_CLASS.getName()
-                                            + " instances are supported, but found: " +
-                                            serverName);
-                                }
-                            }
-                        }
-                        sniHostNames = servernames;
-                    } catch (IllegalAccessException e) {
-                        throw new Error(e);
-                    } catch (InvocationTargetException e) {
-                        throw new Error(e);
+            if (version >= 8 && !isDestroyed()) {
+                if (clientMode) {
+                    sniHostNames = Java8SslParametersUtils.getSniHostNames(sslParameters);
+                    for (String name: sniHostNames) {
+                        SSL.setTlsExtHostName(ssl, name);
                     }
                 }
-                if (GET_USE_CIPHER_SUITES_ORDER_METHOD != null && !isDestroyed()) {
-                    try {
-                        if ((Boolean) GET_USE_CIPHER_SUITES_ORDER_METHOD.invoke(sslParameters)) {
-                            SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
-                        } else {
-                            SSL.clearOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
-                        }
-                    } catch (IllegalAccessException e) {
-                        throw new Error(e);
-                    } catch (InvocationTargetException e) {
-                        throw new Error(e);
-                    }
+                if (Java8SslParametersUtils.getUseCipherSuitesOrder(sslParameters)) {
+                    SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
+                } else {
+                    SSL.clearOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
                 }
             }
         }
