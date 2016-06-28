@@ -168,11 +168,6 @@
                 </goals>
                 <configuration>
                   <rules>
-                    <requireJavaVersion>
-                      <!-- Enforce JDK 1.7 (and not 1.8+) for compilation. -->
-                      <!-- See: https://github.com/netty/netty/issues/3548 -->
-                      <version>[1.7.0, 1.8.0)</version>
-                    </requireJavaVersion>
                     <requireProperty>
                       <regexMessage>
                         Release process must be performed on linux-x86_64.
@@ -620,9 +615,9 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.5.1</version>
+        <version>3.6.0</version>
         <configuration>
-          <compilerVersion>1.7</compilerVersion>
+          <compilerVersion>1.8</compilerVersion>
           <fork>true</fork>
           <source>1.6</source>
           <target>1.6</target>
@@ -698,6 +693,8 @@
             <ignore>javax.net.ssl.SSLEngine</ignore>
             <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>
             <ignore>javax.net.ssl.SSLParameters</ignore>
+            <ignore>javax.net.ssl.SNIServerName</ignore>
+            <ignore>javax.net.ssl.SNIHostName</ignore>
             <ignore>java.security.AlgorithmConstraints</ignore>
             <ignore>java.security.cert.CertificateRevokedException</ignore>
             <ignore>java.security.cert.CertPathValidatorException</ignore>
