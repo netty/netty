@@ -76,9 +76,8 @@ public class HashedWheelTimer implements Timer {
     static final InternalLogger logger =
             InternalLoggerFactory.getInstance(HashedWheelTimer.class);
 
-    private static final ResourceLeakDetector<HashedWheelTimer> leakDetector =
-            new ResourceLeakDetector<HashedWheelTimer>(
-                    HashedWheelTimer.class, 1, Runtime.getRuntime().availableProcessors() * 4);
+    private static final ResourceLeakDetector<HashedWheelTimer> leakDetector = ResourceLeakDetectorFactory.instance()
+            .newResourceLeakDetector(HashedWheelTimer.class, 1, Runtime.getRuntime().availableProcessors() * 4L);
 
     private static final AtomicIntegerFieldUpdater<HashedWheelTimer> WORKER_STATE_UPDATER;
     static {

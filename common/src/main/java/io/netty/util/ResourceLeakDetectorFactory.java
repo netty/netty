@@ -61,60 +61,82 @@ public abstract class ResourceLeakDetectorFactory {
      * @param <T> - the type of the resource class
      * @return - a new instance of {@link ResourceLeakDetector}
      */
-    public abstract <T> ResourceLeakDetector<T> newResourceLeakDetector(final Class<T> resource);
+    public final <T> ResourceLeakDetector<T> newResourceLeakDetector(Class<T> resource) {
+        return newResourceLeakDetector(resource, ResourceLeakDetector.DEFAULT_SAMPLING_INTERVAL, Long.MAX_VALUE);
+    }
+
+    /**
+     * Returns a new instance of a {@link ResourceLeakDetector} with the given resource class.
+     *
+     * @param resource - the resource class used to initialize the {@link ResourceLeakDetector}
+     * @param samplingInterval - the interval on which sampling takes place
+     * @param maxActive - the maximum active instances
+     * @param <T> - the type of the resource class
+     * @return - a new instance of {@link ResourceLeakDetector}
+     */
+    public abstract <T> ResourceLeakDetector<T> newResourceLeakDetector(
+            Class<T> resource, int samplingInterval, long maxActive);
 
     /**
      * Default implementation that loads custom leak detector via system property
      */
     private static final class DefaultResourceLeakDetectorFactory extends ResourceLeakDetectorFactory {
+        private final Constructor<?> customClassConstructor;
 
-        private final String customLeakDetector;
-        private final Constructor customClassConstructor;
-
-        public DefaultResourceLeakDetectorFactory() {
-            this.customLeakDetector = AccessController.doPrivileged(new PrivilegedAction<String>() {
-                @Override
-                public String run() {
-                    return SystemPropertyUtil.get("io.netty.customResourceLeakDetector");
-                }
-            });
-
-            this.customClassConstructor = customClassConstructor();
+        DefaultResourceLeakDetectorFactory() {
+            String customLeakDetector;
+            try {
+                customLeakDetector = AccessController.doPrivileged(new PrivilegedAction<String>() {
+                    @Override
+                    public String run() {
+                        return SystemPropertyUtil.get("io.netty.customResourceLeakDetector");
+                    }
+                });
+            } catch (Throwable cause) {
+                logger.error("Could not access System property: io.netty.customResourceLeakDetector", cause);
+                customLeakDetector = null;
+            }
+            customClassConstructor = customLeakDetector == null ? null : customClassConstructor(customLeakDetector);
         }
 
-        private Constructor customClassConstructor() {
+        private static Constructor<?> customClassConstructor(String customLeakDetector) {
             try {
-                if (customLeakDetector != null) {
-                    final Class<?> detectorClass = Class.forName(customLeakDetector, true,
-                            PlatformDependent.getSystemClassLoader());
+                final Class<?> detectorClass = Class.forName(customLeakDetector, true,
+                        PlatformDependent.getSystemClassLoader());
 
-                    if (ResourceLeakDetector.class.isAssignableFrom(detectorClass)) {
-                        return detectorClass.getConstructor(Class.class);
-                    } else {
-                        logger.error("Class {} does not inherit from ResourceLeakDetector.", customLeakDetector);
-                    }
+                if (ResourceLeakDetector.class.isAssignableFrom(detectorClass)) {
+                    return detectorClass.getConstructor(Class.class, int.class, long.class);
+                } else {
+                    logger.error("Class {} does not inherit from ResourceLeakDetector.", customLeakDetector);
                 }
             } catch (Throwable t) {
-                logger.error("Could not load custom resource leak detector class provided: " + customLeakDetector, t);
+                logger.error("Could not load custom resource leak detector class provided: {}",
+                        customLeakDetector, t);
             }
             return null;
         }
 
         @Override
-        public <T> ResourceLeakDetector<T> newResourceLeakDetector(final Class<T> resource) {
-            try {
-                if (customClassConstructor != null) {
+        public <T> ResourceLeakDetector<T> newResourceLeakDetector(
+                Class<T> resource, int samplingInterval, long maxActive) {
+            if (customClassConstructor != null) {
+                try {
+                    @SuppressWarnings("unchecked")
                     ResourceLeakDetector<T> leakDetector =
-                            (ResourceLeakDetector<T>) customClassConstructor.newInstance(resource);
-                    logger.debug("Loaded custom ResourceLeakDetector: {}", customLeakDetector);
+                            (ResourceLeakDetector<T>) customClassConstructor.newInstance(
+                                    resource, samplingInterval, maxActive);
+                    logger.debug("Loaded custom ResourceLeakDetector: {}",
+                            customClassConstructor.getDeclaringClass().getName());
                     return leakDetector;
+                } catch (Throwable t) {
+                    logger.error(
+                            "Could not load custom resource leak detector provided: {} with the given resource: {}",
+                            customClassConstructor.getDeclaringClass().getName(), resource, t);
                 }
-            } catch (Throwable t) {
-                logger.error("Could not load custom resource leak detector provided: {} with the given resource: {}",
-                        customLeakDetector, resource, t);
             }
 
-            ResourceLeakDetector<T> resourceLeakDetector = new ResourceLeakDetector<T>(resource);
+            ResourceLeakDetector<T> resourceLeakDetector = new ResourceLeakDetector<T>(
+                    resource, samplingInterval, maxActive);
             logger.debug("Loaded default ResourceLeakDetector: {}", resourceLeakDetector);
             return resourceLeakDetector;
         }
