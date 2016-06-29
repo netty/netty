@@ -22,14 +22,9 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Random;
 
-import static io.netty.util.AsciiString.contains;
-import static io.netty.util.AsciiString.containsIgnoreCase;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static io.netty.util.AsciiString.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 /**
  * Test character encoding and case insensitivity for the {@link AsciiString} class
@@ -313,5 +308,12 @@ public class AsciiStringCharacterTest {
         assertEquals(1, AsciiString.indexOf("aabaabaa", 'a', 1));
         assertEquals(3, AsciiString.indexOf("aabaabaa", 'a', 2));
         assertEquals(3, AsciiString.indexOf("aabdabaa", 'd', 1));
+    }
+
+    @Test
+    public void testSubStringHashCode() {
+        String a = "123";
+        String b = "a123";
+        assertEquals(AsciiString.hashCode(a), AsciiString.hashCode(b.substring(1)));
     }
 }

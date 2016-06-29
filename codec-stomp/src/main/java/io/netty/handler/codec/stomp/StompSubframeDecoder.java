@@ -23,6 +23,7 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.stomp.StompSubframeDecoder.State;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.AppendableCharSequence;
 import io.netty.util.internal.StringUtil;
 
@@ -214,7 +215,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
             if (!line.isEmpty()) {
                 String[] split = StringUtil.split(line, ':');
                 if (split.length == 2) {
-                    headers.add(split[0], split[1]);
+                    headers.add(new AsciiString(split[0]), split[1]);
                 }
             } else {
                 if (headers.contains(StompHeaders.CONTENT_LENGTH))  {
