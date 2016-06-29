@@ -1031,6 +1031,15 @@ public final class PlatformDependent {
             }
 
             try {
+                Method getVersion = java.lang.Runtime.class.getMethod("version");
+                Object version = getVersion.invoke(null);
+                javaVersion = (Integer) version.getClass().getMethod("major").invoke(version);
+                break;
+            } catch (Throwable ignored) {
+                // Ignore
+            }
+
+            try {
                 Class.forName("java.time.Clock", false, getClassLoader(Object.class));
                 javaVersion = 8;
                 break;
