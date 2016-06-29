@@ -26,6 +26,7 @@ import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -165,7 +166,8 @@ public final class ChannelOutboundBuffer {
      * Increment the pending bytes which will be written at some point.
      * This method is thread-safe!
      */
-    void incrementPendingOutboundBytes(long size) {
+    @UnstableApi
+    public void incrementPendingOutboundBytes(long size) {
         incrementPendingOutboundBytes(size, true);
     }
 
@@ -184,7 +186,8 @@ public final class ChannelOutboundBuffer {
      * Decrement the pending bytes which will be written at some point.
      * This method is thread-safe!
      */
-    void decrementPendingOutboundBytes(long size) {
+    @UnstableApi
+    public void decrementPendingOutboundBytes(long size) {
         decrementPendingOutboundBytes(size, true, true);
     }
 

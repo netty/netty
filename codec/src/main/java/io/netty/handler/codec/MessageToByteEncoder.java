@@ -30,6 +30,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  * {@link ChannelOutboundHandlerAdapter} which encodes message in a stream-like fashion from one message to an
  * {@link ByteBuf}.
  *
+ * <strong>Please consider using {@link MessageToBufferedByteEncoder} for performance reasons.</strong>
  *
  * Example implementation which encodes {@link Integer}s to a {@link ByteBuf}.
  *
@@ -46,7 +47,7 @@ import io.netty.util.internal.TypeParameterMatcher;
 public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
-    private final boolean preferDirect;
+    final boolean preferDirect;
 
     /**
      * @see {@link #MessageToByteEncoder(boolean)} with {@code true} as boolean parameter.
