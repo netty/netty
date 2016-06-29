@@ -17,40 +17,45 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import sun.misc.Cleaner;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 
 
 /**
- * Allows to free direct {@link ByteBuffer} by using {@link Cleaner}. This is encapsulated in an extra class to be able
+ * Allows to free direct {@link ByteBuffer} by using Cleaner. This is encapsulated in an extra class to be able
  * to use {@link PlatformDependent0} on Android without problems.
  *
  * For more details see <a href="https://github.com/netty/netty/issues/2604">#2604</a>.
  */
 final class Cleaner0 {
     private static final long CLEANER_FIELD_OFFSET;
+    private static final Method CLEAN_METHOD;
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Cleaner0.class);
 
     static {
         ByteBuffer direct = ByteBuffer.allocateDirect(1);
         Field cleanerField;
         long fieldOffset = -1;
+        Method clean = null;
         if (PlatformDependent0.hasUnsafe()) {
             try {
                 cleanerField = direct.getClass().getDeclaredField("cleaner");
                 cleanerField.setAccessible(true);
-                Cleaner cleaner = (Cleaner) cleanerField.get(direct);
-                cleaner.clean();
+                Object cleaner = cleanerField.get(direct);
                 fieldOffset = PlatformDependent0.objectFieldOffset(cleanerField);
+                clean = cleaner.getClass().getDeclaredMethod("clean");
+                clean.invoke(cleaner);
             } catch (Throwable t) {
                 // We don't have ByteBuffer.cleaner().
                 fieldOffset = -1;
+                clean = null;
             }
         }
         logger.debug("java.nio.ByteBuffer.cleaner(): {}", fieldOffset != -1? "available" : "unavailable");
         CLEANER_FIELD_OFFSET = fieldOffset;
+        CLEAN_METHOD = clean;
 
         // free buffer if possible
         freeDirectBuffer(direct);
@@ -60,10 +65,11 @@ final class Cleaner0 {
         if (CLEANER_FIELD_OFFSET == -1 || !buffer.isDirect()) {
             return;
         }
+        assert CLEAN_METHOD != null : "CLEANER_FIELD_OFFSET != -1 implies CLEAN_METHOD != null";
         try {
-            Cleaner cleaner = (Cleaner) PlatformDependent0.getObject(buffer, CLEANER_FIELD_OFFSET);
+            Object cleaner = PlatformDependent0.getObject(buffer, CLEANER_FIELD_OFFSET);
             if (cleaner != null) {
-                cleaner.clean();
+                CLEAN_METHOD.invoke(cleaner);
             }
         } catch (Throwable t) {
             // Nothing we can do here.
