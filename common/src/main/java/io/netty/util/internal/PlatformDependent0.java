@@ -62,14 +62,9 @@ final class PlatformDependent0 {
         try {
             addressField = Buffer.class.getDeclaredField("address");
             addressField.setAccessible(true);
-            if (addressField.getLong(ByteBuffer.allocate(1)) != 0) {
-                // A heap buffer must have 0 address.
+            if (addressField.getLong(direct) == 0) {
+                // A direct buffer must have non-zero address.
                 addressField = null;
-            } else {
-                if (addressField.getLong(direct) == 0) {
-                    // A direct buffer must have non-zero address.
-                    addressField = null;
-                }
             }
         } catch (Throwable t) {
             // Failed to access the address field.
