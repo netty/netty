@@ -276,19 +276,15 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     private boolean fetchFromScheduledTaskQueue() {
-        if (hasScheduledTasks()) {
-            long nanoTime = AbstractScheduledEventExecutor.nanoTime();
-            for (;;) {
-                Runnable scheduledTask = pollScheduledTask(nanoTime);
-                if (scheduledTask == null) {
-                    break;
-                }
-                if (!taskQueue.offer(scheduledTask)) {
-                    // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
-                    scheduledTaskQueue().add((ScheduledFutureTask<?>) scheduledTask);
-                    return false;
-                }
+        long nanoTime = AbstractScheduledEventExecutor.nanoTime();
+        Runnable scheduledTask  = pollScheduledTask(nanoTime);
+        while (scheduledTask != null) {
+            if (!taskQueue.offer(scheduledTask)) {
+                // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
+                scheduledTaskQueue().add((ScheduledFutureTask<?>) scheduledTask);
+                return false;
             }
+            scheduledTask  = pollScheduledTask(nanoTime);
         }
         return true;
     }
