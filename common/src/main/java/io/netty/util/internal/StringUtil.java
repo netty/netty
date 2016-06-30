@@ -548,6 +548,18 @@ public final class StringUtil {
         return c == DOUBLE_QUOTE;
     }
 
+    /**
+     * Determine if the string {@code s} ends with the char {@code c}.
+     *
+     * @param s the string to test
+     * @param c the tested char
+     * @return true if {@code s} ends with the char {@code c}
+     */
+    public static boolean endsWith(CharSequence s, char c) {
+        int len = s.length();
+        return len > 0 && s.charAt(len - 1) == c;
+    }
+
     private StringUtil() {
         // Unused.
     }
