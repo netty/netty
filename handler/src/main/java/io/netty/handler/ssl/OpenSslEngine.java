@@ -1470,12 +1470,15 @@ public final class OpenSslEngine extends SSLEngine {
                     assert GET_ASCII_NAME_METHOD != null;
                     try {
                         List<?> servernames = (List<?>) GET_SERVER_NAMES_METHOD.invoke(sslParameters);
-                        for (Object serverName : servernames) {
-                            if (SNI_HOSTNAME_CLASS.isInstance(serverName)) {
-                                SSL.setTlsExtHostName(ssl, (String) GET_ASCII_NAME_METHOD.invoke(serverName));
-                            } else {
-                                throw new IllegalArgumentException("Only " + SNI_HOSTNAME_CLASS.getName()
-                                        + " instances are supported, but found: " + serverName);
+                        if (servernames != null) {
+                            for (Object serverName : servernames) {
+                                if (SNI_HOSTNAME_CLASS.isInstance(serverName)) {
+                                    SSL.setTlsExtHostName(ssl, (String) GET_ASCII_NAME_METHOD.invoke(serverName));
+                                } else {
+                                    throw new IllegalArgumentException("Only " + SNI_HOSTNAME_CLASS.getName()
+                                                                       + " instances are supported, but found: " +
+                                                                       serverName);
+                                }
                             }
                         }
                         sniHostNames = servernames;
