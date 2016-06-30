@@ -104,15 +104,11 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
     }
 
     private void fetchFromScheduledTaskQueue() {
-        if (hasScheduledTasks()) {
-            long nanoTime = AbstractScheduledEventExecutor.nanoTime();
-            for (;;) {
-                Runnable scheduledTask = pollScheduledTask(nanoTime);
-                if (scheduledTask == null) {
-                    break;
-                }
-                taskQueue.add(scheduledTask);
-            }
+        long nanoTime = AbstractScheduledEventExecutor.nanoTime();
+        Runnable scheduledTask = pollScheduledTask(nanoTime);
+        while (scheduledTask != null) {
+            taskQueue.add(scheduledTask);
+            scheduledTask = pollScheduledTask(nanoTime);
         }
     }
 
