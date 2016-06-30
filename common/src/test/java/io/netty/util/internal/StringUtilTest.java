@@ -440,4 +440,13 @@ public class StringUtilTest {
     }
 
     private static final class TestClass { }
+
+    @Test
+    public void testEndsWith() {
+        assertFalse(StringUtil.endsWith("", 'u'));
+        assertTrue(StringUtil.endsWith("u", 'u'));
+        assertTrue(StringUtil.endsWith("-u", 'u'));
+        assertFalse(StringUtil.endsWith("-", 'u'));
+        assertFalse(StringUtil.endsWith("u-", 'u'));
+    }
 }
