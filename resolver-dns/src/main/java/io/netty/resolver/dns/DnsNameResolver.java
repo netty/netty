@@ -39,17 +39,21 @@ import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.reflect.Method;
 import java.net.IDN;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -68,6 +72,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static final InetAddress LOCALHOST_ADDRESS;
 
     static final InternetProtocolFamily[] DEFAULT_RESOLVE_ADDRESS_TYPES = new InternetProtocolFamily[2];
+    static final String[] DEFAULT_SEACH_DOMAINS;
 
     static {
         // Note that we did not use SystemPropertyUtil.getBoolean() here to emulate the behavior of JDK.
@@ -82,6 +87,23 @@ public class DnsNameResolver extends InetNameResolver {
             LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
             logger.debug("-Djava.net.preferIPv6Addresses: false");
         }
+    }
+
+    static {
+        String[] searchDomains = new String[0];
+        try {
+            Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
+            Method open = configClass.getMethod("open");
+            Method nameservers = configClass.getMethod("searchlist");
+            Object instance = open.invoke(null);
+
+            @SuppressWarnings("unchecked")
+            List<String> list = (List<String>) nameservers.invoke(instance);
+            searchDomains = list.toArray(new String[list.size()]);
+        } catch (Exception ignore) {
+            // Failed to get the system name search domain list.
+        }
+        DEFAULT_SEACH_DOMAINS = searchDomains;
     }
 
     private static final DatagramDnsResponseDecoder DECODER = new DatagramDnsResponseDecoder();
@@ -117,6 +139,8 @@ public class DnsNameResolver extends InetNameResolver {
     private final int maxPayloadSize;
     private final boolean optResourceEnabled;
     private final HostsFileEntriesResolver hostsFileEntriesResolver;
+    private final String[] searchDomains;
+    private final int ndots;
 
     /**
      * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
@@ -135,6 +159,8 @@ public class DnsNameResolver extends InetNameResolver {
      * @param maxPayloadSize the capacity of the datagram packet buffer
      * @param optResourceEnabled if automatic inclusion of a optional records is enabled
      * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to check for local aliases
+     * @param searchDomains TODO
+     * @param ndots TODO
      */
     public DnsNameResolver(
             EventLoop eventLoop,
@@ -148,7 +174,9 @@ public class DnsNameResolver extends InetNameResolver {
             boolean traceEnabled,
             int maxPayloadSize,
             boolean optResourceEnabled,
-            HostsFileEntriesResolver hostsFileEntriesResolver) {
+            HostsFileEntriesResolver hostsFileEntriesResolver,
+            String[] searchDomains,
+            int ndots) {
 
         super(eventLoop);
         checkNotNull(channelFactory, "channelFactory");
@@ -162,6 +190,8 @@ public class DnsNameResolver extends InetNameResolver {
         this.optResourceEnabled = optResourceEnabled;
         this.hostsFileEntriesResolver = checkNotNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
         this.resolveCache = resolveCache;
+        this.searchDomains = checkNotNull(searchDomains, "searchDomains");
+        this.ndots = checkPositive(ndots, "ndots");
 
         Bootstrap b = new Bootstrap();
         b.group(executor());
@@ -373,14 +403,74 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
+    private boolean searchDomains(String hostname) {
+        if (searchDomains.length == 0 || (hostname.length() > 0 && hostname.charAt(hostname.length() - 1) == '.')) {
+            return false;
+        } else {
+            int idx = hostname.length();
+            int dots = 0;
+            while (idx-- > 0) {
+                if (hostname.charAt(idx) == '.') {
+                    dots++;
+                }
+                if (dots >= ndots) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
     private void doResolveUncached(String hostname,
                                    Promise<InetAddress> promise,
                                    DnsCache resolveCache) {
-        final DnsNameResolverContext<InetAddress> ctx =
+        doResolveUncached(hostname, promise, resolveCache, searchDomains.length > 0 && !hostname.endsWith("."));
+    }
+
+    private void doResolveUncached(final String hostname,
+                                   Promise<InetAddress> promise,
+                                   final DnsCache resolveCache, boolean trySearchDomain) {
+        if (trySearchDomain) {
+            final Promise<InetAddress> original = promise;
+            promise = new DefaultPromise<InetAddress>(executor());
+            FutureListener<InetAddress> globalListener = new FutureListener<InetAddress>() {
+                @Override
+                public void operationComplete(Future<InetAddress> future) throws Exception {
+                    if (future.isSuccess()) {
+                        original.setSuccess(future.getNow());
+                    } else {
+                        FutureListener<InetAddress> sdListener = new FutureListener<InetAddress>() {
+                            int count;
+                            @Override
+                            public void operationComplete(Future<InetAddress> future) throws Exception {
+                                if (future.isSuccess()) {
+                                    original.trySuccess(future.getNow());
+                                } else {
+                                    if (count < searchDomains.length) {
+                                        String searchDomain = searchDomains[count++];
+                                        Promise<InetAddress> p = new DefaultPromise<InetAddress>(executor());
+                                        doResolveUncached(hostname + "." + searchDomain, p, resolveCache, false);
+                                        p.addListener(this);
+                                    } else {
+                                        original.tryFailure(future.cause());
+                                    }
+                                }
+                            }
+                        };
+                        future.addListener(sdListener);
+                    }
+                }
+            };
+            promise.addListener(globalListener);
+        }
+        if (searchDomains(hostname)) {
+            promise.tryFailure(new UnknownHostException(hostname));
+        } else {
+            final DnsNameResolverContext<InetAddress> ctx =
                 new DnsNameResolverContext<InetAddress>(this, hostname, promise, resolveCache) {
                     @Override
                     protected boolean finishResolve(
-                            Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries) {
+                        Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries) {
 
                         final int numEntries = resolvedEntries.size();
                         for (int i = 0; i < numEntries; i++) {
@@ -394,7 +484,8 @@ public class DnsNameResolver extends InetNameResolver {
                     }
                 };
 
-        ctx.resolve();
+            ctx.resolve();
+        }
     }
 
     @Override
