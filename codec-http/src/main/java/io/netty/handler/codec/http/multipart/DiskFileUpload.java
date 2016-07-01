@@ -147,8 +147,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     protected String getDiskFilename() {
-        File file = new File(filename);
-        return file.getName();
+        return "upload";
     }
 
     @Override
