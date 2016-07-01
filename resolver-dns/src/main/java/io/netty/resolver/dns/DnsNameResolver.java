@@ -39,10 +39,8 @@ import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
@@ -53,7 +51,6 @@ import java.lang.reflect.Method;
 import java.net.IDN;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -159,8 +156,8 @@ public class DnsNameResolver extends InetNameResolver {
      * @param maxPayloadSize the capacity of the datagram packet buffer
      * @param optResourceEnabled if automatic inclusion of a optional records is enabled
      * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to check for local aliases
-     * @param searchDomains TODO
-     * @param ndots TODO
+     * @param searchDomains the list of search domain
+     * @param ndots the ndots value
      */
     public DnsNameResolver(
             EventLoop eventLoop,
@@ -243,6 +240,14 @@ public class DnsNameResolver extends InetNameResolver {
 
     InternetProtocolFamily[] resolveAddressTypesUnsafe() {
         return resolvedAddressTypes;
+    }
+
+    String[] searchDomains() {
+        return searchDomains;
+    }
+
+    int ndots() {
+        return ndots;
     }
 
     /**
@@ -403,7 +408,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    private boolean searchDomains(String hostname) {
+    boolean searchDomains(String hostname) {
         if (searchDomains.length == 0 || (hostname.length() > 0 && hostname.charAt(hostname.length() - 1) == '.')) {
             return false;
         } else {
@@ -424,67 +429,36 @@ public class DnsNameResolver extends InetNameResolver {
     private void doResolveUncached(String hostname,
                                    Promise<InetAddress> promise,
                                    DnsCache resolveCache) {
-        doResolveUncached(hostname, promise, resolveCache, searchDomains.length > 0 && !hostname.endsWith("."));
+        SingleResolverContext ctx = new SingleResolverContext(this, hostname, resolveCache);
+        ctx.resolve(promise);
     }
 
-    private void doResolveUncached(final String hostname,
-                                   Promise<InetAddress> promise,
-                                   final DnsCache resolveCache, boolean trySearchDomain) {
-        if (trySearchDomain) {
-            final Promise<InetAddress> original = promise;
-            promise = new DefaultPromise<InetAddress>(executor());
-            FutureListener<InetAddress> globalListener = new FutureListener<InetAddress>() {
-                @Override
-                public void operationComplete(Future<InetAddress> future) throws Exception {
-                    if (future.isSuccess()) {
-                        original.setSuccess(future.getNow());
-                    } else {
-                        FutureListener<InetAddress> sdListener = new FutureListener<InetAddress>() {
-                            int count;
-                            @Override
-                            public void operationComplete(Future<InetAddress> future) throws Exception {
-                                if (future.isSuccess()) {
-                                    original.trySuccess(future.getNow());
-                                } else {
-                                    if (count < searchDomains.length) {
-                                        String searchDomain = searchDomains[count++];
-                                        Promise<InetAddress> p = new DefaultPromise<InetAddress>(executor());
-                                        doResolveUncached(hostname + "." + searchDomain, p, resolveCache, false);
-                                        p.addListener(this);
-                                    } else {
-                                        original.tryFailure(future.cause());
-                                    }
-                                }
-                            }
-                        };
-                        future.addListener(sdListener);
-                    }
-                }
-            };
-            promise.addListener(globalListener);
+    class SingleResolverContext extends DnsNameResolverContext<InetAddress> {
+
+        public SingleResolverContext(DnsNameResolver parent, String hostname, DnsCache resolveCache) {
+            super(parent, hostname, resolveCache);
         }
-        if (searchDomains(hostname)) {
-            promise.tryFailure(new UnknownHostException(hostname));
-        } else {
-            final DnsNameResolverContext<InetAddress> ctx =
-                new DnsNameResolverContext<InetAddress>(this, hostname, promise, resolveCache) {
-                    @Override
-                    protected boolean finishResolve(
-                        Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries) {
 
-                        final int numEntries = resolvedEntries.size();
-                        for (int i = 0; i < numEntries; i++) {
-                            final InetAddress a = resolvedEntries.get(i).address();
-                            if (addressType.isInstance(a)) {
-                                setSuccess(promise(), a);
-                                return true;
-                            }
-                        }
-                        return false;
-                    }
-                };
+        @Override
+        protected DnsNameResolverContext<InetAddress> newResolverContext(DnsNameResolver parent,
+                                                                         String hostname, DnsCache resolveCache) {
+            return new SingleResolverContext(parent, hostname, resolveCache);
+        }
 
-            ctx.resolve();
+        @Override
+        protected boolean finishResolve(
+            Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries,
+            Promise<InetAddress> promise) {
+
+            final int numEntries = resolvedEntries.size();
+            for (int i = 0; i < numEntries; i++) {
+                final InetAddress a = resolvedEntries.get(i).address();
+                if (addressType.isInstance(a)) {
+                    setSuccess(promise, a);
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
@@ -563,36 +537,47 @@ public class DnsNameResolver extends InetNameResolver {
         return true;
     }
 
-    private void doResolveAllUncached(final String hostname,
-                                      final Promise<List<InetAddress>> promise,
-                                      DnsCache resolveCache) {
-        final DnsNameResolverContext<List<InetAddress>> ctx =
-                new DnsNameResolverContext<List<InetAddress>>(this, hostname, promise, resolveCache) {
-                    @Override
-                    protected boolean finishResolve(
-                            Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries) {
+    class ListResolverContext extends DnsNameResolverContext<List<InetAddress>> {
+        public ListResolverContext(DnsNameResolver parent, String hostname, DnsCache resolveCache) {
+            super(parent, hostname, resolveCache);
+        }
 
-                        List<InetAddress> result = null;
-                        final int numEntries = resolvedEntries.size();
-                        for (int i = 0; i < numEntries; i++) {
-                            final InetAddress a = resolvedEntries.get(i).address();
-                            if (addressType.isInstance(a)) {
-                                if (result == null) {
-                                    result = new ArrayList<InetAddress>(numEntries);
-                                }
-                                result.add(a);
-                            }
-                        }
+        @Override
+        protected DnsNameResolverContext<List<InetAddress>> newResolverContext(DnsNameResolver parent, String hostname,
+                                                                               DnsCache resolveCache) {
+            return new ListResolverContext(parent, hostname, resolveCache);
+        }
 
-                        if (result != null) {
-                            promise().trySuccess(result);
-                            return true;
-                        }
-                        return false;
+        @Override
+        protected boolean finishResolve(
+            Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries,
+            Promise<List<InetAddress>> promise) {
+
+            List<InetAddress> result = null;
+            final int numEntries = resolvedEntries.size();
+            for (int i = 0; i < numEntries; i++) {
+                final InetAddress a = resolvedEntries.get(i).address();
+                if (addressType.isInstance(a)) {
+                    if (result == null) {
+                        result = new ArrayList<InetAddress>(numEntries);
                     }
-                };
+                    result.add(a);
+                }
+            }
 
-        ctx.resolve();
+            if (result != null) {
+                promise.trySuccess(result);
+                return true;
+            }
+            return false;
+        }
+    }
+
+    private void doResolveAllUncached(String hostname,
+                                      Promise<List<InetAddress>> promise,
+                                      DnsCache resolveCache) {
+        DnsNameResolverContext<List<InetAddress>> ctx = new ListResolverContext(this, hostname, resolveCache);
+        ctx.resolve(promise);
     }
 
     private static String hostname(String inetHost) {

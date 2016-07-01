@@ -26,6 +26,7 @@ import org.apache.directory.server.dns.messages.QuestionRecord;
 import org.apache.directory.server.dns.messages.RecordClass;
 import org.apache.directory.server.dns.messages.RecordType;
 import org.apache.directory.server.dns.messages.ResourceRecord;
+import org.apache.directory.server.dns.messages.ResourceRecordImpl;
 import org.apache.directory.server.dns.messages.ResourceRecordModifier;
 import org.apache.directory.server.dns.protocol.DnsProtocolHandler;
 import org.apache.directory.server.dns.protocol.DnsUdpDecoder;
@@ -45,8 +46,11 @@ import org.apache.mina.transport.socket.DatagramSessionConfig;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -79,7 +83,7 @@ final class TestDnsServer extends DnsServer {
 
     @Override
     public void start() throws IOException {
-        InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST4, 0);
+        InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST4, 50000);
         UdpTransport transport = new UdpTransport(address.getHostName(), address.getPort());
         setTransports(transport);
 
@@ -162,32 +166,53 @@ final class TestDnsServer extends DnsServer {
 
     public static final class MapRecordStoreA implements RecordStore {
 
-        private final Map<String, String> domainMap;
+        private final Map<String, List<String>> domainMap;
 
-        public MapRecordStoreA(Set<String> domains) {
-            domainMap = new HashMap<String, String>(domains.size());
+        public MapRecordStoreA(Set<String> domains, int length) {
+            domainMap = new HashMap<String, List<String>>(domains.size());
             for (String domain : domains) {
-                domainMap.put(domain, TestRecordStore.nextIp());
+                List<String> addresses = new ArrayList<String>(length);
+                for (int i = 0; i < length; i++) {
+                    addresses.add(TestRecordStore.nextIp());
+                }
+                domainMap.put(domain, addresses);
             }
         }
 
+        public MapRecordStoreA(Set<String> domains) {
+            this(domains, 1);
+        }
+
         public String getAddress(String domain) {
+            return domainMap.get(domain).get(0);
+        }
+
+        public List<String> getAddresses(String domain) {
             return domainMap.get(domain);
         }
 
         @Override
         public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) throws DnsException {
             String name = questionRecord.getDomainName();
-            if (domainMap.containsKey(name)) {
-                ResourceRecordModifier rm = new ResourceRecordModifier();
-                rm.setDnsClass(RecordClass.IN);
-                rm.setDnsName(name);
-                rm.setDnsTtl(100);
-                rm.setDnsType(questionRecord.getRecordType());
-                if (questionRecord.getRecordType() == RecordType.A) {
-                    rm.put(DnsAttribute.IP_ADDRESS, domainMap.get(name));
-                    return Collections.singleton(rm.getEntry());
+            List<String> addresses = domainMap.get(name);
+            if (addresses != null && questionRecord.getRecordType() == RecordType.A) {
+                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>();
+                for (String address : addresses) {
+                    HashMap<String, Object> attributes = new HashMap<String, Object>();
+                    attributes.put(DnsAttribute.IP_ADDRESS.toLowerCase(), address);
+                    records.add(new ResourceRecordImpl(name, questionRecord.getRecordType(),
+                        RecordClass.IN, 100, attributes) {
+                        @Override
+                        public int hashCode() {
+                            return System.identityHashCode(this);
+                        }
+                        @Override
+                        public boolean equals(Object o) {
+                            return false;
+                        }
+                    });
                 }
+                return records;
             }
             return null;
         }

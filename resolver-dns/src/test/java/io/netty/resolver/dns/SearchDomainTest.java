@@ -22,9 +22,11 @@ import org.junit.After;
 import org.junit.Test;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -52,7 +54,7 @@ public class SearchDomainTest {
   }
 
   @Test
-  public void testSearchDomain() throws Exception {
+  public void testResolve() throws Exception {
     Set<String> domains = new HashSet<String>();
     domains.add("host1.foo.com");
     domains.add("host1");
@@ -95,6 +97,52 @@ public class SearchDomainTest {
     // "host5.sub" contains a dot and is resolved
     resolved = resolver.resolve("host5.sub").sync().getNow();
     assertEquals(store.getAddress("host5.sub"), resolved.getHostAddress());
+  }
+
+  @Test
+  public void testResolveAll() throws Exception {
+    Set<String> domains = new HashSet<String>();
+    domains.add("host1.foo.com");
+    domains.add("host1");
+    domains.add("host3");
+    domains.add("host4.sub.foo.com");
+    domains.add("host5.sub.foo.com");
+    domains.add("host5.sub");
+
+    TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(domains, 2);
+    dnsServer = new TestDnsServer(store);
+    dnsServer.start();
+
+    DnsNameResolver resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).build();
+
+    List<InetAddress> resolved = resolver.resolveAll("host1.foo.com").sync().getNow();
+    assertEquals(store.getAddresses("host1.foo.com"), asStrings(resolved));
+
+    // host1 resolves host1.foo.com with foo.com search domain
+    resolved = resolver.resolveAll("host1").sync().getNow();
+    assertEquals(store.getAddresses("host1.foo.com"), asStrings(resolved));
+
+    // "host1." absolute query
+    resolved = resolver.resolveAll("host1.").sync().getNow();
+    assertEquals(store.getAddresses("host1"), asStrings(resolved));
+
+    // "host2" not resolved
+    assertFalse(resolver.resolveAll("host2").await().isSuccess());
+
+    // "host3" does not contain a dot or is not absolute
+    assertFalse(resolver.resolveAll("host3").await().isSuccess());
+
+    // "host3." does not contain a dot but is absolute
+    resolved = resolver.resolveAll("host3.").sync().getNow();
+    assertEquals(store.getAddresses("host3"), asStrings(resolved));
+
+    // "host4.sub" contains a dot but not resolved then resolved to "host4.sub.foo.com" with "foo.com" search domain
+    resolved = resolver.resolveAll("host4.sub").sync().getNow();
+    assertEquals(store.getAddresses("host4.sub.foo.com"), asStrings(resolved));
+
+    // "host5.sub" contains a dot and is resolved
+    resolved = resolver.resolveAll("host5.sub").sync().getNow();
+    assertEquals(store.getAddresses("host5.sub"), asStrings(resolved));
   }
 
   @Test
@@ -146,5 +194,16 @@ public class SearchDomainTest {
     // "host2.sub" is resolved with the foo.com search domain as ndots = 2
     resolved = resolver.resolve("host2.sub").sync().getNow();
     assertEquals(store.getAddress("host2.sub.foo.com"), resolved.getHostAddress());
+  }
+
+  private List<String> asStrings(List<InetAddress> list) {
+    if (list != null) {
+      List<String> ret = new ArrayList<String>();
+      for (InetAddress addr : list) {
+        ret.add(addr.getHostAddress());
+      }
+      return ret;
+    }
+    return null;
   }
 }

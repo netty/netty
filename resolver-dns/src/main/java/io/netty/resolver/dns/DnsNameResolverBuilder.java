@@ -290,6 +290,12 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
+    /**
+     * Set the list of search domains of the resolver.
+     *
+     * @param searchDomains the search domains
+     * @return {@code this}
+     */
     public DnsNameResolverBuilder searchDomains(Iterable<String> searchDomains) {
         checkNotNull(searchDomains, "searchDomains");
 
@@ -313,6 +319,12 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
+  /**
+   * Set the number of dots which must appear in a name before an initial absolute query is made.
+   *
+   * @param ndots the ndots value
+   * @return {@code this}
+   */
     public DnsNameResolverBuilder ndots(int ndots) {
         this.ndots = ndots;
         return this;
