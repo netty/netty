@@ -28,6 +28,7 @@ import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEI
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOTCONN;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEPIPE;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEWOULDBLOCK;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorECONNREFUSED;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.strError;
 
 /**
@@ -43,6 +44,7 @@ public final class Errors {
     public static final int ERRNO_EAGAIN_NEGATIVE = -errnoEAGAIN();
     public static final int ERRNO_EWOULDBLOCK_NEGATIVE = -errnoEWOULDBLOCK();
     public static final int ERRNO_EINPROGRESS_NEGATIVE = -errnoEINPROGRESS();
+    public static final int ERROR_ECONNREFUSED_NEGATIVE = -errorECONNREFUSED();
 
     /**
      * Holds the mappings for errno codes to String messages.
@@ -69,6 +71,19 @@ public final class Errors {
         }
     }
 
+    static final class NativeConnectException extends ConnectException {
+        private static final long serialVersionUID = -5532328671712318161L;
+        private final int expectedErr;
+        NativeConnectException(String method, int expectedErr) {
+            super(method);
+            this.expectedErr = expectedErr;
+        }
+
+        int expectedErr() {
+            return expectedErr;
+        }
+    }
+
     static {
         for (int i = 0; i < ERRORS.length; i++) {
             // This is ok as strerror returns 'Unknown error i' when the message is not known.
@@ -76,8 +91,12 @@ public final class Errors {
         }
     }
 
-    static ConnectException newConnectException(String method, int err) {
-        return new ConnectException(method + "() failed: " + ERRORS[-err]);
+    static void throwConnectException(String method, NativeConnectException refusedCause, int err)
+            throws ConnectException {
+        if (err == refusedCause.expectedErr()) {
+            throw refusedCause;
+        }
+        throw new ConnectException(method + "() failed: " + ERRORS[-err]);
     }
 
     public static NativeIoException newConnectionResetException(String method, int errnoNegative) {
