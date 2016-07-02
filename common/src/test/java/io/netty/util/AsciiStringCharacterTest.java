@@ -86,7 +86,7 @@ public class AsciiStringCharacterTest {
 
     @Test
     public void subSequenceTest() {
-        byte[] init = {'t', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 't', 'e', 's', 't' };
+        byte[] init = { 't', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 't', 'e', 's', 't' };
         AsciiString ascii = new AsciiString(init);
         final int start = 2;
         final int end = init.length;
@@ -101,8 +101,8 @@ public class AsciiStringCharacterTest {
 
     @Test
     public void testContains() {
-        String[] falseLhs = {null, "a", "aa", "aaa" };
-        String[] falseRhs = {null, "b", "ba", "baa" };
+        String[] falseLhs = { null, "a", "aa", "aaa" };
+        String[] falseRhs = { null, "b", "ba", "baa" };
         for (int i = 0; i < falseLhs.length; ++i) {
             for (int j = 0; j < falseRhs.length; ++j) {
                 assertContains(falseLhs[i], falseRhs[i], false, false);
