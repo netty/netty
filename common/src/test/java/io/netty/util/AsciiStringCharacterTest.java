@@ -314,4 +314,10 @@ public class AsciiStringCharacterTest {
         assertEquals(3, AsciiString.indexOf("aabaabaa", 'a', 2));
         assertEquals(3, AsciiString.indexOf("aabdabaa", 'd', 1));
     }
+
+    @Test
+    public void testSubStringHashCode() {
+        //two "123"s
+        assertEquals(AsciiString.hashCode("123"), AsciiString.hashCode("a123".substring(1)));
+    }
 }
