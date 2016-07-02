@@ -276,7 +276,7 @@ public final class HttpUtil {
 
     /**
      * Sets or removes the {@code "Expect: 100-continue"} header to / from the
-     * specified message. If the specified {@code value} is {@code true},
+     * specified message. If {@code expected} is {@code true},
      * the {@code "Expect: 100-continue"} header is set and all other previous
      * {@code "Expect"} headers are removed.  Otherwise, all {@code "Expect"}
      * headers are removed completely.
