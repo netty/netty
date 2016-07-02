@@ -319,6 +319,6 @@ public class AsciiStringCharacterTest {
     public void testSubStringHashCode() {
         String a = "123";
         String b = "a123";
-        Assert.assertEquals(AsciiString.hashCode(a),AsciiString.hashCode(b.substring(1)));
+        assertEquals(AsciiString.hashCode(a),AsciiString.hashCode(b.substring(1)));
     }
 }
