@@ -18,7 +18,7 @@ package io.netty.util.concurrent;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
 import java.util.concurrent.RunnableFuture;
@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
  * Abstract base class for {@link EventExecutor} implementations.
  */
 public abstract class AbstractEventExecutor extends AbstractExecutorService implements EventExecutor {
+    private final Set<EventExecutor> executorSet = Collections.singleton((EventExecutor) this);
 
     @Override
     public EventExecutor next() {
@@ -41,7 +42,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
 
     @Override
     public Iterator<EventExecutor> iterator() {
-        return new EventExecutorIterator();
+        return executorSet.iterator();
     }
 
     @Override
@@ -130,28 +131,5 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         throw new UnsupportedOperationException();
-    }
-
-    private final class EventExecutorIterator implements Iterator<EventExecutor> {
-        private boolean nextCalled;
-
-        @Override
-        public boolean hasNext() {
-            return !nextCalled;
-        }
-
-        @Override
-        public EventExecutor next() {
-            if (!hasNext()) {
-                throw new NoSuchElementException();
-            }
-            nextCalled = true;
-            return AbstractEventExecutor.this;
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException("read-only");
-        }
     }
 }
