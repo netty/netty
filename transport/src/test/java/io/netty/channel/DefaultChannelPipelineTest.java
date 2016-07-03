@@ -36,6 +36,7 @@ import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -53,6 +54,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.Assert.*;
 
@@ -884,6 +886,37 @@ public class DefaultChannelPipelineTest {
         pipeline.addAfter("test", null, newHandler());
 
         pipeline.addBefore("test", null, newHandler());
+    }
+
+    @Test(timeout = 3000)
+    public void testUnorderedEventExecutor() throws Throwable {
+        ChannelPipeline pipeline1 = new LocalChannel().pipeline();
+        EventExecutorGroup eventExecutors = new UnorderedThreadPoolEventExecutor(2);
+        EventLoopGroup defaultGroup = new LocalEventLoopGroup(1);
+        try {
+            EventLoop eventLoop1 = defaultGroup.next();
+            eventLoop1.register(pipeline1.channel()).syncUninterruptibly();
+            final CountDownLatch latch = new CountDownLatch(1);
+            pipeline1.addLast(eventExecutors, new ChannelInboundHandlerAdapter() {
+                @Override
+                public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                    // Just block one of the two threads.
+                    LockSupport.park();
+                }
+
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    latch.countDown();
+                }
+            });
+            // Trigger an event, as we use UnorderedEventExecutor userEventTriggered should be called even when
+            // handlerAdded(...) blocks.
+            pipeline1.fireUserEventTriggered("");
+            latch.await();
+        } finally {
+            defaultGroup.shutdownGracefully().syncUninterruptibly();
+            eventExecutors.shutdownGracefully().syncUninterruptibly();
+        }
     }
 
     private static final class TestTask implements Runnable {
