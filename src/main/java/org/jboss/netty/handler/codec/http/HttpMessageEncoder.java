@@ -161,12 +161,18 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
     private static void encodeHeader(ChannelBuffer buf, String header, String value)
             throws UnsupportedEncodingException {
-        buf.writeBytes(header.getBytes("ASCII"));
+        encodeAscii(header, buf);
         buf.writeByte(COLON);
         buf.writeByte(SP);
-        buf.writeBytes(value.getBytes("ASCII"));
+        encodeAscii(value, buf);
         buf.writeByte(CR);
         buf.writeByte(LF);
+    }
+
+    private static void encodeAscii(String s, ChannelBuffer buf) {
+        for (int i = 0; i < s.length(); i++) {
+            buf.writeByte(s.charAt(i));
+        }
     }
 
     protected abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception;
