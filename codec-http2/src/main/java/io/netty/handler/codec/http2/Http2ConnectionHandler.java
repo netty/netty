@@ -714,6 +714,15 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
     }
 
+    private void processRstStreamWriteResult(ChannelHandlerContext ctx, Http2Stream stream, ChannelFuture future) {
+        if (future.isSuccess()) {
+            closeStream(stream, future);
+        } else {
+            // The connection will be closed and so no need to change the resetSent flag to false.
+            onConnectionError(ctx, future.cause(), null);
+        }
+    }
+
     /**
      * Returns the client preface string if this is a client connection, otherwise returns {@code null}.
      */
