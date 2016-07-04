@@ -29,12 +29,18 @@ public interface ChannelPool extends Closeable {
     /**
      * Acquire a {@link Channel} from this {@link ChannelPool}. The returned {@link Future} is notified once
      * the acquire is successful and failed otherwise.
+     *
+     * <strong>Its important that an acquired is always released to the pool again, even if the {@link Channel}
+     * is explicitly closed..</strong>
      */
     Future<Channel> acquire();
 
     /**
      * Acquire a {@link Channel} from this {@link ChannelPool}. The given {@link Promise} is notified once
      * the acquire is successful and failed otherwise.
+     *
+     * <strong>Its important that an acquired is always released to the pool again, even if the {@link Channel}
+     * is explicitly closed..</strong>
      */
     Future<Channel> acquire(Promise<Channel> promise);
 
