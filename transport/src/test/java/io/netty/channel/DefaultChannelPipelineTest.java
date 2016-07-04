@@ -678,7 +678,7 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test(timeout = 30000)
     public void testHandlerAddedAndRemovedCalledInCorrectOrder() throws Throwable {
         final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
         final EventExecutorGroup group2 = new DefaultEventExecutorGroup(1);
@@ -768,7 +768,7 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test(timeout = 30000)
     public void testHandlerAddedThrowsAndRemovedThrowsException() throws InterruptedException {
         final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
         try {
