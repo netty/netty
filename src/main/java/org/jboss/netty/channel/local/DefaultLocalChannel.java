@@ -198,8 +198,8 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
                     break;
                 }
 
-                fireExceptionCaught(this, cause);
                 e.getFuture().setFailure(cause);
+                fireExceptionCaught(this, cause);
             }
         }
     }
