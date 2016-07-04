@@ -212,6 +212,16 @@ public class IpFilterRuleTest {
                 // NOOP
             }
 
+            @Override
+            public boolean getUserDefinedWritability(int index) {
+                return false;
+            }
+
+            @Override
+            public void setUserDefinedWritability(int index, boolean isWritable) {
+                // NOOP
+            }
+
         }, h, addr), addr);
         System.err.println(result);
         return result;

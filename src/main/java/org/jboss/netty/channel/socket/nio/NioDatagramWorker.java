@@ -182,7 +182,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
 
             try {
                 channel.getDatagramChannel().register(
-                        selector, channel.getRawInterestOps(), channel);
+                        selector, channel.getInternalInterestOps(), channel);
 
                 if (future != null) {
                     future.setSuccess();
