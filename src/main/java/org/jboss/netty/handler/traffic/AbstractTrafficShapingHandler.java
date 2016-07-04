@@ -22,6 +22,7 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.UpstreamChannelStateEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.DefaultObjectSizeEstimator;
@@ -33,6 +34,7 @@ import org.jboss.netty.util.TimerTask;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * AbstractTrafficShapingHandler allows to limit the global bandwidth
@@ -74,6 +76,11 @@ public abstract class AbstractTrafficShapingHandler extends
      * Shall be less than TIMEOUT. Here half of "standard" 30s
      */
     public static final long DEFAULT_MAX_TIME = 15000;
+
+    /**
+     * Default max size to not exceed in buffer (write only).
+     */
+    public static final long DEFAULT_MAX_SIZE = 4 * 1024 * 1024L;
 
     /**
      * Default minimal time to wait
@@ -120,11 +127,30 @@ public abstract class AbstractTrafficShapingHandler extends
     protected long maxTime = DEFAULT_MAX_TIME; // default 15 s
 
     /**
+     * Max time to delay before proposing to stop writing new objects from next handlers
+     */
+    protected long maxWriteDelay = 4 * DEFAULT_CHECK_INTERVAL; // default 4 s
+    /**
+     * Max size in the list before proposing to stop writing new objects from next handlers
+     */
+    protected long maxWriteSize = DEFAULT_MAX_SIZE; // default 4MB
+    /**
      * Boolean associated with the release of this TrafficShapingHandler.
      * It will be true only once when the releaseExternalRessources is called
      * to prevent waiting when shutdown.
      */
     final AtomicBoolean release = new AtomicBoolean(false);
+
+    /**
+     * Attachment of ChannelHandlerContext
+     *
+     */
+    protected static class ReadWriteStatus {
+        volatile boolean readSuspend;
+        volatile boolean writeSuspend;
+        volatile boolean writeSuspendFromChannel;
+        ReentrantLock lock = new ReentrantLock(true);
+    }
 
      private void init(ObjectSizeEstimator newObjectSizeEstimator,
              Timer newTimer, long newWriteLimit, long newReadLimit,
@@ -419,6 +445,35 @@ public abstract class AbstractTrafficShapingHandler extends
        this.maxTime = maxTime;
    }
 
+   /**
+    * @return the maxWriteDelay
+    */
+   public long getMaxWriteDelay() {
+       return maxWriteDelay;
+   }
+
+   /**
+    * @param maxWriteDelay the maximum Write Delay in ms in the buffer allowed before write suspended is set
+    */
+   public void setMaxWriteDelay(long maxWriteDelay) {
+       this.maxWriteDelay = maxWriteDelay;
+   }
+
+   /**
+    * @return the maxWriteSize
+    */
+   public long getMaxWriteSize() {
+       return maxWriteSize;
+   }
+
+   /**
+    * @param maxWriteSize the maximum Write Size allowed in the buffer
+    *            per channel before write suspended is set
+    */
+   public void setMaxWriteSize(long maxWriteSize) {
+       this.maxWriteSize = maxWriteSize;
+   }
+
     /**
      * Called each time the accounting is computed from the TrafficCounters.
      * This method could be used for instance to implement almost real time accounting.
@@ -443,31 +498,32 @@ public abstract class AbstractTrafficShapingHandler extends
             if (release.get()) {
                 return;
             }
-            if (!ctx.getChannel().isReadable() && ctx.getAttachment() == null) {
+            ReadWriteStatus rws = checkAttachment(ctx);
+            if (!ctx.getChannel().isReadable() && ! rws.readSuspend) {
                 // If isReadable is False and Active is True, user make a direct setReadable(false)
                 // Then Just reset the status
                 if (logger.isDebugEnabled()) {
                     logger.debug("Not Unsuspend: " + ctx.getChannel().isReadable() + ":" +
-                            (ctx.getAttachment() == null));
+                            rws.readSuspend);
                 }
-                ctx.setAttachment(null);
+                rws.readSuspend = false;
             } else {
                 // Anything else allows the handler to reset the AutoRead
                 if (logger.isDebugEnabled()) {
-                    if (ctx.getChannel().isReadable() && ctx.getAttachment() != null) {
+                    if (ctx.getChannel().isReadable() && rws.readSuspend) {
                         logger.debug("Unsuspend: " + ctx.getChannel().isReadable() + ":" +
-                                (ctx.getAttachment() == null));
+                                rws.readSuspend);
                     } else {
                         logger.debug("Normal Unsuspend: " + ctx.getChannel().isReadable() + ":" +
-                                (ctx.getAttachment() == null));
+                                rws.readSuspend);
                     }
                 }
-                ctx.setAttachment(null);
+                rws.readSuspend = false;
                 ctx.getChannel().setReadable(true);
             }
             if (logger.isDebugEnabled()) {
                 logger.debug("Unsupsend final status => " + ctx.getChannel().isReadable() + ":" +
-                        (ctx.getAttachment() == null));
+                        rws.readSuspend);
             }
         }
     }
@@ -476,10 +532,12 @@ public abstract class AbstractTrafficShapingHandler extends
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt)
             throws Exception {
         try {
-            long size = objectSizeEstimator.estimateSize(evt.getMessage());
+            ReadWriteStatus rws = checkAttachment(ctx);
+            long size = calculateSize(evt.getMessage());
             if (size > 0 && trafficCounter != null) {
                 // compute the number of ms to wait before reopening the channel
                 long wait = trafficCounter.readTimeToWait(size, readLimit, maxTime);
+                wait = checkWaitReadTime(ctx, wait);
                 if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                     // time in order to try to limit the traffic
                     if (release.get()) {
@@ -490,7 +548,7 @@ public abstract class AbstractTrafficShapingHandler extends
                         // Only AutoRead AND HandlerActive True means Context Active
                         if (logger.isDebugEnabled()) {
                             logger.debug("Read Suspend: " + wait + ":" + channel.isReadable() + ":" +
-                                    (ctx.getAttachment() == null));
+                                    rws.readSuspend);
                         }
                         if (timer == null) {
                             // Sleep since no executor
@@ -498,12 +556,12 @@ public abstract class AbstractTrafficShapingHandler extends
                             Thread.sleep(wait);
                             return;
                         }
-                        if (channel.isReadable() && ctx.getAttachment() == null) {
-                            ctx.setAttachment(Boolean.TRUE);
+                        if (channel.isReadable() && ! rws.readSuspend) {
+                            rws.readSuspend = true;
                             channel.setReadable(false);
                             if (logger.isDebugEnabled()) {
                                 logger.debug("Suspend final status => " + channel.isReadable() + ":" +
-                                        (ctx.getAttachment() == null));
+                                        rws.readSuspend);
                             }
                             // Create a Runnable to reactive the read if needed. If one was create before
                             // it will just be reused to limit object creation
@@ -515,35 +573,49 @@ public abstract class AbstractTrafficShapingHandler extends
                 }
             }
         } finally {
+            informReadOperation(ctx);
             // The message is then just passed to the next handler
             super.messageReceived(ctx, evt);
         }
+    }
+
+    /**
+     * Method overridden in GTSH to take into account specific timer for the channel
+     * @param ctx
+     * @param wait
+     * @return the wait to use according to the context
+     */
+    protected long checkWaitReadTime(final ChannelHandlerContext ctx, long wait) {
+        // no change by default
+        return wait;
+    }
+
+    /**
+     * Method overridden in GTSH to take into account specific timer for the channel
+     * @param ctx
+     */
+    protected void informReadOperation(final ChannelHandlerContext ctx) {
+        // default noop
     }
 
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent evt)
             throws Exception {
         long wait = 0;
+        ReadWriteStatus rws = checkAttachment(ctx);
+        long size = calculateSize(evt.getMessage());
         try {
-            long size = objectSizeEstimator.estimateSize(evt.getMessage());
             if (size > 0 && trafficCounter != null) {
                 // compute the number of ms to wait before continue with the channel
                 wait = trafficCounter.writeTimeToWait(size, writeLimit, maxTime);
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Write Suspend: " + wait + ":" + ctx.getChannel().isReadable() + ":" +
-                            (ctx.getAttachment() == null));
+                    logger.debug("Write Suspend: " + wait + ":" + ctx.getChannel().isWritable() + ":" +
+                            rws.writeSuspend);
                 }
                 if (wait >= MINIMAL_WAIT) {
                     if (release.get()) {
                         return;
                     }
-                    /*
-                     * Option 2:
-                     * Thread.sleep(wait);
-                     * System.out.println("Write unsuspended");
-                     * Option 1: use an ordered list of messages to send
-                     * Warning of memory pressure!
-                     */
                 } else {
                     wait = 0;
                 }
@@ -552,8 +624,8 @@ public abstract class AbstractTrafficShapingHandler extends
             if (release.get()) {
                 return;
             }
-            // The message is then just passed to the next handler
-            submitWrite(ctx, evt, wait);
+            // The message is scheduled
+            submitWrite(ctx, evt, size, wait);
         }
     }
 
@@ -561,8 +633,81 @@ public abstract class AbstractTrafficShapingHandler extends
         super.writeRequested(ctx, evt);
     }
 
-    protected abstract void submitWrite(final ChannelHandlerContext ctx, final MessageEvent evt, final long delay)
-            throws Exception;
+    protected abstract void submitWrite(final ChannelHandlerContext ctx, final MessageEvent evt, final long size,
+            final long delay) throws Exception;
+
+    protected void setWritable(ChannelHandlerContext ctx, boolean writable) {
+        ReadWriteStatus rws = checkAttachment(ctx);
+        if (rws.writeSuspend == !writable && ! writable) {
+            return;
+        }
+        rws.writeSuspend = ! writable;
+        Channel channel = ctx.getChannel();
+        if (! writable) {
+            ctx.sendUpstream(
+                    new UpstreamChannelStateEvent(
+                            channel, ChannelState.INTEREST_OPS, Channel.OP_WRITE));
+        } else {
+            // reset the suspend from Channel if any
+            rws.writeSuspendFromChannel = false;
+            ctx.sendUpstream(
+                    new UpstreamChannelStateEvent(
+                            channel, ChannelState.INTEREST_OPS, Channel.OP_NONE));
+        }
+    }
+
+    @Override
+    public void channelInterestChanged(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        ReadWriteStatus rws = checkAttachment(ctx);
+        if (e.getState() == ChannelState.INTEREST_OPS) {
+            if ((((Integer) e.getValue()).intValue() & Channel.OP_WRITE) == 0
+                && rws.writeSuspend && ! rws.writeSuspendFromChannel) {
+                // silently ignored since already in Write Suspension from this handler
+                return;
+            } else if ((((Integer) e.getValue()).intValue() & Channel.OP_WRITE) != 0) {
+                // force Suspension due to Channel limit
+                rws.writeSuspendFromChannel = true;
+                setWritable(ctx, false);
+                return;
+            }
+            if (rws.writeSuspend) {
+                return;
+            }
+            // Coming here if not OP_WRITE and not handler suspended and system suspended
+            rws.writeSuspendFromChannel = false;
+        }
+        super.channelInterestChanged(ctx, e);
+    }
+
+    /**
+     * Check the writability according to delay and size for the channel.
+     * Set if necessary WRITE_SUSPENDED status.
+     * @param ctx
+     * @param delay
+     * @param queueSize
+     */
+    protected void checkWriteSuspend(ChannelHandlerContext ctx, long delay, long queueSize) {
+        if (queueSize > maxWriteSize || delay > maxWriteDelay) {
+            setWritable(ctx, false);
+        }
+    }
+    /**
+     * Explicitly release the Write suspended status and trigger the event WRITE_ENABLED
+     * @param ctx
+     */
+    protected void releaseWriteSuspended(ChannelHandlerContext ctx) {
+        setWritable(ctx, true);
+    }
+    /**
+     * Check if the current channel is WRITE SUSPENDED by a TrafficShapingHandler
+     * @param ctx
+     * @return True if write is in Suspended status
+     */
+    public static boolean checkWriteSuspended(ChannelHandlerContext ctx) {
+        ReadWriteStatus rws = checkAttachment(ctx);
+        return ! rws.writeSuspend;
+    }
 
     @Override
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
@@ -573,8 +718,8 @@ public abstract class AbstractTrafficShapingHandler extends
                     (((Integer) cse.getValue()).intValue() & Channel.OP_READ) != 0) {
 
                 // setReadable(true) requested
-                boolean readSuspended = ctx.getAttachment() != null;
-                if (readSuspended) {
+                ReadWriteStatus rws = checkAttachment(ctx);
+                if (rws.readSuspend) {
                     // Drop the request silently if this handler has
                     // set the flag.
                     e.getFuture().setSuccess();
@@ -605,10 +750,30 @@ public abstract class AbstractTrafficShapingHandler extends
         //shall be done outside (since it can be shared): timer.stop();
     }
 
+    protected static synchronized ReadWriteStatus checkAttachment(ChannelHandlerContext ctx) {
+        ReadWriteStatus rws = (ReadWriteStatus) ctx.getAttachment();
+        if (rws == null) {
+            rws = new ReadWriteStatus();
+            ctx.setAttachment(rws);
+        }
+        return rws;
+    }
+    @Override
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        checkAttachment(ctx);
+        super.channelConnected(ctx, e);
+    }
+
+    protected long calculateSize(Object obj) {
+        long size = objectSizeEstimator.estimateSize(obj);
+        //logger.debug("Size: "+size);
+        return size;
+    }
     @Override
     public String toString() {
         return "TrafficShaping with Write Limit: " + writeLimit +
-                " Read Limit: " + readLimit + " every: " + checkInterval + " and Counter: " +
-                (trafficCounter != null? trafficCounter.toString() : "none");
+                " Read Limit: " + readLimit + " every: " + checkInterval + " maxDelay: " + maxWriteDelay +
+                " maxSize: " + maxWriteSize + " and Counter: " +
+                (trafficCounter != null ? trafficCounter.toString() : "none");
     }
 }
