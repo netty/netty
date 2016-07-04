@@ -514,4 +514,8 @@ public class Bootstrap implements ExternalResourceReleasable {
         410, 139, 657, 640, 743, 128, 458, 866,
         501, 348, 155, 276, 101, 858, 323, 359,
     };
+    
+    public static void main(String args[]) {
+        System.out.println("ni hao ,gitub");
+    }
 }
