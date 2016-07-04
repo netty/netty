@@ -1083,6 +1083,18 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
         throw reject();
     }
 
+    @Override
+    public int setCharSequence(int index, CharSequence sequence, Charset charset) {
+        reject();
+        return -1;
+    }
+
+    @Override
+    public int writeCharSequence(CharSequence sequence, Charset charset) {
+        reject();
+        return -1;
+    }
+
     private void checkIndex(int index, int length) {
         if (index + length > buffer.writerIndex()) {
             throw REPLAY;
