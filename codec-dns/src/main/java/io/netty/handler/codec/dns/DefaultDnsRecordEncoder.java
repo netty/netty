@@ -23,6 +23,8 @@ import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.dns.DefaultDnsRecordDecoder.ROOT;
 
+import static io.netty.handler.codec.dns.DefaultDnsRecordDecoder.ROOT;
+
 /**
  * The default {@link DnsRecordEncoder} implementation.
  *
