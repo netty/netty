@@ -60,7 +60,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      *
      * Threading - synchronized(this). We must support adding listeners when there is no EventExecutor.
      */
-    private Object listeners;
+    private volatile Object listeners;
     /**
      * Threading - synchronized(this). We are required to hold the monitor to use Java's underlying wait()/notifyAll().
      */
@@ -417,7 +417,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private void notifyListeners() {
-        // Modifications to listeners should be done in a synchronized block before this, and should be visible here.
         if (listeners == null) {
             return;
         }
