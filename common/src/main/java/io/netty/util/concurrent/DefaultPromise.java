@@ -520,7 +520,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             l.operationComplete(future);
         } catch (Throwable t) {
-            logger.warn("An exception was thrown by {}.operationComplete()", l.getClass().getName(), t);
+            logger.warn("An exception was thrown by " + l.getClass().getName() + ".operationComplete()", t);
         }
     }
 
@@ -747,7 +747,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             l.operationProgressed(future, progress, total);
         } catch (Throwable t) {
-            logger.warn("An exception was thrown by {}.operationProgressed()", l.getClass().getName(), t);
+            logger.warn("An exception was thrown by " + l.getClass().getName() + ".operationProgressed()", t);
         }
     }
 
