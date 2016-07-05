@@ -87,6 +87,9 @@ public class ChannelOption<T> extends UniqueName {
     public static final ChannelOption<Boolean> DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION =
             valueOf("DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION");
 
+    public static final ChannelOption<Boolean> SINGLE_EVENTEXECUTOR_PER_GROUP =
+            valueOf("SINGLE_EVENTEXECUTOR_PER_GROUP");
+
     /**
      * Creates a new {@link ChannelOption} with the specified {@param name} or return the already existing
      * {@link ChannelOption} for the given name.
