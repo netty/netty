@@ -34,8 +34,8 @@ public class ChannelDuplexHandler extends ChannelInboundHandlerAdapter implement
      */
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-                     ChannelPromise future) throws Exception {
-        ctx.bind(localAddress, future);
+                     ChannelPromise promise) throws Exception {
+        ctx.bind(localAddress, promise);
     }
 
     /**
@@ -46,8 +46,8 @@ public class ChannelDuplexHandler extends ChannelInboundHandlerAdapter implement
      */
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        SocketAddress localAddress, ChannelPromise future) throws Exception {
-        ctx.connect(remoteAddress, localAddress, future);
+                        SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        ctx.connect(remoteAddress, localAddress, promise);
     }
 
     /**
@@ -57,9 +57,9 @@ public class ChannelDuplexHandler extends ChannelInboundHandlerAdapter implement
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise future)
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
-        ctx.disconnect(future);
+        ctx.disconnect(promise);
     }
 
     /**
@@ -69,8 +69,8 @@ public class ChannelDuplexHandler extends ChannelInboundHandlerAdapter implement
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-        ctx.close(future);
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.close(promise);
     }
 
     /**
@@ -80,8 +80,8 @@ public class ChannelDuplexHandler extends ChannelInboundHandlerAdapter implement
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-        ctx.deregister(future);
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.deregister(promise);
     }
 
     /**
