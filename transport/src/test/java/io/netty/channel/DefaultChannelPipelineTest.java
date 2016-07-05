@@ -932,6 +932,44 @@ public class DefaultChannelPipelineTest {
         }
     }
 
+    @Test
+    public void testPinExecutor() {
+        EventExecutorGroup group = new DefaultEventExecutorGroup(2);
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline2 = new LocalChannel().pipeline();
+
+        pipeline.addLast(group, "h1", new ChannelInboundHandlerAdapter());
+        pipeline.addLast(group, "h2", new ChannelInboundHandlerAdapter());
+        pipeline2.addLast(group, "h3", new ChannelInboundHandlerAdapter());
+
+        EventExecutor executor1 = pipeline.context("h1").executor();
+        EventExecutor executor2 = pipeline.context("h2").executor();
+        assertNotNull(executor1);
+        assertNotNull(executor2);
+        assertSame(executor1, executor2);
+        EventExecutor executor3 = pipeline2.context("h3").executor();
+        assertNotNull(executor3);
+        assertNotSame(executor3, executor2);
+        group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
+    }
+
+    @Test
+    public void testNotPinExecutor() {
+        EventExecutorGroup group = new DefaultEventExecutorGroup(2);
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        pipeline.channel().config().setOption(ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP, false);
+
+        pipeline.addLast(group, "h1", new ChannelInboundHandlerAdapter());
+        pipeline.addLast(group, "h2", new ChannelInboundHandlerAdapter());
+
+        EventExecutor executor1 = pipeline.context("h1").executor();
+        EventExecutor executor2 = pipeline.context("h2").executor();
+        assertNotNull(executor1);
+        assertNotNull(executor2);
+        assertNotSame(executor1, executor2);
+        group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
+    }
+
     private static final class TestTask implements Runnable {
 
         private final ChannelPipeline pipeline;
