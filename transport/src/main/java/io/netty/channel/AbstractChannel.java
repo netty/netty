@@ -134,6 +134,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return localAddress;
     }
 
+    /**
+     * @deprecated no use-case for this.
+     */
+    @Deprecated
     protected void invalidateLocalAddress() {
         localAddress = null;
     }
@@ -153,8 +157,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     /**
-     * Reset the stored remoteAddress
+     * @deprecated no use-case for this.
      */
+    @Deprecated
     protected void invalidateRemoteAddress() {
         remoteAddress = null;
     }
