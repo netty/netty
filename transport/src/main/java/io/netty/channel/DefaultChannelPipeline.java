@@ -66,6 +66,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private Map<EventExecutorGroup, EventExecutor> childExecutors;
     private MessageSizeEstimator.Handle estimatorHandle;
+    private boolean firstRegistration = true;
 
     /**
      * This is the head of a linked list that is processed by {@link #callHandlerAddedForAllHandlers()} and so process
@@ -634,6 +635,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));
+        }
+    }
+
+    final void invokeHandlerAddedIfNeeded() {
+        assert channel.eventLoop().inEventLoop();
+        if (firstRegistration) {
+            firstRegistration = false;
+            // We are now registered to the EventLoop. It's time to call the callbacks for the ChannelHandlers,
+            // that were added before the registration was done.
+            callHandlerAddedForAllHandlers();
         }
     }
 
@@ -1218,7 +1229,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             implements ChannelOutboundHandler, ChannelInboundHandler {
 
         private final Unsafe unsafe;
-        private boolean firstRegistration = true;
 
         HeadContext(DefaultChannelPipeline pipeline) {
             super(pipeline, null, HEAD_NAME, false, true);
@@ -1293,13 +1303,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-            if (firstRegistration) {
-                firstRegistration = false;
-                // We are now registered to the EventLoop. It's time to call the callbacks for the ChannelHandlers,
-                // that were added before the registration was done.
-                callHandlerAddedForAllHandlers();
-            }
-
+            invokeHandlerAddedIfNeeded();
             ctx.fireChannelRegistered();
         }
 
