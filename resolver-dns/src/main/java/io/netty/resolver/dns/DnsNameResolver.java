@@ -42,6 +42,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -99,7 +100,7 @@ public class DnsNameResolver extends InetNameResolver {
             searchDomains = list.toArray(new String[list.size()]);
         } catch (Exception ignore) {
             // Failed to get the system name search domain list.
-            searchDomains = new String[0];
+            searchDomains = EmptyArrays.EMPTY_STRINGS;
         }
         DEFAULT_SEACH_DOMAINS = searchDomains;
     }
