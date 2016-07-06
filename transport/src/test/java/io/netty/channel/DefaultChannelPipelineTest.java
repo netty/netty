@@ -25,6 +25,10 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.oio.OioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -884,6 +888,62 @@ public class DefaultChannelPipelineTest {
             latch.await();
         } finally {
             defaultGroup.shutdownGracefully();
+        }
+    }
+
+    @Test(timeout = 3000)
+    public void testAddInListenerNio() throws Throwable {
+        testAddInListener(new NioSocketChannel(), new NioEventLoopGroup(1));
+    }
+
+    @Test(timeout = 3000)
+    public void testAddInListenerOio() throws Throwable {
+        testAddInListener(new OioSocketChannel(), new OioEventLoopGroup(1));
+    }
+
+    @Test(timeout = 3000)
+    public void testAddInListenerLocal() throws Throwable {
+        testAddInListener(new LocalChannel(), new DefaultEventLoopGroup(1));
+    }
+
+    private static void testAddInListener(Channel channel, EventLoopGroup group) throws Throwable {
+        ChannelPipeline pipeline1 = channel.pipeline();
+        try {
+            final Object event = new Object();
+            final Promise<Object> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+            group.register(pipeline1.channel()).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    ChannelPipeline pipeline = future.channel().pipeline();
+                    final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
+                    pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                            handlerAddedCalled.set(true);
+                        }
+
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                            promise.setSuccess(event);
+                        }
+
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                            promise.setFailure(cause);
+                        }
+                    });
+                    if (!handlerAddedCalled.get()) {
+                        promise.setFailure(new AssertionError("handlerAdded(...) should have been called"));
+                        return;
+                    }
+                    // This event must be captured by the added handler.
+                    pipeline.fireUserEventTriggered(event);
+                }
+            });
+            assertSame(event, promise.syncUninterruptibly().getNow());
+        } finally {
+            pipeline1.channel().close().syncUninterruptibly();
+            group.shutdownGracefully();
         }
     }
 
