@@ -87,7 +87,7 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     static {
-        String[] searchDomains = new String[0];
+        String[] searchDomains;
         try {
             Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
             Method open = configClass.getMethod("open");
@@ -99,6 +99,7 @@ public class DnsNameResolver extends InetNameResolver {
             searchDomains = list.toArray(new String[list.size()]);
         } catch (Exception ignore) {
             // Failed to get the system name search domain list.
+            searchDomains = new String[0];
         }
         DEFAULT_SEACH_DOMAINS = searchDomains;
     }
@@ -187,7 +188,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.optResourceEnabled = optResourceEnabled;
         this.hostsFileEntriesResolver = checkNotNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
         this.resolveCache = resolveCache;
-        this.searchDomains = checkNotNull(searchDomains, "searchDomains");
+        this.searchDomains = checkNotNull(searchDomains, "searchDomains").clone();
         this.ndots = checkPositive(ndots, "ndots");
 
         Bootstrap b = new Bootstrap();
@@ -242,11 +243,11 @@ public class DnsNameResolver extends InetNameResolver {
         return resolvedAddressTypes;
     }
 
-    String[] searchDomains() {
+    final String[] searchDomains() {
         return searchDomains;
     }
 
-    int ndots() {
+    final int ndots() {
         return ndots;
     }
 
@@ -411,19 +412,18 @@ public class DnsNameResolver extends InetNameResolver {
     boolean searchDomains(String hostname) {
         if (searchDomains.length == 0 || (hostname.length() > 0 && hostname.charAt(hostname.length() - 1) == '.')) {
             return false;
-        } else {
-            int idx = hostname.length();
-            int dots = 0;
-            while (idx-- > 0) {
-                if (hostname.charAt(idx) == '.') {
-                    dots++;
-                }
-                if (dots >= ndots) {
-                    return false;
-                }
-            }
-            return true;
         }
+        int idx = hostname.length();
+        int dots = 0;
+        while (idx-- > 0) {
+            if (hostname.charAt(idx) == '.') {
+                dots++;
+            }
+            if (dots >= ndots) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void doResolveUncached(String hostname,
@@ -433,20 +433,20 @@ public class DnsNameResolver extends InetNameResolver {
         ctx.resolve(promise);
     }
 
-    class SingleResolverContext extends DnsNameResolverContext<InetAddress> {
+    final class SingleResolverContext extends DnsNameResolverContext<InetAddress> {
 
-        public SingleResolverContext(DnsNameResolver parent, String hostname, DnsCache resolveCache) {
+        SingleResolverContext(DnsNameResolver parent, String hostname, DnsCache resolveCache) {
             super(parent, hostname, resolveCache);
         }
 
         @Override
-        protected DnsNameResolverContext<InetAddress> newResolverContext(DnsNameResolver parent,
+        DnsNameResolverContext<InetAddress> newResolverContext(DnsNameResolver parent,
                                                                          String hostname, DnsCache resolveCache) {
             return new SingleResolverContext(parent, hostname, resolveCache);
         }
 
         @Override
-        protected boolean finishResolve(
+        boolean finishResolve(
             Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries,
             Promise<InetAddress> promise) {
 
@@ -537,19 +537,19 @@ public class DnsNameResolver extends InetNameResolver {
         return true;
     }
 
-    class ListResolverContext extends DnsNameResolverContext<List<InetAddress>> {
-        public ListResolverContext(DnsNameResolver parent, String hostname, DnsCache resolveCache) {
+    final class ListResolverContext extends DnsNameResolverContext<List<InetAddress>> {
+        ListResolverContext(DnsNameResolver parent, String hostname, DnsCache resolveCache) {
             super(parent, hostname, resolveCache);
         }
 
         @Override
-        protected DnsNameResolverContext<List<InetAddress>> newResolverContext(DnsNameResolver parent, String hostname,
+        DnsNameResolverContext<List<InetAddress>> newResolverContext(DnsNameResolver parent, String hostname,
                                                                                DnsCache resolveCache) {
             return new ListResolverContext(parent, hostname, resolveCache);
         }
 
         @Override
-        protected boolean finishResolve(
+        boolean finishResolve(
             Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries,
             Promise<List<InetAddress>> promise) {
 

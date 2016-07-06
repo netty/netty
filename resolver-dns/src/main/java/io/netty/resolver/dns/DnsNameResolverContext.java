@@ -102,17 +102,17 @@ abstract class DnsNameResolverContext<T> {
         resolve(promise, parent.searchDomains().length > 0 && !hostname.endsWith("."));
     }
 
-    void resolve(Promise<T> promise, boolean trySearchDomain) {
+    private void resolve(Promise<T> promise, boolean trySearchDomain) {
         if (trySearchDomain) {
             final Promise<T> original = promise;
             promise = new DefaultPromise<T>(parent.executor());
-            FutureListener<T> globalListener = new FutureListener<T>() {
+            promise.addListener(new FutureListener<T>() {
                 @Override
                 public void operationComplete(Future<T> future) throws Exception {
                     if (future.isSuccess()) {
                         original.setSuccess(future.getNow());
                     } else {
-                        FutureListener<T> sdListener = new FutureListener<T>() {
+                        future.addListener(new FutureListener<T>() {
                             int count;
                             @Override
                             public void operationComplete(Future<T> future) throws Exception {
@@ -132,12 +132,10 @@ abstract class DnsNameResolverContext<T> {
                                     }
                                 }
                             }
-                        };
-                        future.addListener(sdListener);
+                        });
                     }
                 }
-            };
-            promise.addListener(globalListener);
+            });
         }
         if (parent.searchDomains(hostname)) {
             promise.tryFailure(new UnknownHostException(hostname));
@@ -480,10 +478,10 @@ abstract class DnsNameResolverContext<T> {
         promise.tryFailure(cause);
     }
 
-    protected abstract boolean finishResolve(
+    abstract boolean finishResolve(
             Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries, Promise<T> promise);
 
-    protected abstract DnsNameResolverContext<T> newResolverContext(DnsNameResolver parent, String hostname,
+    abstract DnsNameResolverContext<T> newResolverContext(DnsNameResolver parent, String hostname,
                                                                     DnsCache resolveCache);
 
     static String decodeDomainName(ByteBuf in) {
