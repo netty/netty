@@ -101,6 +101,52 @@ public class SearchDomainTest {
     }
 
     @Test
+    public void testResolveAll() throws Exception {
+        Set<String> domains = new HashSet<String>();
+        domains.add("host1.foo.com");
+        domains.add("host1");
+        domains.add("host3");
+        domains.add("host4.sub.foo.com");
+        domains.add("host5.sub.foo.com");
+        domains.add("host5.sub");
+
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(domains, 2);
+        dnsServer = new TestDnsServer(store);
+        dnsServer.start();
+
+        DnsNameResolver resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).build();
+
+        List<InetAddress> resolved = resolver.resolveAll("host1.foo.com").sync().getNow();
+        assertEquals(store.getAddresses("host1.foo.com"), asStrings(resolved));
+
+        // host1 resolves host1.foo.com with foo.com search domain
+        resolved = resolver.resolveAll("host1").sync().getNow();
+        assertEquals(store.getAddresses("host1.foo.com"), asStrings(resolved));
+
+        // "host1." absolute query
+        resolved = resolver.resolveAll("host1.").sync().getNow();
+        assertEquals(store.getAddresses("host1"), asStrings(resolved));
+
+        // "host2" not resolved
+        assertFalse(resolver.resolveAll("host2").await().isSuccess());
+
+        // "host3" does not contain a dot or is not absolute
+        assertFalse(resolver.resolveAll("host3").await().isSuccess());
+
+        // "host3." does not contain a dot but is absolute
+        resolved = resolver.resolveAll("host3.").sync().getNow();
+        assertEquals(store.getAddresses("host3"), asStrings(resolved));
+
+        // "host4.sub" contains a dot but not resolved then resolved to "host4.sub.foo.com" with "foo.com" search domain
+        resolved = resolver.resolveAll("host4.sub").sync().getNow();
+        assertEquals(store.getAddresses("host4.sub.foo.com"), asStrings(resolved));
+
+        // "host5.sub" contains a dot and is resolved
+        resolved = resolver.resolveAll("host5.sub").sync().getNow();
+        assertEquals(store.getAddresses("host5.sub"), asStrings(resolved));
+    }
+
+    @Test
     public void testMultipleSearchDomain() throws Exception {
         Set<String> domains = new HashSet<String>();
         domains.add("host1.foo.com");
