@@ -581,7 +581,12 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     private static String hostname(String inetHost) {
-        return IDN.toASCII(inetHost);
+        String hostname = IDN.toASCII(inetHost);
+        // Check for http://bugs.java.com/bugdatabase/view_bug.do?bug_id=6894622
+        if (inetHost.endsWith(".") && !hostname.endsWith(".")) {
+            hostname += ".";
+        }
+        return hostname;
     }
 
     /**
