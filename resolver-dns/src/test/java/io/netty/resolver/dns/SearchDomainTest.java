@@ -100,7 +100,6 @@ public class SearchDomainTest {
         assertEquals(store.getAddress("host5.sub"), resolved.getHostAddress());
     }
 
-
     @Test
     public void testMultipleSearchDomain() throws Exception {
         Set<String> domains = new HashSet<String>();
