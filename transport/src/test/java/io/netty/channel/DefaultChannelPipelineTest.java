@@ -455,6 +455,7 @@ public class DefaultChannelPipelineTest {
     @Test
     public void testCancelBind() throws Exception {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -465,6 +466,7 @@ public class DefaultChannelPipelineTest {
     @Test
     public void testCancelConnect() throws Exception {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -475,6 +477,7 @@ public class DefaultChannelPipelineTest {
     @Test
     public void testCancelDisconnect() throws Exception {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -485,6 +488,7 @@ public class DefaultChannelPipelineTest {
     @Test
     public void testCancelClose() throws Exception {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -495,6 +499,7 @@ public class DefaultChannelPipelineTest {
     @Test
     public void testCancelDeregister() throws Exception {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -505,6 +510,8 @@ public class DefaultChannelPipelineTest {
     @Test
     public void testCancelWrite() throws Exception {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
+
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
         ByteBuf buffer = Unpooled.buffer();
@@ -517,6 +524,8 @@ public class DefaultChannelPipelineTest {
     @Test
     public void testCancelWriteAndFlush() throws Exception {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel());
+
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
         ByteBuf buffer = Unpooled.buffer();
