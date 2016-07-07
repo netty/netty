@@ -98,8 +98,7 @@ abstract class DnsNameResolverContext<T> {
     }
 
     void resolve(Promise<T> promise) {
-        boolean directSearch = parent.searchDomains().length == 0 ||
-            (hostname.length() > 0 && hostname.charAt(hostname.length() - 1) == '.');
+        boolean directSearch = parent.searchDomains().length == 0 || StringUtil.endsWith(hostname, '.');
         if (directSearch) {
             internalResolve(promise);
         } else {
