@@ -105,7 +105,7 @@ abstract class DnsNameResolverContext<T> {
     private void resolve(Promise<T> promise, boolean trySearchDomain) {
         if (trySearchDomain) {
             final Promise<T> original = promise;
-            promise = new DefaultPromise<T>(parent.executor());
+            promise = parent.executor().newPromise();
             promise.addListener(new FutureListener<T>() {
                 @Override
                 public void operationComplete(Future<T> future) throws Exception {
@@ -121,7 +121,7 @@ abstract class DnsNameResolverContext<T> {
                                 } else {
                                     if (count < parent.searchDomains().length) {
                                         String searchDomain = parent.searchDomains()[count++];
-                                        Promise<T> nextPromise = new DefaultPromise<T>(parent.executor());
+                                        Promise<T> nextPromise = parent.executor().newPromise();
                                         String nextHostname = DnsNameResolverContext.this.hostname + "." + searchDomain;
                                         DnsNameResolverContext<T> nextContext = newResolverContext(parent,
                                             nextHostname, resolveCache);
