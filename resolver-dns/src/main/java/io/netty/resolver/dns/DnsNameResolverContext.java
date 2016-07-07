@@ -105,32 +105,23 @@ abstract class DnsNameResolverContext<T> {
             final Promise<T> original = promise;
             promise = parent.executor().newPromise();
             promise.addListener(new FutureListener<T>() {
+                int count;
                 @Override
                 public void operationComplete(Future<T> future) throws Exception {
                     if (future.isSuccess()) {
-                        original.setSuccess(future.getNow());
+                        original.trySuccess(future.getNow());
                     } else {
-                        future.addListener(new FutureListener<T>() {
-                            int count;
-                            @Override
-                            public void operationComplete(Future<T> future) throws Exception {
-                                if (future.isSuccess()) {
-                                    original.trySuccess(future.getNow());
-                                } else {
-                                    if (count < parent.searchDomains().length) {
-                                        String searchDomain = parent.searchDomains()[count++];
-                                        Promise<T> nextPromise = parent.executor().newPromise();
-                                        String nextHostname = DnsNameResolverContext.this.hostname + "." + searchDomain;
-                                        DnsNameResolverContext<T> nextContext = newResolverContext(parent,
-                                            nextHostname, resolveCache);
-                                        nextContext.internalResolve(nextPromise);
-                                        nextPromise.addListener(this);
-                                    } else {
-                                        original.tryFailure(future.cause());
-                                    }
-                                }
-                            }
-                        });
+                        if (count < parent.searchDomains().length) {
+                            String searchDomain = parent.searchDomains()[count++];
+                            Promise<T> nextPromise = parent.executor().newPromise();
+                            String nextHostname = DnsNameResolverContext.this.hostname + "." + searchDomain;
+                            DnsNameResolverContext<T> nextContext = newResolverContext(parent,
+                                nextHostname, resolveCache);
+                            nextContext.internalResolve(nextPromise);
+                            nextPromise.addListener(this);
+                        } else {
+                            original.tryFailure(future.cause());
+                        }
                     }
                 }
             });
