@@ -169,7 +169,7 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
     ChannelHandlerContext fireExceptionCaught(Throwable cause);
 
     @Override
-    ChannelHandlerContext fireUserEventTriggered(Object event);
+    ChannelHandlerContext fireUserEventTriggered(Object evt);
 
     @Override
     ChannelHandlerContext fireChannelRead(Object msg);
