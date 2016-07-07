@@ -44,6 +44,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -567,7 +568,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static String hostname(String inetHost) {
         String hostname = IDN.toASCII(inetHost);
         // Check for http://bugs.java.com/bugdatabase/view_bug.do?bug_id=6894622
-        if (inetHost.endsWith(".") && !hostname.endsWith(".")) {
+        if (StringUtil.endsWith(inetHost, '.') && !StringUtil.endsWith(hostname, '.')) {
             hostname += ".";
         }
         return hostname;

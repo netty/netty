@@ -18,7 +18,9 @@ package io.netty.resolver.dns;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.util.concurrent.Future;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetAddress;
@@ -28,9 +30,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class SearchDomainTest {
 
@@ -43,7 +47,12 @@ public class SearchDomainTest {
     }
 
     private TestDnsServer dnsServer;
-    private final EventLoopGroup group = new NioEventLoopGroup(1);
+    private EventLoopGroup group;
+
+    @Before
+    public void before() {
+        group = new NioEventLoopGroup(1);
+    }
 
     @After
     public void destroy() {
@@ -70,34 +79,35 @@ public class SearchDomainTest {
 
         DnsNameResolver resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).build();
 
-        InetAddress resolved = resolver.resolve("host1.foo.com").sync().getNow();
-        assertEquals(store.getAddress("host1.foo.com"), resolved.getHostAddress());
+        String a = "host1.foo.com";
+        String resolved = assertResolve(resolver, a);
+        assertEquals(store.getAddress("host1.foo.com"), resolved);
 
         // host1 resolves host1.foo.com with foo.com search domain
-        resolved = resolver.resolve("host1").sync().getNow();
-        assertEquals(store.getAddress("host1.foo.com"), resolved.getHostAddress());
+        resolved = assertResolve(resolver, "host1");
+        assertEquals(store.getAddress("host1.foo.com"), resolved);
 
         // "host1." absolute query
-        resolved = resolver.resolve("host1.").sync().getNow();
-        assertEquals(store.getAddress("host1"), resolved.getHostAddress());
+        resolved = assertResolve(resolver, "host1.");
+        assertEquals(store.getAddress("host1"), resolved);
 
         // "host2" not resolved
-        assertFalse(resolver.resolve("host2").await().isSuccess());
+        assertNotResolve(resolver, "host2");
 
         // "host3" does not contain a dot or is not absolute
-        assertFalse(resolver.resolve("host3").await().isSuccess());
+        assertNotResolve(resolver, "host3");
 
         // "host3." does not contain a dot but is absolute
-        resolved = resolver.resolve("host3.").sync().getNow();
-        assertEquals(store.getAddress("host3"), resolved.getHostAddress());
+        resolved = assertResolve(resolver, "host3.");
+        assertEquals(store.getAddress("host3"), resolved);
 
         // "host4.sub" contains a dot but not resolved then resolved to "host4.sub.foo.com" with "foo.com" search domain
-        resolved = resolver.resolve("host4.sub").sync().getNow();
-        assertEquals(store.getAddress("host4.sub.foo.com"), resolved.getHostAddress());
+        resolved = assertResolve(resolver, "host4.sub");
+        assertEquals(store.getAddress("host4.sub.foo.com"), resolved);
 
         // "host5.sub" contains a dot and is resolved
-        resolved = resolver.resolve("host5.sub").sync().getNow();
-        assertEquals(store.getAddress("host5.sub"), resolved.getHostAddress());
+        resolved = assertResolve(resolver, "host5.sub");
+        assertEquals(store.getAddress("host5.sub"), resolved);
     }
 
     @Test
@@ -116,34 +126,35 @@ public class SearchDomainTest {
 
         DnsNameResolver resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).build();
 
-        List<InetAddress> resolved = resolver.resolveAll("host1.foo.com").sync().getNow();
-        assertEquals(store.getAddresses("host1.foo.com"), asStrings(resolved));
+        String a = "host1.foo.com";
+        List<String> resolved = assertResolveAll(resolver, a);
+        assertEquals(store.getAddresses("host1.foo.com"), resolved);
 
         // host1 resolves host1.foo.com with foo.com search domain
-        resolved = resolver.resolveAll("host1").sync().getNow();
-        assertEquals(store.getAddresses("host1.foo.com"), asStrings(resolved));
+        resolved = assertResolveAll(resolver, "host1");
+        assertEquals(store.getAddresses("host1.foo.com"), resolved);
 
         // "host1." absolute query
-        resolved = resolver.resolveAll("host1.").sync().getNow();
-        assertEquals(store.getAddresses("host1"), asStrings(resolved));
+        resolved = assertResolveAll(resolver, "host1.");
+        assertEquals(store.getAddresses("host1"), resolved);
 
         // "host2" not resolved
-        assertFalse(resolver.resolveAll("host2").await().isSuccess());
+        assertNotResolveAll(resolver, "host2");
 
         // "host3" does not contain a dot or is not absolute
-        assertFalse(resolver.resolveAll("host3").await().isSuccess());
+        assertNotResolveAll(resolver, "host3");
 
         // "host3." does not contain a dot but is absolute
-        resolved = resolver.resolveAll("host3.").sync().getNow();
-        assertEquals(store.getAddresses("host3"), asStrings(resolved));
+        resolved = assertResolveAll(resolver, "host3.");
+        assertEquals(store.getAddresses("host3"), resolved);
 
         // "host4.sub" contains a dot but not resolved then resolved to "host4.sub.foo.com" with "foo.com" search domain
-        resolved = resolver.resolveAll("host4.sub").sync().getNow();
-        assertEquals(store.getAddresses("host4.sub.foo.com"), asStrings(resolved));
+        resolved = assertResolveAll(resolver, "host4.sub");
+        assertEquals(store.getAddresses("host4.sub.foo.com"), resolved);
 
         // "host5.sub" contains a dot and is resolved
-        resolved = resolver.resolveAll("host5.sub").sync().getNow();
-        assertEquals(store.getAddresses("host5.sub"), asStrings(resolved));
+        resolved = assertResolveAll(resolver, "host5.sub");
+        assertEquals(store.getAddresses("host5.sub"), resolved);
     }
 
     @Test
@@ -161,19 +172,19 @@ public class SearchDomainTest {
         DnsNameResolver resolver = newResolver().searchDomains(Arrays.asList("foo.com", "bar.com")).build();
 
         // "host1" resolves via the "foo.com" search path
-        InetAddress resolved = resolver.resolve("host1").sync().getNow();
-        assertEquals(store.getAddress("host1.foo.com"), resolved.getHostAddress());
+        String resolved = assertResolve(resolver, "host1");
+        assertEquals(store.getAddress("host1.foo.com"), resolved);
 
         // "host2" resolves via the "bar.com" search path
-        resolved = resolver.resolve("host2").sync().getNow();
-        assertEquals(store.getAddress("host2.bar.com"), resolved.getHostAddress());
+        resolved = assertResolve(resolver, "host2");
+        assertEquals(store.getAddress("host2.bar.com"), resolved);
 
         // "host3" resolves via the the "foo.com" search path as it is the first one
-        resolved = resolver.resolve("host3").sync().getNow();
-        assertEquals(store.getAddress("host3.foo.com"), resolved.getHostAddress());
+        resolved = assertResolve(resolver, "host3");
+        assertEquals(store.getAddress("host3.foo.com"), resolved);
 
         // "host4" does not resolve
-        assertFalse(resolver.resolve("host4").await().isSuccess());
+        assertNotResolve(resolver, "host4");
     }
 
     @Test
@@ -189,22 +200,39 @@ public class SearchDomainTest {
 
         DnsNameResolver resolver = newResolver().searchDomains(Collections.singleton("foo.com")).ndots(2).build();
 
-        InetAddress resolved = resolver.resolve("host1.sub").sync().getNow();
-        assertEquals(store.getAddress("host1.sub.foo.com"), resolved.getHostAddress());
+        String resolved = assertResolve(resolver, "host1.sub");
+        assertEquals(store.getAddress("host1.sub.foo.com"), resolved);
 
         // "host2.sub" is resolved with the foo.com search domain as ndots = 2
-        resolved = resolver.resolve("host2.sub").sync().getNow();
-        assertEquals(store.getAddress("host2.sub.foo.com"), resolved.getHostAddress());
+        resolved = assertResolve(resolver, "host2.sub");
+        assertEquals(store.getAddress("host2.sub.foo.com"), resolved);
     }
 
-    private static List<String> asStrings(List<InetAddress> list) {
-        if (list != null) {
-            List<String> ret = new ArrayList<String>();
-            for (InetAddress addr : list) {
-              ret.add(addr.getHostAddress());
-            }
-            return ret;
+    private void assertNotResolve(DnsNameResolver resolver, String inetHost) throws InterruptedException {
+        Future<InetAddress> fut = resolver.resolve(inetHost);
+        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        assertFalse(fut.isSuccess());
+    }
+
+    private void assertNotResolveAll(DnsNameResolver resolver, String inetHost) throws InterruptedException {
+        Future<List<InetAddress>> fut = resolver.resolveAll(inetHost);
+        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        assertFalse(fut.isSuccess());
+    }
+
+    private String assertResolve(DnsNameResolver resolver, String inetHost) throws InterruptedException {
+        Future<InetAddress> fut = resolver.resolve(inetHost);
+        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        return fut.getNow().getHostAddress();
+    }
+
+    private List<String> assertResolveAll(DnsNameResolver resolver, String inetHost) throws InterruptedException {
+        Future<List<InetAddress>> fut = resolver.resolveAll(inetHost);
+        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        List<String> list = new ArrayList<String>();
+        for (InetAddress addr : fut.getNow()) {
+            list.add(addr.getHostAddress());
         }
-        return null;
+        return list;
     }
 }

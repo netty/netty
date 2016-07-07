@@ -138,12 +138,9 @@ abstract class DnsNameResolverContext<T> {
             int idx = hostname.length();
             int dots = 0;
             while (idx-- > 0) {
-                if (hostname.charAt(idx) == '.') {
-                    dots++;
-                    if (dots >= parent.ndots()) {
-                        internalResolve(promise);
-                        return;
-                    }
+                if (hostname.charAt(idx) == '.' && ++dots >= parent.ndots()) {
+                    internalResolve(promise);
+                    return;
                 }
             }
             promise.tryFailure(new UnknownHostException(hostname));

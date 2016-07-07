@@ -73,11 +73,11 @@ final class TestDnsServer extends DnsServer {
 
     private final RecordStore store;
 
-    public TestDnsServer(Set<String> domains) {
+    TestDnsServer(Set<String> domains) {
         this.store = new TestRecordStore(domains);
     }
 
-    public TestDnsServer(RecordStore store) {
+    TestDnsServer(RecordStore store) {
         this.store = store;
     }
 
