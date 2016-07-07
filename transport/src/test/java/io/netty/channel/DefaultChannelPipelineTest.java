@@ -927,8 +927,8 @@ public class DefaultChannelPipelineTest {
             pipeline1.fireUserEventTriggered("");
             latch.await();
         } finally {
-            defaultGroup.shutdownGracefully().syncUninterruptibly();
-            eventExecutors.shutdownGracefully().syncUninterruptibly();
+            defaultGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS).syncUninterruptibly();
+            eventExecutors.shutdownGracefully(0, 0, TimeUnit.SECONDS).syncUninterruptibly();
         }
     }
 
