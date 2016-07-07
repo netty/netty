@@ -98,11 +98,11 @@ abstract class DnsNameResolverContext<T> {
     }
 
     void resolve(Promise<T> promise) {
-        resolve(promise, parent.searchDomains().length > 0 && !hostname.endsWith("."));
-    }
-
-    private void resolve(Promise<T> promise, boolean trySearchDomain) {
-        if (trySearchDomain) {
+        boolean directSearch = parent.searchDomains().length == 0 ||
+            (hostname.length() > 0 && hostname.charAt(hostname.length() - 1) == '.');
+        if (directSearch) {
+            internalResolve(promise);
+        } else {
             final Promise<T> original = promise;
             promise = parent.executor().newPromise();
             promise.addListener(new FutureListener<T>() {
@@ -124,7 +124,7 @@ abstract class DnsNameResolverContext<T> {
                                         String nextHostname = DnsNameResolverContext.this.hostname + "." + searchDomain;
                                         DnsNameResolverContext<T> nextContext = newResolverContext(parent,
                                             nextHostname, resolveCache);
-                                        nextContext.resolve(nextPromise, false);
+                                        nextContext.internalResolve(nextPromise);
                                         nextPromise.addListener(this);
                                     } else {
                                         original.tryFailure(future.cause());
@@ -135,11 +135,18 @@ abstract class DnsNameResolverContext<T> {
                     }
                 }
             });
-        }
-        if (parent.searchDomains(hostname)) {
+            int idx = hostname.length();
+            int dots = 0;
+            while (idx-- > 0) {
+                if (hostname.charAt(idx) == '.') {
+                    dots++;
+                    if (dots >= parent.ndots()) {
+                        internalResolve(promise);
+                        return;
+                    }
+                }
+            }
             promise.tryFailure(new UnknownHostException(hostname));
-        } else {
-            internalResolve(promise);
         }
     }
 

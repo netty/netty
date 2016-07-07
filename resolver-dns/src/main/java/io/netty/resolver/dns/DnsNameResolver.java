@@ -410,23 +410,6 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    boolean searchDomains(String hostname) {
-        if (searchDomains.length == 0 || (hostname.length() > 0 && hostname.charAt(hostname.length() - 1) == '.')) {
-            return false;
-        }
-        int idx = hostname.length();
-        int dots = 0;
-        while (idx-- > 0) {
-            if (hostname.charAt(idx) == '.') {
-                dots++;
-            }
-            if (dots >= ndots) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private void doResolveUncached(String hostname,
                                    Promise<InetAddress> promise,
                                    DnsCache resolveCache) {
