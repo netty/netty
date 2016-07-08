@@ -110,24 +110,21 @@ abstract class DnsNameResolverContext<T> {
                 public void operationComplete(Future<T> future) throws Exception {
                     if (future.isSuccess()) {
                         original.trySuccess(future.getNow());
+                    } else if (count < parent.searchDomains().length) {
+                        String searchDomain = parent.searchDomains()[count++];
+                        Promise<T> nextPromise = parent.executor().newPromise();
+                        String nextHostname = DnsNameResolverContext.this.hostname + "." + searchDomain;
+                        DnsNameResolverContext<T> nextContext = newResolverContext(parent,
+                            nextHostname, resolveCache);
+                        nextContext.internalResolve(nextPromise);
+                        nextPromise.addListener(this);
                     } else {
-                        if (count < parent.searchDomains().length) {
-                            String searchDomain = parent.searchDomains()[count++];
-                            Promise<T> nextPromise = parent.executor().newPromise();
-                            String nextHostname = DnsNameResolverContext.this.hostname + "." + searchDomain;
-                            DnsNameResolverContext<T> nextContext = newResolverContext(parent,
-                                nextHostname, resolveCache);
-                            nextContext.internalResolve(nextPromise);
-                            nextPromise.addListener(this);
-                        } else {
-                            original.tryFailure(future.cause());
-                        }
+                        original.tryFailure(future.cause());
                     }
                 }
             });
-            int idx = hostname.length();
             int dots = 0;
-            while (idx-- > 0) {
+            for (int idx = hostname.length() - 1; idx >= 0; idx--) {
                 if (hostname.charAt(idx) == '.' && ++dots >= parent.ndots()) {
                     internalResolve(promise);
                     return;
