@@ -172,6 +172,7 @@ public class PendingWriteQueueTest {
     private static void assertQueueEmpty(PendingWriteQueue queue) {
         assertTrue(queue.isEmpty());
         assertEquals(0, queue.size());
+        assertEquals(0, queue.bytes());
         assertNull(queue.current());
         assertNull(queue.removeAndWrite());
         assertNull(queue.removeAndWriteAll());
