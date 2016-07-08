@@ -471,11 +471,11 @@ abstract class DnsNameResolverContext<T> {
         promise.tryFailure(cause);
     }
 
-    abstract boolean finishResolve(
-            Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries, Promise<T> promise);
+    abstract boolean finishResolve(Class<? extends InetAddress> addressType, List<DnsCacheEntry> resolvedEntries,
+                                   Promise<T> promise);
 
     abstract DnsNameResolverContext<T> newResolverContext(DnsNameResolver parent, String hostname,
-                                                                    DnsCache resolveCache);
+                                                          DnsCache resolveCache);
 
     static String decodeDomainName(ByteBuf in) {
         in.markReaderIndex();
