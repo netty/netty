@@ -542,6 +542,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * Abstract class which provides common functionality for writability monitor implementations.
      */
     private class WritabilityMonitor {
+        private boolean inWritePendingBytes;
         private long totalPendingBytes;
         private final Writer writer = new StreamByteDistributor.Writer() {
             @Override
@@ -613,16 +614,28 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         final void writePendingBytes() throws Http2Exception {
-            int bytesToWrite = writableBytes();
-
-            // Make sure we always write at least once, regardless if we have bytesToWrite or not.
-            // This ensures that zero-length frames will always be written.
-            for (;;) {
-                if (!streamByteDistributor.distribute(bytesToWrite, writer) ||
-                    (bytesToWrite = writableBytes()) <= 0 ||
-                    !isChannelWritable0()) {
-                    break;
+            // Reentry is not permitted during the byte distribution process. It may lead to undesirable distribution of
+            // bytes and even infinite loops. We protect against reentry and make sure each call has an opportunity to
+            // cause a distribution to occur. This may be useful for example if the channel's writability changes from
+            // Writable -> Not Writable (because we are writing) -> Writable (because the user flushed to make more room
+            // in the channel outbound buffer).
+            if (inWritePendingBytes) {
+                return;
+            }
+            inWritePendingBytes = true;
+            try {
+                int bytesToWrite = writableBytes();
+                // Make sure we always write at least once, regardless if we have bytesToWrite or not.
+                // This ensures that zero-length frames will always be written.
+                for (;;) {
+                    if (!streamByteDistributor.distribute(bytesToWrite, writer) ||
+                        (bytesToWrite = writableBytes()) <= 0 ||
+                        !isChannelWritable0()) {
+                        break;
+                    }
                 }
+            } finally {
+                inWritePendingBytes = false;
             }
         }
 
