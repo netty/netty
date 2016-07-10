@@ -95,6 +95,32 @@ public class PooledByteBufAllocatorTest {
     }
 
     @Test
+    public void testSmallSubpageMetric() {
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
+        ByteBuf buffer = allocator.heapBuffer(500);
+        try {
+            PoolArenaMetric metric = allocator.heapArenas().get(0);
+            PoolSubpageMetric subpageMetric = metric.smallSubpages().get(0);
+            assertEquals(1, subpageMetric.maxNumElements() - subpageMetric.numAvailable());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testTinySubpageMetric() {
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
+        ByteBuf buffer = allocator.heapBuffer(1);
+        try {
+            PoolArenaMetric metric = allocator.heapArenas().get(0);
+            PoolSubpageMetric subpageMetric = metric.tinySubpages().get(0);
+            assertEquals(1, subpageMetric.maxNumElements() - subpageMetric.numAvailable());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
     public void testFreePoolChunk() {
         int chunkSize = 16 * 1024 * 1024;
         PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 0, 8192, 11, 0, 0, 0);
