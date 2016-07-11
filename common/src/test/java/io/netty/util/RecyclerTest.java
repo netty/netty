@@ -18,6 +18,7 @@ package io.netty.util;
 import org.junit.Test;
 
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
@@ -197,6 +198,53 @@ public class RecyclerTest {
 
         assertThat(recycler.threadLocalCapacity(), is(maxCapacity));
         assertThat(recycler.threadLocalSize(), is(0));
+    }
+
+    @Test
+    public void testDiscardingExceedingElementsWithRecycleAtDifferentThread() throws Exception {
+        final int maxCapacity = 32;
+        final AtomicInteger instancesCount = new AtomicInteger(0);
+
+        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(maxCapacity, 2) {
+            @Override
+            protected HandledObject newObject(Recycler.Handle<HandledObject> handle) {
+                instancesCount.incrementAndGet();
+                return new HandledObject(handle);
+            }
+        };
+
+        // Borrow 2 * maxCapacity objects.
+        final HandledObject[] array = new HandledObject[maxCapacity * 2];
+        for (int i = 0; i < array.length; i++) {
+            array[i] = recycler.get();
+        }
+
+        assertEquals(array.length, instancesCount.get());
+        // Reset counter.
+        instancesCount.set(0);
+
+        // Recycle from other thread.
+        final Thread thread = new Thread() {
+            @Override
+            public void run() {
+                for (HandledObject object: array) {
+                    object.recycle();
+                }
+            }
+        };
+        thread.start();
+        thread.join();
+
+        assertEquals(0, instancesCount.get());
+
+        // Borrow 2 * maxCapacity objects. Half of them should come from
+        // the recycler queue, the other half should be freshly allocated.
+        for (int i = 0; i < array.length; i++) {
+            recycler.get();
+        }
+
+        // The implementation uses maxCapacity / 2 as limit per WeakOrderQueue
+        assertEquals(array.length - maxCapacity / 2, instancesCount.get());
     }
 
     static final class HandledObject {
