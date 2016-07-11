@@ -69,16 +69,12 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public int hashCode() {
-        return getName().hashCode();
+        return FileUploadUtil.hashCode(this);
     }
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof Attribute)) {
-            return false;
-        }
-        Attribute attribute = (Attribute) o;
-        return getName().equalsIgnoreCase(attribute.getName());
+        return o instanceof FileUpload && FileUploadUtil.equals(this, (FileUpload) o);
     }
 
     @Override
@@ -91,13 +87,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     }
 
     public int compareTo(FileUpload o) {
-        int v;
-        v = getName().compareToIgnoreCase(o.getName());
-        if (v != 0) {
-            return v;
-        }
-        // TODO should we compare size ?
-        return v;
+        return FileUploadUtil.compareTo(this, o);
     }
 
     @Override
