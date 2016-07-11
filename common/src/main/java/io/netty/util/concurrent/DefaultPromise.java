@@ -599,6 +599,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         try {
             for (;;) {
                 synchronized (this) {
+                    if (isDone()) {
+                        return true;
+                    }
                     incWaiters();
                     try {
                         wait(waitTime / 1000000, (int) (waitTime % 1000000));
