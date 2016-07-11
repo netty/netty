@@ -21,6 +21,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
@@ -33,8 +35,10 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.max;
+import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings("unchecked")
@@ -202,6 +206,39 @@ public class DefaultPromiseTest {
     @Test(timeout = 2000)
     public void testLateListenerIsOrderedCorrectlyFailure() throws InterruptedException {
         testLateListenerIsOrderedCorrectly(fakeException());
+    }
+
+    @Test
+    public void testSignalRace() {
+        final long wait = TimeUnit.NANOSECONDS.convert(10, TimeUnit.SECONDS);
+        EventExecutor executor = null;
+        try {
+            executor = new TestEventExecutor();
+
+            final int numberOfAttempts = 4096;
+            final Map<Thread, DefaultPromise<Void>> promises = new HashMap<Thread, DefaultPromise<Void>>();
+            for (int i = 0; i < numberOfAttempts; i++) {
+                final DefaultPromise<Void> promise = new DefaultPromise<Void>(executor);
+                final Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        promise.setSuccess(null);
+                    }
+                });
+                promises.put(thread, promise);
+            }
+
+            for (final Map.Entry<Thread, DefaultPromise<Void>> promise : promises.entrySet()) {
+                promise.getKey().start();
+                final long start = System.nanoTime();
+                promise.getValue().awaitUninterruptibly(wait, TimeUnit.NANOSECONDS);
+                assertThat(System.nanoTime() - start, lessThan(wait));
+            }
+        } finally {
+            if (executor != null) {
+                executor.shutdownGracefully();
+            }
+        }
     }
 
     private void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,
