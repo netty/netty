@@ -65,7 +65,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
     /**
      * Underlying checksum calculator in use.
      */
-    private Checksum checksum;
+    private ByteBufChecksum checksum;
 
     /**
      * Type of current block.
@@ -114,7 +114,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
     /**
      * Creates a new LZ4 decoder with customizable implementation.
      *
-     * @param factory            user customizable {@link net.jpountz.lz4.LZ4Factory} instance
+     * @param factory            user customizable {@link LZ4Factory} instance
      *                           which may be JNI bindings to the original C implementation, a pure Java implementation
      *                           or a Java implementation that uses the {@link sun.misc.Unsafe}
      * @param validateChecksums  if {@code true}, the checksum field will be validated against the actual
@@ -132,7 +132,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
     /**
      * Creates a new customizable LZ4 decoder.
      *
-     * @param factory   user customizable {@link net.jpountz.lz4.LZ4Factory} instance
+     * @param factory   user customizable {@link LZ4Factory} instance
      *                  which may be JNI bindings to the original C implementation, a pure Java implementation
      *                  or a Java implementation that uses the {@link sun.misc.Unsafe}
      * @param checksum  the {@link Checksum} instance to use to check data for integrity.
@@ -143,7 +143,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
             throw new NullPointerException("factory");
         }
         decompressor = factory.fastDecompressor();
-        this.checksum = checksum;
+        this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
     }
 
     @Override
@@ -212,69 +212,47 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                     break;
                 }
 
-                final int idx = in.readerIndex();
+                final ByteBufChecksum checksum = this.checksum;
+                ByteBuf uncompressed = null;
 
-                ByteBuf uncompressed = ctx.alloc().heapBuffer(decompressedLength, decompressedLength);
-                final byte[] dest = uncompressed.array();
-                final int destOff = uncompressed.arrayOffset() + uncompressed.writerIndex();
-
-                boolean success = false;
                 try {
                     switch (blockType) {
-                    case BLOCK_TYPE_NON_COMPRESSED: {
-                        in.getBytes(idx, dest, destOff, decompressedLength);
-                        break;
-                    }
-                    case BLOCK_TYPE_COMPRESSED: {
-                        final byte[] src;
-                        final int srcOff;
-                        if (in.hasArray()) {
-                            src = in.array();
-                            srcOff = in.arrayOffset() + idx;
-                        } else {
-                            src = new byte[compressedLength];
-                            in.getBytes(idx, src);
-                            srcOff = 0;
-                        }
+                        case BLOCK_TYPE_NON_COMPRESSED:
+                            // Just pass through, we not update the readerIndex yet as we do this outside of the
+                            // switch statement.
+                            uncompressed = in.retainedSlice(in.readerIndex(), decompressedLength);
+                            break;
+                        case BLOCK_TYPE_COMPRESSED:
+                            uncompressed = checksum == null || checksum.isSupportingByteBuffer()
+                                    // We can allocate whatever buffer if we either not need to do checksum processing
+                                    // or if our ByteBufChecksum implementation supports ByteBuffer.
+                                    // This is needed as Checksum implementations itself only support byte[].
+                                    ? ctx.alloc().buffer(decompressedLength, decompressedLength)
+                                    : ctx.alloc().heapBuffer(decompressedLength, decompressedLength);
 
-                        try {
-                            final int readBytes = decompressor.decompress(src, srcOff,
-                                    dest, destOff, decompressedLength);
-                            if (compressedLength != readBytes) {
-                                throw new DecompressionException(String.format(
-                                    "stream corrupted: compressedLength(%d) and actual length(%d) mismatch",
-                                    compressedLength, readBytes));
-                            }
-                        } catch (LZ4Exception e) {
-                            throw new DecompressionException(e);
-                        }
-                        break;
-                    }
-                    default:
-                        throw new DecompressionException(String.format(
-                                "unexpected blockType: %d (expected: %d or %d)",
-                                blockType, BLOCK_TYPE_NON_COMPRESSED, BLOCK_TYPE_COMPRESSED));
-                    }
-
-                    final Checksum checksum = this.checksum;
-                    if (checksum != null) {
-                        checksum.reset();
-                        checksum.update(dest, destOff, decompressedLength);
-                        final int checksumResult = (int) checksum.getValue();
-                        if (checksumResult != currentChecksum) {
+                            decompressor.decompress(CompressionUtil.safeNioBuffer(in),
+                                    uncompressed.internalNioBuffer(uncompressed.writerIndex(), decompressedLength));
+                            // Update the writerIndex now to reflect what we decompressed.
+                            uncompressed.writerIndex(uncompressed.writerIndex() + decompressedLength);
+                            break;
+                        default:
                             throw new DecompressionException(String.format(
-                                    "stream corrupted: mismatching checksum: %d (expected: %d)",
-                                    checksumResult, currentChecksum));
-                        }
+                                    "unexpected blockType: %d (expected: %d or %d)",
+                                    blockType, BLOCK_TYPE_NON_COMPRESSED, BLOCK_TYPE_COMPRESSED));
                     }
-                    uncompressed.writerIndex(uncompressed.writerIndex() + decompressedLength);
-                    out.add(uncompressed);
+                    // Skip inbound bytes after we processed them.
                     in.skipBytes(compressedLength);
 
+                    if (checksum != null) {
+                        CompressionUtil.checkChecksum(checksum, uncompressed, currentChecksum);
+                    }
+                    out.add(uncompressed);
+                    uncompressed = null;
                     currentState = State.INIT_BLOCK;
-                    success = true;
+                } catch (LZ4Exception e) {
+                    throw new DecompressionException(e);
                 } finally {
-                    if (!success) {
+                    if (uncompressed != null) {
                         uncompressed.release();
                     }
                 }
