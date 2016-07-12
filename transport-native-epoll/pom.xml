@@ -114,6 +114,9 @@
                 <manifest>
                   <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                 </manifest>
+                <manifestEntries>
+                  <Bundle-NativeCode>META-INF/native/libnetty-transport-native-epoll.so; osname=linux, processor=x86_64"</Bundle-NativeCode>
+                </manifestEntries>
                 <index>true</index>
                 <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
               </archive>
