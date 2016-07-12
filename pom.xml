@@ -730,6 +730,10 @@
             <ignore>java.security.cert.CertificateRevokedException</ignore>
 
             <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
+
+            <!-- Compression -->
+            <ignore>java.util.zip.CRC32</ignore>
+            <ignore>java.util.zip.Adler32</ignore>
           </ignores>
         </configuration>
         <executions>
