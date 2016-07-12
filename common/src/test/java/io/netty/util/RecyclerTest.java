@@ -18,6 +18,7 @@ package io.netty.util;
 import org.junit.Test;
 
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
@@ -197,6 +198,51 @@ public class RecyclerTest {
 
         assertThat(recycler.threadLocalCapacity(), is(maxCapacity));
         assertThat(recycler.threadLocalSize(), is(0));
+    }
+
+    @Test
+    public void testDiscardingExceedingElementsWithRecycleAtDifferentThread() throws Exception {
+        final int maxCapacity = 4;
+        final AtomicInteger instancesCount = new AtomicInteger(0);
+
+        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(maxCapacity) {
+            @Override
+            protected HandledObject newObject(Recycler.Handle handle) {
+                instancesCount.incrementAndGet();
+                return new HandledObject(handle);
+            }
+        };
+
+        // Borrow 2 * maxCapacity objects.
+        final HandledObject[] array = new HandledObject[maxCapacity * 2];
+        for (int i = 0; i < array.length; i++) {
+            array[i] = recycler.get();
+        }
+
+        assertEquals(2 * maxCapacity, instancesCount.get());
+
+        // Recycle all objects from other thread, only half of them
+        // should be retained, the rest should be discarded
+        final Thread thread = new Thread() {
+            @Override
+            public void run() {
+                for (int i = 0; i < array.length; i++) {
+                    recycler.recycle(array[i], array[i].handle);
+                }
+            }
+        };
+        thread.start();
+        thread.join();
+
+        assertEquals(2 * maxCapacity, instancesCount.get());
+
+        // Borrow 2 * maxCapacity objects. Half of them should come from
+        // the recycler queue, the other half should be freshly allocated
+        for (int i = 0; i < (2 * maxCapacity); i++) {
+            recycler.get();
+        }
+
+        assertEquals(3 * maxCapacity, instancesCount.get());
     }
 
     static final class HandledObject {

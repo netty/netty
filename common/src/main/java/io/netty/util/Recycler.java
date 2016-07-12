@@ -17,7 +17,6 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -27,6 +26,8 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.jctools.queues.SpscArrayQueue;
 
 /**
  * Light-weight object pool based on a thread-local stack.
@@ -44,7 +45,6 @@ public abstract class Recycler<T> {
     private static final int DEFAULT_INITIAL_MAX_CAPACITY = 262144;
     private static final int DEFAULT_MAX_CAPACITY;
     private static final int INITIAL_CAPACITY;
-    private static final int LINK_CAPACITY;
 
     static {
         // In the future, we might have different maxCapacity for different object types.
@@ -58,16 +58,11 @@ public abstract class Recycler<T> {
 
         DEFAULT_MAX_CAPACITY = maxCapacity;
 
-        LINK_CAPACITY = MathUtil.findNextPositivePowerOfTwo(
-                Math.max(SystemPropertyUtil.getInt("io.netty.recycler.linkCapacity", 16), 16));
-
         if (logger.isDebugEnabled()) {
             if (DEFAULT_MAX_CAPACITY == 0) {
                 logger.debug("-Dio.netty.recycler.maxCapacity.default: disabled");
-                logger.debug("-Dio.netty.recycler.linkCapacity: disabled");
             } else {
                 logger.debug("-Dio.netty.recycler.maxCapacity.default: {}", DEFAULT_MAX_CAPACITY);
-                logger.debug("-Dio.netty.recycler.linkCapacity: {}", LINK_CAPACITY);
             }
         }
 
@@ -152,45 +147,33 @@ public abstract class Recycler<T> {
             // we don't want to have a ref to the queue as the value in our weak map
             // so we null it out; to ensure there are no races with restoring it later
             // we impose a memory ordering here (no-op on x86)
-            Map<Stack<?>, WeakOrderQueue> delayedRecycled = DELAYED_RECYCLED.get();
-            WeakOrderQueue queue = delayedRecycled.get(stack);
+            Map<Stack<?>, HandleQueue> delayedRecycled = DELAYED_RECYCLED.get();
+            HandleQueue queue = delayedRecycled.get(stack);
             if (queue == null) {
-                delayedRecycled.put(stack, queue = new WeakOrderQueue(stack, thread));
+                delayedRecycled.put(stack, queue = new HandleQueue(stack, thread));
             }
             queue.add(this);
         }
     }
 
-    private static final FastThreadLocal<Map<Stack<?>, WeakOrderQueue>> DELAYED_RECYCLED =
-            new FastThreadLocal<Map<Stack<?>, WeakOrderQueue>>() {
+    private static final FastThreadLocal<Map<Stack<?>, HandleQueue>> DELAYED_RECYCLED =
+            new FastThreadLocal<Map<Stack<?>, HandleQueue>>() {
         @Override
-        protected Map<Stack<?>, WeakOrderQueue> initialValue() {
-            return new WeakHashMap<Stack<?>, WeakOrderQueue>();
+        protected Map<Stack<?>, HandleQueue> initialValue() {
+            return new WeakHashMap<Stack<?>, HandleQueue>();
         }
     };
 
-    // a queue that makes only moderate guarantees about visibility: items are seen in the correct order,
-    // but we aren't absolutely guaranteed to ever see anything at all, thereby keeping the queue cheap to maintain
-    private static final class WeakOrderQueue {
+    private static final class HandleQueue {
+        private final SpscArrayQueue<DefaultHandle> handles;
 
-        // Let Link extend AtomicInteger for intrinsics. The Link itself will be used as writerIndex.
-        @SuppressWarnings("serial")
-        private static final class Link extends AtomicInteger {
-            private final DefaultHandle[] elements = new DefaultHandle[LINK_CAPACITY];
-
-            private int readIndex;
-            private Link next;
-        }
-
-        // chain of data items
-        private Link head, tail;
         // pointer to another queue of delayed items for the same stack
-        private WeakOrderQueue next;
+        private HandleQueue next;
         private final WeakReference<Thread> owner;
         private final int id = ID_GENERATOR.getAndIncrement();
 
-        WeakOrderQueue(Stack<?> stack, Thread thread) {
-            head = tail = new Link();
+        HandleQueue(Stack<?> stack, Thread thread) {
+            handles = new SpscArrayQueue<Recycler.DefaultHandle>(stack.maxCapacity);
             owner = new WeakReference<Thread>(thread);
             synchronized (stack) {
                 next = stack.head;
@@ -200,82 +183,46 @@ public abstract class Recycler<T> {
 
         void add(DefaultHandle handle) {
             handle.lastRecycledId = id;
-
-            Link tail = this.tail;
-            int writeIndex;
-            if ((writeIndex = tail.get()) == LINK_CAPACITY) {
-                this.tail = tail = tail.next = new Link();
-                writeIndex = tail.get();
-            }
-            tail.elements[writeIndex] = handle;
             handle.stack = null;
-            // we lazy set to ensure that setting stack to null appears before we unnull it in the owning thread;
-            // this also means we guarantee visibility of an element in the queue if we see the index updated
-            tail.lazySet(writeIndex + 1);
+            handles.relaxedOffer(handle);
         }
 
         boolean hasFinalData() {
-            return tail.readIndex != tail.get();
+            return !handles.isEmpty();
         }
 
-        // transfer as many items as we can from this queue to the stack, returning true if any were transferred
-        @SuppressWarnings("rawtypes")
+        // transfer as many items as we can from this queue to the stack,
+        // returning true if any were transferred
         boolean transfer(Stack<?> dst) {
+            final int dstSize = dst.size;
+            final int srcSize = handles.size();
+            final int expectedCapacity = dstSize + srcSize;
 
-            Link head = this.head;
-            if (head == null) {
-                return false;
-            }
-
-            if (head.readIndex == LINK_CAPACITY) {
-                if (head.next == null) {
-                    return false;
-                }
-                this.head = head = head.next;
-            }
-
-            final int srcStart = head.readIndex;
-            int srcEnd = head.get();
-            final int srcSize = srcEnd - srcStart;
             if (srcSize == 0) {
                 return false;
             }
 
-            final int dstSize = dst.size;
-            final int expectedCapacity = dstSize + srcSize;
-
             if (expectedCapacity > dst.elements.length) {
-                final int actualCapacity = dst.increaseCapacity(expectedCapacity);
-                srcEnd = Math.min(srcStart + actualCapacity - dstSize, srcEnd);
+                dst.increaseCapacity(expectedCapacity);
             }
 
-            if (srcStart != srcEnd) {
-                final DefaultHandle[] srcElems = head.elements;
-                final DefaultHandle[] dstElems = dst.elements;
-                int newDstSize = dstSize;
-                for (int i = srcStart; i < srcEnd; i++) {
-                    DefaultHandle element = srcElems[i];
-                    if (element.recycleId == 0) {
-                        element.recycleId = element.lastRecycledId;
-                    } else if (element.recycleId != element.lastRecycledId) {
+            int capacity = dst.elements.length;
+            for (int i = 0; i < srcSize; i++) {
+                DefaultHandle h = handles.relaxedPoll();
+                if (h != null && dst.size < capacity) {
+                    if (h.recycleId == 0) {
+                        h.recycleId = h.lastRecycledId;
+                        h.stack = dst;
+                    } else if (h.recycleId != h.lastRecycledId) {
                         throw new IllegalStateException("recycled already");
                     }
-                    element.stack = dst;
-                    dstElems[newDstSize ++] = element;
-                    srcElems[i] = null;
+                    dst.elements[dst.size++] = h;
+                } else {
+                    break;
                 }
-                dst.size = newDstSize;
-
-                if (srcEnd == LINK_CAPACITY && head.next != null) {
-                    this.head = head.next;
-                }
-
-                head.readIndex = srcEnd;
-                return true;
-            } else {
-                // The destination stack is full already.
-                return false;
             }
+
+            return dst.size > dstSize;
         }
     }
 
@@ -291,8 +238,8 @@ public abstract class Recycler<T> {
         private final int maxCapacity;
         private int size;
 
-        private volatile WeakOrderQueue head;
-        private WeakOrderQueue cursor, prev;
+        private volatile HandleQueue head;
+        private HandleQueue cursor, prev;
 
         Stack(Recycler<T> parent, Thread thread, int maxCapacity) {
             this.parent = parent;
@@ -349,7 +296,7 @@ public abstract class Recycler<T> {
         }
 
         boolean scavengeSome() {
-            WeakOrderQueue cursor = this.cursor;
+            HandleQueue cursor = this.cursor;
             if (cursor == null) {
                 cursor = head;
                 if (cursor == null) {
@@ -358,14 +305,14 @@ public abstract class Recycler<T> {
             }
 
             boolean success = false;
-            WeakOrderQueue prev = this.prev;
+            HandleQueue prev = this.prev;
             do {
                 if (cursor.transfer(this)) {
                     success = true;
                     break;
                 }
 
-                WeakOrderQueue next = cursor.next;
+                HandleQueue next = cursor.next;
                 if (cursor.owner.get() == null) {
                     // If the thread associated with the queue is gone, unlink it, after
                     // performing a volatile read to confirm there is no data left to collect.
