@@ -21,9 +21,14 @@ import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.sameInstance;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 public class GlobalEventExecutorTest {
 
@@ -89,6 +94,29 @@ public class GlobalEventExecutorTest {
         // Now it should be stopped.
         assertThat(thread.isAlive(), is(false));
         assertThat(e.thread, sameInstance(thread));
+    }
+
+    // ensure that when a task submission causes a new thread to be created, the thread inherits the thread group of the
+    // submitting thread
+    @Test(timeout = 2000)
+    public void testThreadGroup() throws InterruptedException {
+        final ThreadGroup group = new ThreadGroup("group");
+        final AtomicReference<ThreadGroup> capturedGroup = new AtomicReference<ThreadGroup>();
+        final Thread thread = new Thread(group, new Runnable() {
+            @Override
+            public void run() {
+                final Thread t = e.threadFactory.newThread(new Runnable() {
+                    @Override
+                    public void run() {
+                    }
+                });
+                capturedGroup.set(t.getThreadGroup());
+            }
+        });
+        thread.start();
+        thread.join();
+
+        assertEquals(group, capturedGroup.get());
     }
 
     private static final class TestRunnable implements Runnable {
