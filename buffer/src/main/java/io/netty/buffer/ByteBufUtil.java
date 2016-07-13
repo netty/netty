@@ -565,9 +565,24 @@ public final class ByteBufUtil {
         }
     }
 
+    static String readUtf8(AbstractByteBuf buf, int readerIndex, int length) { // Fast-Path for a AbstractByteBuf
+        buf.checkIndex(readerIndex, length);
+        UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(new char[length]);
+        for (int i = 0; i < length; i++) {
+            byte b = buf._getByte(readerIndex + i); // Bypass bounds-checks (we checked outside the loop)
+            processor.process(b);
+        }
+        return processor.toString();
+    }
+
     static String decodeString(ByteBuf src, int readerIndex, int len, Charset charset) {
         if (len == 0) {
             return StringUtil.EMPTY_STRING;
+        }
+        if (charset.equals(CharsetUtil.UTF_8)) {
+            return src instanceof AbstractByteBuf ?
+                    readUtf8((AbstractByteBuf) src, readerIndex, len)
+                    : UTF8Decoder.decode(src, readerIndex, len);
         }
         final CharsetDecoder decoder = CharsetUtil.decoder(charset);
         final int maxLength = (int) ((double) len * decoder.maxCharsPerByte());

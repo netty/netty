@@ -1210,7 +1210,11 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public String toString(int index, int length, Charset charset) {
-        return ByteBufUtil.decodeString(this, index, length, charset);
+        if (charset.equals(CharsetUtil.UTF_8)) {
+            return ByteBufUtil.readUtf8(this, index, length); // Fast utf-8 decoder
+        } else {
+            return ByteBufUtil.decodeString(this, index, length, charset);
+        }
     }
 
     @Override
