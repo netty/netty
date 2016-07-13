@@ -142,6 +142,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
             if (msg instanceof Http2WindowUpdateFrame) {
                 Http2WindowUpdateFrame frame = (Http2WindowUpdateFrame) msg;
                 consumeBytes(frame.streamId(), frame.windowSizeIncrement());
+                promise.setSuccess();
             } else if (msg instanceof Http2StreamFrame) {
                 writeStreamFrame((Http2StreamFrame) msg, promise);
             } else if (msg instanceof Http2GoAwayFrame) {
