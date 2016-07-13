@@ -41,7 +41,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class ThreadDeathWatcher {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ThreadDeathWatcher.class);
-    private static final ThreadFactory threadFactory;
+    // visible for testing
+    static final ThreadFactory threadFactory;
 
     private static final Queue<Entry> pendingEntries = PlatformDependent.newMpscQueue();
     private static final Watcher watcher = new Watcher();
@@ -54,7 +55,10 @@ public final class ThreadDeathWatcher {
         if (!StringUtil.isNullOrEmpty(serviceThreadPrefix)) {
             poolName = serviceThreadPrefix + poolName;
         }
-        threadFactory = new DefaultThreadFactory(poolName, true, Thread.MIN_PRIORITY);
+        // because the ThreadDeathWatcher is a singleton, tasks submitted to it can come from arbitrary threads and
+        // this can trigger the creation of a thread from arbitrary thread groups; for this reason, the thread factory
+        // must not be sticky about its thread group
+        threadFactory = new DefaultThreadFactory(poolName, true, Thread.MIN_PRIORITY, null);
     }
 
     /**
