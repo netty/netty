@@ -149,6 +149,8 @@ final class PlatformDependent0 {
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, int): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null? "available" : "unavailable");
+
+        freeDirectBuffer(direct);
     }
 
     static boolean isUnaligned() {
