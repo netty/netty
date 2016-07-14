@@ -141,8 +141,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
         try {
             if (msg instanceof Http2WindowUpdateFrame) {
                 Http2WindowUpdateFrame frame = (Http2WindowUpdateFrame) msg;
-                consumeBytes(frame.streamId(), frame.windowSizeIncrement());
-                promise.setSuccess();
+                consumeBytes(frame.streamId(), frame.windowSizeIncrement(), promise);
             } else if (msg instanceof Http2StreamFrame) {
                 writeStreamFrame((Http2StreamFrame) msg, promise);
             } else if (msg instanceof Http2GoAwayFrame) {
@@ -155,13 +154,14 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
         }
     }
 
-    private void consumeBytes(int streamId, int bytes) {
+    private void consumeBytes(int streamId, int bytes, ChannelPromise promise) {
         try {
             Http2Stream stream = http2Handler.connection().stream(streamId);
             http2Handler.connection().local().flowController()
                         .consumeBytes(stream, bytes);
+            promise.setSuccess();
         } catch (Throwable t) {
-            exceptionCaught(ctx, t);
+            promise.setFailure(t);
         }
     }
 
