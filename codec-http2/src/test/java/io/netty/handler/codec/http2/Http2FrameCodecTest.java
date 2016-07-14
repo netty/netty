@@ -402,9 +402,24 @@ public class Http2FrameCodecTest {
         frameListener.onDataRead(http2HandlerCtx, 3, releaseLater(data), 0, true);
 
         int before = connection.local().flowController().unconsumedBytes(stream);
-        channel.writeOutbound(new DefaultHttp2WindowUpdateFrame(100).setStreamId(stream.id()));
+        ChannelFuture f = channel.write(new DefaultHttp2WindowUpdateFrame(100).setStreamId(stream.id()));
         int after = connection.local().flowController().unconsumedBytes(stream);
         assertEquals(100, before - after);
+        assertTrue(f.isSuccess());
+    }
+
+    @Test
+    public void windowUpdateMayFail() throws Exception {
+        frameListener.onHeadersRead(http2HandlerCtx, 3, request, 31, false);
+        Http2Connection connection = framingCodec.connectionHandler().connection();
+        Http2Stream stream = connection.stream(3);
+        assertNotNull(stream);
+
+        // Fails, cause trying to return too many bytes to the flow controller
+        ChannelFuture f = channel.write(new DefaultHttp2WindowUpdateFrame(100).setStreamId(stream.id()));
+        assertTrue(f.isDone());
+        assertFalse(f.isSuccess());
+        assertThat(f.cause(), instanceOf(Http2Exception.class));
     }
 
     private static ChannelPromise anyChannelPromise() {
