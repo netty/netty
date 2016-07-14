@@ -31,10 +31,17 @@ public final class ByteBufferUtil {
         Method directBufferCleanerCleanX = null;
         boolean v;
         try {
-            directBufferCleanerX = Class.forName("java.nio.DirectByteBuffer").getMethod("cleaner");
+            ByteBuffer direct = ByteBuffer.allocateDirect(1);
+            directBufferCleanerX = direct.getClass().getMethod("cleaner");
             directBufferCleanerX.setAccessible(true);
-            directBufferCleanerCleanX = Class.forName("sun.misc.Cleaner").getMethod("clean");
-            directBufferCleanerCleanX.setAccessible(true);
+            Object cleaner = directBufferCleanerX.invoke(direct);
+            try {
+                Runnable runnable = (Runnable) cleaner;
+                directBufferCleanerCleanX = Runnable.class.getDeclaredMethod("run");
+            } catch (ClassCastException ignored) {
+                directBufferCleanerCleanX = cleaner.getClass().getMethod("clean");
+            }
+            directBufferCleanerCleanX.invoke(cleaner);
             v = true;
         } catch (Exception e) {
             v = false;
