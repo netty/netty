@@ -43,9 +43,15 @@ final class Cleaner0 {
             try {
                 cleanerField = direct.getClass().getDeclaredField("cleaner");
                 cleanerField.setAccessible(true);
-                Object cleaner = cleanerField.get(direct);
                 fieldOffset = PlatformDependent0.objectFieldOffset(cleanerField);
-                clean = cleaner.getClass().getDeclaredMethod("clean");
+                Object cleaner = cleanerField.get(direct);
+                try {
+                    // Cleaner implements Runnable from JDK9 onwards.
+                    Runnable runnable = (Runnable) cleaner;
+                    clean = Runnable.class.getDeclaredMethod("run");
+                } catch (ClassCastException ignored) {
+                    clean = cleaner.getClass().getDeclaredMethod("clean");
+                }
                 clean.invoke(cleaner);
             } catch (Throwable t) {
                 // We don't have ByteBuffer.cleaner().
