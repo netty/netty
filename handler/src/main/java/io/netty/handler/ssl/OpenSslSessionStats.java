@@ -25,13 +25,13 @@ import org.apache.tomcat.jni.SSLContext;
  */
 public final class OpenSslSessionStats {
 
-    private final OpenSslContext context;
+    private final ReferenceCountedOpenSslContext context;
 
     // IMPORTANT: We take the OpenSslContext and not just the long (which points the native instance) to prevent
     //            the GC to collect OpenSslContext as this would also free the pointer and so could result in a
     //            segfault when the user calls any of the methods here that try to pass the pointer down to the native
     //            level.
-    OpenSslSessionStats(OpenSslContext context) {
+    OpenSslSessionStats(ReferenceCountedOpenSslContext context) {
         this.context = context;
     }
 

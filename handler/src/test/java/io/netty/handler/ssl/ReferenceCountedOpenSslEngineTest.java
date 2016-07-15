@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,27 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.handler.ssl;
 
-import io.netty.util.ReferenceCounted;
-import io.netty.util.internal.UnstableApi;
+import io.netty.util.ReferenceCountUtil;
 
-/**
- * An enumeration of SSL/TLS protocol providers.
- */
-public enum SslProvider {
-    /**
-     * JDK's default implementation.
-     */
-    JDK,
-    /**
-     * OpenSSL-based implementation.
-     */
-    OPENSSL,
-    /**
-     * OpenSSL-based implementation which does not have finalizers and instead implements {@link ReferenceCounted}.
-     */
-    @UnstableApi
-    OPENSSL_REFCNT
+import javax.net.ssl.SSLEngine;
+
+public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
+    @Override
+    protected SslProvider sslProvider() {
+        return SslProvider.OPENSSL_REFCNT;
+    }
+
+    @Override
+    protected void cleanupSslContext(SslContext ctx) {
+        ReferenceCountUtil.release(ctx);
+    }
+
+    @Override
+    protected void cleanupSslEngine(SSLEngine engine) {
+        ReferenceCountUtil.release(engine);
+    }
 }
