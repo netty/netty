@@ -30,6 +30,8 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
 
     EpollDomainSocketChannelConfig(AbstractEpollChannel channel) {
         super(channel);
+        // Make it consistent with NIO.
+        setMaxMessagesPerRead(16);
     }
 
     @Override

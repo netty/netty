@@ -44,6 +44,8 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
             setTcpNoDelay(true);
         }
+        // Make it consistent with NIO.
+        setMaxMessagesPerRead(16);
     }
 
     @Override
