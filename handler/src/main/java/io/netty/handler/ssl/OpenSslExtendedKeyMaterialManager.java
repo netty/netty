@@ -28,12 +28,13 @@ final class OpenSslExtendedKeyMaterialManager extends OpenSslKeyMaterialManager 
     }
 
     @Override
-    protected String chooseClientAlias(OpenSslEngine engine, String[] keyTypes, X500Principal[] issuer) {
+    protected String chooseClientAlias(ReferenceCountedOpenSslEngine engine, String[] keyTypes,
+                                       X500Principal[] issuer) {
         return keyManager.chooseEngineClientAlias(keyTypes, issuer, engine);
     }
 
     @Override
-    protected String chooseServerAlias(OpenSslEngine engine, String type) {
+    protected String chooseServerAlias(ReferenceCountedOpenSslEngine engine, String type) {
         return keyManager.chooseEngineServerAlias(type, null, engine);
     }
 }

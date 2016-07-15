@@ -421,9 +421,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // Check if queue is not empty first because create a new ChannelException is expensive
             pendingUnencryptedWrites.removeAndFailAll(new ChannelException("Pending write on removal of SslHandler"));
         }
-        if (engine instanceof OpenSslEngine) {
-            // Call shutdown so we ensure all the native memory is released asap
-            ((OpenSslEngine) engine).shutdown();
+        if (engine instanceof ReferenceCountedOpenSslEngine) {
+            ((ReferenceCountedOpenSslEngine) engine).release();
         }
     }
 

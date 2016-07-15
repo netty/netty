@@ -15,30 +15,27 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.handler.ssl.ReferenceCountedOpenSslServerContext.ServerContext;
 import org.apache.tomcat.jni.SSL;
-import org.apache.tomcat.jni.SSLContext;
+
+import java.io.File;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509ExtendedKeyManager;
-import javax.net.ssl.X509ExtendedTrustManager;
-import javax.net.ssl.X509KeyManager;
-import javax.net.ssl.X509TrustManager;
-import java.io.File;
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.handler.ssl.ReferenceCountedOpenSslServerContext.newSessionContext;
 
 /**
  * A server-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
+ * <p>This class will use a finalizer to ensure native resources are automatically cleaned up. To avoid finalizers
+ * and manually release the native memory see {@link ReferenceCountedOpenSslServerContext}.
  */
 public final class OpenSslServerContext extends OpenSslContext {
-    private static final byte[] ID = new byte[] {'n', 'e', 't', 't', 'y'};
     private final OpenSslServerSessionContext sessionContext;
     private final OpenSslKeyMaterialManager keyMaterialManager;
 
@@ -349,74 +346,14 @@ public final class OpenSslServerContext extends OpenSslContext {
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
-            synchronized (OpenSslContext.class) {
-                try {
-                    SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
-                    if (!OpenSsl.useKeyManagerFactory()) {
-                        if (keyManagerFactory != null) {
-                            throw new IllegalArgumentException(
-                                    "KeyManagerFactory not supported");
-                        }
-
-                        /* Set certificate verification policy. */
-                        SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
-
-                        setKeyMaterial(ctx, keyCertChain, key, keyPassword);
-                        keyMaterialManager = null;
-                    } else {
-                        if (keyCertChain != null) {
-                            keyManagerFactory = buildKeyManagerFactory(
-                                    keyCertChain, key, keyPassword, keyManagerFactory);
-                        }
-
-                        if (keyManagerFactory != null) {
-                            X509KeyManager keyManager = chooseX509KeyManager(keyManagerFactory.getKeyManagers());
-                            keyMaterialManager = useExtendedKeyManager(keyManager) ?
-                                    new OpenSslExtendedKeyMaterialManager(
-                                            (X509ExtendedKeyManager) keyManager, keyPassword) :
-                                    new OpenSslKeyMaterialManager(keyManager, keyPassword);
-                        } else {
-                            keyMaterialManager = null;
-                        }
-                    }
-                } catch (Exception e) {
-                    throw new SSLException("failed to set certificate and key", e);
-                }
-                try {
-                    if (trustCertCollection != null) {
-                        trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory);
-                    } else if (trustManagerFactory == null) {
-                        // Mimic the way SSLContext.getInstance(KeyManager[], null, null) works
-                        trustManagerFactory = TrustManagerFactory.getInstance(
-                                TrustManagerFactory.getDefaultAlgorithm());
-                        trustManagerFactory.init((KeyStore) null);
-                    }
-
-                    final X509TrustManager manager = chooseTrustManager(trustManagerFactory.getTrustManagers());
-
-                    // IMPORTANT: The callbacks set for verification must be static to prevent memory leak as
-                    //            otherwise the context can never be collected. This is because the JNI code holds
-                    //            a global reference to the callbacks.
-                    //
-                    //            See https://github.com/netty/netty/issues/5372
-
-                    // Use this to prevent an error when running on java < 7
-                    if (useExtendedTrustManager(manager)) {
-                        SSLContext.setCertVerifyCallback(ctx,
-                                new ExtendedTrustManagerVerifyCallback(engineMap, (X509ExtendedTrustManager) manager));
-                    } else {
-                        SSLContext.setCertVerifyCallback(ctx, new TrustManagerVerifyCallback(engineMap, manager));
-                    }
-                } catch (Exception e) {
-                    throw new SSLException("unable to setup trustmanager", e);
-                }
-            }
-            sessionContext = new OpenSslServerSessionContext(this);
-            sessionContext.setSessionIdContext(ID);
+            ServerContext context = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
+                                                      keyCertChain, key, keyPassword, keyManagerFactory);
+            sessionContext = context.sessionContext;
+            keyMaterialManager = context.keyMaterialManager;
             success = true;
         } finally {
             if (!success) {
-                destroy();
+                release();
             }
         }
     }
@@ -429,35 +366,5 @@ public final class OpenSslServerContext extends OpenSslContext {
     @Override
     OpenSslKeyMaterialManager keyMaterialManager() {
         return keyMaterialManager;
-    }
-
-    private static final class TrustManagerVerifyCallback extends AbstractCertificateVerifier {
-        private final X509TrustManager manager;
-
-        TrustManagerVerifyCallback(OpenSslEngineMap engineMap, X509TrustManager manager) {
-            super(engineMap);
-            this.manager = manager;
-        }
-
-        @Override
-        void verify(OpenSslEngine engine, X509Certificate[] peerCerts, String auth)
-                throws Exception {
-            manager.checkClientTrusted(peerCerts, auth);
-        }
-    }
-
-    private static final class ExtendedTrustManagerVerifyCallback extends AbstractCertificateVerifier {
-        private final X509ExtendedTrustManager manager;
-
-        ExtendedTrustManagerVerifyCallback(OpenSslEngineMap engineMap, X509ExtendedTrustManager manager) {
-            super(engineMap);
-            this.manager = manager;
-        }
-
-        @Override
-        void verify(OpenSslEngine engine, X509Certificate[] peerCerts, String auth)
-                throws Exception {
-            manager.checkClientTrusted(peerCerts, auth, engine);
-        }
     }
 }
