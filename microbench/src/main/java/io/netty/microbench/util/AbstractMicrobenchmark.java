@@ -18,6 +18,7 @@ package io.netty.microbench.util;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.SystemPropertyUtil;
 
+import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -59,9 +60,16 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
             customArgs = new String[]{"-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m", "-Djmh.executor=CUSTOM",
                     "-Djmh.executor.class=io.netty.microbench.util.AbstractMicrobenchmark$HarnessExecutor"};
         }
-        String[] jvmArgs = new String[BASE_JVM_ARGS.length + customArgs.length];
+        String[] propertyArgs;
+        if (SystemPropertyUtil.contains("jvmArgs")) {
+            propertyArgs = SystemPropertyUtil.get("jvmArgs").split(" ");
+        } else {
+            propertyArgs = new String[0];
+        }
+        String[] jvmArgs = new String[BASE_JVM_ARGS.length + customArgs.length + propertyArgs.length];
         System.arraycopy(BASE_JVM_ARGS, 0, jvmArgs, 0, BASE_JVM_ARGS.length);
         System.arraycopy(customArgs, 0, jvmArgs, BASE_JVM_ARGS.length, customArgs.length);
+        System.arraycopy(propertyArgs, 0, jvmArgs, BASE_JVM_ARGS.length + customArgs.length, propertyArgs.length);
         if (disableAssertions) {
             jvmArgs = removeAssertions(jvmArgs);
         }

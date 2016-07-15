@@ -585,7 +585,7 @@ public final class ByteBufUtil {
             }
         }
         UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(new char[length]);
-        buf.forEachByte(processor);
+        buf.forEachByte(readerIndex, length, processor);
         return processor.toString();
     }
 
