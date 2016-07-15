@@ -48,7 +48,6 @@ import java.util.concurrent.Executor;
  */
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private static SocketChannel newSocket(SelectorProvider provider) {
@@ -102,11 +101,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override
