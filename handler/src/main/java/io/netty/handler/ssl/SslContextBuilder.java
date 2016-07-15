@@ -385,6 +385,8 @@ public final class SslContextBuilder {
 
     /**
      * Create new {@code SslContext} instance with configured settings.
+     * <p>If {@link #sslProvider(SslProvider)} is set to {@link SslProvider#OPENSSL_REFCNT} then the caller is
+     * responsible for releasing this object, or else native memory may leak.
      */
     public SslContext build() throws SSLException {
         if (forServer) {
