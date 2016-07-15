@@ -24,6 +24,7 @@ import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.UTF8Decoder;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -565,9 +566,45 @@ public final class ByteBufUtil {
         }
     }
 
-    static String readUtf8(AbstractByteBuf buf, int readerIndex, int length) { // Fast-Path for a AbstractByteBuf
+    public static String readUtf8(ByteBuf buf, int readerIndex, int length) {
+        if (buf instanceof AbstractByteBuf) {
+            return readUtf8Fast((AbstractByteBuf) buf, readerIndex, length);
+        } else {
+            return readUtf8Slow(buf, readerIndex, length);
+        }
+    }
+
+    private static String readUtf8Slow(ByteBuf buf, int readerIndex, int length) {
+        if (buf instanceof WrappedByteBuf) {
+            ByteBuf wrapped;
+            while ((wrapped = buf.unwrap()) != null) {
+                buf = wrapped;
+            }
+            if (buf instanceof AbstractByteBuf) {
+                return readUtf8Fast((AbstractByteBuf) buf, readerIndex, length);
+            }
+        }
+        UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(new char[length]);
+        buf.forEachByte(processor);
+        return processor.toString();
+    }
+
+    // Fast-Path for a AbstractByteBuf
+    static String readUtf8Fast(AbstractByteBuf buf, int readerIndex, int length) {
         buf.checkIndex(readerIndex, length);
         UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(new char[length]);
+        /*
+         * Inline AbstractByteBuf.forEachByte by hand since the JIT doesn't do it it properly
+         * The JIT inlines AbstractByteBuf.forEachByte, but not AbstractByteBuf.forEachByteAsc0.
+         * Since forEachByteAsc0 isn't inlined., the JVM can't optimize away UTF8Processor,
+         * In a test no one else was using a ByteProcessor, the JIT could optimistically inline UTF8Processor.process()
+         * In real applications, other things will use ByteProcessor.
+         * So UTF8Processor.process() won't even be inlined into the loop!
+         *
+         * Therefore we use a manually-inlined version of AbstractByteBuf.forEachByte().
+         * That will cause UTF8Processor to be inlined.
+         * Then the JIT can stack-allocate it and perform its usual optimizations.
+         */
         for (int i = 0; i < length; i++) {
             byte b = buf._getByte(readerIndex + i); // Bypass bounds-checks (we checked outside the loop)
             processor.process(b);
@@ -580,9 +617,7 @@ public final class ByteBufUtil {
             return StringUtil.EMPTY_STRING;
         }
         if (charset.equals(CharsetUtil.UTF_8)) {
-            return src instanceof AbstractByteBuf ?
-                    readUtf8((AbstractByteBuf) src, readerIndex, len)
-                    : UTF8Decoder.decode(src, readerIndex, len);
+            return readUtf8(src, readerIndex, len);
         }
         final CharsetDecoder decoder = CharsetUtil.decoder(charset);
         final int maxLength = (int) ((double) len * decoder.maxCharsPerByte());

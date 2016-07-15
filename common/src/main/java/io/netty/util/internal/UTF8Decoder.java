@@ -1,25 +1,18 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
+ * Copyright (c) 2016 Nicholas Schlabach <Techcable@techcable.net>
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
  *
- * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at:
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
- * the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package io.netty.buffer;
+package io.netty.util.internal;
 
 import java.io.DataInput;
 import java.io.IOException;
 
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.MathUtil;
-import io.netty.util.internal.StringUtil;
 
 /**
  * A fast utf decoder implemented based on http://bjoern.hoehrmann.de/utf-8/decoder/dfa/
@@ -31,12 +24,12 @@ public final class UTF8Decoder {
     /**
      * The state the decoder will be in if the decoder is done decoding the character.
      */
-    private static final int UTF8_ACCEPT = 0;
+    /* default */ static final int UTF8_ACCEPT = 0;
 
     /**
      * The state the decoder will be in if the decoder detects an invalid character.
      */
-    private static final int UTF8_REJECT = 12;
+    /* default */ static final int UTF8_REJECT = 12;
 
     /**
      * The state table that maps bytes to character classes.
@@ -61,7 +54,7 @@ public final class UTF8Decoder {
      * </ul>
      * </p>
      */
-    private static final byte[] CHARACTER_CLASSES = new byte[] {
+    /* default */  static final byte[] CHARACTER_CLASSES = new byte[] {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -75,7 +68,7 @@ public final class UTF8Decoder {
     /**
      * Maps the state and the character class to the next state
      */
-    private static final byte[] TRANSLATION_TABLE = new byte[] {
+    /* default */ static final byte[] TRANSLATION_TABLE = new byte[] {
             0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
             12, 0, 12, 12, 12, 12, 12, 0, 12, 0, 12, 12, 12, 24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12,
             12, 12, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12,
@@ -100,7 +93,6 @@ public final class UTF8Decoder {
         return processor.toString();
     }
 
-
     public static String decode(DataInput input, int length) throws IOException {
         UTF8Processor processor = new UTF8Processor(new char[length]);
         for (int i = 0; i < length; i++) {
@@ -111,16 +103,6 @@ public final class UTF8Decoder {
 
     private static String illegalIndex(int offset, int length, int size) {
         return "Illegal offset " + offset + " and length " + length + " for only " + size + " bytes!";
-    }
-
-    public static String decode(ByteBuf buf, int offset, int length) {
-        int size = buf.writerIndex();
-        if (MathUtil.isOutOfBounds(offset, length, size)) {
-            throw new IndexOutOfBoundsException(illegalIndex(offset, length, size));
-        }
-        UTF8Processor processor = new UTF8Processor(new char[length]);
-        buf.forEachByte(offset, length, processor);
-        return processor.toString();
     }
 
     public static final class UTF8Processor implements ByteProcessor {
@@ -159,12 +141,12 @@ public final class UTF8Decoder {
                     throw new IllegalArgumentException(illegalByte(b));
                 case UTF8_ACCEPT:
                     // We're finished
-                    if (isBasicCodePoint(codePoint)) {
+                    if (StringUtil.isBasicCodePoint(codePoint)) {
                         // It can be represented as a single char
                         dest[destLength++] = (char) codePoint;
-                    } else if (isValidCodePoint(codePoint)) {
-                        dest[destLength++] = highSurrogate(codePoint);
-                        dest[destLength++] = lowSurrogate(codePoint);
+                    } else if (StringUtil.isValidCodePoint(codePoint)) {
+                        dest[destLength++] = StringUtil.highSurrogate(codePoint);
+                        dest[destLength++] = StringUtil.lowSurrogate(codePoint);
                     } else {
                         throw new IllegalArgumentException(illegalCodePoint(codePoint));
                     }
@@ -188,23 +170,5 @@ public final class UTF8Decoder {
                                 (byte) (codePoint >> 8),
                                 (byte) codePoint
                 });
-    }
-
-    // Java 6 Backports of utilities in java.lang.Character
-
-    private static boolean isBasicCodePoint(int codePoint) {
-        return codePoint >>> 16 == 0;
-    }
-    private static boolean isValidCodePoint(int codePoint) {
-        return (codePoint >>> 16) < ((Character.MAX_CODE_POINT + 1) >>> 16);
-    }
-
-    private static char highSurrogate(int codePoint) {
-        return (char) ((codePoint >>> 10)
-                + (Character.MIN_HIGH_SURROGATE - (Character.MIN_SUPPLEMENTARY_CODE_POINT >>> 10)));
-    }
-
-    private static char lowSurrogate(int codePoint) {
-        return (char) ((codePoint & 0x3ff) + Character.MIN_LOW_SURROGATE);
     }
 }

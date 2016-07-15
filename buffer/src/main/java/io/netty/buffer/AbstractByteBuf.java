@@ -1377,10 +1377,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     final void checkIndex0(int index, int fieldLength) {
-        if (isOutOfBounds(index, fieldLength, capacity())) {
-            throw new IndexOutOfBoundsException(String.format(
-                    "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, capacity()));
+        int capacity = capacity();
+        if (isOutOfBounds(index, fieldLength, capacity)) {
+            throw new IndexOutOfBoundsException(indexOutOfBoundsMsg(index, fieldLength, capacity));
         }
+    }
+
+    // Apparently its _significantly_ faster to move the error message creation code to a separate method
+    private static String indexOutOfBoundsMsg(int index, int fieldLength, int capacity) {
+        return String.format("index: %d, length: %d (expected: range(0, %d))", index, fieldLength, capacity);
     }
 
     protected final void checkSrcIndex(int index, int length, int srcIndex, int srcCapacity) {

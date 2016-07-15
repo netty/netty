@@ -544,7 +544,23 @@ public final class StringUtil {
         return c >= '\uD800' && c <= '\uDFFF';
     }
 
-    private static boolean isDoubleQuote(char c) {
+    public static boolean isBasicCodePoint(int codePoint) {
+        return codePoint >>> 16 == 0;
+    }
+    public static boolean isValidCodePoint(int codePoint) {
+        return (codePoint >>> 16) < ((Character.MAX_CODE_POINT + 1) >>> 16);
+    }
+
+    public static char highSurrogate(int codePoint) {
+        return (char) ((codePoint >>> 10)
+                + (Character.MIN_HIGH_SURROGATE - (Character.MIN_SUPPLEMENTARY_CODE_POINT >>> 10)));
+    }
+
+    public static char lowSurrogate(int codePoint) {
+        return (char) ((codePoint & 0x3ff) + Character.MIN_LOW_SURROGATE);
+    }
+
+    public static boolean isDoubleQuote(char c) {
         return c == DOUBLE_QUOTE;
     }
 
