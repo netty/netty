@@ -44,8 +44,6 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(NioUdtByteConnectorChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
-
     private final UdtChannelConfig config;
 
     public NioUdtByteConnectorChannel() {
@@ -173,11 +171,6 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
     @Override
     protected SocketAddress localAddress0() {
         return javaChannel().socket().getLocalSocketAddress();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override
