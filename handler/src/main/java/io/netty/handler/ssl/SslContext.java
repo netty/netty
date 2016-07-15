@@ -396,8 +396,7 @@ public abstract class SslContext {
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-            long sessionCacheSize, long sessionTimeout,
-            ClientAuth clientAuth) throws SSLException {
+            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth) throws SSLException {
 
         if (provider == null) {
             provider = defaultServerProvider();
@@ -411,6 +410,11 @@ public abstract class SslContext {
                     clientAuth);
         case OPENSSL:
             return new OpenSslServerContext(
+                    trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
+                    keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
+                    clientAuth);
+        case OPENSSL_REFCNT:
+            return new ReferenceCountedOpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
                     clientAuth);
@@ -749,9 +753,13 @@ public abstract class SslContext {
                 return new OpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+            case OPENSSL_REFCNT:
+                return new ReferenceCountedOpenSslClientContext(
+                        trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
+                        keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+            default:
+                throw new Error(provider.toString());
         }
-        // Should never happen!!
-        throw new Error();
     }
 
     static ApplicationProtocolConfig toApplicationProtocolConfig(Iterable<String> nextProtocols) {
@@ -813,14 +821,17 @@ public abstract class SslContext {
 
     /**
      * Creates a new {@link SSLEngine}.
-     *
+     * <p>If {@link SslProvider#OPENSSL_REFCNT} is used then the object must be released. One way to do this is to
+     * wrap in a {@link SslHandler} and insert it into a pipeline. See {@link #newHandler(ByteBufAllocator)}.
      * @return a new {@link SSLEngine}
      */
     public abstract SSLEngine newEngine(ByteBufAllocator alloc);
 
     /**
      * Creates a new {@link SSLEngine} using advisory peer information.
-     *
+     * <p>If {@link SslProvider#OPENSSL_REFCNT} is used then the object must be released. One way to do this is to
+     * wrap in a {@link SslHandler} and insert it into a pipeline.
+     * See {@link #newHandler(ByteBufAllocator, String, int)}.
      * @param peerHost the non-authoritative name of the host
      * @param peerPort the non-authoritative port
      *
@@ -835,7 +846,9 @@ public abstract class SslContext {
 
     /**
      * Creates a new {@link SslHandler}.
-     *
+     * <p>If {@link SslProvider#OPENSSL_REFCNT} is used then the returned {@link SslHandler} will release the engine
+     * that is wrapped. If the returned {@link SslHandler} is not inserted into a pipeline then you may leak native
+     * memory!
      * @return a new {@link SslHandler}
      */
     public final SslHandler newHandler(ByteBufAllocator alloc) {
@@ -844,7 +857,9 @@ public abstract class SslContext {
 
     /**
      * Creates a new {@link SslHandler} with advisory peer information.
-     *
+     * <p>If {@link SslProvider#OPENSSL_REFCNT} is used then the returned {@link SslHandler} will release the engine
+     * that is wrapped. If the returned {@link SslHandler} is not inserted into a pipeline then you may leak native
+     * memory!
      * @param peerHost the non-authoritative name of the host
      * @param peerPort the non-authoritative port
      *

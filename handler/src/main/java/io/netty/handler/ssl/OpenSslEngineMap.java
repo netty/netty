@@ -21,15 +21,15 @@ interface OpenSslEngineMap {
      * Remove the {@link OpenSslEngine} with the given {@code ssl} address and
      * return it.
      */
-    OpenSslEngine remove(long ssl);
+    ReferenceCountedOpenSslEngine remove(long ssl);
 
     /**
      * Add a {@link OpenSslEngine} to this {@link OpenSslEngineMap}.
      */
-    void add(OpenSslEngine engine);
+    void add(ReferenceCountedOpenSslEngine engine);
 
     /**
      * Get the {@link OpenSslEngine} for the given {@code ssl} address.
      */
-    OpenSslEngine get(long ssl);
+    ReferenceCountedOpenSslEngine get(long ssl);
 }

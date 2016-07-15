@@ -65,7 +65,7 @@ class OpenSslKeyMaterialManager {
         this.password = password;
     }
 
-    void setKeyMaterial(OpenSslEngine engine) throws SSLException {
+    void setKeyMaterial(ReferenceCountedOpenSslEngine engine) throws SSLException {
         long ssl = engine.sslPointer();
         String[] authMethods = SSL.authenticationMethods(ssl);
         Set<String> aliases = new HashSet<String>(authMethods.length);
@@ -80,7 +80,8 @@ class OpenSslKeyMaterialManager {
         }
     }
 
-    void setKeyMaterial(OpenSslEngine engine, String[] keyTypes, X500Principal[] issuer) throws SSLException {
+    void setKeyMaterial(ReferenceCountedOpenSslEngine engine, String[] keyTypes,
+                        X500Principal[] issuer) throws SSLException {
         setKeyMaterial(engine.sslPointer(), chooseClientAlias(engine, keyTypes, issuer));
     }
 
@@ -116,12 +117,12 @@ class OpenSslKeyMaterialManager {
         }
     }
 
-    protected String chooseClientAlias(@SuppressWarnings("unused") OpenSslEngine engine,
+    protected String chooseClientAlias(@SuppressWarnings("unused") ReferenceCountedOpenSslEngine engine,
                                        String[] keyTypes, X500Principal[] issuer) {
         return keyManager.chooseClientAlias(keyTypes, issuer, null);
     }
 
-    protected String chooseServerAlias(@SuppressWarnings("unused") OpenSslEngine engine, String type) {
+    protected String chooseServerAlias(@SuppressWarnings("unused") ReferenceCountedOpenSslEngine engine, String type) {
         return keyManager.chooseServerAlias(type, null, null);
     }
 }
