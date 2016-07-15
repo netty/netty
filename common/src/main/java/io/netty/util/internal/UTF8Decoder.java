@@ -40,6 +40,9 @@ package io.netty.util.internal;
 
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.Arrays;
+
+import com.sun.tools.javac.util.Assert;
 
 import io.netty.util.ByteProcessor;
 
@@ -137,8 +140,8 @@ public final class UTF8Decoder {
     public static final class UTF8Processor implements ByteProcessor {
         private int state = UTF8_ACCEPT; // The state we are currently in, we start out by wanting a new character
         private int codePoint; // Our current unicode code point
-        private int destLength;
-        private final char[] dest;
+        private int destSize;
+        private char[] dest;
 
         public UTF8Processor(char[] dest) {
             this.dest = dest;
@@ -146,6 +149,9 @@ public final class UTF8Decoder {
 
         public boolean process(byte rawByte) {
             int b = rawByte & 0xFF; // Byte.toUnsignedInt
+            if (dest == null) {
+                throw new IllegalArgumentException("toString() already called!");
+            }
             if (b <= 127) {
                 processASCII(b);
             } else {
@@ -155,7 +161,7 @@ public final class UTF8Decoder {
         }
 
         private void processASCII(int b) {
-            dest[destLength++] = (char) b;
+            dest[destSize++] = (char) b;
         }
 
         private void processUnicode(int b) {
@@ -170,34 +176,19 @@ public final class UTF8Decoder {
                     throw new IllegalArgumentException(illegalByte(b));
                 case UTF8_ACCEPT:
                     // We're finished
-                    if (StringUtil.isBasicCodePoint(codePoint)) {
-                        // It can be represented as a single char
-                        dest[destLength++] = (char) codePoint;
-                    } else if (StringUtil.isValidCodePoint(codePoint)) {
-                        dest[destLength++] = StringUtil.highSurrogate(codePoint);
-                        dest[destLength++] = StringUtil.lowSurrogate(codePoint);
-                    } else {
-                        throw new IllegalArgumentException(illegalCodePoint(codePoint));
-                    }
+                    destSize += StringUtil.toCharacters(codePoint, dest, destSize);
             }
         }
 
         public String toString() {
-            return new String(dest, 0, destLength);
+            char[] dest = this.dest;
+            this.dest = null; // Sanity if anyone ever tries to use this again
+            if (dest == null) throw new IllegalArgumentException("toString() already called!");
+            return PlatformDependent.createSharedString(dest, destSize);
         }
     }
 
     private static String illegalByte(int character) {
         return "Illegal UTF8 byte: 0x " + StringUtil.byteToHexStringPadded(character);
-    }
-
-    private static String illegalCodePoint(int codePoint) {
-        return "Illegal UTF8 code point "
-                + StringUtil.toHexStringPadded(new byte[] {
-                                (byte) (codePoint >> 24),
-                                (byte) (codePoint >> 16),
-                                (byte) (codePoint >> 8),
-                                (byte) codePoint
-                });
     }
 }

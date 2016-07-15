@@ -1364,6 +1364,36 @@ public final class PlatformDependent {
         }
     }
 
+    public static String createSharedString(char[] chars, int newLength) {
+        if (hasUnsafe() && PlatformDependent0.hasSecretAccess()) {
+            if (chars.length == newLength) {
+                return PlatformDependent0.createSharedString(chars);
+            } else {
+                return createCopiedString(chars, newLength);
+            }
+        } else {
+            return new String(chars, 0, newLength);
+        }
+    }
+
+    private static String createCopiedString(char[] chars, int newLength) {
+        int charsLength = chars.length;
+        if (newLength > charsLength || newLength < 0) {
+            throw new StringIndexOutOfBoundsException(newLengthInvalidErrorMsg(charsLength, newLength));
+        }
+        char[] copy = new char[newLength];
+        System.arraycopy(chars, 0, copy, 0, newLength);
+        return PlatformDependent0.createSharedString(copy);
+    }
+
+    private static String newLengthInvalidErrorMsg(int oldLength, int newLength) {
+        if (newLength < 0) {
+            return "Negative new length:" + newLength;
+        } else {
+            return "New length " + newLength + " is bigger than old length " + oldLength;
+        }
+    }
+
     private static final class AtomicLongCounter extends AtomicLong implements LongCounter {
         private static final long serialVersionUID = 4074772784610639305L;
 

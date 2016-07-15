@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * String utility class.
@@ -549,6 +549,31 @@ public final class StringUtil {
     }
     public static boolean isValidCodePoint(int codePoint) {
         return (codePoint >>> 16) < ((Character.MAX_CODE_POINT + 1) >>> 16);
+    }
+
+    public static int toCharacters(int codePoint, char[] dest, int index) {
+        if (isBasicCodePoint(codePoint)) {
+            dest[index] = (char) codePoint;
+            return 1;
+        } else if (isValidCodePoint(codePoint)) {
+            if (index + 2 > dest.length) throw new ArrayIndexOutOfBoundsException(index);
+            // We write elements "backwards" to guarantee all-or-nothing
+            dest[index+1] = lowSurrogate(codePoint);
+            dest[index] = highSurrogate(codePoint);
+            return 2;
+        } else {
+            throw new IllegalArgumentException(illegalCodePointMsg(codePoint));
+        }
+    }
+
+    private static String illegalCodePointMsg(int codePoint) {
+        return "Illegal code point "
+                + StringUtil.toHexStringPadded(new byte[] {
+                (byte) (codePoint >> 24),
+                (byte) (codePoint >> 16),
+                (byte) (codePoint >> 8),
+                (byte) codePoint
+        });
     }
 
     public static char highSurrogate(int codePoint) {

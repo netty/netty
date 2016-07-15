@@ -17,6 +17,9 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import sun.misc.JavaLangAccess;
+import sun.misc.SharedSecrets;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Constructor;
@@ -39,6 +42,7 @@ final class PlatformDependent0 {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
     static final Unsafe UNSAFE;
+    static final JavaLangAccess JAVA_LANG_ACCESS;
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
@@ -154,6 +158,14 @@ final class PlatformDependent0 {
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, int): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null? "available" : "unavailable");
+
+        JavaLangAccess javaLangAccess = null;
+        if (unsafe != null) {
+            try {
+                javaLangAccess = SharedSecrets.getJavaLangAccess();
+            } catch (Throwable ignored) { }
+        }
+        JAVA_LANG_ACCESS = javaLangAccess;
     }
 
     static boolean isUnaligned() {
@@ -524,6 +536,14 @@ final class PlatformDependent0 {
 
     static void freeMemory(long address) {
         UNSAFE.freeMemory(address);
+    }
+
+    static boolean hasSecretAccess() {
+        return JAVA_LANG_ACCESS != null;
+    }
+
+    static String createSharedString(char[] chars) {
+        return JAVA_LANG_ACCESS.newStringUnsafe(checkNotNull(chars, "Null chars"));
     }
 
     private PlatformDependent0() {
