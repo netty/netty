@@ -38,12 +38,13 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -1018,51 +1019,48 @@ public final class PlatformDependent {
         return false;
     }
 
-    @SuppressWarnings("LoopStatementThatDoesntLoop")
     private static int javaVersion0() {
-        int javaVersion;
+        final int majorVersion;
 
-        // Not really a loop
-        for (;;) {
-            // Android
-            if (isAndroid()) {
-                javaVersion = 6;
-                break;
-            }
-
-            try {
-                Method getVersion = java.lang.Runtime.class.getMethod("version");
-                Object version = getVersion.invoke(null);
-                javaVersion = (Integer) version.getClass().getMethod("major").invoke(version);
-                break;
-            } catch (Throwable ignored) {
-                // Ignore
-            }
-
-            try {
-                Class.forName("java.time.Clock", false, getClassLoader(Object.class));
-                javaVersion = 8;
-                break;
-            } catch (Throwable ignored) {
-                // Ignore
-            }
-
-            try {
-                Class.forName("java.util.concurrent.LinkedTransferQueue", false, getClassLoader(BlockingQueue.class));
-                javaVersion = 7;
-                break;
-            } catch (Throwable ignored) {
-                // Ignore
-            }
-
-            javaVersion = 6;
-            break;
+        if (isAndroid()) {
+            majorVersion = 6;
+        } else {
+            majorVersion = majorVersionFromJavaSpecificationVersion();
         }
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("Java version: {}", javaVersion);
+        logger.debug("Java version: {}", majorVersion);
+
+        return majorVersion;
+    }
+
+    static int majorVersionFromJavaSpecificationVersion() {
+        try {
+            final String javaSpecVersion = AccessController.doPrivileged(new PrivilegedAction<String>() {
+                @Override
+                public String run() {
+                    return System.getProperty("java.specification.version");
+                }
+            });
+            return majorVersion(javaSpecVersion);
+        } catch (SecurityException e) {
+            logger.debug("security exception while reading java.specification.version", e);
+            return 6;
         }
-        return javaVersion;
+    }
+
+    static int majorVersion(final String javaSpecVersion) {
+        final String[] components = javaSpecVersion.split("\\.");
+        final int[] version = new int[components.length];
+        for (int i = 0; i < components.length; i++) {
+            version[i] = Integer.parseInt(components[i]);
+        }
+
+        if (version[0] == 1) {
+            assert version[1] >= 6;
+            return version[1];
+        } else {
+            return version[0];
+        }
     }
 
     private static boolean hasUnsafe0() {
