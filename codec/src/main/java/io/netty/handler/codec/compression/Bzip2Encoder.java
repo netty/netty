@@ -121,19 +121,8 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
                         return;
                     }
                     Bzip2BlockCompressor blockCompressor = this.blockCompressor;
-                    final int length = in.readableBytes() < blockCompressor.availableSize() ?
-                                    in.readableBytes() : blockCompressor.availableSize();
-                    final int offset;
-                    final byte[] array;
-                    if (in.hasArray()) {
-                        array = in.array();
-                        offset = in.arrayOffset() + in.readerIndex();
-                    } else {
-                        array = new byte[length];
-                        in.getBytes(in.readerIndex(), array);
-                        offset = 0;
-                    }
-                    final int bytesWritten = blockCompressor.write(array, offset, length);
+                    final int length = Math.min(in.readableBytes(), blockCompressor.availableSize());
+                    final int bytesWritten = blockCompressor.write(in, in.readerIndex(), length);
                     in.skipBytes(bytesWritten);
                     if (!blockCompressor.isFull()) {
                         if (in.isReadable()) {

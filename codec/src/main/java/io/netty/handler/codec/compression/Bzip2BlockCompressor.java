@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.ByteProcessor;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
 
@@ -32,6 +33,13 @@ import static io.netty.handler.codec.compression.Bzip2Constants.*;
  * 7. Huffman encode and write data - {@link #close(ByteBuf)} (through {@link Bzip2HuffmanStageEncoder})
  */
 final class Bzip2BlockCompressor {
+    private final ByteProcessor writeProcessor = new ByteProcessor() {
+        @Override
+        public boolean process(byte value) throws Exception {
+            return write(value);
+        }
+    };
+
     /**
      * A writer that provides bit-level writes.
      */
@@ -197,22 +205,15 @@ final class Bzip2BlockCompressor {
 
     /**
      * Writes an array to the block.
-     * @param data The array to write
+     * @param buffer The buffer to write
      * @param offset The offset within the input data to write from
      * @param length The number of bytes of input data to write
      * @return The actual number of input bytes written. May be less than the number requested, or
      *         zero if the block is already full
      */
-    int write(final byte[] data, int offset, int length) {
-        int written = 0;
-
-        while (length-- > 0) {
-            if (!write(data[offset++])) {
-                break;
-            }
-            written++;
-        }
-        return written;
+    int write(final ByteBuf buffer, int offset, int length) {
+        int index = buffer.forEachByte(offset, length, writeProcessor);
+        return index == -1 ? length : index - offset;
     }
 
     /**
