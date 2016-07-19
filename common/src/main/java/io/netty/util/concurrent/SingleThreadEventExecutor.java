@@ -445,15 +445,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     @UnstableApi
     protected void afterRunningAllTasks() { }
-
-    private static void safeExecute(Runnable task) {
-        try {
-            task.run();
-        } catch (Throwable t) {
-            logger.warn("A task raised an exception. Task: {}", task, t);
-        }
-    }
-
     /**
      * Returns the amount of time left until the scheduled task with the closest dead line is executed.
      */
