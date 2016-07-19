@@ -154,9 +154,13 @@ public class SimpleChannelPool implements ChannelPool {
         return promise;
     }
 
-    private static void notifyConnect(ChannelFuture future, Promise<Channel> promise) {
+    private void notifyConnect(ChannelFuture future, Promise<Channel> promise) {
         if (future.isSuccess()) {
-            promise.setSuccess(future.channel());
+            Channel channel = future.channel();
+            if (!promise.trySuccess(channel)) {
+                // Promise was completed in the meantime (like cancelled), just release the channel again
+                release(channel);
+            }
         } else {
             promise.setFailure(future.cause());
         }
