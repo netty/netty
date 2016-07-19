@@ -38,7 +38,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private final byte[] dictionary;
 
     // GZIP related
-    private final CRC32 crc;
+    private final ByteBufChecksum crc;
 
     private enum GzipState {
         HEADER_START,
@@ -91,7 +91,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
         switch (wrapper) {
             case GZIP:
                 inflater = new Inflater(true);
-                crc = new CRC32();
+                crc = ByteBufChecksum.wrapChecksum(new CRC32());
                 break;
             case NONE:
                 inflater = new Inflater(true);
@@ -271,10 +271,8 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 }
 
                 // mtime (int)
-                crc.update(in.readByte());
-                crc.update(in.readByte());
-                crc.update(in.readByte());
-                crc.update(in.readByte());
+                crc.update(in, in.readerIndex(), 4);
+                in.skipBytes(4);
 
                 crc.update(in.readUnsignedByte()); // extra flags
                 crc.update(in.readUnsignedByte()); // operating system
@@ -298,9 +296,8 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     if (in.readableBytes() < xlen) {
                         return false;
                     }
-                    byte[] xtra = new byte[xlen];
-                    in.readBytes(xtra);
-                    crc.update(xtra);
+                    crc.update(in, in.readerIndex(), xlen);
+                    in.skipBytes(xlen);
                 }
                 gzipState = GzipState.SKIP_FNAME;
             case SKIP_FNAME:
