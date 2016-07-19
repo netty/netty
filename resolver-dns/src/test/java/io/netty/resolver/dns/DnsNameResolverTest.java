@@ -166,7 +166,8 @@ public class DnsNameResolverTest {
             "cnet.com",
             "vimeo.com",
             "redtube.com",
-            "blogspot.in")));
+            "blogspot.in",
+            "localhost")));
 
     /**
      * The list of the domain names to exclude from {@link #testResolveAorAAAA()}.
@@ -232,6 +233,7 @@ public class DnsNameResolverTest {
                 "people.com.cn",
                 "googleusercontent.com",
                 "blogspot.in",
+                "localhost",
                 StringUtil.EMPTY_STRING);
     }
 

@@ -134,7 +134,7 @@ public final class NetUtil {
         // Create IPv4 loopback address.
         Inet4Address localhost4 = null;
         try {
-            localhost4 = (Inet4Address) InetAddress.getByAddress(LOCALHOST4_BYTES);
+            localhost4 = (Inet4Address) InetAddress.getByAddress("localhost", LOCALHOST4_BYTES);
         } catch (Exception e) {
             // We should not get here as long as the length of the address is correct.
             PlatformDependent.throwException(e);
@@ -144,7 +144,7 @@ public final class NetUtil {
         // Create IPv6 loopback address.
         Inet6Address localhost6 = null;
         try {
-            localhost6 = (Inet6Address) InetAddress.getByAddress(LOCALHOST6_BYTES);
+            localhost6 = (Inet6Address) InetAddress.getByAddress("localhost", LOCALHOST6_BYTES);
         } catch (Exception e) {
             // We should not get here as long as the length of the address is correct.
             PlatformDependent.throwException(e);
