@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.ByteProcessor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
@@ -42,6 +43,14 @@ abstract class ByteBufChecksum implements Checksum {
         CRC32_UPDATE_METHOD = updateByteBuffer(new CRC32());
     }
 
+    private final ByteProcessor updateProcessor = new ByteProcessor() {
+        @Override
+        public boolean process(byte value) throws Exception {
+            update(value);
+            return true;
+        }
+    };
+
     private static Method updateByteBuffer(Checksum checksum) {
         if (PlatformDependent.javaVersion() >= 8) {
             try {
@@ -55,42 +64,6 @@ abstract class ByteBufChecksum implements Checksum {
         return null;
     }
 
-    protected Checksum checksum;
-
-    private ByteBufChecksum(Checksum checksum) {
-        this.checksum = checksum;
-    }
-
-    @Override
-    public void update(int b) {
-        checksum.update(b);
-    }
-
-    /**
-     * @see {@link #update(byte[], int, int)}.
-     */
-    abstract void update(ByteBuf b, int off, int len);
-
-    /**
-     * Returns {@code true} if {@link ByteBuffer} is supported without memory copy.
-     */
-    abstract boolean isSupportingByteBuffer();
-
-    @Override
-    public void update(byte[] b, int off, int len) {
-        checksum.update(b, off, len);
-    }
-
-    @Override
-    public long getValue() {
-        return checksum.getValue();
-    }
-
-    @Override
-    public void reset() {
-        checksum.reset();
-    }
-
     static ByteBufChecksum wrapChecksum(Checksum checksum) {
         ObjectUtil.checkNotNull(checksum, "checksum");
         if (checksum instanceof Adler32 && ADLER32_UPDATE_METHOD != null) {
@@ -102,7 +75,18 @@ abstract class ByteBufChecksum implements Checksum {
         return new SlowByteBufChecksum(checksum);
     }
 
-    private static final class ReflectiveByteBufChecksum extends ByteBufChecksum {
+    /**
+     * @see {@link #update(byte[], int, int)}.
+     */
+    public void update(ByteBuf b, int off, int len) {
+        if (b.hasArray()) {
+            update(b.array(), b.arrayOffset() + off, len);
+        } else {
+            b.forEachByte(off, len, updateProcessor);
+        }
+    }
+
+    private static final class ReflectiveByteBufChecksum extends SlowByteBufChecksum {
         private final Method method;
 
         ReflectiveByteBufChecksum(Checksum checksum, Method method) {
@@ -111,7 +95,7 @@ abstract class ByteBufChecksum implements Checksum {
         }
 
         @Override
-        void update(ByteBuf b, int off, int len) {
+        public void update(ByteBuf b, int off, int len) {
             if (b.hasArray()) {
                 update(b.array(), b.arrayOffset() + off, len);
             } else {
@@ -122,37 +106,34 @@ abstract class ByteBufChecksum implements Checksum {
                 }
             }
         }
-
-        @Override
-        boolean isSupportingByteBuffer() {
-            return true;
-        }
     }
 
-    private static final class SlowByteBufChecksum extends ByteBufChecksum {
+    private static class SlowByteBufChecksum extends ByteBufChecksum {
+
+        protected final Checksum checksum;
 
         SlowByteBufChecksum(Checksum checksum) {
-            super(checksum);
+            this.checksum = checksum;
         }
 
         @Override
-        void update(ByteBuf b, int off, int len) {
-            if (b.hasArray()) {
-                update(b.array(), b.arrayOffset() + off, len);
-            } else {
-                ByteBuf heapBuffer = b.alloc().heapBuffer(len);
-                try {
-                    heapBuffer.writeBytes(b, off, len);
-                    update(heapBuffer.array(), heapBuffer.arrayOffset(), len);
-                } finally {
-                    heapBuffer.release();
-                }
-            }
+        public void update(int b) {
+            checksum.update(b);
         }
 
         @Override
-        boolean isSupportingByteBuffer() {
-            return false;
+        public void update(byte[] b, int off, int len) {
+            checksum.update(b, off, len);
+        }
+
+        @Override
+        public long getValue() {
+            return checksum.getValue();
+        }
+
+        @Override
+        public void reset() {
+            checksum.reset();
         }
     }
 }

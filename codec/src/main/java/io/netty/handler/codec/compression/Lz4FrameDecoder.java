@@ -223,12 +223,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                             uncompressed = in.retainedSlice(in.readerIndex(), decompressedLength);
                             break;
                         case BLOCK_TYPE_COMPRESSED:
-                            uncompressed = checksum == null || checksum.isSupportingByteBuffer()
-                                    // We can allocate whatever buffer if we either not need to do checksum processing
-                                    // or if our ByteBufChecksum implementation supports ByteBuffer.
-                                    // This is needed as Checksum implementations itself only support byte[].
-                                    ? ctx.alloc().buffer(decompressedLength, decompressedLength)
-                                    : ctx.alloc().heapBuffer(decompressedLength, decompressedLength);
+                            uncompressed = ctx.alloc().buffer(decompressedLength, decompressedLength);
 
                             decompressor.decompress(CompressionUtil.safeNioBuffer(in),
                                     uncompressed.internalNioBuffer(uncompressed.writerIndex(), decompressedLength));

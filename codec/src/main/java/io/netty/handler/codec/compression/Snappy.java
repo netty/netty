@@ -611,14 +611,7 @@ public final class Snappy {
     static int calculateChecksum(ByteBuf data, int offset, int length) {
         Crc32c crc32 = new Crc32c();
         try {
-            if (data.hasArray()) {
-                crc32.update(data.array(), data.arrayOffset() + offset, length);
-            } else {
-                byte[] array = new byte[length];
-                data.getBytes(offset, array);
-                crc32.update(array, 0, length);
-            }
-
+            crc32.update(data, offset, length);
             return maskChecksum((int) crc32.getValue());
         } finally {
             crc32.reset();
