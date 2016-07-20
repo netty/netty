@@ -166,20 +166,27 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
 
                     in.skipBytes(4);
                     int checksum = in.readIntLE();
-                    ByteBuf uncompressed = ctx.alloc().buffer(0);
-                    if (validateChecksums) {
-                        int oldWriterIndex = in.writerIndex();
-                        try {
-                            in.writerIndex(in.readerIndex() + chunkLength - 4);
-                            snappy.decode(in, uncompressed);
-                        } finally {
-                            in.writerIndex(oldWriterIndex);
+                    ByteBuf uncompressed = ctx.alloc().buffer();
+                    try {
+                        if (validateChecksums) {
+                            int oldWriterIndex = in.writerIndex();
+                            try {
+                                in.writerIndex(in.readerIndex() + chunkLength - 4);
+                                snappy.decode(in, uncompressed);
+                            } finally {
+                                in.writerIndex(oldWriterIndex);
+                            }
+                            validateChecksum(checksum, uncompressed, 0, uncompressed.writerIndex());
+                        } else {
+                            snappy.decode(in.readSlice(chunkLength - 4), uncompressed);
                         }
-                        validateChecksum(checksum, uncompressed, 0, uncompressed.writerIndex());
-                    } else {
-                        snappy.decode(in.readSlice(chunkLength - 4), uncompressed);
+                        out.add(uncompressed);
+                        uncompressed = null;
+                    } finally {
+                        if (uncompressed != null) {
+                            uncompressed.release();
+                        }
                     }
-                    out.add(uncompressed);
                     snappy.reset();
                     break;
             }
