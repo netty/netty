@@ -17,8 +17,8 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufUtil;
-import io.netty.util.internal.MacAddressUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.MacAddressUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadLocalRandom;
@@ -136,7 +136,7 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     private static int defaultProcessId() {
-        final ClassLoader loader = PlatformDependent.getSystemClassLoader();
+        final ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
         String value;
         try {
             // Invoke java.lang.management.ManagementFactory.getRuntimeMXBean().getName()
@@ -145,7 +145,7 @@ public final class DefaultChannelId implements ChannelId {
 
             Method getRuntimeMXBean = mgmtFactoryType.getMethod("getRuntimeMXBean", EmptyArrays.EMPTY_CLASSES);
             Object bean = getRuntimeMXBean.invoke(null, EmptyArrays.EMPTY_OBJECTS);
-            Method getName = runtimeMxBeanType.getDeclaredMethod("getName", EmptyArrays.EMPTY_CLASSES);
+            Method getName = runtimeMxBeanType.getMethod("getName", EmptyArrays.EMPTY_CLASSES);
             value = (String) getName.invoke(bean, EmptyArrays.EMPTY_OBJECTS);
         } catch (Exception e) {
             logger.debug("Could not invoke ManagementFactory.getRuntimeMXBean().getName(); Android?", e);
