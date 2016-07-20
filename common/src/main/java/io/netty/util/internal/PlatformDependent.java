@@ -176,10 +176,14 @@ public final class PlatformDependent {
         Method unreserveMemoryMethod;
 
         /**
-         * @return a new hook for direct memory management.
+         * @return a new hook for direct memory management. It can be disabled
+         * by setting {@code -Dio.netty.nio.memory.tracking.enable=false}
          */
         static _Bits getBits() {
             try {
+                if (!Boolean.parseBoolean(SystemPropertyUtil.get("io.netty.nio.memory.tracking.enable", "true"))) {
+                    return null;
+                }
                 return new _Bits();
             } catch (Exception e) {
                 logger.warn("Failed to initialize nio hook.", e);
