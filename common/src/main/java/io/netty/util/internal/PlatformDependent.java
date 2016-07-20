@@ -16,6 +16,7 @@
 package io.netty.util.internal;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent._Bits;
 import io.netty.util.internal.chmv8.ConcurrentHashMapV8;
 import io.netty.util.internal.chmv8.LongAdderV8;
 import io.netty.util.internal.logging.InternalLogger;
@@ -33,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -90,6 +92,7 @@ public final class PlatformDependent {
     private static final boolean DIRECT_BUFFER_PREFERRED =
             HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
+    private static final _Bits _BITS;
 
     private static final int MPSC_CHUNK_SIZE =  1024;
     private static final int MIN_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * 2;
@@ -150,6 +153,94 @@ public final class PlatformDependent {
         }
         DIRECT_MEMORY_LIMIT = maxDirectMemory;
         logger.debug("io.netty.maxDirectMemory: {} bytes", maxDirectMemory);
+        
+        _BITS = _Bits.getBits();
+    }
+    
+    /**
+     * Util class to expose {@link java.nio.Bits} methods for
+     * direct memory management.
+     */
+    static class _Bits {
+
+    	static final boolean pa = sun.misc.VM.isDirectMemoryPageAligned();
+    	static final int ps = PlatformDependent0.UNSAFE.pageSize();
+
+    	/** Hidden method to reserve memory */
+    	Method reserveMemoryMethod;
+
+    	/** Hidden method to unreserve memory */
+    	Method unreserveMemoryMethod;
+
+    	/**
+    	 * @return a new hook for direct memory management.
+    	 */
+    	static _Bits getBits() {
+    		try {
+    			return new _Bits();
+    		} catch (ClassNotFoundException | NoSuchMethodException | SecurityException e) {
+    			logger.warn("Failed to initialize nio hook.", e);
+    			return null;
+    		}
+    	}
+
+    	/**
+    	 * Constructor.
+    	 */
+    	_Bits() throws ClassNotFoundException, NoSuchMethodException, SecurityException {
+    		Class<?> nioBitsClass = Class.forName("java.nio.Bits");
+
+    		// Methods
+    		reserveMemoryMethod = nioBitsClass.getDeclaredMethod("reserveMemory", long.class, int.class);
+    		reserveMemoryMethod.setAccessible(true);
+    		unreserveMemoryMethod = nioBitsClass.getDeclaredMethod("unreserveMemory", long.class, int.class);
+    		unreserveMemoryMethod.setAccessible(true);
+    	}
+
+    	/**
+    	 * Hook for calling {@link java.nio.Bits#reserveMemory(long,int)}
+    	 * @param capacity the amount of direct memory to allocate
+    	 */
+    	void reserveMemory(int capacity) {
+    		long size = Math.max(1L, capacity + (pa ? ps : 0));
+    		try {
+    			reserveMemoryMethod.invoke(null, size, capacity);
+    		} catch (InvocationTargetException e) {
+    			handleInvocationTargetException(e);
+    		} catch (IllegalAccessException | IllegalArgumentException e) {
+    			logger.warn("Failed reserving  " + capacity + " bytes of memory.", e);
+    		}
+    	}
+
+    	/**
+    	 * Hook for calling {@link java.nio.Bits#unreserveMemory(long,int)}
+    	 * @param capacity the amount of direct memory to deallocate
+    	 */
+    	void unreserveMemory(int capacity) {
+    		long size = Math.max(1L, capacity + (pa ? ps : 0));
+    		try {
+    			unreserveMemoryMethod.invoke(null, size, capacity);
+    		} catch (InvocationTargetException e) {
+    			handleInvocationTargetException(e);
+    		} catch (IllegalAccessException | IllegalArgumentException e) {
+    			logger.warn("Failed unreserving  " + capacity + " bytes of memory.", e);
+    		}
+    	}
+
+    	/**
+    	 * May eventually bubble up an {@link OutOfMemoryError}.
+    	 *
+    	 * @param e the {@link InvocationTargetException} thrown by {@link #reserveMemory(long)}
+    	 * or {@link #unreserveMemory(long)}.
+    	 */
+    	static void handleInvocationTargetException(InvocationTargetException e) {
+    		Throwable targetException = e.getTargetException();
+    		if (targetException instanceof Error) {
+    			throw (Error) targetException;
+    		} else {
+    			logger.warn("Failed invoking method.", e);
+    		}
+    	}
     }
 
     /**
@@ -606,26 +697,40 @@ public final class PlatformDependent {
     }
 
     private static void incrementMemoryCounter(int capacity) {
-        if (DIRECT_MEMORY_COUNTER != null) {
-            for (;;) {
-                long usedMemory = DIRECT_MEMORY_COUNTER.get();
-                long newUsedMemory = usedMemory + capacity;
-                if (newUsedMemory > DIRECT_MEMORY_LIMIT) {
-                    throw new OutOfDirectMemoryError("failed to allocate " + capacity
-                            + " byte(s) of direct memory (used: " + usedMemory + ", max: " + DIRECT_MEMORY_LIMIT + ')');
-                }
-                if (DIRECT_MEMORY_COUNTER.compareAndSet(usedMemory, newUsedMemory)) {
-                    break;
-                }
-            }
-        }
+    	// Try to use the hook
+    	if (_BITS != null) {
+    		_BITS.reserveMemory(capacity);
+    		return;
+    	}
+
+    	// Otherwise, fallback on the old implementation
+    	if (DIRECT_MEMORY_COUNTER != null) {
+    		for (;;) {
+    			long usedMemory = DIRECT_MEMORY_COUNTER.get();
+    			long newUsedMemory = usedMemory + capacity;
+    			if (newUsedMemory > DIRECT_MEMORY_LIMIT) {
+    				throw new OutOfDirectMemoryError("failed to allocate " + capacity
+    						+ " byte(s) of direct memory (used: " + usedMemory + ", max: " + DIRECT_MEMORY_LIMIT + ')');
+    			}
+    			if (DIRECT_MEMORY_COUNTER.compareAndSet(usedMemory, newUsedMemory)) {
+    				break;
+    			}
+    		}
+    	}
     }
 
     private static void decrementMemoryCounter(int capacity) {
-        if (DIRECT_MEMORY_COUNTER != null) {
-            long usedMemory = DIRECT_MEMORY_COUNTER.addAndGet(-capacity);
-            assert usedMemory >= 0;
-        }
+    	// Try to use the hook
+    	if (_BITS != null) {
+    		_BITS.unreserveMemory(capacity);
+    		return;
+    	}
+
+    	// Otherwise, fallback on the old implementation
+    	if (DIRECT_MEMORY_COUNTER != null) {
+    		long usedMemory = DIRECT_MEMORY_COUNTER.addAndGet(-capacity);
+    		assert usedMemory >= 0;
+    	}
     }
 
     public static boolean useDirectBufferNoCleaner() {
