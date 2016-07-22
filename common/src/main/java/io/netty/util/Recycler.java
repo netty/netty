@@ -223,7 +223,7 @@ public abstract class Recycler<T> {
         private WeakOrderQueue next;
         private final WeakReference<Thread> owner;
         private final int id = ID_GENERATOR.getAndIncrement();
-        private final Stack<?> stack;
+        private final AtomicInteger availableSharedCapacity;
 
         WeakOrderQueue(Stack<?> stack, Thread thread) {
             head = tail = new Link();
@@ -232,10 +232,33 @@ public abstract class Recycler<T> {
                 next = stack.head;
                 stack.head = this;
             }
-            this.stack = stack;
+
+            // Its important that we not store the Stack itself in the WeakOrderQueue as the Stack also is used in
+            // the WeakHashMap as key. So just store the enclosed AtomicInteger which should allow to have the
+            // Stack itself GCed.
+            availableSharedCapacity = stack.availableSharedCapacity;
+
             // We allocated a Link so reserve the space
-            boolean reserved = stack.reserveSpace(LINK_CAPACITY);
+            boolean reserved = reserveSpace(LINK_CAPACITY);
             assert reserved;
+        }
+
+        private boolean reserveSpace(int space) {
+            assert space >= 0;
+            for (;;) {
+                int available = availableSharedCapacity.get();
+                if (available < space) {
+                    return false;
+                }
+                if (availableSharedCapacity.compareAndSet(available, available - space)) {
+                    return true;
+                }
+            }
+        }
+
+        private void reclaimSpace(int space) {
+            assert space >= 0;
+            availableSharedCapacity.addAndGet(space);
         }
 
         void add(DefaultHandle<?> handle) {
@@ -244,7 +267,7 @@ public abstract class Recycler<T> {
             Link tail = this.tail;
             int writeIndex;
             if ((writeIndex = tail.get()) == LINK_CAPACITY) {
-                if (!stack.reserveSpace(LINK_CAPACITY)) {
+                if (!reserveSpace(LINK_CAPACITY)) {
                     // Drop it.
                     return;
                 }
@@ -314,7 +337,7 @@ public abstract class Recycler<T> {
 
                 if (srcEnd == LINK_CAPACITY && head.next != null) {
                     // Add capacity back as the Link is GCed.
-                    stack.reclaimSpace(LINK_CAPACITY);
+                    reclaimSpace(LINK_CAPACITY);
 
                     this.head = head.next;
                 }
@@ -339,7 +362,7 @@ public abstract class Recycler<T> {
         private DefaultHandle<?>[] elements;
         private final int maxCapacity;
         private int size;
-        private final AtomicInteger availableSharedCapacity;
+        final AtomicInteger availableSharedCapacity;
 
         private volatile WeakOrderQueue head;
         private WeakOrderQueue cursor, prev;
@@ -350,24 +373,6 @@ public abstract class Recycler<T> {
             this.maxCapacity = maxCapacity;
             availableSharedCapacity = new AtomicInteger(max(maxCapacity / maxSharedCapacityFactor, LINK_CAPACITY));
             elements = new DefaultHandle[min(INITIAL_CAPACITY, maxCapacity)];
-        }
-
-        boolean reserveSpace(int space) {
-            assert space >= 0;
-            for (;;) {
-                int available = availableSharedCapacity.get();
-                if (available < space) {
-                    return false;
-                }
-                if (availableSharedCapacity.compareAndSet(available, available - space)) {
-                    return true;
-                }
-            }
-        }
-
-        void reclaimSpace(int space) {
-            assert space >= 0;
-            availableSharedCapacity.addAndGet(space);
         }
 
         int increaseCapacity(int expectedCapacity) {
