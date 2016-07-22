@@ -349,9 +349,6 @@ public final class OpenSslServerContext extends OpenSslContext {
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
-            checkNotNull(keyCertChain, "keyCertChainFile");
-            checkNotNull(key, "keyFile");
-
             synchronized (OpenSslContext.class) {
                 try {
                     SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
@@ -373,9 +370,7 @@ public final class OpenSslServerContext extends OpenSslContext {
                         }
 
                         if (keyManagerFactory != null) {
-                            X509KeyManager keyManager = chooseX509KeyManager(
-                                    buildKeyManagerFactory(keyCertChain, key, keyPassword, keyManagerFactory)
-                                            .getKeyManagers());
+                            X509KeyManager keyManager = chooseX509KeyManager(keyManagerFactory.getKeyManagers());
                             keyMaterialManager = useExtendedKeyManager(keyManager) ?
                                     new OpenSslExtendedKeyMaterialManager(
                                             (X509ExtendedKeyManager) keyManager, keyPassword) :
