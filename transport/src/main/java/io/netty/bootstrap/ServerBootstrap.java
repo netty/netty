@@ -169,13 +169,23 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel ch) throws Exception {
-                ChannelPipeline pipeline = ch.pipeline();
+                final ChannelPipeline pipeline = ch.pipeline();
                 ChannelHandler handler = config.handler();
                 if (handler != null) {
                     pipeline.addLast(handler);
                 }
-                pipeline.addLast(new ServerBootstrapAcceptor(
-                        currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
+
+                // We add this handler via the EventLoop as the user may have used a ChannelInitializer as handler.
+                // In this case the initChannel(...) method will only be called after this method returns. Because
+                // of this we need to ensure we add our handler in a delayed fashion so all the users handler are
+                // placed in front of the ServerBootstrapAcceptor.
+                ch.eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        pipeline.addLast(new ServerBootstrapAcceptor(
+                                currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
+                    }
+                });
             }
         });
     }
