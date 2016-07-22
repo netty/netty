@@ -61,7 +61,6 @@ public class GlobalEventExecutorTest {
         // Ensure the thread stopped itself after running the task.
         assertThat(thread.isAlive(), is(false));
         assertThat(task.ran.get(), is(true));
-        assertThat(e.thread, sameInstance(thread));
 
         // Ensure another new thread starts again.
         task.ran.set(false);
@@ -74,7 +73,6 @@ public class GlobalEventExecutorTest {
         // Ensure the thread stopped itself after running the task.
         assertThat(thread.isAlive(), is(false));
         assertThat(task.ran.get(), is(true));
-        assertThat(e.thread, sameInstance(thread));
     }
 
     @Test
@@ -93,7 +91,6 @@ public class GlobalEventExecutorTest {
 
         // Now it should be stopped.
         assertThat(thread.isAlive(), is(false));
-        assertThat(e.thread, sameInstance(thread));
     }
 
     // ensure that when a task submission causes a new thread to be created, the thread inherits the thread group of the
