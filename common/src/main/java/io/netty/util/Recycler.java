@@ -190,7 +190,12 @@ public abstract class Recycler<T> {
             Map<Stack<?>, WeakOrderQueue> delayedRecycled = DELAYED_RECYCLED.get();
             WeakOrderQueue queue = delayedRecycled.get(stack);
             if (queue == null) {
-                delayedRecycled.put(stack, queue = new WeakOrderQueue(stack, thread));
+                queue = WeakOrderQueue.allocate(stack, thread);
+                if (queue == null) {
+                    // drop object
+                    return;
+                }
+                delayedRecycled.put(stack, queue);
             }
             queue.add(this);
         }
@@ -225,7 +230,7 @@ public abstract class Recycler<T> {
         private final int id = ID_GENERATOR.getAndIncrement();
         private final AtomicInteger availableSharedCapacity;
 
-        WeakOrderQueue(Stack<?> stack, Thread thread) {
+        private WeakOrderQueue(Stack<?> stack, Thread thread) {
             head = tail = new Link();
             owner = new WeakReference<Thread>(thread);
             synchronized (stack) {
@@ -237,13 +242,18 @@ public abstract class Recycler<T> {
             // the WeakHashMap as key. So just store the enclosed AtomicInteger which should allow to have the
             // Stack itself GCed.
             availableSharedCapacity = stack.availableSharedCapacity;
-
-            // We allocated a Link so reserve the space
-            boolean reserved = reserveSpace(LINK_CAPACITY);
-            assert reserved;
         }
 
-        private boolean reserveSpace(int space) {
+        /**
+         * Allocate a new {@link WeakOrderQueue} or return {@code null} if not possible.
+         */
+        static WeakOrderQueue allocate(Stack<?> stack, Thread thread) {
+            // We allocated a Link so reserve the space
+            return reserveSpace(stack.availableSharedCapacity, LINK_CAPACITY)
+                    ? new WeakOrderQueue(stack, thread) : null;
+        }
+
+        private static boolean reserveSpace(AtomicInteger availableSharedCapacity, int space) {
             assert space >= 0;
             for (;;) {
                 int available = availableSharedCapacity.get();
@@ -267,7 +277,7 @@ public abstract class Recycler<T> {
             Link tail = this.tail;
             int writeIndex;
             if ((writeIndex = tail.get()) == LINK_CAPACITY) {
-                if (!reserveSpace(LINK_CAPACITY)) {
+                if (!reserveSpace(availableSharedCapacity, LINK_CAPACITY)) {
                     // Drop it.
                     return;
                 }
@@ -290,7 +300,6 @@ public abstract class Recycler<T> {
         // transfer as many items as we can from this queue to the stack, returning true if any were transferred
         @SuppressWarnings("rawtypes")
         boolean transfer(Stack<?> dst) {
-
             Link head = this.head;
             if (head == null) {
                 return false;
@@ -347,6 +356,22 @@ public abstract class Recycler<T> {
             } else {
                 // The destination stack is full already.
                 return false;
+            }
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            try {
+                super.finalize();
+            } finally {
+                // We need to reclaim all space that was reserved by this WeakOrderQueue so we not run out of space in
+                // the stack. This is needed as we not have a good life-time control over the queue as it is used in a
+                // WeakHashMap which will drop it at any time.
+                Link link = head;
+                while (link != null) {
+                    reclaimSpace(LINK_CAPACITY);
+                    link = link.next;
+                }
             }
         }
     }
