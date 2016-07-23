@@ -52,9 +52,19 @@ public interface Attribute<T> {
      * Removes this attribute from the {@link AttributeMap} and returns the old value. Subsequent {@link #get()}
      * calls will return {@code null}.
      *
-     * If you only want to return the old value and clear the {@link Attribute} while still keep it in
+     * If you only want to return the old value and clear the {@link Attribute} while still keep it in the
      * {@link AttributeMap} use {@link #getAndSet(Object)} with a value of {@code null}.
+     *
+     * <p>
+     * Be aware that even if you call this method another thread that has obtained a reference to this {@link Attribute}
+     * via {@link AttributeMap#attr(AttributeKey)} will still operate on the same instance. That said if now another
+     * thread or even the same thread later will call {@link AttributeMap#attr(AttributeKey)} again, a new
+     * {@link Attribute} instance is created and so is not the same as the previous one that was removed. Because of
+     * this special caution should be taken when you call {@link #remove()} or {@link #getAndRemove()}.
+     *
+     * @deprecated please consider using {@link #getAndSet(Object)} (with value of {@code null}).
      */
+    @Deprecated
     T getAndRemove();
 
     /**
@@ -68,6 +78,16 @@ public interface Attribute<T> {
      *
      * If you only want to remove the value and clear the {@link Attribute} while still keep it in
      * {@link AttributeMap} use {@link #set(Object)} with a value of {@code null}.
+     *
+     * <p>
+     * Be aware that even if you call this method another thread that has obtained a reference to this {@link Attribute}
+     * via {@link AttributeMap#attr(AttributeKey)} will still operate on the same instance. That said if now another
+     * thread or even the same thread later will call {@link AttributeMap#attr(AttributeKey)} again, a new
+     * {@link Attribute} instance is created and so is not the same as the previous one that was removed. Because of
+     * this special caution should be taken when you call {@link #remove()} or {@link #getAndRemove()}.
+     *
+     * @deprecated please consider using {@link #set(Object)} (with value of {@code null}).
      */
+    @Deprecated
     void remove();
 }
