@@ -321,6 +321,7 @@ public final class DnsNameResolverBuilder {
 
   /**
    * Set the number of dots which must appear in a name before an initial absolute query is made.
+   * The default value is {@code 1}.
    *
    * @param ndots the ndots value
    * @return {@code this}

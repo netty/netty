@@ -191,7 +191,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.hostsFileEntriesResolver = checkNotNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
         this.resolveCache = resolveCache;
         this.searchDomains = checkNotNull(searchDomains, "searchDomains").clone();
-        this.ndots = checkPositive(ndots, "ndots");
+        this.ndots = checkPositiveOrZero(ndots, "ndots");
 
         Bootstrap b = new Bootstrap();
         b.group(executor());
