@@ -257,26 +257,31 @@ public final class NativeLibraryLoader {
         try {
             // Make sure the helper is belong to the target ClassLoader.
             final Class<?> newHelper = tryToLoadClass(loader, NativeLibraryUtil.class);
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    try {
-                        /*
-                         * Invoke the helper to load the native library, if succeed, then the native
-                         * library belong to the specified ClassLoader.
-                         */
-                        Method method = newHelper.getMethod("loadLibrary",
-                                new Class<?>[] { String.class, boolean.class });
-                        return method.invoke(null, name, absolute);
-                    } catch (Exception e) {
-                        throw new IllegalArgumentException("Load library failed!", e);
-                    }
-                }
-            });
+            loadLibraryByHelper(newHelper, name, absolute);
         } catch (Exception e) { // Should by pass the UnsatisfiedLinkError here!
             logger.debug("Unable to load the library: " + name + '.', e);
-            NativeLibraryUtil.loadLibrary(name, absolute);
+            NativeLibraryUtil.loadLibrary(name, absolute);  // Fallback to local helper class.
         }
+    }
+
+    private static void loadLibraryByHelper(final Class<?> helper, final String name, final boolean absolute) {
+        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            @Override
+            public Object run() {
+                try {
+                    /*
+                     * Invoke the helper to load the native library, if succeed, then the native
+                     * library belong to the specified ClassLoader.
+                     */
+                    Method method = helper.getMethod("loadLibrary",
+                            new Class<?>[] { String.class, boolean.class });
+                    method.setAccessible(true);
+                    return method.invoke(null, name, absolute);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Load library failed!", e);
+                }
+            }
+        });
     }
 
     /**
@@ -319,7 +324,12 @@ public final class NativeLibraryLoader {
      * @throws ClassNotFoundException Helper class not found or loading failed
      */
     private static byte[] classToByteArray(Class<?> clazz) throws ClassNotFoundException {
-        URL classUrl = clazz.getResource(clazz.getSimpleName() + ".class");
+        String fileName = clazz.getName();
+        int lastDot = fileName.lastIndexOf('.');
+        if (lastDot > 0) {
+            fileName = fileName.substring(lastDot + 1);
+        }
+        URL classUrl = clazz.getResource(fileName + ".class");
         if (classUrl == null) {
             throw new ClassNotFoundException(clazz.getName());
         }
