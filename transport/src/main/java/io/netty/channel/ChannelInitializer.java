@@ -18,8 +18,11 @@ package io.netty.channel;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * A special {@link ChannelInboundHandler} which offers an easy way to initialize a {@link Channel} once it was
@@ -50,6 +53,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 public abstract class ChannelInitializer<C extends Channel> extends ChannelInboundHandlerAdapter {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializer.class);
+    // We use a ConcurrentMap as a ChannelInitializer is usually shared between all Channels in a Bootstrap /
+    // ServerBootstrap. This way we can reduce the memory usage compared to use Attributes.
+    private final ConcurrentMap<ChannelHandlerContext, Boolean> initMap = PlatformDependent.newConcurrentHashMap();
 
     /**
      * This method will be called once the {@link Channel} was registered. After the method returns this instance
@@ -65,9 +71,16 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
     @Override
     @SuppressWarnings("unchecked")
     public final void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        initChannel((C) ctx.channel());
-        ctx.pipeline().remove(this);
-        ctx.pipeline().fireChannelRegistered();
+        // Normally this method will never be called as handlerAdded(...) should call initChannel(...) and remove
+        // the handler.
+        if (initChannel(ctx)) {
+            // we called initChannel(...) so we need to call now pipeline.fireChannelRegistered() to ensure we not
+            // miss an event.
+            ctx.pipeline().fireChannelRegistered();
+        } else {
+            // Called initChannel(...) before which is the expected behavior, so just forward the event.
+            ctx.fireChannelRegistered();
+        }
     }
 
     /**
@@ -76,13 +89,48 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.warn("Failed to initialize a channel. Closing: " + ctx.channel(), cause);
+        ctx.close();
+    }
+
+    /**
+     * {@inheritDoc} If override this method ensure you call super!
+     */
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        if (ctx.channel().isRegistered()) {
+            // This should always be true with our current DefaultChannelPipeline implementation.
+            // The good thing about calling initChannel(...) in handlerAdded(...) is that there will be no ordering
+            // suprises if a ChannelInitializer will add another ChannelInitializer. This is as all handlers
+            // will be added in the expected order.
+            initChannel(ctx);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private boolean initChannel(ChannelHandlerContext ctx) throws Exception {
+        if (initMap.putIfAbsent(ctx, Boolean.TRUE) == null) { // Guard against re-entrance.
+            try {
+                initChannel((C) ctx.channel());
+            } catch (Throwable cause) {
+                // Explicitly call exceptionCaught(...) as we removed the handler before calling initChannel(...).
+                // We do so to prevent multiple calls to initChannel(...).
+                exceptionCaught(ctx, cause);
+            } finally {
+                remove(ctx);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void remove(ChannelHandlerContext ctx) {
         try {
             ChannelPipeline pipeline = ctx.pipeline();
             if (pipeline.context(this) != null) {
                 pipeline.remove(this);
             }
         } finally {
-            ctx.close();
+            initMap.remove(ctx);
         }
     }
 }
