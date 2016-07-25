@@ -248,10 +248,10 @@ public final class NativeLibraryLoader {
     }
 
     /**
-     * Loading the native library through the specified ClassLoader.
-     * @param loader - The specified ClassLoader where the native library will be loaded into
+     * Loading the native library into the specified {@link ClassLoader}.
+     * @param loader - The {@link ClassLoader} where the native library will be loaded into
      * @param name - The native library path or name
-     * @param absolute - Whether the native library will be loaded by path or not
+     * @param absolute - Whether the native library will be loaded by path or by name
      */
     private static void loadLibrary(final ClassLoader loader, final String name, final boolean absolute) {
         try {
@@ -269,25 +269,23 @@ public final class NativeLibraryLoader {
             @Override
             public Object run() {
                 try {
-                    /*
-                     * Invoke the helper to load the native library, if succeed, then the native
-                     * library belong to the specified ClassLoader.
-                     */
+                    // Invoke the helper to load the native library, if succeed, then the native
+                    // library belong to the specified ClassLoader.
                     Method method = helper.getMethod("loadLibrary",
                             new Class<?>[] { String.class, boolean.class });
                     method.setAccessible(true);
                     return method.invoke(null, name, absolute);
                 } catch (Exception e) {
-                    throw new IllegalArgumentException("Load library failed!", e);
+                    throw new IllegalStateException("Load library failed!", e);
                 }
             }
         });
     }
 
     /**
-     * Try to load the helper Class into specified ClassLoader.
-     * @param loader - The specified ClassLoader
-     * @param helper - The helper Class
+     * Try to load the helper {@link Class} into specified {@link ClassLoader}.
+     * @param loader - The {@link ClassLoader} where to load the helper {@link Class}
+     * @param helper - The helper {@link Class}
      * @return A new helper Class defined in the specified ClassLoader.
      * @throws ClassNotFoundException Helper class not found or loading failed
      */
@@ -296,7 +294,7 @@ public final class NativeLibraryLoader {
         try {
             return loader.loadClass(helper.getName());
         } catch (ClassNotFoundException e) {
-            // The helper class NOT found in target ClassLoader, we have to define the helper class.
+            // The helper class is NOT found in target ClassLoader, we have to define the helper class.
             final byte[] classBinary = classToByteArray(helper);
             return AccessController.doPrivileged(new PrivilegedAction<Class<?>>() {
                 @Override
@@ -310,7 +308,7 @@ public final class NativeLibraryLoader {
                         return (Class<?>) defineClass.invoke(loader, helper.getName(), classBinary, 0,
                                 classBinary.length);
                     } catch (Exception e) {
-                        throw new IllegalArgumentException("Define class failed!", e);
+                        throw new IllegalStateException("Define class failed!", e);
                     }
                 }
             });
@@ -318,9 +316,9 @@ public final class NativeLibraryLoader {
     }
 
     /**
-     * Load the helper Class as a byte array, to be redefined in specified ClassLoader.
-     * @param clazz - The helper Class provided by this bundle
-     * @return The binary content of helper class.
+     * Load the helper {@link Class} as a byte array, to be redefined in specified {@link ClassLoader}.
+     * @param clazz - The helper {@link Class} provided by this bundle
+     * @return The binary content of helper {@link Class}.
      * @throws ClassNotFoundException Helper class not found or loading failed
      */
     private static byte[] classToByteArray(Class<?> clazz) throws ClassNotFoundException {
@@ -333,25 +331,34 @@ public final class NativeLibraryLoader {
         if (classUrl == null) {
             throw new ClassNotFoundException(clazz.getName());
         }
+        byte[] buf = new byte[1024];
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        InputStream in = null;
         try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            InputStream in = classUrl.openStream();
-            try {
-                byte[] buf = new byte[1024];
-                while (true) {
-                    int r = in.read(buf);
-                    if (r == -1) {
-                        break;
-                    }
-                    out.write(buf, 0, r);
+            in = classUrl.openStream();
+            while (true) {
+                int r = in.read(buf);
+                if (r == -1) {
+                    break;
                 }
-                return out.toByteArray();
-            } finally {
-                in.close();
-                out.close();
+                out.write(buf, 0, r);
             }
+            return out.toByteArray();
         } catch (IOException ex) {
             throw new ClassNotFoundException(clazz.getName(), ex);
+        } finally {
+            closeQuietly(in);
+            closeQuietly(out);
+        }
+    }
+
+    private static void closeQuietly(java.io.Closeable c) {
+        if (c != null) {
+            try {
+                c.close();
+            } catch (IOException ignore) {
+                // ignore
+            }
         }
     }
 
