@@ -83,7 +83,7 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         // This may be the last event in the read loop, so flush now!
-        flushIfNeeded(ctx, true);
+        resetReadAndFlushIfNeeded(ctx);
         ctx.fireChannelReadComplete();
     }
 
@@ -96,21 +96,21 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         // To ensure we not miss to flush anything, do it now.
-        flushIfNeeded(ctx, true);
+        resetReadAndFlushIfNeeded(ctx);
         ctx.fireExceptionCaught(cause);
     }
 
     @Override
     public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         // Try to flush one last time if flushes are pending before disconnect the channel.
-        flushIfNeeded(ctx, true);
+        resetReadAndFlushIfNeeded(ctx);
         ctx.disconnect(promise);
     }
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         // Try to flush one last time if flushes are pending before close the channel.
-        flushIfNeeded(ctx, true);
+        resetReadAndFlushIfNeeded(ctx);
         ctx.close(promise);
     }
 
@@ -118,20 +118,22 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         if (!ctx.channel().isWritable()) {
             // The writability of the channel changed to false, so flush all consolidated flushes now to free up memory.
-            flushIfNeeded(ctx, false);
+            flushIfNeeded(ctx);
         }
         ctx.fireChannelWritabilityChanged();
     }
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        flushIfNeeded(ctx, false);
+        flushIfNeeded(ctx);
     }
 
-    private void flushIfNeeded(ChannelHandlerContext ctx, boolean resetReadInProgress) {
-        if (resetReadInProgress) {
-            readInprogess = false;
-        }
+    private void resetReadAndFlushIfNeeded(ChannelHandlerContext ctx) {
+        readInprogess = false;
+        flushIfNeeded(ctx);
+    }
+
+    private void flushIfNeeded(ChannelHandlerContext ctx) {
         if (flushPendingCount > 0) {
             flushPendingCount = 0;
             ctx.flush();
