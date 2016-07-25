@@ -54,6 +54,7 @@ public abstract class Recycler<T> {
     private static final int DEFAULT_MAX_CAPACITY;
     private static final int INITIAL_CAPACITY;
     private static final int MAX_SHARED_CAPACITY_FACTOR;
+    private static final int MAX_DELAYED_QUEUES_PER_THREAD;
     private static final int LINK_CAPACITY;
     private static final int RATIO;
 
@@ -70,6 +71,11 @@ public abstract class Recycler<T> {
         MAX_SHARED_CAPACITY_FACTOR = max(2,
                 SystemPropertyUtil.getInt("io.netty.recycler.maxSharedCapacityFactor",
                         2));
+
+        MAX_DELAYED_QUEUES_PER_THREAD = max(0,
+                SystemPropertyUtil.getInt("io.netty.recycler.maxDelayedQueuesPerThread",
+                        // We use the same value as default EventLoop number
+                        Runtime.getRuntime().availableProcessors() * 2));
 
         LINK_CAPACITY = safeFindNextPositivePowerOfTwo(
                 max(SystemPropertyUtil.getInt("io.netty.recycler.linkCapacity", 16), 16));
@@ -99,11 +105,13 @@ public abstract class Recycler<T> {
     private final int maxCapacity;
     private final int maxSharedCapacityFactor;
     private final int ratioMask;
+    private final int maxDelayedQueuesPerThread;
 
     private final FastThreadLocal<Stack<T>> threadLocal = new FastThreadLocal<Stack<T>>() {
         @Override
         protected Stack<T> initialValue() {
-            return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacity, maxSharedCapacityFactor, ratioMask);
+            return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacity, maxSharedCapacityFactor,
+                    ratioMask, maxDelayedQueuesPerThread);
         }
     };
 
@@ -116,17 +124,19 @@ public abstract class Recycler<T> {
     }
 
     protected Recycler(int maxCapacity, int maxSharedCapacityFactor) {
-        this(maxCapacity, maxSharedCapacityFactor, RATIO);
+        this(maxCapacity, maxSharedCapacityFactor, RATIO, MAX_DELAYED_QUEUES_PER_THREAD);
     }
 
-    protected Recycler(int maxCapacity, int maxSharedCapacityFactor, int ratio) {
+    protected Recycler(int maxCapacity, int maxSharedCapacityFactor, int ratio, int maxDelayedQueuesPerThread) {
         ratioMask = safeFindNextPositivePowerOfTwo(ratio) - 1;
         if (maxCapacity <= 0) {
             this.maxCapacity = 0;
             this.maxSharedCapacityFactor = 1;
+            this.maxDelayedQueuesPerThread = 0;
         } else {
             this.maxCapacity = maxCapacity;
             this.maxSharedCapacityFactor = max(1, maxSharedCapacityFactor);
+            this.maxDelayedQueuesPerThread = max(0, maxDelayedQueuesPerThread);
         }
     }
 
@@ -194,26 +204,7 @@ public abstract class Recycler<T> {
             if (object != value) {
                 throw new IllegalArgumentException("object does not belong to handle");
             }
-
-            Thread thread = Thread.currentThread();
-            if (thread == stack.thread) {
-                stack.push(this);
-                return;
-            }
-            // we don't want to have a ref to the queue as the value in our weak map
-            // so we null it out; to ensure there are no races with restoring it later
-            // we impose a memory ordering here (no-op on x86)
-            Map<Stack<?>, WeakOrderQueue> delayedRecycled = DELAYED_RECYCLED.get();
-            WeakOrderQueue queue = delayedRecycled.get(stack);
-            if (queue == null) {
-                queue = WeakOrderQueue.allocate(stack, thread);
-                if (queue == null) {
-                    // drop object
-                    return;
-                }
-                delayedRecycled.put(stack, queue);
-            }
-            queue.add(this);
+            stack.push(this);
         }
     }
 
@@ -228,6 +219,8 @@ public abstract class Recycler<T> {
     // a queue that makes only moderate guarantees about visibility: items are seen in the correct order,
     // but we aren't absolutely guaranteed to ever see anything at all, thereby keeping the queue cheap to maintain
     private static final class WeakOrderQueue {
+
+        static final WeakOrderQueue DUMMY = new WeakOrderQueue();
 
         // Let Link extend AtomicInteger for intrinsics. The Link itself will be used as writerIndex.
         @SuppressWarnings("serial")
@@ -245,6 +238,11 @@ public abstract class Recycler<T> {
         private final WeakReference<Thread> owner;
         private final int id = ID_GENERATOR.getAndIncrement();
         private final AtomicInteger availableSharedCapacity;
+
+        private WeakOrderQueue() {
+            owner = null;
+            availableSharedCapacity = null;
+        }
 
         private WeakOrderQueue(Stack<?> stack, Thread thread) {
             head = tail = new Link();
@@ -408,23 +406,26 @@ public abstract class Recycler<T> {
         // still recycling all items.
         final Recycler<T> parent;
         final Thread thread;
-        private DefaultHandle<?>[] elements;
+        final AtomicInteger availableSharedCapacity;
+        final int maxDelayedQueues;
+
         private final int maxCapacity;
         private final int ratioMask;
+        private DefaultHandle<?>[] elements;
         private int size;
         private int handleRecycleCount = -1; // Start with -1 so the first one will be recycled.
-        final AtomicInteger availableSharedCapacity;
-
-        private volatile WeakOrderQueue head;
         private WeakOrderQueue cursor, prev;
+        private volatile WeakOrderQueue head;
 
-        Stack(Recycler<T> parent, Thread thread, int maxCapacity, int maxSharedCapacityFactor, int ratioMask) {
+        Stack(Recycler<T> parent, Thread thread, int maxCapacity, int maxSharedCapacityFactor,
+              int ratioMask, int maxDelayedQueues) {
             this.parent = parent;
             this.thread = thread;
             this.maxCapacity = maxCapacity;
             availableSharedCapacity = new AtomicInteger(max(maxCapacity / maxSharedCapacityFactor, LINK_CAPACITY));
             elements = new DefaultHandle[min(INITIAL_CAPACITY, maxCapacity)];
             this.ratioMask = ratioMask;
+            this.maxDelayedQueues = maxDelayedQueues;
         }
 
         int increaseCapacity(int expectedCapacity) {
@@ -523,6 +524,18 @@ public abstract class Recycler<T> {
         }
 
         void push(DefaultHandle<?> item) {
+            Thread currentThread = Thread.currentThread();
+            if (thread == currentThread) {
+                // The current Thread is the thread that belongs to the Stack, we can try to push the object now.
+                pushNow(item);
+            } else {
+                // The current Thread is not the one that belongs to the Stack, we need to signal that the push
+                // happens later.
+                pushLater(item, currentThread);
+            }
+        }
+
+        private void pushNow(DefaultHandle<?> item) {
             if ((item.recycleId | item.lastRecycledId) != 0) {
                 throw new IllegalStateException("recycled already");
             }
@@ -539,6 +552,32 @@ public abstract class Recycler<T> {
 
             elements[size] = item;
             this.size = size + 1;
+        }
+
+        private void pushLater(DefaultHandle<?> item, Thread thread) {
+            // we don't want to have a ref to the queue as the value in our weak map
+            // so we null it out; to ensure there are no races with restoring it later
+            // we impose a memory ordering here (no-op on x86)
+            Map<Stack<?>, WeakOrderQueue> delayedRecycled = DELAYED_RECYCLED.get();
+            WeakOrderQueue queue = delayedRecycled.get(this);
+            if (queue == null) {
+                if (delayedRecycled.size() >= maxDelayedQueues) {
+                    // Add a dummy queue so we know we should drop the object
+                    delayedRecycled.put(this, WeakOrderQueue.DUMMY);
+                    return;
+                }
+                // Check if we already reached the maximum number of delayed queues and if we can allocate at all.
+                if ((queue = WeakOrderQueue.allocate(this, thread)) == null) {
+                    // drop object
+                    return;
+                }
+                delayedRecycled.put(this, queue);
+            } else if (queue == WeakOrderQueue.DUMMY) {
+                // drop object
+                return;
+            }
+
+            queue.add(item);
         }
 
         boolean dropHandle(DefaultHandle<?> handle) {
