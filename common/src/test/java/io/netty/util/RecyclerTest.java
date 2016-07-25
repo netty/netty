@@ -94,7 +94,7 @@ public class RecyclerTest {
 
     @Test
     public void testRecycleAtDifferentThread() throws Exception {
-        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(256, 10, 2) {
+        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(256, 10, 2, 10) {
             @Override
             protected HandledObject newObject(Recycler.Handle<HandledObject> handle) {
                 return new HandledObject(handle);
