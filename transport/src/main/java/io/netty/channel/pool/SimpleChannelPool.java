@@ -149,7 +149,7 @@ public class SimpleChannelPool implements ChannelPool {
                 });
             }
         } catch (Throwable cause) {
-            promise.setFailure(cause);
+            promise.tryFailure(cause);
         }
         return promise;
     }
@@ -162,7 +162,7 @@ public class SimpleChannelPool implements ChannelPool {
                 release(channel);
             }
         } else {
-            promise.setFailure(future.cause());
+            promise.tryFailure(future.cause());
         }
     }
 
@@ -310,7 +310,7 @@ public class SimpleChannelPool implements ChannelPool {
 
     private static void closeAndFail(Channel channel, Throwable cause, Promise<?> promise) {
         closeChannel(channel);
-        promise.setFailure(cause);
+        promise.tryFailure(cause);
     }
 
     /**
