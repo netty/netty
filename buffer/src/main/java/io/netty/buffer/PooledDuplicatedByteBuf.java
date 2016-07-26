@@ -28,7 +28,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
-final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf<PooledDuplicatedByteBuf> {
+final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     private static final Recycler<PooledDuplicatedByteBuf> RECYCLER = new Recycler<PooledDuplicatedByteBuf>() {
         @Override
@@ -37,9 +37,10 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf<PooledD
         }
     };
 
-    static PooledDuplicatedByteBuf newInstance(AbstractByteBuf buffer, int readerIndex, int writerIndex) {
+    static PooledDuplicatedByteBuf newInstance(AbstractByteBuf unwrapped, ByteBuf wrapped,
+                                               int readerIndex, int writerIndex) {
         final PooledDuplicatedByteBuf duplicate = RECYCLER.get();
-        duplicate.init(buffer, readerIndex, writerIndex, buffer.maxCapacity());
+        duplicate.init(unwrapped, wrapped, readerIndex, writerIndex, wrapped.maxCapacity());
         duplicate.markReaderIndex();
         duplicate.markWriterIndex();
 
@@ -84,6 +85,21 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf<PooledD
     @Override
     public ByteBuf copy(int index, int length) {
         return unwrap().copy(index, length);
+    }
+
+    @Override
+    public ByteBuf slice(int index, int length) {
+        return unwrap().slice(index, length);
+    }
+
+    @Override
+    public ByteBuf retainedSlice(int index, int length) {
+        return PooledSlicedByteBuf.newInstance(unwrap(), this, index, length);
+    }
+
+    @Override
+    public ByteBuf retainedDuplicate() {
+        return PooledDuplicatedByteBuf.newInstance(unwrap(), this, readerIndex(), writerIndex());
     }
 
     @Override

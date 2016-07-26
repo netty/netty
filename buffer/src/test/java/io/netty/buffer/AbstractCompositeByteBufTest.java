@@ -457,7 +457,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     public void testComponentMustBeSlice() {
         CompositeByteBuf buf = releaseLater(compositeBuffer());
         buf.addComponent(buffer(4).setIndex(1, 3));
-        assertThat(buf.component(0), is(instanceOf(SlicedByteBuf.class)));
+        assertThat(buf.component(0), is(instanceOf(AbstractUnpooledSlicedByteBuf.class)));
         assertThat(buf.component(0).capacity(), is(2));
         assertThat(buf.component(0).maxCapacity(), is(2));
     }
