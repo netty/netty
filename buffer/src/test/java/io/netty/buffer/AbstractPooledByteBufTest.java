@@ -15,8 +15,6 @@
  */
 package io.netty.buffer;
 
-import org.junit.Test;
-
 import static org.junit.Assert.*;
 
 public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
@@ -26,49 +24,14 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
     @Override
     protected ByteBuf newBuffer(int length) {
         ByteBuf buffer = alloc(length);
+
+        // Testing if the writerIndex and readerIndex are correct when allocate and also after we reset the mark.
+        assertEquals(0, buffer.writerIndex());
+        assertEquals(0, buffer.readerIndex());
+        buffer.resetReaderIndex();
+        buffer.resetWriterIndex();
         assertEquals(0, buffer.writerIndex());
         assertEquals(0, buffer.readerIndex());
         return buffer;
-    }
-
-    @Test
-    public void testDiscardMarks() {
-        testDiscardMarks(4);
-    }
-
-    @Test
-    public void testDiscardMarksUnpooled() {
-        testDiscardMarks(32 * 1024 * 1024);
-    }
-
-    private void testDiscardMarks(int capacity) {
-        ByteBuf buf = newBuffer(capacity);
-        buf.writeShort(1);
-
-        buf.skipBytes(1);
-
-        buf.markReaderIndex();
-        buf.markWriterIndex();
-        assertTrue(buf.release());
-
-        ByteBuf buf2 = newBuffer(capacity);
-
-        assertSame(unwrapIfNeeded(buf), unwrapIfNeeded(buf2));
-
-        buf2.writeShort(1);
-
-        buf2.resetReaderIndex();
-        buf2.resetWriterIndex();
-
-        assertEquals(0, buf2.readerIndex());
-        assertEquals(0, buf2.writerIndex());
-        assertTrue(buf2.release());
-    }
-
-    private static ByteBuf unwrapIfNeeded(ByteBuf buf) {
-        if (buf instanceof AdvancedLeakAwareByteBuf || buf instanceof SimpleLeakAwareByteBuf) {
-            return buf.unwrap();
-        }
-        return buf;
     }
 }
