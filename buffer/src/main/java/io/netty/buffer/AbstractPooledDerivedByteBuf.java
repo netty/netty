@@ -24,15 +24,15 @@ import java.nio.ByteOrder;
 /**
  * Abstract base class for derived {@link ByteBuf} implementations.
  */
-abstract class AbstractPooledDerivedByteBuf<T> extends AbstractReferenceCountedByteBuf {
+abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByteBuf {
 
-    private final Handle<AbstractPooledDerivedByteBuf<T>> recyclerHandle;
+    private final Handle<AbstractPooledDerivedByteBuf> recyclerHandle;
     private AbstractByteBuf buffer;
 
     @SuppressWarnings("unchecked")
-    AbstractPooledDerivedByteBuf(Handle<? extends AbstractPooledDerivedByteBuf<T>> recyclerHandle) {
+    AbstractPooledDerivedByteBuf(Handle<? extends AbstractPooledDerivedByteBuf> recyclerHandle) {
         super(0);
-        this.recyclerHandle = (Handle<AbstractPooledDerivedByteBuf<T>>) recyclerHandle;
+        this.recyclerHandle = (Handle<AbstractPooledDerivedByteBuf>) recyclerHandle;
     }
 
     @Override
@@ -40,26 +40,25 @@ abstract class AbstractPooledDerivedByteBuf<T> extends AbstractReferenceCountedB
         return buffer;
     }
 
-    final <U extends AbstractPooledDerivedByteBuf<T>> U init(
-            AbstractByteBuf buffer, int readerIndex, int writerIndex, int maxCapacity) {
+    final <U extends AbstractPooledDerivedByteBuf> U init(
+            AbstractByteBuf unwrapped, ByteBuf wrapped, int readerIndex, int writerIndex, int maxCapacity) {
 
-        buffer.retain();
-        this.buffer = buffer;
+        wrapped.retain(); // Retain up front to ensure the wrapped buffer is accessible before doing more work.
+        this.buffer = unwrapped;
 
-        boolean success = false;
         try {
             maxCapacity(maxCapacity);
-            setIndex(readerIndex, writerIndex);
+            setIndex0(readerIndex, writerIndex); // It is assumed the bounds checking is done by the caller.
             setRefCnt(1);
 
             @SuppressWarnings("unchecked")
             final U castThis = (U) this;
-            success = true;
+            wrapped = null;
             return castThis;
         } finally {
-            if (!success) {
+            if (wrapped != null) {
                 this.buffer = null;
-                buffer.release();
+                wrapped.release();
             }
         }
     }
@@ -121,18 +120,8 @@ abstract class AbstractPooledDerivedByteBuf<T> extends AbstractReferenceCountedB
     }
 
     @Override
-    public final ByteBuf retainedDuplicate() {
-        return PooledDuplicatedByteBuf.newInstance(this, readerIndex(), writerIndex());
-    }
-
-    @Override
     public final ByteBuf retainedSlice() {
         final int index = readerIndex();
         return retainedSlice(index, writerIndex() - index);
-    }
-
-    @Override
-    public final ByteBuf retainedSlice(int index, int length) {
-        return PooledSlicedByteBuf.newInstance(this, index, length, index);
     }
 }

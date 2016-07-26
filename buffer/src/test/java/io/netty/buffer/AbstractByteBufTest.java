@@ -2918,6 +2918,54 @@ public abstract class AbstractByteBufTest {
         testDuplicateContents(false);
     }
 
+    @Test
+    public void testDuplicateCapacityChange() {
+        testDuplicateCapacityChange(false);
+    }
+
+    @Test
+    public void testRetainedDuplicateCapacityChange() {
+        testDuplicateCapacityChange(true);
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testSliceCapacityChange() {
+        testSliceCapacityChange(false);
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testRetainedSliceCapacityChange() {
+        testSliceCapacityChange(true);
+    }
+
+    private void testDuplicateCapacityChange(boolean retainedDuplicate) {
+        ByteBuf buf = releaseLater(newBuffer(8));
+        ByteBuf dup = retainedDuplicate ? buf.retainedDuplicate() : buf.duplicate();
+        try {
+            dup.capacity(10);
+            assertEquals(buf.capacity(), dup.capacity());
+            dup.capacity(5);
+            assertEquals(buf.capacity(), dup.capacity());
+        } finally {
+            if (retainedDuplicate) {
+                dup.release();
+            }
+        }
+    }
+
+    private void testSliceCapacityChange(boolean retainedSlice) {
+        ByteBuf buf = releaseLater(newBuffer(8));
+        ByteBuf slice = retainedSlice ? buf.retainedSlice(buf.readerIndex() + 1, 3)
+                                      : buf.slice(buf.readerIndex() + 1, 3);
+        try {
+            slice.capacity(10);
+        } finally {
+            if (retainedSlice) {
+                slice.release();
+            }
+        }
+    }
+
     private void testSliceOutOfBounds(boolean initRetainedSlice, boolean finalRetainedSlice, boolean indexOutOfBounds) {
         ByteBuf buf = releaseLater(newBuffer(8));
         ByteBuf slice = initRetainedSlice ? buf.retainedSlice(buf.readerIndex() + 1, 2)

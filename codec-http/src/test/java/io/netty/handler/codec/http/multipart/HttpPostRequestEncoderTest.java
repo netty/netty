@@ -17,7 +17,6 @@ package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.SlicedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
@@ -37,6 +36,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TRANSFER_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /** {@link HttpPostRequestEncoder} test case. */
 public class HttpPostRequestEncoderTest {
@@ -225,11 +225,11 @@ public class HttpPostRequestEncoderTest {
         encoder.finalizeRequest();
         while (! encoder.isEndOfInput()) {
             HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
-            if (httpContent.content() instanceof SlicedByteBuf) {
-                assertEquals(2, httpContent.content().refCnt());
-            } else {
-                assertEquals(1, httpContent.content().refCnt());
-            }
+            ByteBuf content = httpContent.content();
+            int refCnt = content.refCnt();
+            assertTrue("content: " + content + " content.unwrap(): " + content.unwrap() + " refCnt: " + refCnt,
+                    (content.unwrap() == content || content.unwrap() == null) && refCnt == 1 ||
+                    content.unwrap() != content && refCnt == 2);
             httpContent.release();
         }
         encoder.cleanFiles();

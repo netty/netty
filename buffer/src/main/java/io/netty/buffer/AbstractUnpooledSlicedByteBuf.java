@@ -13,57 +13,76 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
+import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 
-import static io.netty.buffer.AbstractUnpooledSlicedByteBuf.checkSliceOutOfBounds;
+import static io.netty.util.internal.MathUtil.isOutOfBounds;
 
-final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
+abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
+    private final ByteBuf buffer;
+    private final int adjustment;
 
-    private static final Recycler<PooledSlicedByteBuf> RECYCLER = new Recycler<PooledSlicedByteBuf>() {
-        @Override
-        protected PooledSlicedByteBuf newObject(Handle<PooledSlicedByteBuf> handle) {
-            return new PooledSlicedByteBuf(handle);
+    AbstractUnpooledSlicedByteBuf(ByteBuf buffer, int index, int length) {
+        super(length);
+        checkSliceOutOfBounds(index, length, buffer);
+
+        if (buffer instanceof AbstractUnpooledSlicedByteBuf) {
+            this.buffer = ((AbstractUnpooledSlicedByteBuf) buffer).buffer;
+            adjustment = ((AbstractUnpooledSlicedByteBuf) buffer).adjustment + index;
+        } else if (buffer instanceof DuplicatedByteBuf) {
+            this.buffer = buffer.unwrap();
+            adjustment = index;
+        } else {
+            this.buffer = buffer;
+            adjustment = index;
         }
-    };
 
-    static PooledSlicedByteBuf newInstance(AbstractByteBuf unwrapped, ByteBuf wrapped,
-                                           int index, int length) {
-        checkSliceOutOfBounds(index, length, unwrapped);
-        return newInstance0(unwrapped, wrapped, index, length);
+        initLength(length);
+        writerIndex(length);
     }
 
-    private static PooledSlicedByteBuf newInstance0(AbstractByteBuf unwrapped, ByteBuf wrapped,
-                                                    int adjustment, int length) {
-        final PooledSlicedByteBuf slice = RECYCLER.get();
-        slice.init(unwrapped, wrapped, 0, length, length);
-        slice.discardMarks();
-        slice.adjustment = adjustment;
-
-        return slice;
+    /**
+     * Called by the constructor before {@link #writerIndex(int)}.
+     * @param length the {@code length} argument from the constructor.
+     */
+    void initLength(int length) {
     }
 
-    int adjustment;
-
-    private PooledSlicedByteBuf(Handle<PooledSlicedByteBuf> handle) {
-        super(handle);
+    int length() {
+        return capacity();
     }
 
     @Override
-    public int capacity() {
-        return maxCapacity();
+    public ByteBuf unwrap() {
+        return buffer;
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return unwrap().alloc();
+    }
+
+    @Override
+    @Deprecated
+    public ByteOrder order() {
+        return unwrap().order();
+    }
+
+    @Override
+    public boolean isDirect() {
+        return unwrap().isDirect();
     }
 
     @Override
@@ -72,8 +91,23 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
     }
 
     @Override
+    public boolean hasArray() {
+        return unwrap().hasArray();
+    }
+
+    @Override
+    public byte[] array() {
+        return unwrap().array();
+    }
+
+    @Override
     public int arrayOffset() {
         return idx(unwrap().arrayOffset());
+    }
+
+    @Override
+    public boolean hasMemoryAddress() {
+        return unwrap().hasMemoryAddress();
     }
 
     @Override
@@ -82,15 +116,109 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
     }
 
     @Override
-    public ByteBuffer nioBuffer(int index, int length) {
-        checkIndex0(index, length);
-        return unwrap().nioBuffer(idx(index), length);
+    public byte getByte(int index) {
+        checkIndex0(index, 1);
+        return unwrap().getByte(idx(index));
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int index, int length) {
-        checkIndex0(index, length);
-        return unwrap().nioBuffers(idx(index), length);
+    protected byte _getByte(int index) {
+        return unwrap().getByte(idx(index));
+    }
+
+    @Override
+    public short getShort(int index) {
+        checkIndex0(index, 2);
+        return unwrap().getShort(idx(index));
+    }
+
+    @Override
+    protected short _getShort(int index) {
+        return unwrap().getShort(idx(index));
+    }
+
+    @Override
+    public short getShortLE(int index) {
+        checkIndex0(index, 2);
+        return unwrap().getShortLE(idx(index));
+    }
+
+    @Override
+    protected short _getShortLE(int index) {
+        return unwrap().getShortLE(idx(index));
+    }
+
+    @Override
+    public int getUnsignedMedium(int index) {
+        checkIndex0(index, 3);
+        return unwrap().getUnsignedMedium(idx(index));
+    }
+
+    @Override
+    protected int _getUnsignedMedium(int index) {
+        return unwrap().getUnsignedMedium(idx(index));
+    }
+
+    @Override
+    public int getUnsignedMediumLE(int index) {
+        checkIndex0(index, 3);
+        return unwrap().getUnsignedMediumLE(idx(index));
+    }
+
+    @Override
+    protected int _getUnsignedMediumLE(int index) {
+        return unwrap().getUnsignedMediumLE(idx(index));
+    }
+
+    @Override
+    public int getInt(int index) {
+        checkIndex0(index, 4);
+        return unwrap().getInt(idx(index));
+    }
+
+    @Override
+    protected int _getInt(int index) {
+        return unwrap().getInt(idx(index));
+    }
+
+    @Override
+    public int getIntLE(int index) {
+        checkIndex0(index, 4);
+        return unwrap().getIntLE(idx(index));
+    }
+
+    @Override
+    protected int _getIntLE(int index) {
+        return unwrap().getIntLE(idx(index));
+    }
+
+    @Override
+    public long getLong(int index) {
+        checkIndex0(index, 8);
+        return unwrap().getLong(idx(index));
+    }
+
+    @Override
+    protected long _getLong(int index) {
+        return unwrap().getLong(idx(index));
+    }
+
+    @Override
+    public long getLongLE(int index) {
+        checkIndex0(index, 8);
+        return unwrap().getLongLE(idx(index));
+    }
+
+    @Override
+    protected long _getLongLE(int index) {
+        return unwrap().getLongLE(idx(index));
+    }
+
+    @Override
+    public ByteBuf duplicate() {
+        final ByteBuf duplicate = unwrap().slice(adjustment, length());
+        duplicate.setIndex(readerIndex(), writerIndex());
+        return duplicate;
     }
 
     @Override
@@ -103,127 +231,6 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
     public ByteBuf slice(int index, int length) {
         checkIndex0(index, length);
         return unwrap().slice(idx(index), length);
-    }
-
-    @Override
-    public ByteBuf retainedSlice(int index, int length) {
-        checkIndex0(index, length);
-        return PooledSlicedByteBuf.newInstance0(unwrap(), this, idx(index), length);
-    }
-
-    @Override
-    public ByteBuf duplicate() {
-        // Capacity is not allowed to change for a sliced ByteBuf, so length == capacity()
-        final ByteBuf duplicate = unwrap().slice(adjustment, capacity());
-        duplicate.setIndex(readerIndex(), writerIndex());
-        return duplicate;
-    }
-
-    @Override
-    public ByteBuf retainedDuplicate() {
-        // Capacity is not allowed to change for a sliced ByteBuf, so length == capacity()
-        final ByteBuf duplicate = retainedSlice(0, capacity());
-        duplicate.setIndex(readerIndex(), writerIndex());
-        return duplicate;
-    }
-
-    @Override
-    public byte getByte(int index) {
-        checkIndex0(index, 1);
-        return unwrap().getByte(idx(index));
-    }
-
-    @Override
-    protected byte _getByte(int index) {
-        return unwrap()._getByte(idx(index));
-    }
-
-    @Override
-    public short getShort(int index) {
-        checkIndex0(index, 2);
-        return unwrap().getShort(idx(index));
-    }
-
-    @Override
-    protected short _getShort(int index) {
-        return unwrap()._getShort(idx(index));
-    }
-
-    @Override
-    public short getShortLE(int index) {
-        checkIndex0(index, 2);
-        return unwrap().getShortLE(idx(index));
-    }
-
-    @Override
-    protected short _getShortLE(int index) {
-        return unwrap()._getShortLE(idx(index));
-    }
-
-    @Override
-    public int getUnsignedMedium(int index) {
-        checkIndex0(index, 3);
-        return unwrap().getUnsignedMedium(idx(index));
-    }
-
-    @Override
-    protected int _getUnsignedMedium(int index) {
-        return unwrap()._getUnsignedMedium(idx(index));
-    }
-
-    @Override
-    public int getUnsignedMediumLE(int index) {
-        checkIndex0(index, 3);
-        return unwrap().getUnsignedMediumLE(idx(index));
-    }
-
-    @Override
-    protected int _getUnsignedMediumLE(int index) {
-        return unwrap()._getUnsignedMediumLE(idx(index));
-    }
-
-    @Override
-    public int getInt(int index) {
-        checkIndex0(index, 4);
-        return unwrap().getInt(idx(index));
-    }
-
-    @Override
-    protected int _getInt(int index) {
-        return unwrap()._getInt(idx(index));
-    }
-
-    @Override
-    public int getIntLE(int index) {
-        checkIndex0(index, 4);
-        return unwrap().getIntLE(idx(index));
-    }
-
-    @Override
-    protected int _getIntLE(int index) {
-        return unwrap()._getIntLE(idx(index));
-    }
-
-    @Override
-    public long getLong(int index) {
-        checkIndex0(index, 8);
-        return unwrap().getLong(idx(index));
-    }
-
-    @Override
-    protected long _getLong(int index) {
-        return unwrap()._getLong(idx(index));
-    }
-
-    @Override
-    public long getLongLE(int index) {
-        checkIndex0(index, 8);
-        return unwrap().getLongLE(idx(index));
-    }
-
-    @Override
-    protected long _getLongLE(int index) {
-        return unwrap()._getLongLE(idx(index));
     }
 
     @Override
@@ -255,8 +262,14 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
     }
 
     @Override
+    public CharSequence getCharSequence(int index, int length, Charset charset) {
+        checkIndex0(index, length);
+        return buffer.getCharSequence(idx(index), length, charset);
+    }
+
+    @Override
     protected void _setByte(int index, int value) {
-        unwrap()._setByte(idx(index), value);
+        unwrap().setByte(idx(index), value);
     }
 
     @Override
@@ -268,7 +281,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setShort(int index, int value) {
-        unwrap()._setShort(idx(index), value);
+        unwrap().setShort(idx(index), value);
     }
 
     @Override
@@ -280,7 +293,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setShortLE(int index, int value) {
-        unwrap()._setShortLE(idx(index), value);
+        unwrap().setShortLE(idx(index), value);
     }
 
     @Override
@@ -292,7 +305,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setMedium(int index, int value) {
-        unwrap()._setMedium(idx(index), value);
+        unwrap().setMedium(idx(index), value);
     }
 
     @Override
@@ -304,7 +317,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setMediumLE(int index, int value) {
-        unwrap()._setMediumLE(idx(index), value);
+        unwrap().setMediumLE(idx(index), value);
     }
 
     @Override
@@ -316,7 +329,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setInt(int index, int value) {
-        unwrap()._setInt(idx(index), value);
+        unwrap().setInt(idx(index), value);
     }
 
     @Override
@@ -328,7 +341,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setIntLE(int index, int value) {
-        unwrap()._setIntLE(idx(index), value);
+        unwrap().setIntLE(idx(index), value);
     }
 
     @Override
@@ -340,7 +353,7 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     protected void _setLong(int index, long value) {
-        unwrap()._setLong(idx(index), value);
+        unwrap().setLong(idx(index), value);
     }
 
     @Override
@@ -377,69 +390,108 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
     }
 
     @Override
-    public ByteBuf getBytes(int index, OutputStream out, int length)
-            throws IOException {
+    public int setCharSequence(int index, CharSequence sequence, Charset charset) {
+        if (charset.equals(CharsetUtil.UTF_8)) {
+            checkIndex0(index, ByteBufUtil.utf8MaxBytes(sequence));
+            return ByteBufUtil.writeUtf8(this, idx(index), sequence, sequence.length());
+        }
+        if (charset.equals(CharsetUtil.US_ASCII)) {
+            int len = sequence.length();
+            checkIndex0(index, len);
+            return ByteBufUtil.writeAscii(this, idx(index), sequence, len);
+        }
+        byte[] bytes = sequence.toString().getBytes(charset);
+        checkIndex0(index, bytes.length);
+        buffer.setBytes(idx(index), bytes);
+        return bytes.length;
+    }
+
+    @Override
+    public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
         checkIndex0(index, length);
         unwrap().getBytes(idx(index), out, length);
         return this;
     }
 
     @Override
-    public int getBytes(int index, GatheringByteChannel out, int length)
-            throws IOException {
+    public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
         checkIndex0(index, length);
         return unwrap().getBytes(idx(index), out, length);
     }
 
     @Override
-    public int getBytes(int index, FileChannel out, long position, int length)
-            throws IOException {
+    public int getBytes(int index, FileChannel out, long position, int length) throws IOException {
         checkIndex0(index, length);
         return unwrap().getBytes(idx(index), out, position, length);
     }
 
     @Override
-    public int setBytes(int index, InputStream in, int length)
-            throws IOException {
+    public int setBytes(int index, InputStream in, int length) throws IOException {
         checkIndex0(index, length);
         return unwrap().setBytes(idx(index), in, length);
     }
 
     @Override
-    public int setBytes(int index, ScatteringByteChannel in, int length)
-            throws IOException {
+    public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         checkIndex0(index, length);
         return unwrap().setBytes(idx(index), in, length);
     }
 
     @Override
-    public int setBytes(int index, FileChannel in, long position, int length)
-            throws IOException {
+    public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
         checkIndex0(index, length);
         return unwrap().setBytes(idx(index), in, position, length);
+    }
+
+    @Override
+    public int nioBufferCount() {
+        return unwrap().nioBufferCount();
+    }
+
+    @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        checkIndex0(index, length);
+        return unwrap().nioBuffer(idx(index), length);
+    }
+
+    @Override
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        checkIndex0(index, length);
+        return unwrap().nioBuffers(idx(index), length);
     }
 
     @Override
     public int forEachByte(int index, int length, ByteProcessor processor) {
         checkIndex0(index, length);
         int ret = unwrap().forEachByte(idx(index), length, processor);
-        if (ret < adjustment) {
+        if (ret >= adjustment) {
+            return ret - adjustment;
+        } else {
             return -1;
         }
-        return ret - adjustment;
     }
 
     @Override
     public int forEachByteDesc(int index, int length, ByteProcessor processor) {
         checkIndex0(index, length);
         int ret = unwrap().forEachByteDesc(idx(index), length, processor);
-        if (ret < adjustment) {
+        if (ret >= adjustment) {
+            return ret - adjustment;
+        } else {
             return -1;
         }
-        return ret - adjustment;
     }
 
-    private int idx(int index) {
+    /**
+     * Returns the index with the needed adjustment.
+     */
+    final int idx(int index) {
         return index + adjustment;
+    }
+
+    static void checkSliceOutOfBounds(int index, int length, ByteBuf buffer) {
+        if (isOutOfBounds(index, length, buffer.capacity())) {
+            throw new IndexOutOfBoundsException(buffer + ".slice(" + index + ", " + length + ')');
+        }
     }
 }

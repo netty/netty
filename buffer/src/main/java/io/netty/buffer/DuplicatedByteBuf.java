@@ -47,6 +47,8 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
         if (buffer instanceof DuplicatedByteBuf) {
             this.buffer = ((DuplicatedByteBuf) buffer).buffer;
+        } else if (buffer instanceof AbstractPooledDerivedByteBuf) {
+            this.buffer = buffer.unwrap();
         } else {
             this.buffer = buffer;
         }
