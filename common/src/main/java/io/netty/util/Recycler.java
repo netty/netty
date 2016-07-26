@@ -49,8 +49,7 @@ public abstract class Recycler<T> {
     };
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger(Integer.MIN_VALUE);
     private static final int OWN_THREAD_ID = ID_GENERATOR.getAndIncrement();
-    // TODO: Some arbitrary large number - should adjust as we get more production experience.
-    private static final int DEFAULT_INITIAL_MAX_CAPACITY = 262144;
+    private static final int DEFAULT_INITIAL_MAX_CAPACITY = 32768; // Use 32k instances as default max capacity.
 
     private static final int DEFAULT_MAX_CAPACITY;
     private static final int INITIAL_CAPACITY;
