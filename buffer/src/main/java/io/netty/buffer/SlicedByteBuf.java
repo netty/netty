@@ -28,6 +28,8 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
+import static io.netty.util.internal.MathUtil.isOutOfBounds;
+
 /**
  * A derived buffer which exposes its parent's sub-region only.  It is
  * recommended to use {@link ByteBuf#slice()} and
@@ -45,7 +47,7 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
 
     public SlicedByteBuf(ByteBuf buffer, int index, int length) {
         super(length);
-        if (index < 0 || index > buffer.capacity() - length) {
+        if (isOutOfBounds(index, length, buffer.capacity())) {
             throw new IndexOutOfBoundsException(buffer + ".slice(" + index + ", " + length + ')');
         }
 
