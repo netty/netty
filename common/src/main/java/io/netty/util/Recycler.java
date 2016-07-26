@@ -17,7 +17,6 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -28,6 +27,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -55,6 +55,7 @@ public abstract class Recycler<T> {
     private static final int INITIAL_CAPACITY;
     private static final int MAX_SHARED_CAPACITY_FACTOR;
     private static final int LINK_CAPACITY;
+    private static final int RATIO;
 
     static {
         // In the future, we might have different maxCapacity for different object types.
@@ -70,18 +71,26 @@ public abstract class Recycler<T> {
                 SystemPropertyUtil.getInt("io.netty.recycler.maxSharedCapacityFactor",
                         2));
 
-        LINK_CAPACITY = MathUtil.findNextPositivePowerOfTwo(
+        LINK_CAPACITY = findNextPositivePowerOfTwo(
                 max(SystemPropertyUtil.getInt("io.netty.recycler.linkCapacity", 16), 16));
+
+        // By default we allow one push to a Recycler for each 8th try on handles that were never recycled before.
+        // This should help to slowly increase the capacity of the recycler while not be too sensitive to allocation
+        // bursts.
+        RATIO = min(findNextPositivePowerOfTwo(
+                max(SystemPropertyUtil.getInt("io.netty.recycler.ratio", 8), 2)), 0x40000000);
 
         if (logger.isDebugEnabled()) {
             if (DEFAULT_MAX_CAPACITY == 0) {
                 logger.debug("-Dio.netty.recycler.maxCapacity: disabled");
                 logger.debug("-Dio.netty.recycler.maxSharedCapacityFactor: disabled");
                 logger.debug("-Dio.netty.recycler.linkCapacity: disabled");
+                logger.debug("-Dio.netty.recycler.ratio: disabled");
             } else {
                 logger.debug("-Dio.netty.recycler.maxCapacity: {}", DEFAULT_MAX_CAPACITY);
                 logger.debug("-Dio.netty.recycler.maxSharedCapacityFactor: {}", MAX_SHARED_CAPACITY_FACTOR);
                 logger.debug("-Dio.netty.recycler.linkCapacity: {}", LINK_CAPACITY);
+                logger.debug("-Dio.netty.recycler.ratio: {}", RATIO);
             }
         }
 
@@ -90,11 +99,12 @@ public abstract class Recycler<T> {
 
     private final int maxCapacity;
     private final int maxSharedCapacityFactor;
+    private final int ratioMask;
 
     private final FastThreadLocal<Stack<T>> threadLocal = new FastThreadLocal<Stack<T>>() {
         @Override
         protected Stack<T> initialValue() {
-            return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacity, maxSharedCapacityFactor);
+            return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacity, maxSharedCapacityFactor, ratioMask);
         }
     };
 
@@ -107,6 +117,14 @@ public abstract class Recycler<T> {
     }
 
     protected Recycler(int maxCapacity, int maxSharedCapacityFactor) {
+        this(maxCapacity, maxSharedCapacityFactor, RATIO);
+    }
+
+    protected Recycler(int maxCapacity, int maxSharedCapacityFactor, int ratio) {
+        if (ratio > 0x40000000) {
+            throw new IllegalArgumentException(ratio + ": " + ratio + " (expected: < 0x40000000)");
+        }
+        ratioMask = findNextPositivePowerOfTwo(ratio) - 1;
         if (maxCapacity <= 0) {
             this.maxCapacity = 0;
             this.maxSharedCapacityFactor = 1;
@@ -166,6 +184,8 @@ public abstract class Recycler<T> {
         private int lastRecycledId;
         private int recycleId;
 
+        boolean hasBeenRecycled;
+
         private Stack<?> stack;
         private Object value;
 
@@ -178,6 +198,7 @@ public abstract class Recycler<T> {
             if (object != value) {
                 throw new IllegalArgumentException("object does not belong to handle");
             }
+
             Thread thread = Thread.currentThread();
             if (thread == stack.thread) {
                 stack.push(this);
@@ -337,11 +358,15 @@ public abstract class Recycler<T> {
                     } else if (element.recycleId != element.lastRecycledId) {
                         throw new IllegalStateException("recycled already");
                     }
+                    srcElems[i] = null;
+
+                    if (dst.dropHandle(element)) {
+                        // Drop the object.
+                        continue;
+                    }
                     element.stack = dst;
                     dstElems[newDstSize ++] = element;
-                    srcElems[i] = null;
                 }
-                dst.size = newDstSize;
 
                 if (srcEnd == LINK_CAPACITY && head.next != null) {
                     // Add capacity back as the Link is GCed.
@@ -351,6 +376,10 @@ public abstract class Recycler<T> {
                 }
 
                 head.readIndex = srcEnd;
+                if (dst.size == newDstSize) {
+                    return false;
+                }
+                dst.size = newDstSize;
                 return true;
             } else {
                 // The destination stack is full already.
@@ -385,18 +414,21 @@ public abstract class Recycler<T> {
         final Thread thread;
         private DefaultHandle<?>[] elements;
         private final int maxCapacity;
+        private final int ratioMask;
         private int size;
+        private int handleRecycleCount = -1; // Start with -1 so the first one will be recycled.
         final AtomicInteger availableSharedCapacity;
 
         private volatile WeakOrderQueue head;
         private WeakOrderQueue cursor, prev;
 
-        Stack(Recycler<T> parent, Thread thread, int maxCapacity, int maxSharedCapacityFactor) {
+        Stack(Recycler<T> parent, Thread thread, int maxCapacity, int maxSharedCapacityFactor, int ratioMask) {
             this.parent = parent;
             this.thread = thread;
             this.maxCapacity = maxCapacity;
             availableSharedCapacity = new AtomicInteger(max(maxCapacity / maxSharedCapacityFactor, LINK_CAPACITY));
             elements = new DefaultHandle[min(INITIAL_CAPACITY, maxCapacity)];
+            this.ratioMask = ratioMask;
         }
 
         int increaseCapacity(int expectedCapacity) {
@@ -501,8 +533,8 @@ public abstract class Recycler<T> {
             item.recycleId = item.lastRecycledId = OWN_THREAD_ID;
 
             int size = this.size;
-            if (size >= maxCapacity) {
-                // Hit the maximum capacity - drop the possibly youngest object.
+            if (size >= maxCapacity || dropHandle(item)) {
+                // Hit the maximum capacity or should drop - drop the possibly youngest object.
                 return;
             }
             if (size == elements.length) {
@@ -511,6 +543,17 @@ public abstract class Recycler<T> {
 
             elements[size] = item;
             this.size = size + 1;
+        }
+
+        boolean dropHandle(DefaultHandle<?> handle) {
+            if (!handle.hasBeenRecycled) {
+                if ((++handleRecycleCount & ratioMask) != 0) {
+                    // Drop the object.
+                    return true;
+                }
+                handle.hasBeenRecycled = true;
+            }
+            return false;
         }
 
         DefaultHandle<T> newHandle() {
