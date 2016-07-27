@@ -178,14 +178,10 @@ public class QueryStringDecoder {
     public String path() {
         if (path == null) {
             if (!hasPath) {
-                return path = "";
-            }
-
-            int pathEndPos = uri.indexOf('?');
-            if (pathEndPos < 0) {
-                path = uri;
+                path = "";
             } else {
-                return path = uri.substring(0, pathEndPos);
+                int pathEndPos = uri.indexOf('?');
+                path = decodeComponent(pathEndPos < 0 ? uri : uri.substring(0, pathEndPos), this.charset);
             }
         }
         return path;
@@ -197,16 +193,18 @@ public class QueryStringDecoder {
     public Map<String, List<String>> parameters() {
         if (params == null) {
             if (hasPath) {
-                int pathLength = path().length();
-                if (uri.length() == pathLength) {
-                    return Collections.emptyMap();
+                int pathEndPos = uri.indexOf('?');
+                if (pathEndPos >= 0 && pathEndPos < uri.length() - 1) {
+                    decodeParams(uri.substring(pathEndPos + 1));
+                } else {
+                    params = Collections.emptyMap();
                 }
-                decodeParams(uri.substring(pathLength + 1));
             } else {
                 if (uri.isEmpty()) {
-                    return Collections.emptyMap();
+                    params = Collections.emptyMap();
+                } else {
+                    decodeParams(uri);
                 }
-                decodeParams(uri);
             }
         }
         return params;
