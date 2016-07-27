@@ -331,16 +331,12 @@ public final class NativeLibraryLoader {
         if (classUrl == null) {
             throw new ClassNotFoundException(clazz.getName());
         }
-        byte[] buf = new byte[1024];
+        byte[] buf = new byte[8192];
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         InputStream in = null;
         try {
             in = classUrl.openStream();
-            while (true) {
-                int r = in.read(buf);
-                if (r == -1) {
-                    break;
-                }
+            for (int r; (r = in.read(buf)) != -1;) {
                 out.write(buf, 0, r);
             }
             return out.toByteArray();
