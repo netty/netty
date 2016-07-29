@@ -15,24 +15,21 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.dns.DatagramDnsQuery;
-import io.netty.handler.codec.dns.DefaultDnsRawRecord;
+import io.netty.handler.codec.dns.AbstractDnsOptPseudoRrRecord;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
-import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -49,7 +46,7 @@ final class DnsQueryContext {
     private final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise;
     private final int id;
     private final DnsQuestion question;
-    private final Iterable<DnsRecord> additional;
+    private final DnsRecord[] additionals;
     private final DnsRecord optResource;
     private final InetSocketAddress nameServerAddr;
 
@@ -59,20 +56,21 @@ final class DnsQueryContext {
     DnsQueryContext(DnsNameResolver parent,
                     InetSocketAddress nameServerAddr,
                     DnsQuestion question,
-                    Iterable<DnsRecord> additional,
+                    DnsRecord[] additionals,
                     Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
 
         this.parent = checkNotNull(parent, "parent");
         this.nameServerAddr = checkNotNull(nameServerAddr, "nameServerAddr");
         this.question = checkNotNull(question, "question");
-        this.additional = checkNotNull(additional, "additional");
+        this.additionals = checkNotNull(additionals, "additionals");
         this.promise = checkNotNull(promise, "promise");
         recursionDesired = parent.isRecursionDesired();
         id = parent.queryContextManager.add(this);
 
         if (parent.isOptResourceEnabled()) {
-            optResource = new DefaultDnsRawRecord(
-                    StringUtil.EMPTY_STRING, DnsRecordType.OPT, parent.maxPayloadSize(), 0, Unpooled.EMPTY_BUFFER);
+            optResource = new AbstractDnsOptPseudoRrRecord(parent.maxPayloadSize(), 0, 0) {
+                // We may want to remove this in the future and let the user just specify the opt record in the query.
+            };
         } else {
             optResource = null;
         }
@@ -95,9 +93,10 @@ final class DnsQueryContext {
 
         query.addRecord(DnsSection.QUESTION, question);
 
-        for (DnsRecord record:additional) {
+        for (DnsRecord record: additionals) {
             query.addRecord(DnsSection.ADDITIONAL, record);
         }
+
         if (optResource != null) {
             query.addRecord(DnsSection.ADDITIONAL, optResource);
         }
