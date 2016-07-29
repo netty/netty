@@ -1414,11 +1414,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 public void run() {
                     logger.warn("{} Last write attempt timed out; force-closing the connection.", ctx.channel());
 
-                    // We notify the promise in the TryNotifyListener as there is a "race" where the close(...) call
-                    // by the timeoutFuture and the close call in the flushFuture listener will be called. Because of
-                    // this we need to use trySuccess() and tryFailure(...) as otherwise we can cause an
-                    // IllegalStateException.
-                    ctx.close(ctx.newPromise()).addListener(new ChannelPromiseNotifier(promise));
+                    addCloseListener(ctx.close(ctx.newPromise()), promise);
                 }
             }, closeNotifyTimeoutMillis, TimeUnit.MILLISECONDS);
         } else {
@@ -1435,14 +1431,19 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
                 // Trigger the close in all cases to make sure the promise is notified
                 // See https://github.com/netty/netty/issues/2358
-                //
-                // We notify the promise in the ChannelPromiseNotifier as there is a "race" where the close(...) call
-                // by the timeoutFuture and the close call in the flushFuture listener will be called. Because of
-                // this we need to use trySuccess() and tryFailure(...) as otherwise we can cause an
-                // IllegalStateException.
-                ctx.close(ctx.newPromise()).addListener(new ChannelPromiseNotifier(promise));
+                addCloseListener(ctx.close(ctx.newPromise()), promise);
             }
         });
+    }
+
+    private static void addCloseListener(ChannelFuture future, ChannelPromise promise) {
+        // We notify the promise in the ChannelPromiseNotifier as there is a "race" where the close(...) call
+        // by the timeoutFuture and the close call in the flushFuture listener will be called. Because of
+        // this we need to use trySuccess() and tryFailure(...) as otherwise we can cause an
+        // IllegalStateException.
+        // Also we not want to log if the notification happens as this is expected in some cases.
+        // See https://github.com/netty/netty/issues/5598
+        future.addListener(new ChannelPromiseNotifier(false, promise));
     }
 
     /**
