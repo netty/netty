@@ -20,82 +20,46 @@ import org.junit.Test;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 public class RecyclerTest {
 
+    private static Recycler<HandledObject> newRecycler(int max) {
+        return new Recycler<HandledObject>(max) {
+            @Override
+            protected HandledObject newObject(
+                    Recycler.Handle<HandledObject> handle) {
+                return new HandledObject(handle);
+            }
+        };
+    }
+
     @Test(expected = IllegalStateException.class)
     public void testMultipleRecycle() {
-        RecyclableObject object = RecyclableObject.newInstance();
+        Recycler<HandledObject> recycler = newRecycler(1024);
+        HandledObject object = recycler.get();
         object.recycle();
         object.recycle();
     }
 
     @Test
     public void testRecycle() {
-        RecyclableObject object = RecyclableObject.newInstance();
+        Recycler<HandledObject> recycler = newRecycler(1024);
+        HandledObject object = recycler.get();
         object.recycle();
-        RecyclableObject object2 = RecyclableObject.newInstance();
+        HandledObject object2 = recycler.get();
         assertSame(object, object2);
         object2.recycle();
     }
 
     @Test
     public void testRecycleDisable() {
-        DisabledRecyclableObject object = DisabledRecyclableObject.newInstance();
+        Recycler<HandledObject> recycler = newRecycler(-1);
+        HandledObject object = recycler.get();
         object.recycle();
-        DisabledRecyclableObject object2 = DisabledRecyclableObject.newInstance();
+        HandledObject object2 = recycler.get();
         assertNotSame(object, object2);
         object2.recycle();
-    }
-
-    static final class RecyclableObject {
-
-        private static final Recycler<RecyclableObject> RECYCLER = new Recycler<RecyclableObject>() {
-            @Override
-            protected RecyclableObject newObject(Handle<RecyclableObject> handle) {
-                return new RecyclableObject(handle);
-            }
-        };
-
-        private final Recycler.Handle<RecyclableObject> handle;
-
-        private RecyclableObject(Recycler.Handle<RecyclableObject> handle) {
-            this.handle = handle;
-        }
-
-        public static RecyclableObject newInstance() {
-            return RECYCLER.get();
-        }
-
-        public void recycle() {
-            handle.recycle(this);
-        }
-    }
-
-    static final class DisabledRecyclableObject {
-
-        private static final Recycler<DisabledRecyclableObject> RECYCLER = new Recycler<DisabledRecyclableObject>(-1) {
-            @Override
-            protected DisabledRecyclableObject newObject(Handle<DisabledRecyclableObject> handle) {
-                return new DisabledRecyclableObject(handle);
-            }
-        };
-
-        private final Recycler.Handle<DisabledRecyclableObject> handle;
-
-        private DisabledRecyclableObject(Recycler.Handle<DisabledRecyclableObject> handle) {
-            this.handle = handle;
-        }
-
-        public static DisabledRecyclableObject newInstance() {
-            return RECYCLER.get();
-        }
-
-        public void recycle() {
-            handle.recycle(this);
-        }
     }
 
     /**
@@ -111,15 +75,8 @@ public class RecyclerTest {
         }
     }
 
-    void testMaxCapacity(int maxCapacity) {
-        Recycler<HandledObject> recycler = new Recycler<HandledObject>(maxCapacity) {
-            @Override
-            protected HandledObject newObject(
-                    Recycler.Handle<HandledObject> handle) {
-                return new HandledObject(handle);
-            }
-        };
-
+    private static void testMaxCapacity(int maxCapacity) {
+        Recycler<HandledObject> recycler = newRecycler(maxCapacity);
         HandledObject[] objects = new HandledObject[maxCapacity * 3];
         for (int i = 0; i < objects.length; i++) {
             objects[i] = recycler.get();
@@ -130,12 +87,14 @@ public class RecyclerTest {
             objects[i] = null;
         }
 
-        assertEquals(maxCapacity, recycler.threadLocalCapacity());
+        assertTrue("The threadLocalCapacity (" + recycler.threadLocalCapacity() + ") must be <= maxCapacity ("
+                + maxCapacity + ") as we not pool all new handles internally",
+                maxCapacity >= recycler.threadLocalCapacity());
     }
 
     @Test
     public void testRecycleAtDifferentThread() throws Exception {
-        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(256) {
+        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(256, 10, 2) {
             @Override
             protected HandledObject newObject(Recycler.Handle<HandledObject> handle) {
                 return new HandledObject(handle);
@@ -143,27 +102,25 @@ public class RecyclerTest {
         };
 
         final HandledObject o = recycler.get();
+        final HandledObject o2 = recycler.get();
         final Thread thread = new Thread() {
             @Override
             public void run() {
                 o.recycle();
+                o2.recycle();
             }
         };
         thread.start();
         thread.join();
 
-        assertThat(recycler.get(), is(sameInstance(o)));
+        assertSame(recycler.get(), o);
+        assertNotSame(recycler.get(), o2);
     }
 
     @Test
     public void testMaxCapacityWithRecycleAtDifferentThread() throws Exception {
         final int maxCapacity = 4; // Choose the number smaller than WeakOrderQueue.LINK_CAPACITY
-        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(maxCapacity) {
-            @Override
-            protected HandledObject newObject(Recycler.Handle handle) {
-                return new HandledObject(handle);
-            }
-        };
+        final Recycler<HandledObject> recycler = newRecycler(maxCapacity);
 
         // Borrow 2 * maxCapacity objects.
         // Return the half from the same thread.
@@ -189,15 +146,15 @@ public class RecyclerTest {
         thread.start();
         thread.join();
 
-        assertThat(recycler.threadLocalCapacity(), is(maxCapacity));
-        assertThat(recycler.threadLocalSize(), is(maxCapacity));
+        assertEquals(maxCapacity, recycler.threadLocalCapacity());
+        assertEquals(1, recycler.threadLocalSize());
 
         for (int i = 0; i < array.length; i ++) {
             recycler.get();
         }
 
-        assertThat(recycler.threadLocalCapacity(), is(maxCapacity));
-        assertThat(recycler.threadLocalSize(), is(0));
+        assertEquals(maxCapacity, recycler.threadLocalCapacity());
+        assertEquals(0, recycler.threadLocalSize());
     }
 
     @Test
@@ -244,7 +201,9 @@ public class RecyclerTest {
         }
 
         // The implementation uses maxCapacity / 2 as limit per WeakOrderQueue
-        assertEquals(array.length - maxCapacity / 2, instancesCount.get());
+        assertTrue("The instances count (" +  instancesCount.get() + ") must be <= array.length (" + array.length
+                + ") - maxCapacity (" + maxCapacity + ") / 2 as we not pool all new handles" +
+                " internally", array.length - maxCapacity / 2 <= instancesCount.get());
     }
 
     static final class HandledObject {
