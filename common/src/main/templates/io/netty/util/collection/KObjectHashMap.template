@@ -15,7 +15,7 @@
 
 package io.netty.util.collection;
 
-import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
+import static io.netty.util.internal.MathUtil.safeFindNextPositivePowerOfTwo;
 
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
@@ -77,9 +77,6 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
     }
 
     public @K@ObjectHashMap(int initialCapacity, float loadFactor) {
-        if (initialCapacity < 1) {
-            throw new IllegalArgumentException("initialCapacity must be >= 1");
-        }
         if (loadFactor <= 0.0f || loadFactor > 1.0f) {
             // Cannot exceed 1 because we can never store more than capacity elements;
             // using a bigger loadFactor would trigger rehashing before the desired load is reached.
@@ -89,7 +86,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
         this.loadFactor = loadFactor;
 
         // Adjust the initial capacity if necessary.
-        int capacity = findNextPositivePowerOfTwo(initialCapacity);
+        int capacity = safeFindNextPositivePowerOfTwo(initialCapacity);
         mask = capacity - 1;
 
         // Allocate the arrays.
