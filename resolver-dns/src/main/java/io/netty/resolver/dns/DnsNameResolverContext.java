@@ -74,6 +74,7 @@ abstract class DnsNameResolverContext<T> {
     private final boolean traceEnabled;
     private final int maxAllowedQueries;
     private final InternetProtocolFamily[] resolveAddressTypes;
+    private final DnsRecord[] additionals;
 
     private final Set<Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> queriesInProgress =
             Collections.newSetFromMap(
@@ -86,9 +87,11 @@ abstract class DnsNameResolverContext<T> {
 
     protected DnsNameResolverContext(DnsNameResolver parent,
                                      String hostname,
+                                     DnsRecord[] additionals,
                                      DnsCache resolveCache) {
         this.parent = parent;
         this.hostname = hostname;
+        this.additionals = additionals;
         this.resolveCache = resolveCache;
 
         nameServerAddrs = parent.nameServerAddresses.stream();
@@ -114,9 +117,9 @@ abstract class DnsNameResolverContext<T> {
                     } else if (count < parent.searchDomains().length) {
                         String searchDomain = parent.searchDomains()[count++];
                         Promise<T> nextPromise = parent.executor().newPromise();
-                        String nextHostname = DnsNameResolverContext.this.hostname + "." + searchDomain;
+                        String nextHostname = hostname + '.' + searchDomain;
                         DnsNameResolverContext<T> nextContext = newResolverContext(parent,
-                            nextHostname, resolveCache);
+                            nextHostname, additionals, resolveCache);
                         nextContext.pristineHostname = hostname;
                         nextContext.internalResolve(nextPromise);
                         nextPromise.addListener(this);
@@ -167,7 +170,9 @@ abstract class DnsNameResolverContext<T> {
 
         allowedQueries --;
 
-        final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = parent.query(nameServerAddr, question);
+        final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = parent.query0(
+                nameServerAddr, question, additionals,
+                parent.ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
         queriesInProgress.add(f);
 
         f.addListener(new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
@@ -288,7 +293,7 @@ abstract class DnsNameResolverContext<T> {
             }
 
             final DnsCacheEntry e = new DnsCacheEntry(hostname, resolved);
-            resolveCache.cache(hostname, resolved, r.timeToLive(), parent.ch.eventLoop());
+            resolveCache.cache(hostname, additionals, resolved, r.timeToLive(), parent.ch.eventLoop());
             resolvedEntries.add(e);
             found = true;
 
@@ -475,7 +480,7 @@ abstract class DnsNameResolverContext<T> {
         }
         final UnknownHostException cause = new UnknownHostException(buf.toString());
 
-        resolveCache.cache(hostname, cause, parent.ch.eventLoop());
+        resolveCache.cache(hostname, additionals, cause, parent.ch.eventLoop());
         promise.tryFailure(cause);
     }
 
@@ -483,7 +488,7 @@ abstract class DnsNameResolverContext<T> {
                                    Promise<T> promise);
 
     abstract DnsNameResolverContext<T> newResolverContext(DnsNameResolver parent, String hostname,
-                                                          DnsCache resolveCache);
+                                                          DnsRecord[] additionals, DnsCache resolveCache);
 
     static String decodeDomainName(ByteBuf in) {
         in.markReaderIndex();

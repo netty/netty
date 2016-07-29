@@ -16,10 +16,13 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.Test;
+
+import java.net.InetAddress;
 
 import static org.junit.Assert.assertEquals;
 
@@ -62,5 +65,83 @@ public class DefaultDnsRecordEncoderTest {
             out.release();
             expectedBuf.release();
         }
+    }
+
+    @Test
+    public void testOptEcsRecordIpv4() throws Exception {
+        testOptEcsRecordIp(InetAddress.getByName("1.2.3.4"));
+    }
+
+    @Test
+    public void testOptEcsRecordIpv6() throws Exception {
+        testOptEcsRecordIp(InetAddress.getByName("::0"));
+    }
+
+    private static void testOptEcsRecordIp(InetAddress address) throws Exception {
+        int addressBits = address.getAddress().length * Byte.SIZE;
+        for (int i = 0; i <= addressBits; ++i) {
+            testIp(address, i);
+        }
+    }
+
+    private static void testIp(InetAddress address, int prefix) throws Exception {
+        int lowOrderBitsToPreserve = prefix % Byte.SIZE;
+
+        ByteBuf addressPart = Unpooled.wrappedBuffer(address.getAddress(), 0,
+                DefaultDnsRecordEncoder.calculateEcsAddressLength(prefix, lowOrderBitsToPreserve));
+
+        if (lowOrderBitsToPreserve > 0) {
+            // Pad the leftover of the last byte with zeros.
+            int idx = addressPart.writerIndex() - 1;
+            byte lastByte = addressPart.getByte(idx);
+            addressPart.setByte(idx, DefaultDnsRecordEncoder.padWithZeros(lastByte, lowOrderBitsToPreserve));
+        }
+
+        int payloadSize = nextInt(Short.MAX_VALUE);
+        int extendedRcode = nextInt(Byte.MAX_VALUE * 2); // Unsigned
+        int version = nextInt(Byte.MAX_VALUE * 2); // Unsigned
+
+        DefaultDnsRecordEncoder encoder = new DefaultDnsRecordEncoder();
+        ByteBuf out = Unpooled.buffer();
+        try {
+            DnsOptEcsRecord record = new DefaultDnsOptEcsRecord(
+                    payloadSize, extendedRcode, version, prefix, address.getAddress());
+            encoder.encodeRecord(record, out);
+
+            assertEquals(0, out.readByte()); // Name
+            assertEquals(DnsRecordType.OPT.intValue(), out.readUnsignedShort()); // Opt
+            assertEquals(payloadSize, out.readUnsignedShort()); // payload
+            assertEquals(record.timeToLive(), out.getUnsignedInt(out.readerIndex()));
+
+            // Read unpacked TTL.
+            assertEquals(extendedRcode, out.readUnsignedByte());
+            assertEquals(version, out.readUnsignedByte());
+            assertEquals(extendedRcode, record.extendedRcode());
+            assertEquals(version, record.version());
+            assertEquals(0, record.flags());
+
+            assertEquals(0, out.readShort());
+
+            int payloadLength = out.readUnsignedShort();
+            assertEquals(payloadLength, out.readableBytes());
+
+            assertEquals(8, out.readShort()); // As defined by RFC.
+
+            int rdataLength = out.readUnsignedShort();
+            assertEquals(rdataLength, out.readableBytes());
+
+            assertEquals((short) InternetProtocolFamily.of(address).addressNumber(), out.readShort());
+
+            assertEquals(prefix, out.readUnsignedByte());
+            assertEquals(0, out.readUnsignedByte()); // This must be 0 for requests.
+            assertEquals(addressPart, out);
+        } finally {
+            addressPart.release();
+            out.release();
+        }
+    }
+
+    private static int nextInt(int max) {
+        return ThreadLocalRandom.current().nextInt(0, max);
     }
 }
