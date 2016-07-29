@@ -67,6 +67,7 @@ public class IntObjectHashMap<V> implements IntObjectMap<V>, Iterable<IntObjectM
         if (initialCapacity < 1) {
             throw new IllegalArgumentException("initialCapacity must be >= 1");
         }
+
         if (loadFactor <= 0.0f || loadFactor > 1.0f) {
             // Cannot exceed 1 because we can never store more than capacity elements;
             // using a bigger loadFactor would trigger rehashing before the desired load is reached.
