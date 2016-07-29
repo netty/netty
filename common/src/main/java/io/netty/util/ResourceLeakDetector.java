@@ -193,15 +193,12 @@ public class ResourceLeakDetector<T> {
         if (resourceType == null) {
             throw new NullPointerException("resourceType");
         }
-        if (samplingInterval <= 0) {
-            throw new IllegalArgumentException("samplingInterval: " + samplingInterval + " (expected: 1+)");
-        }
         if (maxActive <= 0) {
             throw new IllegalArgumentException("maxActive: " + maxActive + " (expected: 1+)");
         }
 
         this.resourceType = resourceType;
-        this.samplingInterval = MathUtil.findNextPositivePowerOfTwo(samplingInterval);
+        this.samplingInterval = MathUtil.safeFindNextPositivePowerOfTwo(samplingInterval);
         // samplingInterval is a power of two so we calculate a mask that we can use to
         // check if we need to do any leak detection or not.
         mask = this.samplingInterval - 1;
