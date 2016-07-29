@@ -21,7 +21,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * {@link GenericFutureListener} implementation which takes other {@link Future}s
+ * {@link GenericFutureListener} implementation which takes other {@link Promise}s
  * and notifies them on completion.
  *
  * @param <V> the type of value returned by the future
@@ -31,6 +31,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PromiseNotifier.class);
     private final Promise<? super V>[] promises;
+    private final boolean logNotifyFailure;
 
     /**
      * Create a new instance.
@@ -39,6 +40,17 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
      */
     @SafeVarargs
     public PromiseNotifier(Promise<? super V>... promises) {
+        this(true, promises);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param logNotifyFailure {@code true} if logging should be done in case notification fails.
+     * @param promises  the {@link Promise}s to notify once this {@link GenericFutureListener} is notified.
+     */
+    @SafeVarargs
+    public PromiseNotifier(boolean logNotifyFailure, Promise<? super V>... promises) {
         checkNotNull(promises, "promises");
         for (Promise<? super V> promise: promises) {
             if (promise == null) {
@@ -46,6 +58,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
             }
         }
         this.promises = promises.clone();
+        this.logNotifyFailure = logNotifyFailure;
     }
 
     @Override
@@ -53,20 +66,20 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
         if (future.isSuccess()) {
             V result = future.get();
             for (Promise<? super V> p: promises) {
-                if (!p.trySuccess(result)) {
+                if (!p.trySuccess(result) && logNotifyFailure) {
                     logger.warn("Failed to mark a promise as success because it is done already: {}", p);
                 }
             }
         } else if (future.isCancelled()) {
             for (Promise<? super V> p: promises) {
-                if (!p.cancel(false)) {
+                if (!p.cancel(false) && logNotifyFailure) {
                     logger.warn("Failed to cancel a promise because it is done already: {}", p);
                 }
             }
         } else {
             Throwable cause = future.cause();
             for (Promise<? super V> p: promises) {
-                if (!p.tryFailure(cause)) {
+                if (!p.tryFailure(cause) && logNotifyFailure) {
                     logger.warn("Failed to mark a promise as failure because it's done already: {}", p, cause);
                 }
             }
