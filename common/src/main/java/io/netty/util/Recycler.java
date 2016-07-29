@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
+import static io.netty.util.internal.MathUtil.safeFindNextPositivePowerOfTwo;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -71,14 +71,13 @@ public abstract class Recycler<T> {
                 SystemPropertyUtil.getInt("io.netty.recycler.maxSharedCapacityFactor",
                         2));
 
-        LINK_CAPACITY = findNextPositivePowerOfTwo(
+        LINK_CAPACITY = safeFindNextPositivePowerOfTwo(
                 max(SystemPropertyUtil.getInt("io.netty.recycler.linkCapacity", 16), 16));
 
         // By default we allow one push to a Recycler for each 8th try on handles that were never recycled before.
         // This should help to slowly increase the capacity of the recycler while not be too sensitive to allocation
         // bursts.
-        RATIO = min(findNextPositivePowerOfTwo(
-                max(SystemPropertyUtil.getInt("io.netty.recycler.ratio", 8), 2)), 0x40000000);
+        RATIO = safeFindNextPositivePowerOfTwo(SystemPropertyUtil.getInt("io.netty.recycler.ratio", 8));
 
         if (logger.isDebugEnabled()) {
             if (DEFAULT_MAX_CAPACITY == 0) {
@@ -121,10 +120,7 @@ public abstract class Recycler<T> {
     }
 
     protected Recycler(int maxCapacity, int maxSharedCapacityFactor, int ratio) {
-        if (ratio > 0x40000000) {
-            throw new IllegalArgumentException(ratio + ": " + ratio + " (expected: < 0x40000000)");
-        }
-        ratioMask = findNextPositivePowerOfTwo(ratio) - 1;
+        ratioMask = safeFindNextPositivePowerOfTwo(ratio) - 1;
         if (maxCapacity <= 0) {
             this.maxCapacity = 0;
             this.maxSharedCapacityFactor = 1;
