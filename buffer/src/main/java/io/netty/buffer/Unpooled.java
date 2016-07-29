@@ -309,13 +309,14 @@ public final class Unpooled {
             }
             break;
         default:
-            for (ByteBuf b: buffers) {
-                if (b.isReadable()) {
-                    return new CompositeByteBuf(ALLOC, false, maxNumComponents, buffers);
-                } else {
-                    b.release();
+            for (int i = 0; i < buffers.length; i++) {
+                ByteBuf buf = buffers[i];
+                if (buf.isReadable()) {
+                    return new CompositeByteBuf(ALLOC, false, maxNumComponents, buffers, i, buffers.length);
                 }
+                buf.release();
             }
+            break;
         }
         return EMPTY_BUFFER;
     }
