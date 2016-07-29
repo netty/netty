@@ -628,4 +628,22 @@ public class UnpooledTest {
         ByteBuf buf = freeLater(buffer(8));
         buf.skipBytes(-1);
     }
+
+    // See https://github.com/netty/netty/issues/5597
+    @Test
+    public void testWrapByteBufArrayStartsWithNonReadable() {
+        ByteBuf buffer1 = buffer(8);
+        ByteBuf buffer2 = buffer(8).writeZero(8); // Ensure the ByteBuf is readable.
+        ByteBuf buffer3 = buffer(8);
+        ByteBuf buffer4 = buffer(8).writeZero(8); // Ensure the ByteBuf is readable.
+
+        ByteBuf wrapped = wrappedBuffer(buffer1, buffer2, buffer3, buffer4);
+        assertEquals(16, wrapped.readableBytes());
+        assertTrue(wrapped.release());
+        assertEquals(0, buffer1.refCnt());
+        assertEquals(0, buffer2.refCnt());
+        assertEquals(0, buffer3.refCnt());
+        assertEquals(0, buffer4.refCnt());
+        assertEquals(0, wrapped.refCnt());
+    }
 }
