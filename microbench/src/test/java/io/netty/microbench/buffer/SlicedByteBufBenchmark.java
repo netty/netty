@@ -17,7 +17,6 @@ package io.netty.microbench.buffer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.SlicedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -42,7 +41,7 @@ public class SlicedByteBufBenchmark extends AbstractMicrobenchmark {
     public void setup() {
         // Use buffer sizes that will also allow to write UTF-8 without grow the buffer
         ByteBuf buffer = Unpooled.buffer(512).retain();
-        slicedByteBuf = new SlicedByteBuf(buffer, 0, 256);
+        slicedByteBuf = buffer.slice(0, 256);
         slicedAbstractByteBuf = buffer.slice(0, 256);
 
         if (slicedByteBuf.getClass() == slicedAbstractByteBuf.getClass()) {

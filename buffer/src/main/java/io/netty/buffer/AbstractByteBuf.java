@@ -1165,7 +1165,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf duplicate() {
-        return new DuplicatedAbstractByteBuf(this);
+        return new UnpooledDuplicatedByteBuf(this);
     }
 
     @Override
@@ -1185,7 +1185,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf slice(int index, int length) {
-        return new SlicedAbstractByteBuf(this, index, length);
+        return new UnpooledSlicedByteBuf(this, index, length);
     }
 
     @Override

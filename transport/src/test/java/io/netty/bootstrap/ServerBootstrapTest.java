@@ -15,13 +15,21 @@
  */
 package io.netty.bootstrap;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import org.junit.Test;
 
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -56,6 +64,76 @@ public class ServerBootstrapTest {
             latch.await();
             assertNull(error.get());
         } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test(timeout = 3000)
+    public void testParentHandler() throws Exception {
+        testParentHandler(false);
+    }
+
+    @Test(timeout = 3000)
+    public void testParentHandlerViaChannelInitializer() throws Exception {
+        testParentHandler(true);
+    }
+
+    private static void testParentHandler(boolean channelInitializer) throws Exception {
+        final LocalAddress addr = new LocalAddress(UUID.randomUUID().toString());
+        final CountDownLatch readLatch = new CountDownLatch(1);
+        final CountDownLatch initLatch = new CountDownLatch(1);
+
+        final ChannelHandler handler = new ChannelInboundHandlerAdapter() {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                initLatch.countDown();
+                super.handlerAdded(ctx);
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                readLatch.countDown();
+                super.channelRead(ctx, msg);
+            }
+        };
+
+        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        Channel sch = null;
+        Channel cch = null;
+        try {
+            ServerBootstrap sb = new ServerBootstrap();
+            sb.channel(LocalServerChannel.class)
+                    .group(group)
+                    .childHandler(new ChannelInboundHandlerAdapter());
+            if (channelInitializer) {
+                sb.handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) throws Exception {
+                        ch.pipeline().addLast(handler);
+                    }
+                });
+            } else {
+                sb.handler(handler);
+            }
+
+            Bootstrap cb = new Bootstrap();
+            cb.group(group)
+                    .channel(LocalChannel.class)
+                    .handler(new ChannelInboundHandlerAdapter());
+
+            sch = sb.bind(addr).syncUninterruptibly().channel();
+
+            cch = cb.connect(addr).syncUninterruptibly().channel();
+
+            initLatch.await();
+            readLatch.await();
+        } finally {
+            if (sch != null) {
+                sch.close().syncUninterruptibly();
+            }
+            if (cch != null) {
+                cch.close().syncUninterruptibly();
+            }
             group.shutdownGracefully();
         }
     }

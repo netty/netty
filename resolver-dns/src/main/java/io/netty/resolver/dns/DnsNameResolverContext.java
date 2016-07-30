@@ -123,14 +123,18 @@ abstract class DnsNameResolverContext<T> {
                     }
                 }
             });
-            int dots = 0;
-            for (int idx = hostname.length() - 1; idx >= 0; idx--) {
-                if (hostname.charAt(idx) == '.' && ++dots >= parent.ndots()) {
-                    internalResolve(promise);
-                    return;
+            if (parent.ndots() == 0) {
+                internalResolve(promise);
+            } else {
+                int dots = 0;
+                for (int idx = hostname.length() - 1; idx >= 0; idx--) {
+                    if (hostname.charAt(idx) == '.' && ++dots >= parent.ndots()) {
+                        internalResolve(promise);
+                        return;
+                    }
                 }
+                promise.tryFailure(new UnknownHostException(hostname));
             }
-            promise.tryFailure(new UnknownHostException(hostname));
         }
     }
 

@@ -38,6 +38,14 @@ public class QueryStringDecoderTest {
     public void testBasic() throws Exception {
         QueryStringDecoder d;
 
+        d = new QueryStringDecoder("/foo");
+        Assert.assertEquals("/foo", d.path());
+        Assert.assertEquals(0, d.parameters().size());
+
+        d = new QueryStringDecoder("/foo%20bar");
+        Assert.assertEquals("/foo bar", d.path());
+        Assert.assertEquals(0, d.parameters().size());
+
         d = new QueryStringDecoder("/foo?a=b=c");
         Assert.assertEquals("/foo", d.path());
         Assert.assertEquals(1, d.parameters().size());
@@ -46,6 +54,13 @@ public class QueryStringDecoderTest {
 
         d = new QueryStringDecoder("/foo?a=1&a=2");
         Assert.assertEquals("/foo", d.path());
+        Assert.assertEquals(1, d.parameters().size());
+        Assert.assertEquals(2, d.parameters().get("a").size());
+        Assert.assertEquals("1", d.parameters().get("a").get(0));
+        Assert.assertEquals("2", d.parameters().get("a").get(1));
+
+        d = new QueryStringDecoder("/foo%20bar?a=1&a=2");
+        Assert.assertEquals("/foo bar", d.path());
         Assert.assertEquals(1, d.parameters().size());
         Assert.assertEquals(2, d.parameters().get("a").size());
         Assert.assertEquals("1", d.parameters().get("a").get(0));
@@ -85,6 +100,8 @@ public class QueryStringDecoderTest {
     public void testExotic() throws Exception {
         assertQueryString("", "");
         assertQueryString("foo", "foo");
+        assertQueryString("foo", "foo?");
+        assertQueryString("/foo", "/foo?");
         assertQueryString("/foo", "/foo");
         assertQueryString("?a=", "?a");
         assertQueryString("foo?a=", "foo?a");

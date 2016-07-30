@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static io.netty.handler.codec.compression.Snappy.validateChecksum;
@@ -45,7 +44,7 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
         RESERVED_SKIPPABLE
     }
 
-    private static final byte[] SNAPPY = { 's', 'N', 'a', 'P', 'p', 'Y' };
+    private static final int SNAPPY_IDENTIFIER_LEN = 6;
     private static final int MAX_UNCOMPRESSED_DATA_SIZE = 65536 + 4;
 
     private final Snappy snappy = new Snappy();
@@ -98,21 +97,24 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
 
             switch (chunkType) {
                 case STREAM_IDENTIFIER:
-                    if (chunkLength != SNAPPY.length) {
+                    if (chunkLength != SNAPPY_IDENTIFIER_LEN) {
                         throw new DecompressionException("Unexpected length of stream identifier: " + chunkLength);
                     }
 
-                    if (inSize < 4 + SNAPPY.length) {
+                    if (inSize < 4 + SNAPPY_IDENTIFIER_LEN) {
                         break;
                     }
 
-                    byte[] identifier = new byte[chunkLength];
-                    in.skipBytes(4).readBytes(identifier);
+                    in.skipBytes(4);
+                    int offset = in.readerIndex();
+                    in.skipBytes(SNAPPY_IDENTIFIER_LEN);
 
-                    if (!Arrays.equals(identifier, SNAPPY)) {
-                        throw new DecompressionException("Unexpected stream identifier contents. Mismatched snappy " +
-                                "protocol version?");
-                    }
+                    checkByte(in.getByte(offset++), (byte) 's');
+                    checkByte(in.getByte(offset++), (byte) 'N');
+                    checkByte(in.getByte(offset++), (byte) 'a');
+                    checkByte(in.getByte(offset++), (byte) 'P');
+                    checkByte(in.getByte(offset++), (byte) 'p');
+                    checkByte(in.getByte(offset), (byte) 'Y');
 
                     started = true;
                     break;
@@ -166,26 +168,40 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
 
                     in.skipBytes(4);
                     int checksum = in.readIntLE();
-                    ByteBuf uncompressed = ctx.alloc().buffer(0);
-                    if (validateChecksums) {
-                        int oldWriterIndex = in.writerIndex();
-                        try {
-                            in.writerIndex(in.readerIndex() + chunkLength - 4);
-                            snappy.decode(in, uncompressed);
-                        } finally {
-                            in.writerIndex(oldWriterIndex);
+                    ByteBuf uncompressed = ctx.alloc().buffer();
+                    try {
+                        if (validateChecksums) {
+                            int oldWriterIndex = in.writerIndex();
+                            try {
+                                in.writerIndex(in.readerIndex() + chunkLength - 4);
+                                snappy.decode(in, uncompressed);
+                            } finally {
+                                in.writerIndex(oldWriterIndex);
+                            }
+                            validateChecksum(checksum, uncompressed, 0, uncompressed.writerIndex());
+                        } else {
+                            snappy.decode(in.readSlice(chunkLength - 4), uncompressed);
                         }
-                        validateChecksum(checksum, uncompressed, 0, uncompressed.writerIndex());
-                    } else {
-                        snappy.decode(in.readSlice(chunkLength - 4), uncompressed);
+                        out.add(uncompressed);
+                        uncompressed = null;
+                    } finally {
+                        if (uncompressed != null) {
+                            uncompressed.release();
+                        }
                     }
-                    out.add(uncompressed);
                     snappy.reset();
                     break;
             }
         } catch (Exception e) {
             corrupted = true;
             throw e;
+        }
+    }
+
+    private static void checkByte(byte actual, byte expect) {
+        if (actual != expect) {
+            throw new DecompressionException("Unexpected stream identifier contents. Mismatched snappy " +
+                    "protocol version?");
         }
     }
 

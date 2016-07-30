@@ -48,6 +48,7 @@ public class SearchDomainTest {
 
     private TestDnsServer dnsServer;
     private EventLoopGroup group;
+    private DnsNameResolver resolver;
 
     @Before
     public void before() {
@@ -59,6 +60,9 @@ public class SearchDomainTest {
         if (dnsServer != null) {
             dnsServer.stop();
             dnsServer = null;
+        }
+        if (resolver != null) {
+            resolver.close();
         }
         group.shutdownGracefully();
     }
@@ -77,7 +81,7 @@ public class SearchDomainTest {
         dnsServer = new TestDnsServer(store);
         dnsServer.start();
 
-        DnsNameResolver resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).build();
+        resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).build();
 
         String a = "host1.foo.com";
         String resolved = assertResolve(resolver, a);
@@ -124,7 +128,7 @@ public class SearchDomainTest {
         dnsServer = new TestDnsServer(store);
         dnsServer.start();
 
-        DnsNameResolver resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).build();
+        resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).build();
 
         String a = "host1.foo.com";
         List<String> resolved = assertResolveAll(resolver, a);
@@ -169,7 +173,7 @@ public class SearchDomainTest {
         dnsServer = new TestDnsServer(store);
         dnsServer.start();
 
-        DnsNameResolver resolver = newResolver().searchDomains(Arrays.asList("foo.com", "bar.com")).build();
+        resolver = newResolver().searchDomains(Arrays.asList("foo.com", "bar.com")).build();
 
         // "host1" resolves via the "foo.com" search path
         String resolved = assertResolve(resolver, "host1");
@@ -198,7 +202,7 @@ public class SearchDomainTest {
         dnsServer = new TestDnsServer(store);
         dnsServer.start();
 
-        DnsNameResolver resolver = newResolver().searchDomains(Collections.singleton("foo.com")).ndots(2).build();
+        resolver = newResolver().searchDomains(Collections.singleton("foo.com")).ndots(2).build();
 
         String resolved = assertResolve(resolver, "host1.sub");
         assertEquals(store.getAddress("host1.sub.foo.com"), resolved);
@@ -206,6 +210,32 @@ public class SearchDomainTest {
         // "host2.sub" is resolved with the foo.com search domain as ndots = 2
         resolved = assertResolve(resolver, "host2.sub");
         assertEquals(store.getAddress("host2.sub.foo.com"), resolved);
+    }
+
+    @Test
+    public void testSearchDomainWithNdots0() throws Exception {
+        Set<String> domains = new HashSet<String>();
+        domains.add("host1");
+        domains.add("host1.foo.com");
+        domains.add("host2.foo.com");
+
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(domains);
+        dnsServer = new TestDnsServer(store);
+        dnsServer.start();
+
+        resolver = newResolver().searchDomains(Collections.singleton("foo.com")).ndots(0).build();
+
+        // "host1" resolves directly as ndots = 0
+        String resolved = assertResolve(resolver, "host1");
+        assertEquals(store.getAddress("host1"), resolved);
+
+        // "host1.foo.com" resolves to host1.foo
+        resolved = assertResolve(resolver, "host1.foo.com");
+        assertEquals(store.getAddress("host1.foo.com"), resolved);
+
+        // "host2" resolves to host2.foo.com with the foo.com search domain
+        resolved = assertResolve(resolver, "host2");
+        assertEquals(store.getAddress("host2.foo.com"), resolved);
     }
 
     private void assertNotResolve(DnsNameResolver resolver, String inetHost) throws InterruptedException {
