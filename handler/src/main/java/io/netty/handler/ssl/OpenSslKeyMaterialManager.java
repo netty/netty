@@ -23,7 +23,9 @@ import javax.security.auth.x500.X500Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Manages key material for {@link OpenSslEngine}s and so set the right {@link PrivateKey}s and
@@ -66,10 +68,14 @@ class OpenSslKeyMaterialManager {
     void setKeyMaterial(OpenSslEngine engine) throws SSLException {
         long ssl = engine.sslPointer();
         String[] authMethods = SSL.authenticationMethods(ssl);
+        Set<String> aliases = new HashSet<String>(authMethods.length);
         for (String authMethod : authMethods) {
             String type = KEY_TYPES.get(authMethod);
             if (type != null) {
-                setKeyMaterial(ssl, chooseServerAlias(engine, type));
+                String alias = chooseServerAlias(engine, type);
+                if (alias != null && aliases.add(alias)) {
+                    setKeyMaterial(ssl, alias);
+                }
             }
         }
     }
@@ -87,7 +93,7 @@ class OpenSslKeyMaterialManager {
             X509Certificate[] certificates = keyManager.getCertificateChain(alias);
 
             if (certificates != null && certificates.length != 0) {
-                keyCertChainBio = OpenSslContext.toBIO(keyManager.getCertificateChain(alias));
+                keyCertChainBio = OpenSslContext.toBIO(certificates);
                 if (key != null) {
                     keyBio = OpenSslContext.toBIO(key);
                 }
