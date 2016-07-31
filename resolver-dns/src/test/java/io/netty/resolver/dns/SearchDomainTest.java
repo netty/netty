@@ -24,6 +24,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,7 +35,10 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.core.StringContains.containsString;
 
 public class SearchDomainTest {
 
@@ -264,5 +268,24 @@ public class SearchDomainTest {
             list.add(addr.getHostAddress());
         }
         return list;
+    }
+
+    @Test
+    public void testExceptionMsgNoSearchDomain() throws Exception {
+        Set<String> domains = new HashSet<String>();
+
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(domains);
+        dnsServer = new TestDnsServer(store);
+        dnsServer.start();
+
+        resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).build();
+
+        Future<InetAddress> fut = resolver.resolve("unknown.hostname");
+        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        assertFalse(fut.isSuccess());
+        final Throwable cause = fut.cause();
+        assertEquals(UnknownHostException.class, cause.getClass());
+        assertThat("search domain is included in UnknownHostException", cause.getMessage(),
+            not(containsString("foo.com")));
     }
 }
