@@ -18,6 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SelectStrategy;
+import io.netty.channel.SendDirectByteBufPool;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.epoll.AbstractEpollChannel.AbstractEpollUnsafe;
 import io.netty.channel.unix.FileDescriptor;
@@ -60,6 +61,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private final boolean allowGrowing;
     private final EpollEventArray events;
     private final IovArray iovArray = new IovArray();
+    private final SendDirectByteBufPool sendBufferPool = new SendDirectByteBufPool();
     private final SelectStrategy selectStrategy;
     private final IntSupplier selectNowSupplier = new IntSupplier() {
         @Override
@@ -125,6 +127,10 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     IovArray cleanArray() {
         iovArray.clear();
         return iovArray;
+    }
+
+    SendDirectByteBufPool bufferPool() {
+        return sendBufferPool;
     }
 
     @Override
@@ -424,6 +430,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             // release native memory
             iovArray.release();
             events.free();
+            sendBufferPool.release();
         }
     }
 }
