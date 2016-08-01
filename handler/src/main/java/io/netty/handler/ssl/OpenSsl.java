@@ -28,6 +28,8 @@ import org.apache.tomcat.jni.Pool;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -50,6 +52,7 @@ public final class OpenSsl {
     private static final Set<String> AVAILABLE_OPENSSL_CIPHER_SUITES;
     private static final Set<String> AVAILABLE_JAVA_CIPHER_SUITES;
     private static final boolean SUPPORTS_KEYMANAGER_FACTORY;
+    private static final boolean USE_KEYMANAGER_FACTORY;
 
     // Protocols
     static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
@@ -120,6 +123,7 @@ public final class OpenSsl {
         if (cause == null) {
             final Set<String> availableOpenSslCipherSuites = new LinkedHashSet<String>(128);
             boolean supportsKeyManagerFactory = false;
+            boolean useKeyManagerFactory = false;
             final long aprPool = Pool.create(0);
             try {
                 final long sslCtx = SSLContext.make(aprPool, SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
@@ -142,6 +146,13 @@ public final class OpenSsl {
                             certBio = OpenSslContext.toBIO(cert.cert());
                             SSL.setCertificateChainBio(ssl, certBio, false);
                             supportsKeyManagerFactory = true;
+                            useKeyManagerFactory = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                                @Override
+                                public Boolean run() {
+                                    return SystemPropertyUtil.getBoolean(
+                                            "io.netty.handler.ssl.openssl.useKeyManagerFactory", true);
+                                }
+                            });
                         } catch (Throwable ignore) {
                             logger.debug("KeyManagerFactory not supported.");
                         }
@@ -183,11 +194,13 @@ public final class OpenSsl {
             }
             AVAILABLE_CIPHER_SUITES = availableCipherSuites;
             SUPPORTS_KEYMANAGER_FACTORY = supportsKeyManagerFactory;
+            USE_KEYMANAGER_FACTORY = useKeyManagerFactory;
         } else {
             AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_JAVA_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_CIPHER_SUITES = Collections.emptySet();
             SUPPORTS_KEYMANAGER_FACTORY = false;
+            USE_KEYMANAGER_FACTORY = false;
         }
     }
 
@@ -294,6 +307,10 @@ public final class OpenSsl {
      */
     public static boolean supportsKeyManagerFactory() {
         return SUPPORTS_KEYMANAGER_FACTORY;
+    }
+
+    static boolean useKeyManagerFactory() {
+        return USE_KEYMANAGER_FACTORY;
     }
 
     static boolean isError(long errorCode) {

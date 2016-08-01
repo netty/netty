@@ -352,7 +352,7 @@ public final class OpenSslServerContext extends OpenSslContext {
             synchronized (OpenSslContext.class) {
                 try {
                     SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
-                    if (!OpenSsl.supportsKeyManagerFactory()) {
+                    if (!OpenSsl.useKeyManagerFactory()) {
                         if (keyManagerFactory != null) {
                             throw new IllegalArgumentException(
                                     "KeyManagerFactory not supported");
