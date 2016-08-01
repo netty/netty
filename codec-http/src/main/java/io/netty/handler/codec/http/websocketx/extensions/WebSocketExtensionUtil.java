@@ -18,7 +18,6 @@ package io.netty.handler.codec.http.websocketx.extensions;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,8 +30,8 @@ import java.util.regex.Pattern;
 
 public final class WebSocketExtensionUtil {
 
-    private static final char EXTENSION_SEPARATOR = ',';
-    private static final char PARAMETER_SEPARATOR = ';';
+    private static final String EXTENSION_SEPARATOR = ",";
+    private static final String PARAMETER_SEPARATOR = ";";
     private static final char PARAMETER_EQUAL = '=';
 
     private static final Pattern PARAMETER = Pattern.compile("^([^=]+)(=[\\\"]?([^\\\"]+)[\\\"]?)?$");
@@ -43,11 +42,11 @@ public final class WebSocketExtensionUtil {
     }
 
     public static List<WebSocketExtensionData> extractExtensions(String extensionHeader) {
-        String[] rawExtensions = StringUtil.split(extensionHeader, EXTENSION_SEPARATOR);
+        String[] rawExtensions = extensionHeader.split(EXTENSION_SEPARATOR);
         if (rawExtensions.length > 0) {
             List<WebSocketExtensionData> extensions = new ArrayList<WebSocketExtensionData>(rawExtensions.length);
             for (String rawExtension : rawExtensions) {
-                String[] extensionParameters = StringUtil.split(rawExtension, PARAMETER_SEPARATOR);
+                String[] extensionParameters = rawExtension.split(PARAMETER_SEPARATOR);
                 String name = extensionParameters[0].trim();
                 Map<String, String> parameters;
                 if (extensionParameters.length > 1) {
@@ -60,7 +59,7 @@ public final class WebSocketExtensionUtil {
                         }
                     }
                 } else {
-                    parameters = Collections.<String, String>emptyMap();
+                    parameters = Collections.emptyMap();
                 }
                 extensions.add(new WebSocketExtensionData(name, parameters));
             }
@@ -74,19 +73,14 @@ public final class WebSocketExtensionUtil {
             Map<String, String> extensionParameters) {
 
         StringBuilder newHeaderValue = new StringBuilder(
-                currentHeaderValue != null ? currentHeaderValue.length() : 0 + extensionName.length() + 1);
+                currentHeaderValue != null ? currentHeaderValue.length() : extensionName.length() + 1);
         if (currentHeaderValue != null && !currentHeaderValue.trim().isEmpty()) {
             newHeaderValue.append(currentHeaderValue);
             newHeaderValue.append(EXTENSION_SEPARATOR);
         }
         newHeaderValue.append(extensionName);
-        boolean isFirst = true;
         for (Entry<String, String> extensionParameter : extensionParameters.entrySet()) {
-            if (isFirst) {
-                newHeaderValue.append(PARAMETER_SEPARATOR);
-            } else {
-                isFirst = false;
-            }
+            newHeaderValue.append(PARAMETER_SEPARATOR);
             newHeaderValue.append(extensionParameter.getKey());
             if (extensionParameter.getValue() != null) {
                 newHeaderValue.append(PARAMETER_EQUAL);

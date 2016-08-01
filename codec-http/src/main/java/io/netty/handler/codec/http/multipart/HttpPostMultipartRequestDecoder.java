@@ -704,7 +704,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 if (checkSecondArg) {
                     // read next values and store them in the map as Attribute
                     for (int i = 2; i < contents.length; i++) {
-                        String[] values = StringUtil.split(contents[i], '=', 2);
+                        String[] values = contents[i].split("=", 2);
                         Attribute attribute;
                         try {
                             String name = cleanString(values[0]);
@@ -1825,7 +1825,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         if (svalue.indexOf(';') >= 0) {
             values = splitMultipartHeaderValues(svalue);
         } else {
-            values = StringUtil.split(svalue, ',');
+            values = svalue.split(",");
         }
         for (String value : values) {
             headers.add(value.trim());

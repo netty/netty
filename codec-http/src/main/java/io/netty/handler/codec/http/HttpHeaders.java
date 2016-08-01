@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
-import io.netty.util.internal.StringUtil;
 
 import java.text.ParseException;
 import java.util.Calendar;
@@ -1591,7 +1590,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     private static boolean contains(String value, CharSequence expected, boolean ignoreCase) {
-        String[] parts = StringUtil.split(value, ',');
+        String[] parts = value.split(",");
         if (ignoreCase) {
             for (String s: parts) {
                 if (AsciiString.contentEqualsIgnoreCase(expected, s.trim())) {

@@ -34,7 +34,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThrowableUtil;
 
 import java.net.URI;
@@ -224,7 +223,7 @@ public abstract class WebSocketClientHandshaker {
             setActualSubprotocol(expectedSubprotocol); // null or "" - we echo what the user requested
         } else if (!expectedProtocol.isEmpty() && receivedProtocol != null && !receivedProtocol.isEmpty()) {
             // We require a subprotocol and received one -> verify it
-            for (String protocol : StringUtil.split(expectedSubprotocol, ',')) {
+            for (String protocol : expectedProtocol.split(",")) {
                 if (protocol.trim().equals(receivedProtocol)) {
                     protocolValid = true;
                     setActualSubprotocol(receivedProtocol);
