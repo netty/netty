@@ -307,7 +307,9 @@ public class DnsNameResolver extends InetNameResolver {
      */
     @Override
     public void close() {
-        ch.close();
+        if (ch.isOpen()) {
+            ch.close();
+        }
     }
 
     @Override
