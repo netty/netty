@@ -17,6 +17,8 @@ package io.netty.util.internal;
 
 import org.junit.Test;
 
+import java.util.Arrays;
+
 import static io.netty.util.internal.StringUtil.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
@@ -48,33 +50,48 @@ public class StringUtilTest {
 
     @Test
     public void splitSimple() {
-        assertArrayEquals(new String[] { "foo", "bar" }, split("foo:bar", ':'));
+        assertArrayEquals(new String[] { "foo", "bar" }, "foo:bar".split(":"));
     }
 
     @Test
     public void splitWithTrailingDelimiter() {
-        assertArrayEquals(new String[] { "foo", "bar" }, split("foo,bar,", ','));
+        assertArrayEquals(new String[] { "foo", "bar" }, "foo,bar,".split(","));
     }
 
     @Test
     public void splitWithTrailingDelimiters() {
-        assertArrayEquals(new String[] { "foo", "bar" }, split("foo!bar!!", '!'));
+        assertArrayEquals(new String[] { "foo", "bar" }, "foo!bar!!".split("!"));
+    }
+
+    @Test
+    public void splitWithTrailingDelimitersDot() {
+        assertArrayEquals(new String[] { "foo", "bar" }, "foo.bar..".split("\\."));
+    }
+
+    @Test
+    public void splitWithTrailingDelimitersEq() {
+        assertArrayEquals(new String[] { "foo", "bar" }, "foo=bar==".split("="));
+    }
+
+    @Test
+    public void splitWithTrailingDelimitersSpace() {
+        assertArrayEquals(new String[] { "foo", "bar" }, "foo bar  ".split(" "));
     }
 
     @Test
     public void splitWithConsecutiveDelimiters() {
-        assertArrayEquals(new String[] { "foo", "", "bar" }, split("foo$$bar", '$'));
+        assertArrayEquals(new String[] { "foo", "", "bar" }, "foo$$bar".split("\\$"));
     }
 
     @Test
     public void splitWithDelimiterAtBeginning() {
-        assertArrayEquals(new String[] { "", "foo", "bar" }, split("#foo#bar", '#'));
+        assertArrayEquals(new String[] { "", "foo", "bar" }, "#foo#bar".split("#"));
     }
 
     @Test
     public void splitMaxPart() {
-        assertArrayEquals(new String[] { "foo", "bar:bar2" }, split("foo:bar:bar2", ':', 2));
-        assertArrayEquals(new String[] { "foo", "bar", "bar2" }, split("foo:bar:bar2", ':', 3));
+        assertArrayEquals(new String[] { "foo", "bar:bar2" }, "foo:bar:bar2".split(":", 2));
+        assertArrayEquals(new String[] { "foo", "bar", "bar2" }, "foo:bar:bar2".split(":", 3));
     }
 
     @Test

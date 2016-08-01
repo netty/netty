@@ -33,7 +33,6 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -85,7 +84,7 @@ public abstract class WebSocketServerHandshaker {
         this.version = version;
         this.uri = uri;
         if (subprotocols != null) {
-            String[] subprotocolArray = StringUtil.split(subprotocols, ',');
+            String[] subprotocolArray = subprotocols.split(",");
             for (int i = 0; i < subprotocolArray.length; i++) {
                 subprotocolArray[i] = subprotocolArray[i].trim();
             }
@@ -344,7 +343,7 @@ public abstract class WebSocketServerHandshaker {
             return null;
         }
 
-        String[] requestedSubprotocolArray = StringUtil.split(requestedSubprotocols, ',');
+        String[] requestedSubprotocolArray = requestedSubprotocols.split(",");
         for (String p: requestedSubprotocolArray) {
             String requestedSubprotocol = p.trim();
 
