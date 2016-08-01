@@ -204,7 +204,7 @@ public final class OpenSslClientContext extends OpenSslContext {
             }
             synchronized (OpenSslContext.class) {
                 try {
-                    if (!OpenSsl.supportsKeyManagerFactory()) {
+                    if (!OpenSsl.useKeyManagerFactory()) {
                         if (keyManagerFactory != null) {
                             throw new IllegalArgumentException(
                                     "KeyManagerFactory not supported");
