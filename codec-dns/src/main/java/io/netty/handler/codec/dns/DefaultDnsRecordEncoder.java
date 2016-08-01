@@ -87,7 +87,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
             return;
         }
 
-        final String[] labels = StringUtil.split(name, '.');
+        final String[] labels = name.split("\\.");
         for (String label : labels) {
             final int labelLen = label.length();
             if (labelLen == 0) {

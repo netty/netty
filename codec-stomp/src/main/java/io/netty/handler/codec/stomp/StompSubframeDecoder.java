@@ -24,7 +24,6 @@ import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.stomp.StompSubframeDecoder.State;
 import io.netty.util.internal.AppendableCharSequence;
-import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 import java.util.Locale;
@@ -212,7 +211,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         for (;;) {
             String line = readLine(buffer, maxLineLength);
             if (!line.isEmpty()) {
-                String[] split = StringUtil.split(line, ':');
+                String[] split = line.split(":");
                 if (split.length == 2) {
                     headers.add(split[0], split[1]);
                 }
