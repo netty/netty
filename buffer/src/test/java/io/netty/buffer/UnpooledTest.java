@@ -482,7 +482,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, copyInt(null).capacity());
-        assertEquals(0, copyInt(EMPTY_INTS).capacity());
+        assertEquals(0, copyInt(new int[] {}).capacity());
     }
 
     @Test
@@ -502,7 +502,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, copyShort((short[]) null).capacity());
-        assertEquals(0, copyShort(EMPTY_SHORTS).capacity());
+        assertEquals(0, copyShort(new short[] {}).capacity());
     }
 
     @Test
@@ -514,7 +514,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, copyShort((int[]) null).capacity());
-        assertEquals(0, copyShort(EMPTY_INTS).capacity());
+        assertEquals(0, copyShort(new int[] {}).capacity());
     }
 
     @Test
@@ -534,7 +534,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, copyMedium(null).capacity());
-        assertEquals(0, copyMedium(EMPTY_INTS).capacity());
+        assertEquals(0, copyMedium(new int[] {}).capacity());
     }
 
     @Test
@@ -554,7 +554,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, copyLong(null).capacity());
-        assertEquals(0, copyLong(EMPTY_LONGS).capacity());
+        assertEquals(0, copyLong(new long[] {}).capacity());
     }
 
     @Test
@@ -574,7 +574,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, copyFloat(null).capacity());
-        assertEquals(0, copyFloat(EMPTY_FLOATS).capacity());
+        assertEquals(0, copyFloat(new float[] {}).capacity());
     }
 
     @Test
@@ -594,7 +594,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, copyDouble(null).capacity());
-        assertEquals(0, copyDouble(EMPTY_DOUBLES).capacity());
+        assertEquals(0, copyDouble(new double[] {}).capacity());
     }
 
     @Test
@@ -606,7 +606,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, copyBoolean(null).capacity());
-        assertEquals(0, copyBoolean(EMPTY_BOOLEANS).capacity());
+        assertEquals(0, copyBoolean(new boolean[] {}).capacity());
     }
 
     @Test
