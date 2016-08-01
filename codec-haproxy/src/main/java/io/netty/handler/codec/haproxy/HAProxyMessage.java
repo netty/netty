@@ -20,7 +20,6 @@ import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.StringUtil;
 
 /**
  * Message container for decoded HAProxy proxy protocol parameters
@@ -227,7 +226,7 @@ public final class HAProxyMessage {
             throw new HAProxyProtocolException("header");
         }
 
-        String[] parts = StringUtil.split(header, ' ');
+        String[] parts = header.split(" ");
         int numParts = parts.length;
 
         if (numParts < 2) {

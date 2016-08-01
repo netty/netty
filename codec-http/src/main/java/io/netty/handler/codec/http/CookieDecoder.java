@@ -19,7 +19,6 @@ import static io.netty.handler.codec.http.CookieUtil.firstInvalidCookieNameOctet
 import static io.netty.handler.codec.http.CookieUtil.firstInvalidCookieValueOctet;
 import static io.netty.handler.codec.http.CookieUtil.unwrapValue;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -64,8 +63,6 @@ public final class CookieDecoder {
     private static final String PORT = "Port";
 
     private static final String VERSION = "Version";
-
-    private static final char COMMA = ',';
 
     private final boolean strict;
 
@@ -169,7 +166,7 @@ public final class CookieDecoder {
                 } else if (VERSION.equalsIgnoreCase(name)) {
                     version = Integer.parseInt(value);
                 } else if (PORT.equalsIgnoreCase(name)) {
-                    String[] portList = StringUtil.split(value, COMMA);
+                    String[] portList = value.split(",");
                     for (String s1: portList) {
                         try {
                             ports.add(Integer.valueOf(s1));
