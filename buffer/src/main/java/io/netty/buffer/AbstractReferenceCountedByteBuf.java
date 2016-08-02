@@ -59,11 +59,8 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     public ByteBuf retain() {
         for (;;) {
             int refCnt = this.refCnt;
-            if (refCnt == 0) {
-                throw new IllegalReferenceCountException(0, 1);
-            }
-            if (refCnt == Integer.MAX_VALUE) {
-                throw new IllegalReferenceCountException(Integer.MAX_VALUE, 1);
+            if (refCnt == 0 || refCnt == Integer.MAX_VALUE) {
+                throw new IllegalReferenceCountException(refCnt, 1);
             }
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt + 1)) {
                 break;
@@ -79,14 +76,12 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         }
 
         for (;;) {
+            final int nextCnt;
             int refCnt = this.refCnt;
-            if (refCnt == 0) {
-                throw new IllegalReferenceCountException(0, increment);
-            }
-            if (refCnt > Integer.MAX_VALUE - increment) {
+            if (refCnt == 0 || (nextCnt = refCnt + increment) < 0) {
                 throw new IllegalReferenceCountException(refCnt, increment);
             }
-            if (refCntUpdater.compareAndSet(this, refCnt, refCnt + increment)) {
+            if (refCntUpdater.compareAndSet(this, refCnt, nextCnt)) {
                 break;
             }
         }
