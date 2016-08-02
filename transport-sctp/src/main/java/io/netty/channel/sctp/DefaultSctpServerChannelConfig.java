@@ -17,7 +17,6 @@ package io.netty.channel.sctp;
 
 import com.sun.nio.sctp.SctpServerChannel;
 import com.sun.nio.sctp.SctpStandardSocketOptions;
-import com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
@@ -66,6 +65,9 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
         if (option == ChannelOption.SO_SNDBUF) {
             return (T) Integer.valueOf(getSendBufferSize());
         }
+        if (option == SctpChannelOption.SCTP_INIT_MAXSTREAMS) {
+            return (T) getInitMaxStreams();
+        }
         return super.getOption(option);
     }
 
@@ -78,7 +80,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
         } else if (option == ChannelOption.SO_SNDBUF) {
             setSendBufferSize((Integer) value);
         } else if (option == SctpChannelOption.SCTP_INIT_MAXSTREAMS) {
-            setInitMaxStreams((InitMaxStreams) value);
+            setInitMaxStreams((SctpStandardSocketOptions.InitMaxStreams) value);
         } else {
             return super.setOption(option, value);
         }
@@ -125,7 +127,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     }
 
     @Override
-    public InitMaxStreams getInitMaxStreams() {
+    public SctpStandardSocketOptions.InitMaxStreams getInitMaxStreams() {
         try {
             return javaChannel.getOption(SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS);
         } catch (IOException e) {
@@ -134,7 +136,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     }
 
     @Override
-    public SctpServerChannelConfig setInitMaxStreams(InitMaxStreams initMaxStreams) {
+    public SctpServerChannelConfig setInitMaxStreams(SctpStandardSocketOptions.InitMaxStreams initMaxStreams) {
         try {
             javaChannel.setOption(SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS, initMaxStreams);
         } catch (IOException e) {
