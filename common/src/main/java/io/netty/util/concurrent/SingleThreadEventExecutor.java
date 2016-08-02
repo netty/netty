@@ -696,7 +696,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 return true;
             }
 
-            // There were tasks in the queue. Wait a little bit more until no tasks are queued for the quiet period.
+            // There were tasks in the queue. Wait a little bit more until no tasks are queued for the quiet period or
+            // terminate if the quiet period is 0.
+            // See https://github.com/netty/netty/issues/4241
+            if (gracefulShutdownQuietPeriod == 0) {
+                return true;
+            }
             wakeup(true);
             return false;
         }
