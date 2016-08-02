@@ -15,20 +15,17 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.ThreadLocalRandom;
-
-import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Base implementation of {@link Constant}.
  */
 public abstract class AbstractConstant<T extends AbstractConstant<T>> implements Constant<T> {
 
+    private static final AtomicLong uniqueIdGenerator = new AtomicLong();
     private final int id;
     private final String name;
-    private volatile long uniquifier;
-    private ByteBuffer directBuffer;
+    private final long uniquifier;
 
     /**
      * Creates a new instance.
@@ -36,6 +33,7 @@ public abstract class AbstractConstant<T extends AbstractConstant<T>> implements
     protected AbstractConstant(int id, String name) {
         this.id = id;
         this.name = name;
+        this.uniquifier = uniqueIdGenerator.getAndIncrement();
     }
 
     @Override
@@ -78,34 +76,14 @@ public abstract class AbstractConstant<T extends AbstractConstant<T>> implements
             return returnCode;
         }
 
-        long thisUV = uniquifier();
-        long otherUV = other.uniquifier();
-        if (thisUV < otherUV) {
+        if (uniquifier < other.uniquifier) {
             return -1;
         }
-        if (thisUV > otherUV) {
+        if (uniquifier > other.uniquifier) {
             return 1;
         }
 
         throw new Error("failed to compare two different constants");
     }
 
-    private long uniquifier() {
-        long uniquifier;
-        if ((uniquifier = this.uniquifier) == 0) {
-            synchronized (this) {
-                while ((uniquifier = this.uniquifier) == 0) {
-                    if (PlatformDependent.hasUnsafe()) {
-                        directBuffer = ByteBuffer.allocateDirect(1);
-                        this.uniquifier = PlatformDependent.directBufferAddress(directBuffer);
-                    } else {
-                        directBuffer = null;
-                        this.uniquifier = ThreadLocalRandom.current().nextLong();
-                    }
-                }
-            }
-        }
-
-        return uniquifier;
-    }
 }
