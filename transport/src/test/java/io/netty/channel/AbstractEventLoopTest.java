@@ -21,7 +21,10 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.Future;
 import org.junit.Test;
+
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -58,6 +61,24 @@ public abstract class AbstractEventLoopTest {
         EventExecutor executorNew = channel.pipeline().context(TestChannelHandler.class).executor();
         assertNotSame(executor1, executorNew);
         assertSame(executor, future.channel().pipeline().context(TestChannelHandler2.class).executor());
+    }
+
+    @Test(timeout = 5000)
+    public void testShutdownGracefullyNoQuietPeriod() throws Exception {
+        EventLoopGroup loop = newEventLoopGroup();
+        ServerBootstrap b = new ServerBootstrap();
+        b.group(loop)
+                .channel(newChannel())
+                .childHandler(new ChannelInboundHandlerAdapter());
+
+        // Not close the Channel to ensure the EventLoop is still shutdown in time.
+        b.bind(0).sync().channel();
+
+        Future<?> f = loop.shutdownGracefully(0, 1, TimeUnit.MINUTES);
+        assertTrue(loop.awaitTermination(2, TimeUnit.SECONDS));
+        assertTrue(f.syncUninterruptibly().isSuccess());
+        assertTrue(loop.isShutdown());
+        assertTrue(loop.isTerminated());
     }
 
     private static final class TestChannelHandler extends ChannelDuplexHandler { }
