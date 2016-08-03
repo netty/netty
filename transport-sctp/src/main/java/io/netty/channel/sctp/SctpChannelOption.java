@@ -25,18 +25,21 @@ import java.net.SocketAddress;
  */
 public final class SctpChannelOption<T> extends ChannelOption<T> {
 
-    @SuppressWarnings("rawtypes")
-    private static final Class<SctpChannelOption> T = SctpChannelOption.class;
+    public static final ChannelOption<Boolean> SCTP_DISABLE_FRAGMENTS =
+            valueOf(SctpChannelOption.class, "SCTP_DISABLE_FRAGMENTS");
+    public static final ChannelOption<Boolean> SCTP_EXPLICIT_COMPLETE =
+            valueOf(SctpChannelOption.class, "SCTP_EXPLICIT_COMPLETE");
+    public static final ChannelOption<Integer> SCTP_FRAGMENT_INTERLEAVE =
+            valueOf(SctpChannelOption.class, "SCTP_FRAGMENT_INTERLEAVE");
+    public static final ChannelOption<InitMaxStreams> SCTP_INIT_MAXSTREAMS =
+            valueOf(SctpChannelOption.class, "SCTP_INIT_MAXSTREAMS");
 
-    public static final ChannelOption<Boolean> SCTP_DISABLE_FRAGMENTS = valueOf(T, "SCTP_DISABLE_FRAGMENTS");
-    public static final ChannelOption<Boolean> SCTP_EXPLICIT_COMPLETE = valueOf(T, "SCTP_EXPLICIT_COMPLETE");
-    public static final ChannelOption<Integer> SCTP_FRAGMENT_INTERLEAVE = valueOf(T, "SCTP_FRAGMENT_INTERLEAVE");
-    public static final ChannelOption<InitMaxStreams> SCTP_INIT_MAXSTREAMS = valueOf(T, "SCTP_INIT_MAXSTREAMS");
-
-    public static final ChannelOption<Boolean> SCTP_NODELAY = valueOf(T, "SCTP_NODELAY");
-    public static final ChannelOption<SocketAddress> SCTP_PRIMARY_ADDR = valueOf(T, "SCTP_PRIMARY_ADDR");
+    public static final ChannelOption<Boolean> SCTP_NODELAY =
+            valueOf(SctpChannelOption.class, "SCTP_NODELAY");
+    public static final ChannelOption<SocketAddress> SCTP_PRIMARY_ADDR =
+            valueOf(SctpChannelOption.class, "SCTP_PRIMARY_ADDR");
     public static final ChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR =
-            valueOf(T, "SCTP_SET_PEER_PRIMARY_ADDR");
+            valueOf(SctpChannelOption.class, "SCTP_SET_PEER_PRIMARY_ADDR");
 
     @SuppressWarnings({ "unused", "deprecation" })
     private SctpChannelOption() {
