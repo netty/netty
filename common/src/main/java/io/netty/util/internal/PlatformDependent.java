@@ -85,6 +85,7 @@ public final class PlatformDependent {
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
+    private static final boolean IS_EXPLICIT_NO_UNSAFE = explicitNoUnsafe0();
     private static final boolean HAS_UNSAFE = hasUnsafe0();
     private static final boolean CAN_USE_CHM_V8 = HAS_UNSAFE && JAVA_VERSION < 8;
     private static final boolean DIRECT_BUFFER_PREFERRED =
@@ -116,7 +117,7 @@ public final class PlatformDependent {
             logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
         }
 
-        if (!hasUnsafe() && !isAndroid()) {
+        if (!hasUnsafe() && !isAndroid() && !IS_EXPLICIT_NO_UNSAFE) {
             logger.info(
                     "Your platform does not provide complete low-level API for accessing direct buffers reliably. " +
                     "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
@@ -1063,18 +1064,13 @@ public final class PlatformDependent {
         }
     }
 
-    private static boolean hasUnsafe0() {
-        boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
+    private static boolean explicitNoUnsafe0() {
+        final boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
         logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
-
-        if (isAndroid()) {
-            logger.debug("sun.misc.Unsafe: unavailable (Android)");
-            return false;
-        }
 
         if (noUnsafe) {
             logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
-            return false;
+            return true;
         }
 
         // Legacy properties
@@ -1087,6 +1083,19 @@ public final class PlatformDependent {
 
         if (!tryUnsafe) {
             logger.debug("sun.misc.Unsafe: unavailable (io.netty.tryUnsafe/org.jboss.netty.tryUnsafe)");
+            return true;
+        }
+
+        return false;
+    }
+
+    private static boolean hasUnsafe0() {
+        if (isAndroid()) {
+            logger.debug("sun.misc.Unsafe: unavailable (Android)");
+            return false;
+        }
+
+        if (IS_EXPLICIT_NO_UNSAFE) {
             return false;
         }
 
