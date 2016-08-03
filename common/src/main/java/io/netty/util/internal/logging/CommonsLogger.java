@@ -44,7 +44,11 @@ import org.apache.commons.logging.Log;
 /**
  * <a href="http://commons.apache.org/logging/">Apache Commons Logging</a>
  * logger.
+ *
+ * @deprecated Please use {@link Log4J2Logger} or {@link Log4JLogger} or
+ * {@link Slf4JLogger}.
  */
+@Deprecated
 class CommonsLogger extends AbstractInternalLogger {
 
     private static final long serialVersionUID = 8647838678388394885L;
