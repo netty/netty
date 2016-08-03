@@ -49,9 +49,8 @@ public abstract class Recycler<T> {
     };
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger(Integer.MIN_VALUE);
     private static final int OWN_THREAD_ID = ID_GENERATOR.getAndIncrement();
-    private static final int DEFAULT_INITIAL_MAX_CAPACITY = 32768; // Use 32k instances as default max capacity.
-
-    private static final int DEFAULT_MAX_CAPACITY;
+    private static final int DEFAULT_INITIAL_MAX_CAPACITY_PER_THREAD = 32768; // Use 32k instances as default.
+    private static final int DEFAULT_MAX_CAPACITY_PER_THREAD;
     private static final int INITIAL_CAPACITY;
     private static final int MAX_SHARED_CAPACITY_FACTOR;
     private static final int MAX_DELAYED_QUEUES_PER_THREAD;
@@ -62,11 +61,13 @@ public abstract class Recycler<T> {
         // In the future, we might have different maxCapacity for different object types.
         // e.g. io.netty.recycler.maxCapacity.writeTask
         //      io.netty.recycler.maxCapacity.outboundBuffer
-        int maxCapacity = SystemPropertyUtil.getInt("io.netty.recycler.maxCapacity", DEFAULT_INITIAL_MAX_CAPACITY);
-        if (maxCapacity < 0) {
-            maxCapacity = DEFAULT_INITIAL_MAX_CAPACITY;
+        int maxCapacityPerThread = SystemPropertyUtil.getInt("io.netty.recycler.maxCapacityPerThread",
+                SystemPropertyUtil.getInt("io.netty.recycler.maxCapacity", DEFAULT_INITIAL_MAX_CAPACITY_PER_THREAD));
+        if (maxCapacityPerThread < 0) {
+            maxCapacityPerThread = DEFAULT_INITIAL_MAX_CAPACITY_PER_THREAD;
         }
-        DEFAULT_MAX_CAPACITY = maxCapacity;
+
+        DEFAULT_MAX_CAPACITY_PER_THREAD = maxCapacityPerThread;
 
         MAX_SHARED_CAPACITY_FACTOR = max(2,
                 SystemPropertyUtil.getInt("io.netty.recycler.maxSharedCapacityFactor",
@@ -86,23 +87,23 @@ public abstract class Recycler<T> {
         RATIO = safeFindNextPositivePowerOfTwo(SystemPropertyUtil.getInt("io.netty.recycler.ratio", 8));
 
         if (logger.isDebugEnabled()) {
-            if (DEFAULT_MAX_CAPACITY == 0) {
-                logger.debug("-Dio.netty.recycler.maxCapacity: disabled");
+            if (DEFAULT_MAX_CAPACITY_PER_THREAD == 0) {
+                logger.debug("-Dio.netty.recycler.maxCapacityPerThread: disabled");
                 logger.debug("-Dio.netty.recycler.maxSharedCapacityFactor: disabled");
                 logger.debug("-Dio.netty.recycler.linkCapacity: disabled");
                 logger.debug("-Dio.netty.recycler.ratio: disabled");
             } else {
-                logger.debug("-Dio.netty.recycler.maxCapacity: {}", DEFAULT_MAX_CAPACITY);
+                logger.debug("-Dio.netty.recycler.maxCapacityPerThread: {}", DEFAULT_MAX_CAPACITY_PER_THREAD);
                 logger.debug("-Dio.netty.recycler.maxSharedCapacityFactor: {}", MAX_SHARED_CAPACITY_FACTOR);
                 logger.debug("-Dio.netty.recycler.linkCapacity: {}", LINK_CAPACITY);
                 logger.debug("-Dio.netty.recycler.ratio: {}", RATIO);
             }
         }
 
-        INITIAL_CAPACITY = min(DEFAULT_MAX_CAPACITY, 256);
+        INITIAL_CAPACITY = min(DEFAULT_MAX_CAPACITY_PER_THREAD, 256);
     }
 
-    private final int maxCapacity;
+    private final int maxCapacityPerThread;
     private final int maxSharedCapacityFactor;
     private final int ratioMask;
     private final int maxDelayedQueuesPerThread;
@@ -110,31 +111,32 @@ public abstract class Recycler<T> {
     private final FastThreadLocal<Stack<T>> threadLocal = new FastThreadLocal<Stack<T>>() {
         @Override
         protected Stack<T> initialValue() {
-            return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacity, maxSharedCapacityFactor,
+            return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacityPerThread, maxSharedCapacityFactor,
                     ratioMask, maxDelayedQueuesPerThread);
         }
     };
 
     protected Recycler() {
-        this(DEFAULT_MAX_CAPACITY);
+        this(DEFAULT_MAX_CAPACITY_PER_THREAD);
     }
 
-    protected Recycler(int maxCapacity) {
-        this(maxCapacity, MAX_SHARED_CAPACITY_FACTOR);
+    protected Recycler(int maxCapacityPerThread) {
+        this(maxCapacityPerThread, MAX_SHARED_CAPACITY_FACTOR);
     }
 
-    protected Recycler(int maxCapacity, int maxSharedCapacityFactor) {
-        this(maxCapacity, maxSharedCapacityFactor, RATIO, MAX_DELAYED_QUEUES_PER_THREAD);
+    protected Recycler(int maxCapacityPerThread, int maxSharedCapacityFactor) {
+        this(maxCapacityPerThread, maxSharedCapacityFactor, RATIO, MAX_DELAYED_QUEUES_PER_THREAD);
     }
 
-    protected Recycler(int maxCapacity, int maxSharedCapacityFactor, int ratio, int maxDelayedQueuesPerThread) {
+    protected Recycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
+                       int ratio, int maxDelayedQueuesPerThread) {
         ratioMask = safeFindNextPositivePowerOfTwo(ratio) - 1;
-        if (maxCapacity <= 0) {
-            this.maxCapacity = 0;
+        if (maxCapacityPerThread <= 0) {
+            this.maxCapacityPerThread = 0;
             this.maxSharedCapacityFactor = 1;
             this.maxDelayedQueuesPerThread = 0;
         } else {
-            this.maxCapacity = maxCapacity;
+            this.maxCapacityPerThread = maxCapacityPerThread;
             this.maxSharedCapacityFactor = max(1, maxSharedCapacityFactor);
             this.maxDelayedQueuesPerThread = max(0, maxDelayedQueuesPerThread);
         }
@@ -142,7 +144,7 @@ public abstract class Recycler<T> {
 
     @SuppressWarnings("unchecked")
     public final T get() {
-        if (maxCapacity == 0) {
+        if (maxCapacityPerThread == 0) {
             return newObject((Handle<T>) NOOP_HANDLE);
         }
         Stack<T> stack = threadLocal.get();
