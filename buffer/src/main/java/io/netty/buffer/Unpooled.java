@@ -183,7 +183,7 @@ public final class Unpooled {
         if (!buffer.hasRemaining()) {
             return EMPTY_BUFFER;
         }
-        if (buffer.hasArray()) {
+        if (!buffer.isDirect() && buffer.hasArray()) {
             return wrappedBuffer(
                     buffer.array(),
                     buffer.arrayOffset() + buffer.position(),
