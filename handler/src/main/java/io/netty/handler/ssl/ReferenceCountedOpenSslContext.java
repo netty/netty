@@ -644,7 +644,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
             SSLContext.setCertificateBio(
                     ctx, keyCertChainBio, keyBio,
-                    keyPassword == null ? StringUtil.EMPTY_STRING : keyPassword, SSL.SSL_AIDX_RSA);
+                    keyPassword == null ? StringUtil.EMPTY_STRING : keyPassword);
             // We may have more then one cert in the chain so add all of them now.
             SSLContext.setCertificateChainBio(ctx, keyCertChainBio, false);
         } catch (SSLException e) {
