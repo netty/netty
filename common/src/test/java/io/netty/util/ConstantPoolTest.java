@@ -28,15 +28,15 @@ import static org.junit.Assert.*;
 public class ConstantPoolTest {
 
     static final class TestConstant extends AbstractConstant<TestConstant> {
-        TestConstant(int id, String name) {
-            super(id, name);
+        TestConstant(String name) {
+            super(name);
         }
     }
 
     private static final ConstantPool<TestConstant> pool = new ConstantPool<TestConstant>() {
         @Override
         protected TestConstant newConstant(int id, String name) {
-            return new TestConstant(id, name);
+            return new TestConstant(name);
         }
     };
 

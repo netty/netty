@@ -68,7 +68,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
     private T getOrCreate(String name) {
         T constant = constants.get(name);
         if (constant == null) {
-            final T tempConstant = newConstant(nextId(), name);
+            final T tempConstant = newConstant(0, name);
             constant = constants.putIfAbsent(name, tempConstant);
             if (constant == null) {
                 return tempConstant;
@@ -103,7 +103,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
     private T createOrThrow(String name) {
         T constant = constants.get(name);
         if (constant == null) {
-            final T tempConstant = newConstant(nextId(), name);
+            final T tempConstant = newConstant(0, name);
             constant = constants.putIfAbsent(name, tempConstant);
             if (constant == null) {
                 return tempConstant;

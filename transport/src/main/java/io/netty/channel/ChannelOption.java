@@ -35,7 +35,7 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     private static final ConstantPool<ChannelOption<Object>> pool = new ConstantPool<ChannelOption<Object>>() {
         @Override
         protected ChannelOption<Object> newConstant(int id, String name) {
-            return new ChannelOption<Object>(id, name);
+            return new ChannelOption<Object>(name);
         }
     };
 
@@ -134,13 +134,8 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     /**
      * Creates a new {@link ChannelOption} with the specified unique {@code name}.
      */
-    private ChannelOption(int id, String name) {
-        super(id, name);
-    }
-
-    @Deprecated
     protected ChannelOption(String name) {
-        this(pool.nextId(), name);
+        super(name);
     }
 
     /**

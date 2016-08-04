@@ -27,7 +27,7 @@ public final class AttributeKey<T> extends AbstractConstant<AttributeKey<T>> {
     private static final ConstantPool<AttributeKey<Object>> pool = new ConstantPool<AttributeKey<Object>>() {
         @Override
         protected AttributeKey<Object> newConstant(int id, String name) {
-            return new AttributeKey<Object>(id, name);
+            return new AttributeKey<Object>(name);
         }
     };
 
@@ -60,7 +60,7 @@ public final class AttributeKey<T> extends AbstractConstant<AttributeKey<T>> {
         return (AttributeKey<T>) pool.valueOf(firstNameComponent, secondNameComponent);
     }
 
-    private AttributeKey(int id, String name) {
-        super(id, name);
+    private AttributeKey(String name) {
+        super(name);
     }
 }

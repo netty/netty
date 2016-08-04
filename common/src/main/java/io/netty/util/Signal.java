@@ -27,7 +27,7 @@ public final class Signal extends Error implements Constant<Signal> {
     private static final ConstantPool<Signal> pool = new ConstantPool<Signal>() {
         @Override
         protected Signal newConstant(int id, String name) {
-            return new Signal(id, name);
+            return new Signal(name);
         }
     };
 
@@ -50,8 +50,8 @@ public final class Signal extends Error implements Constant<Signal> {
     /**
      * Creates a new {@link Signal} with the specified {@code name}.
      */
-    private Signal(int id, String name) {
-        constant = new SignalConstant(id, name);
+    private Signal(String name) {
+        constant = new SignalConstant(name);
     }
 
     /**
@@ -109,8 +109,8 @@ public final class Signal extends Error implements Constant<Signal> {
     }
 
     private static final class SignalConstant extends AbstractConstant<SignalConstant> {
-        SignalConstant(int id, String name) {
-            super(id, name);
+        SignalConstant(String name) {
+            super(name);
         }
     }
 }
