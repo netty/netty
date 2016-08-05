@@ -35,6 +35,8 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
@@ -82,15 +84,19 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     // - http://bugs.sun.com/view_bug.do?bug_id=6427854
     // - https://github.com/netty/netty/issues/203
     static {
-        String key = "sun.nio.ch.bugLevel";
-        try {
-            String buglevel = SystemPropertyUtil.get(key);
-            if (buglevel == null) {
-                System.setProperty(key, "");
-            }
-        } catch (SecurityException e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Unable to get/set System Property: {}", key, e);
+        final String key = "sun.nio.ch.bugLevel";
+        final String buglevel = SystemPropertyUtil.get(key);
+        if (buglevel == null) {
+            try {
+                AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                    @Override
+                    public Void run() {
+                        System.setProperty(key, "");
+                        return null;
+                    }
+                });
+            } catch (final SecurityException e) {
+                logger.debug("Unable to get/set System Property: " + key, e);
             }
         }
 
