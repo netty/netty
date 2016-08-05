@@ -161,31 +161,64 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             return selector;
         }
 
-        try {
-            SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
+        final SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
 
-            Class<?> selectorImplClass =
-                    Class.forName("sun.nio.ch.SelectorImpl", false, PlatformDependent.getSystemClassLoader());
-
-            // Ensure the current selector implementation is what we can instrument.
-            if (!selectorImplClass.isAssignableFrom(selector.getClass())) {
-                return selector;
+        Object maybeSelectorImplClass = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            @Override
+            public Object run() {
+                try {
+                    return Class.forName(
+                            "sun.nio.ch.SelectorImpl",
+                            false,
+                            PlatformDependent.getSystemClassLoader());
+                } catch (ClassNotFoundException e) {
+                    return e;
+                } catch (SecurityException e) {
+                    return e;
+                }
             }
+        });
 
-            Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
-            Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
+        if (!(maybeSelectorImplClass instanceof Class) ||
+                // ensure the current selector implementation is what we can instrument.
+                !((Class<?>) maybeSelectorImplClass).isAssignableFrom(selector.getClass())) {
+            if (maybeSelectorImplClass instanceof Exception) {
+                Exception e = (Exception) maybeSelectorImplClass;
+                logger.trace("failed to instrument a special java.util.Set into: {}", selector, e);
+            }
+            return selector;
+        }
 
-            selectedKeysField.setAccessible(true);
-            publicSelectedKeysField.setAccessible(true);
+        final Class<?> selectorImplClass = (Class<?>) maybeSelectorImplClass;
 
-            selectedKeysField.set(selector, selectedKeySet);
-            publicSelectedKeysField.set(selector, selectedKeySet);
+        Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            @Override
+            public Object run() {
+                try {
+                    Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
+                    Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
 
-            selectedKeys = selectedKeySet;
-            logger.trace("Instrumented an optimized java.util.Set into: {}", selector);
-        } catch (Throwable t) {
+                    selectedKeysField.setAccessible(true);
+                    publicSelectedKeysField.setAccessible(true);
+
+                    selectedKeysField.set(selector, selectedKeySet);
+                    publicSelectedKeysField.set(selector, selectedKeySet);
+                    return null;
+                } catch (NoSuchFieldException e) {
+                    return e;
+                } catch (IllegalAccessException e) {
+                    return e;
+                }
+            }
+        });
+
+        if (maybeException instanceof Exception) {
             selectedKeys = null;
-            logger.trace("Failed to instrument an optimized java.util.Set into: {}", selector, t);
+            Exception e = (Exception) maybeException;
+            logger.trace("failed to instrument a special java.util.Set into: {}", selector, e);
+        } else {
+            selectedKeys = selectedKeySet;
+            logger.trace("instrumented a special java.util.Set into: {}", selector);
         }
 
         return selector;
