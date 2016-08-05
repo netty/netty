@@ -287,7 +287,10 @@ final class PlatformDependent0 {
         return newDirectBuffer(UNSAFE.allocateMemory(capacity), capacity);
     }
 
-    private static ByteBuffer newDirectBuffer(long address, int capacity) {
+    static ByteBuffer newDirectBuffer(long address, int capacity) {
+        ObjectUtil.checkPositiveOrZero(address, "address");
+        ObjectUtil.checkPositiveOrZero(capacity, "capacity");
+
         try {
             return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(address, capacity);
         } catch (Throwable cause) {
