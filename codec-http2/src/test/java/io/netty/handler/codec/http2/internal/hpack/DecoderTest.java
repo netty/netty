@@ -33,17 +33,14 @@ package io.netty.handler.codec.http2.internal.hpack;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.AsciiString.of;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -62,7 +59,7 @@ public class DecoderTest {
         return Hex.encodeHexString(s.getBytes());
     }
 
-    private void decode(String encoded) throws IOException {
+    private void decode(String encoded) throws Http2Exception {
         byte[] b = Hex.decodeHex(encoded.toCharArray());
         ByteBuf in = Unpooled.wrappedBuffer(b);
         try {
@@ -79,7 +76,7 @@ public class DecoderTest {
     }
 
     @Test
-    public void testLiteralHuffmanEncodedWithEmptyNameAndValue() throws IOException {
+    public void testLiteralHuffmanEncodedWithEmptyNameAndValue() throws Http2Exception {
         byte[] input = {0, (byte) 0x80, 0};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
@@ -90,8 +87,8 @@ public class DecoderTest {
         }
     }
 
-    @Test(expected = IOException.class)
-    public void testLiteralHuffmanEncodedWithPaddingGreaterThan7Throws() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testLiteralHuffmanEncodedWithPaddingGreaterThan7Throws() throws Http2Exception {
         byte[] input = {0, (byte) 0x81, -1};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
@@ -101,8 +98,8 @@ public class DecoderTest {
         }
     }
 
-    @Test(expected = IOException.class)
-    public void testLiteralHuffmanEncodedWithDecodingEOSThrows() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testLiteralHuffmanEncodedWithDecodingEOSThrows() throws Http2Exception {
         byte[] input = {0, (byte) 0x84, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
@@ -112,8 +109,8 @@ public class DecoderTest {
         }
     }
 
-    @Test(expected = IOException.class)
-    public void testLiteralHuffmanEncodedWithPaddingNotCorrespondingToMSBThrows() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testLiteralHuffmanEncodedWithPaddingNotCorrespondingToMSBThrows() throws Http2Exception {
         byte[] input = {0, (byte) 0x81, 0};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
@@ -123,41 +120,39 @@ public class DecoderTest {
         }
     }
 
-    @Test
-    public void testIncompleteIndex() throws IOException {
-        // Verify incomplete indices are unread
+    @Test(expected = Http2Exception.class)
+    public void testIncompleteIndex() throws Http2Exception, Http2Exception {
         byte[] compressed = Hex.decodeHex("FFF0".toCharArray());
         ByteBuf in = Unpooled.wrappedBuffer(compressed);
         try {
             decoder.decode(in, mockHeaders);
             assertEquals(1, in.readableBytes());
             decoder.decode(in, mockHeaders);
-            assertEquals(1, in.readableBytes());
         } finally {
             in.release();
         }
     }
 
-    @Test(expected = IOException.class)
-    public void testUnusedIndex() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testUnusedIndex() throws Http2Exception {
         // Index 0 is not used
         decode("80");
     }
 
-    @Test(expected = IOException.class)
-    public void testIllegalIndex() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testIllegalIndex() throws Http2Exception {
         // Index larger than the header table
         decode("FF00");
     }
 
-    @Test(expected = IOException.class)
-    public void testInsidiousIndex() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testInsidiousIndex() throws Http2Exception {
         // Insidious index so the last shift causes sign overflow
         decode("FF8080808008");
     }
 
     @Test
-    public void testDynamicTableSizeUpdate() throws Exception {
+    public void testDynamicTableSizeUpdate() throws Http2Exception {
         decode("20");
         assertEquals(0, decoder.getMaxHeaderTableSize());
         decode("3FE11F");
@@ -165,58 +160,57 @@ public class DecoderTest {
     }
 
     @Test
-    public void testDynamicTableSizeUpdateRequired() throws Exception {
+    public void testDynamicTableSizeUpdateRequired() throws Http2Exception {
         decoder.setMaxHeaderTableSize(32);
         decode("3F00");
         assertEquals(31, decoder.getMaxHeaderTableSize());
     }
 
-    @Test(expected = IOException.class)
-    public void testIllegalDynamicTableSizeUpdate() throws Exception {
+    @Test(expected = Http2Exception.class)
+    public void testIllegalDynamicTableSizeUpdate() throws Http2Exception {
         // max header table size = MAX_HEADER_TABLE_SIZE + 1
         decode("3FE21F");
     }
 
-    @Test(expected = IOException.class)
-    public void testInsidiousMaxDynamicTableSize() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testInsidiousMaxDynamicTableSize() throws Http2Exception {
         // max header table size sign overflow
         decode("3FE1FFFFFF07");
     }
 
     @Test
-    public void testReduceMaxDynamicTableSize() throws Exception {
+    public void testReduceMaxDynamicTableSize() throws Http2Exception {
         decoder.setMaxHeaderTableSize(0);
         assertEquals(0, decoder.getMaxHeaderTableSize());
         decode("2081");
     }
 
-    @Test(expected = IOException.class)
-    public void testTooLargeDynamicTableSizeUpdate() throws Exception {
+    @Test(expected = Http2Exception.class)
+    public void testTooLargeDynamicTableSizeUpdate() throws Http2Exception {
         decoder.setMaxHeaderTableSize(0);
         assertEquals(0, decoder.getMaxHeaderTableSize());
         decode("21"); // encoder max header table size not small enough
     }
 
-    @Test(expected = IOException.class)
-    public void testMissingDynamicTableSizeUpdate() throws Exception {
+    @Test(expected = Http2Exception.class)
+    public void testMissingDynamicTableSizeUpdate() throws Http2Exception {
         decoder.setMaxHeaderTableSize(0);
         assertEquals(0, decoder.getMaxHeaderTableSize());
         decode("81");
     }
 
     @Test
-    public void testLiteralWithIncrementalIndexingWithEmptyName() throws Exception {
+    public void testLiteralWithIncrementalIndexingWithEmptyName() throws Http2Exception {
         decode("400005" + hex("value"));
         verify(mockHeaders, times(1)).add(EMPTY_STRING, of("value"));
     }
 
     @Test
-    public void testLiteralWithIncrementalIndexingCompleteEviction() throws Exception {
+    public void testLiteralWithIncrementalIndexingCompleteEviction() throws Http2Exception {
         // Verify indexed host header
         decode("4004" + hex("name") + "05" + hex("value"));
         verify(mockHeaders).add(of("name"), of("value"));
         verifyNoMoreInteractions(mockHeaders);
-        assertFalse(decoder.endHeaderBlock());
 
         reset(mockHeaders);
         StringBuilder sb = new StringBuilder();
@@ -232,7 +226,7 @@ public class DecoderTest {
         decode(sb.toString());
         verify(mockHeaders).add(of(":authority"), of(value));
         verifyNoMoreInteractions(mockHeaders);
-        assertFalse(decoder.endHeaderBlock());
+        reset(mockHeaders);
 
         // Verify next header is inserted at index 62
         decode("4004" + hex("name") + "05" + hex("value") + "BE");
@@ -240,29 +234,8 @@ public class DecoderTest {
         verifyNoMoreInteractions(mockHeaders);
     }
 
-    @Test
-    public void testLiteralWithIncrementalIndexingWithLargeName() throws Exception {
-        // Ignore header name that exceeds max header size
-        StringBuilder sb = new StringBuilder();
-        sb.append("407F817F");
-        for (int i = 0; i < 16384; i++) {
-            sb.append("61"); // 'a'
-        }
-        sb.append("00");
-        decode(sb.toString());
-        verifyNoMoreInteractions(mockHeaders);
-
-        // Verify header block is reported as truncated
-        assertTrue(decoder.endHeaderBlock());
-
-        // Verify next header is inserted at index 62
-        decode("4004" + hex("name") + "05" + hex("value") + "BE");
-        verify(mockHeaders, times(2)).add(of("name"), of("value"));
-        verifyNoMoreInteractions(mockHeaders);
-    }
-
-    @Test
-    public void testLiteralWithIncrementalIndexingWithLargeValue() throws Exception {
+    @Test(expected = Http2Exception.class)
+    public void testLiteralWithIncrementalIndexingWithLargeValue() throws Http2Exception {
         // Ignore header that exceeds max header size
         StringBuilder sb = new StringBuilder();
         sb.append("4004");
@@ -272,25 +245,16 @@ public class DecoderTest {
             sb.append("61"); // 'a'
         }
         decode(sb.toString());
-        verifyNoMoreInteractions(mockHeaders);
-
-        // Verify header block is reported as truncated
-        assertTrue(decoder.endHeaderBlock());
-
-        // Verify next header is inserted at index 62
-        decode("4004" + hex("name") + "05" + hex("value") + "BE");
-        verify(mockHeaders, times(2)).add(of("name"), of("value"));
-        verifyNoMoreInteractions(mockHeaders);
     }
 
     @Test
-    public void testLiteralWithoutIndexingWithEmptyName() throws Exception {
+    public void testLiteralWithoutIndexingWithEmptyName() throws Http2Exception {
         decode("000005" + hex("value"));
         verify(mockHeaders, times(1)).add(EMPTY_STRING, of("value"));
     }
 
-    @Test(expected = IOException.class)
-    public void testLiteralWithoutIndexingWithLargeName() throws Exception {
+    @Test(expected = Http2Exception.class)
+    public void testLiteralWithoutIndexingWithLargeName() throws Http2Exception {
         // Ignore header name that exceeds max header size
         StringBuilder sb = new StringBuilder();
         sb.append("007F817F");
@@ -299,17 +263,10 @@ public class DecoderTest {
         }
         sb.append("00");
         decode(sb.toString());
-        verifyNoMoreInteractions(mockHeaders);
-
-        // Verify header block is reported as truncated
-        assertTrue(decoder.endHeaderBlock());
-
-        // Verify table is unmodified
-        decode("BE");
     }
 
-    @Test(expected = IOException.class)
-    public void testLiteralWithoutIndexingWithLargeValue() throws Exception {
+    @Test(expected = Http2Exception.class)
+    public void testLiteralWithoutIndexingWithLargeValue() throws Http2Exception {
         // Ignore header that exceeds max header size
         StringBuilder sb = new StringBuilder();
         sb.append("0004");
@@ -319,23 +276,16 @@ public class DecoderTest {
             sb.append("61"); // 'a'
         }
         decode(sb.toString());
-        verifyNoMoreInteractions(mockHeaders);
-
-        // Verify header block is reported as truncated
-        assertTrue(decoder.endHeaderBlock());
-
-        // Verify table is unmodified
-        decode("BE");
     }
 
     @Test
-    public void testLiteralNeverIndexedWithEmptyName() throws Exception {
+    public void testLiteralNeverIndexedWithEmptyName() throws Http2Exception {
         decode("100005" + hex("value"));
         verify(mockHeaders, times(1)).add(EMPTY_STRING, of("value"));
     }
 
-    @Test(expected = IOException.class)
-    public void testLiteralNeverIndexedWithLargeName() throws Exception {
+    @Test(expected = Http2Exception.class)
+    public void testLiteralNeverIndexedWithLargeName() throws Http2Exception {
         // Ignore header name that exceeds max header size
         StringBuilder sb = new StringBuilder();
         sb.append("107F817F");
@@ -344,17 +294,10 @@ public class DecoderTest {
         }
         sb.append("00");
         decode(sb.toString());
-        verifyNoMoreInteractions(mockHeaders);
-
-        // Verify header block is reported as truncated
-        assertTrue(decoder.endHeaderBlock());
-
-        // Verify table is unmodified
-        decode("BE");
     }
 
-    @Test(expected = IOException.class)
-    public void testLiteralNeverIndexedWithLargeValue() throws Exception {
+    @Test(expected = Http2Exception.class)
+    public void testLiteralNeverIndexedWithLargeValue() throws Http2Exception {
         // Ignore header that exceeds max header size
         StringBuilder sb = new StringBuilder();
         sb.append("1004");
@@ -364,12 +307,5 @@ public class DecoderTest {
             sb.append("61"); // 'a'
         }
         decode(sb.toString());
-        verifyNoMoreInteractions(mockHeaders);
-
-        // Verify header block is reported as truncated
-        assertTrue(decoder.endHeaderBlock());
-
-        // Verify table is unmodified
-        decode("BE");
     }
 }

@@ -33,8 +33,6 @@
 
 package io.netty.handler.codec.http2.internal.hpack;
 
-import java.io.IOException;
-
 /**
  * Extracted from org/apache/commons/codec/binary/Hex.java Copyright Apache Software Foundation
  */
@@ -62,14 +60,14 @@ final class Hex {
      *
      * @param data An array of characters containing hexadecimal digits
      * @return A byte array containing binary data decoded from the supplied char array.
-     * @throws IOException Thrown if an odd number or illegal of characters is supplied
+     * @throws IllegalArgumentException Thrown if an odd number or illegal of characters is supplied
      */
-    public static byte[] decodeHex(char[] data) throws IOException {
+    public static byte[] decodeHex(char[] data) {
 
         int len = data.length;
 
         if ((len & 0x01) != 0) {
-            throw new IOException("Odd number of characters.");
+            throw new IllegalArgumentException("Odd number of characters.");
         }
 
         byte[] out = new byte[len >> 1];
@@ -152,12 +150,12 @@ final class Hex {
      * @param ch A character to convert to an integer digit
      * @param index The index of the character in the source
      * @return An integer
-     * @throws IOException Thrown if ch is an illegal hex character
+     * @throws IllegalArgumentException Thrown if ch is an illegal hex character
      */
-    protected static int toDigit(char ch, int index) throws IOException {
+    protected static int toDigit(char ch, int index) throws IllegalArgumentException {
         int digit = Character.digit(ch, 16);
         if (digit == -1) {
-            throw new IOException("Illegal hexadecimal character " + ch + " at index " + index);
+            throw new IllegalArgumentException("Illegal hexadecimal character " + ch + " at index " + index);
         }
         return digit;
     }

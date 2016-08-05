@@ -31,23 +31,26 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
-import io.netty.util.internal.ThrowableUtil;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.io.IOException;
 
+import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.HUFFMAN_CODES;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.HUFFMAN_CODE_LENGTHS;
 
 final class HuffmanDecoder {
 
-    private static final IOException EOS_DECODED = ThrowableUtil.unknownStackTrace(
-            new IOException("HPACK - EOS Decoded"), HuffmanDecoder.class, "decode(...)");
-    private static final IOException INVALID_PADDING = ThrowableUtil.unknownStackTrace(
-            new IOException("HPACK - Invalid Padding"), HuffmanDecoder.class, "decode(...)");
+    private static final Http2Exception EOS_DECODED = ThrowableUtil.unknownStackTrace(
+            connectionError(COMPRESSION_ERROR, "HPACK - EOS Decoded"), HuffmanDecoder.class, "decode(...)");
+    private static final Http2Exception INVALID_PADDING = ThrowableUtil.unknownStackTrace(
+            connectionError(COMPRESSION_ERROR, "HPACK - Invalid Padding"), HuffmanDecoder.class, "decode(...)");
 
     private static final Node ROOT = buildTree(HUFFMAN_CODES, HUFFMAN_CODE_LENGTHS);
 
@@ -65,7 +68,7 @@ final class HuffmanDecoder {
      * @throws IOException if an I/O error occurs. In particular, an <code>IOException</code> may be
      * thrown if the output stream has been closed.
      */
-    public AsciiString decode(ByteBuf buf, int length) throws IOException {
+    public AsciiString decode(ByteBuf buf, int length) throws Http2Exception {
         processor.reset();
         buf.forEachByte(buf.readerIndex(), length, processor);
         buf.skipBytes(length);
@@ -178,7 +181,7 @@ final class HuffmanDecoder {
          * there is too much padding.
          */
         @Override
-        public boolean process(byte value) throws IOException {
+        public boolean process(byte value) throws Http2Exception {
             current = (current << 8) | (value & 0xFF);
             currentBits += 8;
             symbolBits += 8;
@@ -200,7 +203,7 @@ final class HuffmanDecoder {
             return true;
         }
 
-        AsciiString end() throws IOException {
+        AsciiString end() throws Http2Exception {
             /*
              * We have consumed all the bytes in buf, but haven't consumed all the symbols. We may be on
              * a partial symbol, so consume until there is nothing left. This will loop at most 2 times.

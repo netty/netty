@@ -34,6 +34,7 @@ package io.netty.microbench.http2.internal.hpack;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.internal.hpack.Decoder;
 import io.netty.handler.codec.http2.internal.hpack.Encoder;
@@ -47,7 +48,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.IOException;
 import java.util.List;
 
 public class DecoderBenchmark extends AbstractMicrobenchmark {
@@ -70,18 +70,18 @@ public class DecoderBenchmark extends AbstractMicrobenchmark {
     private ByteBuf input;
 
     @Setup(Level.Trial)
-    public void setup() throws IOException {
+    public void setup() {
         input = Unpooled.wrappedBuffer(getSerializedHeaders(Util.headers(size, limitToAscii), sensitive));
     }
 
     @TearDown(Level.Trial)
-    public void teardown() throws IOException {
+    public void teardown() {
         input.release();
     }
 
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
-    public void decode(final Blackhole bh) throws IOException {
+    public void decode(final Blackhole bh) throws Http2Exception {
         Decoder decoder = new Decoder(maxHeaderSize, maxTableSize, 32);
         @SuppressWarnings("unchecked")
         Http2Headers headers =
@@ -93,7 +93,6 @@ public class DecoderBenchmark extends AbstractMicrobenchmark {
             }
         };
         decoder.decode(input.duplicate(), headers);
-        decoder.endHeaderBlock();
     }
 
     private byte[] getSerializedHeaders(List<Header> headers, boolean sensitive) {
