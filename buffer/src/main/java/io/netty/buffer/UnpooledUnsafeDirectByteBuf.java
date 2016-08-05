@@ -35,11 +35,11 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     private final ByteBufAllocator alloc;
 
-    private long memoryAddress;
     private ByteBuffer tmpNioBuf;
     private int capacity;
     private boolean doNotFree;
     ByteBuffer buffer;
+    long memoryAddress;
 
     /**
      * Creates a new direct buffer.
@@ -73,6 +73,10 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
      * @param maxCapacity the maximum capacity of the underlying direct buffer
      */
     protected UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
+        this(alloc, initialBuffer, maxCapacity, true);
+    }
+
+    UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity, boolean doFree) {
         super(maxCapacity);
         if (alloc == null) {
             throw new NullPointerException("alloc");
@@ -94,7 +98,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         }
 
         this.alloc = alloc;
-        doNotFree = true;
+        doNotFree = !doFree;
         setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN), false);
         writerIndex(initialCapacity);
     }
