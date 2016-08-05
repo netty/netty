@@ -33,18 +33,18 @@ package io.netty.handler.codec.http2.internal.hpack;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.util.AsciiString;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
 public class HuffmanTest {
 
     @Test
-    public void testHuffman() throws IOException {
+    public void testHuffman() throws Http2Exception {
         String s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         for (int i = 0; i < s.length(); i++) {
             roundTrip(s.substring(0, i));
@@ -56,8 +56,8 @@ public class HuffmanTest {
         roundTrip(buf);
     }
 
-    @Test(expected = IOException.class)
-    public void testDecodeEOS() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testDecodeEOS() throws Http2Exception {
         byte[] buf = new byte[4];
         for (int i = 0; i < 4; i++) {
             buf[i] = (byte) 0xFF;
@@ -65,51 +65,51 @@ public class HuffmanTest {
         decode(newHuffmanDecoder(), buf);
     }
 
-    @Test(expected = IOException.class)
-    public void testDecodeIllegalPadding() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testDecodeIllegalPadding() throws Http2Exception {
         byte[] buf = new byte[1];
         buf[0] = 0x00; // '0', invalid padding
         decode(newHuffmanDecoder(), buf);
     }
 
-    @Test(expected = IOException.class)
-    public void testDecodeExtraPadding() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testDecodeExtraPadding() throws Http2Exception {
         byte[] buf = makeBuf(0x0f, 0xFF); // '1', 'EOS'
         decode(newHuffmanDecoder(), buf);
     }
 
-    @Test(expected = IOException.class)
-    public void testDecodeExtraPadding1byte() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testDecodeExtraPadding1byte() throws Http2Exception {
         byte[] buf = makeBuf(0xFF);
         decode(newHuffmanDecoder(), buf);
     }
 
-    @Test(expected = IOException.class)
-    public void testDecodeExtraPadding2byte() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testDecodeExtraPadding2byte() throws Http2Exception {
         byte[] buf = makeBuf(0x1F, 0xFF); // 'a'
         decode(newHuffmanDecoder(), buf);
     }
 
-    @Test(expected = IOException.class)
-    public void testDecodeExtraPadding3byte() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testDecodeExtraPadding3byte() throws Http2Exception {
         byte[] buf = makeBuf(0x1F, 0xFF, 0xFF); // 'a'
         decode(newHuffmanDecoder(), buf);
     }
 
-    @Test(expected = IOException.class)
-    public void testDecodeExtraPadding4byte() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testDecodeExtraPadding4byte() throws Http2Exception {
         byte[] buf = makeBuf(0x1F, 0xFF, 0xFF, 0xFF); // 'a'
         decode(newHuffmanDecoder(), buf);
     }
 
-    @Test(expected = IOException.class)
-    public void testDecodeExtraPadding29bit() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testDecodeExtraPadding29bit() throws Http2Exception {
         byte[] buf = makeBuf(0xFF, 0x9F, 0xFF, 0xFF, 0xFF);  // '|'
         decode(newHuffmanDecoder(), buf);
     }
 
-    @Test(expected = IOException.class)
-    public void testDecodePartialSymbol() throws IOException {
+    @Test(expected = Http2Exception.class)
+    public void testDecodePartialSymbol() throws Http2Exception {
         byte[] buf = makeBuf(0x52, 0xBC, 0x30, 0xFF, 0xFF, 0xFF, 0xFF); // " pFA\x00", 31 bits of padding, a.k.a. EOS
         decode(newHuffmanDecoder(), buf);
     }
@@ -122,21 +122,21 @@ public class HuffmanTest {
         return buf;
     }
 
-    private static void roundTrip(String s) throws IOException {
+    private static void roundTrip(String s) throws Http2Exception {
         roundTrip(new HuffmanEncoder(), newHuffmanDecoder(), s);
     }
 
     private static void roundTrip(HuffmanEncoder encoder, HuffmanDecoder decoder, String s)
-            throws IOException {
+            throws Http2Exception {
         roundTrip(encoder, decoder, s.getBytes());
     }
 
-    private static void roundTrip(byte[] buf) throws IOException {
+    private static void roundTrip(byte[] buf) throws Http2Exception {
         roundTrip(new HuffmanEncoder(), newHuffmanDecoder(), buf);
     }
 
     private static void roundTrip(HuffmanEncoder encoder, HuffmanDecoder decoder, byte[] buf)
-            throws IOException {
+            throws Http2Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
             encoder.encode(buffer, new AsciiString(buf, false));
@@ -151,7 +151,7 @@ public class HuffmanTest {
         }
     }
 
-    private static byte[] decode(HuffmanDecoder decoder, byte[] bytes) throws IOException {
+    private static byte[] decode(HuffmanDecoder decoder, byte[] bytes) throws Http2Exception {
         ByteBuf buffer = Unpooled.wrappedBuffer(bytes);
         try {
             AsciiString decoded = decoder.decode(buffer, buffer.readableBytes());
