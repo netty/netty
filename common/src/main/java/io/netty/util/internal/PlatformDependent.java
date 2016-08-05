@@ -27,6 +27,7 @@ import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscLinkedAtomicQueue;
 import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
 import org.jctools.util.Pow2;
+import org.jctools.util.UnsafeAccess;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -833,6 +834,50 @@ public final class PlatformDependent {
         return null;
     }
 
+    private static final class Mpsc {
+        private static final boolean USE_MPSC_CHUNKED_ARRAY_QUEUE;
+
+        private Mpsc() {
+        }
+
+        static {
+            Object unsafe = null;
+            if (hasUnsafe()) {
+                // jctools goes through its own process of initializing unsafe; of
+                // course, this requires permissions which might not be granted to calling code, so we
+                // must mark this block as privileged too
+                unsafe = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                    @Override
+                    public Object run() {
+                        // force JCTools to initialize unsafe
+                        return UnsafeAccess.UNSAFE;
+                    }
+                });
+            }
+
+            if (unsafe == null) {
+                logger.debug("org.jctools-core.MpscChunkedArrayQueue: unavailable");
+                USE_MPSC_CHUNKED_ARRAY_QUEUE = false;
+            } else {
+                logger.debug("org.jctools-core.MpscChunkedArrayQueue: available");
+                USE_MPSC_CHUNKED_ARRAY_QUEUE = true;
+            }
+        }
+
+        static <T> Queue<T> newMpscQueue(final int maxCapacity) {
+            if (USE_MPSC_CHUNKED_ARRAY_QUEUE) {
+                // Calculate the max capacity which can not be bigger then MAX_ALLOWED_MPSC_CAPACITY.
+                // This is forced by the MpscChunkedArrayQueue implementation as will try to round it
+                // up to the next power of two and so will overflow otherwise.
+                final int capacity =
+                        Math.max(Math.min(maxCapacity, MAX_ALLOWED_MPSC_CAPACITY), MIN_MAX_MPSC_CAPACITY);
+                return new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE, capacity, true);
+            } else {
+                return new MpscLinkedAtomicQueue<T>();
+            }
+        }
+    }
+
     /**
      * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and a single
      * consumer (one thread!).
@@ -845,14 +890,8 @@ public final class PlatformDependent {
      * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and a single
      * consumer (one thread!).
      */
-    public static <T> Queue<T> newMpscQueue(int maxCapacity) {
-        return hasUnsafe() ?
-                new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE,
-                        // Calculate the max capacity which can not be bigger then MAX_ALLOWED_MPSC_CAPACITY.
-                        // This is forced by the MpscChunkedArrayQueue implementation as will try to round it
-                        // up to the next power of two and so will overflow otherwise.
-                        Math.max(Math.min(maxCapacity, MAX_ALLOWED_MPSC_CAPACITY), MIN_MAX_MPSC_CAPACITY), true)
-                : new MpscLinkedAtomicQueue<T>();
+    public static <T> Queue<T> newMpscQueue(final int maxCapacity) {
+        return Mpsc.newMpscQueue(maxCapacity);
     }
 
     /**
