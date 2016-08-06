@@ -32,6 +32,8 @@ import java.nio.ByteBuffer;
 final class Cleaner0 {
     private static final long CLEANER_FIELD_OFFSET;
     private static final Method CLEAN_METHOD;
+    private static final boolean CLEANER_IS_RUNNABLE;
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Cleaner0.class);
 
     static {
@@ -39,6 +41,7 @@ final class Cleaner0 {
         Field cleanerField;
         long fieldOffset = -1;
         Method clean = null;
+        boolean cleanerIsRunnable = false;
         if (PlatformDependent0.hasUnsafe()) {
             try {
                 cleanerField = direct.getClass().getDeclaredField("cleaner");
@@ -48,20 +51,23 @@ final class Cleaner0 {
                 try {
                     // Cleaner implements Runnable from JDK9 onwards.
                     Runnable runnable = (Runnable) cleaner;
-                    clean = Runnable.class.getDeclaredMethod("run");
+                    runnable.run();
+                    cleanerIsRunnable = true;
                 } catch (ClassCastException ignored) {
                     clean = cleaner.getClass().getDeclaredMethod("clean");
+                    clean.invoke(cleaner);
                 }
-                clean.invoke(cleaner);
             } catch (Throwable t) {
                 // We don't have ByteBuffer.cleaner().
                 fieldOffset = -1;
                 clean = null;
+                cleanerIsRunnable = false;
             }
         }
         logger.debug("java.nio.ByteBuffer.cleaner(): {}", fieldOffset != -1? "available" : "unavailable");
         CLEANER_FIELD_OFFSET = fieldOffset;
         CLEAN_METHOD = clean;
+        CLEANER_IS_RUNNABLE = cleanerIsRunnable;
 
         // free buffer if possible
         freeDirectBuffer(direct);
@@ -71,11 +77,16 @@ final class Cleaner0 {
         if (CLEANER_FIELD_OFFSET == -1 || !buffer.isDirect()) {
             return;
         }
-        assert CLEAN_METHOD != null : "CLEANER_FIELD_OFFSET != -1 implies CLEAN_METHOD != null";
+        assert CLEAN_METHOD != null || CLEANER_IS_RUNNABLE:
+                "CLEANER_FIELD_OFFSET != -1 implies CLEAN_METHOD != null or CLEANER_IS_RUNNABLE == true";
         try {
             Object cleaner = PlatformDependent0.getObject(buffer, CLEANER_FIELD_OFFSET);
             if (cleaner != null) {
-                CLEAN_METHOD.invoke(cleaner);
+                if (CLEANER_IS_RUNNABLE) {
+                    ((Runnable) cleaner).run();
+                } else {
+                    CLEAN_METHOD.invoke(cleaner);
+                }
             }
         } catch (Throwable t) {
             // Nothing we can do here.
