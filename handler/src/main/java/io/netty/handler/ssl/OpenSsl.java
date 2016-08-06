@@ -24,12 +24,15 @@ import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.apache.tomcat.Apr;
 import org.apache.tomcat.jni.Buffer;
 import org.apache.tomcat.jni.Library;
 import org.apache.tomcat.jni.Pool;
 import org.apache.tomcat.jni.SSL;
 import org.apache.tomcat.jni.SSLContext;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
@@ -37,6 +40,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Properties;
 import java.util.Set;
 
 /**
@@ -118,6 +122,12 @@ public final class OpenSsl {
                         OpenSslEngine.class.getSimpleName() + " will be unavailable. " +
                         "See http://netty.io/wiki/forked-tomcat-native.html for more information.", t);
             }
+        }
+
+        if (cause == null && !isNettyTcnative()) {
+            logger.debug("incompatible tcnative in the classpath; "
+                    + OpenSslEngine.class.getSimpleName() + " will be unavailable.");
+            cause = new ClassNotFoundException("incompatible tcnative in the classpath");
         }
 
         UNAVAILABILITY_CAUSE = cause;
@@ -204,6 +214,32 @@ public final class OpenSsl {
             SUPPORTS_KEYMANAGER_FACTORY = false;
             USE_KEYMANAGER_FACTORY = false;
         }
+    }
+
+    private static boolean isNettyTcnative() {
+        return AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+            @Override
+            public Boolean run() {
+                InputStream is = null;
+                try {
+                    is = Apr.class.getResourceAsStream("/org/apache/tomcat/apr.properties");
+                    Properties props = new Properties();
+                    props.load(is);
+                    String info = props.getProperty("tcn.info");
+                    return info != null && info.startsWith("netty-tcnative");
+                } catch (Throwable ignore) {
+                    return false;
+                } finally {
+                    if (is != null) {
+                        try {
+                            is.close();
+                        } catch (IOException ignore) {
+                            // ignore
+                        }
+                    }
+                }
+            }
+        });
     }
 
     /**
