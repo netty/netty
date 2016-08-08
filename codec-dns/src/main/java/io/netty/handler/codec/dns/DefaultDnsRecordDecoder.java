@@ -20,6 +20,9 @@ import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
+
 /**
  * The default {@link DnsRecordDecoder} implementation.
  *
@@ -93,6 +96,12 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         if (type == DnsRecordType.PTR) {
             in.setIndex(offset, offset + length);
             return new DefaultDnsPtrRecord(name, dnsClass, timeToLive, decodeName0(in));
+        } else if (type == DnsRecordType.NAPTR) {
+            in.readerIndex(offset);
+            return new DefaultDnsNaptrRecord(name, type, dnsClass, timeToLive, in);
+        } else if (type == DnsRecordType.SRV) {
+            in.readerIndex(offset);
+            return new DefaultDnsSrvRecord(name, type, dnsClass, timeToLive, in);
         }
         return new DefaultDnsRawRecord(
                 name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
@@ -109,6 +118,8 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
     protected String decodeName0(ByteBuf in) {
         return decodeName(in);
     }
+
+    protected String decodeCharString0(ByteBuf in) { return decodeCharString(in); }
 
     /**
      * Retrieves a domain name given a buffer containing a DNS packet. If the
@@ -183,5 +194,18 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         }
 
         return name.toString();
+    }
+
+    public static String decodeCharString(ByteBuf in) {
+        if (in.readableBytes() == 0) {
+            return null;
+        }
+        int length = (int) in.readByte();
+        if (in.readableBytes() < length) {
+            return null;
+        }
+        byte[] buf = new byte[length];
+        in.readBytes(buf);
+        return new String(buf, CharsetUtil.US_ASCII);
     }
 }
