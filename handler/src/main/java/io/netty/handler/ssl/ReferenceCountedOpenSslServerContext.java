@@ -37,7 +37,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * <p>Instances of this class must be {@link #release() released} or else native memory will leak!
  */
 public final class ReferenceCountedOpenSslServerContext extends ReferenceCountedOpenSslContext {
-    private static final byte[] ID = new byte[] {'n', 'e', 't', 't', 'y'};
+    private static final byte[] ID = {'n', 'e', 't', 't', 'y'};
     private final OpenSslServerSessionContext sessionContext;
     private final OpenSslKeyMaterialManager keyMaterialManager;
 

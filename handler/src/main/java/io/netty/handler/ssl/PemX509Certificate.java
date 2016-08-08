@@ -16,16 +16,9 @@
 package io.netty.handler.ssl;
 
 import java.math.BigInteger;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.Principal;
 import java.security.PublicKey;
-import java.security.SignatureException;
 import java.security.cert.CertificateEncodingException;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateExpiredException;
-import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Date;
@@ -261,7 +254,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     }
 
     @Override
-    public byte[] getEncoded() throws CertificateEncodingException {
+    public byte[] getEncoded() {
         throw new UnsupportedOperationException();
     }
 
@@ -286,14 +279,12 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     }
 
     @Override
-    public void checkValidity() throws CertificateExpiredException,
-            CertificateNotYetValidException {
+    public void checkValidity() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void checkValidity(Date date) throws CertificateExpiredException,
-            CertificateNotYetValidException {
+    public void checkValidity(Date date) {
         throw new UnsupportedOperationException();
     }
 
@@ -328,7 +319,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     }
 
     @Override
-    public byte[] getTBSCertificate() throws CertificateEncodingException {
+    public byte[] getTBSCertificate() {
         throw new UnsupportedOperationException();
     }
 
@@ -373,16 +364,12 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     }
 
     @Override
-    public void verify(PublicKey key)
-            throws CertificateException, NoSuchAlgorithmException,
-            InvalidKeyException, NoSuchProviderException, SignatureException {
+    public void verify(PublicKey key) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void verify(PublicKey key, String sigProvider)
-            throws CertificateException, NoSuchAlgorithmException,
-            InvalidKeyException, NoSuchProviderException, SignatureException {
+    public void verify(PublicKey key, String sigProvider) {
         throw new UnsupportedOperationException();
     }
 
