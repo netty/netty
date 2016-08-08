@@ -16,17 +16,22 @@
 
 package io.netty.handler.codec.mqtt;
 
+import io.netty.util.internal.ObjectUtil;
+
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#subscribe">
  *     MQTTV3.1/subscribe</a>
  */
 public final class MqttSubscribeMessage extends MqttMessage {
 
+    private final MqttSubscribePayload payload;
+
     public MqttSubscribeMessage(
             MqttFixedHeader mqttFixedHeader,
             MqttMessageIdVariableHeader variableHeader,
             MqttSubscribePayload payload) {
-        super(mqttFixedHeader, variableHeader, payload);
+        super(mqttFixedHeader, variableHeader);
+        this.payload = ObjectUtil.checkNotNull(payload, "payload");
     }
 
     @Override
@@ -36,6 +41,6 @@ public final class MqttSubscribeMessage extends MqttMessage {
 
     @Override
     public MqttSubscribePayload payload() {
-        return (MqttSubscribePayload) super.payload();
+        return payload;
     }
 }

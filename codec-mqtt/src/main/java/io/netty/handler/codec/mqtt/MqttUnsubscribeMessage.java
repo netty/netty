@@ -16,17 +16,22 @@
 
 package io.netty.handler.codec.mqtt;
 
+import io.netty.util.internal.ObjectUtil;
+
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#unsubscribe">
  *     MQTTV3.1/unsubscribe</a>
  */
 public final class MqttUnsubscribeMessage extends MqttMessage {
 
+    private final MqttUnsubscribePayload payload;
+
     public MqttUnsubscribeMessage(
             MqttFixedHeader mqttFixedHeader,
             MqttMessageIdVariableHeader variableHeader,
             MqttUnsubscribePayload payload) {
-        super(mqttFixedHeader, variableHeader, payload);
+        super(mqttFixedHeader, variableHeader);
+        this.payload = ObjectUtil.checkNotNull(payload, "payload");
     }
 
     @Override
@@ -36,6 +41,6 @@ public final class MqttUnsubscribeMessage extends MqttMessage {
 
     @Override
     public MqttUnsubscribePayload payload() {
-        return (MqttUnsubscribePayload) super.payload();
+        return payload;
     }
 }
