@@ -68,11 +68,6 @@ public interface Http2ConnectionDecoder extends Closeable {
     Http2Settings localSettings();
 
     /**
-     * Sets the local settings for this endpoint of the HTTP/2 connection.
-     */
-    void localSettings(Http2Settings settings) throws Http2Exception;
-
-    /**
      * Indicates whether or not the first initial {@code SETTINGS} frame was received from the remote endpoint.
      */
     boolean prefaceReceived();
