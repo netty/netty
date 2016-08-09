@@ -69,11 +69,6 @@ public class DecoratingHttp2ConnectionDecoder implements Http2ConnectionDecoder 
     }
 
     @Override
-    public void localSettings(Http2Settings settings) throws Http2Exception {
-        delegate.localSettings(settings);
-    }
-
-    @Override
     public boolean prefaceReceived() {
         return delegate.prefaceReceived();
     }

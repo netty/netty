@@ -132,46 +132,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     @Override
-    public void localSettings(Http2Settings settings) throws Http2Exception {
-        Boolean pushEnabled = settings.pushEnabled();
-        Http2FrameReader.Configuration config = frameReader.configuration();
-        Http2HeaderTable inboundHeaderTable = config.headerTable();
-        Http2FrameSizePolicy inboundFrameSizePolicy = config.frameSizePolicy();
-        if (pushEnabled != null) {
-            if (connection.isServer()) {
-                throw connectionError(PROTOCOL_ERROR, "Server sending SETTINGS frame with ENABLE_PUSH specified");
-            }
-            connection.local().allowPushTo(pushEnabled);
-        }
-
-        Long maxConcurrentStreams = settings.maxConcurrentStreams();
-        if (maxConcurrentStreams != null) {
-            int value = (int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE);
-            connection.remote().maxActiveStreams(value);
-        }
-
-        Long headerTableSize = settings.headerTableSize();
-        if (headerTableSize != null) {
-            inboundHeaderTable.maxHeaderTableSize((int) Math.min(headerTableSize, Integer.MAX_VALUE));
-        }
-
-        Integer maxHeaderListSize = settings.maxHeaderListSize();
-        if (maxHeaderListSize != null) {
-            inboundHeaderTable.maxHeaderListSize(maxHeaderListSize);
-        }
-
-        Integer maxFrameSize = settings.maxFrameSize();
-        if (maxFrameSize != null) {
-            inboundFrameSizePolicy.maxFrameSize(maxFrameSize);
-        }
-
-        Integer initialWindowSize = settings.initialWindowSize();
-        if (initialWindowSize != null) {
-            flowController().initialWindowSize(initialWindowSize);
-        }
-    }
-
-    @Override
     public void close() {
         frameReader.close();
     }
