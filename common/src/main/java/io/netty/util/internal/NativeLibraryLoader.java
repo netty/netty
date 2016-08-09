@@ -18,6 +18,7 @@ package io.netty.util.internal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -196,7 +197,6 @@ public final class NativeLibraryLoader {
         InputStream in = null;
         OutputStream out = null;
         File tmpFile = null;
-        boolean loaded = false;
         try {
             tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
             in = url.openStream();
@@ -208,37 +208,29 @@ public final class NativeLibraryLoader {
                 out.write(buffer, 0, length);
             }
             out.flush();
-            out.close();
-            out = null;
 
             System.load(tmpFile.getPath());
-            loaded = true;
         } catch (Exception e) {
             throw (UnsatisfiedLinkError) new UnsatisfiedLinkError(
                     "could not load a native library: " + name).initCause(e);
         } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException ignore) {
-                    // ignore
-                }
+            safeClose(in);
+            safeClose(out);
+            // After we load the library it is safe to delete the file.
+            // We delete the file immediately to free up resources as soon as possible,
+            // and if this fails fallback to deleting on JVM exit.
+            if (tmpFile != null && !tmpFile.delete()) {
+                tmpFile.deleteOnExit();
             }
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (IOException ignore) {
-                    // ignore
-                }
-            }
-            if (tmpFile != null) {
-                if (loaded) {
-                    tmpFile.deleteOnExit();
-                } else {
-                    if (!tmpFile.delete()) {
-                        tmpFile.deleteOnExit();
-                    }
-                }
+        }
+    }
+
+    private static void safeClose(Closeable closeable) {
+        if (closeable != null) {
+            try {
+                closeable.close();
+            } catch (IOException ignore) {
+                // ignore
             }
         }
     }
