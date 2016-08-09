@@ -276,7 +276,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         private BooleanSupplier isWritableSupplier = new BooleanSupplier() {
             @Override
             public boolean get() throws Exception {
-                return windowSize() - pendingBytes() > 0;
+                return windowSize() > pendingBytes();
             }
         };
 

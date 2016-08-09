@@ -518,6 +518,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
             state = CLOSED;
 
+            --createdBy().numStreams;
             activeStreams.deactivate(this, itr);
             return this;
         }
@@ -827,8 +828,10 @@ public class DefaultHttp2Connection implements Http2Connection {
         private boolean pushToAllowed = true;
         private F flowController;
         private int maxActiveStreams;
+        private int maxStreams;
         // Fields accessed by inner classes
         int numActiveStreams;
+        int numStreams;
 
         DefaultEndpoint(boolean server) {
             this.server = server;
@@ -848,7 +851,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
             // Push is disallowed by default for servers and allowed for clients.
             pushToAllowed = !server;
-            maxActiveStreams = Integer.MAX_VALUE;
+            maxStreams = maxActiveStreams = Integer.MAX_VALUE;
         }
 
         @Override
@@ -861,12 +864,12 @@ public class DefaultHttp2Connection implements Http2Connection {
                 nextReservationStreamId = streamId;
             }
             nextStreamIdToCreate = streamId + 2;
+            ++numStreams;
         }
 
         @Override
         public boolean isValidStreamId(int streamId) {
-            boolean even = (streamId & 1) == 0;
-            return streamId > 0 && server == even;
+            return streamId > 0 && server == ((streamId & 1) == 0);
         }
 
         @Override
@@ -876,7 +879,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public boolean canOpenStream() {
-            return numActiveStreams + 1 <= maxActiveStreams;
+            return numActiveStreams < maxActiveStreams;
         }
 
         private DefaultStream createStream(int streamId, State state) throws Http2Exception {
@@ -980,7 +983,17 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public void maxActiveStreams(int maxActiveStreams) {
+        public int maxStreams() {
+            return maxStreams;
+        }
+
+        @Override
+        public void maxStreams(int maxActiveStreams, int maxStreams) throws Http2Exception {
+            if (maxStreams < maxActiveStreams) {
+                throw connectionError(PROTOCOL_ERROR, "maxStream[%d] streams must be >= maxActiveStreams[%d]",
+                        maxStreams,  maxActiveStreams);
+            }
+            this.maxStreams = maxStreams;
             this.maxActiveStreams = maxActiveStreams;
         }
 
@@ -1035,8 +1048,12 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (nextStreamIdToCreate <= 0) {
                 throw connectionError(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.");
             }
-            if ((state.localSideOpen() || state.remoteSideOpen()) && !canOpenStream()) {
-                throw connectionError(REFUSED_STREAM, "Maximum active streams violated for this endpoint.");
+            if (state.localSideOpen() || state.remoteSideOpen()) {
+                if (!canOpenStream()) {
+                    throw connectionError(REFUSED_STREAM, "Maximum active streams violated for this endpoint.");
+                }
+            } else if (numStreams == maxStreams) {
+                throw streamError(streamId, REFUSED_STREAM, "Maximum streams violated for this endpoint.");
             }
             if (isClosed()) {
                 throw connectionError(INTERNAL_ERROR, "Attempted to create stream id %d after connection was closed",
