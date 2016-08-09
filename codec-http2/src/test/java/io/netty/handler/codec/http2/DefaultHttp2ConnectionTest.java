@@ -44,6 +44,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
+import static java.lang.Integer.MAX_VALUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -392,22 +393,22 @@ public class DefaultHttp2ConnectionTest {
 
     @Test(expected = Http2NoMoreStreamIdsException.class)
     public void serverRemoteIncrementAndGetStreamShouldRespectOverflow() throws Http2Exception {
-        incrementAndGetStreamShouldRespectOverflow(server.remote(), Integer.MAX_VALUE);
+        incrementAndGetStreamShouldRespectOverflow(server.remote(), MAX_VALUE);
     }
 
     @Test(expected = Http2NoMoreStreamIdsException.class)
     public void serverLocalIncrementAndGetStreamShouldRespectOverflow() throws Http2Exception {
-        incrementAndGetStreamShouldRespectOverflow(server.local(), Integer.MAX_VALUE - 1);
+        incrementAndGetStreamShouldRespectOverflow(server.local(), MAX_VALUE - 1);
     }
 
     @Test(expected = Http2NoMoreStreamIdsException.class)
     public void clientRemoteIncrementAndGetStreamShouldRespectOverflow() throws Http2Exception {
-        incrementAndGetStreamShouldRespectOverflow(client.remote(), Integer.MAX_VALUE - 1);
+        incrementAndGetStreamShouldRespectOverflow(client.remote(), MAX_VALUE - 1);
     }
 
     @Test(expected = Http2NoMoreStreamIdsException.class)
     public void clientLocalIncrementAndGetStreamShouldRespectOverflow() throws Http2Exception {
-        incrementAndGetStreamShouldRespectOverflow(client.local(), Integer.MAX_VALUE);
+        incrementAndGetStreamShouldRespectOverflow(client.local(), MAX_VALUE);
     }
 
     @Test(expected = Http2Exception.class)
@@ -426,20 +427,39 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test(expected = Http2Exception.class)
-    public void createShouldThrowWhenMaxAllowedStreamsExceeded() throws Http2Exception {
-        server.local().maxActiveStreams(0);
+    public void createShouldThrowWhenMaxAllowedStreamsOpenExceeded() throws Http2Exception {
+        server.local().maxStreams(0, 0);
         server.local().createStream(2, true);
     }
 
+    @Test(expected = Http2Exception.class)
+    public void createShouldThrowWhenMaxAllowedStreamsIdleExceeded() throws Http2Exception {
+        server.local().maxStreams(0, 0);
+        server.local().createIdleStream(2);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void createShouldThrowWhenMaxAllowedStreamsReservedExceeded() throws Http2Exception {
+        server.local().maxStreams(1, 1);
+        Http2Stream parent = server.local().createStream(2, false);
+        server.local().reservePushStream(4, parent);
+    }
+
     @Test
-    public void createIdleShouldSucceedWhenMaxAllowedStreamsExceeded() throws Http2Exception {
-        server.local().maxActiveStreams(0);
+    public void createIdleShouldSucceedWhenMaxAllowedActiveStreamsExceeded() throws Http2Exception {
+        server.local().maxStreams(0, MAX_VALUE);
         Http2Stream stream = server.local().createIdleStream(2);
 
         // Opening should fail, however.
         thrown.expect(Http2Exception.class);
         thrown.expectMessage("Maximum active streams violated for this endpoint.");
         stream.open(false);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void createIdleShouldFailWhenMaxAllowedStreamsExceeded() throws Http2Exception {
+        server.local().maxStreams(0, 0);
+        server.local().createIdleStream(2);
     }
 
     @Test(expected = Http2Exception.class)
@@ -490,13 +510,13 @@ public class DefaultHttp2ConnectionTest {
     @SuppressWarnings("NumericOverflow")
     @Test(expected = Http2Exception.class)
     public void localStreamInvalidStreamIdShouldThrow() throws Http2Exception {
-        client.local().createStream(Integer.MAX_VALUE + 2, false);
+        client.local().createStream(MAX_VALUE + 2, false);
     }
 
     @SuppressWarnings("NumericOverflow")
     @Test(expected = Http2Exception.class)
     public void remoteStreamInvalidStreamIdShouldThrow() throws Http2Exception {
-        client.remote().createStream(Integer.MAX_VALUE + 1, false);
+        client.remote().createStream(MAX_VALUE + 1, false);
     }
 
     @Test
