@@ -37,6 +37,6 @@ public final class OpenSslEngine extends ReferenceCountedOpenSslEngine {
     @SuppressWarnings("FinalizeDeclaration")
     protected void finalize() throws Throwable {
         super.finalize();
-        safeRelease(this);
+        OpenSsl.releaseIfNeeded(this);
     }
 }
