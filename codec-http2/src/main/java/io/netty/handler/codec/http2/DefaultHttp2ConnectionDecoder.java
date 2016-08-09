@@ -386,7 +386,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             Long maxConcurrentStreams = settings.maxConcurrentStreams();
             if (maxConcurrentStreams != null) {
                 int value = (int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE);
-                connection.remote().maxActiveStreams(value);
+                // By default just enforce the SETTINGS_MAX_CONCURRENT_STREAMS limit for stream in all states.
+                connection.remote().maxStreams(value, value);
             }
 
             Long headerTableSize = settings.headerTableSize();

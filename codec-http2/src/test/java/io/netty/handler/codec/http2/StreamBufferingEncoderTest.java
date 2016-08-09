@@ -453,9 +453,9 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void closeShouldCancelAllBufferedStreams() {
+    public void closeShouldCancelAllBufferedStreams() throws Http2Exception {
         encoder.writeSettingsAck(ctx, newPromise());
-        connection.local().maxActiveStreams(0);
+        connection.local().maxStreams(0, 0);
 
         ChannelFuture f1 = encoderWriteHeaders(3, newPromise());
         ChannelFuture f2 = encoderWriteHeaders(5, newPromise());

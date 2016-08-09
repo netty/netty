@@ -29,6 +29,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
 
 /**
@@ -87,12 +88,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         Long maxConcurrentStreams = settings.maxConcurrentStreams();
         if (maxConcurrentStreams != null) {
-            connection.local().maxActiveStreams((int) min(maxConcurrentStreams, Integer.MAX_VALUE));
+            // TODO(scott): define an extension setting so we can communicate/enforce the maxStreams limit locally.
+            connection.local().maxStreams((int) min(maxConcurrentStreams, MAX_VALUE), MAX_VALUE);
         }
 
         Long headerTableSize = settings.headerTableSize();
         if (headerTableSize != null) {
-            outboundHeaderTable.maxHeaderTableSize((int) min(headerTableSize, Integer.MAX_VALUE));
+            outboundHeaderTable.maxHeaderTableSize((int) min(headerTableSize, MAX_VALUE));
         }
 
         Integer maxHeaderListSize = settings.maxHeaderListSize();
@@ -384,7 +386,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         public boolean merge(ChannelHandlerContext ctx, Http2RemoteFlowController.FlowControlled next) {
             FlowControlledData nextData;
             if (FlowControlledData.class != next.getClass() ||
-                Integer.MAX_VALUE - (nextData = (FlowControlledData) next).size() < size()) {
+                MAX_VALUE - (nextData = (FlowControlledData) next).size() < size()) {
                 return false;
             }
             nextData.queue.copyTo(queue);

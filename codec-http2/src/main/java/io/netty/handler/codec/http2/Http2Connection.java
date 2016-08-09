@@ -195,7 +195,6 @@ public interface Http2Connection {
          * <ul>
          * <li>The requested stream ID is not the next sequential ID for this endpoint.</li>
          * <li>The stream already exists.</li>
-         * <li>{@link #isExhausted()} is {@code true}</li>
          * <li>{@link #canOpenStream()} is {@code false}.</li>
          * <li>The connection is marked as going away.</li>
          * </ul>
@@ -257,11 +256,22 @@ public interface Http2Connection {
         int maxActiveStreams();
 
         /**
-         * Sets the maximum number of streams (created by this endpoint) that are allowed to be active at once.
-         * This is the {@code SETTINGS_MAX_CONCURRENT_STREAMS} value sent from the opposite endpoint to
-         * restrict stream creation by this endpoint.
+         * The limit imposed by {@link #maxActiveStreams()} does not apply to streams in the IDLE state. Since IDLE
+         * streams can still consume resources this limit will include streams in all states.
+         * @return The maximum number of streams that can exist at any given time.
          */
-        void maxActiveStreams(int maxActiveStreams);
+        int maxStreams();
+
+        /**
+         * Sets the limit for {@code SETTINGS_MAX_CONCURRENT_STREAMS} and the limit for {@link #maxStreams()}.
+         * @param maxActiveStreams The maximum number of streams (created by this endpoint) that are allowed to be
+         * active at once. This is the {@code SETTINGS_MAX_CONCURRENT_STREAMS} value sent from the opposite endpoint to
+         * restrict stream creation by this endpoint.
+         * @param maxStreams The limit imposed by {@link #maxActiveStreams()} does not apply to streams in the IDLE
+         * state. Since IDLE streams can still consume resources this limit will include streams in all states.
+         * @throws Http2Exception if {@code maxStreams < maxActiveStream}.
+         */
+        void maxStreams(int maxActiveStreams, int maxStreams) throws Http2Exception;
 
         /**
          * Gets the ID of the stream last successfully created by this endpoint.
