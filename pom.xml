@@ -229,7 +229,7 @@
     <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
-    <log4j2.version>2.6.1</log4j2.version>
+    <log4j2.version>2.6.2</log4j2.version>
   </properties>
 
   <modules>
