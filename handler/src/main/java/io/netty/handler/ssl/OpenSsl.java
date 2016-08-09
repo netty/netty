@@ -18,6 +18,8 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -431,5 +433,11 @@ public final class OpenSsl {
 
     private static String normalize(String value) {
         return value.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "");
+    }
+
+    static void releaseIfNeeded(ReferenceCounted counted) {
+        if (counted.refCnt() > 0) {
+            ReferenceCountUtil.safeRelease(counted);
+        }
     }
 }

@@ -22,8 +22,6 @@ import java.security.cert.Certificate;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
-import static io.netty.util.ReferenceCountUtil.safeRelease;
-
 /**
  * This class will use a finalizer to ensure native resources are automatically cleaned up. To avoid finalizers
  * and manually release the native memory see {@link ReferenceCountedOpenSslContext}.
@@ -53,6 +51,6 @@ public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     @SuppressWarnings("FinalizeDeclaration")
     protected final void finalize() throws Throwable {
         super.finalize();
-        safeRelease(this);
+        OpenSsl.releaseIfNeeded(this);
     }
 }
