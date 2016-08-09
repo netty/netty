@@ -24,7 +24,6 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  * a {@link ByteBuf}.
  */
 public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
-    private static final byte[] CRLF = { CR, LF };
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
