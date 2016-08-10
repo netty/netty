@@ -29,8 +29,8 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.apache.tomcat.jni.Buffer;
-import org.apache.tomcat.jni.SSL;
+import io.netty.tcnative.jni.Buffer;
+import io.netty.tcnative.jni.SSL;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
