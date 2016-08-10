@@ -15,6 +15,11 @@
  */
 package io.netty.channel.embedded;
 
+import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Queue;
+
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -36,11 +41,6 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Queue;
 
 /**
  * Base class for {@link Channel} implementations that are used in an embedded fashion.
@@ -273,10 +273,51 @@ public class EmbeddedChannel extends AbstractChannel {
         for (Object m: msgs) {
             p.fireChannelRead(m);
         }
-        p.fireChannelReadComplete();
-        runPendingTasks();
-        checkException();
+
+        flushInbound(false, voidPromise());
         return isNotEmpty(inboundMessages);
+    }
+
+    /**
+     * Writes one message to the inbound of this {@link Channel} and does not flush it. This
+     * method is conceptually equivalent to {@link #write(Object)}.
+     *
+     * @see #writeOneOutbound(Object)
+     */
+    public ChannelFuture writeOneInbound(Object msg) {
+        return writeOneInbound(msg, newPromise());
+    }
+
+    /**
+     * Writes one message to the inbound of this {@link Channel} and does not flush it. This
+     * method is conceptually equivalent to {@link #write(Object, ChannelPromise)}.
+     *
+     * @see #writeOneOutbound(Object, ChannelPromise)
+     */
+    public ChannelFuture writeOneInbound(Object msg, ChannelPromise promise) {
+        if (checkOpen(true)) {
+            pipeline().fireChannelRead(msg);
+        }
+        return checkException(promise);
+    }
+
+    /**
+     * Flushes the inbound of this {@link Channel}. This method is conceptually equivalent to {@link #flush()}.
+     *
+     * @see #flushOutbound()
+     */
+    public EmbeddedChannel flushInbound() {
+        flushInbound(true, voidPromise());
+        return this;
+    }
+
+    private ChannelFuture flushInbound(boolean recordException, ChannelPromise promise) {
+      if (checkOpen(recordException)) {
+          pipeline().fireChannelReadComplete();
+          runPendingTasks();
+      }
+
+      return checkException(promise);
     }
 
     /**
@@ -299,10 +340,8 @@ public class EmbeddedChannel extends AbstractChannel {
                 }
                 futures.add(write(m));
             }
-            // We need to call runPendingTasks first as a ChannelOutboundHandler may used eventloop.execute(...) to
-            // delay the write on the next eventloop run.
-            runPendingTasks();
-            flush();
+
+            flushOutbound0();
 
             int size = futures.size();
             for (int i = 0; i < size; i++) {
@@ -320,6 +359,50 @@ public class EmbeddedChannel extends AbstractChannel {
         } finally {
             futures.recycle();
         }
+    }
+
+    /**
+     * Writes one message to the outbound of this {@link Channel} and does not flush it. This
+     * method is conceptually equivalent to {@link #write(Object)}.
+     *
+     * @see #writeOneInbound(Object)
+     */
+    public ChannelFuture writeOneOutbound(Object msg) {
+        return writeOneOutbound(msg, newPromise());
+    }
+
+    /**
+     * Writes one message to the outbound of this {@link Channel} and does not flush it. This
+     * method is conceptually equivalent to {@link #write(Object, ChannelPromise)}.
+     *
+     * @see #writeOneInbound(Object, ChannelPromise)
+     */
+    public ChannelFuture writeOneOutbound(Object msg, ChannelPromise promise) {
+        if (checkOpen(true)) {
+            return write(msg, promise);
+        }
+        return checkException(promise);
+    }
+
+    /**
+     * Flushes the outbound of this {@link Channel}. This method is conceptually equivalent to {@link #flush()}.
+     *
+     * @see #flushInbound()
+     */
+    public EmbeddedChannel flushOutbound() {
+        if (checkOpen(true)) {
+            flushOutbound0();
+        }
+        checkException(voidPromise());
+        return this;
+    }
+
+    private void flushOutbound0() {
+        // We need to call runPendingTasks first as a ChannelOutboundHandler may used eventloop.execute(...) to
+        // delay the write on the next eventloop run.
+        runPendingTasks();
+
+        flush();
     }
 
     /**
@@ -484,25 +567,50 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     /**
+     * Checks for the presence of an {@link Exception}.
+     */
+    private ChannelFuture checkException(ChannelPromise promise) {
+      Throwable t = lastException;
+      if (t != null) {
+        lastException = null;
+
+        if (promise.isVoid()) {
+            PlatformDependent.throwException(t);
+        }
+
+        return promise.setFailure(t);
+      }
+
+      return promise.setSuccess();
+    }
+
+    /**
      * Check if there was any {@link Throwable} received and if so rethrow it.
      */
     public void checkException() {
-        Throwable t = lastException;
-        if (t == null) {
-            return;
-        }
+      checkException(voidPromise());
+    }
 
-        lastException = null;
+    /**
+     * Returns {@code true} if the {@link Channel} is open and records optionally
+     * an {@link Exception} if it isn't.
+     */
+    private boolean checkOpen(boolean recordException) {
+        if (!isOpen()) {
+          if (recordException) {
+              recordException(new ClosedChannelException());
+          }
+          return false;
+      }
 
-        PlatformDependent.throwException(t);
+      return true;
     }
 
     /**
      * Ensure the {@link Channel} is open and if not throw an exception.
      */
     protected final void ensureOpen() {
-        if (!isOpen()) {
-            recordException(new ClosedChannelException());
+        if (!checkOpen(true)) {
             checkException();
         }
     }
@@ -563,9 +671,25 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             ReferenceCountUtil.retain(msg);
-            outboundMessages().add(msg);
+            handleOutboundMessage(msg);
             in.remove();
         }
+    }
+
+    /**
+     * Called for each outbound message.
+     *
+     * @see #doWrite(ChannelOutboundBuffer)
+     */
+    protected void handleOutboundMessage(Object msg) {
+        outboundMessages().add(msg);
+    }
+
+    /**
+     * Called for each inbound message.
+     */
+    protected void handleInboundMessage(Object msg) {
+        inboundMessages().add(msg);
     }
 
     private class DefaultUnsafe extends AbstractUnsafe {
@@ -587,7 +711,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
         @Override
         protected void onUnhandledInboundMessage(Object msg) {
-            inboundMessages().add(msg);
+          handleInboundMessage(msg);
         }
     }
 }
