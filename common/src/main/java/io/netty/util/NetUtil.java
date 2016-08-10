@@ -118,9 +118,14 @@ public final class NetUtil {
     private static final int IPV4_SEPARATORS = 3;
 
     /**
-     * {@code true} if ipv4 should be used on a system that supports ipv4 and ipv6.
+     * {@code true} if IPv4 should be used even if the system supports both IPv4 and IPv6.
      */
     private static final boolean IPV4_PREFERRED = Boolean.getBoolean("java.net.preferIPv4Stack");
+
+    /**
+     * {@code true} if an IPv6 address should be preferred when a host has both an IPv4 address and an IPv6 address.
+     */
+    private static final boolean IPV6_ADDRESSES_PREFERRED = Boolean.getBoolean("java.net.preferIPv6Addresses");
 
     /**
      * The logger being used by this class
@@ -128,6 +133,9 @@ public final class NetUtil {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NetUtil.class);
 
     static {
+        logger.debug("-Djava.net.preferIPv4Stack: {}", IPV4_PREFERRED);
+        logger.debug("-Djava.net.preferIPv6Addresses: {}", IPV6_ADDRESSES_PREFERRED);
+
         byte[] LOCALHOST4_BYTES = {127, 0, 0, 1};
         byte[] LOCALHOST6_BYTES = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 
@@ -278,10 +286,25 @@ public final class NetUtil {
     }
 
     /**
-     * Returns {@code true} if ipv4 should be prefered on a system that supports ipv4 and ipv6.
+     * Returns {@code true} if IPv4 should be used even if the system supports both IPv4 and IPv6. Setting this
+     * property to {@code true} will disable IPv6 support. The default value of this property is {@code false}.
+     *
+     * @see <a href="https://docs.oracle.com/javase/8/docs/api/java/net/doc-files/net-properties.html">Java SE
+     *      networking properties</a>
      */
     public static boolean isIpV4StackPreferred() {
         return IPV4_PREFERRED;
+    }
+
+    /**
+     * Returns {@code true} if an IPv6 address should be preferred when a host has both an IPv4 address and an IPv6
+     * address. The default value of this property is {@code false}.
+     *
+     * @see <a href="https://docs.oracle.com/javase/8/docs/api/java/net/doc-files/net-properties.html">Java SE
+     *      networking properties</a>
+     */
+    public static boolean isIpV6AddressesPreferred() {
+        return IPV6_ADDRESSES_PREFERRED;
     }
 
     /**
