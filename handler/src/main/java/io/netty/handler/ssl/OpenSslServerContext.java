@@ -16,7 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.handler.ssl.ReferenceCountedOpenSslServerContext.ServerContext;
-import org.apache.tomcat.jni.SSL;
+import io.netty.tcnative.jni.SSL;
 
 import java.io.File;
 import java.security.PrivateKey;
