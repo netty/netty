@@ -27,10 +27,9 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.apache.tomcat.jni.CertificateVerifier;
-import org.apache.tomcat.jni.Pool;
-import org.apache.tomcat.jni.SSL;
-import org.apache.tomcat.jni.SSLContext;
+import io.netty.tcnative.jni.CertificateVerifier;
+import io.netty.tcnative.jni.SSL;
+import io.netty.tcnative.jni.SSLContext;
 
 import java.security.AccessController;
 import java.security.PrivateKey;
@@ -98,7 +97,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * The OpenSSL SSL_CTX object
      */
     protected volatile long ctx;
-    long aprPool;
     @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile int aprPoolDestroyed;
     private final List<String> unmodifiableCiphers;
@@ -250,15 +248,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
         this.apn = checkNotNull(apn, "apn");
 
-        // Allocate a new APR pool.
-        aprPool = Pool.create(0);
-
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
             synchronized (ReferenceCountedOpenSslContext.class) {
                 try {
-                    ctx = SSLContext.make(aprPool, SSL.SSL_PROTOCOL_ALL, mode);
+                    ctx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, mode);
                 } catch (Exception e) {
                     throw new SSLException("failed to create an SSL_CTX", e);
                 }
@@ -465,12 +460,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             if (ctx != 0) {
                 SSLContext.free(ctx);
                 ctx = 0;
-            }
-
-            // Guard against multiple destroyPools() calls triggered by construction exception and finalize() later
-            if (aprPool != 0) {
-                Pool.destroy(aprPool);
-                aprPool = 0;
             }
         }
     }
