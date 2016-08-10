@@ -18,12 +18,16 @@ package io.netty.util.internal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.URL;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Locale;
 
@@ -186,7 +190,7 @@ public final class NativeLibraryLoader {
 
         if (url == null) {
             // Fall back to normal loading of JNI stuff
-            System.loadLibrary(name);
+            loadLibrary(loader, name, false);
             return;
         }
 
@@ -211,7 +215,7 @@ public final class NativeLibraryLoader {
             out.close();
             out = null;
 
-            System.load(tmpFile.getPath());
+            loadLibrary(loader, tmpFile.getPath(), true);
             loaded = true;
         } catch (Exception e) {
             throw (UnsatisfiedLinkError) new UnsatisfiedLinkError(
@@ -239,6 +243,117 @@ public final class NativeLibraryLoader {
                         tmpFile.deleteOnExit();
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Loading the native library into the specified {@link ClassLoader}.
+     * @param loader - The {@link ClassLoader} where the native library will be loaded into
+     * @param name - The native library path or name
+     * @param absolute - Whether the native library will be loaded by path or by name
+     */
+    private static void loadLibrary(final ClassLoader loader, final String name, final boolean absolute) {
+        try {
+            // Make sure the helper is belong to the target ClassLoader.
+            final Class<?> newHelper = tryToLoadClass(loader, NativeLibraryUtil.class);
+            loadLibraryByHelper(newHelper, name, absolute);
+        } catch (Exception e) { // Should by pass the UnsatisfiedLinkError here!
+            logger.debug("Unable to load the library: " + name + '.', e);
+            NativeLibraryUtil.loadLibrary(name, absolute);  // Fallback to local helper class.
+        }
+    }
+
+    private static void loadLibraryByHelper(final Class<?> helper, final String name, final boolean absolute) {
+        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            @Override
+            public Object run() {
+                try {
+                    // Invoke the helper to load the native library, if succeed, then the native
+                    // library belong to the specified ClassLoader.
+                    Method method = helper.getMethod("loadLibrary",
+                            new Class<?>[] { String.class, boolean.class });
+                    method.setAccessible(true);
+                    return method.invoke(null, name, absolute);
+                } catch (Exception e) {
+                    throw new IllegalStateException("Load library failed!", e);
+                }
+            }
+        });
+    }
+
+    /**
+     * Try to load the helper {@link Class} into specified {@link ClassLoader}.
+     * @param loader - The {@link ClassLoader} where to load the helper {@link Class}
+     * @param helper - The helper {@link Class}
+     * @return A new helper Class defined in the specified ClassLoader.
+     * @throws ClassNotFoundException Helper class not found or loading failed
+     */
+    private static Class<?> tryToLoadClass(final ClassLoader loader, final Class<?> helper)
+            throws ClassNotFoundException {
+        try {
+            return loader.loadClass(helper.getName());
+        } catch (ClassNotFoundException e) {
+            // The helper class is NOT found in target ClassLoader, we have to define the helper class.
+            final byte[] classBinary = classToByteArray(helper);
+            return AccessController.doPrivileged(new PrivilegedAction<Class<?>>() {
+                @Override
+                public Class<?> run() {
+                    try {
+                        // Define the helper class in the target ClassLoader,
+                        //  then we can call the helper to load the native library.
+                        Method defineClass = ClassLoader.class.getDeclaredMethod("defineClass", String.class,
+                                byte[].class, int.class, int.class);
+                        defineClass.setAccessible(true);
+                        return (Class<?>) defineClass.invoke(loader, helper.getName(), classBinary, 0,
+                                classBinary.length);
+                    } catch (Exception e) {
+                        throw new IllegalStateException("Define class failed!", e);
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Load the helper {@link Class} as a byte array, to be redefined in specified {@link ClassLoader}.
+     * @param clazz - The helper {@link Class} provided by this bundle
+     * @return The binary content of helper {@link Class}.
+     * @throws ClassNotFoundException Helper class not found or loading failed
+     */
+    private static byte[] classToByteArray(Class<?> clazz) throws ClassNotFoundException {
+        String fileName = clazz.getName();
+        int lastDot = fileName.lastIndexOf('.');
+        if (lastDot > 0) {
+            fileName = fileName.substring(lastDot + 1);
+        }
+        URL classUrl = clazz.getResource(fileName + ".class");
+        if (classUrl == null) {
+            throw new ClassNotFoundException(clazz.getName());
+        }
+        byte[] buf = new byte[1024];
+        ByteArrayOutputStream out = new ByteArrayOutputStream(4096);
+        InputStream in = null;
+        try {
+            in = classUrl.openStream();
+            for (int r; (r = in.read(buf)) != -1;) {
+                out.write(buf, 0, r);
+            }
+            return out.toByteArray();
+        } catch (IOException ex) {
+            throw new ClassNotFoundException(clazz.getName(), ex);
+        } finally {
+            closeQuietly(in);
+            closeQuietly(out);
+        }
+    }
+
+    private static void closeQuietly(java.io.Closeable c) {
+        if (c != null) {
+            try {
+                c.close();
+            } catch (IOException ignore) {
+                // ignore
             }
         }
     }
