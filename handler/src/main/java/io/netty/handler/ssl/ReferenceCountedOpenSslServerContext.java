@@ -15,8 +15,8 @@
  */
 package io.netty.handler.ssl;
 
-import org.apache.tomcat.jni.SSL;
-import org.apache.tomcat.jni.SSLContext;
+import io.netty.tcnative.jni.SSL;
+import io.netty.tcnative.jni.SSLContext;
 
 import java.security.KeyStore;
 import java.security.PrivateKey;

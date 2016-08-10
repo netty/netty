@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import org.apache.tomcat.jni.SSL;
+import io.netty.tcnative.jni.SSL;
 
 import java.io.File;
 import java.security.PrivateKey;

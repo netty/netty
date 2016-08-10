@@ -16,7 +16,7 @@
 
 package io.netty.handler.ssl;
 
-import org.apache.tomcat.jni.SSLContext;
+import io.netty.tcnative.jni.SSLContext;
 
 /**
  * Stats exposed by an OpenSSL session context.
