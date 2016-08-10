@@ -70,21 +70,24 @@ public class DnsNameResolver extends InetNameResolver {
     private static final String LOCALHOST = "localhost";
     private static final InetAddress LOCALHOST_ADDRESS;
 
-    static final InternetProtocolFamily[] DEFAULT_RESOLVE_ADDRESS_TYPES = new InternetProtocolFamily[2];
+    static final InternetProtocolFamily[] DEFAULT_RESOLVE_ADDRESS_TYPES;
     static final String[] DEFAULT_SEACH_DOMAINS;
 
     static {
-        // Note that we did not use SystemPropertyUtil.getBoolean() here to emulate the behavior of JDK.
-        if (Boolean.getBoolean("java.net.preferIPv6Addresses")) {
-            DEFAULT_RESOLVE_ADDRESS_TYPES[0] = InternetProtocolFamily.IPv6;
-            DEFAULT_RESOLVE_ADDRESS_TYPES[1] = InternetProtocolFamily.IPv4;
-            LOCALHOST_ADDRESS = NetUtil.LOCALHOST6;
-            logger.debug("-Djava.net.preferIPv6Addresses: true");
-        } else {
-            DEFAULT_RESOLVE_ADDRESS_TYPES[0] = InternetProtocolFamily.IPv4;
-            DEFAULT_RESOLVE_ADDRESS_TYPES[1] = InternetProtocolFamily.IPv6;
+        if (NetUtil.isIpV4StackPreferred()) {
+            DEFAULT_RESOLVE_ADDRESS_TYPES = new InternetProtocolFamily[] { InternetProtocolFamily.IPv4 };
             LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
-            logger.debug("-Djava.net.preferIPv6Addresses: false");
+        } else {
+            DEFAULT_RESOLVE_ADDRESS_TYPES = new InternetProtocolFamily[2];
+            if (NetUtil.isIpV6AddressesPreferred()) {
+                DEFAULT_RESOLVE_ADDRESS_TYPES[0] = InternetProtocolFamily.IPv6;
+                DEFAULT_RESOLVE_ADDRESS_TYPES[1] = InternetProtocolFamily.IPv4;
+                LOCALHOST_ADDRESS = NetUtil.LOCALHOST6;
+            } else {
+                DEFAULT_RESOLVE_ADDRESS_TYPES[0] = InternetProtocolFamily.IPv4;
+                DEFAULT_RESOLVE_ADDRESS_TYPES[1] = InternetProtocolFamily.IPv6;
+                LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
+            }
         }
     }
 
