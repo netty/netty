@@ -44,7 +44,8 @@ class PerMessageDeflateEncoder extends DeflateEncoder {
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         return ((msg instanceof TextWebSocketFrame ||
-                msg instanceof BinaryWebSocketFrame) &&
+                msg instanceof BinaryWebSocketFrame ||
+                msg instanceof UncompressedWebSocketDataFrame) &&
                    (((WebSocketFrame) msg).rsv() & WebSocketExtension.RSV1) == 0) ||
                (msg instanceof ContinuationWebSocketFrame && compressing);
     }
@@ -63,7 +64,11 @@ class PerMessageDeflateEncoder extends DeflateEncoder {
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg,
             List<Object> out) throws Exception {
-        super.encode(ctx, msg, out);
+        if (msg instanceof UncompressedWebSocketDataFrame) {
+            out.add(((UncompressedWebSocketDataFrame) msg).extractDataFrame().retain());
+        } else {
+            super.encode(ctx, msg, out);
+        }
 
         if (msg.isFinalFragment()) {
             compressing = false;

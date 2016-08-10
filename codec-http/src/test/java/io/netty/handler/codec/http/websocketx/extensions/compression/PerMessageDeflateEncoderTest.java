@@ -96,6 +96,32 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
+    public void testUncompressedWebSocketFrame() {
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
+
+        // initialize
+        byte[] payload = new byte[300];
+        random.nextBytes(payload);
+
+        UncompressedWebSocketDataFrame frame = new UncompressedWebSocketDataFrame(
+                new BinaryWebSocketFrame(true, WebSocketExtension.RSV3, Unpooled.wrappedBuffer(payload)));
+
+        // execute
+        assertTrue(encoderChannel.writeOutbound(frame));
+        BinaryWebSocketFrame newFrame = encoderChannel.readOutbound();
+
+        // test
+        assertNotNull(newFrame);
+        assertEquals(WebSocketExtension.RSV3, newFrame.rsv());
+        assertEquals(300, newFrame.content().readableBytes());
+
+        byte[] finalPayload = new byte[payload.length];
+        newFrame.content().readBytes(finalPayload);
+        assertTrue(Arrays.equals(finalPayload, payload));
+        newFrame.release();
+    }
+
+    @Test
     public void testFramementedFrame() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(

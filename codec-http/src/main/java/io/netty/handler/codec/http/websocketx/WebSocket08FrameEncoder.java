@@ -104,6 +104,10 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
 
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
+        if (msg instanceof WebSocketDataFrameContainer) {
+            msg = ((WebSocketDataFrameContainer) msg).extractDataFrame();
+        }
+
         final ByteBuf data = msg.content();
         byte[] mask;
 
