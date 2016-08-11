@@ -866,7 +866,7 @@ public abstract class SslContext {
         return newHandler(newEngine(alloc, peerHost, peerPort));
     }
 
-    private static SslHandler newHandler(SSLEngine engine) {
+    static SslHandler newHandler(SSLEngine engine) {
         return new SslHandler(engine);
     }
 
