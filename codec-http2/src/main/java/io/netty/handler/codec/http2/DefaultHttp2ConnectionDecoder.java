@@ -16,6 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -24,6 +25,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.List;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
@@ -32,6 +34,8 @@ import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_V
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Integer.MAX_VALUE;
+import static java.lang.Math.min;
 
 /**
  * Provides the default implementation for processing inbound frame events and delegates to a
@@ -385,14 +389,13 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Long maxConcurrentStreams = settings.maxConcurrentStreams();
             if (maxConcurrentStreams != null) {
-                int value = (int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE);
-                // By default just enforce the SETTINGS_MAX_CONCURRENT_STREAMS limit for stream in all states.
-                connection.remote().maxStreams(value, value);
+                int value = (int) min(maxConcurrentStreams, MAX_VALUE);
+                connection.remote().maxStreams(value, calculateMaxStreams(value));
             }
 
             Long headerTableSize = settings.headerTableSize();
             if (headerTableSize != null) {
-                headerTable.maxHeaderTableSize((int) Math.min(headerTableSize, Integer.MAX_VALUE));
+                headerTable.maxHeaderTableSize((int) min(headerTableSize, MAX_VALUE));
             }
 
             Integer maxHeaderListSize = settings.maxHeaderListSize();
@@ -409,6 +412,18 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             if (initialWindowSize != null) {
                 flowController().initialWindowSize(initialWindowSize);
             }
+        }
+
+        /**
+         * Calculate the {@code maxStreams} paramter for the {@link Endpoint#maxStreams(int, int)} method based upon
+         * SETTINGS_MAX_CONCURRENT_STREAMS.
+         * @param maxConcurrentStreams SETTINGS_MAX_CONCURRENT_STREAMS
+         * @return the {@code maxStreams} paramter for the {@link Endpoint#maxStreams(int, int)} method.
+         */
+        @UnstableApi
+        protected int calculateMaxStreams(int maxConcurrentStreams) {
+            int maxStreams = maxConcurrentStreams + SMALLEST_MAX_CONCURRENT_STREAMS;
+            return maxStreams < 0 ? MAX_VALUE : maxStreams;
         }
 
         @Override
@@ -552,7 +567,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
          * <p/>
          */
         private boolean streamCreatedAfterGoAwaySent(int streamId) {
-            Http2Connection.Endpoint<?> remote = connection.remote();
+            Endpoint<?> remote = connection.remote();
             return connection.goAwaySent() && remote.isValidStreamId(streamId) &&
                     streamId > remote.lastStreamKnownByPeer();
         }
