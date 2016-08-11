@@ -26,6 +26,7 @@ import io.netty.util.AsyncMapping;
 import io.netty.util.CharsetUtil;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.Mapping;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -37,6 +38,8 @@ import java.net.IDN;
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.Locale;
+
+import javax.net.ssl.SSLEngine;
 
 /**
  * <p>Enables <a href="https://tools.ietf.org/html/rfc3546#section-3.1">SNI
@@ -303,9 +306,19 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void replaceHandler(ChannelHandlerContext ctx, Selection selection) {
+        SSLEngine sslEngine = null;
         this.selection = selection;
-        SslHandler sslHandler = selection.context.newHandler(ctx.alloc());
-        ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
+        try {
+            sslEngine = selection.context.newEngine(ctx.alloc());
+            ctx.pipeline().replace(this, SslHandler.class.getName(), selection.context.newHandler(sslEngine));
+        } catch (Throwable cause) {
+            this.selection = EMPTY_SELECTION;
+            // Since the SslHandler was not inserted into the pipeline the ownership of the SSLEngine was not
+            // transferred to the SslHandler.
+            // See https://github.com/netty/netty/issues/5678
+            ReferenceCountUtil.safeRelease(sslEngine);
+            ctx.fireExceptionCaught(cause);
+        }
     }
 
     @Override
