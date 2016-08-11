@@ -489,6 +489,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
         try {
             wrap(ctx, false);
+        } catch (Throwable cause) {
+            // Fail pending writes.
+            pendingUnencryptedWrites.removeAndFailAll(cause);
+
+            PlatformDependent.throwException(cause);
         } finally {
             // We may have written some parts of data before an exception was thrown so ensure we always flush.
             // See https://github.com/netty/netty/issues/3900#issuecomment-172481830
@@ -1247,9 +1252,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         engine.closeOutbound();
 
         ChannelPromise closeNotifyFuture = ctx.newPromise();
-        write(ctx, Unpooled.EMPTY_BUFFER, closeNotifyFuture);
-        flush(ctx);
-        safeClose(ctx, closeNotifyFuture, promise);
+        try {
+            write(ctx, Unpooled.EMPTY_BUFFER, closeNotifyFuture);
+            flush(ctx);
+        } finally {
+            safeClose(ctx, closeNotifyFuture, promise);
+        }
     }
 
     @Override
