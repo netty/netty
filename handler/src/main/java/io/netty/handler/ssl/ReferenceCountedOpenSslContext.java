@@ -637,29 +637,43 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
          /* Load the certificate file and private key. */
         long keyBio = 0;
         long keyCertChainBio = 0;
-
+        long keyCertChainBio2 = 0;
+        PemEncoded encoded = null;
         try {
-            keyCertChainBio = toBIO(keyCertChain);
-            keyBio = toBIO(key);
+            // Only encode one time
+            encoded = PemX509Certificate.toPEM(ByteBufAllocator.DEFAULT, true, keyCertChain);
+            keyCertChainBio = newBIO(encoded.content().retainedSlice());
+            keyCertChainBio2 = newBIO(encoded.content().retainedSlice());
+
+            if (key != null) {
+                keyBio = toBIO(key);
+            }
 
             SSLContext.setCertificateBio(
                     ctx, keyCertChainBio, keyBio,
                     keyPassword == null ? StringUtil.EMPTY_STRING : keyPassword);
             // We may have more then one cert in the chain so add all of them now.
-            SSLContext.setCertificateChainBio(ctx, keyCertChainBio, false);
+            SSLContext.setCertificateChainBio(ctx, keyCertChainBio2, false);
         } catch (SSLException e) {
             throw e;
         } catch (Exception e) {
             throw new SSLException("failed to set certificate and key", e);
         } finally {
-            if (keyBio != 0) {
-                SSL.freeBIO(keyBio);
-            }
-            if (keyCertChainBio != 0) {
-                SSL.freeBIO(keyCertChainBio);
+            freeBio(keyBio);
+            freeBio(keyCertChainBio);
+            freeBio(keyCertChainBio2);
+            if (encoded != null) {
+                encoded.release();
             }
         }
     }
+
+    static void freeBio(long bio) {
+        if (bio != 0) {
+            SSL.freeBIO(bio);
+        }
+    }
+
     /**
      * Return the pointer to a <a href="https://www.openssl.org/docs/crypto/BIO_get_mem_ptr.html">in-memory BIO</a>
      * or {@code 0} if the {@code key} is {@code null}. The BIO contains the content of the {@code key}.
@@ -730,7 +744,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
-    private static long newBIO(ByteBuf buffer) throws Exception {
+    static long newBIO(ByteBuf buffer) throws Exception {
         try {
             long bio = SSL.newMemBIO();
             int readable = buffer.readableBytes();
