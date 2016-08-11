@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBufAllocator;
 import org.apache.tomcat.jni.SSL;
 
 import javax.net.ssl.SSLException;
@@ -26,6 +27,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import static io.netty.handler.ssl.ReferenceCountedOpenSslContext.freeBio;
+import static io.netty.handler.ssl.ReferenceCountedOpenSslContext.newBIO;
+import static io.netty.handler.ssl.ReferenceCountedOpenSslContext.toBIO;
 
 /**
  * Manages key material for {@link OpenSslEngine}s and so set the right {@link PrivateKey}s and
@@ -88,32 +93,39 @@ class OpenSslKeyMaterialManager {
     private void setKeyMaterial(long ssl, String alias) throws SSLException {
         long keyBio = 0;
         long keyCertChainBio = 0;
+        long keyCertChainBio2 = 0;
+
         try {
             // TODO: Should we cache these and so not need to do a memory copy all the time ?
             PrivateKey key = keyManager.getPrivateKey(alias);
             X509Certificate[] certificates = keyManager.getCertificateChain(alias);
 
             if (certificates != null && certificates.length != 0) {
-                keyCertChainBio = OpenSslContext.toBIO(certificates);
-                if (key != null) {
-                    keyBio = OpenSslContext.toBIO(key);
-                }
-                SSL.setCertificateBio(ssl, keyCertChainBio, keyBio, password);
+                // Only encode one time
+                PemEncoded encoded = PemX509Certificate.toPEM(ByteBufAllocator.DEFAULT, true, certificates);
+                try {
+                    keyCertChainBio = newBIO(encoded.content().retainedSlice());
+                    keyCertChainBio2 = newBIO(encoded.content().retainedSlice());
 
-                // We may have more then one cert in the chain so add all of them now.
-                SSL.setCertificateChainBio(ssl, keyCertChainBio, false);
+                    if (key != null) {
+                        keyBio = toBIO(key);
+                    }
+                    SSL.setCertificateBio(ssl, keyCertChainBio, keyBio, password);
+
+                    // We may have more then one cert in the chain so add all of them now.
+                    SSL.setCertificateChainBio(ssl, keyCertChainBio2, false);
+                } finally {
+                    encoded.release();
+                }
             }
         } catch (SSLException e) {
             throw e;
         } catch (Exception e) {
             throw new SSLException(e);
         } finally {
-            if (keyBio != 0) {
-                SSL.freeBIO(keyBio);
-            }
-            if (keyCertChainBio != 0) {
-                SSL.freeBIO(keyCertChainBio);
-            }
+            freeBio(keyBio);
+            freeBio(keyCertChainBio);
+            freeBio(keyCertChainBio2);
         }
     }
 
