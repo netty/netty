@@ -514,11 +514,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
 
                 SSLEngineResult result = wrap(alloc, engine, buf, out);
-                if (!buf.isReadable()) {
-                    promise = pendingUnencryptedWrites.remove();
-                } else {
-                    promise = null;
-                }
 
                 if (result.getStatus() == Status.CLOSED) {
                     // SSLEngine has been closed already.
@@ -526,6 +521,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     pendingUnencryptedWrites.removeAndFailAll(SSLENGINE_CLOSED);
                     return;
                 } else {
+                    if (!buf.isReadable()) {
+                        promise = pendingUnencryptedWrites.remove();
+                    } else {
+                        promise = null;
+                    }
+
                     switch (result.getHandshakeStatus()) {
                         case NEED_TASK:
                             runDelegatedTasks();
