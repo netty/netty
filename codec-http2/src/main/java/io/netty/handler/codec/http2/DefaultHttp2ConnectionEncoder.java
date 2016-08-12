@@ -356,7 +356,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // Don't update dataSize because we need to ensure the size() method returns a consistent size even after
             // error so we don't invalidate flow control when returning bytes to flow control.
             lifecycleManager.onError(ctx, cause);
-            promise.tryFailure(cause);
         }
 
         @Override
