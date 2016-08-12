@@ -75,12 +75,7 @@ import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
  *
  * <h3>Beginning the handshake</h3>
  * <p>
- * You must make sure not to write a message while the handshake is in progress unless you are
- * renegotiating.  You will be notified by the {@link Future} which is
- * returned by the {@link #handshakeFuture()} method when the handshake
- * process succeeds or fails.
- * <p>
- * Beside using the handshake {@link ChannelFuture} to get notified about the completation of the handshake it's
+ * Beside using the handshake {@link ChannelFuture} to get notified about the completion of the handshake it's
  * also possible to detect it by implement the
  * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)}
  * method and check for a {@link SslHandshakeCompletionEvent}.
