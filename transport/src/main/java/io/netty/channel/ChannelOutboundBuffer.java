@@ -25,7 +25,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -669,28 +669,14 @@ public final class ChannelOutboundBuffer {
     }
 
     private static void safeSuccess(ChannelPromise promise) {
-        if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
-            Throwable err = promise.cause();
-            if (err == null) {
-                logger.warn("Failed to mark a promise as success because it has succeeded already: {}", promise);
-            } else {
-                logger.warn(
-                        "Failed to mark a promise as success because it has failed already: {}, unnotified cause {}",
-                        promise, ThrowableUtil.stackTraceToString(err));
-            }
+        if (!(promise instanceof VoidChannelPromise)) {
+            PromiseNotificationUtil.trySuccess(promise, null, logger);
         }
     }
 
     private static void safeFail(ChannelPromise promise, Throwable cause) {
-        if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
-            Throwable err = promise.cause();
-            if (err == null) {
-                logger.warn("Failed to mark a promise as failure because it has succeeded already: {}", promise, cause);
-            } else {
-                logger.warn(
-                        "Failed to mark a promise as failure because it has failed already: {}, unnotified cause {}",
-                        promise, ThrowableUtil.stackTraceToString(err), cause);
-            }
+        if (!(promise instanceof VoidChannelPromise)) {
+            PromiseNotificationUtil.tryFailure(promise, cause, logger);
         }
     }
 
