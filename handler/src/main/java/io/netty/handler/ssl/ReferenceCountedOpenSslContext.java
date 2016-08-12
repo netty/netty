@@ -621,8 +621,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         try {
             // Only encode one time
             encoded = PemX509Certificate.toPEM(ByteBufAllocator.DEFAULT, true, keyCertChain);
-            keyCertChainBio = newBIO(encoded.content().retainedSlice());
-            keyCertChainBio2 = newBIO(encoded.content().retainedSlice());
+            keyCertChainBio = newBIO(encoded.content().slice().retain());
+            keyCertChainBio2 = newBIO(encoded.content().slice().retain());
 
             if (key != null) {
                 keyBio = toBIO(key);
