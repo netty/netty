@@ -25,6 +25,7 @@ import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.OrderedEventExecutor;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -842,10 +843,8 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private static void notifyOutboundHandlerException(Throwable cause, ChannelPromise promise) {
-        if (!promise.tryFailure(cause) && !(promise instanceof VoidChannelPromise)) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Failed to fail the promise because it's done already: {}", promise, cause);
-            }
+        if (!(promise instanceof VoidChannelPromise)) {
+            PromiseNotificationUtil.tryFailure(promise, cause, logger);
         }
     }
 
