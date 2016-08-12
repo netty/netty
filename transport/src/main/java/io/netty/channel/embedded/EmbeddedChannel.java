@@ -498,7 +498,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     /**
-     * Ensure the {@link Channel} is open and of not throw an exception.
+     * Ensure the {@link Channel} is open and if not throw an exception.
      */
     protected final void ensureOpen() {
         if (!isOpen()) {
