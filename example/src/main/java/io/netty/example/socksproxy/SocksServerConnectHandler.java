@@ -102,7 +102,10 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                             if (future.isSuccess()) {
                                 ChannelFuture responseFuture =
                                         ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(
-                                                Socks5CommandStatus.SUCCESS, request.dstAddrType()));
+                                                Socks5CommandStatus.SUCCESS,
+                                                request.dstAddrType(),
+                                                request.dstAddr(),
+                                                request.dstPort()));
 
                                 responseFuture.addListener(new ChannelFutureListener() {
                                     @Override
