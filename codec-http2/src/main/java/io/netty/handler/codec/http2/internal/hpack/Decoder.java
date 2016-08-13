@@ -39,6 +39,7 @@ import io.netty.util.AsciiString;
 
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
+import static io.netty.handler.codec.http2.Http2Error.valueOf;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
@@ -173,36 +174,18 @@ public final class Decoder {
                     break;
 
                 case READ_MAX_DYNAMIC_TABLE_SIZE:
-                    int maxSize = decodeULE128(in) + index;
-
-                    if (maxSize < 0) { // Check for numerical overflow
-                        throw DECODE_DECOMPRESSION_EXCEPTION;
-                    }
-
-                    setDynamicTableSize(maxSize);
+                    setDynamicTableSize(decodeULE128(in, index));
                     state = READ_HEADER_REPRESENTATION;
                     break;
 
                 case READ_INDEXED_HEADER:
-                    int headerIndex = decodeULE128(in) + index;
-
-                    if (headerIndex < 0) { // Check for numerical overflow
-                        throw DECODE_DECOMPRESSION_EXCEPTION;
-                    }
-
-                    headersLength = indexHeader(headerIndex, headers, headersLength);
+                    headersLength = indexHeader(decodeULE128(in, index), headers, headersLength);
                     state = READ_HEADER_REPRESENTATION;
                     break;
 
                 case READ_INDEXED_HEADER_NAME:
                     // Header Name matches an entry in the Header Table
-                    int nameIndex = decodeULE128(in) + index;
-
-                    if (nameIndex < 0) { // Check for numerical overflow
-                        throw DECODE_DECOMPRESSION_EXCEPTION;
-                    }
-
-                    name = readName(nameIndex);
+                    name = readName(decodeULE128(in, index));
                     state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                     break;
 
@@ -223,11 +206,7 @@ public final class Decoder {
 
                 case READ_LITERAL_HEADER_NAME_LENGTH:
                     // Header Name is a Literal String
-                    nameLength = decodeULE128(in) + index;
-
-                    if (nameLength < 0) { // Check for numerical overflow
-                        throw DECODE_DECOMPRESSION_EXCEPTION;
-                    }
+                    nameLength = decodeULE128(in, index);
 
                     if (nameLength > maxHeadersLength - headersLength) {
                         maxHeaderSizeExceeded();
@@ -271,11 +250,7 @@ public final class Decoder {
 
                 case READ_LITERAL_HEADER_VALUE_LENGTH:
                     // Header Value is a Literal String
-                    valueLength = decodeULE128(in) + index;
-
-                    if (valueLength < 0) { // Check for numerical overflow
-                        throw DECODE_DECOMPRESSION_EXCEPTION;
-                    }
+                    valueLength = decodeULE128(in, index);
 
                     // Check new header size against max header size
                     if ((long) valueLength + nameLength > maxHeadersLength - headersLength) {
@@ -429,21 +404,25 @@ public final class Decoder {
     }
 
     // Unsigned Little Endian Base 128 Variable-Length Integer Encoding
-    private static int decodeULE128(ByteBuf in) throws Http2Exception {
+    private static int decodeULE128(ByteBuf in, int result) throws Http2Exception {
+        assert result <= 0x7f && result >= 0;
         final int writerIndex = in.writerIndex();
-        for (int readerIndex = in.readerIndex(), shift = 0, result = 0;
+        for (int readerIndex = in.readerIndex(), shift = 0;
              readerIndex < writerIndex; ++readerIndex, shift += 7) {
             byte b = in.getByte(readerIndex);
-            if (shift == 28 && (b & 0xF8) != 0) {
+            if (shift == 28 && ((b & 0x80) != 0 || b > 6)) {
+                // the maximum value that can be represented by a signed 32 bit number is:
+                // 0x7f + 0x7f + (0x7f << 7) + (0x7f << 14) + (0x7f << 21) + (0x6 << 28)
+                // this means any more shifts will result in overflow so we should break out and throw an error.
                 in.readerIndex(readerIndex + 1);
                 break;
             }
 
             if ((b & 0x80) == 0) {
                 in.readerIndex(readerIndex + 1);
-                return result | ((b & 0x7F) << shift);
+                return result + ((b & 0x7F) << shift);
             }
-            result |= (b & 0x7F) << shift;
+            result += (b & 0x7F) << shift;
         }
 
         throw DECODE_ULE_128_DECOMPRESSION_EXCEPTION;

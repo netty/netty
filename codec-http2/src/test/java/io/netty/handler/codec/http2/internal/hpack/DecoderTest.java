@@ -40,6 +40,7 @@ import org.junit.Test;
 
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.AsciiString.of;
+import static java.lang.Integer.MAX_VALUE;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -148,7 +149,7 @@ public class DecoderTest {
     @Test(expected = Http2Exception.class)
     public void testInsidiousIndex() throws Http2Exception {
         // Insidious index so the last shift causes sign overflow
-        decode("FF8080808008");
+        decode("FF8080808007");
     }
 
     @Test
@@ -174,8 +175,18 @@ public class DecoderTest {
 
     @Test(expected = Http2Exception.class)
     public void testInsidiousMaxDynamicTableSize() throws Http2Exception {
+        decoder.setMaxHeaderTableSize(MAX_VALUE);
         // max header table size sign overflow
         decode("3FE1FFFFFF07");
+    }
+
+    @Test
+    public void testMaxValidDynamicTableSize() throws Http2Exception {
+        decoder.setMaxHeaderTableSize(MAX_VALUE);
+        String baseValue = "3FE1FFFFFF0";
+        for (int i = 0; i < 7; ++i) {
+            decode(baseValue + i);
+        }
     }
 
     @Test
