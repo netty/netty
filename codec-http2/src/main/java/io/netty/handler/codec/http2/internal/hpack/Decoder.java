@@ -213,7 +213,7 @@ public final class Decoder {
                     if (index == 0x7f) {
                         state = READ_LITERAL_HEADER_NAME_LENGTH;
                     } else {
-                        if (nameLength > maxHeadersLength - headersLength) {
+                        if (index > maxHeadersLength - headersLength) {
                             maxHeaderSizeExceeded();
                         }
                         nameLength = index;
