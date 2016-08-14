@@ -1,5 +1,4 @@
 {
-  "force_huffman_on": true,
   "header_blocks":
   [
     {
@@ -9,7 +8,7 @@
       ],
       "encoded": [
         "4487 6107 a4b5 8d33 ff40 86f2 b12d 424f",
-        "4f83 ee3a 3f"
+        "4f03 7661 6c"
       ],
       "dynamic_table": [
         { "x-custom": "val" },
@@ -40,7 +39,7 @@
         { "x-custom": "val" }
       ],
       "encoded": [
-        "bfbe 4082 94e7 838c 767f bf"
+        "bfbe 4082 94e7 0362 6172 bf"
       ],
       "dynamic_table": [
         { "foo": "bar" },
