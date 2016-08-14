@@ -1,6 +1,5 @@
 {
   "max_header_table_size": 128,
-  "force_huffman_off": true,
   "header_blocks":
   [
     {
@@ -10,9 +9,8 @@
         { "name3": "val3" }
       ],
       "encoded": [
-        "4005 6e61 6d65 3104 7661 6c31 4005 6e61",
-        "6d65 3204 7661 6c32 4005 6e61 6d65 3304",
-        "7661 6c33"
+        "4084 a874 943f 83ee 3a03 4084 a874 945f",
+        "83ee 3a05 4084 a874 959f 83ee 3a19"
       ],
       "dynamic_table": [
         { "name3": "val3" },
@@ -28,7 +26,7 @@
         { "name2": "val2" }
       ],
       "encoded": [
-        "3f32 be40 056e 616d 6532 0476 616c 32"
+        "3f32 be40 84a8 7494 5f83 ee3a 05"
       ],
       "dynamic_table": [
         { "name2": "val2" }
@@ -43,8 +41,8 @@
         { "name3": "val3" }
       ],
       "encoded": [
-        "3f61 4005 6e61 6d65 3104 7661 6c31 bf40",
-        "056e 616d 6533 0476 616c 33"
+        "3f61 4084 a874 943f 83ee 3a03 bf40 84a8",
+        "7495 9f83 ee3a 19"
       ],
       "dynamic_table": [
         { "name3": "val3" },

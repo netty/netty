@@ -1,6 +1,4 @@
 {
-  "use_indexing": false,
-  "force_huffman_off": true,
   "header_blocks":
   [
     {
@@ -8,11 +6,12 @@
         { ":path": "/sample/path" }
       ],
       "encoded": [
-        "040c 2f73 616d 706c 652f 7061 7468"
+        "4489 6103 a6ba 0ac5 634c ff"
       ],
       "dynamic_table": [
+        { ":path": "/sample/path" }
       ],
-      "table_size": 0
+      "table_size": 49
     }
   ]
 }

@@ -1,6 +1,5 @@
 {
   "sensitive_headers": true,
-  "force_huffman_off": true,
   "header_blocks":
   [
     {
@@ -8,8 +7,7 @@
         { "password": "secret" }
       ],
       "encoded": [
-        "1008 7061 7373 776f 7264 0673 6563 7265",
-        "74"
+        "1086 ac68 4783 d927 8441 4961 53"
       ],
       "dynamic_table": [
       ],
