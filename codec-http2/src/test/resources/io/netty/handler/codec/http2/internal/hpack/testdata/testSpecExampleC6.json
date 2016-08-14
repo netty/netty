@@ -1,6 +1,5 @@
 {
   "max_header_table_size": 256,
-  "force_huffman_on": true,
   "header_blocks":
   [
     {
@@ -32,7 +31,7 @@
         { "location": "https://www.example.com" }
       ],
       "encoded": [
-        "4883 640e ffc1 c0bf"
+        "4803 3330 37c1 c0bf"
       ],
       "dynamic_table": [
         { ":status": "307" },

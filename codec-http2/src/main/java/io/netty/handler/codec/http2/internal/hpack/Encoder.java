@@ -46,11 +46,6 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 public final class Encoder {
-    // for testing
-    private final boolean useIndexing;
-    private final boolean forceHuffmanOn;
-    private final boolean forceHuffmanOff;
-
     // a linked hash map of header fields
     private final HeaderEntry[] headerFields;
     private final HeaderEntry head = new HeaderEntry(-1, AsciiString.EMPTY_STRING,
@@ -71,25 +66,9 @@ public final class Encoder {
      * Creates a new encoder.
      */
     public Encoder(int maxHeaderTableSize, int arraySizeHint) {
-        this(maxHeaderTableSize, true, false, false, arraySizeHint);
-    }
-
-    /**
-     * Constructor for testing only.
-     */
-    Encoder(
-            int maxHeaderTableSize,
-            boolean useIndexing,
-            boolean forceHuffmanOn,
-            boolean forceHuffmanOff,
-            int arraySizeHint
-    ) {
         if (maxHeaderTableSize < 0) {
             throw new IllegalArgumentException("Illegal Capacity: " + maxHeaderTableSize);
         }
-        this.useIndexing = useIndexing;
-        this.forceHuffmanOn = forceHuffmanOn;
-        this.forceHuffmanOff = forceHuffmanOff;
         capacity = maxHeaderTableSize;
         // Enforce a bound of [2, 128] because hashMask is a byte. The max possible value of hashMask is one less
         // than the length of this array, and we want the mask to be > 0.
@@ -144,16 +123,9 @@ public final class Encoder {
                 // Section 6.1. Indexed Header Field Representation
                 encodeInteger(out, 0x80, 7, staticTableIndex);
             } else {
-                int nameIndex = getNameIndex(name);
-                if (useIndexing) {
-                    ensureCapacity(headerSize);
-                }
-                HpackUtil.IndexType indexType =
-                        useIndexing ? INCREMENTAL : NONE;
-                encodeLiteral(out, name, value, indexType, nameIndex);
-                if (useIndexing) {
-                    add(name, value);
-                }
+                ensureCapacity(headerSize);
+                encodeLiteral(out, name, value, INCREMENTAL, getNameIndex(name));
+                add(name, value);
             }
         }
     }
@@ -184,24 +156,17 @@ public final class Encoder {
      * Encode integer according to Section 5.1.
      */
     private static void encodeInteger(ByteBuf out, int mask, int n, int i) {
-        if (n < 0 || n > 8) {
-            throw new IllegalArgumentException("N: " + n);
-        }
+        assert n >= 0 && n <= 8 : "N: " + n;
         int nbits = 0xFF >>> (8 - n);
         if (i < nbits) {
             out.writeByte(mask | i);
         } else {
             out.writeByte(mask | nbits);
             int length = i - nbits;
-            for (;;) {
-                if ((length & ~0x7F) == 0) {
-                    out.writeByte(length);
-                    return;
-                } else {
-                    out.writeByte((length & 0x7F) | 0x80);
-                    length >>>= 7;
-                }
+            for (; (length & ~0x7F) != 0; length >>>= 7) {
+                out.writeByte((length & 0x7F) | 0x80);
             }
+            out.writeByte(length);
         }
     }
 
@@ -210,7 +175,7 @@ public final class Encoder {
      */
     private void encodeStringLiteral(ByteBuf out, CharSequence string) {
         int huffmanLength = huffmanEncoder.getEncodedLength(string);
-        if ((huffmanLength < string.length() && !forceHuffmanOff) || forceHuffmanOn) {
+        if (huffmanLength < string.length()) {
             encodeInteger(out, 0x80, 7, huffmanLength);
             huffmanEncoder.encode(out, string);
         } else {
@@ -232,26 +197,21 @@ public final class Encoder {
      */
     private void encodeLiteral(ByteBuf out, CharSequence name, CharSequence value, HpackUtil.IndexType indexType,
                                int nameIndex) {
-        int mask;
-        int prefixBits;
+        boolean nameIndexValid = nameIndex != -1;
         switch (indexType) {
             case INCREMENTAL:
-                mask = 0x40;
-                prefixBits = 6;
+                encodeInteger(out, 0x40, 6, nameIndexValid ? nameIndex : 0);
                 break;
             case NONE:
-                mask = 0x00;
-                prefixBits = 4;
+                encodeInteger(out, 0x00, 4, nameIndexValid ? nameIndex : 0);
                 break;
             case NEVER:
-                mask = 0x10;
-                prefixBits = 4;
+                encodeInteger(out, 0x10, 4, nameIndexValid ? nameIndex : 0);
                 break;
             default:
-                throw new IllegalStateException("should not reach here");
+                throw new Error("should not reach here");
         }
-        encodeInteger(out, mask, prefixBits, nameIndex == -1 ? 0 : nameIndex);
-        if (nameIndex == -1) {
+        if (!nameIndexValid) {
             encodeStringLiteral(out, name);
         }
         encodeStringLiteral(out, value);

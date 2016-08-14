@@ -61,10 +61,7 @@ final class TestCase {
             .create();
 
     int maxHeaderTableSize = -1;
-    boolean useIndexing = true;
     boolean sensitiveHeaders;
-    boolean forceHuffmanOn;
-    boolean forceHuffmanOff;
 
     List<HeaderBlock> headerBlocks;
 
@@ -161,7 +158,7 @@ final class TestCase {
             maxHeaderTableSize = Integer.MAX_VALUE;
         }
 
-        return new Encoder(maxHeaderTableSize, useIndexing, forceHuffmanOn, forceHuffmanOff, 16);
+        return new Encoder(maxHeaderTableSize);
     }
 
     private Decoder createDecoder() {

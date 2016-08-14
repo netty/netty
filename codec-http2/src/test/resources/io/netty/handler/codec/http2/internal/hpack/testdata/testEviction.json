@@ -1,6 +1,5 @@
 {
   "max_header_table_size": 128,
-  "force_huffman_on": true,
   "header_blocks":
   [
     {
@@ -28,8 +27,8 @@
         { "x-custom": "val6" }
       ],
       "encoded": [
-        "4487 6107 a4b5 8d33 ff7f 0083 ee3a 1a7e",
-        "83ee 3a1b 7e83 ee3a 1c"
+        "4487 6107 a4b5 8d33 ff40 86f2 b12d 424f",
+        "4f83 ee3a 1a7e 83ee 3a1b 7e83 ee3a 1c"
       ],
       "dynamic_table": [
         { "x-custom": "val6" },
@@ -45,8 +44,8 @@
         { "x-custom": "val3" }
       ],
       "encoded": [
-        "4487 6107 a4b5 8d33 ff7f 0083 ee3a 037e",
-        "83ee 3a05 7e83 ee3a 19"
+        "4487 6107 a4b5 8d33 ff40 86f2 b12d 424f",
+        "4f83 ee3a 037e 83ee 3a05 7e83 ee3a 19"
       ],
       "dynamic_table": [
         { "x-custom": "val3" },

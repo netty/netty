@@ -1,5 +1,4 @@
 {
-  "force_huffman_off": true,
   "header_blocks":
   [
     {
@@ -7,8 +6,8 @@
         { "custom-key": "custom-header" }
       ],
       "encoded": [
-        "400a 6375 7374 6f6d 2d6b 6579 0d63 7573",
-        "746f 6d2d 6865 6164 6572"
+        "4088 25a8 49e9 5ba9 7d7f 8925 a849 e95a",
+        "728e 42d9"
       ],
       "dynamic_table": [
         { "custom-key": "custom-header" }
