@@ -68,6 +68,7 @@ public class CorsHandlerTest {
     public void simpleRequestWithAnyOrigin() {
         final HttpResponse response = simpleRequest(forAnyOrigin().build(), "http://localhost:7777");
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is("*"));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
     }
 
     @Test
@@ -77,6 +78,7 @@ public class CorsHandlerTest {
                 .build(), "null");
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is("null"));
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS), is(equalTo("true")));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
     }
 
     @Test
@@ -84,6 +86,7 @@ public class CorsHandlerTest {
         final String origin = "http://localhost:8888";
         final HttpResponse response = simpleRequest(forOrigin(origin).build(), origin);
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(origin));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
     }
 
     @Test
@@ -93,8 +96,10 @@ public class CorsHandlerTest {
         final String[] origins = {origin1, origin2};
         final HttpResponse response1 = simpleRequest(forOrigins(origins).build(), origin1);
         assertThat(response1.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(origin1));
+        assertThat(response1.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
         final HttpResponse response2 = simpleRequest(forOrigins(origins).build(), origin2);
         assertThat(response2.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(origin2));
+        assertThat(response2.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
     }
 
     @Test
@@ -103,6 +108,7 @@ public class CorsHandlerTest {
         final HttpResponse response = simpleRequest(
                 forOrigins("https://localhost:8888").build(), origin);
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(nullValue()));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
     }
 
     @Test
