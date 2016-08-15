@@ -48,6 +48,7 @@ public class CorsHandlerTest {
     public void simpleRequestWithAnyOrigin() {
         final HttpResponse response = simpleRequest(CorsConfig.withAnyOrigin().build(), "http://localhost:7777");
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is("*"));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
     }
 
     @Test
@@ -55,6 +56,7 @@ public class CorsHandlerTest {
         final String origin = "http://localhost:8888";
         final HttpResponse response = simpleRequest(CorsConfig.withOrigin(origin).build(), origin);
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(origin));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
     }
 
     @Test
@@ -64,8 +66,10 @@ public class CorsHandlerTest {
         final String[] origins = {origin1, origin2};
         final HttpResponse response1 = simpleRequest(CorsConfig.withOrigins(origins).build(), origin1);
         assertThat(response1.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(origin1));
+        assertThat(response1.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
         final HttpResponse response2 = simpleRequest(CorsConfig.withOrigins(origins).build(), origin2);
         assertThat(response2.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(origin2));
+        assertThat(response2.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
     }
 
     @Test
@@ -73,6 +77,7 @@ public class CorsHandlerTest {
         final String origin = "http://localhost:8888";
         final HttpResponse response = simpleRequest(CorsConfig.withOrigins("https://localhost:8888").build(), origin);
         assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is(nullValue()));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_HEADERS), is(nullValue()));
     }
 
     @Test
