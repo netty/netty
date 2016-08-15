@@ -137,7 +137,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
         if (file.isDirectory()) {
             if (uri.endsWith("/")) {
-                sendListing(ctx, file);
+                sendListing(ctx, file, uri);
             } else {
                 sendRedirect(ctx, uri + '/');
             }
@@ -264,11 +264,10 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
     private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[A-Za-z0-9][-_A-Za-z0-9\\.]*");
 
-    private static void sendListing(ChannelHandlerContext ctx, File dir) {
+    private static void sendListing(ChannelHandlerContext ctx, File dir, String dirPath) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
 
-        String dirPath = dir.getPath();
         StringBuilder buf = new StringBuilder()
             .append("<!DOCTYPE html>\r\n")
             .append("<html><head><title>")
