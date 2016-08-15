@@ -37,18 +37,50 @@ import static io.netty.handler.codec.http.HttpUtil.getContentLength;
  * or {@link FullHttpResponse} (depending on if it used to handle requests or responses)
  * with no following {@link HttpContent}s.  It is useful when you don't want to take
  * care of HTTP messages whose transfer encoding is 'chunked'.  Insert this
- * handler after {@link HttpObjectDecoder} in the {@link ChannelPipeline}:
- * <pre>
- * {@link ChannelPipeline} p = ...;
- * ...
- * p.addLast("encoder", new {@link HttpResponseEncoder}());
- * p.addLast("decoder", new {@link HttpRequestDecoder}());
- * p.addLast("aggregator", <b>new {@link HttpObjectAggregator}(1048576)</b>);
- * ...
- * p.addLast("handler", new HttpRequestHandler());
- * </pre>
- * Be aware that you need to have the {@link HttpResponseEncoder} or {@link HttpRequestEncoder}
- * before the {@link HttpObjectAggregator} in the {@link ChannelPipeline}.
+ * handler after {@link HttpResponseDecoder} in the {@link ChannelPipeline} if being used to handle
+ * responses, or after {@link HttpRequestDecoder} and {@link HttpResponseEncoder} in the
+ * {@link ChannelPipeline} if being used to handle requests.
+ * <blockquote>
+ *  <pre>
+ *  {@link ChannelPipeline} p = ...;
+ *  ...
+ *  p.addLast("decoder", <b>new {@link HttpRequestDecoder}()</b>);
+ *  p.addLast("encoder", <b>new {@link HttpResponseEncoder}()</b>);
+ *  p.addLast("aggregator", <b>new {@link HttpObjectAggregator}(1048576)</b>);
+ *  ...
+ *  p.addLast("handler", new HttpRequestHandler());
+ *  </pre>
+ * </blockquote>
+ * <p>
+ * For convenience, consider putting a {@link HttpServerCodec} before the {@link HttpObjectAggregator}
+ * as it functions as both a {@link HttpRequestDecoder} and a {@link HttpResponseEncoder}.
+ * </p>
+ * Be aware that {@link HttpObjectAggregator} may end up sending a {@link HttpResponse}:
+ * <table border summary="Possible Responses">
+ *   <tbody>
+ *     <tr>
+ *       <th>Response Status</th>
+ *       <th>Condition When Sent</th>
+ *     </tr>
+ *     <tr>
+ *       <td>100 Continue</td>
+ *       <td>A '100-continue' expectation is received and the 'content-length' doesn't exceed maxContentLength</td>
+ *     </tr>
+ *     <tr>
+ *       <td>417 Expectation Failed</td>
+ *       <td>A '100-continue' expectation is received and the 'content-length' exceeds maxContentLength</td>
+ *     </tr>
+ *     <tr>
+ *       <td>413 Request Entity Too Large</td>
+ *       <td>Either the 'content-length' or the bytes received so far exceed maxContentLength</td>
+ *     </tr>
+ *   </tbody>
+ * </table>
+ *
+ * @see FullHttpRequest
+ * @see FullHttpResponse
+ * @see HttpResponseDecoder
+ * @see HttpServerCodec
  */
 public class HttpObjectAggregator
         extends MessageAggregator<HttpObject, HttpMessage, HttpContent, FullHttpMessage> {
