@@ -262,7 +262,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         return SystemPropertyUtil.get("user.dir") + File.separator + uri;
     }
 
-    private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[A-Za-z0-9][-_A-Za-z0-9\\.]*");
+    private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[^-\\._]?[^<>&\\\"]*");
 
     private static void sendListing(ChannelHandlerContext ctx, File dir) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK);
@@ -271,7 +271,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         String dirPath = dir.getPath();
         StringBuilder buf = new StringBuilder()
             .append("<!DOCTYPE html>\r\n")
-            .append("<html><head><title>")
+            .append("<html><head><meta charset='utf-8' /><title>")
             .append("Listing of: ")
             .append(dirPath)
             .append("</title></head><body>\r\n")
