@@ -642,8 +642,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         try {
             // Only encode one time
             encoded = PemX509Certificate.toPEM(ByteBufAllocator.DEFAULT, true, keyCertChain);
-            keyCertChainBio = newBIO(encoded.content().retainedSlice());
-            keyCertChainBio2 = newBIO(encoded.content().retainedSlice());
+            keyCertChainBio = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
+            keyCertChainBio2 = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
 
             if (key != null) {
                 keyBio = toBIO(key);
@@ -714,7 +714,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
-    private static long toBIO(ByteBufAllocator allocator, PemEncoded pem) throws Exception {
+    static long toBIO(ByteBufAllocator allocator, PemEncoded pem) throws Exception {
         try {
             // We can turn direct buffers straight into BIOs. No need to
             // make a yet another copy.
@@ -744,7 +744,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
-    static long newBIO(ByteBuf buffer) throws Exception {
+    private static long newBIO(ByteBuf buffer) throws Exception {
         try {
             long bio = SSL.newMemBIO();
             int readable = buffer.readableBytes();
