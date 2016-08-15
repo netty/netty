@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static io.netty.handler.ssl.ReferenceCountedOpenSslContext.freeBio;
-import static io.netty.handler.ssl.ReferenceCountedOpenSslContext.newBIO;
 import static io.netty.handler.ssl.ReferenceCountedOpenSslContext.toBIO;
 
 /**
@@ -104,8 +103,8 @@ class OpenSslKeyMaterialManager {
                 // Only encode one time
                 PemEncoded encoded = PemX509Certificate.toPEM(ByteBufAllocator.DEFAULT, true, certificates);
                 try {
-                    keyCertChainBio = newBIO(encoded.content().retainedSlice());
-                    keyCertChainBio2 = newBIO(encoded.content().retainedSlice());
+                    keyCertChainBio = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
+                    keyCertChainBio2 = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
 
                     if (key != null) {
                         keyBio = toBIO(key);
