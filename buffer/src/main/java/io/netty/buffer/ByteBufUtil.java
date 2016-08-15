@@ -103,8 +103,6 @@ public final class ByteBufUtil {
     }
 
     /**
-<<<<<<< HEAD
-=======
      * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified byte array.
      */
@@ -121,7 +119,6 @@ public final class ByteBufUtil {
     }
 
     /**
->>>>>>> e5386b0... Move Hex dump related util from ByteBufUtil to inner class
      * Calculates the hash code of the specified buffer.  This method is
      * useful when implementing a new buffer type.
      */
