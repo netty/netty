@@ -196,7 +196,6 @@ public class CorsHandler extends ChannelDuplexHandler {
             final HttpResponse response = (HttpResponse) msg;
             if (setOrigin(response)) {
                 setAllowCredentials(response);
-                setAllowHeaders(response);
                 setExposeHeaders(response);
             }
         }
