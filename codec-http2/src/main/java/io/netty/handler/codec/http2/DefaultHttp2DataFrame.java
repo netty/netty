@@ -153,8 +153,8 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
 
     @Override
     public String toString() {
-        return "DefaultHttp2DataFrame(streamId=" + streamId() + ", content=" + content
-            + ", endStream=" + endStream + ", padding=" + padding + ")";
+        return "DefaultHttp2DataFrame(streamId=" + getStreamId() + ", content=" + content
+               + ", endStream=" + endStream + ", padding=" + padding + ")";
     }
 
     @Override

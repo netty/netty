@@ -321,7 +321,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void outgoingStreamActiveShouldFireUserEvent() throws Exception {
+    public void outboundStreamShouldNotFireStreamActiveEvent() throws Exception {
         Http2ConnectionEncoder encoder = framingCodec.connectionHandler().encoder();
 
         encoder.writeHeaders(http2HandlerCtx, 2, request, 31, false, channel.newPromise());
@@ -329,9 +329,6 @@ public class Http2FrameCodecTest {
         Http2Stream stream = framingCodec.connectionHandler().connection().stream(2);
         assertNotNull(stream);
         assertEquals(State.OPEN, stream.state());
-
-        Http2StreamActiveEvent streamActiveEvent = inboundHandler.readUserEvent();
-        assertEquals(stream.id(), streamActiveEvent.streamId());
 
         assertNull(inboundHandler.readInbound());
         assertNull(inboundHandler.readUserEvent());
@@ -532,7 +529,7 @@ public class Http2FrameCodecTest {
         }
     }
 
-    public static class VerifiableHttp2FrameWriter extends DefaultHttp2FrameWriter {
+    private static class VerifiableHttp2FrameWriter extends DefaultHttp2FrameWriter {
         @Override
         public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
                                        int padding, boolean endStream, ChannelPromise promise) {

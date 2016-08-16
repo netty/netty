@@ -90,8 +90,8 @@ public final class DefaultHttp2HeadersFrame extends AbstractHttp2StreamFrame imp
 
     @Override
     public String toString() {
-        return "DefaultHttp2HeadersFrame(streamId=" + streamId() + ", headers=" + headers
-            + ", endStream=" + endStream + ", padding=" + padding + ")";
+        return "DefaultHttp2HeadersFrame(streamId=" + getStreamId() + ", headers=" + headers
+               + ", endStream=" + endStream + ", padding=" + padding + ")";
     }
 
     @Override
