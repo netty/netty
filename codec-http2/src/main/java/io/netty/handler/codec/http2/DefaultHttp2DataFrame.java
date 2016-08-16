@@ -76,8 +76,8 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
     }
 
     @Override
-    public DefaultHttp2DataFrame setStreamId(int streamId) {
-        super.setStreamId(streamId);
+    public DefaultHttp2DataFrame streamId(int streamId) {
+        super.streamId(streamId);
         return this;
     }
 
@@ -154,7 +154,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
     @Override
     public String toString() {
         return "DefaultHttp2DataFrame(streamId=" + streamId() + ", content=" + content
-            + ", endStream=" + endStream + ", padding=" + padding + ")";
+               + ", endStream=" + endStream + ", padding=" + padding + ")";
     }
 
     @Override

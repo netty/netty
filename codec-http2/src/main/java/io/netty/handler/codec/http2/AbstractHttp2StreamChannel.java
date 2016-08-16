@@ -28,6 +28,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
 
 import java.net.SocketAddress;
@@ -67,10 +68,12 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         }
     };
 
+    // Volatile, as parent and child channel may be on different eventloops.
+    private volatile int streamId = -1;
     private boolean closed;
     private boolean readInProgress;
 
-    public AbstractHttp2StreamChannel(Channel parent) {
+    protected AbstractHttp2StreamChannel(Channel parent) {
         super(parent);
     }
 
@@ -91,7 +94,7 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
 
     @Override
     public boolean isActive() {
-        return !closed;
+        return isOpen();
     }
 
     @Override
@@ -278,6 +281,20 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         } else {
             eventLoop().execute(fireChildReadCompleteTask);
         }
+    }
+
+    /**
+     * This method must only be called within the parent channel's eventloop.
+     */
+    protected void streamId(int streamId) {
+        if (this.streamId != -1) {
+            throw new IllegalStateException("Stream identifier may only be set once.");
+        }
+        this.streamId = ObjectUtil.checkPositiveOrZero(streamId, "streamId");
+    }
+
+    protected int streamId() {
+        return streamId;
     }
 
     /**
