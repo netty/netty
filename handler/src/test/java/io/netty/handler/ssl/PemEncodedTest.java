@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -43,6 +44,7 @@ public class PemEncodedTest {
 
     private static void testPemEncoded(SslProvider provider) throws Exception {
         assumeTrue(OpenSsl.isAvailable());
+        assumeFalse(OpenSsl.useKeyManagerFactory());
         PemPrivateKey pemKey;
         PemX509Certificate pemCert;
         SelfSignedCertificate ssc = new SelfSignedCertificate();
@@ -70,6 +72,7 @@ public class PemEncodedTest {
     private static void assertRelease(PemEncoded encoded) {
         assertTrue(encoded.release());
     }
+
     private static byte[] toByteArray(File file) throws Exception {
         FileInputStream in = new FileInputStream(file);
         try {
