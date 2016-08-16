@@ -107,6 +107,24 @@ public final class Http2CodecUtil {
     public static final int DEFAULT_MAX_FRAME_SIZE = MAX_FRAME_SIZE_LOWER_BOUND;
 
     /**
+     * Returns {@code true} if the stream is an outbound stream.
+     *
+     * @param server    {@code true} if the endpoint is a server, {@code false} otherwise.
+     * @param streamId  the stream identifier
+     */
+    public static boolean isOutboundStream(boolean server, int streamId) {
+        boolean even = (streamId & 1) == 0;
+        return streamId > 0 && server == even;
+    }
+
+    /**
+     * Returns true if the {@code streamId} is a valid HTTP/2 stream identifier.
+     */
+    public static boolean isStreamIdValid(int streamId) {
+        return streamId >= 0;
+    }
+
+    /**
      * The assumed minimum value for {@code SETTINGS_MAX_CONCURRENT_STREAMS} as
      * recommended by the HTTP/2 spec.
      */
