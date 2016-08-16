@@ -20,6 +20,7 @@ import io.netty.util.internal.EmptyArrays;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.NotYetConnectedException;
 
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEAGAIN;
 import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEBADF;
@@ -118,9 +119,13 @@ public final class Errors {
         if (err == resetCause.expectedErr()) {
             throw resetCause;
         }
-        if (err == ERRNO_EBADF_NEGATIVE || err == ERRNO_ENOTCONN_NEGATIVE) {
+        if (err == ERRNO_EBADF_NEGATIVE) {
             throw closedCause;
         }
+        if (err == ERRNO_ENOTCONN_NEGATIVE) {
+            throw new NotYetConnectedException();
+        }
+
         // TODO: We could even go further and use a pre-instantiated IOException for the other error codes, but for
         //       all other errors it may be better to just include a stack trace.
         throw newIOException(method, err);
