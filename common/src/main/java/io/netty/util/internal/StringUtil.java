@@ -556,9 +556,8 @@ public final class StringUtil {
             dest[index] = (char) codePoint;
             return 1;
         } else if (isValidCodePoint(codePoint)) {
-            if (index + 2 > dest.length) throw new ArrayIndexOutOfBoundsException(index);
             // We write elements "backwards" to guarantee all-or-nothing
-            dest[index+1] = lowSurrogate(codePoint);
+            dest[index + 1] = lowSurrogate(codePoint);
             dest[index] = highSurrogate(codePoint);
             return 2;
         } else {

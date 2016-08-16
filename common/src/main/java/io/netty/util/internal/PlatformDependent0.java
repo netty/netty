@@ -45,6 +45,7 @@ final class PlatformDependent0 {
     static final JavaLangAccess JAVA_LANG_ACCESS;
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
+    private static final long CHAR_ARRAY_BASE_OFFSET;
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
 
     // constants borrowed from murmur3
@@ -116,6 +117,7 @@ final class PlatformDependent0 {
         if (unsafe == null) {
             ADDRESS_FIELD_OFFSET = -1;
             BYTE_ARRAY_BASE_OFFSET = -1;
+            CHAR_ARRAY_BASE_OFFSET = 1;
             UNALIGNED = false;
             DIRECT_BUFFER_CONSTRUCTOR = null;
         } else {
@@ -139,6 +141,7 @@ final class PlatformDependent0 {
 
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
             BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
+            CHAR_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(char[].class);
             boolean unaligned;
             try {
                 Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
@@ -159,11 +162,15 @@ final class PlatformDependent0 {
         logger.debug("java.nio.DirectByteBuffer.<init>(long, int): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null? "available" : "unavailable");
 
-        JavaLangAccess javaLangAccess = null;
+        JavaLangAccess javaLangAccess;
         if (unsafe != null) {
             try {
                 javaLangAccess = SharedSecrets.getJavaLangAccess();
-            } catch (Throwable ignored) { }
+            } catch (Throwable ignored) {
+                javaLangAccess = null;
+            }
+        } else {
+            javaLangAccess = null;
         }
         JAVA_LANG_ACCESS = javaLangAccess;
     }
@@ -293,6 +300,10 @@ final class PlatformDependent0 {
 
     static void putLong(long address, long value) {
         UNSAFE.putLong(address, value);
+    }
+
+    static void putChar(char[] data, int index, char value) {
+        UNSAFE.putChar(data, CHAR_ARRAY_BASE_OFFSET + index, value);
     }
 
     static void putByte(byte[] data, int index, byte value) {

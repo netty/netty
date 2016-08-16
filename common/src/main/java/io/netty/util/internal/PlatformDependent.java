@@ -521,6 +521,10 @@ public final class PlatformDependent {
         PlatformDependent0.putLong(address, value);
     }
 
+    public static void putChar(char[] data, int index, char value) {
+        PlatformDependent0.putChar(data, index, value);
+    }
+
     public static void putByte(byte[] data, int index, byte value) {
         PlatformDependent0.putByte(data, index, value);
     }
@@ -1365,7 +1369,7 @@ public final class PlatformDependent {
     }
 
     public static String createSharedString(char[] chars, int newLength) {
-        if (hasUnsafe() && PlatformDependent0.hasSecretAccess()) {
+        if (hasUnsafe() && PlatformDependent0.hasSecretAccess() && javaVersion() >= 8) {
             if (chars.length == newLength) {
                 return PlatformDependent0.createSharedString(chars);
             } else {

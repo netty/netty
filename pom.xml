@@ -699,6 +699,8 @@
           <ignores>
             <ignore>sun.misc.Unsafe</ignore>
             <ignore>sun.misc.Cleaner</ignore>
+            <ignore>sun.misc.SharedSecrets</ignore>
+            <ignore>sun.misc.JavaLangAccess</ignore>
             <ignore>sun.nio.ch.DirectBuffer</ignore>
 
             <ignore>java.util.zip.Deflater</ignore>

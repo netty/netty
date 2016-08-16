@@ -40,9 +40,6 @@ package io.netty.util.internal;
 
 import java.io.DataInput;
 import java.io.IOException;
-import java.util.Arrays;
-
-import com.sun.tools.javac.util.Assert;
 
 import io.netty.util.ByteProcessor;
 
@@ -51,7 +48,8 @@ import io.netty.util.ByteProcessor;
  */
 public final class UTF8Decoder {
 
-    private UTF8Decoder() { }
+    private UTF8Decoder() {
+    }
 
     /**
      * The state the decoder will be in if the decoder is done decoding the character.
@@ -69,24 +67,24 @@ public final class UTF8Decoder {
      * <p>
      * Classes:
      * <ul>
-     *     <li>00..7f -> 0</li>
-     *     <li>80..8f -> 1</li>
-     *     <li>90..9f -> 9</li>
-     *     <li>a0..bf -> 7</li>
-     *     <li>c0..c1 -> 8</li>
-     *     <li>c2..df -> 2</li>
-     *     <li>e0..e0 -> 10</li>
-     *     <li>e1..ec -> 3</li>
-     *     <li>ed..ed -> 4</li>
-     *     <li>ee..ef -> 3</li>
-     *     <li>f0..f0 -> 11</li>
-     *     <li>f1..f3 -> 6</li>
-     *     <li>f4..f4 -> 5</li>
-     *     <li>f5..ff -> 8</li>
+     * <li>00..7f -> 0</li>
+     * <li>80..8f -> 1</li>
+     * <li>90..9f -> 9</li>
+     * <li>a0..bf -> 7</li>
+     * <li>c0..c1 -> 8</li>
+     * <li>c2..df -> 2</li>
+     * <li>e0..e0 -> 10</li>
+     * <li>e1..ec -> 3</li>
+     * <li>ed..ed -> 4</li>
+     * <li>ee..ef -> 3</li>
+     * <li>f0..f0 -> 11</li>
+     * <li>f1..f3 -> 6</li>
+     * <li>f4..f4 -> 5</li>
+     * <li>f5..ff -> 8</li>
      * </ul>
      * </p>
      */
-    /* default */  static final byte[] CHARACTER_CLASSES = new byte[] {
+    /* default */  static final byte[] CHARACTER_CLASSES = new byte[]{
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -100,7 +98,7 @@ public final class UTF8Decoder {
     /**
      * Maps the state and the character class to the next state
      */
-    /* default */ static final byte[] TRANSLATION_TABLE = new byte[] {
+    /* default */ static final byte[] TRANSLATION_TABLE = new byte[]{
             0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
             12, 0, 12, 12, 12, 12, 12, 0, 12, 0, 12, 12, 12, 24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12,
             12, 12, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12,
@@ -138,10 +136,10 @@ public final class UTF8Decoder {
     }
 
     public static final class UTF8Processor implements ByteProcessor {
-        private int state = UTF8_ACCEPT; // The state we are currently in, we start out by wanting a new character
+        /* default */ int state = UTF8_ACCEPT; // The state we are currently in, we start out by wanting a new character
         private int codePoint; // Our current unicode code point
-        private int destSize;
-        private char[] dest;
+        /* default */ int destSize;
+        /* default */ char[] dest;
 
         public UTF8Processor(char[] dest) {
             this.dest = dest;
@@ -164,7 +162,7 @@ public final class UTF8Decoder {
             dest[destSize++] = (char) b;
         }
 
-        private void processUnicode(int b) {
+        /* default */ void processUnicode(int b) {
             final int characterClass = CHARACTER_CLASSES[b];
             if (state == UTF8_ACCEPT) {
                 codePoint = (0xFF >> characterClass) & b;
@@ -180,15 +178,65 @@ public final class UTF8Decoder {
             }
         }
 
+        public boolean isReady() {
+            return state == UTF8_ACCEPT;
+        }
+
         public String toString() {
             char[] dest = this.dest;
             this.dest = null; // Sanity if anyone ever tries to use this again
-            if (dest == null) throw new IllegalArgumentException("toString() already called!");
+            if (dest == null) {
+                throw new IllegalArgumentException("toString() already called!");
+            }
             return PlatformDependent.createSharedString(dest, destSize);
         }
     }
 
     private static String illegalByte(int character) {
         return "Illegal UTF8 byte: 0x " + StringUtil.byteToHexStringPadded(character);
+    }
+
+    private static final UnsafeAccess UNSAFE_INSTANCE = new UnsafeAccess() {
+
+        @Override
+        public void processUnicode(UTF8Decoder.UTF8Processor processor, int rawByte) {
+            processor.processUnicode(rawByte);
+        }
+
+        @Override
+        public char[] getDestinationBuffer(UTF8Processor processor) {
+            return processor.dest;
+        }
+
+        @Override
+        public int getDestinationBufferSize(UTF8Processor processor) {
+            return processor.destSize;
+        }
+
+        @Override
+        public void setDestinationBufferSize(UTF8Processor processor, int newSize) {
+            processor.destSize = newSize;
+        }
+
+        @Override
+        public boolean isAcceptingNewChar(UTF8Processor processor) {
+            return processor.state == UTF8_ACCEPT;
+        }
+    };
+
+    public static UnsafeAccess unsafeAccess() {
+        return UNSAFE_INSTANCE;
+    }
+
+    public interface UnsafeAccess {
+        void processUnicode(UTF8Processor processor, int rawByte);
+
+        char[] getDestinationBuffer(UTF8Processor processor);
+
+        int getDestinationBufferSize(UTF8Processor processor);
+
+        void setDestinationBufferSize(UTF8Processor processor, int newSize);
+
+        boolean isAcceptingNewChar(UTF8Processor processor);
     }
 }

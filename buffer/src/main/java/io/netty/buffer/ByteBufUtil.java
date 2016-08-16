@@ -1,4 +1,4 @@
-/*
+w/*
  * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
@@ -15,6 +15,18 @@
  */
 package io.netty.buffer;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CoderResult;
+import java.nio.charset.CodingErrorAction;
+import java.util.Arrays;
+import java.util.Locale;
+
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
@@ -28,22 +40,9 @@ import io.netty.util.internal.UTF8Decoder;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.CharBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CoderResult;
-import java.nio.charset.CodingErrorAction;
-import java.util.Arrays;
-import java.util.Locale;
-
-import static io.netty.util.internal.MathUtil.isOutOfBounds;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.StringUtil.NEWLINE;
-import static io.netty.util.internal.StringUtil.isSurrogate;
+import static io.netty.util.internal.MathUtil.*;
+import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.util.internal.StringUtil.*;
 
 /**
  * A collection of utility methods that is related with handling {@link ByteBuf},
@@ -575,7 +574,7 @@ public final class ByteBufUtil {
     }
 
     private static String readUtf8Slow(ByteBuf buf, int readerIndex, int length) {
-        if (buf instanceof WrappedByteBuf) {
+        if (buf instanceof WrappedByteBuf || buf instanceof AbstractDerivedByteBuf) {
             ByteBuf wrapped;
             while ((wrapped = buf.unwrap()) != null) {
                 buf = wrapped;
@@ -592,6 +591,46 @@ public final class ByteBufUtil {
     // Fast-Path for a AbstractByteBuf
     static String readUtf8Fast(AbstractByteBuf buf, int readerIndex, int length) {
         buf.checkIndex(readerIndex, length);
+        if (PlatformDependent.hasUnsafe() && buf.hasMemoryAddress()) {
+            return readUtf8FastDirect(buf.memoryAddress() + readerIndex, length);
+        }
+        return readUtf8FastSimple(buf, readerIndex, length);
+    }
+
+    private static String readUtf8FastDirect(final long memory, final int length) {
+        char[] dest = new char[length];
+        int destSize;
+        // ASCII-only loop
+        for (destSize = 0; destSize < length; destSize++) {
+            int b = PlatformDependent.getByte(memory + destSize) & 0xFF;
+            if (b > 127) {
+                // We've encountered unicode, and we need to go the slow-path
+                return readUtf8FastDirectUnicode(dest, destSize, memory, length);
+            }
+            dest[destSize] = (char) b;
+        }
+        // Looks like it was all ASCII, so lets just return what we have since we know destSize == length
+        return PlatformDependent.createSharedString(dest);
+    }
+
+    private static String readUtf8FastDirectUnicode(char[] dest, int destSize, long memory, final long length) {
+        if (length != dest.length) {
+            throw new AssertionError();
+        }
+        if (destSize >= dest.length) {
+            throw new AssertionError();
+        }
+        UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(dest);
+        final UTF8Decoder.UnsafeAccess unsafeAccess = UTF8Decoder.unsafeAccess();
+        unsafeAccess.setDestinationBufferSize(processor, destSize);
+        for (; destSize < length; destSize++) {
+            byte b = PlatformDependent.getByte(memory + destSize);
+            processor.process(b);
+        }
+        return processor.toString();
+    }
+
+    private static String readUtf8FastSimple(AbstractByteBuf buf, int readerIndex, int length) {
         UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(new char[length]);
         /*
          * Inline AbstractByteBuf.forEachByte by hand since the JIT doesn't do it it properly
