@@ -68,12 +68,17 @@ public final class UTF8Decoder {
     /* default */ static final int CONTINUATION_CLASS_2 = 9; // 90..9F
     /* default */ static final int CONTINUATION_CLASS_3 = 7; // A0..BF
     /* default */ static final int TWO_BYTE_BEGIN_CLASS = 2; // C2..DF
-    /* default */ static final int THREE_BYTE_BEGIN_CLASS_1 = 10; // E0 - can potentially be used for an overlong encoding
-    /* default */ static final int THREE_BYTE_BEGIN_CLASS_2 = 4; // ED - can potentially be used for an overlong encoding
+    // Can potentially be used for an overlong encoding
+    /* default */ static final int THREE_BYTE_BEGIN_CLASS_1 = 10; // E0
+    /* default */ static final int THREE_BYTE_BEGIN_CLASS_2 = 4; // ED
+    // These bytes take up 3 characters, but they can't be overlong
     /* default */ static final int THREE_BYTE_BEGIN_CLASS_PRIMARY = 3; // E1..EC && EE..EF
-    /* default */ static final int FOUR_BYTE_BEGIN_CLASS_1 = 11; // F0 - can potentially be used for an overlong encoding
+    // Can potentially be used for an overlong encoding
+    /* default */ static final int FOUR_BYTE_BEGIN_CLASS_1 = 11; // F0
+    // This is the primary set of four byte characters, which aren't overlong and represent valid codepoints
     /* default */ static final int FOUR_BYTE_BEGIN_CLASS_PRIMARY = 4; // F1..F3
-    /* default */ static final int FOUR_BYTE_BEGIN_CLASS_2 = 5; // F0 - may possibly be an invalid code point
+    // This is possibly an invalid code point
+    /* default */ static final int FOUR_BYTE_BEGIN_CLASS_2 = 5; // F0
     /**
      * C0..C1 can _only_ be used for an overlong encoding of ASCII
      * F4..F5 can _only_ be used to encode an invalid code point
@@ -166,8 +171,9 @@ public final class UTF8Decoder {
         return "Illegal offset " + offset + " and length " + length + " for only " + size + " bytes!";
     }
 
-
-    /* default */ static final InvalidReason[] INVALID_REASONS = ArrayUtils.join(InvalidReason.class, new InvalidReason[][]{
+    /* default */ static final InvalidReason[] INVALID_REASONS = ArrayUtils.join(
+            InvalidReason.class,
+            new InvalidReason[][] {
             {
                     // First byte
                     null,
@@ -212,7 +218,6 @@ public final class UTF8Decoder {
                     null,
                     InvalidReason.INSUFFICIENT_CONTINUATION_BYTES,
                     InvalidReason.INSUFFICIENT_CONTINUATION_BYTES
-
             },
             {
                     // state #3 (two more bytes needed)
@@ -319,7 +324,7 @@ public final class UTF8Decoder {
 
         /* default */ UTF8Processor(char[] dest, int destSize) {
             if (destSize < 0 || destSize >= dest.length) {
-                throw new IndexOutOfBoundsException(destSize);
+                throw new IndexOutOfBoundsException(Integer.toString(destSize));
             }
             this.dest = dest;
             this.destSize = destSize;
@@ -365,7 +370,7 @@ public final class UTF8Decoder {
             return state == UTF8_ACCEPT;
         }
 
-        private int toIgnore = 0;
+        private int toIgnore;
 
         private int handleInvalid(int rawByte, int characterClass) {
             InvalidReason invalidReason = INVALID_REASONS[state + characterClass];
@@ -378,7 +383,6 @@ public final class UTF8Decoder {
             return onInvalid(invalidReason, rawByte);
         }
 
-
         private static String illegalStateMsg(int state) {
             return "Illegal state: " + state;
         }
@@ -389,7 +393,9 @@ public final class UTF8Decoder {
 
         protected int onInvalid(InvalidReason invalidReason, int rawByte) {
             if (rawByte < 0 && invalidReason != InvalidReason.INSUFFICIENT_CONTINUATION_BYTES) {
-                throw new IllegalArgumentException("Byte can't be negative/absent unless the reason is INSUFFICIENT_CONTINUATION_BYTES!");
+                throw new IllegalArgumentException(
+                    "Byte can't be negative/absent unless the reason is INSUFFICIENT_CONTINUATION_BYTES!"
+                );
             }
             int numExpected = state / 36 + 1;
             int toIgnore = 0;
@@ -449,7 +455,9 @@ public final class UTF8Decoder {
 
         @Deprecated // Use build() where possible for higher performance
         public String toString() {
-            if (dest == null) throw new IllegalStateException("build() already called!");
+            if (dest == null) {
+                throw new IllegalStateException("build() already called!");
+            }
             return new String(dest, 0, destSize);
         }
     }
@@ -467,7 +475,7 @@ public final class UTF8Decoder {
     private static final UnsafeAccess UNSAFE_INSTANCE = new UnsafeAccess() {
 
         @Override
-        public UTF8Processor fromChars(char[] dest, int destSize) {
+        public UTF8Processor fromCharArray(char[] dest, int destSize) {
             return new UTF8Processor(dest, destSize);
         }
 
@@ -502,7 +510,7 @@ public final class UTF8Decoder {
     }
 
     public interface UnsafeAccess {
-        UTF8Processor fromChars(char[] dest, int destSize);
+        UTF8Processor fromCharArray(char[] dest, int destSize);
 
         void processUnicode(UTF8Processor processor, int rawByte);
 

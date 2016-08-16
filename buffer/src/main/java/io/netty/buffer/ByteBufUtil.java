@@ -1,4 +1,4 @@
-w/*
+/*
  * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,

@@ -1371,12 +1371,20 @@ public final class PlatformDependent {
     public static String createSharedString(char[] chars, int newLength) {
         if (hasUnsafe() && PlatformDependent0.hasSecretAccess() && javaVersion() >= 8) {
             if (chars.length == newLength) {
-                return PlatformDependent0.createSharedString(chars);
+                return createSharedString(chars);
             } else {
                 return createCopiedString(chars, newLength);
             }
         } else {
             return new String(chars, 0, newLength);
+        }
+    }
+
+    public static String createSharedString(char[] chars) {
+        if (hasUnsafe() && PlatformDependent0.hasSecretAccess() && javaVersion() >= 8) {
+            return PlatformDependent0.createSharedString(chars);
+        } else {
+            return new String(chars);
         }
     }
 

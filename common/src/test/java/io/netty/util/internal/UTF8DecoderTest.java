@@ -114,7 +114,9 @@ public class UTF8DecoderTest {
         Assert.assertEquals("The decoded message didn't equal the actual message.", japaneseWikipediaText, decoded);
     }
 
-    private static final byte[] CONTINUATION_BYTES = Bytes.toArray(ContiguousSet.create(Range.closed(0x80, 0xBF), DiscreteDomain.integers()));
+    private static final byte[] CONTINUATION_BYTES = Bytes.toArray(
+        ContiguousSet.create(Range.closed(0x80, 0xBF), DiscreteDomain.integers())
+    );
     /**
      * Bytes that are illegal anywhere in the sequence
      */
@@ -232,7 +234,12 @@ public class UTF8DecoderTest {
         } else if ((byte) end != end) {
             throw new IllegalArgumentException("End " + Integer.toHexString(end) + " can't fit in a byte");
         } else if (start > end) {
-            throw new IllegalArgumentException("Start " + Integer.toHexString(start) + " is greater than end " + Integer.toHexString(end));
+            throw new IllegalArgumentException(
+                "Start "
+                + Integer.toHexString(start)
+                + " is greater than end "
+                + Integer.toHexString(end)
+            );
         }
         int size = end - start;
         byte[] result = new byte[size];
@@ -268,7 +275,6 @@ public class UTF8DecoderTest {
             );
         }
     }
-
 
     @Test
     public void testIllegalBytes() {
