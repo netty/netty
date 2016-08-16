@@ -58,9 +58,9 @@ public final class Socket extends FileDescriptor {
     private static final Errors.NativeIoException CONNECTION_RESET_EXCEPTION_SENDMSG = unknownStackTrace(
             Errors.newConnectionResetException("syscall:sendmsg(...)",
             Errors.ERRNO_EPIPE_NEGATIVE), Socket.class, "sendToAddresses(...)");
-    private static final Errors.NativeIoException CONNECTION_NOT_CONNECTED_SHUTDOWN_EXCEPTION =
+    private static final Errors.NativeIoException CONNECTION_RESET_SHUTDOWN_EXCEPTION =
             unknownStackTrace(Errors.newConnectionResetException("syscall:shutdown(...)",
-                    Errors.ERRNO_ENOTCONN_NEGATIVE), Socket.class, "shutdown(...)");
+                    Errors.ERRNO_ECONNRESET_NEGATIVE), Socket.class, "shutdown(...)");
     private static final Errors.NativeConnectException FINISH_CONNECT_REFUSED_EXCEPTION =
             unknownStackTrace(new Errors.NativeConnectException("syscall:getsockopt(...)",
                     Errors.ERROR_ECONNREFUSED_NEGATIVE), Socket.class, "finishConnect(...)");
@@ -100,7 +100,7 @@ public final class Socket extends FileDescriptor {
         }
         int res = shutdown(fd, read, write);
         if (res < 0) {
-            ioResult("shutdown", res, CONNECTION_NOT_CONNECTED_SHUTDOWN_EXCEPTION, SHUTDOWN_CLOSED_CHANNEL_EXCEPTION);
+            ioResult("shutdown", res, CONNECTION_RESET_SHUTDOWN_EXCEPTION, SHUTDOWN_CLOSED_CHANNEL_EXCEPTION);
         }
     }
 
