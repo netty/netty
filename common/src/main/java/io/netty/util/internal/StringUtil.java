@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 
+import com.sun.org.apache.regexp.internal.RE;
+
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
@@ -574,6 +576,9 @@ public final class StringUtil {
                 (byte) codePoint
         });
     }
+
+    public static final char REPLACEMENT_CHARACTER = '\ufffd';
+    public static final String REPLACEMENT_CHARACTER_STRING = String.valueOf(REPLACEMENT_CHARACTER);
 
     public static char highSurrogate(int codePoint) {
         return (char) ((codePoint >>> 10)

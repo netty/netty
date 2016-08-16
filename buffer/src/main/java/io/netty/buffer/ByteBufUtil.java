@@ -583,9 +583,9 @@ public final class ByteBufUtil {
                 return readUtf8Fast((AbstractByteBuf) buf, readerIndex, length);
             }
         }
-        UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(new char[length]);
+        UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(length);
         buf.forEachByte(readerIndex, length, processor);
-        return processor.toString();
+        return processor.build();
     }
 
     // Fast-Path for a AbstractByteBuf
@@ -620,18 +620,16 @@ public final class ByteBufUtil {
         if (destSize >= dest.length) {
             throw new AssertionError();
         }
-        UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(dest);
-        final UTF8Decoder.UnsafeAccess unsafeAccess = UTF8Decoder.unsafeAccess();
-        unsafeAccess.setDestinationBufferSize(processor, destSize);
+        final UTF8Decoder.UTF8Processor processor = UTF8Decoder.unsafeAccess().fromCharArray(dest, destSize);
         for (; destSize < length; destSize++) {
             byte b = PlatformDependent.getByte(memory + destSize);
             processor.process(b);
         }
-        return processor.toString();
+        return processor.build();
     }
 
     private static String readUtf8FastSimple(AbstractByteBuf buf, int readerIndex, int length) {
-        UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(new char[length]);
+        UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(length);
         /*
          * Inline AbstractByteBuf.forEachByte by hand since the JIT doesn't do it it properly
          * The JIT inlines AbstractByteBuf.forEachByte, but not AbstractByteBuf.forEachByteAsc0.
@@ -648,7 +646,7 @@ public final class ByteBufUtil {
             byte b = buf._getByte(readerIndex + i); // Bypass bounds-checks (we checked outside the loop)
             processor.process(b);
         }
-        return processor.toString();
+        return processor.build();
     }
 
     static String decodeString(ByteBuf src, int readerIndex, int len, Charset charset) {

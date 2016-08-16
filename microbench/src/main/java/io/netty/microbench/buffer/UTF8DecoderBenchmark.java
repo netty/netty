@@ -107,9 +107,9 @@ public class UTF8DecoderBenchmark extends AbstractMicrobenchmark {
     public String decodeNettyUnoptimized() {
         int size = encoded.writerIndex();
         // Naive use of UTF8Decoder without cool micro-optimizations
-        UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(new char[size]);
+        UTF8Decoder.UTF8Processor processor = new UTF8Decoder.UTF8Processor(size);
         encoded.forEachByte(encoded.readerIndex(), size, processor);
-        return processor.toString();
+        return processor.build();
     }
 
     @TearDown
