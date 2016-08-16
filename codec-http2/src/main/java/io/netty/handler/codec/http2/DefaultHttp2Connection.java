@@ -1050,7 +1050,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
             if (state.localSideOpen() || state.remoteSideOpen()) {
                 if (!canOpenStream()) {
-                    throw connectionError(REFUSED_STREAM, "Maximum active streams violated for this endpoint.");
+                    throw streamError(streamId, REFUSED_STREAM, "Maximum active streams violated for this endpoint.");
                 }
             } else if (numStreams == maxStreams) {
                 throw streamError(streamId, REFUSED_STREAM, "Maximum streams violated for this endpoint.");
