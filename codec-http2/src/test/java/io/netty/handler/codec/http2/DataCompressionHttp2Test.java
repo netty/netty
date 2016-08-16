@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -248,7 +249,7 @@ public class DataCompressionHttp2Test {
                 }
             });
             awaitServer();
-            assertEquals(data.resetReaderIndex().toString(CharsetUtil.UTF_8),
+            assertEquals(new String(ByteBufUtil.getBytes(data.resetReaderIndex()), CharsetUtil.UTF_8),
                     serverOut.toString(CharsetUtil.UTF_8.name()));
         } finally {
             data.release();

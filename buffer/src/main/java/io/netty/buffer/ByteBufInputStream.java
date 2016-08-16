@@ -16,10 +16,11 @@
 package io.netty.buffer;
 
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+
+import io.netty.util.internal.UTF8Decoder;
 
 /**
  * An {@link InputStream} which reads data from a {@link ByteBuf}.
@@ -225,7 +226,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public String readUTF() throws IOException {
-        return DataInputStream.readUTF(this);
+        return UTF8Decoder.decode(this, readUnsignedShort());
     }
 
     @Override
