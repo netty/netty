@@ -63,8 +63,8 @@ public final class DefaultHttp2HeadersFrame extends AbstractHttp2StreamFrame imp
     }
 
     @Override
-    public DefaultHttp2HeadersFrame setStreamId(int streamId) {
-        super.setStreamId(streamId);
+    public DefaultHttp2HeadersFrame streamId(int streamId) {
+        super.streamId(streamId);
         return this;
     }
 
@@ -91,7 +91,7 @@ public final class DefaultHttp2HeadersFrame extends AbstractHttp2StreamFrame imp
     @Override
     public String toString() {
         return "DefaultHttp2HeadersFrame(streamId=" + streamId() + ", headers=" + headers
-            + ", endStream=" + endStream + ", padding=" + padding + ")";
+               + ", endStream=" + endStream + ", padding=" + padding + ")";
     }
 
     @Override
