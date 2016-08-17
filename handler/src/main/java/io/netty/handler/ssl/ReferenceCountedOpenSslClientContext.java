@@ -40,6 +40,10 @@ import javax.security.auth.x500.X500Principal;
 /**
  * A client-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
  * <p>Instances of this class must be {@link #release() released} or else native memory will leak!
+ *
+ * <p>Instances of this class <strong>must not</strong> be released before any {@link ReferenceCountedOpenSslEngine}
+ * which depends upon the instance of this class is released. Otherwise if any method of
+ * {@link ReferenceCountedOpenSslEngine} is called which uses this class's JNI resources the JVM may crash.
  */
 public final class ReferenceCountedOpenSslClientContext extends ReferenceCountedOpenSslContext {
     private static final InternalLogger logger =

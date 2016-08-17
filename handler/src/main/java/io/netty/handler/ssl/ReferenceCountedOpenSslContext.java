@@ -62,6 +62,10 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * An implementation of {@link SslContext} which works with libraries that support the
  * <a href="https://www.openssl.org/">OpenSsl</a> C library API.
  * <p>Instances of this class must be {@link #release() released} or else native memory will leak!
+ *
+ * <p>Instances of this class <strong>must not</strong> be released before any {@link ReferenceCountedOpenSslEngine}
+ * which depends upon the instance of this class is released. Otherwise if any method of
+ * {@link ReferenceCountedOpenSslEngine} is called which uses this class's JNI resources the JVM may crash.
  */
 public abstract class ReferenceCountedOpenSslContext extends SslContext implements ReferenceCounted {
     private static final InternalLogger logger =

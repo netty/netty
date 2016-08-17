@@ -72,6 +72,10 @@ import static javax.net.ssl.SSLEngineResult.Status.OK;
  * Implements a {@link SSLEngine} using
  * <a href="https://www.openssl.org/docs/crypto/BIO_s_bio.html#EXAMPLE">OpenSSL BIO abstractions</a>.
  * <p>Instances of this class must be {@link #release() released} or else native memory will leak!
+ *
+ * <p>Instances of this class <strong>must</strong> be released before the {@link ReferenceCountedOpenSslContext}
+ * the instance depends upon are released. Otherwise if any method of this class is called which uses the
+ * the {@link ReferenceCountedOpenSslContext} JNI resources the JVM may crash.
  */
 public class ReferenceCountedOpenSslEngine extends SSLEngine implements ReferenceCounted {
 
