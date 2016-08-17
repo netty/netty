@@ -703,9 +703,11 @@
 
             <ignore>java.util.zip.Deflater</ignore>
 
-            <!-- Used for NIO UDP multicast -->
+            <!-- Used for NIO -->
             <ignore>java.nio.channels.DatagramChannel</ignore>
             <ignore>java.nio.channels.MembershipKey</ignore>
+            <ignore>java.nio.channels.ServerSocketChannel</ignore>
+            <ignore>java.nio.channels.SocketChannel</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
             <ignore>java.nio.channels.spi.SelectorProvider</ignore>
 
