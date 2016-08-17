@@ -118,17 +118,34 @@ public abstract class SSLEngineTest {
 
     @After
     public void tearDown() throws InterruptedException {
+        ChannelFuture clientCloseFuture = null;
+        ChannelFuture serverConnectedCloseFuture = null;
+        ChannelFuture serverCloseFuture = null;
         if (clientChannel != null) {
-            clientChannel.close();
+            clientCloseFuture = clientChannel.close();
             clientChannel = null;
         }
         if (serverConnectedChannel != null) {
-            serverConnectedChannel.close();
+            serverConnectedCloseFuture = serverConnectedChannel.close();
             serverConnectedChannel = null;
         }
         if (serverChannel != null) {
-            serverChannel.close().sync();
+            serverCloseFuture = serverChannel.close();
             serverChannel = null;
+        }
+        // We must wait for the Channel cleanup to finish. In the case if the ReferenceCountedOpenSslEngineTest
+        // the ReferenceCountedOpenSslEngine depends upon the SslContext and so we must wait the cleanup the
+        // SslContext to avoid JVM core dumps!
+        //
+        // See https://github.com/netty/netty/issues/5692
+        if (clientCloseFuture != null) {
+            clientCloseFuture.sync();
+        }
+        if (serverConnectedCloseFuture != null) {
+            serverConnectedCloseFuture.sync();
+        }
+        if (serverCloseFuture != null) {
+            serverCloseFuture.sync();
         }
         if (serverSslCtx != null) {
             cleanupSslContext(serverSslCtx);
