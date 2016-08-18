@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ConnectionPendingException;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
@@ -782,7 +783,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
             try {
                 if (connectPromise != null) {
-                    throw new IllegalStateException("connection attempt already made");
+                    throw new ConnectionPendingException();
                 }
 
                 boolean wasActive = isActive();

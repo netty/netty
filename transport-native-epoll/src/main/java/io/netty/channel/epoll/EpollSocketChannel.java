@@ -29,6 +29,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
+import java.nio.channels.AlreadyConnectedException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -181,6 +182,13 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         }
         InetSocketAddress remoteAddr = (InetSocketAddress) remoteAddress;
         checkResolvable(remoteAddr);
+
+        if (remote != null) {
+            // Check if already connected before trying to connect. This is needed as connect(...) will not return -1
+            // and set errno to EISCONN if a previous connect(...) attempt was setting errno to EINPROGRESS and finished
+            // later.
+            throw new AlreadyConnectedException();
+        }
 
         boolean connected = super.doConnect(remoteAddress, localAddress);
         if (connected) {

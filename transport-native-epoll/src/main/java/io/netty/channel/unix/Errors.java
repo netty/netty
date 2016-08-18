@@ -19,18 +19,13 @@ import io.netty.util.internal.EmptyArrays;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.NoRouteToHostException;
+import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 
-import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEAGAIN;
-import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEBADF;
-import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoECONNRESET;
-import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEINPROGRESS;
-import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOTCONN;
-import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEPIPE;
-import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoEWOULDBLOCK;
-import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errorECONNREFUSED;
-import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.strError;
+import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.*;
 
 /**
  * <strong>Internal usage only!</strong>
@@ -46,6 +41,9 @@ public final class Errors {
     public static final int ERRNO_EWOULDBLOCK_NEGATIVE = -errnoEWOULDBLOCK();
     public static final int ERRNO_EINPROGRESS_NEGATIVE = -errnoEINPROGRESS();
     public static final int ERROR_ECONNREFUSED_NEGATIVE = -errorECONNREFUSED();
+    public static final int ERROR_EISCONN_NEGATIVE = -errorEISCONN();
+    public static final int ERROR_EALREADY_NEGATIVE = -errorEALREADY();
+    public static final int ERROR_ENETUNREACH_NEGATIVE = -errorENETUNREACH();
 
     /**
      * Holds the mappings for errno codes to String messages.
@@ -93,9 +91,18 @@ public final class Errors {
     }
 
     static void throwConnectException(String method, NativeConnectException refusedCause, int err)
-            throws ConnectException {
+            throws IOException {
         if (err == refusedCause.expectedErr()) {
             throw refusedCause;
+        }
+        if (err == ERROR_EALREADY_NEGATIVE) {
+            throw new ConnectionPendingException();
+        }
+        if (err == ERROR_ENETUNREACH_NEGATIVE) {
+            throw new NoRouteToHostException();
+        }
+        if (err == ERROR_EISCONN_NEGATIVE) {
+            throw new AlreadyConnectedException();
         }
         throw new ConnectException(method + "() failed: " + ERRORS[-err]);
     }

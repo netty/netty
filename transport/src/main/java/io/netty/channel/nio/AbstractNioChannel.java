@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.util.concurrent.ScheduledFuture;
@@ -245,7 +246,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
             try {
                 if (connectPromise != null) {
-                    throw new IllegalStateException("connection attempt already made");
+                    // Already a connect in process.
+                    throw new ConnectionPendingException();
                 }
 
                 boolean wasActive = isActive();
