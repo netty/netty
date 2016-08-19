@@ -2332,7 +2332,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
 
     /**
      * Compares the content of the specified buffer to the content of this
-     * buffer.  Comparison is performed in the same manner with the string
+     * buffer. Comparison is performed in the same manner with the string
      * comparison functions of various languages such as {@code strcmp},
      * {@code memcmp} and {@link String#compareTo(String)}.
      */

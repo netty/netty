@@ -229,52 +229,81 @@ public final class ByteBufUtil {
         final int minLength = Math.min(aLen, bLen);
         final int uintCount = minLength >>> 2;
         final int byteCount = minLength & 3;
-
         int aIndex = bufferA.readerIndex();
         int bIndex = bufferB.readerIndex();
 
-        if (bufferA.order() == bufferB.order()) {
-            for (int i = uintCount; i > 0; i --) {
-                long va = bufferA.getUnsignedInt(aIndex);
-                long vb = bufferB.getUnsignedInt(bIndex);
-                if (va > vb) {
-                    return 1;
-                }
-                if (va < vb) {
-                    return -1;
-                }
-                aIndex += 4;
-                bIndex += 4;
+        if (uintCount > 0) {
+            boolean bufferAIsBigEndian = bufferA.order() == ByteOrder.BIG_ENDIAN;
+            final long res;
+            int uintCountIncrement = uintCount << 2;
+
+            if (bufferA.order() == bufferB.order()) {
+                res = bufferAIsBigEndian ? compareUintBigEndian(bufferA, bufferB, aIndex, bIndex, uintCountIncrement) :
+                        compareUintLittleEndian(bufferA, bufferB, aIndex, bIndex, uintCountIncrement);
+            } else {
+                res = bufferAIsBigEndian ? compareUintBigEndianA(bufferA, bufferB, aIndex, bIndex, uintCountIncrement) :
+                        compareUintBigEndianB(bufferA, bufferB, aIndex, bIndex, uintCountIncrement);
             }
-        } else {
-            for (int i = uintCount; i > 0; i --) {
-                long va = bufferA.getUnsignedInt(aIndex);
-                long vb = swapInt(bufferB.getInt(bIndex)) & 0xFFFFFFFFL;
-                if (va > vb) {
-                    return 1;
-                }
-                if (va < vb) {
-                    return -1;
-                }
-                aIndex += 4;
-                bIndex += 4;
+            if (res != 0) {
+                // Ensure we not overflow when cast
+                return (int) Math.min(Integer.MAX_VALUE, res);
             }
+            aIndex += uintCountIncrement;
+            bIndex += uintCountIncrement;
         }
 
-        for (int i = byteCount; i > 0; i --) {
-            short va = bufferA.getUnsignedByte(aIndex);
-            short vb = bufferB.getUnsignedByte(bIndex);
-            if (va > vb) {
-                return 1;
+        for (int aEnd = aIndex + byteCount; aIndex < aEnd; ++aIndex, ++bIndex) {
+            int comp = bufferA.getUnsignedByte(aIndex) - bufferB.getUnsignedByte(bIndex);
+            if (comp != 0) {
+                return comp;
             }
-            if (va < vb) {
-                return -1;
-            }
-            aIndex ++;
-            bIndex ++;
         }
 
         return aLen - bLen;
+    }
+
+    private static long compareUintBigEndian(
+            ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
+        for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
+            long comp = bufferA.getUnsignedInt(aIndex) - bufferB.getUnsignedInt(bIndex);
+            if (comp != 0) {
+                return comp;
+            }
+        }
+        return 0;
+    }
+
+    private static long compareUintLittleEndian(
+            ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
+        for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
+            long comp = bufferA.getUnsignedIntLE(aIndex) - bufferB.getUnsignedIntLE(bIndex);
+            if (comp != 0) {
+                return comp;
+            }
+        }
+        return 0;
+    }
+
+    private static long compareUintBigEndianA(
+            ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
+        for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
+            long comp =  bufferA.getUnsignedInt(aIndex) - bufferB.getUnsignedIntLE(bIndex);
+            if (comp != 0) {
+                return comp;
+            }
+        }
+        return 0;
+    }
+
+    private static long compareUintBigEndianB(
+            ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
+        for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
+            long comp =  bufferA.getUnsignedIntLE(aIndex) - bufferB.getUnsignedInt(bIndex);
+            if (comp != 0) {
+                return comp;
+            }
+        }
+        return 0;
     }
 
     /**
