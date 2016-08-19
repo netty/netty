@@ -77,8 +77,13 @@ public final class ThreadLocalRandom extends Random {
         long initialSeedUniquifier = ThreadLocalRandom.initialSeedUniquifier;
         if (initialSeedUniquifier == 0) {
             // Use the system property value.
-            ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier =
-                    SystemPropertyUtil.getLong("io.netty.initialSeedUniquifier", 0);
+            ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier = AccessController.doPrivileged(
+                    new PrivilegedAction<Long>() {
+                @Override
+                public Long run() {
+                    return Long.getLong("io.netty.initialSeedUniquifier", 0);
+                }
+            });
         }
 
         // Otherwise, generate one.
@@ -86,7 +91,7 @@ public final class ThreadLocalRandom extends Random {
             boolean secureRandom = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
                 @Override
                 public Boolean run() {
-                    return SystemPropertyUtil.getBoolean("java.util.secureRandomSeed", false);
+                    return Boolean.getBoolean("java.util.secureRandomSeed");
                 }
             });
 
