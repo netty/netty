@@ -66,8 +66,7 @@ public final class ThreadLocalRandom extends Random {
 
     private static final AtomicLong seedUniquifier = new AtomicLong();
 
-    private static volatile long initialSeedUniquifier =
-            SystemPropertyUtil.getLong("io.netty.initialSeedUniquifier", 0);
+    private static volatile long initialSeedUniquifier;
 
     private static final Thread seedGeneratorThread;
     private static final BlockingQueue<Long> seedQueue;
@@ -75,11 +74,18 @@ public final class ThreadLocalRandom extends Random {
     private static volatile long seedGeneratorEndTime;
 
     static {
+        initialSeedUniquifier = AccessController.doPrivileged(new PrivilegedAction<Long>() {
+            @Override
+            public Long run() {
+                return Long.getLong("io.netty.initialSeedUniquifier", 0);
+            }
+        });
+
         if (initialSeedUniquifier == 0) {
             boolean secureRandom = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
                 @Override
                 public Boolean run() {
-                    return SystemPropertyUtil.getBoolean("java.util.secureRandomSeed", false);
+                    return Boolean.getBoolean("java.util.secureRandomSeed");
                 }
             });
 
