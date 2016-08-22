@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.cors;
 
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -24,6 +25,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -80,7 +82,7 @@ public class CorsHandler extends ChannelDuplexHandler {
             setPreflightHeaders(response);
         }
         release(request);
-        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+        respond(ctx, request, response);
     }
 
     /**
@@ -203,8 +205,22 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {
-        ctx.writeAndFlush(new DefaultFullHttpResponse(request.protocolVersion(), FORBIDDEN))
-                .addListener(ChannelFutureListener.CLOSE);
         release(request);
+        respond(ctx, request, new DefaultFullHttpResponse(request.protocolVersion(), FORBIDDEN));
+    }
+
+    private static void respond(
+            final ChannelHandlerContext ctx,
+            final HttpRequest request,
+            final HttpResponse response) {
+
+        final boolean keepAlive = HttpUtil.isKeepAlive(request);
+
+        HttpUtil.setKeepAlive(response, keepAlive);
+
+        final ChannelFuture future = ctx.writeAndFlush(response);
+        if (!keepAlive) {
+            future.addListener(ChannelFutureListener.CLOSE);
+        }
     }
 }
