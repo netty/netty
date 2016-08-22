@@ -189,7 +189,7 @@ public interface ChannelConfig {
     ChannelConfig setAutoRead(boolean autoRead);
 
     /**
-     * @deprecated From version 5.0, {@link Channel} will not be closed on write failure.
+     * @deprecated  Auto close will be removed in a future release.
      *
      * Returns {@code true} if and only if the {@link Channel} will be closed automatically and immediately on
      * write failure.  The default is {@code false}.
@@ -198,7 +198,7 @@ public interface ChannelConfig {
     boolean isAutoClose();
 
     /**
-     * @deprecated From version 5.0, {@link Channel} will not be closed on write failure.
+     * @deprecated  Auto close will be removed in a future release.
      *
      * Sets whether the {@link Channel} should be closed automatically and immediately on write faillure.
      * The default is {@code false}.
