@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.util.AsciiString;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -35,10 +36,13 @@ import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_O
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.DATE;
 import static io.netty.handler.codec.http.HttpHeaderNames.ORIGIN;
 import static io.netty.handler.codec.http.HttpHeaderNames.VARY;
+import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
+import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.handler.codec.http.HttpMethod.DELETE;
 import static io.netty.handler.codec.http.HttpMethod.GET;
@@ -289,14 +293,97 @@ public class CorsHandlerTest {
     }
 
     @Test
+    public void shortCurcuitWithConnectionKeepAliveShouldStayOpen() {
+        final CorsConfig config = forOrigin("http://localhost:8080").shortCircuit().build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = createHttpRequest(GET);
+        request.headers().set(ORIGIN, "http://localhost:8888");
+        request.headers().set(CONNECTION, KEEP_ALIVE);
+
+        channel.writeInbound(request);
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(channel.isOpen(), is(true));
+        assertThat(response.status(), is(FORBIDDEN));
+    }
+
+    @Test
+    public void shortCurcuitWithoutConnectionShouldStayOpen() {
+        final CorsConfig config = forOrigin("http://localhost:8080").shortCircuit().build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = createHttpRequest(GET);
+        request.headers().set(ORIGIN, "http://localhost:8888");
+
+        channel.writeInbound(request);
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(channel.isOpen(), is(true));
+        assertThat(response.status(), is(FORBIDDEN));
+    }
+
+    @Test
+    public void shortCurcuitWithConnectionCloseShouldClose() {
+        final CorsConfig config = forOrigin("http://localhost:8080").shortCircuit().build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = createHttpRequest(GET);
+        request.headers().set(ORIGIN, "http://localhost:8888");
+        request.headers().set(CONNECTION, CLOSE);
+
+        channel.writeInbound(request);
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(channel.isOpen(), is(false));
+        assertThat(response.status(), is(FORBIDDEN));
+    }
+
+    @Test
     public void preflightRequestShouldReleaseRequest() {
         final CorsConfig config = forOrigin("http://localhost:8888")
                 .preflightResponseHeader("CustomHeader", Arrays.asList("value1", "value2"))
                 .build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
-        final FullHttpRequest request = optionsRequest("http://localhost:8888", "content-type, xheader1");
+        final FullHttpRequest request = optionsRequest("http://localhost:8888", "content-type, xheader1", null);
         channel.writeInbound(request);
         assertThat(request.refCnt(), is(0));
+    }
+
+    @Test
+    public void preflightRequestWithConnectionKeepAliveShouldStayOpen() throws Exception {
+
+        final CorsConfig config = forOrigin("http://localhost:8888").build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = optionsRequest("http://localhost:8888", "", KEEP_ALIVE);
+        channel.writeInbound(request);
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(channel.isOpen(), is(true));
+        assertThat(response.status(), is(OK));
+    }
+
+    @Test
+    public void preflightRequestWithoutConnectionShouldStayOpen() throws Exception {
+
+        final CorsConfig config = forOrigin("http://localhost:8888").build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = optionsRequest("http://localhost:8888", "", null);
+        channel.writeInbound(request);
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(channel.isOpen(), is(true));
+        assertThat(response.status(), is(OK));
+    }
+
+    @Test
+    public void preflightRequestWithConnectionCloseShouldClose() throws Exception {
+
+        final CorsConfig config = forOrigin("http://localhost:8888").build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = optionsRequest("http://localhost:8888", "", CLOSE);
+        channel.writeInbound(request);
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(channel.isOpen(), is(false));
+        assertThat(response.status(), is(OK));
     }
 
     @Test
@@ -339,15 +426,22 @@ public class CorsHandlerTest {
                                                  final String origin,
                                                  final String requestHeaders) {
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
-        channel.writeInbound(optionsRequest(origin, requestHeaders));
+        channel.writeInbound(optionsRequest(origin, requestHeaders, null));
         return (HttpResponse) channel.readOutbound();
     }
 
-    private static FullHttpRequest optionsRequest(final String origin, final String requestHeaders) {
+    private static FullHttpRequest optionsRequest(final String origin,
+                                                  final String requestHeaders,
+                                                  final AsciiString connection) {
         final FullHttpRequest httpRequest = createHttpRequest(OPTIONS);
         httpRequest.headers().set(ORIGIN, origin);
         httpRequest.headers().set(ACCESS_CONTROL_REQUEST_METHOD, httpRequest.method().toString());
         httpRequest.headers().set(ACCESS_CONTROL_REQUEST_HEADERS, requestHeaders);
+
+        if (connection != null) {
+            httpRequest.headers().set(CONNECTION, connection);
+        }
+
         return httpRequest;
     }
 
