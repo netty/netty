@@ -73,6 +73,10 @@ public class ServerCookieDecoderTest {
         Cookie c;
 
         c = it.next();
+        assertEquals("ARPT", c.name());
+        assertEquals("LWUKQPSWRTUN04CKKJI", c.value());
+
+        c = it.next();
         assertEquals("__utma", c.name());
         assertEquals("48461872.1094088325.1258140131.1258140131.1258140131.1", c.value());
 
@@ -89,10 +93,6 @@ public class ServerCookieDecoderTest {
         assertEquals("48461872.1258140131.1.1.utmcsr=overstock.com|" +
                 "utmccn=(referral)|utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance/clearance/32/dept.html",
                 c.value());
-
-        c = it.next();
-        assertEquals("ARPT", c.name());
-        assertEquals("LWUKQPSWRTUN04CKKJI", c.value());
 
         c = it.next();
         assertEquals("kw-2E343B92-B097-442c-BFA5-BE371E0325A2", c.name());
@@ -181,5 +181,22 @@ public class ServerCookieDecoderTest {
     public void testRejectCookieValueWithSemicolon() {
         Set<Cookie> cookies = ServerCookieDecoder.STRICT.decode("name=\"foo;bar\";");
         assertTrue(cookies.isEmpty());
+    }
+
+    @Test
+    public void testCaseSensitiveNames() {
+        Set<Cookie> cookies = ServerCookieDecoder.STRICT.decode("session_id=a; Session_id=b;");
+        Iterator<Cookie> it = cookies.iterator();
+        Cookie c;
+
+        c = it.next();
+        assertEquals("Session_id", c.name());
+        assertEquals("b", c.value());
+
+        c = it.next();
+        assertEquals("session_id", c.name());
+        assertEquals("a", c.value());
+
+        assertFalse(it.hasNext());
     }
 }

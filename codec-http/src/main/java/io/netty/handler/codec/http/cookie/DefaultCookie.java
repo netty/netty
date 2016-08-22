@@ -135,7 +135,7 @@ public class DefaultCookie implements Cookie {
         }
 
         Cookie that = (Cookie) o;
-        if (!name().equalsIgnoreCase(that.name())) {
+        if (!name().equals(that.name())) {
             return false;
         }
 
@@ -164,7 +164,7 @@ public class DefaultCookie implements Cookie {
 
     @Override
     public int compareTo(Cookie c) {
-        int v = name().compareToIgnoreCase(c.name());
+        int v = name().compareTo(c.name());
         if (v != 0) {
             return v;
         }
