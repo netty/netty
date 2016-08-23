@@ -25,6 +25,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.codec.http2.Http2MultiplexCodec.Http2StreamChannel;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.UnstableApi;
 
@@ -41,11 +42,23 @@ import static java.util.Collections.unmodifiableMap;
  * <p>The bootstrap requires a registered parent {@link Channel} with a {@link ChannelPipeline} that contains the
  * {@link Http2MultiplexCodec}.
  *
- * <p>A child channel becomes active as soon as it is registered to an eventloop. Therefore, an active channel does not
- * map to an active HTTP/2 stream immediately. Only once a {@link Http2HeadersFrame} has been sent or received, does
- * the channel map to an active HTTP/2 stream. In case it was not possible to open a new HTTP/2 stream (i.e. due to
- * the maximum number of active streams being exceeded), the child channel receives an exception indicating the reason
- * and is closed immediately thereafter.
+ * <h3>Channel Events</h3>
+ *
+ * A child channel becomes active as soon as it is registered to an {@link EventLoop}. Therefore, an active channel
+ * does not map to an active HTTP/2 stream immediately. Only once a {@link Http2HeadersFrame} has been successfully sent
+ * or received, does the channel map to an active HTTP/2 stream. In case it is not possible to open a new HTTP/2 stream
+ * (i.e. due to the maximum number of active streams being exceeded), the child channel receives an exception
+ * indicating the cause and is closed immediately thereafter.
+ *
+ * <h3>Writability and Flow Control</h3>
+ *
+ * A child channel observes outbound/remote flow control via the channel's writability. A channel only becomes writable
+ * when it maps to an active HTTP/2 stream and the stream's flow control window is greater than zero. A child channel
+ * does not know about the connection-level flow control window. {@link ChannelHandler}s are free to ignore the
+ * channel's writability, in which case the excessive writes will be buffered by the parent channel. It's important to
+ * note that only {@link Http2DataFrame}s are subject to HTTP/2 flow control. So it's perfectly legal (and expected)
+ * by a handler that aims to respect the channel's writability to e.g. write a {@link Http2DataFrame} even if the
+ * channel is marked unwritable.
  *
  * <p>This class is thread-safe.
  */
@@ -79,13 +92,14 @@ public class Http2StreamChannelBootstrap {
      * Creates a new channel that will eventually map to a local/outbound HTTP/2 stream.
      */
     public ChannelFuture connect() {
-        return connect(-1);
+        Http2Stream2 newStream = channelAndCodec.multiplexCodec.newStream();
+        return connect(newStream);
     }
 
     /**
      * Used by the {@link Http2MultiplexCodec} to instantiate incoming/remotely-created streams.
      */
-    ChannelFuture connect(int streamId) {
+    ChannelFuture connect(Http2Stream2 stream) {
         validateState();
 
         ParentChannelAndMultiplexCodec channelAndCodec0 = channelAndCodec;
@@ -95,7 +109,7 @@ public class Http2StreamChannelBootstrap {
         EventLoopGroup group0 = group;
         group0 = group0 == null ? parentChannel.eventLoop() : group0;
 
-        return multiplexCodec.createStreamChannel(parentChannel, group0, handler, options, attributes, streamId);
+        return multiplexCodec.createStreamChannel(parentChannel, group0, handler, options, attributes, stream);
     }
 
     /**

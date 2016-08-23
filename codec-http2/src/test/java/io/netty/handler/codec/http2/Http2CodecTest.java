@@ -39,9 +39,9 @@ import java.util.concurrent.CountDownLatch;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -115,10 +115,10 @@ public class Http2CodecTest {
 
         Channel childChannel1 = b.connect().syncUninterruptibly().channel();
         assertTrue(childChannel1.isActive());
-        assertFalse(isStreamIdValid(((AbstractHttp2StreamChannel) childChannel1).streamId()));
+        assertFalse(isStreamIdValid(((AbstractHttp2StreamChannel) childChannel1).stream().id()));
         Channel childChannel2 = b.connect().channel();
         assertTrue(childChannel2.isActive());
-        assertFalse(isStreamIdValid(((AbstractHttp2StreamChannel) childChannel2).streamId()));
+        assertFalse(isStreamIdValid(((AbstractHttp2StreamChannel) childChannel2).stream().id()));
 
         Http2Headers headers1 = new DefaultHttp2Headers();
         Http2Headers headers2 = new DefaultHttp2Headers();
@@ -129,14 +129,14 @@ public class Http2CodecTest {
 
         Http2HeadersFrame headersFrame2 = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(headersFrame2);
-        assertEquals(3, headersFrame2.streamId());
+        assertEquals(3, headersFrame2.stream().id());
 
         Http2HeadersFrame headersFrame1 = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(headersFrame1);
-        assertEquals(5, headersFrame1.streamId());
+        assertEquals(5, headersFrame1.stream().id());
 
-        assertEquals(3, ((AbstractHttp2StreamChannel) childChannel2).streamId());
-        assertEquals(5, ((AbstractHttp2StreamChannel) childChannel1).streamId());
+        assertEquals(3, ((AbstractHttp2StreamChannel) childChannel2).stream().id());
+        assertEquals(5, ((AbstractHttp2StreamChannel) childChannel1).stream().id());
 
         childChannel1.close();
         childChannel2.close();
@@ -151,27 +151,27 @@ public class Http2CodecTest {
         assertTrue(childChannel.isActive());
 
         Http2Headers headers = new DefaultHttp2Headers();
-        childChannel.write(new DefaultHttp2HeadersFrame(headers));
+        childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
         ByteBuf data = Unpooled.buffer(100).writeZero(100);
         childChannel.writeAndFlush(new DefaultHttp2DataFrame(data, true));
 
         Http2HeadersFrame headersFrame = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(headersFrame);
-        assertEquals(3, headersFrame.streamId());
+        assertEquals(3, headersFrame.stream().id());
         assertEquals(headers, headersFrame.headers());
 
         Http2DataFrame dataFrame = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(dataFrame);
-        assertEquals(3, dataFrame.streamId());
+        assertEquals(3, dataFrame.stream().id());
         assertEquals(data.resetReaderIndex(), dataFrame.content());
-        assertTrue(dataFrame.isEndStream());
+        assertTrue(dataFrame.endStream());
         dataFrame.release();
 
         childChannel.close();
 
         Http2ResetFrame rstFrame = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(rstFrame);
-        assertEquals(3, rstFrame.streamId());
+        assertEquals(3, rstFrame.stream().id());
     }
 
     @Sharable

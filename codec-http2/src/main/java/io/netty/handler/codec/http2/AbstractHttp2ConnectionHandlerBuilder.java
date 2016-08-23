@@ -78,13 +78,12 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2ConnectionHandler,
                                                             B extends AbstractHttp2ConnectionHandlerBuilder<T, B>> {
 
-    private static final long DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = MILLISECONDS.convert(30, SECONDS);
     private static final SensitivityDetector DEFAULT_HEADER_SENSITIVITY_DETECTOR = Http2HeadersEncoder.NEVER_SENSITIVE;
 
     // The properties that can always be set.
     private Http2Settings initialSettings = Http2Settings.defaultSettings();
     private Http2FrameListener frameListener;
-    private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
+    private long gracefulShutdownTimeoutMillis = Http2CodecUtil.DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
 
     // The property that will prohibit connection() and codec() if set by server(),
     // because this property is used only when this builder creates a Http2Connection.

@@ -265,6 +265,33 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
+     * Removes the current flushed message and returns its {@link ChannelPromise}. Unlike {@link #remove()} this method
+     * does not release the message or complete the promise. If no flushed message exist, this method returns
+     * {@code null}.
+     */
+    public ChannelPromise steal() {
+        Entry e = flushedEntry;
+        if (e == null) {
+            clearNioBuffers();
+            return null;
+        }
+
+        ChannelPromise promise = e.promise;
+        final int size = e.pendingSize;
+
+        removeEntry(e);
+
+        if (!e.cancelled && size > 0) {
+            decrementPendingOutboundBytes(size, false, true);
+        }
+
+        // recycle the entry
+        e.recycle();
+
+        return promise;
+    }
+
+    /**
      * Will remove the current message, mark its {@link ChannelPromise} as failure using the given {@link Throwable}
      * and return {@code true}. If no   flushed message exists at the time this method is called it will return
      * {@code false} to signal that no more messages are ready to be handled.

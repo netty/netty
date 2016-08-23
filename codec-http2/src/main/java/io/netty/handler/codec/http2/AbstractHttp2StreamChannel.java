@@ -15,37 +15,52 @@
 
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
  * Child {@link Channel} of another channel, for use for modeling streams as channels.
  */
 abstract class AbstractHttp2StreamChannel extends AbstractChannel {
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicLongFieldUpdater<AbstractHttp2StreamChannel> OUTBOUND_FLOW_CONTROL_WINDOW_UPDATER;
+
     /**
      * Used by subclasses to queue a close channel within the read queue. When read, it will close
      * the channel (using Unsafe) instead of notifying handlers of the message with {@code
      * channelRead()}. Additional inbound messages must not arrive after this one.
      */
     protected static final Object CLOSE_MESSAGE = new Object();
+    /**
+     * Used to add a message to the {@link ChannelOutboundBuffer}, so as to have it re-evaluate its writability state.
+     */
+    private static final Object REEVALUATE_WRITABILITY_MESSAGE = new Object();
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), AbstractHttp2StreamChannel.class, "doWrite(...)");
@@ -55,7 +70,7 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
      */
     private static final int ARBITRARY_MESSAGE_SIZE = 9;
 
-    private final ChannelConfig config = new DefaultChannelConfig(this);
+    private final Http2StreamChannelConfig config = new Http2StreamChannelConfig(this);
     private final Queue<Object> inboundBuffer = new ArrayDeque<Object>(4);
     private final Runnable fireChildReadCompleteTask = new Runnable() {
         @Override
@@ -68,13 +83,35 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         }
     };
 
-    // Volatile, as parent and child channel may be on different eventloops.
-    private volatile int streamId = -1;
+    private final Http2Stream2 stream;
     private boolean closed;
     private boolean readInProgress;
 
-    protected AbstractHttp2StreamChannel(Channel parent) {
+    /**
+     * The flow control window of the remote side i.e. the number of bytes this channel is allowed to send to the remote
+     * peer. The window can become negative if a channel handler ignores the channel's writability. We are using a long
+     * so that we realistically don't have to worry about underflow.
+     */
+    @SuppressWarnings("UnusedDeclaration")
+    private volatile long outboundFlowControlWindow;
+
+    static {
+        @SuppressWarnings("rawtypes")
+        AtomicLongFieldUpdater<AbstractHttp2StreamChannel> updater = AtomicLongFieldUpdater.newUpdater(
+                AbstractHttp2StreamChannel.class, "outboundFlowControlWindow");
+        if (updater == null) {
+            updater = AtomicLongFieldUpdater.newUpdater(AbstractHttp2StreamChannel.class, "outboundFlowControlWindow");
+        }
+        OUTBOUND_FLOW_CONTROL_WINDOW_UPDATER = updater;
+    }
+
+    protected AbstractHttp2StreamChannel(Channel parent, Http2Stream2 stream) {
         super(parent);
+        this.stream = stream;
+    }
+
+    protected Http2Stream2 stream() {
+        return stream;
     }
 
     @Override
@@ -95,6 +132,16 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
     @Override
     public boolean isActive() {
         return isOpen();
+    }
+
+    @Override
+    public boolean isWritable() {
+        return isStreamIdValid(stream.id())
+               // So that the channel doesn't become active before the initial flow control window has been set.
+               && outboundFlowControlWindow > 0
+               // Could be null if channel closed.
+               && unsafe().outboundBuffer() != null
+               && unsafe().outboundBuffer().isWritable();
     }
 
     @Override
@@ -168,70 +215,52 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         if (closed) {
             throw CLOSED_CHANNEL_EXCEPTION;
         }
-
-        EventExecutor preferredExecutor = preferredEventExecutor();
-
-        // TODO: this is pretty broken; futures should only be completed after they are processed on
-        // the parent channel. However, it isn't currently possible due to ChannelOutboundBuffer's
-        // behavior which requires completing the current future before getting the next message. It
-        // should become easier once we have outbound flow control support.
-        // https://github.com/netty/netty/issues/4941
-        if (preferredExecutor.inEventLoop()) {
-            for (;;) {
-                Object msg = in.current();
-                if (msg == null) {
-                    break;
-                }
-                try {
-                    doWrite(ReferenceCountUtil.retain(msg));
-                } catch (Throwable t) {
-                    // It would be nice to fail the future, but we can't do that if not on the event
-                    // loop. So we instead opt for a solution that is consistent.
-                    pipeline().fireExceptionCaught(t);
-                }
-                in.remove();
+        final MessageSizeEstimator.Handle sizeEstimator = config().getMessageSizeEstimator().newHandle();
+        for (;;) {
+            final Object msg = in.current();
+            if (msg == null) {
+                break;
             }
-            doWriteComplete();
-        } else {
-            // Use a copy because the original msgs will be recycled by AbstractChannel.
-            final Object[] msgsCopy = new Object[in.size()];
-            for (int i = 0; i < msgsCopy.length; i ++) {
-                msgsCopy[i] = ReferenceCountUtil.retain(in.current());
+            // TODO(buchgr): Detecting cancellation relies on ChannelOutboundBuffer internals. NOT COOL!
+            if (msg == Unpooled.EMPTY_BUFFER /* The write was cancelled. */
+                || msg == REEVALUATE_WRITABILITY_MESSAGE /* Write to trigger writability after window update. */) {
                 in.remove();
+                continue;
             }
-
-            preferredExecutor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    for (Object msg : msgsCopy) {
-                        try {
-                            doWrite(msg);
-                        } catch (Throwable t) {
-                            pipeline().fireExceptionCaught(t);
-                        }
-                    }
-                    doWriteComplete();
-                }
-            });
+            final int bytes = sizeEstimator.size(msg);
+            /**
+             * The flow control window needs to be decrement before stealing the message from the buffer (and thereby
+             * decrementing the number of pending bytes). Else, when calling steal() the number of pending bytes could
+             * be less than the writebuffer watermark (=flow control window) and thus trigger a writability change.
+             *
+             * This code must never trigger a writability change. Only reading window updates or channel writes may
+             * change the channel's writability.
+             */
+            incrementOutboundFlowControlWindow(-bytes);
+            final ChannelPromise promise = in.steal();
+            if (bytes > 0) {
+                promise.addListener(new ReturnFlowControlWindowOnFailureListener(bytes));
+            }
+            // TODO(buchgr): Should we also the change the writability if END_STREAM is set?
+            try {
+                doWrite(msg, promise);
+            } catch (Throwable t) {
+                promise.tryFailure(t);
+            }
         }
+        doWriteComplete();
     }
 
     /**
      * Process a single write. Guaranteed to eventually be followed by a {@link #doWriteComplete()},
      * which denotes the end of the batch of writes. May be called from any thread.
      */
-    protected abstract void doWrite(Object msg) throws Exception;
+    protected abstract void doWrite(Object msg, ChannelPromise promise) throws Exception;
 
     /**
      * Process end of batch of {@link #doWrite(ChannelOutboundBuffer)}s. May be called from any thread.
      */
     protected abstract void doWriteComplete();
-
-    /**
-     * The ideal thread for events like {@link #doWrite(ChannelOutboundBuffer)} to be processed on. May be used for
-     * efficient batching, but not required.
-     */
-    protected abstract EventExecutor preferredEventExecutor();
 
     /**
      * {@code bytes}-count of bytes provided to {@link #fireChildRead} have been read. May be called
@@ -283,18 +312,16 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         }
     }
 
-    /**
-     * This method must only be called within the parent channel's eventloop.
-     */
-    protected void streamId(int streamId) {
-        if (this.streamId != -1) {
-            throw new IllegalStateException("Stream identifier may only be set once.");
+    protected void incrementOutboundFlowControlWindow(int bytes) {
+        if (bytes == 0) {
+            return;
         }
-        this.streamId = ObjectUtil.checkPositiveOrZero(streamId, "streamId");
+        OUTBOUND_FLOW_CONTROL_WINDOW_UPDATER.addAndGet(this, bytes);
     }
 
-    protected int streamId() {
-        return streamId;
+    // Visible for testing
+    long getOutboundFlowControlWindow() {
+        return outboundFlowControlWindow;
     }
 
     /**
@@ -305,13 +332,18 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         if (msg == CLOSE_MESSAGE) {
             allocHandle.readComplete();
             pipeline().fireChannelReadComplete();
-            unsafe().close(voidPromise());
+            close();
             return false;
+        }
+        if (msg instanceof Http2WindowUpdateFrame) {
+            Http2WindowUpdateFrame windowUpdate = (Http2WindowUpdateFrame) msg;
+            incrementOutboundFlowControlWindow(windowUpdate.windowSizeIncrement());
+            reevaluateWritability();
+            return true;
         }
         int numBytesToBeConsumed = 0;
         if (msg instanceof Http2DataFrame) {
-            Http2DataFrame data = (Http2DataFrame) msg;
-            numBytesToBeConsumed = data.content().readableBytes() + data.padding();
+            numBytesToBeConsumed = dataFrameFlowControlBytes((Http2DataFrame) msg);
             allocHandle.lastBytesRead(numBytesToBeConsumed);
         } else {
             allocHandle.lastBytesRead(ARBITRARY_MESSAGE_SIZE);
@@ -324,11 +356,133 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
         return true;
     }
 
+    private void reevaluateWritability() {
+        ChannelOutboundBuffer buffer = unsafe().outboundBuffer();
+        // If the buffer is not writable but should be writable, then write and flush a dummy object
+        // to trigger a writability change.
+        if (!buffer.isWritable() && buffer.totalPendingWriteBytes() < config.getWriteBufferHighWaterMark()) {
+            unsafe().outboundBuffer().addMessage(REEVALUATE_WRITABILITY_MESSAGE, 1, voidPromise());
+            unsafe().flush();
+        }
+    }
+
+    private static int dataFrameFlowControlBytes(Http2DataFrame frame) {
+        return frame.content().readableBytes()
+               + frame.padding()
+               // +1 to account for the pad length field. See http://httpwg.org/specs/rfc7540.html#DATA
+               + (frame.padding() & 1);
+    }
+
     private final class Unsafe extends AbstractUnsafe {
         @Override
         public void connect(final SocketAddress remoteAddress,
                 SocketAddress localAddress, final ChannelPromise promise) {
             promise.setFailure(new UnsupportedOperationException());
+        }
+    }
+
+    /**
+     * Returns the flow-control size for DATA frames, and 0 for all other frames.
+     */
+    private static final class FlowControlledFrameSizeEstimator implements MessageSizeEstimator {
+
+        private static final FlowControlledFrameSizeEstimator INSTANCE = new FlowControlledFrameSizeEstimator();
+
+        private static final class EstimatorHandle implements MessageSizeEstimator.Handle {
+
+            private static final EstimatorHandle INSTANCE = new EstimatorHandle();
+
+            @Override
+            public int size(Object msg) {
+                if (msg instanceof Http2DataFrame) {
+                    return dataFrameFlowControlBytes((Http2DataFrame) msg);
+                }
+                return 0;
+            }
+        }
+
+        @Override
+        public Handle newHandle() {
+            return EstimatorHandle.INSTANCE;
+        }
+    }
+
+    /**
+     * {@link ChannelConfig} so that the high and low writebuffer watermarks can reflect the outbound flow control
+     * window, without having to create a new {@link WriteBufferWaterMark} object whenever the flow control window
+     * changes.
+     */
+    private final class Http2StreamChannelConfig extends DefaultChannelConfig {
+
+        // TODO(buchgr): Overwrite the RecvByteBufAllocator. We only need it to implement max messages per read.
+        Http2StreamChannelConfig(Channel channel) {
+            super(channel);
+        }
+
+        @Override
+        @Deprecated
+        public int getWriteBufferHighWaterMark() {
+            int window = (int) min(Integer.MAX_VALUE, outboundFlowControlWindow);
+            return max(0, window);
+        }
+
+        @Override
+        @Deprecated
+        public int getWriteBufferLowWaterMark() {
+            return getWriteBufferHighWaterMark();
+        }
+
+        @Override
+        public MessageSizeEstimator getMessageSizeEstimator() {
+            return FlowControlledFrameSizeEstimator.INSTANCE;
+        }
+
+        // TODO(buchgr): Throwing exceptions is not ideal. Maybe NO-OP and log a warning?
+        @Override
+        public WriteBufferWaterMark getWriteBufferWaterMark() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        @Deprecated
+        public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        @Deprecated
+        public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        @Deprecated
+        public ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private class ReturnFlowControlWindowOnFailureListener implements ChannelFutureListener {
+        private final int bytes;
+
+        ReturnFlowControlWindowOnFailureListener(int bytes) {
+            this.bytes = bytes;
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (!future.isSuccess()) {
+                /**
+                 * Return the flow control window of the failed data frame. We expect this code to be rarely executed
+                 * and by implementing it as a window update, we don't have to worry about thread-safety.
+                 */
+                fireChildRead(new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
+            }
         }
     }
 }
