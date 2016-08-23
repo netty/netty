@@ -18,12 +18,14 @@ package io.netty.handler.codec.http2;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * The default {@link Http2ResetFrame} implementation.
  */
 @UnstableApi
 public final class DefaultHttp2ResetFrame extends AbstractHttp2StreamFrame implements Http2ResetFrame {
+
     private final long errorCode;
 
     /**
@@ -45,8 +47,8 @@ public final class DefaultHttp2ResetFrame extends AbstractHttp2StreamFrame imple
     }
 
     @Override
-    public DefaultHttp2ResetFrame streamId(int streamId) {
-        super.streamId(streamId);
+    public DefaultHttp2ResetFrame stream(Http2Stream2 stream) {
+        super.stream(stream);
         return this;
     }
 
@@ -62,7 +64,7 @@ public final class DefaultHttp2ResetFrame extends AbstractHttp2StreamFrame imple
 
     @Override
     public String toString() {
-        return "DefaultHttp2ResetFrame(stream=" + streamId() + "errorCode=" + errorCode + ")";
+        return "DefaultHttp2ResetFrame(stream=" + stream() + ", errorCode=" + errorCode + ')';
     }
 
     @Override

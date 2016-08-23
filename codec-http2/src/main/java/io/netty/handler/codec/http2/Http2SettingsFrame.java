@@ -13,22 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.UnstableApi;
+/**
+ * HTTP/2 SETTINGS frame.
+ */
+public interface Http2SettingsFrame extends Http2Frame {
 
-@UnstableApi
-public abstract class AbstractHttp2StreamStateEvent implements Http2StreamStateEvent {
-
-    private final int streamId;
-
-    protected AbstractHttp2StreamStateEvent(int streamId) {
-        this.streamId = ObjectUtil.checkPositiveOrZero(streamId, "streamId");
-    }
+    Http2Settings settings();
 
     @Override
-    public int streamId() {
-        return streamId;
-    }
+    String name();
 }
