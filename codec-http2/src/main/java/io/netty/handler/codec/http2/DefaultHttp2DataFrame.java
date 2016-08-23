@@ -76,8 +76,8 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
     }
 
     @Override
-    public DefaultHttp2DataFrame streamId(int streamId) {
-        super.streamId(streamId);
+    public DefaultHttp2DataFrame stream(Http2Stream2 stream) {
+        super.stream(stream);
         return this;
     }
 
@@ -87,7 +87,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
     }
 
     @Override
-    public boolean isEndStream() {
+    public boolean endStream() {
         return endStream;
     }
 
@@ -153,7 +153,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
 
     @Override
     public String toString() {
-        return "DefaultHttp2DataFrame(streamId=" + streamId() + ", content=" + content
+        return "DefaultHttp2DataFrame(stream=" + stream() + ", content=" + content
                + ", endStream=" + endStream + ", padding=" + padding + ")";
     }
 
