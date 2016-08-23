@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -24,14 +25,16 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public class Http2StreamActiveEvent extends AbstractHttp2StreamStateEvent {
 
+    private final int initialFlowControlWindow;
     private final Http2HeadersFrame headers;
 
-    public Http2StreamActiveEvent(int streamId) {
-        this(streamId, null);
+    public Http2StreamActiveEvent(int streamId, int initialFlowControlWindow) {
+        this(streamId, initialFlowControlWindow, null);
     }
 
-    public Http2StreamActiveEvent(int streamId, Http2HeadersFrame headers) {
+    public Http2StreamActiveEvent(int streamId, int initialFlowControlWindow, Http2HeadersFrame headers) {
         super(streamId);
+        this.initialFlowControlWindow = ObjectUtil.checkPositive(initialFlowControlWindow, "initialFlowControlWindow");
         this.headers = headers;
     }
 
@@ -41,5 +44,9 @@ public class Http2StreamActiveEvent extends AbstractHttp2StreamStateEvent {
      */
     public Http2HeadersFrame headers() {
         return headers;
+    }
+
+    public int initialFlowControlWindow() {
+        return initialFlowControlWindow;
     }
 }

@@ -27,7 +27,10 @@ import io.netty.util.internal.UnstableApi;
 public interface Http2StreamFrame extends Http2Frame {
 
     /**
-     * Sets the identifier of the stream this frame applies to.
+     * Sets the identifier of the stream this frame applies to. This method may be called at most once.
+     *
+     * <p><em>NOTE:</em> This method is supposed to be called by the HTTP/2 transport only. It must not be called by
+     * users.
      *
      * @return {@code this}
      */

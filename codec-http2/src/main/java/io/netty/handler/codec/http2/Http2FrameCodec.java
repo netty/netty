@@ -257,6 +257,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
             streamId = headersFrame.getStreamId();
         } else {
             final Endpoint<Http2LocalFlowController> localEndpoint = http2Handler.connection().local();
+            final int flowControlWindow = http2Handler.connection().remote().flowController().initialWindowSize();
             streamId = localEndpoint.incrementAndGetNextStreamId();
             try {
                 // Try to create a stream in OPEN state before writing headers, to catch errors on stream creation
@@ -266,7 +267,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
                 promise.setFailure(e);
                 return;
             }
-            ctx.fireUserEventTriggered(new Http2StreamActiveEvent(streamId, headersFrame));
+            ctx.fireUserEventTriggered(new Http2StreamActiveEvent(streamId, flowControlWindow, headersFrame));
         }
         http2Handler.encoder().writeHeaders(http2HandlerCtx, streamId, headersFrame.headers(),
                                             headersFrame.padding(), headersFrame.isEndStream(), promise);
@@ -283,7 +284,8 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
                 // Creation of outbound streams is notified in writeHeadersFrame().
                 return;
             }
-            ctx.fireUserEventTriggered(new Http2StreamActiveEvent(stream.id()));
+            int flowControlWindow = http2Handler.connection().remote().flowController().initialWindowSize();
+            ctx.fireUserEventTriggered(new Http2StreamActiveEvent(stream.id(), flowControlWindow));
         }
 
         @Override
@@ -327,6 +329,15 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
         }
 
         @Override
+        public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement) {
+            if (streamId == 0) {
+                // Ignore connection window updates.
+                return;
+            }
+            ctx.fireChannelRead(new DefaultHttp2WindowUpdateFrame(windowSizeIncrement).setStreamId(streamId));
+        }
+
+        @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
                                   Http2Headers headers, int streamDependency, short weight, boolean
                                           exclusive, int padding, boolean endStream) {
@@ -348,7 +359,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
             dataFrame.setStreamId(streamId);
             ctx.fireChannelRead(dataFrame);
 
-            // We return the bytes in bytesConsumed() once the stream channel consumed the bytes.
+            // We return the bytes in consumeBytes() once the stream channel consumed the bytes.
             return 0;
         }
     }

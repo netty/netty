@@ -25,6 +25,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -179,7 +180,7 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
         try {
             if (evt instanceof Http2StreamActiveEvent) {
                 Http2StreamActiveEvent activeEvent = (Http2StreamActiveEvent) evt;
-                onStreamActive(activeEvent.streamId(), activeEvent.headers());
+                onStreamActive(activeEvent.streamId(), activeEvent.initialFlowControlWindow(), activeEvent.headers());
             } else if (evt instanceof Http2StreamClosedEvent) {
                 onStreamClosed(((Http2StreamClosedEvent) evt).streamId());
             } else {
@@ -190,7 +191,7 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
         }
     }
 
-    private void onStreamActive(int streamId, Http2HeadersFrame headersFrame) {
+    private void onStreamActive(int streamId, int initialFlowControlWindow, Http2HeadersFrame headersFrame) {
         final Http2StreamChannel childChannel;
         if (isOutbound(streamId)) {
             if (!(headersFrame instanceof ChannelCarryingHeadersFrame)) {
@@ -205,6 +206,10 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
 
         Http2StreamChannel existing = childChannels.put(streamId, childChannel);
         assert existing == null;
+
+        assert !childChannel.isWritable();
+        childChannel.incrementOutboundFlowControlWindow(initialFlowControlWindow);
+        childChannel.pipeline().fireChannelWritabilityChanged();
     }
 
     private void onStreamClosed(int streamId) {
@@ -247,10 +252,6 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
             }
             executor.execute(task);
         }
-    }
-
-    void writeFromStreamChannel(Object msg, boolean flush) {
-        writeFromStreamChannel(msg, ctx.newPromise(), flush);
     }
 
     void writeFromStreamChannel(final Object msg, final ChannelPromise promise, final boolean flush) {
@@ -369,44 +370,38 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
         protected void doClose() throws Exception {
             if (!onStreamClosedFired && hasStreamId()) {
                 Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).setStreamId(getStreamId());
-                writeFromStreamChannel(resetFrame, true);
+                writeFromStreamChannel(resetFrame, ctx.newPromise(), true);
             }
             super.doClose();
         }
 
         @Override
-        protected void doWrite(Object msg) {
-            if (!(msg instanceof Http2StreamFrame)) {
-                ReferenceCountUtil.release(msg);
-                throw new IllegalArgumentException("Message must be an Http2StreamFrame: " + msg);
-            }
-            Http2StreamFrame frame = (Http2StreamFrame) msg;
-            ChannelPromise promise = ctx.newPromise();
-            if (frame.hasStreamId()) {
-                ReferenceCountUtil.release(frame);
-                throw new IllegalArgumentException("Stream identifier must not be set on the frame.");
-            }
+        protected void doWrite(Object msg, ChannelPromise childPromise) {
+            Http2StreamFrame frame = validateStreamFrame(msg);
             if (!hasStreamId()) {
                 if (!(frame instanceof Http2HeadersFrame)) {
                     throw new IllegalArgumentException("The first frame must be a headers frame.");
                 }
                 frame = new ChannelCarryingHeadersFrame((Http2HeadersFrame) frame, this);
                 // Handle errors on stream creation
-                promise.addListener(this);
+                childPromise.addListener(this);
             } else {
                 frame.setStreamId(getStreamId());
             }
-            writeFromStreamChannel(frame, promise, false);
+            /**
+             * Wrap the ChannelPromise of the child channel in a ChannelPromise of the parent channel
+             * in order to be able to use it on the parent channel. We don't need to worry about the
+             * channel being cancelled, as the outbound buffer of the child channel marks it uncancelable.
+             */
+            assert !childPromise.isCancellable();
+            ChannelFutureListener childPromiseNotifier = new ChannelPromiseNotifier(childPromise);
+            ChannelPromise parentPromise = ctx.newPromise().addListener(childPromiseNotifier);
+            writeFromStreamChannel(frame, parentPromise, false);
         }
 
         @Override
         protected void doWriteComplete() {
             flushFromStreamChannel();
-        }
-
-        @Override
-        protected EventExecutor preferredEventExecutor() {
-            return ctx.executor();
         }
 
         @Override
@@ -420,6 +415,19 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
                 pipeline().fireExceptionCaught(future.cause());
                 close();
             }
+        }
+
+        private Http2StreamFrame validateStreamFrame(Object msg) {
+            if (!(msg instanceof Http2StreamFrame)) {
+                ReferenceCountUtil.release(msg);
+                throw new IllegalArgumentException("Message must be an Http2StreamFrame: " + msg);
+            }
+            Http2StreamFrame frame = (Http2StreamFrame) msg;
+            if (frame.hasStreamId()) {
+                ReferenceCountUtil.release(frame);
+                throw new IllegalArgumentException("Stream identifier must not be set on the frame.");
+            }
+            return frame;
         }
     }
 

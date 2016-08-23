@@ -421,6 +421,25 @@ public class Http2FrameCodecTest {
         assertThat(f.cause(), instanceOf(Http2Exception.class));
     }
 
+    @Test
+    public void inboundWindowUpdateShouldBeForwarded() throws Exception {
+        frameListener.onHeadersRead(http2HandlerCtx, 3, request, 31, false);
+        frameListener.onWindowUpdateRead(http2HandlerCtx, 3, 100);
+        // Connection-level window update
+        frameListener.onWindowUpdateRead(http2HandlerCtx, 0, 100);
+
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        Http2WindowUpdateFrame windowUpdateFrame = inboundHandler.readInbound();
+        assertNotNull(windowUpdateFrame);
+        assertEquals(3, windowUpdateFrame.getStreamId());
+        assertEquals(100, windowUpdateFrame.windowSizeIncrement());
+
+        // Window update for the connection should not be forwarded.
+        assertNull(inboundHandler.readInbound());
+    }
+
     private static ChannelPromise anyChannelPromise() {
         return any(ChannelPromise.class);
     }
