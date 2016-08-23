@@ -106,18 +106,6 @@ public class WrappedUnpooledUnsafeByteBufTest extends BigEndianUnsafeDirectByteB
         super.testReadBytes();
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    @Override
-    public void testDuplicateCapacityChange() {
-        super.testDuplicateCapacityChange();
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    @Override
-    public void testRetainedDuplicateCapacityChange() {
-        super.testRetainedDuplicateCapacityChange();
-    }
-
     @Test(expected = IndexOutOfBoundsException.class)
     @Override
     public void testLittleEndianWithExpand() {
