@@ -13,13 +13,32 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
+/**
+ * The default {@link Http2SettingsFrame} implementation.
+ */
+public class DefaultHttp2SettingsFrame implements Http2SettingsFrame {
 
-@UnstableApi
-public class Http2StreamClosedEvent extends AbstractHttp2StreamStateEvent {
-    public Http2StreamClosedEvent(int streamId) {
-        super(streamId);
+    private final Http2Settings settings;
+
+    public DefaultHttp2SettingsFrame(Http2Settings settings) {
+        this.settings = settings;
+    }
+
+    @Override
+    public Http2Settings settings() {
+        return settings;
+    }
+
+    @Override
+    public String name() {
+        return "SETTINGS";
+    }
+
+    @Override
+    public String toString() {
+        return "DefaultHttp2SettingsFrame(settings=" + settings + ')';
     }
 }

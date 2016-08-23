@@ -13,19 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * An event describing a state change of a particular HTTP/2 stream. Such events
- * are typically emitted by channel handlers to exchange stream state information.
+ * HTTP/2 PING Frame.
  */
 @UnstableApi
-public interface Http2StreamStateEvent {
+public interface Http2PingFrame extends Http2Frame, ByteBufHolder {
 
     /**
-     * Returns the HTTP/2 stream identifier for this event.
+     * When {@code true}, indicates that this ping is a ping response.
      */
-    int streamId();
+    boolean ack();
+
+    /**
+     * Returns the eight byte opaque data.
+     */
+    @Override
+    ByteBuf content();
 }
