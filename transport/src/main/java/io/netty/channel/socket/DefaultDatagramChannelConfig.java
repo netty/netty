@@ -402,14 +402,12 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     }
 
     @Override
-    @Deprecated
     public DatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
-    @Deprecated
     public DatagramChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
