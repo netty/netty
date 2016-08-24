@@ -37,13 +37,6 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
         try {
             try {
-                ch.shutdownInput().syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
-
-            try {
                 ch.shutdownOutput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
