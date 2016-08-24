@@ -359,13 +359,11 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
-    @Deprecated
     public int getWriteBufferHighWaterMark() {
         return writeBufferWaterMark.high();
     }
 
     @Override
-    @Deprecated
     public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         if (writeBufferHighWaterMark < 0) {
             throw new IllegalArgumentException(
@@ -387,13 +385,11 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
-    @Deprecated
     public int getWriteBufferLowWaterMark() {
         return writeBufferWaterMark.low();
     }
 
     @Override
-    @Deprecated
     public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         if (writeBufferLowWaterMark < 0) {
             throw new IllegalArgumentException(
