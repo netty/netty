@@ -221,19 +221,21 @@ public class ChannelOutboundBufferTest {
         ch.config().setWriteBufferLowWaterMark(128);
         ch.config().setWriteBufferHighWaterMark(256);
 
-        // Ensure exceeding the low watermark does not make channel unwritable.
         ch.write(buffer().writeZero(128));
+        // Ensure exceeding the low watermark does not make channel unwritable.
+        ch.write(buffer().writeZero(2));
         assertThat(buf.toString(), is(""));
 
         ch.unsafe().outboundBuffer().addFlush();
 
         // Ensure exceeding the high watermark makes channel unwritable.
-        ch.write(buffer().writeZero(128));
+        ch.write(buffer().writeZero(127));
         assertThat(buf.toString(), is("false "));
 
         // Ensure going down to the low watermark makes channel writable again by flushing the first write.
         assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
-        assertThat(ch.unsafe().outboundBuffer().totalPendingWriteBytes(), is(128L));
+        assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
+        assertThat(ch.unsafe().outboundBuffer().totalPendingWriteBytes(), is(127L));
         assertThat(buf.toString(), is("false true "));
 
         safeClose(ch);
@@ -330,7 +332,7 @@ public class ChannelOutboundBufferTest {
         ChannelOutboundBuffer cob = ch.unsafe().outboundBuffer();
 
         // Trigger channelWritabilityChanged() by writing a lot.
-        ch.write(buffer().writeZero(256));
+        ch.write(buffer().writeZero(257));
         assertThat(buf.toString(), is("false "));
 
         // Ensure that setting a user-defined writability flag to false does not trigger channelWritabilityChanged()
