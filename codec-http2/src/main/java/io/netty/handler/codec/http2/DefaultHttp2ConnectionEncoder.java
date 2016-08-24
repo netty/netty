@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -337,7 +338,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         private final CoalescingBufferQueue queue;
         private int dataSize;
 
-        public FlowControlledData(Http2Stream stream, ByteBuf buf, int padding, boolean endOfStream,
+        FlowControlledData(Http2Stream stream, ByteBuf buf, int padding, boolean endOfStream,
                                    ChannelPromise promise) {
             super(stream, padding, endOfStream, promise);
             queue = new CoalescingBufferQueue(promise.channel());
@@ -361,9 +362,19 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         @Override
         public void write(ChannelHandlerContext ctx, int allowedBytes) {
             int queuedData = queue.readableBytes();
-            if (!endOfStream && (queuedData == 0 || allowedBytes == 0)) {
-                // Nothing to write and we don't have to force a write because of EOS.
-                return;
+            if (!endOfStream) {
+                if (queuedData == 0) {
+                    // There's no need to write any data frames because there are only empty data frames in the queue
+                    // and it is not end of stream yet. Just complete their promises by writing an empty buffer.
+                    ChannelPromise writePromise = ctx.newPromise().addListener(this);
+                    queue.remove(0, writePromise).release();
+                    ctx.write(Unpooled.EMPTY_BUFFER, writePromise);
+                    return;
+                }
+
+                if (allowedBytes == 0) {
+                    return;
+                }
             }
 
             // Determine how much data to write.
@@ -408,7 +419,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         private final short weight;
         private final boolean exclusive;
 
-        public FlowControlledHeaders(Http2Stream stream, Http2Headers headers, int streamDependency, short weight,
+        FlowControlledHeaders(Http2Stream stream, Http2Headers headers, int streamDependency, short weight,
                 boolean exclusive, int padding, boolean endOfStream, ChannelPromise promise) {
             super(stream, padding, endOfStream, promise);
             this.headers = headers;
@@ -457,7 +468,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         protected boolean endOfStream;
         protected int padding;
 
-        public FlowControlledBase(final Http2Stream stream, int padding, boolean endOfStream,
+        protected FlowControlledBase(final Http2Stream stream, int padding, boolean endOfStream,
                 final ChannelPromise promise) {
             if (padding < 0) {
                 throw new IllegalArgumentException("padding must be >= 0");
