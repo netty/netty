@@ -324,14 +324,12 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    @Deprecated
     public SocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
-    @Deprecated
     public SocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;

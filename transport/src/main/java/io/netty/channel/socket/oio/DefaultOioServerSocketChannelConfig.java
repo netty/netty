@@ -166,14 +166,12 @@ public class DefaultOioServerSocketChannelConfig extends DefaultServerSocketChan
     }
 
     @Override
-    @Deprecated
     public OioServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
-    @Deprecated
     public OioServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;

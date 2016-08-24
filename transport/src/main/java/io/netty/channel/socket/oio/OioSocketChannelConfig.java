@@ -102,11 +102,9 @@ public interface OioSocketChannelConfig extends SocketChannelConfig {
     OioSocketChannelConfig setAutoClose(boolean autoClose);
 
     @Override
-    @Deprecated
     OioSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     @Override
-    @Deprecated
     OioSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 
     @Override

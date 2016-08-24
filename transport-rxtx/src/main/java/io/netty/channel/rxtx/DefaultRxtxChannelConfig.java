@@ -250,14 +250,12 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     }
 
     @Override
-    @Deprecated
     public RxtxChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
-    @Deprecated
     public RxtxChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;

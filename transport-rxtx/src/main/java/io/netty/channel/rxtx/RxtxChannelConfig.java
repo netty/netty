@@ -294,11 +294,9 @@ public interface RxtxChannelConfig extends ChannelConfig {
     RxtxChannelConfig setAutoClose(boolean autoClose);
 
     @Override
-    @Deprecated
     RxtxChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
     @Override
-    @Deprecated
     RxtxChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 
     @Override
