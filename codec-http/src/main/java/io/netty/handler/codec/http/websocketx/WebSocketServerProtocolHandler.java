@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
 
@@ -46,8 +47,9 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * to the <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt> example.
  *
  * To know once a handshake was done you can intercept the
- * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
- * {@link ServerHandshakeStateEvent#HANDSHAKE_COMPLETE}.
+ * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was instance
+ * of {@link HandshakeComplete}, the event will contain extra information about the handshake such as the request and
+ * selected subprotocol.
  */
 public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
 
@@ -56,9 +58,40 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
      */
     public enum ServerHandshakeStateEvent {
         /**
-         * The Handshake was complete succesful and so the channel was upgraded to websockets
+         * The Handshake was completed successfully and the channel was upgraded to websockets.
+         *
+         * @deprecated in favor of {@link HandshakeComplete} class,
+         * it provides extra information about the handshake
          */
+        @Deprecated
         HANDSHAKE_COMPLETE
+    }
+
+    /**
+     * The Handshake was completed successfully and the channel was upgraded to websockets.
+     */
+    public static final class HandshakeComplete {
+        private final String requestUri;
+        private final HttpHeaders requestHeaders;
+        private final String selectedSubprotocol;
+
+        HandshakeComplete(String requestUri, HttpHeaders requestHeaders, String selectedSubprotocol) {
+            this.requestUri = requestUri;
+            this.requestHeaders = requestHeaders;
+            this.selectedSubprotocol = selectedSubprotocol;
+        }
+
+        public String requestUri() {
+            return requestUri;
+        }
+
+        public HttpHeaders requestHeaders() {
+            return requestHeaders;
+        }
+
+        public String selectedSubprotocol() {
+            return selectedSubprotocol;
+        }
     }
 
     private static final AttributeKey<WebSocketServerHandshaker> HANDSHAKER_ATTR_KEY =

@@ -54,7 +54,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
-        FullHttpRequest req = (FullHttpRequest) msg;
+        final FullHttpRequest req = (FullHttpRequest) msg;
         if (!websocketPath.equals(req.uri())) {
             ctx.fireChannelRead(msg);
             return;
@@ -80,8 +80,12 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                         if (!future.isSuccess()) {
                             ctx.fireExceptionCaught(future.cause());
                         } else {
+                            // Kept for compatibility
                             ctx.fireUserEventTriggered(
                                     WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
+                            ctx.fireUserEventTriggered(
+                                    new WebSocketServerProtocolHandler.HandshakeComplete(
+                                            req.uri(), req.headers(), handshaker.selectedSubprotocol()));
                         }
                     }
                 });
