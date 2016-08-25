@@ -36,12 +36,14 @@ import static org.junit.Assert.*;
 public class WebSocketHandshakeHandOverTest {
 
     private boolean serverReceivedHandshake;
+    private WebSocketServerProtocolHandler.HandshakeComplete serverHandshakeComplete;
     private boolean clientReceivedHandshake;
     private boolean clientReceivedMessage;
 
     @Before
     public void setUp() {
         serverReceivedHandshake = false;
+        serverHandshakeComplete = null;
         clientReceivedHandshake = false;
         clientReceivedMessage = false;
     }
@@ -55,6 +57,8 @@ public class WebSocketHandshakeHandOverTest {
                     serverReceivedHandshake = true;
                     // immediatly send a message to the client on connect
                     ctx.writeAndFlush(new TextWebSocketFrame("abc"));
+                } else if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+                    serverHandshakeComplete = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
                 }
             }
             @Override
@@ -80,6 +84,10 @@ public class WebSocketHandshakeHandOverTest {
         // Transfer the handshake from the client to the server
         transferAllDataWithMerge(clientChannel, serverChannel);
         assertTrue(serverReceivedHandshake);
+        assertNotNull(serverHandshakeComplete);
+        assertEquals("/test", serverHandshakeComplete.requestUri());
+        assertEquals(8, serverHandshakeComplete.requestHeaders().size());
+        assertEquals("test-proto-2", serverHandshakeComplete.selectedSubprotocol());
 
         // Transfer the handshake response and the websocket message to the client
         transferAllDataWithMerge(serverChannel, clientChannel);
@@ -124,7 +132,7 @@ public class WebSocketHandshakeHandOverTest {
                 new HttpClientCodec(),
                 new HttpObjectAggregator(8192),
                 new WebSocketClientProtocolHandler(new URI("ws://localhost:1234/test"),
-                                                   WebSocketVersion.V13, null,
+                                                   WebSocketVersion.V13, "test-proto-2",
                                                    false, null, 65536),
                 handler);
     }
@@ -133,7 +141,7 @@ public class WebSocketHandshakeHandOverTest {
         return new EmbeddedChannel(
                 new HttpServerCodec(),
                 new HttpObjectAggregator(8192),
-                new WebSocketServerProtocolHandler("/test", null, false),
+                new WebSocketServerProtocolHandler("/test", "test-proto-1, test-proto-2", false),
                 handler);
     }
 }
