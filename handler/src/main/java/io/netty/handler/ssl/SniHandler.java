@@ -303,8 +303,24 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void replaceHandler(ChannelHandlerContext ctx, Selection selection) {
-        this.selection = selection;
-        SslHandler sslHandler = selection.context.newHandler(ctx.alloc());
+        try {
+            this.selection = selection;
+            replaceHandler(ctx, selection.hostname, selection.context);
+        } catch (Throwable cause) {
+            this.selection = EMPTY_SELECTION;
+            ctx.fireExceptionCaught(cause);
+        }
+    }
+
+    /**
+     * Replaces the {@link SniHandler} with a {@link SslHandler} as provided by the
+     * given {@link SslContext}.
+     *
+     * Users may override this method to implement custom behavior and to get a
+     * hold onto the {@link SslContext}.
+     */
+    protected void replaceHandler(ChannelHandlerContext ctx, String hostname, SslContext context) throws Exception {
+        SslHandler sslHandler = context.newHandler(ctx.alloc());
         ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
     }
 
