@@ -15,6 +15,13 @@
  */
 package io.netty.handler.ssl;
 
+import java.net.IDN;
+import java.net.SocketAddress;
+import java.util.List;
+import java.util.Locale;
+
+import javax.net.ssl.SSLEngine;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -33,13 +40,6 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.net.IDN;
-import java.net.SocketAddress;
-import java.util.List;
-import java.util.Locale;
-
-import javax.net.ssl.SSLEngine;
 
 /**
  * <p>Enables <a href="https://tools.ietf.org/html/rfc3546#section-3.1">SNI
@@ -277,7 +277,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
         Future<SslContext> future = mapping.map(hostname, ctx.executor().<SslContext>newPromise());
         if (future.isDone()) {
             if (future.isSuccess()) {
-                replaceHandler(ctx, new Selection(future.getNow(), hostname));
+                onSslContext(ctx, hostname, future.getNow());
             } else {
                 throw new DecoderException("failed to get the SslContext for " + hostname, future.cause());
             }
@@ -289,7 +289,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     try {
                         suppressRead = false;
                         if (future.isSuccess()) {
-                            replaceHandler(ctx, new Selection(future.getNow(), hostname));
+                            onSslContext(ctx, hostname, future.getNow());
                         } else {
                             ctx.fireExceptionCaught(new DecoderException("failed to get the SslContext for "
                                     + hostname, future.cause()));
@@ -305,19 +305,41 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
     }
 
-    private void replaceHandler(ChannelHandlerContext ctx, Selection selection) {
-        SSLEngine sslEngine = null;
-        this.selection = selection;
+    /**
+     * Called upon successful completion of the {@link AsyncMapping}'s {@link Future}.
+     *
+     * @see #select(ChannelHandlerContext, String)
+     */
+    private void onSslContext(ChannelHandlerContext ctx, String hostname, SslContext sslContext) {
+        this.selection = new Selection(sslContext, hostname);
         try {
-            sslEngine = selection.context.newEngine(ctx.alloc());
-            ctx.pipeline().replace(this, SslHandler.class.getName(), selection.context.newHandler(sslEngine));
+            replaceHandler(ctx, hostname, sslContext);
         } catch (Throwable cause) {
             this.selection = EMPTY_SELECTION;
+            ctx.fireExceptionCaught(cause);
+        }
+    }
+
+    /**
+     * The default implementation of this method will simply replace {@code this} {@link SniHandler}
+     * instance with a {@link SslHandler}. Users may override this method to implement custom behavior.
+     *
+     * Please be aware that this method may get called after a client has already disconnected and
+     * custom implementations must take it into consideration when overriding this method.
+     *
+     * It's also possible for the hostname argument to be {@code null}.
+     */
+    protected void replaceHandler(ChannelHandlerContext ctx, String hostname, SslContext sslContext) throws Exception {
+        SSLEngine sslEngine = null;
+        try {
+            sslEngine = sslContext.newEngine(ctx.alloc());
+            ctx.pipeline().replace(this, SslHandler.class.getName(), SslContext.newHandler(sslEngine));
+            sslEngine = null;
+        } finally {
             // Since the SslHandler was not inserted into the pipeline the ownership of the SSLEngine was not
             // transferred to the SslHandler.
             // See https://github.com/netty/netty/issues/5678
             ReferenceCountUtil.safeRelease(sslEngine);
-            ctx.fireExceptionCaught(cause);
         }
     }
 

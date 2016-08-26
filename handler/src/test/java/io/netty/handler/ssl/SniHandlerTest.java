@@ -16,36 +16,52 @@
 
 package io.netty.handler.ssl;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+
+import java.io.File;
+import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLEngine;
+import javax.xml.bind.DatatypeConverter;
+
+import org.junit.Test;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.DecoderException;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
+import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.Test;
-
-import javax.xml.bind.DatatypeConverter;
-import java.io.File;
-import java.net.InetSocketAddress;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ObjectUtil;
 
 public class SniHandlerTest {
 
@@ -60,10 +76,16 @@ public class SniHandlerTest {
     }
 
     private static SslContext makeSslContext() throws Exception {
+        return makeSslContext(null);
+    }
+
+    private static SslContext makeSslContext(SslProvider provider) throws Exception {
         File keyFile = new File(SniHandlerTest.class.getResource("test_encrypted.pem").getFile());
         File crtFile = new File(SniHandlerTest.class.getResource("test.crt").getFile());
 
-        return SslContextBuilder.forServer(crtFile, keyFile, "12345").applicationProtocolConfig(newApnConfig()).build();
+        return SslContextBuilder.forServer(crtFile, keyFile, "12345")
+                .sslProvider(provider)
+                .applicationProtocolConfig(newApnConfig()).build();
     }
 
     private static SslContext makeSslClientContext() throws Exception {
@@ -227,6 +249,139 @@ public class SniHandlerTest {
                 clientChannel.close().sync();
             }
             group.shutdownGracefully(0, 0, TimeUnit.MICROSECONDS);
+        }
+    }
+
+    @Test(timeout = 10L * 1000L)
+    public void testReplaceHandler() throws Exception {
+
+        assumeTrue(OpenSsl.isAvailable());
+
+        final String sniHost = "sni.netty.io";
+        LocalAddress address = new LocalAddress("testReplaceHandler-" + Math.random());
+        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        Channel sc = null;
+        Channel cc = null;
+
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        try {
+            final SslContext sslServerContext = SslContextBuilder
+                    .forServer(cert.key(), cert.cert())
+                    .sslProvider(SslProvider.OPENSSL)
+                    .build();
+
+            final Mapping<String, SslContext> mapping = new Mapping<String, SslContext>() {
+                @Override
+                public SslContext map(String input) {
+                    return sslServerContext;
+                }
+            };
+
+            final Promise<Void> releasePromise = group.next().newPromise();
+
+            final SniHandler handler = new SniHandler(mapping) {
+                @Override
+                protected void replaceHandler(ChannelHandlerContext ctx,
+                        String hostname, final SslContext sslContext)
+                        throws Exception {
+
+                    boolean success = false;
+                    try {
+                        // The SniHandler's replaceHandler() method allows us to implement custom behavior.
+                        // As an example, we want to release() the SslContext upon channelInactive() or rather
+                        // when the SslHandler closes it's SslEngine. If you take a close look at SslHandler
+                        // you'll see that it's doing it in the #handlerRemoved0() method.
+
+                        SSLEngine sslEngine = sslContext.newEngine(ctx.alloc());
+                        try {
+                            SslHandler customSslHandler = new CustomSslHandler(sslContext, sslEngine) {
+                                @Override
+                                public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+                                    try {
+                                        super.handlerRemoved0(ctx);
+                                    } finally {
+                                        releasePromise.trySuccess(null);
+                                    }
+                                }
+                            };
+                            ctx.pipeline().replace(this, CustomSslHandler.class.getName(), customSslHandler);
+                            success = true;
+                        } finally {
+                            if (!success) {
+                                ReferenceCountUtil.safeRelease(sslEngine);
+                            }
+                        }
+                    } finally {
+                        if (!success) {
+                            ReferenceCountUtil.safeRelease(sslContext);
+                            releasePromise.cancel(true);
+                        }
+                    }
+                }
+            };
+
+            ServerBootstrap sb = new ServerBootstrap();
+            sc = sb.group(group).channel(LocalServerChannel.class).childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addFirst(handler);
+                }
+            }).bind(address).syncUninterruptibly().channel();
+
+            SslContext sslContext = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .build();
+
+            Bootstrap cb = new Bootstrap();
+            cc = cb.group(group).channel(LocalChannel.class).handler(new SslHandler(
+                    sslContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1)))
+                    .connect(address).syncUninterruptibly().channel();
+
+            cc.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()))
+                .syncUninterruptibly();
+
+            // Notice how the server's SslContext refCnt is 1
+            assertEquals(1, ((ReferenceCounted) sslServerContext).refCnt());
+
+            // The client disconnects
+            cc.close().syncUninterruptibly();
+            if (!releasePromise.awaitUninterruptibly(10L, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("It doesn't seem #replaceHandler() got called.");
+            }
+
+            // We should have successfully release() the SslContext
+            assertEquals(0, ((ReferenceCounted) sslServerContext).refCnt());
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
+
+            cert.delete();
+        }
+    }
+
+    /**
+     * This is a {@link SslHandler} that will call {@code release()} on the {@link SslContext} when
+     * the client disconnects.
+     *
+     * @see SniHandlerTest#testReplaceHandler()
+     */
+    private static class CustomSslHandler extends SslHandler {
+        private final SslContext sslContext;
+
+        public CustomSslHandler(SslContext sslContext, SSLEngine sslEngine) {
+            super(sslEngine);
+            this.sslContext = ObjectUtil.checkNotNull(sslContext, "sslContext");
+        }
+
+        @Override
+        public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+            super.handlerRemoved0(ctx);
+            ReferenceCountUtil.release(sslContext);
         }
     }
 }
