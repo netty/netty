@@ -27,6 +27,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.Channels;
 import java.nio.channels.GatheringByteChannel;
@@ -1532,6 +1533,28 @@ public abstract class AbstractByteBufTest {
         assertTrue(buffer.compareTo(wrappedBuffer(value, 0, 31).order(LITTLE_ENDIAN)) > 0);
         assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(value)) < 0);
         assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
+    }
+
+    @Test
+    public void testCompareTo2() {
+        byte[] bytes = {1, 2, 3, 4};
+        byte[] bytesReversed = {4, 3, 2, 1};
+
+        ByteBuf buf1 = newBuffer(4).clear().writeBytes(bytes).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuf buf2 = newBuffer(4).clear().writeBytes(bytesReversed).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuf buf3 = newBuffer(4).clear().writeBytes(bytes).order(ByteOrder.BIG_ENDIAN);
+        ByteBuf buf4 = newBuffer(4).clear().writeBytes(bytesReversed).order(ByteOrder.BIG_ENDIAN);
+        try {
+            assertEquals(buf1.compareTo(buf2), buf3.compareTo(buf4));
+            assertEquals(buf2.compareTo(buf1), buf4.compareTo(buf3));
+            assertEquals(buf1.compareTo(buf3), buf2.compareTo(buf4));
+            assertEquals(buf3.compareTo(buf1), buf4.compareTo(buf2));
+        } finally {
+            buf1.release();
+            buf2.release();
+            buf3.release();
+            buf4.release();
+        }
     }
 
     @Test
