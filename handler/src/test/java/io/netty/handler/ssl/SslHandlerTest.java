@@ -16,22 +16,32 @@
 
 package io.netty.handler.ssl;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLProtocolException;
+
+import org.junit.Test;
+
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
-import org.junit.Test;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLProtocolException;
-
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 
 public class SslHandlerTest {
 
@@ -66,6 +76,34 @@ public class SslHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
         ch.writeOutbound(new Object());
+    }
+
+    @Test
+    public void testReleaseSslEngine() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        try {
+            SslContext sslContext = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(SslProvider.OPENSSL)
+                .build();
+            try {
+                SSLEngine sslEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+                EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(sslEngine));
+
+                assertEquals(1, ((ReferenceCounted) sslContext).refCnt());
+                assertEquals(1, ((ReferenceCounted) sslEngine).refCnt());
+
+                ch.close().syncUninterruptibly();
+
+                assertEquals(1, ((ReferenceCounted) sslContext).refCnt());
+                assertEquals(0, ((ReferenceCounted) sslEngine).refCnt());
+            } finally {
+                ReferenceCountUtil.release(sslContext);
+            }
+        } finally {
+            cert.delete();
+        }
     }
 
     private static final class TlsReadTest extends ChannelOutboundHandlerAdapter {
