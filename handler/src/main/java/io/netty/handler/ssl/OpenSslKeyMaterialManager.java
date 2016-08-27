@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
+import org.apache.tomcat.jni.CertificateRequestedCallback;
 import org.apache.tomcat.jni.SSL;
 
 import javax.net.ssl.SSLException;
@@ -84,9 +85,46 @@ class OpenSslKeyMaterialManager {
         }
     }
 
-    void setKeyMaterial(ReferenceCountedOpenSslEngine engine, String[] keyTypes,
-                        X500Principal[] issuer) throws SSLException {
-        setKeyMaterial(engine.sslPointer(), chooseClientAlias(engine, keyTypes, issuer));
+    CertificateRequestedCallback.KeyMaterial keyMaterial(ReferenceCountedOpenSslEngine engine, String[] keyTypes,
+                                                         X500Principal[] issuer) throws SSLException {
+        String alias = chooseClientAlias(engine, keyTypes, issuer);
+        long keyBio = 0;
+        long keyCertChainBio = 0;
+        long pkey = 0;
+        long certChain = 0;
+
+        try {
+            // TODO: Should we cache these and so not need to do a memory copy all the time ?
+            X509Certificate[] certificates = keyManager.getCertificateChain(alias);
+            if (certificates == null || certificates.length == 0) {
+                return null;
+            }
+
+            PrivateKey key = keyManager.getPrivateKey(alias);
+            keyCertChainBio = toBIO(certificates);
+            certChain = SSL.parseX509Chain(keyCertChainBio);
+            if (key != null) {
+                keyBio = toBIO(key);
+                pkey = SSL.parsePrivateKey(keyBio, password);
+            }
+            CertificateRequestedCallback.KeyMaterial material = new CertificateRequestedCallback.KeyMaterial(
+                    certChain, pkey);
+
+            // Reset to 0 so we do not free these. This is needed as the client certificate callback takes ownership
+            // of both the key and the certificate if they are returned from this method, and thus must not
+            // be freed here.
+            certChain = pkey = 0;
+            return material;
+        } catch (SSLException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SSLException(e);
+        } finally {
+            freeBio(keyBio);
+            freeBio(keyCertChainBio);
+            SSL.freePrivateKey(pkey);
+            SSL.freeX509Chain(certChain);
+        }
     }
 
     private void setKeyMaterial(long ssl, String alias) throws SSLException {
@@ -96,26 +134,28 @@ class OpenSslKeyMaterialManager {
 
         try {
             // TODO: Should we cache these and so not need to do a memory copy all the time ?
-            PrivateKey key = keyManager.getPrivateKey(alias);
             X509Certificate[] certificates = keyManager.getCertificateChain(alias);
+            if (certificates == null || certificates.length == 0) {
+                return;
+            }
 
-            if (certificates != null && certificates.length != 0) {
-                // Only encode one time
-                PemEncoded encoded = PemX509Certificate.toPEM(ByteBufAllocator.DEFAULT, true, certificates);
-                try {
-                    keyCertChainBio = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
-                    keyCertChainBio2 = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
+            PrivateKey key = keyManager.getPrivateKey(alias);
 
-                    if (key != null) {
-                        keyBio = toBIO(key);
-                    }
-                    SSL.setCertificateBio(ssl, keyCertChainBio, keyBio, password);
+            // Only encode one time
+            PemEncoded encoded = PemX509Certificate.toPEM(ByteBufAllocator.DEFAULT, true, certificates);
+            try {
+                keyCertChainBio = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
+                keyCertChainBio2 = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
 
-                    // We may have more then one cert in the chain so add all of them now.
-                    SSL.setCertificateChainBio(ssl, keyCertChainBio2, false);
-                } finally {
-                    encoded.release();
+                if (key != null) {
+                    keyBio = toBIO(key);
                 }
+                SSL.setCertificateBio(ssl, keyCertChainBio, keyBio, password);
+
+                // We may have more then one cert in the chain so add all of them now.
+                SSL.setCertificateChainBio(ssl, keyCertChainBio2, false);
+            } finally {
+                encoded.release();
             }
         } catch (SSLException e) {
             throw e;
