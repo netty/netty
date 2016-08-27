@@ -234,7 +234,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         }
 
         @Override
-        public void requested(long ssl, byte[] keyTypeBytes, byte[][] asn1DerEncodedPrincipals) {
+        public KeyMaterial requested(long ssl, byte[] keyTypeBytes, byte[][] asn1DerEncodedPrincipals) {
             final ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
             try {
                 final Set<String> keyTypesSet = supportedClientKeyTypes(keyTypeBytes);
@@ -248,12 +248,13 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                         issuers[i] = new X500Principal(asn1DerEncodedPrincipals[i]);
                     }
                 }
-                keyManagerHolder.setKeyMaterial(engine, keyTypes, issuers);
+                return keyManagerHolder.keyMaterial(engine, keyTypes, issuers);
             } catch (Throwable cause) {
                 logger.debug("request of key failed", cause);
                 SSLHandshakeException e = new SSLHandshakeException("General OpenSslEngine problem");
                 e.initCause(cause);
                 engine.handshakeException = e;
+                return null;
             }
         }
 
