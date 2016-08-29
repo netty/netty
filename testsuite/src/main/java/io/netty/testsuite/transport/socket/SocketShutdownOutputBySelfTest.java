@@ -25,6 +25,8 @@ import org.junit.Test;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -76,6 +78,48 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
     }
 
+    @Test(timeout = 30000)
+    public void testShutdownOutputAfterClosed() throws Throwable {
+        run();
+    }
+
+    public void testShutdownOutputAfterClosed(Bootstrap cb) throws Throwable {
+        TestHandler h = new TestHandler();
+        ServerSocket ss = new ServerSocket();
+        Socket s = null;
+        try {
+            ss.bind(addr);
+            SocketChannel ch = (SocketChannel) cb.handler(h).connect().sync().channel();
+            assertTrue(ch.isActive());
+            s = ss.accept();
+
+            ch.close().syncUninterruptibly();
+            try {
+                ch.shutdownInput().syncUninterruptibly();
+                fail();
+            } catch (Throwable cause) {
+                checkThrowable(cause);
+            }
+            try {
+                ch.shutdownOutput().syncUninterruptibly();
+                fail();
+            } catch (Throwable cause) {
+                checkThrowable(cause);
+            }
+        } finally {
+            if (s != null) {
+                s.close();
+            }
+            ss.close();
+        }
+    }
+
+    private static void checkThrowable(Throwable cause) throws Throwable {
+        // Depending on OIO / NIO both are ok
+        if (!(cause instanceof ClosedChannelException) && !(cause instanceof SocketException)) {
+            throw cause;
+        }
+    }
     private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile SocketChannel ch;
         final BlockingQueue<Byte> queue = new LinkedBlockingQueue<Byte>();
