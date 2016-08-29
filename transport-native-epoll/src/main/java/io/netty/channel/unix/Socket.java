@@ -82,6 +82,9 @@ public final class Socket extends FileDescriptor {
             // represents the previous incarnation of the FD we need to be sure we don't inadvertently shutdown the
             // "new" FD without explicitly having a change.
             final int oldState = this.state;
+            if (isClosed(oldState)) {
+                throw new ClosedChannelException();
+            }
             int newState = oldState;
             if (read && !isInputShutdown(newState)) {
                 newState = inputShutdown(newState);
