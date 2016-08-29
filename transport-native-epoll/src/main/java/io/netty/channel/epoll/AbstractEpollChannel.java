@@ -35,6 +35,7 @@ import io.netty.util.ReferenceCountUtil;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -405,17 +406,27 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     try {
                         fd().shutdown(true, false);
                         clearEpollIn0();
-                        pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                     } catch (IOException ignored) {
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
-                        pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                        close(voidPromise());
+                        fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
+                        return;
+                    } catch (NotYetConnectedException ignore) {
+                        // We attempted to shutdown and failed, which means the input has already effectively been
+                        // shutdown.
+                        fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
+                        return;
                     }
+                    pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());
                 }
             }
+        }
+
+        private void fireEventAndClose(Object evt) {
+            pipeline().fireUserEventTriggered(evt);
+            close(voidPromise());
         }
 
         @Override
