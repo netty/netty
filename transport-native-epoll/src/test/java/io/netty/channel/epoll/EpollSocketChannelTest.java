@@ -16,12 +16,25 @@
 package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class EpollSocketChannelTest {
 
@@ -113,7 +126,8 @@ public class EpollSocketChannelTest {
     }
 
     private void runExceptionHandleFeedbackLoop(EventLoopGroup group, Class<? extends ServerChannel> serverChannelClass,
-            Class<? extends Channel> channelClass, SocketAddress bindAddr) throws InterruptedException {
+                                                Class<? extends Channel> channelClass, SocketAddress bindAddr)
+            throws InterruptedException {
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
@@ -136,10 +150,10 @@ public class EpollSocketChannelTest {
             clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[1024]));
 
             // We expect to get 2 exceptions (1 from BuggyChannelHandler and 1 from ExceptionHandler).
-            assertTrue(serverInitializer.exceptionHandler.latch1.await(2, TimeUnit.SECONDS));
+            Assert.assertTrue(serverInitializer.exceptionHandler.latch1.await(2, TimeUnit.SECONDS));
 
             // After we get the first exception, we should get no more, this is expected to timeout.
-            assertFalse("Encountered " + serverInitializer.exceptionHandler.count.get() +
+            Assert.assertFalse("Encountered " + serverInitializer.exceptionHandler.count.get() +
                     " exceptions when 1 was expected",
                     serverInitializer.exceptionHandler.latch2.await(2, TimeUnit.SECONDS));
         } finally {

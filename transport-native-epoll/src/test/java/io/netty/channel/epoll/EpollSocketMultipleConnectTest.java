@@ -33,7 +33,7 @@ public class EpollSocketMultipleConnectTest extends SocketMultipleConnectTest {
                 = new ArrayList<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
         for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
                 : EpollSocketTestPermutation.INSTANCE.socket()) {
-            EventLoopGroup group = comboFactory.newClientInstance().config().group();
+            EventLoopGroup group = comboFactory.newClientInstance().group();
             if (group instanceof NioEventLoopGroup || group instanceof EpollEventLoopGroup) {
                 factories.add(comboFactory);
             }
