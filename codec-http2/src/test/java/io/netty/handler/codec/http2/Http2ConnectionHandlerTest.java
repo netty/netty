@@ -313,13 +313,10 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void writeRstOnNonExistantStreamShouldSucceed() throws Exception {
         handler = newHandler();
+        when(frameWriter.writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID),
+                                        eq(STREAM_CLOSED.code()), eq(promise))).thenReturn(future);
         handler.resetStream(ctx, NON_EXISTANT_STREAM_ID, STREAM_CLOSED.code(), promise);
-        verify(frameWriter, never())
-            .writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong(),
-                    any(ChannelPromise.class));
-        assertTrue(promise.isDone());
-        assertTrue(promise.isSuccess());
-        assertNull(promise.cause());
+        verify(frameWriter).writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID), eq(STREAM_CLOSED.code()), eq(promise));
     }
 
     @Test
