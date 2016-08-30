@@ -27,12 +27,51 @@ import static org.junit.Assert.*;
 
 public class FlushConsolidationHandlerTest {
 
+    private static final int EXPLICIT_FLUSH_AFTER_FLUSHES = 3;
+
+    @Test
+    public void testFlushViaScheduledTask() {
+        final AtomicInteger flushCount = new AtomicInteger();
+        EmbeddedChannel channel = newChannel(flushCount,  true);
+        // Flushes should not go through immediately, as they're scheduled as an async task
+        channel.flush();
+        assertEquals(0, flushCount.get());
+        channel.flush();
+        assertEquals(0, flushCount.get());
+        // Trigger the execution of the async task
+        channel.runPendingTasks();
+        assertEquals(1, flushCount.get());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testFlushViaThresholdOutsideOfReadLoop() {
+        final AtomicInteger flushCount = new AtomicInteger();
+        EmbeddedChannel channel = newChannel(flushCount, true);
+        // After a given threshold, the async task should be bypassed and a flush should be triggered immediately
+        for (int i = 0; i < EXPLICIT_FLUSH_AFTER_FLUSHES; i++) {
+            channel.flush();
+        }
+        assertEquals(1, flushCount.get());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testImmediateFlushOutsideOfReadLoop() {
+        final AtomicInteger flushCount = new AtomicInteger();
+        EmbeddedChannel channel = newChannel(flushCount, false);
+        channel.flush();
+        assertEquals(1, flushCount.get());
+        assertFalse(channel.finish());
+    }
+
     @Test
     public void testFlushViaReadComplete() {
         final AtomicInteger flushCount = new AtomicInteger();
-        EmbeddedChannel channel = newChannel(flushCount);
+        EmbeddedChannel channel = newChannel(flushCount, false);
         // Flush should go through as there is no read loop in progress.
         channel.flush();
+        channel.runPendingTasks();
         assertEquals(1, flushCount.get());
 
         // Simulate read loop;
@@ -45,6 +84,7 @@ public class FlushConsolidationHandlerTest {
         assertEquals(2, flushCount.get());
         // Now flush again as the read loop is complete.
         channel.flush();
+        channel.runPendingTasks();
         assertEquals(3, flushCount.get());
         assertEquals(1L, channel.readOutbound());
         assertEquals(2L, channel.readOutbound());
@@ -55,7 +95,7 @@ public class FlushConsolidationHandlerTest {
     @Test
     public void testFlushViaClose() {
         final AtomicInteger flushCount = new AtomicInteger();
-        EmbeddedChannel channel = newChannel(flushCount);
+        EmbeddedChannel channel = newChannel(flushCount, false);
         // Simulate read loop;
         channel.pipeline().fireChannelRead(1L);
         assertEquals(0, flushCount.get());
@@ -70,7 +110,7 @@ public class FlushConsolidationHandlerTest {
     @Test
     public void testFlushViaDisconnect() {
         final AtomicInteger flushCount = new AtomicInteger();
-        EmbeddedChannel channel = newChannel(flushCount);
+        EmbeddedChannel channel = newChannel(flushCount, false);
         // Simulate read loop;
         channel.pipeline().fireChannelRead(1L);
         assertEquals(0, flushCount.get());
@@ -85,7 +125,7 @@ public class FlushConsolidationHandlerTest {
     @Test(expected = IllegalStateException.class)
     public void testFlushViaException() {
         final AtomicInteger flushCount = new AtomicInteger();
-        EmbeddedChannel channel = newChannel(flushCount);
+        EmbeddedChannel channel = newChannel(flushCount, false);
         // Simulate read loop;
         channel.pipeline().fireChannelRead(1L);
         assertEquals(0, flushCount.get());
@@ -100,7 +140,7 @@ public class FlushConsolidationHandlerTest {
     @Test
     public void testFlushViaRemoval() {
         final AtomicInteger flushCount = new AtomicInteger();
-        EmbeddedChannel channel = newChannel(flushCount);
+        EmbeddedChannel channel = newChannel(flushCount, false);
         // Simulate read loop;
         channel.pipeline().fireChannelRead(1L);
         assertEquals(0, flushCount.get());
@@ -112,18 +152,21 @@ public class FlushConsolidationHandlerTest {
         assertFalse(channel.finish());
     }
 
-    private static EmbeddedChannel newChannel(final AtomicInteger flushCount) {
-        return new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
-            @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
-                flushCount.incrementAndGet();
-                ctx.flush();
-            }
-        }, new FlushConsolidationHandler(), new ChannelInboundHandlerAdapter() {
-            @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                ctx.writeAndFlush(msg);
-            }
-        });
+    private static EmbeddedChannel newChannel(final AtomicInteger flushCount, boolean consolidateWhenNoReadInProgress) {
+        return new EmbeddedChannel(
+                new ChannelOutboundHandlerAdapter() {
+                    @Override
+                    public void flush(ChannelHandlerContext ctx) throws Exception {
+                        flushCount.incrementAndGet();
+                        ctx.flush();
+                    }
+                },
+                new FlushConsolidationHandler(EXPLICIT_FLUSH_AFTER_FLUSHES, consolidateWhenNoReadInProgress),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        ctx.writeAndFlush(msg);
+                    }
+                });
     }
 }
