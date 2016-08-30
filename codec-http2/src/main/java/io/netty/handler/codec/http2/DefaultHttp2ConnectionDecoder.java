@@ -453,6 +453,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
                 Http2Headers headers, int padding) throws Http2Exception {
+            // A client cannot push.
+            if (connection().isServer()) {
+                throw connectionError(PROTOCOL_ERROR, "A client cannot push.");
+            }
+
             Http2Stream parentStream = connection.stream(streamId);
 
             if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, parentStream, "PUSH_PROMISE")) {
