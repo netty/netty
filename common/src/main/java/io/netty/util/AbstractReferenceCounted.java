@@ -19,6 +19,8 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 /**
  * Abstract base class for classes wants to implement {@link ReferenceCounted}.
  */
@@ -51,27 +53,15 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
     @Override
     public ReferenceCounted retain() {
-        for (;;) {
-            int refCnt = this.refCnt;
-            final int nextCnt = refCnt + 1;
-
-            // Ensure we not resurrect (which means the refCnt was 0) and also that we encountered an overflow.
-            if (nextCnt <= 1) {
-                throw new IllegalReferenceCountException(refCnt, 1);
-            }
-            if (refCntUpdater.compareAndSet(this, refCnt, nextCnt)) {
-                break;
-            }
-        }
-        return this;
+        return retain0(1);
     }
 
     @Override
     public ReferenceCounted retain(int increment) {
-        if (increment <= 0) {
-            throw new IllegalArgumentException("increment: " + increment + " (expected: > 0)");
-        }
+        return retain0(checkPositive(increment, "increment"));
+    }
 
+    private ReferenceCounted retain0(int increment) {
         for (;;) {
             int refCnt = this.refCnt;
             final int nextCnt = refCnt + increment;
@@ -94,28 +84,15 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
     @Override
     public boolean release() {
-        for (;;) {
-            int refCnt = this.refCnt;
-            if (refCnt == 0) {
-                throw new IllegalReferenceCountException(0, -1);
-            }
-
-            if (refCntUpdater.compareAndSet(this, refCnt, refCnt - 1)) {
-                if (refCnt == 1) {
-                    deallocate();
-                    return true;
-                }
-                return false;
-            }
-        }
+        return release0(1);
     }
 
     @Override
     public boolean release(int decrement) {
-        if (decrement <= 0) {
-            throw new IllegalArgumentException("decrement: " + decrement + " (expected: > 0)");
-        }
+        return release0(checkPositive(decrement, "decrement"));
+    }
 
+    private boolean release0(int decrement) {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt < decrement) {
