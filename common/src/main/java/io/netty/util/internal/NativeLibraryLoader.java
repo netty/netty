@@ -213,6 +213,11 @@ public final class NativeLibraryLoader {
             }
             out.flush();
 
+            // Close the output stream before loading the unpacked library,
+            // because otherwise Windows will refuse to load it when it's in use by other process.
+            closeQuietly(out);
+            out = null;
+
             loadLibrary(loader, tmpFile.getPath(), true);
         } catch (Exception e) {
             throw (UnsatisfiedLinkError) new UnsatisfiedLinkError(
