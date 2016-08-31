@@ -1274,7 +1274,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     public int forEachByteDesc(ByteProcessor processor) {
         ensureAccessible();
         try {
-            return forEachByteDesc0(writerIndex, readerIndex, processor);
+            return forEachByteDesc0(writerIndex - 1, readerIndex, processor);
         } catch (Exception e) {
             PlatformDependent.throwException(e);
             return -1;

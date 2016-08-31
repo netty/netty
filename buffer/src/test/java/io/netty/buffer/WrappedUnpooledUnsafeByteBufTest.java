@@ -123,4 +123,16 @@ public class WrappedUnpooledUnsafeByteBufTest extends BigEndianUnsafeDirectByteB
     public void testLittleEndianWithExpand() {
         super.testLittleEndianWithExpand();
     }
+
+    @Test
+    @Override
+    public void testForEachByteDesc2() {
+        // Ignore
+    }
+
+    @Test
+    @Override
+    public void testForEachByte2() {
+        // Ignore
+    }
 }
