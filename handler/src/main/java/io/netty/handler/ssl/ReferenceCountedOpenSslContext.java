@@ -79,7 +79,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * Significant SSL/TLS improvements in Java 8</a>
      */
     private static final boolean JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION =
-            SystemPropertyUtil.getBoolean("jdk.tls.rejectClientInitiatedRenegotiation", false);
+            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                @Override
+                public Boolean run() {
+                    return SystemPropertyUtil.getBoolean("jdk.tls.rejectClientInitiatedRenegotiation", false);
+                }
+            });
     private static final List<String> DEFAULT_CIPHERS;
     private static final Integer DH_KEY_LENGTH;
     private static final ResourceLeakDetector<ReferenceCountedOpenSslContext> leakDetector =
