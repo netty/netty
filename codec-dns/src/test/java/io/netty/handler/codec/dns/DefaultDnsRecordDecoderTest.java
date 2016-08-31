@@ -17,9 +17,9 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.StringUtil;
-import org.junit.Assert;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class DefaultDnsRecordDecoderTest {
 
@@ -63,7 +63,27 @@ public class DefaultDnsRecordDecoderTest {
     private static void testDecodeName(String expected, ByteBuf buffer) {
         try {
             DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
-            Assert.assertEquals(expected, decoder.decodeName(buffer));
+            assertEquals(expected, decoder.decodeName0(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testDecodePtrRecord() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        ByteBuf buffer = Unpooled.buffer().writeByte(0);
+        int readerIndex = buffer.readerIndex();
+        int writerIndex = buffer.writerIndex();
+        try {
+            DnsPtrRecord record = (DnsPtrRecord) decoder.decodeRecord(
+                    "netty.io", DnsRecordType.PTR, DnsRecord.CLASS_IN, 60, buffer, 0, 1);
+            assertEquals("netty.io.", record.name());
+            assertEquals(DnsRecord.CLASS_IN, record.dnsClass());
+            assertEquals(60, record.timeToLive());
+            assertEquals(DnsRecordType.PTR, record.type());
+            assertEquals(readerIndex, buffer.readerIndex());
+            assertEquals(writerIndex, buffer.writerIndex());
         } finally {
             buffer.release();
         }
