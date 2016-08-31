@@ -91,11 +91,10 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             ByteBuf in, int offset, int length) throws Exception {
 
         if (type == DnsRecordType.PTR) {
-            in.setIndex(offset, offset + length);
-            return new DefaultDnsPtrRecord(name, dnsClass, timeToLive, decodeName0(in));
+            return new DefaultDnsPtrRecord(name, dnsClass, timeToLive, decodeName0(in.slice(offset, length)));
         }
         return new DefaultDnsRawRecord(
-                name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
+                name, type, dnsClass, timeToLive, in.retainedSlice(offset, length));
     }
 
     /**
