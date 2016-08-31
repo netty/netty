@@ -127,6 +127,18 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    @Override
+    public void testForEachByteDesc2() {
+        // Ignore for SlicedByteBuf
+    }
+
+    @Test
+    @Override
+    public void testForEachByte2() {
+        // Ignore for SlicedByteBuf
+    }
+
+    @Test
     public void testReaderIndexAndMarks() {
         ByteBuf wrapped = Unpooled.buffer(16);
         try {
