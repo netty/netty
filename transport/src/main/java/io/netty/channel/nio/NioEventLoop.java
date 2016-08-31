@@ -208,6 +208,15 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     return e;
                 } catch (IllegalAccessException e) {
                     return e;
+                } catch (RuntimeException e) {
+                    // JDK 9 can throw an inaccessible object exception here; since Netty compiles
+                    // against JDK 7 and this exception was only added in JDK 9, we have to weakly
+                    // check the type
+                    if ("java.lang.reflect.InaccessibleObjectException".equals(e.getClass().getName())) {
+                        return e;
+                    } else {
+                        throw e;
+                    }
                 }
             }
         });
