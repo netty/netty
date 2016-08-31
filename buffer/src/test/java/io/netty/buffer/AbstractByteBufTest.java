@@ -3203,6 +3203,52 @@ public abstract class AbstractByteBufTest {
         assertEquals(0, buffer2.refCnt());
     }
 
+    @Test
+    public void testForEachByteDesc2() {
+        byte[] expected = {1, 2, 3, 4};
+        ByteBuf buf = newBuffer(expected.length);
+        try {
+            buf.writeBytes(expected);
+            final byte[] bytes = new byte[expected.length];
+            int i = buf.forEachByteDesc(new ByteProcessor() {
+                private int index = bytes.length - 1;
+
+                @Override
+                public boolean process(byte value) throws Exception {
+                    bytes[index--] = value;
+                    return true;
+                }
+            });
+            assertEquals(-1, i);
+            assertArrayEquals(expected, bytes);
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testForEachByte2() {
+        byte[] expected = {1, 2, 3, 4};
+        ByteBuf buf = newBuffer(expected.length);
+        try {
+            buf.writeBytes(expected);
+            final byte[] bytes = new byte[expected.length];
+            int i = buf.forEachByte(new ByteProcessor() {
+                private int index;
+
+                @Override
+                public boolean process(byte value) throws Exception {
+                    bytes[index++] = value;
+                    return true;
+                }
+            });
+            assertEquals(-1, i);
+            assertArrayEquals(expected, bytes);
+        } finally {
+            buf.release();
+        }
+    }
+
     private static void assertTrueAndRelease(ByteBuf buf, boolean actual) {
         try {
             assertTrue(actual);
