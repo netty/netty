@@ -57,7 +57,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
             InternalLoggerFactory.getInstance(SniHandler.class);
     private static final Selection EMPTY_SELECTION = new Selection(null, null);
 
-    private final AsyncMapping<String, SslContext> mapping;
+    protected final AsyncMapping<String, SslContext> mapping;
 
     private boolean handshakeFailed;
     private boolean suppressRead;
@@ -273,8 +273,8 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
     }
 
-    private void select(final ChannelHandlerContext ctx, final String hostname) {
-        Future<SslContext> future = mapping.map(hostname, ctx.executor().<SslContext>newPromise());
+    private void select(final ChannelHandlerContext ctx, final String hostname) throws Exception {
+        Future<SslContext> future = lookup(ctx, hostname);
         if (future.isDone()) {
             if (future.isSuccess()) {
                 onSslContext(ctx, hostname, future.getNow());
@@ -303,6 +303,16 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
             });
         }
+    }
+
+    /**
+     * The default implementation will simply call {@link AsyncMapping#map(Object, Promise)} but
+     * users can override this method to implement custom behavior.
+     *
+     * @see AsyncMapping#map(Object, Promise)
+     */
+    protected Future<SslContext> lookup(ChannelHandlerContext ctx, String hostname) throws Exception {
+        return mapping.map(hostname, ctx.executor().<SslContext>newPromise());
     }
 
     /**
