@@ -17,22 +17,25 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.internal.StringUtil;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.nio.CharBuffer;
 
 public class DefaultDnsRecordDecoderTest {
 
     @Test
     public void testDecodeName() {
-        testDecodeName("netty.io.", Unpooled.wrappedBuffer(new byte[] {
+        testDecodeName("netty.io.", Unpooled.wrappedBuffer(new byte[]{
                 5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0
         }));
     }
 
     @Test
     public void testDecodeNameWithoutTerminator() {
-        testDecodeName("netty.io.", Unpooled.wrappedBuffer(new byte[] {
+        testDecodeName("netty.io.", Unpooled.wrappedBuffer(new byte[]{
                 5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o'
         }));
     }
@@ -40,7 +43,7 @@ public class DefaultDnsRecordDecoderTest {
     @Test
     public void testDecodeNameWithExtraTerminator() {
         // Should not be decoded as 'netty.io..'
-        testDecodeName("netty.io.", Unpooled.wrappedBuffer(new byte[] {
+        testDecodeName("netty.io.", Unpooled.wrappedBuffer(new byte[]{
                 5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0, 0
         }));
     }
@@ -57,7 +60,7 @@ public class DefaultDnsRecordDecoderTest {
 
     @Test
     public void testDecodeEmptyNameFromExtraZeroes() {
-        testDecodeName(".", Unpooled.wrappedBuffer(new byte[] { 0, 0 }));
+        testDecodeName(".", Unpooled.wrappedBuffer(new byte[]{0, 0}));
     }
 
     private static void testDecodeName(String expected, ByteBuf buffer) {
