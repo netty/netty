@@ -95,12 +95,6 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
             ch.close().syncUninterruptibly();
             try {
-                ch.shutdownInput().syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
-            try {
                 ch.shutdownOutput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
