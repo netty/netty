@@ -145,7 +145,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      *              for GlobalChannel TSH it is defined as
      *              {@value #GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX}.
      */
-    int userDefinedWritabilityIndex() {
+    protected int userDefinedWritabilityIndex() {
         if (this instanceof GlobalChannelTrafficShapingHandler) {
             return GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
         } else if (this instanceof GlobalTrafficShapingHandler) {
