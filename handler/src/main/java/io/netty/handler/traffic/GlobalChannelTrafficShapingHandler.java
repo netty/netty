@@ -156,7 +156,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     }
 
     @Override
-    int userDefinedWritabilityIndex() {
+    protected int userDefinedWritabilityIndex() {
         return AbstractTrafficShapingHandler.GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
     }
 
