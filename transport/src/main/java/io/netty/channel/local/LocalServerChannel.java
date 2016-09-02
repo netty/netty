@@ -46,6 +46,10 @@ public class LocalServerChannel extends AbstractServerChannel {
     private volatile LocalAddress localAddress;
     private volatile boolean acceptInProgress;
 
+    public LocalServerChannel() {
+        config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
+    }
+
     @Override
     public ChannelConfig config() {
         return config;
