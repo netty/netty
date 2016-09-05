@@ -23,6 +23,8 @@ import java.io.IOException;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
@@ -99,9 +101,10 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      */
     private final class Http2HeaderTableDecoder extends DefaultHttp2HeaderTableListSize implements Http2HeaderTable {
         @Override
-        public void maxHeaderTableSize(int max) throws Http2Exception {
-            if (max < 0) {
-                throw connectionError(PROTOCOL_ERROR, "Header Table Size must be non-negative but was %d", max);
+        public void maxHeaderTableSize(long max) throws Http2Exception {
+            if (max < MIN_HEADER_TABLE_SIZE || max > MAX_HEADER_TABLE_SIZE) {
+                throw connectionError(PROTOCOL_ERROR, "Header Table Size must be >= %d and <= %d but was %d",
+                        MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, max);
             }
             try {
                 decoder.setMaxHeaderTableSize(max);
@@ -111,7 +114,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
         }
 
         @Override
-        public int maxHeaderTableSize() {
+        public long maxHeaderTableSize() {
             return decoder.getMaxHeaderTableSize();
         }
     }

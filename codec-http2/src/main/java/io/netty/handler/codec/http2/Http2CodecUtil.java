@@ -87,7 +87,7 @@ public final class Http2CodecUtil {
     public static final char SETTINGS_MAX_HEADER_LIST_SIZE = 6;
     public static final int NUM_STANDARD_SETTINGS = 6;
 
-    public static final int MAX_HEADER_TABLE_SIZE = Integer.MAX_VALUE; // Size limited by HPACK library
+    public static final long MAX_HEADER_TABLE_SIZE = MAX_UNSIGNED_INT;
     public static final long MAX_CONCURRENT_STREAMS = MAX_UNSIGNED_INT;
     public static final int MAX_INITIAL_WINDOW_SIZE = Integer.MAX_VALUE;
     public static final int MAX_FRAME_SIZE_LOWER_BOUND = 0x4000;
