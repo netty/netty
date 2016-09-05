@@ -153,7 +153,7 @@ class OpenSslKeyMaterialManager {
                 SSL.setCertificateBio(ssl, keyCertChainBio, keyBio, password);
 
                 // We may have more then one cert in the chain so add all of them now.
-                SSL.setCertificateChainBio(ssl, keyCertChainBio2, false);
+                SSL.setCertificateChainBio(ssl, keyCertChainBio2, true);
             } finally {
                 encoded.release();
             }

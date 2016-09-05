@@ -36,6 +36,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.EmptyArrays;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,6 +64,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
 
@@ -70,6 +72,41 @@ public abstract class SSLEngineTest {
 
     protected static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
     protected static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
+
+    private static final byte[] CERT_BYTES = {48, -126, 2, -2, 48, -126, 1, -26, -96, 3, 2, 1, 2, 2, 8, 32, -61,
+            -115, -60, 73, 102, -48, 2, 48, 13, 6, 9, 42, -122, 72, -122, -9, 13, 1, 1, 11, 5, 0, 48, 62, 49, 60, 48,
+            58, 6, 3, 85, 4, 3, 12, 51, 101, 56, 97, 99, 48, 50, 102, 97, 48, 100, 54, 53, 97, 56, 52, 50, 49, 57, 48,
+            49, 54, 48, 52, 53, 100, 98, 56, 98, 48, 53, 99, 52, 56, 53, 98, 52, 101, 99, 100, 102, 46, 110, 101, 116,
+            116, 121, 46, 116, 101, 115, 116, 48, 32, 23, 13, 49, 51, 48, 56, 48, 50, 48, 55, 53, 49, 51, 54, 90, 24,
+            15, 57, 57, 57, 57, 49, 50, 51, 49, 50, 51, 53, 57, 53, 57, 90, 48, 62, 49, 60, 48, 58, 6, 3, 85, 4, 3,
+            12, 51, 101, 56, 97, 99, 48, 50, 102, 97, 48, 100, 54, 53, 97, 56, 52, 50, 49, 57, 48, 49, 54, 48, 52,
+            53, 100, 98, 56, 98, 48, 53, 99, 52, 56, 53, 98, 52, 101, 99, 100, 102, 46, 110, 101, 116, 116, 121, 46,
+            116, 101, 115, 116, 48, -126, 1, 34, 48, 13, 6, 9, 42, -122, 72, -122, -9, 13, 1, 1, 1, 5, 0, 3, -126, 1,
+            15, 0, 48, -126, 1, 10, 2, -126, 1, 1, 0, -37, -8, 112, 78, -36, 45, 20, 68, 18, -81, 13, 72, 9, 29, -72,
+            72, -108, 28, -98, -15, 127, -36, 108, -47, -9, -108, 58, -73, 92, -29, -123, 7, 62, -53, -31, 118, 74, 44,
+            50, 23, 75, -31, 94, 66, -92, -128, 80, -54, 54, -94, -39, -108, -7, 89, 35, -48, -86, 43, -78, 19, 35,
+            109, 69, -33, 19, 82, -92, 78, 40, -45, 48, -103, 90, -127, -83, -116, -37, 21, 85, -73, 109, 95, 68, -119,
+            9, 53, 102, -56, 47, 71, 86, 20, -75, -78, 70, -82, -50, 93, -36, -96, -56, 89, 8, -119, 111, 91, -37, -14,
+            -40, 105, -29, -63, -128, 68, -10, -38, 70, -19, 29, 32, -128, 18, 63, -127, -107, 39, -10, -21, -97, -75,
+            -84, -36, 114, 1, 112, 70, 24, 103, 28, 8, -84, -60, 109, -54, -128, 72, 18, -121, 58, 5, 105, -22, -110,
+            -22, -107, 0, 31, -71, 44, -70, -125, -13, -77, 27, 55, 30, -77, 124, -41, 70, -79, -82, -44, -35, -23, 4,
+            -116, -64, 35, 0, -106, -29, 111, 103, -25, 102, 101, 97, -10, 17, -46, 122, -2, 68, 66, -125, -99, 26,
+            -49, 32, -128, -20, 88, 4, -90, 16, 120, 65, 123, 52, -61, -6, -3, 42, 8, -108, 114, 47, 61, -82, -80, 88,
+            22, 99, -18, -38, -127, 66, 68, -37, 33, -57, 35, 105, -109, -69, 100, 64, 22, 120, 1, -118, 82, 87, -108,
+            -64, -83, 87, 4, -12, -60, 107, -112, -58, 70, -57, 2, 3, 1, 0, 1, 48, 13, 6, 9, 42, -122, 72, -122, -9,
+            13, 1, 1, 11, 5, 0, 3, -126, 1, 1, 0, 75, -4, 55, -75, -26, -14, -90, -104, -40, 88, 43, 57, -50, -113,
+            107, 81, -109, -128, 15, -128, 57, -67, -38, 83, 125, -45, 27, 0, 17, -13, -89, -2, -100, -73, -6, 5, 35,
+            -38, -94, 23, 16, 124, -25, -119, -119, -34, -59, -112, 91, -104, 34, 123, -105, -105, -22, 42, -77, -28,
+            106, 51, -8, -4, 71, 65, 57, 6, -31, -104, 99, 108, 14, 42, -110, -1, 61, -79, 98, -41, 39, -1, 43, 43,
+            -33, -73, -78, -107, -121, -57, -75, 33, 69, 30, 115, -8, -75, 13, -42, 19, 12, 29, 37, 53, 107, -41, 95,
+            24, -33, 48, -95, -117, 114, -35, -58, 49, -79, 7, 42, -14, -33, 31, 30, 54, 35, 12, -1, -7, -5, -38, -24,
+            -75, 43, 59, -117, -74, 76, 55, -17, -45, 39, 7, -71, 30, -44, 100, 75, -126, -44, 50, 120, -58, -47, 97,
+            110, -102, -65, 65, 16, 35, 11, 39, -51, -57, 119, 3, 115, -78, -10, 18, -46, 86, -100, 41, -94, -67, 49,
+            64, -10, 95, 12, 23, 86, 79, 48, 52, -107, 119, -121, -100, 67, -80, 116, -59, -110, 5, 67, -105, 18, 72,
+            91, 123, 88, 102, -119, 10, -63, -116, -51, -119, 20, -32, 90, 120, 35, 41, 16, 113, 108, 93, -108, -43,
+            -5, -64, -106, 81, -63, 13, -109, 100, -111, 69, -126, 90, 83, -120, 86, 93, 122, -82, -120, -24, 7, 125,
+            2, 125, 68, -99, -54, 115, -27, 111, 20, 39, -117, 111, -122, 108};
+    private static final String PRINCIPAL_NAME = "CN=e8ac02fa0d65a84219016045db8b05c485b4ecdf.netty.test";
 
     @Mock
     protected MessageReceiver serverReceiver;
@@ -148,11 +185,11 @@ public abstract class SSLEngineTest {
             serverCloseFuture.sync();
         }
         if (serverSslCtx != null) {
-            cleanupSslContext(serverSslCtx);
+            cleanupServerSslContext(serverSslCtx);
             serverSslCtx = null;
         }
         if (clientSslCtx != null) {
-            cleanupSslContext(clientSslCtx);
+            cleanupClientSslContext(clientSslCtx);
             clientSslCtx = null;
         }
         Future<?> serverGroupShutdownFuture = null;
@@ -181,6 +218,8 @@ public abstract class SSLEngineTest {
                           new File(getClass().getResource("test.crt").getFile()),
                           null);
         runTest(null);
+        assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
+        assertNull(serverException);
     }
 
     @Test
@@ -194,6 +233,7 @@ public abstract class SSLEngineTest {
         mySetupMutualAuth(clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           serverCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
         runTest(null);
+        assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
     }
 
     @Test
@@ -236,7 +276,7 @@ public abstract class SSLEngineTest {
             File clientTrustCrtFile, File clientKeyFile, File clientCrtFile, String clientKeyPassword)
             throws InterruptedException, SSLException {
         serverSslCtx = SslContextBuilder.forServer(serverCrtFile, serverKeyFile, serverKeyPassword)
-                .sslProvider(sslProvider())
+                .sslProvider(sslServerProvider())
                 .trustManager(servertTrustCrtFile)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                 .sessionCacheSize(0)
@@ -244,7 +284,7 @@ public abstract class SSLEngineTest {
                 .build();
 
         clientSslCtx = SslContextBuilder.forClient()
-                .sslProvider(sslProvider())
+                .sslProvider(sslClientProvider())
                 .trustManager(clientTrustCrtFile)
                 .keyManager(clientCrtFile, clientKeyFile, clientKeyPassword)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
@@ -274,7 +314,27 @@ public abstract class SSLEngineTest {
                             serverException = cause.getCause();
                             serverLatch.countDown();
                         } else {
+                            serverException = cause;
                             ctx.fireExceptionCaught(cause);
+                        }
+                    }
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+                            // Verify session
+                            SSLSession session = ctx.pipeline().get(SslHandler.class).engine().getSession();
+                            assertEquals(1, session.getPeerCertificates().length);
+                            assertArrayEquals(CERT_BYTES, session.getPeerCertificates()[0].getEncoded());
+
+                            assertEquals(1, session.getPeerCertificateChain().length);
+                            assertArrayEquals(CERT_BYTES, session.getPeerCertificateChain()[0].getEncoded());
+
+                            assertEquals(1, session.getLocalCertificates().length);
+                            assertArrayEquals(CERT_BYTES, session.getLocalCertificates()[0].getEncoded());
+
+                            assertEquals(PRINCIPAL_NAME, session.getLocalPrincipal().getName());
+                            assertEquals(PRINCIPAL_NAME, session.getPeerPrincipal().getName());
                         }
                     }
                 });
@@ -358,13 +418,13 @@ public abstract class SSLEngineTest {
 
     @Test
     public void testGetCreationTime() throws Exception {
-        clientSslCtx = SslContextBuilder.forClient().sslProvider(sslProvider()).build();
+        clientSslCtx = SslContextBuilder.forClient().sslProvider(sslClientProvider()).build();
         SSLEngine engine = null;
         try {
             engine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
             assertTrue(engine.getSession().getCreationTime() <= System.currentTimeMillis());
         } finally {
-            cleanupSslEngine(engine);
+            cleanupClientSslEngine(engine);
         }
     }
 
@@ -372,11 +432,11 @@ public abstract class SSLEngineTest {
     public void testSessionInvalidate() throws Exception {
         clientSslCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .sslProvider(sslProvider())
+                .sslProvider(sslClientProvider())
                 .build();
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(sslProvider())
+                .sslProvider(sslServerProvider())
                 .build();
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
@@ -390,8 +450,8 @@ public abstract class SSLEngineTest {
             session.invalidate();
             assertFalse(session.isValid());
         } finally {
-            cleanupSslEngine(clientEngine);
-            cleanupSslEngine(serverEngine);
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
         }
     }
 
@@ -399,11 +459,11 @@ public abstract class SSLEngineTest {
     public void testSSLSessionId() throws Exception {
         clientSslCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .sslProvider(sslProvider())
+                .sslProvider(sslClientProvider())
                 .build();
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(sslProvider())
+                .sslProvider(sslServerProvider())
                 .build();
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
@@ -422,8 +482,8 @@ public abstract class SSLEngineTest {
             assertNotEquals(0, serverEngine.getSession().getId().length);
             assertArrayEquals(clientEngine.getSession().getId(), serverEngine.getSession().getId());
         } finally {
-            cleanupSslEngine(clientEngine);
-            cleanupSslEngine(serverEngine);
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
         }
     }
 
@@ -432,7 +492,7 @@ public abstract class SSLEngineTest {
             throws CertificateException, SSLException, InterruptedException, ExecutionException {
         final SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(sslProvider()).build();
+                .sslProvider(sslServerProvider()).build();
         sb = new ServerBootstrap()
                 .group(new NioEventLoopGroup(1))
                 .channel(NioServerSocketChannel.class)
@@ -538,13 +598,13 @@ public abstract class SSLEngineTest {
             File serverKeyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
             File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
             serverSslCtx = SslContextBuilder.forServer(serverCrtFile, serverKeyFile)
-               .sslProvider(sslProvider())
+               .sslProvider(sslServerProvider())
                .build();
 
             sslEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
 
             // Disable all protocols
-            sslEngine.setEnabledProtocols(new String[]{});
+            sslEngine.setEnabledProtocols(EmptyArrays.EMPTY_STRINGS);
 
             // The only protocol that should be enabled is SSLv2Hello
             String[] enabledProtocols = sslEngine.getEnabledProtocols();
@@ -562,7 +622,7 @@ public abstract class SSLEngineTest {
             if (sslEngine != null) {
                 sslEngine.closeInbound();
                 sslEngine.closeOutbound();
-                cleanupSslEngine(sslEngine);
+                cleanupServerSslEngine(sslEngine);
             }
         }
     }
@@ -618,18 +678,32 @@ public abstract class SSLEngineTest {
         }
     }
 
-    protected abstract SslProvider sslProvider();
+    protected abstract SslProvider sslClientProvider();
+
+    protected abstract SslProvider sslServerProvider();
 
     /**
      * Called from the test cleanup code and can be used to release the {@code ctx} if it must be done manually.
      */
-    protected void cleanupSslContext(SslContext ctx) {
+    protected void cleanupClientSslContext(SslContext ctx) {
+    }
+
+    /**
+     * Called from the test cleanup code and can be used to release the {@code ctx} if it must be done manually.
+     */
+    protected void cleanupServerSslContext(SslContext ctx) {
     }
 
     /**
      * Called when ever an SSLEngine is not wrapped by a {@link SslHandler} and inserted into a pipeline.
      */
-    protected void cleanupSslEngine(SSLEngine engine) {
+    protected void cleanupClientSslEngine(SSLEngine engine) {
+    }
+
+    /**
+     * Called when ever an SSLEngine is not wrapped by a {@link SslHandler} and inserted into a pipeline.
+     */
+    protected void cleanupServerSslEngine(SSLEngine engine) {
     }
 
     protected void setupHandlers(ApplicationProtocolConfig apn) throws InterruptedException, SSLException,
@@ -642,7 +716,7 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
 
         setupHandlers(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
-                        .sslProvider(sslProvider())
+                        .sslProvider(sslServerProvider())
                         .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                         .applicationProtocolConfig(serverApn)
                         .sessionCacheSize(0)
@@ -650,7 +724,7 @@ public abstract class SSLEngineTest {
                         .build(),
 
                 SslContextBuilder.forClient()
-                        .sslProvider(sslProvider())
+                        .sslProvider(sslClientProvider())
                         .applicationProtocolConfig(clientApn)
                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
                         .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)

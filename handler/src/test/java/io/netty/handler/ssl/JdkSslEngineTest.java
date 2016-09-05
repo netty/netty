@@ -272,7 +272,12 @@ public class JdkSslEngineTest extends SSLEngineTest {
     }
 
     @Override
-    protected SslProvider sslProvider() {
+    protected SslProvider sslClientProvider() {
+        return SslProvider.JDK;
+    }
+
+    @Override
+    protected SslProvider sslServerProvider() {
         return SslProvider.JDK;
     }
 
