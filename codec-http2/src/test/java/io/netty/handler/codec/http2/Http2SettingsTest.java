@@ -20,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import io.netty.handler.codec.http.HttpUtil;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -85,5 +86,22 @@ public class Http2SettingsTest {
         final long settingsValueUpperBound = (1L << 32) - 1L;
         settings.maxHeaderListSize((int) settingsValueUpperBound);
         assertEquals(Integer.MAX_VALUE, (long) settings.maxHeaderListSize());
+    }
+
+    @Test
+    public void headerTableSizeUnsignedInt() {
+        final long value = 1L << 31;
+        settings.put(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE, (Long) value);
+        assertEquals(value, (long) settings.get(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void headerTableSizeBoundCheck() {
+        settings.put(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE, (Long) Long.MAX_VALUE);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void headerTableSizeBoundCheck2() {
+        settings.put(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE, Long.valueOf(-1L));
     }
 }

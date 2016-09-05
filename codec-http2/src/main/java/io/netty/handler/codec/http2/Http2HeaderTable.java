@@ -24,12 +24,12 @@ public interface Http2HeaderTable {
     /**
      * Sets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
      */
-    void maxHeaderTableSize(int max) throws Http2Exception;
+    void maxHeaderTableSize(long max) throws Http2Exception;
 
     /**
      * Gets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
      */
-    int maxHeaderTableSize();
+    long maxHeaderTableSize();
 
     /**
      * Sets the maximum allowed header elements.

@@ -31,6 +31,8 @@
  */
 package io.netty.handler.codec.http2.internal.hpack;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.internal.hpack.HeaderField.HEADER_ENTRY_OVERHEAD;
 
 final class DynamicTable {
@@ -40,7 +42,7 @@ final class DynamicTable {
     int head;
     int tail;
     private int size;
-    private int capacity = -1; // ensure setCapacity creates the array
+    private long capacity = -1; // ensure setCapacity creates the array
 
     /**
      * Creates a new dynamic table with the specified initial capacity.
@@ -65,14 +67,14 @@ final class DynamicTable {
     /**
      * Return the current size of the dynamic table. This is the sum of the size of the entries.
      */
-    public int size() {
+    public long size() {
         return size;
     }
 
     /**
      * Return the maximum allowable size of the dynamic table.
      */
-    public int capacity() {
+    public long capacity() {
         return capacity;
     }
 
@@ -149,11 +151,10 @@ final class DynamicTable {
      * Set the maximum size of the dynamic table. Entries are evicted from the dynamic table until
      * the size of the table is less than or equal to the maximum size.
      */
-    public void setCapacity(int capacity) {
-        if (capacity < 0) {
-            throw new IllegalArgumentException("Illegal Capacity: " + capacity);
+    public void setCapacity(long capacity) {
+        if (capacity < MIN_HEADER_TABLE_SIZE || capacity > MAX_HEADER_TABLE_SIZE) {
+            throw new IllegalArgumentException("capacity is invalid: " + capacity);
         }
-
         // initially capacity will be -1 so init won't return here
         if (this.capacity == capacity) {
             return;
@@ -169,7 +170,7 @@ final class DynamicTable {
             }
         }
 
-        int maxEntries = capacity / HEADER_ENTRY_OVERHEAD;
+        int maxEntries = (int) (capacity / HEADER_ENTRY_OVERHEAD);
         if (capacity % HEADER_ENTRY_OVERHEAD != 0) {
             maxEntries++;
         }
@@ -192,8 +193,8 @@ final class DynamicTable {
             }
         }
 
-        this.tail = 0;
-        this.head = tail + len;
-        this.headerFields = tmp;
+        tail = 0;
+        head = tail + len;
+        headerFields = tmp;
     }
 }

@@ -87,7 +87,7 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
      *
      * @throws IllegalArgumentException if verification of the setting fails.
      */
-    public Http2Settings headerTableSize(int value) {
+    public Http2Settings headerTableSize(long value) {
         put(SETTINGS_HEADER_TABLE_SIZE, Long.valueOf(value));
         return this;
     }
