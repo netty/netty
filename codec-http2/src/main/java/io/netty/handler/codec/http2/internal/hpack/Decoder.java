@@ -74,7 +74,7 @@ public final class Decoder {
     private final DynamicTable dynamicTable;
     private final HuffmanDecoder huffmanDecoder;
     private final int maxHeadersLength;
-    private int maxDynamicTableSize;
+    private long maxDynamicTableSize;
     private int encoderMaxDynamicTableSize;
     private boolean maxDynamicTableSizeChangeRequired;
 
@@ -305,7 +305,7 @@ public final class Decoder {
      * Set the maximum table size. If this is below the maximum size of the dynamic table used by
      * the encoder, the beginning of the next header block MUST signal this change.
      */
-    public void setMaxHeaderTableSize(int maxHeaderTableSize) {
+    public void setMaxHeaderTableSize(long maxHeaderTableSize) {
         maxDynamicTableSize = maxHeaderTableSize;
         if (maxDynamicTableSize < encoderMaxDynamicTableSize) {
             // decoder requires less space than encoder
@@ -319,7 +319,7 @@ public final class Decoder {
      * Return the maximum table size. This is the maximum size allowed by both the encoder and the
      * decoder.
      */
-    public int getMaxHeaderTableSize() {
+    public long getMaxHeaderTableSize() {
         return dynamicTable.capacity();
     }
 
@@ -333,7 +333,7 @@ public final class Decoder {
     /**
      * Return the size of the dynamic table. Exposed for testing.
      */
-    int size() {
+    long size() {
         return dynamicTable.size();
     }
 
