@@ -21,17 +21,32 @@ import javax.net.ssl.SSLEngine;
 
 public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
     @Override
-    protected SslProvider sslProvider() {
+    protected SslProvider sslClientProvider() {
         return SslProvider.OPENSSL_REFCNT;
     }
 
     @Override
-    protected void cleanupSslContext(SslContext ctx) {
+    protected SslProvider sslServerProvider() {
+        return SslProvider.OPENSSL_REFCNT;
+    }
+
+    @Override
+    protected void cleanupClientSslContext(SslContext ctx) {
         ReferenceCountUtil.release(ctx);
     }
 
     @Override
-    protected void cleanupSslEngine(SSLEngine engine) {
+    protected void cleanupClientSslEngine(SSLEngine engine) {
+        ReferenceCountUtil.release(engine);
+    }
+
+    @Override
+    protected void cleanupServerSslContext(SslContext ctx) {
+        ReferenceCountUtil.release(ctx);
+    }
+
+    @Override
+    protected void cleanupServerSslEngine(SSLEngine engine) {
         ReferenceCountUtil.release(engine);
     }
 }

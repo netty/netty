@@ -21,7 +21,6 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBeh
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -82,11 +81,11 @@ public class OpenSslEngineTest extends SSLEngineTest {
     public void testWrapHeapBuffersNoWritePendingError() throws Exception {
         clientSslCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .sslProvider(sslProvider())
+                .sslProvider(sslClientProvider())
                 .build();
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(sslProvider())
+                .sslProvider(sslServerProvider())
                 .build();
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
@@ -105,13 +104,18 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 assertSame(SSLEngineResult.Status.BUFFER_OVERFLOW, clientEngine.wrap(src, dst).getStatus());
             }
         } finally {
-            cleanupSslEngine(clientEngine);
-            cleanupSslEngine(serverEngine);
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
         }
     }
 
     @Override
-    protected SslProvider sslProvider() {
+    protected SslProvider sslClientProvider() {
+        return SslProvider.OPENSSL;
+    }
+
+    @Override
+    protected SslProvider sslServerProvider() {
         return SslProvider.OPENSSL;
     }
 
