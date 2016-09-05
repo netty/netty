@@ -81,9 +81,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ReferenceCountedOpenSslEngine.class);
 
-    private static final Certificate[] EMPTY_CERTIFICATES = EmptyArrays.EMPTY_CERTIFICATES;
-    private static final X509Certificate[] EMPTY_X509_CERTIFICATES = EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
-
     private static final SSLException BEGIN_HANDSHAKE_ENGINE_CLOSED = ThrowableUtil.unknownStackTrace(
             new SSLException("engine closed"), ReferenceCountedOpenSslEngine.class, "beginHandshake()");
     private static final SSLException HANDSHAKE_ENGINE_CLOSED = ThrowableUtil.unknownStackTrace(
@@ -248,7 +245,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private final OpenSslEngineMap engineMap;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final boolean rejectRemoteInitiatedRenegation;
-    private final ReferenceCountedOpenSslEngine.OpenSslSession session;
+    private final OpenSslSession session;
     private final Certificate[] localCerts;
     private final ByteBuffer[] singleSrcBuffer = new ByteBuffer[1];
     private final ByteBuffer[] singleDstBuffer = new ByteBuffer[1];
@@ -1762,34 +1759,39 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 clientCert = null;
             }
 
-            if (chain == null && clientCert == null) {
-                peerCerts = EMPTY_CERTIFICATES;
-                x509PeerCerts = EMPTY_X509_CERTIFICATES;
+            if (chain == null || chain.length == 0) {
+                if (clientCert == null || clientCert.length == 0) {
+                    peerCerts = EmptyArrays.EMPTY_CERTIFICATES;
+                    x509PeerCerts = EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
+                } else {
+                    peerCerts = new Certificate[1];
+                    x509PeerCerts = new X509Certificate[1];
+
+                    peerCerts[0] = new OpenSslX509Certificate(clientCert);
+                    x509PeerCerts[0] = new OpenSslJavaxX509Certificate(clientCert);
+                }
+            } else if (clientCert == null || clientCert.length == 0) {
+                peerCerts = new Certificate[chain.length];
+                x509PeerCerts = new X509Certificate[chain.length];
+
+                for (int a = 0; a < chain.length; ++a) {
+                    byte[] bytes = chain[a];
+                    peerCerts[a] = new OpenSslX509Certificate(bytes);
+                    x509PeerCerts[a] = new OpenSslJavaxX509Certificate(bytes);
+                }
             } else {
-                int len = chain != null ? chain.length : 0;
+                int len = clientCert.length + 1;
+                peerCerts = new Certificate[len];
+                x509PeerCerts = new X509Certificate[len];
 
-                int i = 0;
-                Certificate[] peerCerts;
-                if (clientCert != null) {
-                    len++;
-                    peerCerts = new Certificate[len];
-                    peerCerts[i++] = new OpenSslX509Certificate(clientCert);
-                } else {
-                    peerCerts = new Certificate[len];
-                }
-                if (chain != null) {
-                    X509Certificate[] pCerts = new X509Certificate[chain.length];
+                peerCerts[0] = new OpenSslX509Certificate(clientCert);
+                x509PeerCerts[0] = new OpenSslJavaxX509Certificate(clientCert);
 
-                    for (int a = 0; a < pCerts.length; ++i, ++a) {
-                        byte[] bytes = chain[a];
-                        pCerts[a] = new OpenSslJavaxX509Certificate(bytes);
-                        peerCerts[i] = new OpenSslX509Certificate(bytes);
-                    }
-                    x509PeerCerts = pCerts;
-                } else {
-                    x509PeerCerts = EMPTY_X509_CERTIFICATES;
+                for (int a = 0, i = 1; a < chain.length; ++a, ++i) {
+                    byte[] bytes = chain[a];
+                    peerCerts[i] = new OpenSslX509Certificate(bytes);
+                    x509PeerCerts[i] = new OpenSslJavaxX509Certificate(bytes);
                 }
-                this.peerCerts = peerCerts;
             }
         }
 
@@ -1860,7 +1862,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 if (peerCerts == null || peerCerts.length == 0) {
                     throw new SSLPeerUnverifiedException("peer not verified");
                 }
-                return peerCerts;
+                return peerCerts.clone();
             }
         }
 
@@ -1878,7 +1880,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 if (x509PeerCerts == null || x509PeerCerts.length == 0) {
                     throw new SSLPeerUnverifiedException("peer not verified");
                 }
-                return x509PeerCerts;
+                return x509PeerCerts.clone();
             }
         }
 
