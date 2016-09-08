@@ -76,7 +76,7 @@ public class HelloWorldHttp2Handler extends ChannelDuplexHandler {
             throws Exception {
         if (headers.isEndStream()) {
             ByteBuf content = ctx.alloc().buffer();
-            content.writeBytes(RESPONSE_BYTES);
+            content.writeBytes(RESPONSE_BYTES.duplicate());
             ByteBufUtil.writeAscii(content, " - via HTTP/2");
             sendResponse(ctx, content);
         }
