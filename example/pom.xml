@@ -124,14 +124,6 @@
       <artifactId>logback-classic</artifactId>
       <scope>runtime</scope>
     </dependency>
-    <dependency>
-      <groupId>org.jctools</groupId>
-      <artifactId>jctools-core</artifactId>
-      <!-- Need runtime scope as otherwise idea is not able to run the examples -->
-      <!-- This is most likely a bug in idea -->
-      <scope>runtime</scope>
-      <optional>true</optional>
-    </dependency>
   </dependencies>
 
   <build>
