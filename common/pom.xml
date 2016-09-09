@@ -49,8 +49,6 @@
       <artifactId>jctools-core</artifactId>
       <!-- Need compile scope to be taken into account by shade plugin -->
       <scope>compile</scope>
-      <!-- Mark as optional as otherwise the bundle plugin will add strict import statements and so fail in OSGI containers-->
-      <optional>true</optional>
     </dependency>
 
     <!-- Logging frameworks - completely optional -->
@@ -187,6 +185,8 @@
                 <!-- NativeLibraryLoader can be used to manually load native libraries from other bundles that this bundle does not depend on,
                 hence use DynamicImport-Package instruction to ensure the loading is successful -->
                 <DynamicImport-Package>*</DynamicImport-Package>
+                <!-- JCTools is shaded -->
+                <Import-Package>!org.jctools.*;sun.misc;resolution:=optional;*</Import-Package>
               </instructions>
             </configuration>
           </execution>
@@ -195,4 +195,3 @@
     </plugins>
   </build>
 </project>
-

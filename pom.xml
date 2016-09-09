@@ -599,13 +599,6 @@
       <artifactId>logback-classic</artifactId>
       <scope>test</scope>
     </dependency>
-
-    <!-- Provided dependency for tests inside IDEs -->
-    <dependency>
-      <groupId>org.jctools</groupId>
-      <artifactId>jctools-core</artifactId>
-      <scope>provided</scope>
-    </dependency>
   </dependencies>
 
   <build>
