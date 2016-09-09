@@ -32,6 +32,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 
@@ -255,6 +256,28 @@ public class Http2ServerDowngraderTest {
         assertThat(request.method(), is(HttpMethod.GET));
         assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
         assertFalse(request instanceof FullHttpRequest);
+        assertTrue(HttpUtil.isTransferEncodingChunked(request));
+
+        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testDowngradeHeadersWithContentLength() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2ServerDowngrader());
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.path("/");
+        headers.method("GET");
+        headers.setInt("content-length", 0);
+
+        assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers)));
+
+        HttpRequest request = ch.readInbound();
+        assertThat(request.uri(), is("/"));
+        assertThat(request.method(), is(HttpMethod.GET));
+        assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
+        assertFalse(request instanceof FullHttpRequest);
+        assertFalse(HttpUtil.isTransferEncodingChunked(request));
 
         assertThat(ch.readInbound(), is(nullValue()));
         assertFalse(ch.finish());
@@ -276,6 +299,7 @@ public class Http2ServerDowngraderTest {
             assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
             assertThat(request.content().readableBytes(), is(0));
             assertTrue(request.trailingHeaders().isEmpty());
+            assertFalse(HttpUtil.isTransferEncodingChunked(request));
         } finally {
             request.release();
         }

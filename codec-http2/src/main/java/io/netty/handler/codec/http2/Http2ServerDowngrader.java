@@ -24,8 +24,12 @@ import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpObject;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
@@ -78,9 +82,12 @@ public class Http2ServerDowngrader extends MessageToMessageCodec<Http2StreamFram
                     out.add(full);
                 }
             } else {
-                out.add(HttpConversionUtil.toHttpRequest(id, headersFrame.headers(), validateHeaders));
+                HttpRequest req = HttpConversionUtil.toHttpRequest(id, headersFrame.headers(), validateHeaders);
+                if (!HttpUtil.isContentLengthSet(req)) {
+                    req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+                }
+                out.add(req);
             }
-
         } else if (frame instanceof Http2DataFrame) {
             Http2DataFrame dataFrame = (Http2DataFrame) frame;
             if (dataFrame.isEndStream()) {
