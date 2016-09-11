@@ -364,7 +364,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Returns the {@link String} representation of this channel.  The returned
-     * string contains the {@linkplain #hashCode()} ID}, {@linkplain #localAddress() local address},
+     * string contains the {@linkplain #hashCode() ID}, {@linkplain #localAddress() local address},
      * and {@linkplain #remoteAddress() remote address} of this channel for
      * easier identification.
      */
