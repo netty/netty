@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.channels.WritableByteChannel;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -53,6 +54,11 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     }
 
     @Test
+    public void testCustomFileRegion() throws Throwable {
+        run();
+    }
+
+    @Test
     public void testFileRegionNotAutoRead() throws Throwable {
         run();
     }
@@ -68,23 +74,28 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     }
 
     public void testFileRegion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testFileRegion0(sb, cb, false, true);
+        testFileRegion0(sb, cb, false, true, true);
+    }
+
+    public void testCustomFileRegion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testFileRegion0(sb, cb, false, true, false);
     }
 
     public void testFileRegionVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testFileRegion0(sb, cb, true, true);
+        testFileRegion0(sb, cb, true, true, true);
     }
 
     public void testFileRegionNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testFileRegion0(sb, cb, false, false);
+        testFileRegion0(sb, cb, false, false, true);
     }
 
     public void testFileRegionVoidPromiseNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testFileRegion0(sb, cb, true, false);
+        testFileRegion0(sb, cb, true, false, true);
     }
 
     private static void testFileRegion0(
-            ServerBootstrap sb, Bootstrap cb, boolean voidPromise, final boolean autoRead) throws Throwable {
+            ServerBootstrap sb, Bootstrap cb, boolean voidPromise, final boolean autoRead, boolean defaultFileRegion)
+            throws Throwable {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
@@ -140,6 +151,10 @@ public class SocketFileRegionTest extends AbstractSocketTest {
                 new FileInputStream(file).getChannel(), startOffset, data.length - bufferSize);
         FileRegion emptyRegion = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, 0);
 
+        if (!defaultFileRegion) {
+            region = new FileRegionWrapper(region);
+            emptyRegion = new FileRegionWrapper(emptyRegion);
+        }
         // Do write ByteBuf and then FileRegion to ensure that mixed writes work
         // Also, write an empty FileRegion to test if writing an empty FileRegion does not cause any issues.
         //
@@ -227,6 +242,79 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }
+        }
+    }
+
+    private static final class FileRegionWrapper implements FileRegion {
+        private final FileRegion region;
+
+        FileRegionWrapper(FileRegion region) {
+            this.region = region;
+        }
+
+        @Override
+        public int refCnt() {
+            return region.refCnt();
+        }
+
+        @Override
+        public long position() {
+            return region.position();
+        }
+
+        @Override
+        @Deprecated
+        public long transfered() {
+            return region.transfered();
+        }
+
+        @Override
+        public boolean release() {
+            return region.release();
+        }
+
+        @Override
+        public long transferred() {
+            return region.transferred();
+        }
+
+        @Override
+        public long count() {
+            return region.count();
+        }
+
+        @Override
+        public boolean release(int decrement) {
+            return region.release(decrement);
+        }
+
+        @Override
+        public long transferTo(WritableByteChannel target, long position) throws IOException {
+            return region.transferTo(target, position);
+        }
+
+        @Override
+        public FileRegion retain() {
+            region.retain();
+            return this;
+        }
+
+        @Override
+        public FileRegion retain(int increment) {
+            region.retain(increment);
+            return this;
+        }
+
+        @Override
+        public FileRegion touch() {
+            region.touch();
+            return this;
+        }
+
+        @Override
+        public FileRegion touch(Object hint) {
+            region.touch(hint);
+            return this;
         }
     }
 }
