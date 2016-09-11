@@ -216,7 +216,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
 
         @Override
         public void onGoAwayReceived(final int lastStreamId, long errorCode, ByteBuf debugData) {
-            ctx.fireChannelRead(new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, debugData));
+            ctx.fireChannelRead(new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, debugData.retain()));
         }
     }
 
