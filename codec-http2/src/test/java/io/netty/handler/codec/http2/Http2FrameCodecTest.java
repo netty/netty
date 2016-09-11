@@ -66,10 +66,10 @@ public class Http2FrameCodecTest {
     private ChannelHandlerContext http2HandlerCtx;
     private LastInboundHandler inboundHandler;
 
-    private Http2Headers request = new DefaultHttp2Headers()
+    private final Http2Headers request = new DefaultHttp2Headers()
             .method(HttpMethod.GET.asciiName()).scheme(HttpScheme.HTTPS.name())
             .authority(new AsciiString("example.org")).path(new AsciiString("/foo"));
-    private Http2Headers response = new DefaultHttp2Headers()
+    private final Http2Headers response = new DefaultHttp2Headers()
             .status(HttpResponseStatus.OK.codeAsText());
 
     @Before
@@ -242,8 +242,10 @@ public class Http2FrameCodecTest {
 
     @Test
     public void receiveGoaway() throws Exception {
-        frameListener.onGoAwayRead(http2HandlerCtx, 2, Http2Error.NO_ERROR.code(), bb("foo"));
-
+        ByteBuf debugData = bb("foo");
+        frameListener.onGoAwayRead(http2HandlerCtx, 2, Http2Error.NO_ERROR.code(), debugData);
+        // Release debugData to emulate ByteToMessageDecoder
+        debugData.release();
         Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, Http2Error.NO_ERROR.code(), bb("foo"));
         Http2GoAwayFrame actualFrame = inboundHandler.readInbound();
 
