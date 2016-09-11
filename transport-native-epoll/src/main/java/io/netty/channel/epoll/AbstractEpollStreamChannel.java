@@ -17,7 +17,9 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
@@ -29,6 +31,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.FileDescriptor;
@@ -44,6 +47,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
+import java.nio.channels.WritableByteChannel;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
@@ -82,6 +86,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     // Lazy init these if we need to splice(...)
     private FileDescriptor pipeIn;
     private FileDescriptor pipeOut;
+
+    private WritableByteChannel byteChannel;
 
     /**
      * @deprecated Use {@link #AbstractEpollStreamChannel(Channel, Socket)}.
@@ -372,7 +378,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      * @param region        the {@link DefaultFileRegion} from which the bytes should be written
      * @return amount       the amount of written bytes
      */
-    private boolean writeFileRegion(
+    private boolean writeDefaultFileRegion(
             ChannelOutboundBuffer in, DefaultFileRegion region, int writeSpinCount) throws Exception {
         final long regionCount = region.count();
         if (region.transferred() >= regionCount) {
@@ -394,6 +400,42 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
             flushedAmount += localFlushedAmount;
             if (region.transfered() >= regionCount) {
+                done = true;
+                break;
+            }
+        }
+
+        if (flushedAmount > 0) {
+            in.progress(flushedAmount);
+        }
+
+        if (done) {
+            in.remove();
+        }
+        return done;
+    }
+
+    private boolean writeFileRegion(
+            ChannelOutboundBuffer in, FileRegion region, final int writeSpinCount) throws Exception {
+        if (region.transferred() >= region.count()) {
+            in.remove();
+            return true;
+        }
+
+        boolean done = false;
+        long flushedAmount = 0;
+
+        if (byteChannel == null) {
+            byteChannel = new SocketWritableByteChannel();
+        }
+        for (int i = writeSpinCount - 1; i >= 0; i--) {
+            final long localFlushedAmount = region.transferTo(byteChannel, region.transferred());
+            if (localFlushedAmount == 0) {
+                break;
+            }
+
+            flushedAmount += localFlushedAmount;
+            if (region.transferred() >= region.count()) {
                 done = true;
                 break;
             }
@@ -448,15 +490,19 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         // The outbound buffer contains only one message or it contains a file region.
         Object msg = in.current();
         if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
-            if (!writeBytes(in, buf, writeSpinCount)) {
+            if (!writeBytes(in, (ByteBuf) msg, writeSpinCount)) {
                 // was not able to write everything so break here we will get notified later again once
                 // the network stack can handle more writes.
                 return false;
             }
         } else if (msg instanceof DefaultFileRegion) {
-            DefaultFileRegion region = (DefaultFileRegion) msg;
-            if (!writeFileRegion(in, region, writeSpinCount)) {
+            if (!writeDefaultFileRegion(in, (DefaultFileRegion) msg, writeSpinCount)) {
+                // was not able to write everything so break here we will get notified later again once
+                // the network stack can handle more writes.
+                return false;
+            }
+        } else if (msg instanceof FileRegion) {
+            if (!writeFileRegion(in, (FileRegion) msg, writeSpinCount)) {
                 // was not able to write everything so break here we will get notified later again once
                 // the network stack can handle more writes.
                 return false;
@@ -533,7 +579,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return buf;
         }
 
-        if (msg instanceof DefaultFileRegion || msg instanceof SpliceOutTask) {
+        if (msg instanceof FileRegion || msg instanceof SpliceOutTask) {
             return msg;
         }
 
@@ -1209,6 +1255,58 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 promise.setFailure(cause);
                 return true;
             }
+        }
+    }
+
+    private final class SocketWritableByteChannel implements WritableByteChannel {
+
+        @Override
+        public int write(ByteBuffer src) throws IOException {
+            final int written;
+            int position = src.position();
+            int limit = src.limit();
+            if (src.isDirect()) {
+                written = fd().write(src, position, src.limit());
+            } else {
+                final int readableBytes = limit - position;
+                ByteBuf buffer = null;
+                try {
+                    if (readableBytes == 0) {
+                        buffer = Unpooled.EMPTY_BUFFER;
+                    } else {
+                        final ByteBufAllocator alloc = alloc();
+                        if (alloc.isDirectBufferPooled()) {
+                            buffer = alloc.directBuffer(readableBytes);
+                        } else {
+                            buffer = ByteBufUtil.threadLocalDirectBuffer();
+                            if (buffer == null) {
+                                buffer = Unpooled.directBuffer(readableBytes);
+                            }
+                        }
+                    }
+                    buffer.writeBytes(src.duplicate());
+                    ByteBuffer nioBuffer = buffer.internalNioBuffer(buffer.readerIndex(), readableBytes);
+                    written = fd().write(nioBuffer, nioBuffer.position(), nioBuffer.limit());
+                } finally {
+                    if (buffer != null) {
+                        buffer.release();
+                    }
+                }
+            }
+            if (written > 0) {
+                src.position(position + written);
+            }
+            return written;
+        }
+
+        @Override
+        public boolean isOpen() {
+            return fd().isOpen();
+        }
+
+        @Override
+        public void close() throws IOException {
+            fd().close();
         }
     }
 }
