@@ -268,7 +268,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        if (readerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
+        if ((readerIdleTimeNanos > 0 || allIdleTimeNanos > 0) && reading) {
             lastReadTime = System.nanoTime();
             reading = false;
         }
