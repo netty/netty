@@ -151,8 +151,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public ChannelFuture writeHeaders(final ChannelHandlerContext ctx, final int streamId,
             final Http2Headers headers, final int streamDependency, final short weight,
-            final boolean exclusive, final int padding, final boolean endOfStream,
-            final ChannelPromise promise) {
+            final boolean exclusive, final int padding, final boolean endOfStream, ChannelPromise promise) {
         try {
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
@@ -176,18 +175,18 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // for this stream.
             Http2RemoteFlowController flowController = flowController();
             if (!endOfStream || !flowController.hasFlowControlled(stream)) {
-                ChannelFuture future = frameWriter.writeHeaders(ctx, streamId, headers, streamDependency, weight,
-                                                                exclusive, padding, endOfStream, promise);
                 if (endOfStream) {
                     final Http2Stream finalStream = stream;
-                    future.addListener(new ChannelFutureListener() {
+                    final ChannelFutureListener closeStreamLocalListener = new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
-                            lifecycleManager.closeStreamLocal(finalStream, promise);
+                            lifecycleManager.closeStreamLocal(finalStream, future);
                         }
-                    });
+                    };
+                    promise = promise.unvoid().addListener(closeStreamLocalListener);
                 }
-                return future;
+                return frameWriter.writeHeaders(ctx, streamId, headers, streamDependency, weight,
+                                                exclusive, padding, endOfStream, promise);
             } else {
                 // Pass headers to the flow-controller so it can maintain their sequence relative to DATA frames.
                 flowController.addFlowControlled(stream,

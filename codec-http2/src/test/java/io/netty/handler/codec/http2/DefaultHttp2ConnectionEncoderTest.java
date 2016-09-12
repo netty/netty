@@ -22,6 +22,7 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
+import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
@@ -50,11 +51,10 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import junit.framework.AssertionFailedError;
 import org.junit.Before;
@@ -85,6 +85,9 @@ public class DefaultHttp2ConnectionEncoderTest {
     private Channel channel;
 
     @Mock
+    private ChannelPipeline pipeline;
+
+    @Mock
     private Http2FrameListener listener;
 
     @Mock
@@ -111,6 +114,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         MockitoAnnotations.initMocks(this);
 
         when(channel.isActive()).thenReturn(true);
+        when(channel.pipeline()).thenReturn(pipeline);
         when(writer.configuration()).thenReturn(writerConfig);
         when(writerConfig.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(64);
@@ -237,9 +241,9 @@ public class DefaultHttp2ConnectionEncoderTest {
         createStream(STREAM_ID, false);
         final ByteBuf data = dummyData().retain();
 
-        ChannelPromise promise1 = newVoidPromise();
+        ChannelPromise promise1 = newVoidPromise(channel);
         encoder.writeData(ctx, STREAM_ID, data, 0, true, promise1);
-        ChannelPromise promise2 = newVoidPromise();
+        ChannelPromise promise2 = newVoidPromise(channel);
         encoder.writeData(ctx, STREAM_ID, data, 0, true, promise2);
 
         // Now merge the two payloads.
@@ -277,6 +281,29 @@ public class DefaultHttp2ConnectionEncoderTest {
         ByteBuf data = Unpooled.buffer(0);
         assertSplitPaddingOnEmptyBuffer(data);
         assertEquals(0, data.refCnt());
+    }
+
+    @Test
+    public void writeHeadersUsingVoidPromise() throws Exception {
+        final Throwable cause = new RuntimeException("fake exception");
+        when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(),
+                                 anyInt(), anyBoolean(), any(ChannelPromise.class)))
+                .then(new Answer<ChannelFuture>() {
+                    @Override
+                    public ChannelFuture answer(InvocationOnMock invocationOnMock) throws Throwable {
+                        ChannelPromise promise = invocationOnMock.getArgumentAt(8, ChannelPromise.class);
+                        assertFalse(promise.isVoid());
+                        return promise.setFailure(cause);
+                    }
+                });
+        createStream(STREAM_ID, false);
+        // END_STREAM flag, so that a listener is added to the future.
+        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, newVoidPromise(channel));
+
+        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(),
+                                    anyInt(), anyBoolean(), any(ChannelPromise.class));
+        // When using a void promise, the error should be propagated via the channel pipeline.
+        verify(pipeline).fireExceptionCaught(cause);
     }
 
     private void assertSplitPaddingOnEmptyBuffer(ByteBuf data) throws Exception {
@@ -581,27 +608,6 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     private ChannelPromise newPromise() {
         return new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
-    }
-
-    private ChannelPromise newVoidPromise() {
-        return new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE) {
-            @Override
-            public ChannelPromise addListener(
-                    GenericFutureListener<? extends Future<? super Void>> listener) {
-                throw new AssertionFailedError();
-            }
-
-            @Override
-            public ChannelPromise addListeners(
-                    GenericFutureListener<? extends Future<? super Void>>... listeners) {
-                throw new AssertionFailedError();
-            }
-
-            @Override
-            public boolean isVoid() {
-                return true;
-            }
-        };
     }
 
     private ChannelFuture newSucceededFuture() {
