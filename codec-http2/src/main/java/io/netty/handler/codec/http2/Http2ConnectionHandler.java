@@ -413,6 +413,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        promise = promise.unvoid();
         // Avoid NotYetConnectedException
         if (!ctx.channel().isActive()) {
             ctx.close(promise);
@@ -629,7 +630,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public ChannelFuture resetStream(final ChannelHandlerContext ctx, int streamId, long errorCode,
-                                     final ChannelPromise promise) {
+                                     ChannelPromise promise) {
+        promise = promise.unvoid();
         final Http2Stream stream = connection().stream(streamId);
         if (stream == null) {
             return resetUnknownStream(ctx, streamId, errorCode, promise);
@@ -670,12 +672,21 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                                 final ByteBuf debugData, ChannelPromise promise) {
         boolean release = false;
         try {
+            promise = promise.unvoid();
             final Http2Connection connection = connection();
-            if (connection.goAwaySent() && lastStreamId > connection.remote().lastStreamKnownByPeer()) {
-                throw connectionError(PROTOCOL_ERROR, "Last stream identifier must not increase between " +
-                                                      "sending multiple GOAWAY frames (was '%d', is '%d').",
-                                      connection.remote().lastStreamKnownByPeer(), lastStreamId);
+            if (connection().goAwaySent()) {
+                // Protect against re-entrancy. Could happen if writing the frame fails, and error handling
+                // treating this is a connection handler and doing a graceful shutdown...
+                if (lastStreamId == connection().remote().lastStreamKnownByPeer()) {
+                    return promise;
+                }
+                if (lastStreamId > connection.remote().lastStreamKnownByPeer()) {
+                    throw connectionError(PROTOCOL_ERROR, "Last stream identifier must not increase between " +
+                                                          "sending multiple GOAWAY frames (was '%d', is '%d').",
+                                          connection.remote().lastStreamKnownByPeer(), lastStreamId);
+                }
             }
+
             connection.goAwaySent(lastStreamId, errorCode, debugData);
 
             // Need to retain before we write the buffer because if we do it after the refCnt could already be 0 and
