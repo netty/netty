@@ -16,9 +16,17 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.AsciiString;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import junit.framework.AssertionFailedError;
 
 import java.util.List;
 import java.util.Random;
@@ -381,5 +389,53 @@ final class Http2TestUtil {
             listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
             messageLatch.countDown();
         }
+    }
+
+    static ChannelPromise newVoidPromise(final Channel channel) {
+        return new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE) {
+            @Override
+            public ChannelPromise addListener(
+                    GenericFutureListener<? extends Future<? super Void>> listener) {
+                throw new AssertionFailedError();
+            }
+
+            @Override
+            public ChannelPromise addListeners(
+                    GenericFutureListener<? extends Future<? super Void>>... listeners) {
+                throw new AssertionFailedError();
+            }
+
+            @Override
+            public boolean isVoid() {
+                return true;
+            }
+
+            @Override
+            public boolean tryFailure(Throwable cause) {
+                channel().pipeline().fireExceptionCaught(cause);
+                return true;
+            }
+
+            @Override
+            public ChannelPromise setFailure(Throwable cause) {
+                tryFailure(cause);
+                return this;
+            }
+
+            @Override
+            public ChannelPromise unvoid() {
+                ChannelPromise promise =
+                        new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+                promise.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (!future.isSuccess()) {
+                            channel().pipeline().fireExceptionCaught(future.cause());
+                        }
+                    }
+                });
+                return promise;
+            }
+        };
     }
 }
