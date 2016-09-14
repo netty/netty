@@ -110,19 +110,19 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     private final long writerIdleTimeNanos;
     private final long allIdleTimeNanos;
 
-    volatile ScheduledFuture<?> readerIdleTimeout;
-    volatile long lastReadTime;
+    private ScheduledFuture<?> readerIdleTimeout;
+    private long lastReadTime;
     private boolean firstReaderIdleEvent = true;
 
-    volatile ScheduledFuture<?> writerIdleTimeout;
-    volatile long lastWriteTime;
+    private ScheduledFuture<?> writerIdleTimeout;
+    private long lastWriteTime;
     private boolean firstWriterIdleEvent = true;
 
-    volatile ScheduledFuture<?> allIdleTimeout;
+    private ScheduledFuture<?> allIdleTimeout;
     private boolean firstAllIdleEvent = true;
 
-    private volatile int state; // 0 - none, 1 - initialized, 2 - destroyed
-    private volatile boolean reading;
+    private byte state; // 0 - none, 1 - initialized, 2 - destroyed
+    private boolean reading;
 
     /**
      * Creates a new instance firing {@link IdleStateEvent}s.
