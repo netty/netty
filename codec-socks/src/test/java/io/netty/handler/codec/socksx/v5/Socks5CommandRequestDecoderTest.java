@@ -67,7 +67,7 @@ public class Socks5CommandRequestDecoderTest {
     @Test
     public void testCmdRequestDecoderIPv6() {
         String[] hosts = {
-                NetUtil.bytesToIpAddress(IPAddressUtil.textToNumericFormatV6("::1"), 0, 16) };
+                NetUtil.bytesToIpAddress(IPAddressUtil.textToNumericFormatV6("::1")) };
         int[] ports = {1, 32769, 65535};
         for (Socks5CommandType cmdType: Arrays.asList(Socks5CommandType.BIND,
                                                       Socks5CommandType.CONNECT,
