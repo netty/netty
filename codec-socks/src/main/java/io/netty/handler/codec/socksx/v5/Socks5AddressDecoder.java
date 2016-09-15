@@ -52,7 +52,7 @@ public interface Socks5AddressDecoder {
                 } else {
                     byte[] tmp = new byte[IPv6_LEN];
                     in.readBytes(tmp);
-                    return NetUtil.bytesToIpAddress(tmp, 0, IPv6_LEN);
+                    return NetUtil.bytesToIpAddress(tmp);
                 }
             } else {
                 throw new DecoderException("unsupported address type: " + (addrType.byteValue() & 0xFF));

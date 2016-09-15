@@ -17,12 +17,17 @@ package io.netty.util;
 
 import org.junit.Test;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static io.netty.util.NetUtil.bytesToIpAddress;
+import static io.netty.util.NetUtil.createByteArrayFromIpAddressString;
+import static io.netty.util.NetUtil.getByName;
+import static io.netty.util.NetUtil.toAddressString;
 import static org.junit.Assert.*;
 
 public class NetUtilTest {
@@ -44,7 +49,8 @@ public class NetUtilTest {
             "10.255.255.254", "0afffffe",
             "172.18.5.4",     "ac120504",
             "0.0.0.0",        "00000000",
-            "127.0.0.1",      "7f000001");
+            "127.0.0.1",      "7f000001",
+            "1.2.3.4",        "01020304");
 
     private static final Map<String, String> invalidIpV4Hosts = new TestMap(
             "1.256.3.4",     null,
@@ -438,30 +444,40 @@ public class NetUtilTest {
     @Test
     public void testCreateByteArrayFromIpAddressString() {
         for (Entry<String, String> e : validIpV4Hosts.entrySet()) {
-            assertHexDumpEquals(e.getValue(), NetUtil.createByteArrayFromIpAddressString(e.getKey()));
+            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(e.getKey()));
         }
         for (Entry<String, String> e : invalidIpV4Hosts.entrySet()) {
-            assertHexDumpEquals(e.getValue(), NetUtil.createByteArrayFromIpAddressString(e.getKey()));
+            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(e.getKey()));
         }
         for (Entry<String, String> e : validIpV6Hosts.entrySet()) {
-            assertHexDumpEquals(e.getValue(), NetUtil.createByteArrayFromIpAddressString(e.getKey()));
+            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(e.getKey()));
         }
         for (Entry<String, String> e : invalidIpV6Hosts.entrySet()) {
-            assertHexDumpEquals(e.getValue(), NetUtil.createByteArrayFromIpAddressString(e.getKey()));
+            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(e.getKey()));
+        }
+    }
+
+    @Test
+    public void testBytesToIpAddress() throws UnknownHostException {
+        for (Entry<String, String> e : validIpV4Hosts.entrySet()) {
+            assertEquals(e.getKey(), bytesToIpAddress(createByteArrayFromIpAddressString(e.getKey())));
+        }
+        for (Entry<byte[], String> testEntry : ipv6ToAddressStrings.entrySet()) {
+            assertEquals(testEntry.getValue(), bytesToIpAddress(testEntry.getKey()));
         }
     }
 
     @Test
     public void testIp6AddressToString() throws UnknownHostException {
         for (Entry<byte[], String> testEntry : ipv6ToAddressStrings.entrySet()) {
-            assertEquals(testEntry.getValue(), NetUtil.toAddressString(InetAddress.getByAddress(testEntry.getKey())));
+            assertEquals(testEntry.getValue(), toAddressString(InetAddress.getByAddress(testEntry.getKey())));
         }
     }
 
     @Test
     public void testIp4AddressToString() throws UnknownHostException {
         for (Entry<String, String> e : validIpV4Hosts.entrySet()) {
-            assertEquals(e.getKey(), NetUtil.toAddressString(InetAddress.getByAddress(unhex(e.getValue()))));
+            assertEquals(e.getKey(), toAddressString(InetAddress.getByAddress(unhex(e.getValue()))));
         }
     }
 
@@ -470,18 +486,18 @@ public class NetUtilTest {
         for (Entry<String, String> testEntry : ipv4MappedToIPv6AddressStrings.entrySet()) {
             assertEquals(
                     testEntry.getValue(),
-                    NetUtil.toAddressString(NetUtil.getByName(testEntry.getKey(), true), true));
+                    toAddressString(getByName(testEntry.getKey(), true), true));
         }
     }
 
     @Test
     public void testinvalidIpv4MappedIp6GetByName() {
         for (String testEntry : invalidIpV4Hosts.keySet()) {
-            assertNull(NetUtil.getByName(testEntry, true));
+            assertNull(getByName(testEntry, true));
         }
 
         for (String testEntry : invalidIpV6Hosts.keySet()) {
-            assertNull(NetUtil.getByName(testEntry, true));
+            assertNull(getByName(testEntry, true));
         }
     }
 
