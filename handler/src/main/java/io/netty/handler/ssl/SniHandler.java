@@ -244,8 +244,12 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
                                             final String hostname = in.toString(offset, serverNameLength,
                                                                                 CharsetUtil.UTF_8);
 
-                                            select(ctx, IDN.toASCII(hostname,
-                                                                    IDN.ALLOW_UNASSIGNED).toLowerCase(Locale.US));
+                                            try {
+                                                select(ctx, IDN.toASCII(hostname,
+                                                                        IDN.ALLOW_UNASSIGNED).toLowerCase(Locale.US));
+                                            } catch (Throwable t) {
+                                                ctx.fireExceptionCaught(t);
+                                            }
                                             return;
                                         } else {
                                             // invalid enum value
