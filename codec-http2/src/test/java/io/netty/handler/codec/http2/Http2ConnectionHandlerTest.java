@@ -53,6 +53,7 @@ import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -425,25 +426,21 @@ public class Http2ConnectionHandlerTest {
     public void cannotSendGoAwayFrameWithIncreasingLastStreamIds() throws Exception {
         handler = newHandler();
         ByteBuf data = dummyData();
-        try {
-            long errorCode = Http2Error.INTERNAL_ERROR.code();
+        long errorCode = Http2Error.INTERNAL_ERROR.code();
 
-            handler.goAway(ctx, STREAM_ID, errorCode, data.retain(), promise);
-            verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
-            verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data), eq(promise));
-            // The frameWriter is only mocked, so it should not have interacted with the promise.
-            assertFalse(promise.isDone());
+        handler.goAway(ctx, STREAM_ID, errorCode, data.retain(), promise);
+        verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
+        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data), eq(promise));
+        // The frameWriter is only mocked, so it should not have interacted with the promise.
+        assertFalse(promise.isDone());
 
-            when(connection.goAwaySent()).thenReturn(true);
-            when(remote.lastStreamKnownByPeer()).thenReturn(STREAM_ID);
-            handler.goAway(ctx, STREAM_ID + 2, errorCode, data, promise);
-            assertTrue(promise.isDone());
-            assertFalse(promise.isSuccess());
-            assertEquals(1, data.refCnt());
-            verifyNoMoreInteractions(frameWriter);
-        } finally {
-            data.release();
-        }
+        when(connection.goAwaySent()).thenReturn(true);
+        when(remote.lastStreamKnownByPeer()).thenReturn(STREAM_ID);
+        handler.goAway(ctx, STREAM_ID + 2, errorCode, data, promise);
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertEquals(0, data.refCnt());
+        verifyNoMoreInteractions(frameWriter);
     }
 
     @Test
