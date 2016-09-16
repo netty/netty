@@ -670,7 +670,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     @Override
     public ChannelFuture goAway(final ChannelHandlerContext ctx, final int lastStreamId, final long errorCode,
                                 final ByteBuf debugData, ChannelPromise promise) {
-        boolean release = false;
         try {
             promise = promise.unvoid();
             final Http2Connection connection = connection();
@@ -692,7 +691,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             // Need to retain before we write the buffer because if we do it after the refCnt could already be 0 and
             // result in an IllegalRefCountException.
             debugData.retain();
-            release = true;
             ChannelFuture future = frameWriter().writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
 
             if (future.isDone()) {
@@ -708,9 +706,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
             return future;
         } catch (Throwable cause) { // Make sure to catch Throwable because we are doing a retain() in this method.
-            if (release) {
-                debugData.release();
-            }
+            debugData.release();
             return promise.setFailure(cause);
         }
     }
