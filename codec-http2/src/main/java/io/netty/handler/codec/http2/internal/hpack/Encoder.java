@@ -32,13 +32,23 @@
 package io.netty.handler.codec.http2.internal.hpack;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
 import java.util.Arrays;
+import java.util.Map;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.INCREMENTAL;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NEVER;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NONE;
@@ -54,24 +64,32 @@ public final class Encoder {
             AsciiString.EMPTY_STRING, Integer.MAX_VALUE, null);
     private final HuffmanEncoder huffmanEncoder = new HuffmanEncoder();
     private final byte hashMask;
+    private final boolean ignoreMaxHeaderListSize;
     private long size;
-    private long capacity;
+    private long maxHeaderTableSize;
+    private long maxHeaderListSize;
 
     /**
      * Creates a new encoder.
      */
-    public Encoder(long maxHeaderTableSize) {
-        this(maxHeaderTableSize, 16);
+    public Encoder() {
+        this(false);
     }
 
     /**
      * Creates a new encoder.
      */
-    public Encoder(long maxHeaderTableSize, int arraySizeHint) {
-        if (maxHeaderTableSize < MIN_HEADER_TABLE_SIZE || maxHeaderTableSize > MAX_HEADER_TABLE_SIZE) {
-            throw new IllegalArgumentException("maxHeaderTableSize is invalid: " + maxHeaderTableSize);
-        }
-        capacity = maxHeaderTableSize;
+    public Encoder(boolean ignoreMaxHeaderListSize) {
+        this(ignoreMaxHeaderListSize, 16);
+    }
+
+    /**
+     * Creates a new encoder.
+     */
+    public Encoder(boolean ignoreMaxHeaderListSize, int arraySizeHint) {
+        this.ignoreMaxHeaderListSize = ignoreMaxHeaderListSize;
+        maxHeaderTableSize = DEFAULT_HEADER_TABLE_SIZE;
+        maxHeaderListSize = DEFAULT_HEADER_LIST_SIZE;
         // Enforce a bound of [2, 128] because hashMask is a byte. The max possible value of hashMask is one less
         // than the length of this array, and we want the mask to be > 0.
         headerFields = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
@@ -84,8 +102,50 @@ public final class Encoder {
      *
      * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
-    public void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive) {
+    public void encodeHeaders(ByteBuf out, Http2Headers headers, SensitivityDetector sensitivityDetector)
+            throws Http2Exception {
+        if (ignoreMaxHeaderListSize) {
+            encodeHeadersIgnoreMaxHeaderListSize(out, headers, sensitivityDetector);
+        } else {
+            encodeHeadersEnforceMaxHeaderListSize(out, headers, sensitivityDetector);
+        }
+    }
 
+    private void encodeHeadersEnforceMaxHeaderListSize(ByteBuf out, Http2Headers headers,
+                                                       SensitivityDetector sensitivityDetector)
+            throws Http2Exception {
+        long headerSize = 0;
+        for (Map.Entry<CharSequence, CharSequence> header : headers) {
+            CharSequence name = header.getKey();
+            CharSequence value = header.getValue();
+            long currHeaderSize = HeaderField.sizeOf(name, value);
+            // OK to increment now and check for bounds after because this value is limited to unsigned int and will not
+            // overflow.
+            headerSize += currHeaderSize;
+            if (headerSize > maxHeaderListSize) {
+                throw connectionError(PROTOCOL_ERROR, "Header list size octets (%d) exceeds maxHeaderListSize (%d)",
+                        headerSize, maxHeaderListSize);
+            }
+            encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value), currHeaderSize);
+        }
+    }
+
+    private void encodeHeadersIgnoreMaxHeaderListSize(ByteBuf out, Http2Headers headers,
+                                                      SensitivityDetector sensitivityDetector) throws Http2Exception {
+        for (Map.Entry<CharSequence, CharSequence> header : headers) {
+            CharSequence name = header.getKey();
+            CharSequence value = header.getValue();
+            encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value),
+                         HeaderField.sizeOf(name, value));
+        }
+    }
+
+    /**
+     * Encode the header field into the header block.
+     *
+     * <strong>The given {@link CharSequence}s must be immutable!</strong>
+     */
+    private void encodeHeader(ByteBuf out, CharSequence name, CharSequence value, boolean sensitive, long headerSize) {
         // If the header value is sensitive then it must never be indexed
         if (sensitive) {
             int nameIndex = getNameIndex(name);
@@ -94,7 +154,7 @@ public final class Encoder {
         }
 
         // If the peer will only use the static table
-        if (capacity == 0) {
+        if (maxHeaderTableSize == 0) {
             int staticTableIndex = StaticTable.getIndex(name, value);
             if (staticTableIndex == -1) {
                 int nameIndex = StaticTable.getIndex(name);
@@ -105,10 +165,8 @@ public final class Encoder {
             return;
         }
 
-        int headerSize = HeaderField.sizeOf(name, value);
-
         // If the headerSize is greater than the max table size then it must be encoded literally
-        if (headerSize > capacity) {
+        if (headerSize > maxHeaderTableSize) {
             int nameIndex = getNameIndex(name);
             encodeLiteral(out, name, value, NONE, nameIndex);
             return;
@@ -127,7 +185,7 @@ public final class Encoder {
             } else {
                 ensureCapacity(headerSize);
                 encodeLiteral(out, name, value, INCREMENTAL, getNameIndex(name));
-                add(name, value);
+                add(name, value, headerSize);
             }
         }
     }
@@ -135,14 +193,15 @@ public final class Encoder {
     /**
      * Set the maximum table size.
      */
-    public void setMaxHeaderTableSize(ByteBuf out, long maxHeaderTableSize) {
+    public void setMaxHeaderTableSize(ByteBuf out, long maxHeaderTableSize) throws Http2Exception {
         if (maxHeaderTableSize < MIN_HEADER_TABLE_SIZE || maxHeaderTableSize > MAX_HEADER_TABLE_SIZE) {
-            throw new IllegalArgumentException("maxHeaderTableSize is invalid: " + maxHeaderTableSize);
+            throw connectionError(PROTOCOL_ERROR, "Header Table Size must be >= %d and <= %d but was %d",
+                    MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, maxHeaderTableSize);
         }
-        if (capacity == maxHeaderTableSize) {
+        if (this.maxHeaderTableSize == maxHeaderTableSize) {
             return;
         }
-        capacity = maxHeaderTableSize;
+        this.maxHeaderTableSize = maxHeaderTableSize;
         ensureCapacity(0);
         // Casting to integer is safe as we verified the maxHeaderTableSize is a valid unsigned int.
         encodeInteger(out, 0x20, 5, (int) maxHeaderTableSize);
@@ -152,7 +211,19 @@ public final class Encoder {
      * Return the maximum table size.
      */
     public long getMaxHeaderTableSize() {
-        return capacity;
+        return maxHeaderTableSize;
+    }
+
+    public void setMaxHeaderListSize(long maxHeaderListSize) throws Http2Exception {
+        if (maxHeaderListSize < MIN_HEADER_LIST_SIZE || maxHeaderListSize > MAX_HEADER_LIST_SIZE) {
+            throw connectionError(PROTOCOL_ERROR, "Header List Size must be >= %d and <= %d but was %d",
+                    MIN_HEADER_LIST_SIZE, MAX_HEADER_LIST_SIZE, maxHeaderListSize);
+        }
+        this.maxHeaderListSize = maxHeaderListSize;
+    }
+
+    public long getMaxHeaderListSize() {
+        return maxHeaderListSize;
     }
 
     /**
@@ -235,8 +306,8 @@ public final class Encoder {
      * Ensure that the dynamic table has enough room to hold 'headerSize' more bytes. Removes the
      * oldest entry from the dynamic table until sufficient space is available.
      */
-    private void ensureCapacity(int headerSize) {
-        while (size + headerSize > capacity) {
+    private void ensureCapacity(long headerSize) {
+        while (maxHeaderTableSize - size < headerSize) {
             int index = length();
             if (index == 0) {
                 break;
@@ -316,20 +387,18 @@ public final class Encoder {
 
     /**
      * Add the header field to the dynamic table. Entries are evicted from the dynamic table until
-     * the size of the table and the new header field is less than the table's capacity. If the size
-     * of the new entry is larger than the table's capacity, the dynamic table will be cleared.
+     * the size of the table and the new header field is less than the table's maxHeaderTableSize. If the size
+     * of the new entry is larger than the table's maxHeaderTableSize, the dynamic table will be cleared.
      */
-    private void add(CharSequence name, CharSequence value) {
-        int headerSize = HeaderField.sizeOf(name, value);
-
-        // Clear the table if the header field size is larger than the capacity.
-        if (headerSize > capacity) {
+    private void add(CharSequence name, CharSequence value, long headerSize) {
+        // Clear the table if the header field size is larger than the maxHeaderTableSize.
+        if (headerSize > maxHeaderTableSize) {
             clear();
             return;
         }
 
-        // Evict oldest entries until we have enough capacity.
-        while (size + headerSize > capacity) {
+        // Evict oldest entries until we have enough maxHeaderTableSize.
+        while (maxHeaderTableSize - size < headerSize) {
             remove();
         }
 

@@ -41,7 +41,6 @@ public final class HelloWorldHttp2HandlerBuilder
     @Override
     protected HelloWorldHttp2Handler build(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                            Http2Settings initialSettings) {
-
         HelloWorldHttp2Handler handler = new HelloWorldHttp2Handler(decoder, encoder, initialSettings);
         frameListener(handler);
         return handler;

@@ -15,6 +15,10 @@
  */
 package io.netty.microbench.http2.internal.hpack;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.AsciiString;
 import io.netty.util.internal.ConstantTimeUtils;
@@ -28,6 +32,9 @@ import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.List;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 
 @Threads(1)
 @Warmup(iterations = 5)
@@ -90,5 +97,19 @@ public class HpackUtilBenchmark extends AbstractMicrobenchmark {
         }
 
         return ConstantTimeUtils.equalsConstantTime(s1, s2) != 0;
+    }
+
+    static Encoder newTestEncoder() {
+        Encoder encoder = new Encoder();
+        ByteBuf buf = Unpooled.buffer();
+        try {
+            encoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
+            encoder.setMaxHeaderListSize(MAX_HEADER_LIST_SIZE);
+        } catch (Http2Exception e) {
+            throw new Error("max size not allowed?", e);
+        } finally  {
+            buf.release();
+        }
+        return encoder;
     }
 }

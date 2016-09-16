@@ -29,9 +29,9 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
+import static io.netty.handler.codec.http2.Http2CodecUtil.headerListSizeExceeded;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.handler.codec.http2.Http2CodecUtil.readUnsignedInt;
-import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.FRAME_SIZE_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -673,8 +673,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          */
         private void headerSizeExceeded() throws Http2Exception {
             close();
-            throw connectionError(ENHANCE_YOUR_CALM, "Header size exceeded max allowed size (%d)",
-                    headersDecoder.configuration().maxHeaderSize());
+            headerListSizeExceeded(streamId, headersDecoder.configuration().headerTable().maxHeaderListSize());
         }
 
         /**
@@ -688,7 +687,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          */
         final void addFragment(ByteBuf fragment, ByteBufAllocator alloc, boolean endOfHeaders) throws Http2Exception {
             if (headerBlock == null) {
-                if (fragment.readableBytes() > headersDecoder.configuration().maxHeaderSize()) {
+                if (fragment.readableBytes() > headersDecoder.configuration().headerTable().maxHeaderListSize()) {
                     headerSizeExceeded();
                 }
                 if (endOfHeaders) {
@@ -701,7 +700,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 }
                 return;
             }
-            if (headersDecoder.configuration().maxHeaderSize() - fragment.readableBytes() <
+            if (headersDecoder.configuration().headerTable().maxHeaderListSize() - fragment.readableBytes() <
                     headerBlock.readableBytes()) {
                 headerSizeExceeded();
             }
@@ -724,7 +723,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          */
         Http2Headers headers() throws Http2Exception {
             try {
-                return headersDecoder.decodeHeaders(headerBlock);
+                return headersDecoder.decodeHeaders(streamId, headerBlock);
             } finally {
                 close();
             }

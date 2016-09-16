@@ -26,6 +26,7 @@ import java.util.List;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
@@ -170,22 +171,30 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             Http2LocalFlowController flowController = flowController();
             int bytesToReturn = data.readableBytes() + padding;
 
-            boolean shouldIgnore = true;
+            final boolean shouldIgnore;
             try {
                 shouldIgnore = shouldIgnoreHeadersOrDataFrame(ctx, streamId, stream, "DATA");
-            } finally {
-                if (shouldIgnore) {
-                    // Ignoring this frame. We still need to count the frame towards the connection flow control
-                    // window, but we immediately mark all bytes as consumed.
-                    flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
-                    flowController.consumeBytes(stream, bytesToReturn);
+            } catch (Http2Exception e) {
+                // Ignoring this frame. We still need to count the frame towards the connection flow control
+                // window, but we immediately mark all bytes as consumed.
+                flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
+                flowController.consumeBytes(stream, bytesToReturn);
+                throw e;
+            } catch (Throwable t) {
+                throw connectionError(INTERNAL_ERROR, t, "Unhandled error on data stream id %d", streamId);
+            }
 
-                    // Verify that the stream may have existed after we apply flow control.
-                    verifyStreamMayHaveExisted(streamId);
+            if (shouldIgnore) {
+                // Ignoring this frame. We still need to count the frame towards the connection flow control
+                // window, but we immediately mark all bytes as consumed.
+                flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
+                flowController.consumeBytes(stream, bytesToReturn);
 
-                    // All bytes have been consumed.
-                    return bytesToReturn;
-                }
+                // Verify that the stream may have existed after we apply flow control.
+                verifyStreamMayHaveExisted(streamId);
+
+                // All bytes have been consumed.
+                return bytesToReturn;
             }
 
             Http2Exception error = null;
@@ -395,10 +404,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Long headerTableSize = settings.headerTableSize();
             if (headerTableSize != null) {
-                headerTable.maxHeaderTableSize((int) min(headerTableSize, MAX_VALUE));
+                headerTable.maxHeaderTableSize(headerTableSize);
             }
 
-            Integer maxHeaderListSize = settings.maxHeaderListSize();
+            Long maxHeaderListSize = settings.maxHeaderListSize();
             if (maxHeaderListSize != null) {
                 headerTable.maxHeaderListSize(maxHeaderListSize);
             }
@@ -415,13 +424,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         /**
-         * Calculate the {@code maxStreams} paramter for the {@link Endpoint#maxStreams(int, int)} method based upon
-         * SETTINGS_MAX_CONCURRENT_STREAMS.
-         * @param maxConcurrentStreams SETTINGS_MAX_CONCURRENT_STREAMS
-         * @return the {@code maxStreams} paramter for the {@link Endpoint#maxStreams(int, int)} method.
+         * Calculate the {@code maxStreams} parameter for the {@link Endpoint#maxStreams(int, int)} method based upon
+         * {@code SETTINGS_MAX_CONCURRENT_STREAMS}.
+         * @param maxConcurrentStreams {@code SETTINGS_MAX_CONCURRENT_STREAMS}.
+         * @return the {@code maxStreams} parameter for the {@link Endpoint#maxStreams(int, int)} method.
          */
-        @UnstableApi
-        protected int calculateMaxStreams(int maxConcurrentStreams) {
+        private int calculateMaxStreams(int maxConcurrentStreams) {
             int maxStreams = maxConcurrentStreams + SMALLEST_MAX_CONCURRENT_STREAMS;
             return maxStreams < 0 ? MAX_VALUE : maxStreams;
         }

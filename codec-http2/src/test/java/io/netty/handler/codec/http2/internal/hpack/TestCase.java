@@ -41,7 +41,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.AsciiString;
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
+import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.Http2HeadersEncoder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,6 +55,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2TestUtil.newTestEncoder;
 
 final class TestCase {
 
@@ -158,7 +164,11 @@ final class TestCase {
             maxHeaderTableSize = Integer.MAX_VALUE;
         }
 
-        return new Encoder(maxHeaderTableSize);
+        try {
+            return newTestEncoder(true, MAX_HEADER_LIST_SIZE, maxHeaderTableSize);
+        } catch (Http2Exception e) {
+            throw new Error("invalid initial values!", e);
+        }
     }
 
     private Decoder createDecoder() {
@@ -167,20 +177,25 @@ final class TestCase {
             maxHeaderTableSize = Integer.MAX_VALUE;
         }
 
-        return new Decoder(8192, maxHeaderTableSize, 32);
+        return new Decoder(32, maxHeaderTableSize);
     }
 
     private static byte[] encode(Encoder encoder, List<HeaderField> headers, int maxHeaderTableSize,
-                                 boolean sensitive) {
+                                 final boolean sensitive) throws Http2Exception {
+        Http2Headers http2Headers = toHttp2Headers(headers);
+        Http2HeadersEncoder.SensitivityDetector sensitivityDetector = new Http2HeadersEncoder.SensitivityDetector() {
+            @Override
+            public boolean isSensitive(CharSequence name, CharSequence value) {
+                return sensitive;
+            }
+        };
         ByteBuf buffer = Unpooled.buffer();
         try {
             if (maxHeaderTableSize != -1) {
                 encoder.setMaxHeaderTableSize(buffer, maxHeaderTableSize);
             }
 
-            for (HeaderField e : headers) {
-                encoder.encodeHeader(buffer, AsciiString.of(e.name), AsciiString.of(e.value), sensitive);
-            }
+            encoder.encodeHeaders(buffer, http2Headers, sensitivityDetector);
             byte[] bytes = new byte[buffer.readableBytes()];
             buffer.readBytes(bytes);
             return bytes;
@@ -189,12 +204,20 @@ final class TestCase {
         }
     }
 
+    private static Http2Headers toHttp2Headers(List<HeaderField> inHeaders) {
+        Http2Headers headers = new DefaultHttp2Headers(false);
+        for (HeaderField e : inHeaders) {
+            headers.add(e.name, e.value);
+        }
+        return headers;
+    }
+
     private static List<HeaderField> decode(Decoder decoder, byte[] expected) throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(expected);
         try {
             List<HeaderField> headers = new ArrayList<HeaderField>();
             TestHeaderListener listener = new TestHeaderListener(headers);
-            decoder.decode(in, listener);
+            decoder.decode(0, in, listener);
             return headers;
         } finally {
             in.release();

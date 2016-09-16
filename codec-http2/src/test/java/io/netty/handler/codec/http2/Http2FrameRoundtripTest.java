@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,7 +40,11 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.handler.codec.http2.Http2CodecUtil.*;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_PADDING;
+import static io.netty.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
+import static io.netty.handler.codec.http2.Http2TestUtil.newTestDecoder;
+import static io.netty.handler.codec.http2.Http2TestUtil.newTestEncoder;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.lang.Math.min;
@@ -108,12 +113,12 @@ public class Http2FrameRoundtripTest {
         doAnswer(new Answer<ChannelPromise>() {
             @Override
             public ChannelPromise answer(InvocationOnMock invocation) throws Throwable {
-                return new DefaultChannelPromise(channel);
+                return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE);
             }
         }).when(ctx).newPromise();
 
-        writer = new DefaultHttp2FrameWriter();
-        reader = new DefaultHttp2FrameReader(false);
+        writer = new DefaultHttp2FrameWriter(new DefaultHttp2HeadersEncoder(NEVER_SENSITIVE, newTestEncoder()));
+        reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, newTestDecoder()));
     }
 
     @After
@@ -277,7 +282,8 @@ public class Http2FrameRoundtripTest {
 
     @Test
     public void headersThatAreTooBigShouldFail() throws Exception {
-        final Http2Headers headers = headersOfSize(DEFAULT_MAX_HEADER_SIZE + 1);
+        reader = new DefaultHttp2FrameReader(false);
+        final Http2Headers headers = headersOfSize(DEFAULT_HEADER_LIST_SIZE + 1);
         writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, MAX_PADDING, true, ctx.newPromise());
         try {
             readFrames();
