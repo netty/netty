@@ -41,7 +41,7 @@ class HeaderField {
     // overhead associated with the structure.
     static final int HEADER_ENTRY_OVERHEAD = 32;
 
-    static int sizeOf(CharSequence name, CharSequence value) {
+    static long sizeOf(CharSequence name, CharSequence value) {
         return name.length() + value.length() + HEADER_ENTRY_OVERHEAD;
     }
 
