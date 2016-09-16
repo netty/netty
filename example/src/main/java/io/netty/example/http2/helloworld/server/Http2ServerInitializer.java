@@ -32,6 +32,7 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.AsciiString;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * Sets up the Netty pipeline for the example server. Depending on the endpoint config, sets up the
@@ -99,7 +100,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
                 ChannelHandlerContext thisCtx = pipeline.context(this);
                 pipeline.addAfter(thisCtx.name(), null, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
                 pipeline.replace(this, null, new HttpObjectAggregator(maxHttpContentLength));
-                ctx.fireChannelRead(msg);
+                ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
             }
         });
 
