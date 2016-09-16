@@ -98,7 +98,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             outboundHeaderTable.maxHeaderTableSize((int) min(headerTableSize, MAX_VALUE));
         }
 
-        Integer maxHeaderListSize = settings.maxHeaderListSize();
+        Long maxHeaderListSize = settings.maxHeaderListSize();
         if (maxHeaderListSize != null) {
             outboundHeaderTable.maxHeaderListSize(maxHeaderListSize);
         }

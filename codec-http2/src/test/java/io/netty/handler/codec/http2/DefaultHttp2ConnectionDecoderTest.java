@@ -238,15 +238,19 @@ public class DefaultHttp2ConnectionDecoderTest {
         int padding = 10;
         int processedBytes = data.readableBytes() + padding;
         try {
-            decode().onDataRead(ctx, STREAM_ID, data, padding, true);
-            verify(localFlow)
-                    .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
-            verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
-            verify(localFlow).frameWriter(any(Http2FrameWriter.class));
-            verifyNoMoreInteractions(localFlow);
+            try {
+                decode().onDataRead(ctx, STREAM_ID, data, padding, true);
+                fail();
+            } catch (Http2Exception e) {
+                verify(localFlow)
+                        .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
+                verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
+                verify(localFlow).frameWriter(any(Http2FrameWriter.class));
+                verifyNoMoreInteractions(localFlow);
 
-            // Verify that the event was absorbed and not propagated to the observer.
-            verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+                // Verify that the event was absorbed and not propagated to the observer.
+                verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
+            }
         } finally {
             data.release();
         }

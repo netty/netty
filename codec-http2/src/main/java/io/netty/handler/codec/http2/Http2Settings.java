@@ -15,6 +15,9 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.util.collection.CharObjectHashMap;
+import io.netty.util.internal.UnstableApi;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
@@ -32,9 +35,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZ
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
-import io.netty.util.collection.CharObjectHashMap;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Settings for one endpoint in an HTTP/2 connection. Each of the values are optional as defined in
@@ -165,15 +165,8 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
     /**
      * Gets the {@code SETTINGS_MAX_HEADER_LIST_SIZE} value. If unavailable, returns {@code null}.
      */
-    public Integer maxHeaderListSize() {
-        Integer value = getIntValue(SETTINGS_MAX_HEADER_LIST_SIZE);
-
-        // Over 2^31 - 1 (minus in integer) size is set to the maximun value
-        if (value != null && value < 0) {
-            value = Integer.MAX_VALUE;
-        }
-
-        return value;
+    public Long maxHeaderListSize() {
+        return get(SETTINGS_MAX_HEADER_LIST_SIZE);
     }
 
     /**
@@ -181,12 +174,7 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
      *
      * @throws IllegalArgumentException if verification of the setting fails.
      */
-    public Http2Settings maxHeaderListSize(int value) {
-        // Over 2^31 - 1 (minus in integer) size is set to the maximun value
-        if (value < 0) {
-            value = Integer.MAX_VALUE;
-        }
-
+    public Http2Settings maxHeaderListSize(long value) {
         put(SETTINGS_MAX_HEADER_LIST_SIZE, Long.valueOf(value));
         return this;
     }

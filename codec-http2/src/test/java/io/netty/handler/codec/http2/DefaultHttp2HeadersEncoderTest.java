@@ -21,6 +21,7 @@ import io.netty.util.AsciiString;
 import org.junit.Before;
 import org.junit.Test;
 
+import static io.netty.handler.codec.http2.Http2TestUtil.newTestEncoder;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -32,7 +33,7 @@ public class DefaultHttp2HeadersEncoderTest {
 
     @Before
     public void setup() {
-        encoder = new DefaultHttp2HeadersEncoder();
+        encoder = new DefaultHttp2HeadersEncoder(Http2HeadersEncoder.NEVER_SENSITIVE, newTestEncoder());
     }
 
     @Test
