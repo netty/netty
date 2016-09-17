@@ -227,4 +227,10 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     public int pageSize() {
         return pageSize;
     }
+
+    void destroy() {
+        if (chunk != null) {
+            chunk.destroy();
+        }
+    }
 }
