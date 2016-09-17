@@ -31,7 +31,6 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     private final int minUsage;
     private final int maxUsage;
     private final int maxCapacity;
-
     private PoolChunk<T> head;
 
     // This is only update once when create the linked like list of PoolChunkList in PoolArena constructor.
@@ -222,5 +221,14 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         }
 
         return buf.toString();
+    }
+
+    void destroy(PoolArena<T> arena) {
+        PoolChunk<T> chunk = head;
+        while (chunk != null) {
+            arena.destroyChunk(chunk);
+            chunk = chunk.next;
+        }
+        head = null;
     }
 }
