@@ -617,6 +617,29 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
     }
 
+    @Override
+    protected final void finalize() throws Throwable {
+        try {
+            super.finalize();
+        } finally {
+            destroyPoolSubPages(smallSubpagePools);
+            destroyPoolSubPages(tinySubpagePools);
+            destroyPoolChunkLists(qInit, q000, q025, q050, q075, q100);
+        }
+    }
+
+    private static void destroyPoolSubPages(PoolSubpage<?>[] pages) {
+        for (PoolSubpage<?> page : pages) {
+            page.destroy();
+        }
+    }
+
+    private void destroyPoolChunkLists(PoolChunkList<T>... chunkLists) {
+        for (PoolChunkList<T> chunkList: chunkLists) {
+            chunkList.destroy(this);
+        }
+    }
+
     static final class HeapArena extends PoolArena<byte[]> {
 
         HeapArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
