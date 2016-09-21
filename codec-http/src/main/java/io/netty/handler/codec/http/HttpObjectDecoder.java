@@ -511,6 +511,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
 
+        resetRequested = false;
         currentState = State.SKIP_CONTROL_CHARS;
     }
 
