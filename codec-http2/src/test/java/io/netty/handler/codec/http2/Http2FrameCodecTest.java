@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.handler.codec.http2.Http2Stream.State;
+import io.netty.handler.logging.LogLevel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
@@ -75,7 +76,7 @@ public class Http2FrameCodecTest {
     @Before
     public void setUp() throws Exception {
         frameWriter = spy(new VerifiableHttp2FrameWriter());
-        framingCodec = new Http2FrameCodec(true, frameWriter);
+        framingCodec = new Http2FrameCodec(true, frameWriter, new Http2FrameLogger(LogLevel.TRACE));
         frameListener = ((DefaultHttp2ConnectionDecoder) framingCodec.connectionHandler().decoder())
                 .internalFrameListener();
         inboundHandler = new LastInboundHandler();
