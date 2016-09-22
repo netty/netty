@@ -274,11 +274,6 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         @Override
-        public long transferred() {
-            return region.transferred();
-        }
-
-        @Override
         public long count() {
             return region.count();
         }
@@ -302,18 +297,6 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         @Override
         public FileRegion retain(int increment) {
             region.retain(increment);
-            return this;
-        }
-
-        @Override
-        public FileRegion touch() {
-            region.touch();
-            return this;
-        }
-
-        @Override
-        public FileRegion touch(Object hint) {
-            region.touch(hint);
             return this;
         }
     }

@@ -411,7 +411,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     private boolean writeFileRegion(
             ChannelOutboundBuffer in, FileRegion region, final int writeSpinCount) throws Exception {
-        if (region.transferred() >= region.count()) {
+        if (region.transfered() >= region.count()) {
             in.remove();
             return true;
         }
@@ -423,13 +423,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             byteChannel = new SocketWritableByteChannel();
         }
         for (int i = writeSpinCount - 1; i >= 0; i--) {
-            final long localFlushedAmount = region.transferTo(byteChannel, region.transferred());
+            final long localFlushedAmount = region.transferTo(byteChannel, region.transfered());
             if (localFlushedAmount == 0) {
                 break;
             }
 
             flushedAmount += localFlushedAmount;
-            if (region.transferred() >= region.count()) {
+            if (region.transfered() >= region.count()) {
                 done = true;
                 break;
             }
