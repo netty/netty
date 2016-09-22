@@ -16,6 +16,7 @@
 package io.netty.util;
 
 import java.util.Set;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -30,8 +31,9 @@ public interface Timer {
      *
      * @return a handle which is associated with the specified task
      *
-     * @throws IllegalStateException if this timer has been
-     *                               {@linkplain #stop() stopped} already
+     * @throws IllegalStateException       if this timer has been {@linkplain #stop() stopped} already
+     * @throws RejectedExecutionException if the pending timeouts are too many and creating new timeout
+     *                                    can cause instability in the system.
      */
     Timeout newTimeout(TimerTask task, long delay, TimeUnit unit);
 

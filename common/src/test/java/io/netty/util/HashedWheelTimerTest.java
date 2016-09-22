@@ -15,12 +15,14 @@
  */
 package io.netty.util;
 
+import com.google.common.base.Supplier;
 import org.junit.Test;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -66,11 +68,7 @@ public class HashedWheelTimerTest {
     public void testStopTimer() throws InterruptedException {
         final Timer timerProcessed = new HashedWheelTimer();
         for (int i = 0; i < 3; i ++) {
-            timerProcessed.newTimeout(new TimerTask() {
-                @Override
-                public void run(Timeout timeout) throws Exception {
-                }
-            }, 1, TimeUnit.MILLISECONDS);
+            timerProcessed.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS);
         }
         Thread.sleep(1000L); // sleep for a second
         assertEquals("Number of unprocessed timeouts should be 0", 0, timerProcessed.stop().size());
@@ -87,7 +85,7 @@ public class HashedWheelTimerTest {
         assertFalse("Number of unprocessed timeouts should be greater than 0", timerUnprocessed.stop().isEmpty());
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testTimerShouldThrowExceptionAfterShutdownForNewTimeouts() throws InterruptedException {
         final Timer timer = new HashedWheelTimer();
         for (int i = 0; i < 3; i ++) {
@@ -99,20 +97,29 @@ public class HashedWheelTimerTest {
         }
 
         timer.stop();
-        Thread.sleep(1000L); // sleep for a second
 
-        timer.newTimeout(new TimerTask() {
+        waitUntilTrue(1000, new Supplier<Boolean>() {
             @Override
-            public void run(Timeout timeout) throws Exception {
-                fail("This should not run");
+            public Boolean get() {
+                try {
+                    timer.newTimeout(new TimerTask() {
+                        @Override
+                        public void run(Timeout timeout) throws Exception {
+                            fail("This should not run");
+                        }
+                    }, 1, TimeUnit.SECONDS);
+                    return false;
+                } catch (IllegalStateException e) {
+                    return true;
+                }
             }
-        }, 1, TimeUnit.SECONDS);
+        });
     }
 
     @Test
     public void testTimerOverflowWheelLength() throws InterruptedException {
         final HashedWheelTimer timer = new HashedWheelTimer(
-                Executors.defaultThreadFactory(), 100, TimeUnit.MILLISECONDS, 32);
+            Executors.defaultThreadFactory(), 100, TimeUnit.MILLISECONDS, 32);
         final AtomicInteger counter = new AtomicInteger();
 
         timer.newTimeout(new TimerTask() {
@@ -122,8 +129,12 @@ public class HashedWheelTimerTest {
                 timer.newTimeout(this, 1, TimeUnit.SECONDS);
             }
         }, 1, TimeUnit.SECONDS);
-        Thread.sleep(3500);
-        assertEquals(3, counter.get());
+        waitUntilTrue(3500, new Supplier<Boolean>() {
+            @Override
+            public Boolean get() {
+                return 3 == counter.get();
+            }
+        });
         timer.stop();
     }
 
@@ -149,9 +160,80 @@ public class HashedWheelTimerTest {
         for (int i = 0; i < scheduledTasks; i++) {
             long delay = queue.take();
             assertTrue("Timeout + " + scheduledTasks + " delay " + delay + " must be " + timeout + " < " + maxTimeout,
-                    delay >= timeout && delay < maxTimeout);
+                delay >= timeout && delay < maxTimeout);
         }
 
         timer.stop();
+    }
+
+    @Test
+    public void testRejectedExecutionExceptionWhenTooManyTimeoutsAreAddedBackToBack() {
+        HashedWheelTimer timer = new HashedWheelTimer(Executors.defaultThreadFactory(), 100,
+            TimeUnit.MILLISECONDS, 32, true, 2);
+        timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
+        timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
+        try {
+            timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
+            fail("Timer allowed adding 3 timeouts when maxPendingTimeouts was 2");
+        } catch (RejectedExecutionException e) {
+            // Expected
+        } finally {
+            timer.stop();
+        }
+    }
+
+    @Test
+    public void testNewTimeoutShouldStopThrowingRejectedExecutionExceptionWhenExistingTimeoutIsCancelled()
+        throws InterruptedException {
+        final HashedWheelTimer timer = new HashedWheelTimer(Executors.defaultThreadFactory(), 100,
+            TimeUnit.MILLISECONDS, 32, true, 2);
+        timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
+        Timeout timeoutToCancel = timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
+        timeoutToCancel.cancel();
+        waitUntilNewTimeoutCanBeAdded(200, timer, 1000);
+    }
+
+    @Test
+    public void testNewTimeoutShouldStopThrowingRejectedExecutionExceptionWhenExistingTimeoutIsExecuted()
+        throws InterruptedException {
+        final HashedWheelTimer timer = new HashedWheelTimer(Executors.defaultThreadFactory(), 25,
+            TimeUnit.MILLISECONDS, 4, true, 2);
+        timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
+        timer.newTimeout(createNoOpTimerTask(), 90, TimeUnit.MILLISECONDS);
+        waitUntilNewTimeoutCanBeAdded(200, timer, 200);
+        timer.stop();
+    }
+
+    private static void waitUntilNewTimeoutCanBeAdded(final long timeoutMilli,
+        final HashedWheelTimer timer, final long newTimeoutDelay) {
+        waitUntilTrue(timeoutMilli, new Supplier<Boolean>() {
+            @Override
+            public Boolean get() {
+                try {
+                    timer.newTimeout(createNoOpTimerTask(), newTimeoutDelay, TimeUnit.MILLISECONDS);
+                    return true;
+                } catch (RejectedExecutionException e) {
+                    return false;
+                }
+            }
+        });
+    }
+
+    private static void waitUntilTrue(long timeoutMilli, Supplier<Boolean> condition) {
+        long startTime = System.currentTimeMillis();
+        while (System.currentTimeMillis() - startTime < timeoutMilli) {
+            if (condition.get()) {
+                return;
+            }
+        }
+        throw new AssertionError("Timed out waiting for condition to be true.");
+    }
+
+    private static TimerTask createNoOpTimerTask() {
+        return new TimerTask() {
+            @Override
+            public void run(final Timeout timeout) throws Exception {
+            }
+        };
     }
 }
