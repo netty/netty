@@ -26,9 +26,11 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A {@link Timer} optimized for approximated I/O timeout scheduling.
@@ -105,6 +107,8 @@ public class HashedWheelTimer implements Timer {
     private final CountDownLatch startTimeInitialized = new CountDownLatch(1);
     private final Queue<HashedWheelTimeout> timeouts = PlatformDependent.newMpscQueue();
     private final Queue<HashedWheelTimeout> cancelledTimeouts = PlatformDependent.newMpscQueue();
+    private final AtomicLong pendingTimeouts = new AtomicLong(0);
+    private final long maxPendingTimeouts;
 
     private volatile long startTime;
 
@@ -195,20 +199,48 @@ public class HashedWheelTimer implements Timer {
     /**
      * Creates a new timer.
      *
-     * @param threadFactory  a {@link ThreadFactory} that creates a
-     *                       background {@link Thread} which is dedicated to
-     *                       {@link TimerTask} execution.
-     * @param tickDuration   the duration between tick
-     * @param unit           the time unit of the {@code tickDuration}
-     * @param ticksPerWheel  the size of the wheel
-     * @param leakDetection  {@code true} if leak detection should be enabled always, if false it will only be enabled
-     *                       if the worker thread is not a daemon thread.
+     * @param threadFactory        a {@link ThreadFactory} that creates a
+     *                             background {@link Thread} which is dedicated to
+     *                             {@link TimerTask} execution.
+     * @param tickDuration         the duration between tick
+     * @param unit                 the time unit of the {@code tickDuration}
+     * @param ticksPerWheel        the size of the wheel
+     * @param leakDetection        {@code true} if leak detection should be enabled always,
+     *                             if false it will only be enabled if the worker thread is not
+     *                             a daemon thread.
+     * @throws NullPointerException     if either of {@code threadFactory} and {@code unit} is {@code null}
+     * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is &lt;= 0
+     */
+    public HashedWheelTimer(
+        ThreadFactory threadFactory,
+        long tickDuration, TimeUnit unit, int ticksPerWheel, boolean leakDetection) {
+        this(threadFactory, tickDuration, unit, ticksPerWheel, leakDetection, -1);
+    }
+
+    /**
+     * Creates a new timer.
+     *
+     * @param threadFactory        a {@link ThreadFactory} that creates a
+     *                             background {@link Thread} which is dedicated to
+     *                             {@link TimerTask} execution.
+     * @param tickDuration         the duration between tick
+     * @param unit                 the time unit of the {@code tickDuration}
+     * @param ticksPerWheel        the size of the wheel
+     * @param leakDetection        {@code true} if leak detection should be enabled always,
+     *                             if false it will only be enabled if the worker thread is not
+     *                             a daemon thread.
+     * @param  maxPendingTimeouts  The maximum number of pending timeouts after which call to
+     *                             {@code newTimeout} will result in
+     *                             {@link java.util.concurrent.RejectedExecutionException}
+     *                             being thrown. No maximum pending timeouts limit is assumed if
+     *                             this value is 0 or negative.
      * @throws NullPointerException     if either of {@code threadFactory} and {@code unit} is {@code null}
      * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is &lt;= 0
      */
     public HashedWheelTimer(
             ThreadFactory threadFactory,
-            long tickDuration, TimeUnit unit, int ticksPerWheel, boolean leakDetection) {
+            long tickDuration, TimeUnit unit, int ticksPerWheel, boolean leakDetection,
+            long maxPendingTimeouts) {
 
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
@@ -239,6 +271,8 @@ public class HashedWheelTimer implements Timer {
         workerThread = threadFactory.newThread(worker);
 
         leak = leakDetection || !workerThread.isDaemon() ? leakDetector.open(this) : null;
+
+        this.maxPendingTimeouts = maxPendingTimeouts;
     }
 
     private static HashedWheelBucket[] createWheel(int ticksPerWheel) {
@@ -347,6 +381,16 @@ public class HashedWheelTimer implements Timer {
         if (unit == null) {
             throw new NullPointerException("unit");
         }
+        if (shouldLimitTimeouts()) {
+            long pendingTimeoutsCount = pendingTimeouts.incrementAndGet();
+            if (pendingTimeoutsCount > maxPendingTimeouts) {
+                pendingTimeouts.decrementAndGet();
+                throw new RejectedExecutionException("Number of pending timeouts ("
+                    + pendingTimeoutsCount + ") is greater than or equal to maximum allowed pending "
+                    + "timeouts (" + maxPendingTimeouts + ")");
+            }
+        }
+
         start();
 
         // Add the timeout to the timeout queue which will be processed on the next tick.
@@ -355,6 +399,10 @@ public class HashedWheelTimer implements Timer {
         HashedWheelTimeout timeout = new HashedWheelTimeout(this, task, deadline);
         timeouts.add(timeout);
         return timeout;
+    }
+
+    private boolean shouldLimitTimeouts() {
+        return maxPendingTimeouts > 0;
     }
 
     private final class Worker implements Runnable {
@@ -558,6 +606,8 @@ public class HashedWheelTimer implements Timer {
             HashedWheelBucket bucket = this.bucket;
             if (bucket != null) {
                 bucket.remove(this);
+            } else if (timer.shouldLimitTimeouts()) {
+                timer.pendingTimeouts.decrementAndGet();
             }
         }
 
@@ -706,6 +756,9 @@ public class HashedWheelTimer implements Timer {
             timeout.prev = null;
             timeout.next = null;
             timeout.bucket = null;
+            if (timeout.timer.shouldLimitTimeouts()) {
+                timeout.timer.pendingTimeouts.decrementAndGet();
+            }
         }
 
         /**
