@@ -46,6 +46,7 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Queue;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.*;
@@ -321,7 +322,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void outgoingStreamActiveShouldFireUserEvent() throws Exception {
+    public void outboundStreamShouldNotFireStreamActiveEvent() throws Exception {
         Http2ConnectionEncoder encoder = framingCodec.connectionHandler().encoder();
 
         encoder.writeHeaders(http2HandlerCtx, 2, request, 31, false, channel.newPromise());
@@ -329,9 +330,6 @@ public class Http2FrameCodecTest {
         Http2Stream stream = framingCodec.connectionHandler().connection().stream(2);
         assertNotNull(stream);
         assertEquals(State.OPEN, stream.state());
-
-        Http2StreamActiveEvent streamActiveEvent = inboundHandler.readUserEvent();
-        assertEquals(stream.id(), streamActiveEvent.streamId());
 
         assertNull(inboundHandler.readInbound());
         assertNull(inboundHandler.readUserEvent());
@@ -422,6 +420,54 @@ public class Http2FrameCodecTest {
         assertTrue(f.isDone());
         assertFalse(f.isSuccess());
         assertThat(f.cause(), instanceOf(Http2Exception.class));
+    }
+
+    @Test
+    public void inboundWindowUpdateShouldBeForwarded() throws Exception {
+        frameListener.onHeadersRead(http2HandlerCtx, 3, request, 31, false);
+        frameListener.onWindowUpdateRead(http2HandlerCtx, 3, 100);
+        // Connection-level window update
+        frameListener.onWindowUpdateRead(http2HandlerCtx, 0, 100);
+
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        Http2WindowUpdateFrame windowUpdateFrame = inboundHandler.readInbound();
+        assertNotNull(windowUpdateFrame);
+        assertEquals(3, windowUpdateFrame.getStreamId());
+        assertEquals(100, windowUpdateFrame.windowSizeIncrement());
+
+        // Window update for the connection should not be forwarded.
+        assertNull(inboundHandler.readInbound());
+    }
+
+    @Test
+    public void streamActiveShouldIncludeStreamFlowControlWindow() throws Http2Exception {
+        Http2Connection connection = framingCodec.connectionHandler().connection();
+
+        /**
+         * Connection and stream flow control window are both 65KiB. Change the connection window to make sure
+         * that our code uses the correct (stream) window.
+         */
+        connection.remote().flowController().incrementWindowSize(connection.connectionStream(), 1024);
+
+        // Incoming Streams
+
+        frameListener.onHeadersRead(http2HandlerCtx, 3, request, 0, false);
+
+        Http2StreamActiveEvent activeEvent = inboundHandler.readUserEvent();
+        assertNotNull(activeEvent);
+        assertEquals(DEFAULT_WINDOW_SIZE, activeEvent.initialFlowControlWindow());
+        assertNull(inboundHandler.readUserEvent());
+
+        // Outgoing Streams
+
+        channel.write(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+
+        activeEvent = inboundHandler.readUserEvent();
+        assertNotNull(activeEvent);
+        assertEquals(DEFAULT_WINDOW_SIZE, activeEvent.initialFlowControlWindow());
+        assertNull(inboundHandler.readUserEvent());
     }
 
     private static ChannelPromise anyChannelPromise() {
@@ -532,7 +578,7 @@ public class Http2FrameCodecTest {
         }
     }
 
-    public static class VerifiableHttp2FrameWriter extends DefaultHttp2FrameWriter {
+    private static class VerifiableHttp2FrameWriter extends DefaultHttp2FrameWriter {
         @Override
         public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
                                        int padding, boolean endStream, ChannelPromise promise) {

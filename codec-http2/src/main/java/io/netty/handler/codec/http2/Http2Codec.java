@@ -36,30 +36,26 @@ public final class Http2Codec extends ChannelDuplexHandler {
      *
      * @param server {@code true} this is a server
      * @param streamHandler the handler added to channels for remotely-created streams. It must be
-     *     {@link ChannelHandler.Sharable}.
+     *     {@link ChannelHandler.Sharable}. {@code null} if the event loop from the parent channel should be used.
      */
     public Http2Codec(boolean server, ChannelHandler streamHandler) {
-        this(server, streamHandler, null);
+        this(server, new Http2StreamChannelBootstrap().handler(streamHandler));
     }
 
     /**
      * Construct a new handler whose child channels run in a different event loop.
      *
      * @param server {@code true} this is a server
-     * @param streamHandler the handler added to channels for remotely-created streams. It must be
-     *     {@link ChannelHandler.Sharable}.
-     * @param streamGroup event loop for registering child channels
+     * @param bootstrap bootstrap used to instantiate child channels for remotely-created streams.
      */
-    public Http2Codec(boolean server, ChannelHandler streamHandler,
-                      EventLoopGroup streamGroup) {
-        this(server, streamHandler, streamGroup, new DefaultHttp2FrameWriter());
+    public Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap) {
+        this(server, bootstrap, new DefaultHttp2FrameWriter());
     }
 
     // Visible for testing
-    Http2Codec(boolean server, ChannelHandler streamHandler,
-               EventLoopGroup streamGroup, Http2FrameWriter frameWriter) {
+    Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap, Http2FrameWriter frameWriter) {
         frameCodec = new Http2FrameCodec(server, frameWriter);
-        multiplexCodec = new Http2MultiplexCodec(server, streamGroup, streamHandler);
+        multiplexCodec = new Http2MultiplexCodec(server, bootstrap);
     }
 
     Http2FrameCodec frameCodec() {

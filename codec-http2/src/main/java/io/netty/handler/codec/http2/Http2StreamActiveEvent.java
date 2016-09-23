@@ -13,13 +13,40 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
+/**
+ * This event is emitted by the {@link Http2FrameCodec} when a stream becomes active.
+ */
 @UnstableApi
 public class Http2StreamActiveEvent extends AbstractHttp2StreamStateEvent {
-    public Http2StreamActiveEvent(int streamId) {
+
+    private final int initialFlowControlWindow;
+    private final Http2HeadersFrame headers;
+
+    public Http2StreamActiveEvent(int streamId, int initialFlowControlWindow) {
+        this(streamId, initialFlowControlWindow, null);
+    }
+
+    public Http2StreamActiveEvent(int streamId, int initialFlowControlWindow, Http2HeadersFrame headers) {
         super(streamId);
+        this.initialFlowControlWindow = ObjectUtil.checkPositive(initialFlowControlWindow, "initialFlowControlWindow");
+        this.headers = headers;
+    }
+
+    /**
+     * For outbound streams, this method returns the <em>same</em> {@link Http2HeadersFrame} object as the one that
+     * made the stream active. For inbound streams, this method returns {@code null}.
+     */
+    public Http2HeadersFrame headers() {
+        return headers;
+    }
+
+    public int initialFlowControlWindow() {
+        return initialFlowControlWindow;
     }
 }

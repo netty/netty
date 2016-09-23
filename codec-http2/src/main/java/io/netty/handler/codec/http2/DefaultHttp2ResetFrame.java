@@ -62,7 +62,7 @@ public final class DefaultHttp2ResetFrame extends AbstractHttp2StreamFrame imple
 
     @Override
     public String toString() {
-        return "DefaultHttp2ResetFrame(stream=" + streamId() + "errorCode=" + errorCode + ")";
+        return "DefaultHttp2ResetFrame(stream=" + getStreamId() + "errorCode=" + errorCode + ")";
     }
 
     @Override
