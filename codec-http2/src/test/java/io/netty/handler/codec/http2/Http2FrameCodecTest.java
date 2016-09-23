@@ -46,6 +46,7 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Queue;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.*;
@@ -438,6 +439,35 @@ public class Http2FrameCodecTest {
 
         // Window update for the connection should not be forwarded.
         assertNull(inboundHandler.readInbound());
+    }
+
+    @Test
+    public void streamActiveShouldIncludeStreamFlowControlWindow() throws Http2Exception {
+        Http2Connection connection = framingCodec.connectionHandler().connection();
+
+        /**
+         * Connection and stream flow control window are both 65KiB. Change the connection window to make sure
+         * that our code uses the correct (stream) window.
+         */
+        connection.remote().flowController().incrementWindowSize(connection.connectionStream(), 1024);
+
+        // Incoming Streams
+
+        frameListener.onHeadersRead(http2HandlerCtx, 3, request, 0, false);
+
+        Http2StreamActiveEvent activeEvent = inboundHandler.readUserEvent();
+        assertNotNull(activeEvent);
+        assertEquals(DEFAULT_WINDOW_SIZE, activeEvent.initialFlowControlWindow());
+        assertNull(inboundHandler.readUserEvent());
+
+        // Outgoing Streams
+
+        channel.write(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+
+        activeEvent = inboundHandler.readUserEvent();
+        assertNotNull(activeEvent);
+        assertEquals(DEFAULT_WINDOW_SIZE, activeEvent.initialFlowControlWindow());
+        assertNull(inboundHandler.readUserEvent());
     }
 
     private static ChannelPromise anyChannelPromise() {

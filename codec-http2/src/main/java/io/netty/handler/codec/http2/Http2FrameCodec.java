@@ -256,13 +256,14 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
         if (headersFrame.hasStreamId()) {
             streamId = headersFrame.getStreamId();
         } else {
-            final Endpoint<Http2LocalFlowController> localEndpoint = http2Handler.connection().local();
-            final int flowControlWindow = http2Handler.connection().remote().flowController().initialWindowSize();
-            streamId = localEndpoint.incrementAndGetNextStreamId();
+            Http2Connection connection = http2Handler.connection();
+            final int flowControlWindow;
+            streamId = connection.local().incrementAndGetNextStreamId();
             try {
                 // Try to create a stream in OPEN state before writing headers, to catch errors on stream creation
                 // early on i.e. max concurrent streams limit reached, stream id exhaustion, etc.
-                localEndpoint.createStream(streamId, false);
+                connection.local().createStream(streamId, false);
+                flowControlWindow = connection.remote().flowController().windowSize(connection.stream(streamId));
             } catch (Http2Exception e) {
                 promise.setFailure(e);
                 return;
@@ -284,7 +285,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
                 // Creation of outbound streams is notified in writeHeadersFrame().
                 return;
             }
-            int flowControlWindow = http2Handler.connection().remote().flowController().initialWindowSize();
+            int flowControlWindow = http2Handler.connection().remote().flowController().windowSize(stream);
             ctx.fireUserEventTriggered(new Http2StreamActiveEvent(stream.id(), flowControlWindow));
         }
 
