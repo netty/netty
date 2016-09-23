@@ -47,6 +47,10 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  * with an ID less than the specified {@code lastStreamId} will immediately fail with a
  * {@link Http2GoAwayException}.
  * <p/>
+ * <p>
+ * If the channel/encoder gets closed, all new and buffered writes will immediately fail with a
+ * {@link Http2ChannelClosedException}.
+ * </p>
  * <p>This implementation makes the buffering mostly transparent and is expected to be used as a
  * drop-in decorator of {@link DefaultHttp2ConnectionEncoder}.
  * </p>
