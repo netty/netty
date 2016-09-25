@@ -242,6 +242,24 @@ public final class HttpUtil {
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, length);
     }
 
+    /**
+     * Set a {@link HttpHeaderNames#CONTENT_LENGTH} with a value of {@code length} if
+     * {@code contentLength} is {@code true}, or remove a {@link HttpHeaderNames#CONTENT_LENGTH}
+     * if {@code contentLength} is {@code false}.
+     *
+     * @param message The message which contains the headers to modify.
+     * @param length The Content-Length value.
+     * @param contentLength if {@code true} then set {@code length} in the headers. otherwise remove
+     * {@link HttpHeaderNames#CONTENT_LENGTH} from the headers.
+     */
+    public static void setContentLength(HttpMessage message, long length, boolean contentLength) {
+        if (contentLength) {
+            message.headers().set(HttpHeaderNames.CONTENT_LENGTH, length);
+        } else {
+            message.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+        }
+    }
+
     public static boolean isContentLengthSet(HttpMessage m) {
         return m.headers().contains(HttpHeaderNames.CONTENT_LENGTH);
     }

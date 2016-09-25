@@ -16,10 +16,13 @@
 package io.netty.handler.codec.http;
 
 import io.netty.util.CharsetUtil;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Random;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.junit.Assert.assertEquals;
@@ -28,6 +31,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class HttpUtilTest {
+
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
 
     @Test
     public void testRemoveTransferEncodingIgnoreCase() {
@@ -99,5 +105,27 @@ public class HttpUtilTest {
         assertEquals("text/html", HttpUtil.getMimeType(message));
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=utf-8");
         assertEquals("text/html", HttpUtil.getMimeType(message));
+    }
+
+    @Test
+    public void testContentLength() {
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        // Initially we don't have a Content-Length header field
+        thrown.expect(NumberFormatException.class);
+        HttpUtil.getContentLength(message);
+
+        // Set a Content-Length header field with a value of `length`
+        long length = new Random().nextLong();
+        HttpUtil.setContentLength(message, length);
+        assertEquals(HttpUtil.getContentLength(message), length);
+
+        // Remove a Content-Length header field
+        HttpUtil.setContentLength(message, 0, false);
+        thrown.expect(NumberFormatException.class);
+        HttpUtil.getContentLength(message);
+
+        // Set a Content-Length header field again
+        HttpUtil.setContentLength(message, length, true);
+        assertEquals(HttpUtil.getContentLength(message), length);
     }
 }
