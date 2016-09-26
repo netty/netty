@@ -160,13 +160,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         // XXX: Make sure to sync this list with JdkSslEngineFactory.
         Collections.addAll(
                 ciphers,
+                "ECDHE-ECDSA-AES256-GCM-SHA384",
+                "ECDHE-ECDSA-AES128-GCM-SHA256",
                 "ECDHE-RSA-AES128-GCM-SHA256",
                 "ECDHE-RSA-AES128-SHA",
                 "ECDHE-RSA-AES256-SHA",
                 "AES128-GCM-SHA256",
                 "AES128-SHA",
-                "AES256-SHA",
-                "DES-CBC3-SHA");
+                "AES256-SHA");
         DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
 
         if (logger.isDebugEnabled()) {
