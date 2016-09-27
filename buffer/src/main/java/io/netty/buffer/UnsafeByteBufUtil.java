@@ -517,9 +517,8 @@ final class UnsafeByteBufUtil {
     }
 
     static void getBytes(AbstractByteBuf buf, long addr, int index, ByteBuffer dst) {
-        buf.checkIndex(index);
-        int bytesToCopy = Math.min(buf.capacity() - index, dst.remaining());
-        if (bytesToCopy == 0) {
+        buf.checkIndex(index, dst.remaining());
+        if (dst.remaining() == 0) {
             return;
         }
 
@@ -530,12 +529,12 @@ final class UnsafeByteBufUtil {
             }
             // Copy to direct memory
             long dstAddress = PlatformDependent.directBufferAddress(dst);
-            PlatformDependent.copyMemory(addr, dstAddress + dst.position(), bytesToCopy);
-            dst.position(dst.position() + bytesToCopy);
+            PlatformDependent.copyMemory(addr, dstAddress + dst.position(), dst.remaining());
+            dst.position(dst.position() + dst.remaining());
         } else if (dst.hasArray()) {
             // Copy to array
-            PlatformDependent.copyMemory(addr, dst.array(), dst.arrayOffset() + dst.position(), bytesToCopy);
-            dst.position(dst.position() + bytesToCopy);
+            PlatformDependent.copyMemory(addr, dst.array(), dst.arrayOffset() + dst.position(), dst.remaining());
+            dst.position(dst.position() + dst.remaining());
         } else  {
             dst.put(buf.nioBuffer());
         }

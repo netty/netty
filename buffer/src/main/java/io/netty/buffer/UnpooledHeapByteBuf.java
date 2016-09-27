@@ -180,8 +180,8 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
-        ensureAccessible();
-        dst.put(array, index, Math.min(capacity() - index, dst.remaining()));
+        checkIndex(index, dst.remaining());
+        dst.put(array, index, dst.remaining());
         return this;
     }
 

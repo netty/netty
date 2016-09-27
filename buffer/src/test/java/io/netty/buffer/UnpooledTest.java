@@ -646,4 +646,30 @@ public class UnpooledTest {
         assertEquals(0, buffer4.refCnt());
         assertEquals(0, wrapped.refCnt());
     }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testGetBytesByteBuffer() {
+        byte[] bytes = {'a', 'b', 'c', 'd', 'e', 'f', 'g'};
+        // Ensure destination buffer is bigger then what is wrapped in the ByteBuf.
+        ByteBuffer nioBuffer = ByteBuffer.allocate(bytes.length + 1);
+        ByteBuf wrappedBuffer = wrappedBuffer(bytes);
+        try {
+            wrappedBuffer.getBytes(wrappedBuffer.readerIndex(), nioBuffer);
+        } finally {
+            wrappedBuffer.release();
+        }
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testGetBytesByteBuffer2() {
+        byte[] bytes = {'a', 'b', 'c', 'd', 'e', 'f', 'g'};
+        // Ensure destination buffer is bigger then what is wrapped in the ByteBuf.
+        ByteBuffer nioBuffer = ByteBuffer.allocate(bytes.length + 1);
+        ByteBuf wrappedBuffer = wrappedBuffer(bytes, 0, bytes.length);
+        try {
+            wrappedBuffer.getBytes(wrappedBuffer.readerIndex(), nioBuffer);
+        } finally {
+            wrappedBuffer.release();
+        }
+    }
 }
