@@ -87,7 +87,7 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
                 resolvesInProgress,
                 resolveAllsInProgress);
 
-        return new InetSocketAddressResolver(eventLoop, resolver);
+        return newAddressResolver(eventLoop, resolver);
     }
 
     /**
@@ -101,5 +101,15 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
                 .channelFactory(channelFactory)
                 .nameServerAddresses(nameServerAddresses)
                 .build();
+    }
+
+    /**
+     * Creates a new {@link AddressResolver}. Override this method to create an alternative {@link AddressResolver}
+     * implementation or override the default configuration.
+     */
+    protected AddressResolver<InetSocketAddress> newAddressResolver(EventLoop eventLoop,
+                                                                    NameResolver<InetAddress> resolver)
+            throws Exception {
+        return new InetSocketAddressResolver(eventLoop, resolver);
     }
 }
