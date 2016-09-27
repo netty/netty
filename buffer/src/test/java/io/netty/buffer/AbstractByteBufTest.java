@@ -2608,6 +2608,20 @@ public abstract class AbstractByteBufTest {
         }
     }
 
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testGetBytesByteBuffer() {
+        byte[] bytes = {'a', 'b', 'c', 'd', 'e', 'f', 'g'};
+        // Ensure destination buffer is bigger then what is in the ByteBuf.
+        ByteBuffer nioBuffer = ByteBuffer.allocate(bytes.length + 1);
+        ByteBuf buffer = newBuffer(bytes.length);
+        try {
+            buffer.writeBytes(bytes);
+            buffer.getBytes(buffer.readerIndex(), nioBuffer);
+        } finally {
+            buffer.release();
+        }
+    }
+
     private void testRefCnt0(final boolean parameter) throws Exception {
         for (int i = 0; i < 10; i++) {
             final CountDownLatch latch = new CountDownLatch(1);
