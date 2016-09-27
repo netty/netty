@@ -341,19 +341,15 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     private void getBytes(int index, ByteBuffer dst, boolean internal) {
-        checkIndex(index);
-        if (dst == null) {
-            throw new NullPointerException("dst");
-        }
+        checkIndex(index, dst.remaining());
 
-        int bytesToCopy = Math.min(capacity() - index, dst.remaining());
         ByteBuffer tmpBuf;
         if (internal) {
             tmpBuf = internalNioBuffer();
         } else {
             tmpBuf = buffer.duplicate();
         }
-        tmpBuf.clear().position(index).limit(index + bytesToCopy);
+        tmpBuf.clear().position(index).limit(index + dst.remaining());
         dst.put(tmpBuf);
     }
 
