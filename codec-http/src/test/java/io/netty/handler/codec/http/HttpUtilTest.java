@@ -100,4 +100,13 @@ public class HttpUtilTest {
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=utf-8");
         assertEquals("text/html", HttpUtil.getMimeType(message));
     }
+
+    @Test
+    public void testGetContentLengthDefaultValue() {
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        assertNull(message.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+        message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
+        assertEquals("bar", message.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+        assertEquals(1L, HttpUtil.getContentLength(message, 1L));
+    }
 }

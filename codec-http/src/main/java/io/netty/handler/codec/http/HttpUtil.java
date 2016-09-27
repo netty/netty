@@ -184,7 +184,11 @@ public final class HttpUtil {
     public static long getContentLength(HttpMessage message, long defaultValue) {
         String value = message.headers().get(HttpHeaderNames.CONTENT_LENGTH);
         if (value != null) {
-            return Long.parseLong(value);
+            try {
+                return Long.parseLong(value);
+            } catch (NumberFormatException ignore) {
+                return defaultValue;
+            }
         }
 
         // We know the content length if it's a Web Socket message even if
