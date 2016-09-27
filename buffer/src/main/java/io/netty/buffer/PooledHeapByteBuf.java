@@ -117,8 +117,8 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     public final ByteBuf getBytes(int index, ByteBuffer dst) {
-        checkIndex(index);
-        dst.put(memory, idx(index), Math.min(capacity() - index, dst.remaining()));
+        checkIndex(index, dst.remaining());
+        dst.put(memory, idx(index), dst.remaining());
         return this;
     }
 
