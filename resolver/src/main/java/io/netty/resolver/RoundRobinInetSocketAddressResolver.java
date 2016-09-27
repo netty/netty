@@ -23,6 +23,7 @@ import io.netty.util.internal.ThreadLocalRandom;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.List;
 
 /**
@@ -54,8 +55,7 @@ public class RoundRobinInetSocketAddressResolver extends InetSocketAddressResolv
                                 List<InetAddress> inetAddresses = future.getNow();
                                 int numAddresses = inetAddresses.size();
                                 if (numAddresses == 0) {
-                                    // this should not happen
-                                    promise.setSuccess(null);
+                                    promise.setFailure(new UnknownHostException(unresolvedAddress.getHostName()));
                                 } else {
                                     int index = 0;
                                     if (numAddresses > 1) {
