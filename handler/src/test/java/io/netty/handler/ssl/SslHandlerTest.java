@@ -26,6 +26,20 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLProtocolException;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.CodecException;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import org.junit.Test;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -39,6 +53,8 @@ import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+
+import java.net.InetSocketAddress;
 
 public class SslHandlerTest {
 
@@ -147,5 +163,83 @@ public class SslHandlerTest {
     public void testIssueReadAfterWriteFlushActive() throws Exception {
         // the handshake is initiated by flush
         new TlsReadTest().test(true);
+    }
+
+    @Test(timeout = 5000)
+    public void testRemoval() throws Exception {
+        NioEventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            final Promise<Void> clientPromise = group.next().newPromise();
+            Bootstrap bootstrap = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(newHandler(SslContextBuilder.forClient().trustManager(
+                            InsecureTrustManagerFactory.INSTANCE).build(), clientPromise));
+
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            final Promise<Void> serverPromise = group.next().newPromise();
+            ServerBootstrap serverBootstrap = new ServerBootstrap()
+                    .group(group, group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(newHandler(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build(),
+                            serverPromise));
+            sc = serverBootstrap.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+            cc = bootstrap.connect(sc.localAddress()).syncUninterruptibly().channel();
+
+            serverPromise.syncUninterruptibly();
+            clientPromise.syncUninterruptibly();
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
+        }
+    }
+
+    private static ChannelHandler newHandler(final SslContext sslCtx, final Promise<Void> promise) {
+        return new ChannelInitializer() {
+            @Override
+            protected void initChannel(final Channel ch) {
+                final SslHandler sslHandler = sslCtx.newHandler(ch.alloc());
+                sslHandler.setHandshakeTimeoutMillis(1000);
+                ch.pipeline().addFirst(sslHandler);
+                sslHandler.handshakeFuture().addListener(new FutureListener<Channel>() {
+                    @Override
+                    public void operationComplete(final Future<Channel> future) {
+                        ch.pipeline().remove(sslHandler);
+
+                        // Schedule the close so removal has time to propergate exception if any.
+                        ch.eventLoop().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                ch.close();
+                            }
+                        });
+                    }
+                });
+
+                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                        if (cause instanceof CodecException) {
+                            cause = cause.getCause();
+                        }
+                        if (cause instanceof IllegalReferenceCountException) {
+                            promise.setFailure(cause);
+                        }
+                    }
+
+                    @Override
+                    public void channelInactive(ChannelHandlerContext ctx) {
+                        promise.trySuccess(null);
+                    }
+                });
+            }
+        };
     }
 }
