@@ -221,7 +221,7 @@ public class ResourceLeakDetector<T> {
         }
 
         if (level.ordinal() < Level.PARANOID.ordinal()) {
-            if ((leakCheckCnt ++ & mask) == 0) {
+            if ((++ leakCheckCnt & mask) == 0) {
                 reportLeak(level);
                 return new DefaultResourceLeak(obj);
             } else {
