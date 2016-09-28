@@ -18,6 +18,7 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -82,18 +83,21 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                 // Convert and write the headers.
                 Http2Headers http2Headers = HttpConversionUtil.toHttp2Headers(httpMsg, validateHeaders);
                 endStream = msg instanceof FullHttpMessage && !((FullHttpMessage) msg).content().isReadable();
-                encoder.writeHeaders(ctx, currentStreamId, http2Headers, 0, endStream, promiseAggregator.newPromise());
+                writeHeaders(ctx, encoder, currentStreamId, httpMsg.headers(), http2Headers,
+                        endStream, promiseAggregator);
             }
 
             if (!endStream && msg instanceof HttpContent) {
                 boolean isLastContent = false;
-                Http2Headers trailers = EmptyHttp2Headers.INSTANCE;
+                HttpHeaders trailers = EmptyHttpHeaders.INSTANCE;
+                Http2Headers http2Trailers = EmptyHttp2Headers.INSTANCE;
                 if (msg instanceof LastHttpContent) {
                     isLastContent = true;
 
                     // Convert any trailing headers.
                     final LastHttpContent lastContent = (LastHttpContent) msg;
-                    trailers = HttpConversionUtil.toHttp2Headers(lastContent.trailingHeaders(), validateHeaders);
+                    trailers = lastContent.trailingHeaders();
+                    http2Trailers = HttpConversionUtil.toHttp2Headers(trailers, validateHeaders);
                 }
 
                 // Write the data
@@ -104,7 +108,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
                 if (!trailers.isEmpty()) {
                     // Write trailing headers.
-                    encoder.writeHeaders(ctx, currentStreamId, trailers, 0, true, promiseAggregator.newPromise());
+                    writeHeaders(ctx, encoder, currentStreamId, trailers, http2Trailers, true, promiseAggregator);
                 }
             }
         } catch (Throwable t) {
@@ -115,5 +119,16 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
             }
             promiseAggregator.doneAllocatingPromises();
         }
+    }
+
+    private static void writeHeaders(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder, int streamId,
+                                     HttpHeaders headers, Http2Headers http2Headers, boolean endStream,
+                                     SimpleChannelPromiseAggregator promiseAggregator) {
+        int dependencyId = headers.getInt(
+                HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), 0);
+        short weight = headers.getShort(
+                HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT);
+        encoder.writeHeaders(ctx, streamId, http2Headers, dependencyId, weight, false,
+                0, endStream, promiseAggregator.newPromise());
     }
 }
