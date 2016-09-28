@@ -268,6 +268,14 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         Http2Stream stream = connection.stream(streamId);
         FullHttpMessage msg = processHeadersBegin(ctx, stream, headers, endOfStream, true, true);
         if (msg != null) {
+            // Add headers for dependency and weight.
+            // See https://github.com/netty/netty/issues/5866
+            if (streamDependency != Http2CodecUtil.CONNECTION_STREAM_ID) {
+                msg.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(),
+                        streamDependency);
+            }
+            msg.headers().setShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), weight);
+
             processHeadersEnd(ctx, stream, msg, endOfStream);
         }
     }
