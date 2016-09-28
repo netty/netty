@@ -26,7 +26,10 @@ import io.netty.util.CharsetUtil;
 import org.junit.Before;
 import org.junit.Test;
 
-import static io.netty.buffer.Unpooled.*;
+import java.util.List;
+
+import static io.netty.buffer.Unpooled.buffer;
+import static io.netty.buffer.Unpooled.copiedBuffer;
 import static org.junit.Assert.*;
 
 public class HAProxyMessageDecoderTest {
@@ -212,16 +215,16 @@ public class HAProxyMessageDecoderTest {
     @Test
     public void testV2IPV4Decode() {
         byte[] header = new byte[28];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -267,16 +270,16 @@ public class HAProxyMessageDecoderTest {
     @Test
     public void testV2UDPDecode() {
         byte[] header = new byte[28];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -322,16 +325,16 @@ public class HAProxyMessageDecoderTest {
     @Test
     public void testv2IPV6Decode() {
         byte[] header = new byte[52];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -401,16 +404,16 @@ public class HAProxyMessageDecoderTest {
     @Test
     public void testv2UnixDecode() {
         byte[] header = new byte[232];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -479,16 +482,16 @@ public class HAProxyMessageDecoderTest {
     @Test
     public void testV2LocalProtocolDecode() {
         byte[] header = new byte[28];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -534,16 +537,16 @@ public class HAProxyMessageDecoderTest {
     @Test
     public void testV2UnknownProtocolDecode() {
         byte[] header = new byte[28];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -587,20 +590,69 @@ public class HAProxyMessageDecoderTest {
     }
 
     @Test
+    public void testV2WithSslTLVs() throws Exception {
+        ch = new EmbeddedChannel(new HAProxyMessageDecoder());
+
+        final byte[] bytes = {13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10, 33, 17, 0, 35, 127, 0, 0, 1, 127, 0, 0, 1,
+                -55, -90, 7, 89, 32, 0, 20, 5, 0, 0, 0, 0, 33, 0, 5, 84, 76, 83, 118, 49, 34, 0, 4, 76, 69, 65, 70};
+
+        int startChannels = ch.pipeline().names().size();
+        ch.writeInbound(copiedBuffer(bytes));
+        Object msgObj = ch.readInbound();
+        assertEquals(startChannels - 1, ch.pipeline().names().size());
+        assertTrue(msgObj instanceof HAProxyMessage);
+        HAProxyMessage msg = (HAProxyMessage) msgObj;
+
+        assertEquals(HAProxyProtocolVersion.V2, msg.protocolVersion());
+        assertEquals(HAProxyCommand.PROXY, msg.command());
+        assertEquals(HAProxyProxiedProtocol.TCP4, msg.proxiedProtocol());
+        assertEquals("127.0.0.1", msg.sourceAddress());
+        assertEquals("127.0.0.1", msg.destinationAddress());
+        assertEquals(51622, msg.sourcePort());
+        assertEquals(1881, msg.destinationPort());
+        final List<HAProxyTLV> tlvs = msg.getTlvs();
+
+        assertEquals(3, tlvs.size());
+        final HAProxyTLV firstTlv = tlvs.get(0);
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL, firstTlv.getType());
+        assertTrue(firstTlv instanceof HAProxySSLTLV);
+        final HAProxySSLTLV sslTlv = (HAProxySSLTLV) firstTlv;
+        assertEquals(0, sslTlv.getVerify());
+        assertEquals(true, sslTlv.getClients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_SSL));
+        assertEquals(true, sslTlv.getClients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_CERT_SESS));
+        assertEquals(false, sslTlv.getClients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_CERT_CONN));
+
+        final HAProxyTLV secondTlv = tlvs.get(1);
+
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_VERSION, secondTlv.getType());
+        assertArrayEquals("TLSv1".getBytes(), secondTlv.getContent());
+
+        final HAProxyTLV thirdTLV = tlvs.get(2);
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_CN, thirdTLV.getType());
+        assertArrayEquals("LEAF".getBytes(), thirdTLV.getContent());
+
+        assertEquals(true, sslTlv.getEncapsulatedTLVs().contains(secondTlv));
+        assertEquals(true, sslTlv.getEncapsulatedTLVs().contains(thirdTLV));
+
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testV2WithTLV() {
         ch = new EmbeddedChannel(new HAProxyMessageDecoder(4));
 
         byte[] header = new byte[236];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -676,16 +728,16 @@ public class HAProxyMessageDecoderTest {
     @Test(expected = HAProxyProtocolException.class)
     public void testV2InvalidProtocol() {
         byte[] header = new byte[28];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -717,16 +769,16 @@ public class HAProxyMessageDecoderTest {
     @Test(expected = HAProxyProtocolException.class)
     public void testV2MissingParams() {
         byte[] header = new byte[26];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -755,16 +807,16 @@ public class HAProxyMessageDecoderTest {
     @Test(expected = HAProxyProtocolException.class)
     public void testV2InvalidCommand() {
         byte[] header = new byte[28];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -796,16 +848,16 @@ public class HAProxyMessageDecoderTest {
     @Test(expected = HAProxyProtocolException.class)
     public void testV2InvalidVersion() {
         byte[] header = new byte[28];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -839,16 +891,16 @@ public class HAProxyMessageDecoderTest {
         ch = new EmbeddedChannel(new HAProxyMessageDecoder(0));
 
         byte[] header = new byte[248];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -880,16 +932,16 @@ public class HAProxyMessageDecoderTest {
     @Test
     public void testV2IncompleteHeader() {
         byte[] header = new byte[13];
-        header[0]  = 0x0D; // Binary Prefix
-        header[1]  = 0x0A; // -----
-        header[2]  = 0x0D; // -----
-        header[3]  = 0x0A; // -----
-        header[4]  = 0x00; // -----
-        header[5]  = 0x0D; // -----
-        header[6]  = 0x0A; // -----
-        header[7]  = 0x51; // -----
-        header[8]  = 0x55; // -----
-        header[9]  = 0x49; // -----
+        header[0] = 0x0D; // Binary Prefix
+        header[1] = 0x0A; // -----
+        header[2] = 0x0D; // -----
+        header[3] = 0x0A; // -----
+        header[4] = 0x00; // -----
+        header[5] = 0x0D; // -----
+        header[6] = 0x0A; // -----
+        header[7] = 0x51; // -----
+        header[8] = 0x55; // -----
+        header[9] = 0x49; // -----
         header[10] = 0x54; // -----
         header[11] = 0x0A; // -----
 
@@ -903,7 +955,7 @@ public class HAProxyMessageDecoderTest {
     @Test
     public void testDetectProtocol() {
         final ByteBuf validHeaderV1 = copiedBuffer("PROXY TCP4 192.168.0.1 192.168.0.11 56324 443\r\n",
-                                                   CharsetUtil.US_ASCII);
+                CharsetUtil.US_ASCII);
         ProtocolDetectionResult<HAProxyProtocolVersion> result = HAProxyMessageDecoder.detectProtocol(validHeaderV1);
         assertEquals(ProtocolDetectionState.DETECTED, result.state());
         assertEquals(HAProxyProtocolVersion.V1, result.detectedProtocol());

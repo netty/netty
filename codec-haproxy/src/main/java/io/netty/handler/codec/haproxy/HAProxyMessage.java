@@ -21,6 +21,10 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Message container for decoded HAProxy proxy protocol parameters
  */
@@ -54,6 +58,7 @@ public final class HAProxyMessage {
     private final String destinationAddress;
     private final int sourcePort;
     private final int destinationPort;
+    private final List<HAProxyTLV> tlvs;
 
     /**
      * Creates a new instance
@@ -73,6 +78,18 @@ public final class HAProxyMessage {
             HAProxyProtocolVersion protocolVersion, HAProxyCommand command, HAProxyProxiedProtocol proxiedProtocol,
             String sourceAddress, String destinationAddress, int sourcePort, int destinationPort) {
 
+        this(protocolVersion, command, proxiedProtocol,
+             sourceAddress, destinationAddress, sourcePort, destinationPort, Collections.EMPTY_LIST);
+    }
+
+    /**
+     * Creates a new instance
+     */
+    private HAProxyMessage(
+            HAProxyProtocolVersion protocolVersion, HAProxyCommand command, HAProxyProxiedProtocol proxiedProtocol,
+            String sourceAddress, String destinationAddress, int sourcePort, int destinationPort,
+            List<HAProxyTLV> tlvs) {
+
         if (proxiedProtocol == null) {
             throw new NullPointerException("proxiedProtocol");
         }
@@ -90,6 +107,7 @@ public final class HAProxyMessage {
         this.destinationAddress = destinationAddress;
         this.sourcePort = sourcePort;
         this.destinationPort = destinationPort;
+        this.tlvs = tlvs;
     }
 
     /**
@@ -214,7 +232,84 @@ public final class HAProxyMessage {
             dstPort = header.readUnsignedShort();
         }
 
-        return new HAProxyMessage(ver, cmd, protAndFam, srcAddress, dstAddress, srcPort, dstPort);
+        final List<HAProxyTLV> tlvs = readTlvs(header);
+
+        return new HAProxyMessage(ver, cmd, protAndFam, srcAddress, dstAddress, srcPort, dstPort, tlvs);
+    }
+
+    private static List<HAProxyTLV> readTlvs(final ByteBuf header) {
+
+        //We need at least 4 byte for a valid TLV. If we have less bytes available, we need to ignore
+        if (header.readableBytes() < 4) {
+            return Collections.emptyList();
+        }
+
+        final List<HAProxyTLV> haProxyTLVs = new ArrayList<HAProxyTLV>();
+
+        while (header.isReadable()) {
+            final HAProxyTLV haProxyTLV = readNextTlv(header);
+
+            if (haProxyTLV == null) {
+                //We don't have a TLV available anymore, we can stop
+                break;
+            }
+            haProxyTLVs.add(haProxyTLV);
+            if (haProxyTLV instanceof HAProxySSLTLV) {
+                haProxyTLVs.addAll(((HAProxySSLTLV) haProxyTLV).getEncapsulatedTLVs());
+            }
+        }
+
+        return haProxyTLVs;
+    }
+
+    private static HAProxyTLV readNextTlv(final ByteBuf header) {
+
+        //We need at least 4 bytes for a TLV
+        if (header.readableBytes() < 4) {
+            return null;
+        }
+
+        final byte typeAsByte = header.readByte();
+        final HAProxyTLV.Type type = HAProxyTLV.Type.getType(typeAsByte);
+
+        final int length = header.readUnsignedShort();
+        switch (type) {
+
+        case PP2_TYPE_SSL:
+
+            final byte[] rawContent = copyByteBufToByteArray(header.duplicate(), length);
+            final ByteBuf byteBuf = header.readBytes(length);
+            final byte client = byteBuf.readByte();
+            final int verify = byteBuf.readInt();
+
+            final List<HAProxyTLV> encapsulatedTlvs = new ArrayList<HAProxyTLV>();
+            while (byteBuf.readableBytes() >= 4) {
+                final HAProxyTLV haProxyTLV = readNextTlv(byteBuf);
+                if (haProxyTLV == null) {
+                    break;
+                }
+                encapsulatedTlvs.add(haProxyTLV);
+            }
+
+            return new HAProxySSLTLV(verify, client, encapsulatedTlvs, rawContent);
+        //If we're not dealing with a SSL Type, we can use the same mechanism
+        case PP2_TYPE_ALPN:
+        case PP2_TYPE_AUTHORITY:
+        case PP2_TYPE_SSL_VERSION:
+        case PP2_TYPE_SSL_CN:
+        case PP2_TYPE_NETNS:
+        case OTHER:
+            final byte[] content = copyByteBufToByteArray(header, length);
+            return new HAProxyTLV(type, typeAsByte, content);
+        default:
+            return null;
+        }
+    }
+
+    private static byte[] copyByteBufToByteArray(final ByteBuf header, final int length) {
+        final byte[] content = new byte[length];
+        header.readBytes(content);
+        return content;
     }
 
     /**
@@ -427,5 +522,14 @@ public final class HAProxyMessage {
      */
     public int destinationPort() {
         return destinationPort;
+    }
+
+    /**
+     * Returns a list of {@link HAProxyTLV} or an empty list if no TLVs are present.
+     * <p>
+     * TLVs are only available for the Proxy Protocol V2
+     */
+    public List<HAProxyTLV> getTlvs() {
+        return Collections.unmodifiableList(tlvs);
     }
 }
