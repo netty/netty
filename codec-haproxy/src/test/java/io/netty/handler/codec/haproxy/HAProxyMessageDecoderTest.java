@@ -28,8 +28,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-import static io.netty.buffer.Unpooled.buffer;
-import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.*;
 import static org.junit.Assert.*;
 
 public class HAProxyMessageDecoderTest {
@@ -158,7 +157,7 @@ public class HAProxyMessageDecoderTest {
     @Test(expected = HAProxyProtocolException.class)
     public void testHeaderTooLong() {
         String header = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
-                "00000000000000000000000000000000000000000000000000000000000000000443\r\n";
+                        "00000000000000000000000000000000000000000000000000000000000000000443\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
     }
 
@@ -593,8 +592,10 @@ public class HAProxyMessageDecoderTest {
     public void testV2WithSslTLVs() throws Exception {
         ch = new EmbeddedChannel(new HAProxyMessageDecoder());
 
-        final byte[] bytes = {13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10, 33, 17, 0, 35, 127, 0, 0, 1, 127, 0, 0, 1,
-                -55, -90, 7, 89, 32, 0, 20, 5, 0, 0, 0, 0, 33, 0, 5, 84, 76, 83, 118, 49, 34, 0, 4, 76, 69, 65, 70};
+        final byte[] bytes = {
+                13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10, 33, 17, 0, 35, 127, 0, 0, 1, 127, 0, 0, 1,
+                -55, -90, 7, 89, 32, 0, 20, 5, 0, 0, 0, 0, 33, 0, 5, 84, 76, 83, 118, 49, 34, 0, 4, 76, 69, 65, 70
+        };
 
         int startChannels = ch.pipeline().names().size();
         ch.writeInbound(copiedBuffer(bytes));
@@ -614,25 +615,25 @@ public class HAProxyMessageDecoderTest {
 
         assertEquals(3, tlvs.size());
         final HAProxyTLV firstTlv = tlvs.get(0);
-        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL, firstTlv.getType());
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL, firstTlv.type());
         assertTrue(firstTlv instanceof HAProxySSLTLV);
         final HAProxySSLTLV sslTlv = (HAProxySSLTLV) firstTlv;
-        assertEquals(0, sslTlv.getVerify());
-        assertEquals(true, sslTlv.getClients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_SSL));
-        assertEquals(true, sslTlv.getClients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_CERT_SESS));
-        assertEquals(false, sslTlv.getClients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_CERT_CONN));
+        assertEquals(0, sslTlv.verify());
+        assertEquals(true, sslTlv.clients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_SSL));
+        assertEquals(true, sslTlv.clients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_CERT_SESS));
+        assertEquals(false, sslTlv.clients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_CERT_CONN));
 
         final HAProxyTLV secondTlv = tlvs.get(1);
 
-        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_VERSION, secondTlv.getType());
-        assertArrayEquals("TLSv1".getBytes(), secondTlv.getContent());
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_VERSION, secondTlv.type());
+        assertArrayEquals("TLSv1".getBytes(CharsetUtil.US_ASCII), secondTlv.content());
 
         final HAProxyTLV thirdTLV = tlvs.get(2);
-        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_CN, thirdTLV.getType());
-        assertArrayEquals("LEAF".getBytes(), thirdTLV.getContent());
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_CN, thirdTLV.type());
+        assertArrayEquals("LEAF".getBytes(CharsetUtil.US_ASCII), thirdTLV.content());
 
-        assertEquals(true, sslTlv.getEncapsulatedTLVs().contains(secondTlv));
-        assertEquals(true, sslTlv.getEncapsulatedTLVs().contains(thirdTLV));
+        assertEquals(true, sslTlv.encapsulatedTLVs().contains(secondTlv));
+        assertEquals(true, sslTlv.encapsulatedTLVs().contains(thirdTLV));
 
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
@@ -955,7 +956,7 @@ public class HAProxyMessageDecoderTest {
     @Test
     public void testDetectProtocol() {
         final ByteBuf validHeaderV1 = copiedBuffer("PROXY TCP4 192.168.0.1 192.168.0.11 56324 443\r\n",
-                CharsetUtil.US_ASCII);
+                                                   CharsetUtil.US_ASCII);
         ProtocolDetectionResult<HAProxyProtocolVersion> result = HAProxyMessageDecoder.detectProtocol(validHeaderV1);
         assertEquals(ProtocolDetectionState.DETECTED, result.state());
         assertEquals(HAProxyProtocolVersion.V1, result.detectedProtocol());

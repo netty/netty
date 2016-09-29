@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.haproxy;
 
+import static io.netty.util.internal.ObjectUtil.*;
+
 /**
  * A Type-Length Value (TLV vector) that can be added to the PROXY protocol
  * to include additional information like SSL information.
@@ -49,10 +51,9 @@ public class HAProxyTLV {
          * If the byte value is not an official one, it will return {@link Type#OTHER}.
          *
          * @param byteValue the byte for a type
-         *
          * @return the {@link Type} of a TLV
          */
-        public static Type getType(final byte byteValue) {
+        public static Type typeForByteValue(final byte byteValue) {
             switch (byteValue) {
             case 0x01:
                 return PP2_TYPE_ALPN;
@@ -80,12 +81,9 @@ public class HAProxyTLV {
      * @param content the raw content of the TLV as byte array
      */
     HAProxyTLV(final Type type, final byte typeByteValue, final byte[] content) {
-        if (type == null) {
-            throw new NullPointerException("type");
-        }
-        if (content == null) {
-            throw new NullPointerException("content");
-        }
+        checkNotNull(type, "type");
+        checkNotNull(content, "content");
+
         this.type = type;
         this.typeByteValue = typeByteValue;
         this.content = content;
@@ -94,21 +92,21 @@ public class HAProxyTLV {
     /**
      * Returns the {@link Type} of this TLV
      */
-    public Type getType() {
+    public Type type() {
         return type;
     }
 
     /**
      * Returns the raw content of the TLV as byte array
      */
-    public byte[] getContent() {
-        return content;
+    public byte[] content() {
+        return content.clone();
     }
 
     /**
      * Returns the type of the TLV as byte
      */
-    public byte getTypeByteValue() {
+    public byte typeByteValue() {
         return typeByteValue;
     }
 

@@ -21,11 +21,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static io.netty.util.internal.ObjectUtil.*;
+
 /**
- * Represents a {@link HAProxyTLV} of the type {@link io.netty.handler.codec.haproxy.HAProxyTLV.Type#PP2_TYPE_SSL}.
+ * Represents a {@link HAProxyTLV} of the type {@link HAProxyTLV.Type#PP2_TYPE_SSL}.
  * This TLV encapsulates other TLVs and has additional information like verification information and a client bitfield.
  */
-public class HAProxySSLTLV extends HAProxyTLV {
+public final class HAProxySSLTLV extends HAProxyTLV {
 
     private final int verify;
     private final List<HAProxyTLV> tlvs;
@@ -52,24 +54,20 @@ public class HAProxySSLTLV extends HAProxyTLV {
 
         super(Type.PP2_TYPE_SSL, (byte) 0x20, rawContent);
 
-        if (tlvs == null) {
-            throw new NullPointerException("tlvs");
-        }
+        checkNotNull(tlvs, "tlvs");
 
         this.verify = verify;
-        this.tlvs = tlvs;
+        this.tlvs = Collections.unmodifiableList(tlvs);
 
-        //Now parse the bitmask
+        // Now parse the bitmask
         clients = new HashSet<CLIENT>();
-        if ((clientBitField & 0x1) == 0x1) {
-
+        if ((clientBitField & 0x1) != 0) {
             clients.add(CLIENT.PP2_CLIENT_SSL);
         }
-        if ((clientBitField & 0x2) == 0x2) {
+        if ((clientBitField & 0x2) != 0) {
             clients.add(CLIENT.PP2_CLIENT_CERT_CONN);
         }
-        if ((clientBitField & 0x4) == 0x4) {
-
+        if ((clientBitField & 0x4) != 0) {
             clients.add(CLIENT.PP2_CLIENT_CERT_SESS);
         }
     }
@@ -77,27 +75,29 @@ public class HAProxySSLTLV extends HAProxyTLV {
     /**
      * Returns the verification result
      */
-    public int getVerify() {
+    public int verify() {
         return verify;
     }
 
     /**
      * Returns an unmodifiable Set of {@link CLIENT} values for this SSL TLV
      */
-    public Set<CLIENT> getClients() {
+    public Set<CLIENT> clients() {
         return Collections.unmodifiableSet(clients);
     }
 
     /**
      * Returns an unmodifiable Set of encapsulated {@link HAProxyTLV}s.
      */
-    public List<HAProxyTLV> getEncapsulatedTLVs() {
-        return Collections.unmodifiableList(tlvs);
+    public List<HAProxyTLV> encapsulatedTLVs() {
+        return tlvs;
     }
 
+    /**
+     * This TLV always encapsulates additional TLVs
+     */
     @Override
     public boolean encapsulatesOtherTLVs() {
-        //This TLV always encapsulates additional TLVs
         return true;
     }
 }
