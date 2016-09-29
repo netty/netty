@@ -18,7 +18,6 @@ package io.netty.handler.flow;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;

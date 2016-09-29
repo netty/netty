@@ -19,8 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http2.internal.hpack.Decoder;
 import io.netty.util.internal.UnstableApi;
 
-import java.io.IOException;
-
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
