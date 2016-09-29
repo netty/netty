@@ -127,6 +127,10 @@ public class MixedFileUpload implements FileUpload {
         return fileUpload.length();
     }
 
+    public long definedLength() {
+        return fileUpload.definedLength();
+    }
+
     public boolean renameTo(File dest) throws IOException {
         return fileUpload.renameTo(dest);
     }

@@ -47,12 +47,14 @@ public class HttpPostRequestEncoderTest {
 
         String expected = "--" + multipartDataBoundary + "\r\n" +
                 "Content-Disposition: form-data; name=\"foo\"" + "\r\n" +
+                "Content-Length: 3" + "\r\n" +
                 "Content-Type: text/plain; charset=UTF-8" + "\r\n" +
                 "\r\n" +
                 "bar" +
                 "\r\n" +
                 "--" + multipartDataBoundary + "\r\n" +
                 "Content-Disposition: form-data; name=\"quux\"; filename=\"file-01.txt\"" + "\r\n" +
+                "Content-Length: " + file1.length() + "\r\n" +
                 "Content-Type: text/plain" + "\r\n" +
                 "Content-Transfer-Encoding: binary" + "\r\n" +
                 "\r\n" +
@@ -83,6 +85,7 @@ public class HttpPostRequestEncoderTest {
 
         String expected = "--" + multipartDataBoundary + "\r\n" +
                 "Content-Disposition: form-data; name=\"foo\"" + "\r\n" +
+                "Content-Length: 3" + "\r\n" +
                 "Content-Type: text/plain; charset=UTF-8" + "\r\n" +
                 "\r\n" +
                 "bar" + "\r\n" +
@@ -92,6 +95,7 @@ public class HttpPostRequestEncoderTest {
                 "\r\n" +
                 "--" + multipartMixedBoundary + "\r\n" +
                 "Content-Disposition: attachment; filename=\"file-02.txt\"" + "\r\n" +
+                "Content-Length: " + file1.length() + "\r\n" +
                 "Content-Type: text/plain" + "\r\n" +
                 "Content-Transfer-Encoding: binary" + "\r\n" +
                 "\r\n" +
@@ -99,6 +103,7 @@ public class HttpPostRequestEncoderTest {
                 "\r\n" +
                 "--" + multipartMixedBoundary + "\r\n" +
                 "Content-Disposition: attachment; filename=\"file-02.txt\"" + "\r\n" +
+                "Content-Length: " + file1.length() + "\r\n" +
                 "Content-Type: text/plain" + "\r\n" +
                 "Content-Transfer-Encoding: binary" + "\r\n" +
                 "\r\n" +

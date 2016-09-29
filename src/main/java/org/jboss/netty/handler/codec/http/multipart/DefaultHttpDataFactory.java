@@ -120,6 +120,26 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         return attribute;
     }
 
+    public Attribute createAttribute(HttpRequest request, String name, long definedSize) {
+        if (useDisk) {
+            Attribute attribute = new DiskAttribute(name, definedSize);
+            attribute.setMaxSize(maxSize);
+            List<HttpData> fileToDelete = getList(request);
+            fileToDelete.add(attribute);
+            return attribute;
+        }
+        if (checkSize) {
+            Attribute attribute = new MixedAttribute(name, definedSize, minSize);
+            attribute.setMaxSize(maxSize);
+            List<HttpData> fileToDelete = getList(request);
+            fileToDelete.add(attribute);
+            return attribute;
+        }
+        MemoryAttribute attribute = new MemoryAttribute(name, definedSize);
+        attribute.setMaxSize(maxSize);
+        return attribute;
+    }
+
     /**
      * Utility method
      * @param data

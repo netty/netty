@@ -279,6 +279,10 @@ public class HttpPostRequestDecoder implements InterfaceHttpPostRequestDecoder {
         return decoder.next();
     }
 
+    public InterfaceHttpData currentPartialHttpData() {
+        return decoder.currentPartialHttpData();
+    }
+
     /**
      * Clean all HttpDatas (on Disk) for the current request.
      */

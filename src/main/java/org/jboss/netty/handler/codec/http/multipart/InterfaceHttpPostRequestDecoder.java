@@ -93,6 +93,16 @@ public interface InterfaceHttpPostRequestDecoder {
     InterfaceHttpData next() throws EndOfDataDecoderException;
 
     /**
+     * Returns the current InterfaceHttpData if currently in decoding status,
+     * meaning all data are not yet within, or null if there is no InterfaceHttpData
+     * currently in decoding status (either because none yet decoded or none currently partially
+     * decoded). Full decoded ones are accessible through hasNext() and next() methods.
+     *
+     * @return the current InterfaceHttpData if currently in decoding status or null if none.
+     */
+    InterfaceHttpData currentPartialHttpData();
+
+    /**
      * Clean all HttpDatas (on Disk) for the current request.
      */
     void cleanFiles();

@@ -87,4 +87,8 @@ public abstract class AbstractHttpData implements HttpData {
     public long length() {
         return size;
     }
+
+    public long definedLength() {
+        return definedSize;
+    }
 }
