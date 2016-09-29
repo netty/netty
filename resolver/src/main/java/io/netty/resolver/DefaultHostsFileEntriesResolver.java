@@ -28,6 +28,11 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
 
     @Override
     public InetAddress address(String inetHost) {
-        return entries.get(inetHost.toLowerCase(Locale.ENGLISH));
+        return entries.get(normalize(inetHost));
+    }
+
+    // package-private for testing purposes
+    String normalize(String inetHost) {
+        return inetHost.toLowerCase(Locale.ENGLISH);
     }
 }
