@@ -96,7 +96,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Boolean validateHeaders;
     private Http2FrameLogger frameLogger;
     private SensitivityDetector headerSensitivityDetector;
-    private Boolean encoderEnforceMaxConcurrentStreams;
+    private boolean encoderEnforceMaxConcurrentStreams;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -272,7 +272,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * would otherwise be exceeded.
      */
     protected boolean encoderEnforceMaxConcurrentStreams() {
-        return encoderEnforceMaxConcurrentStreams != null ? encoderEnforceMaxConcurrentStreams : false;
+        return encoderEnforceMaxConcurrentStreams;
     }
 
     /**
