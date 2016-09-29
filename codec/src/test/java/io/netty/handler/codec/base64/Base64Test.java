@@ -22,7 +22,6 @@ import org.junit.Test;
 
 
 import java.io.ByteArrayInputStream;
-import java.nio.charset.Charset;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 

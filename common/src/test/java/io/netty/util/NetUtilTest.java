@@ -17,7 +17,6 @@ package io.netty.util;
 
 import org.junit.Test;
 
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;

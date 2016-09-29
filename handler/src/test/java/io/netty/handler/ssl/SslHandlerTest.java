@@ -19,10 +19,7 @@ package io.netty.handler.ssl;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.*;
-import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 import javax.net.ssl.SSLContext;

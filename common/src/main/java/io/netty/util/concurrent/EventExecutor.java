@@ -15,8 +15,6 @@
  */
 package io.netty.util.concurrent;
 
-import java.util.Set;
-
 /**
  * The {@link EventExecutor} is a special {@link EventExecutorGroup} which comes
  * with some handy methods to see if a {@link Thread} is executed in a event loop.

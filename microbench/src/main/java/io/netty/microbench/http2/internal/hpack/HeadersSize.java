@@ -34,7 +34,6 @@ package io.netty.microbench.http2.internal.hpack;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
-import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 /**
