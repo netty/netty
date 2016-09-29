@@ -182,6 +182,9 @@ public final class HAProxyMessage {
                 addressLen = addressEnd - startIdx;
             }
             dstAddress = header.toString(startIdx, addressLen, CharsetUtil.US_ASCII);
+            // AF_UNIX defines that exactly 108 bytes are reserved for the address. The previous methods
+            // did not increase the reader index although we already consumed the information.
+            header.readerIndex(startIdx + 108);
         } else {
             if (addressFamily == AddressFamily.AF_IPv4) {
                 // IPv4 requires 12 bytes for address information
