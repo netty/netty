@@ -39,7 +39,6 @@ import io.netty.util.AsciiString;
 
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
-import static io.netty.handler.codec.http2.Http2Error.valueOf;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;

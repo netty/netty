@@ -16,7 +16,6 @@ package io.netty.handler.codec;
 
 import io.netty.util.HashingStrategy;
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.SystemPropertyUtil;
 
 import java.text.DateFormat;
 import java.text.ParseException;

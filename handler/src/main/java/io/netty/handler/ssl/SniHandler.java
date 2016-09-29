@@ -20,8 +20,6 @@ import java.net.SocketAddress;
 import java.util.List;
 import java.util.Locale;
 
-import javax.net.ssl.SSLEngine;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;

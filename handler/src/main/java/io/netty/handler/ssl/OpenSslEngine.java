@@ -19,8 +19,6 @@ import io.netty.buffer.ByteBufAllocator;
 
 import javax.net.ssl.SSLEngine;
 
-import static io.netty.util.ReferenceCountUtil.safeRelease;
-
 /**
  * Implements a {@link SSLEngine} using
  * <a href="https://www.openssl.org/docs/crypto/BIO_s_bio.html#EXAMPLE">OpenSSL BIO abstractions</a>.

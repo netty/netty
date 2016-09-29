@@ -22,10 +22,7 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeMap;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.FutureListener;
 
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
