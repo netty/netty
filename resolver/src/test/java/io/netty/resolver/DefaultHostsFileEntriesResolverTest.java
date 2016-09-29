@@ -19,16 +19,15 @@
  */
 package io.netty.resolver;
 
+import org.junit.Assert;
 import org.junit.Test;
-
-import static org.junit.Assert.assertNotNull;
 
 public class DefaultHostsFileEntriesResolverTest {
 
     @Test
-    public void testLocalhost() {
+    public void testCaseInsensitivity() throws Exception {
         DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver();
-        assertNotNull("localhost doesn't resolve", resolver.address("localhost"));
-        assertNotNull("LOCALHOST doesn't resolve", resolver.address("LOCALHOST"));
+        //normalized somehow
+        Assert.assertEquals(resolver.normalize("localhost"), resolver.normalize("LOCALHOST"));
     }
 }
