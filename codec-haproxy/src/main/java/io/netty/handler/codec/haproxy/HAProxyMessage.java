@@ -299,12 +299,24 @@ public final class HAProxyMessage {
         case PP2_TYPE_NETNS:
         case OTHER:
             final byte[] content = copyByteBufToByteArray(header, length);
+            // Manually set the reader index since the copy method did not increase the index
+            header.readerIndex(header.readerIndex() + content.length);
             return new HAProxyTLV(type, typeAsByte, content);
         default:
             return null;
         }
     }
 
+    /**
+     *  Copies the contents of the ByteBuf (beginning at the reader index) to a byte array of a
+     *  specified length.
+     *
+     *  This method does not modify the readerIndex or writerIndex.
+     *
+     * @param header the byte buffer
+     * @param length the length of the byte array
+     * @return a byte array with the contents of the given ByteBuf up to the specified length
+     */
     private static byte[] copyByteBufToByteArray(final ByteBuf header, final int length) {
         final byte[] content = new byte[length];
         header.getBytes(header.readerIndex(), content);
