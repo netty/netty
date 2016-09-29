@@ -108,7 +108,7 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
      * implementation or override the default configuration.
      */
     protected AddressResolver<InetSocketAddress> newAddressResolver(EventLoop eventLoop,
-                                                                          NameResolver<InetAddress> resolver)
+                                                                    NameResolver<InetAddress> resolver)
             throws Exception {
         return new InetSocketAddressResolver(eventLoop, resolver);
     }

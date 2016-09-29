@@ -20,6 +20,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -30,6 +31,7 @@ import java.util.List;
  * A {@link AbstractAddressResolver} that resolves {@link InetAddress} and chooses a single address randomly if multiple
  * are returned by the {@link NameResolver}.
  */
+@UnstableApi
 public class RoundRobinInetSocketAddressResolver extends InetSocketAddressResolver {
 
     /**
@@ -57,12 +59,10 @@ public class RoundRobinInetSocketAddressResolver extends InetSocketAddressResolv
                                 if (numAddresses == 0) {
                                     promise.setFailure(new UnknownHostException(unresolvedAddress.getHostName()));
                                 } else {
-                                    int index = 0;
-                                    if (numAddresses > 1) {
-                                        // there are multiple addresses: we shall pick one at random
-                                        // this is to support the round robin distribution
-                                        index = ThreadLocalRandom.current().nextInt(numAddresses);
-                                    }
+                                    // if there are multiple addresses: we shall pick one at random
+                                    // this is to support the round robin distribution
+                                    int index =
+                                            (numAddresses == 1)? 0 : ThreadLocalRandom.current().nextInt(numAddresses);
                                     promise.setSuccess(new InetSocketAddress(inetAddresses.get(index),
                                                                              unresolvedAddress.getPort()));
                                 }
