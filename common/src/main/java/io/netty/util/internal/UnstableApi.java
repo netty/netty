@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
  *
  * <ol>
  *     <li>Is not needed for things located in *.internal.* packages</li>
- *     <li>Only public acessible classes/interfaces must be annotated</li>
+ *     <li>Only public accessible classes/interfaces must be annotated</li>
  *     <li>If this annotation is not present the API is considered stable and so no backward compatibility can be
  *         broken in a non-major release!</li>
  * </ol>
