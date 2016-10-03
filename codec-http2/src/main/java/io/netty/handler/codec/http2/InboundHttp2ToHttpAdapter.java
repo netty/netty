@@ -303,6 +303,8 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         }
 
         msg.headers().setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_PROMISE_ID.text(), streamId);
+        msg.headers().setShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(),
+                Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT);
 
         processHeadersEnd(ctx, promisedStream, msg, false);
     }
