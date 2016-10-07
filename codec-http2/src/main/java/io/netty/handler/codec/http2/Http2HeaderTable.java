@@ -22,22 +22,30 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public interface Http2HeaderTable {
     /**
-     * Sets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
+     * Represents the value for
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_HEADER_TABLE_SIZE</a>. This method should
+     * only be called by Netty (not users) as a result of a receiving a {@code SETTINGS} frame.
      */
     void maxHeaderTableSize(long max) throws Http2Exception;
 
     /**
-     * Gets the maximum size of the HPACK header table used for decoding HTTP/2 headers.
+     * Represents the value for
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_HEADER_TABLE_SIZE</a>. The initial value
+     * returned by this method must be {@link Http2CodecUtil#DEFAULT_HEADER_TABLE_SIZE}.
      */
     long maxHeaderTableSize();
 
     /**
-     * Sets the maximum allowed header elements.
+     * Represents the value for
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>. This method should
+     * only be called by Netty (not users) as a result of a receiving a {@code SETTINGS} frame.
      */
-    void maxHeaderListSize(int max) throws Http2Exception;
+    void maxHeaderListSize(long max) throws Http2Exception;
 
     /**
-     * Gets the maximum allowed header elements.
+     * Represents the value for
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>. The initial value
+     * returned by this method must be {@link Http2CodecUtil#DEFAULT_HEADER_LIST_SIZE}.
      */
-    int maxHeaderListSize();
+    long maxHeaderListSize();
 }

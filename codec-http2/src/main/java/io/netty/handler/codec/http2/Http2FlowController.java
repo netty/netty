@@ -36,8 +36,9 @@ public interface Http2FlowController {
      * Sets the connection-wide initial flow control window and updates all stream windows (but not the connection
      * stream window) by the delta.
      * <p>
-     * This method is used to apply the {@code SETTINGS_INITIAL_WINDOW_SIZE} value for an
-     * {@code SETTINGS} frame.
+     * Represents the value for
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>. This method should
+     * only be called by Netty (not users) as a result of a receiving a {@code SETTINGS} frame.
      *
      * @param newWindowSize the new initial window size.
      * @throws Http2Exception thrown if any protocol-related error occurred.
@@ -47,6 +48,10 @@ public interface Http2FlowController {
     /**
      * Gets the connection-wide initial flow control window size that is used as the basis for new stream flow
      * control windows.
+     * <p>
+     * Represents the value for
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>. The initial value
+     * returned by this method must be {@link Http2CodecUtil#DEFAULT_WINDOW_SIZE}.
      */
     int initialWindowSize();
 

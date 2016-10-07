@@ -38,6 +38,7 @@ import io.netty.handler.codec.http2.Http2Headers;
 import org.junit.Before;
 import org.junit.Test;
 
+import static io.netty.handler.codec.http2.Http2TestUtil.newTestDecoder;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.AsciiString.of;
 import static java.lang.Integer.MAX_VALUE;
@@ -50,7 +51,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 public class DecoderTest {
 
-    private static final int MAX_HEADER_SIZE = 8192;
+    private static final int MAX_HEADER_LIST_SIZE = 8192;
     private static final int MAX_HEADER_TABLE_SIZE = 4096;
 
     private Decoder decoder;
@@ -64,15 +65,15 @@ public class DecoderTest {
         byte[] b = Hex.decodeHex(encoded.toCharArray());
         ByteBuf in = Unpooled.wrappedBuffer(b);
         try {
-            decoder.decode(in, mockHeaders);
+            decoder.decode(0, in, mockHeaders);
         } finally {
             in.release();
         }
     }
 
     @Before
-    public void setUp() {
-        decoder = new Decoder(MAX_HEADER_SIZE, MAX_HEADER_TABLE_SIZE, 32);
+    public void setUp() throws Http2Exception {
+        decoder = new Decoder();
         mockHeaders = mock(Http2Headers.class);
     }
 
@@ -81,7 +82,7 @@ public class DecoderTest {
         byte[] input = {0, (byte) 0x80, 0};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(in, mockHeaders);
+            decoder.decode(0, in, mockHeaders);
             verify(mockHeaders, times(1)).add(EMPTY_STRING, EMPTY_STRING);
         } finally {
             in.release();
@@ -93,7 +94,7 @@ public class DecoderTest {
         byte[] input = {0, (byte) 0x81, -1};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(in, mockHeaders);
+            decoder.decode(0, in, mockHeaders);
         } finally {
             in.release();
         }
@@ -104,7 +105,7 @@ public class DecoderTest {
         byte[] input = {0, (byte) 0x84, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(in, mockHeaders);
+            decoder.decode(0, in, mockHeaders);
         } finally {
             in.release();
         }
@@ -115,7 +116,7 @@ public class DecoderTest {
         byte[] input = {0, (byte) 0x81, 0};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(in, mockHeaders);
+            decoder.decode(0, in, mockHeaders);
         } finally {
             in.release();
         }
@@ -126,9 +127,9 @@ public class DecoderTest {
         byte[] compressed = Hex.decodeHex("FFF0".toCharArray());
         ByteBuf in = Unpooled.wrappedBuffer(compressed);
         try {
-            decoder.decode(in, mockHeaders);
+            decoder.decode(0, in, mockHeaders);
             assertEquals(1, in.readableBytes());
-            decoder.decode(in, mockHeaders);
+            decoder.decode(0, in, mockHeaders);
         } finally {
             in.release();
         }

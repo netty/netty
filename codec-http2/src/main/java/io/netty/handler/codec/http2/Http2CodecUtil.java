@@ -29,6 +29,8 @@ import io.netty.util.internal.UnstableApi;
 
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -92,7 +94,7 @@ public final class Http2CodecUtil {
     public static final int MAX_INITIAL_WINDOW_SIZE = Integer.MAX_VALUE;
     public static final int MAX_FRAME_SIZE_LOWER_BOUND = 0x4000;
     public static final int MAX_FRAME_SIZE_UPPER_BOUND = 0xFFFFFF;
-    public static final long MAX_HEADER_LIST_SIZE = Long.MAX_VALUE;
+    public static final long MAX_HEADER_LIST_SIZE = MAX_UNSIGNED_INT;
 
     public static final long MIN_HEADER_TABLE_SIZE = 0;
     public static final long MIN_CONCURRENT_STREAMS = 0;
@@ -103,7 +105,7 @@ public final class Http2CodecUtil {
     public static final boolean DEFAULT_ENABLE_PUSH = true;
     public static final short DEFAULT_PRIORITY_WEIGHT = 16;
     public static final int DEFAULT_HEADER_TABLE_SIZE = 4096;
-    public static final int DEFAULT_MAX_HEADER_SIZE = 8192;
+    public static final int DEFAULT_HEADER_LIST_SIZE = 8192;
     public static final int DEFAULT_MAX_FRAME_SIZE = MAX_FRAME_SIZE_LOWER_BOUND;
 
     /**
@@ -219,6 +221,10 @@ public final class Http2CodecUtil {
      */
     public static int streamableBytes(StreamByteDistributor.StreamState state) {
         return max(0, min(state.pendingBytes(), state.windowSize()));
+    }
+
+    public static void headerListSizeExceeded(int streamId, long maxHeaderListSize) throws Http2Exception {
+        throw streamError(streamId, PROTOCOL_ERROR, "Header size exceeded max allowed size (%d)", maxHeaderListSize);
     }
 
     static void writeFrameHeaderInternal(ByteBuf out, int payloadLength, byte type,

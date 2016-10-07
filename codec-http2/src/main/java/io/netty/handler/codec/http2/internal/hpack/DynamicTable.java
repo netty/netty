@@ -41,13 +41,13 @@ final class DynamicTable {
     HeaderField[] headerFields;
     int head;
     int tail;
-    private int size;
+    private long size;
     private long capacity = -1; // ensure setCapacity creates the array
 
     /**
      * Creates a new dynamic table with the specified initial capacity.
      */
-    DynamicTable(int initialCapacity) {
+    DynamicTable(long initialCapacity) {
         setCapacity(initialCapacity);
     }
 
@@ -106,7 +106,7 @@ final class DynamicTable {
             clear();
             return;
         }
-        while (size + headerSize > capacity) {
+        while (capacity - size < headerSize) {
             remove();
         }
         headerFields[head++] = header;

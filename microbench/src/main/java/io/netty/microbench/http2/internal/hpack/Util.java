@@ -31,6 +31,9 @@
  */
 package io.netty.microbench.http2.internal.hpack;
 
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
+import io.netty.handler.codec.http2.Http2Headers;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -102,5 +105,15 @@ public final class Util {
      */
     static List<Header> headers(HeadersSize size, boolean limitToAscii) {
         return headersMap.get(new HeadersKey(size, limitToAscii));
+    }
+
+    static Http2Headers http2Headers(HeadersSize size, boolean limitToAscii) {
+        List<Header> headers = headersMap.get(new HeadersKey(size, limitToAscii));
+        Http2Headers http2Headers = new DefaultHttp2Headers(false);
+        for (int i = 0; i < headers.size(); ++i) {
+            Header header = headers.get(i);
+            http2Headers.add(header.name, header.value);
+        }
+        return http2Headers;
     }
 }

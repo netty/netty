@@ -15,13 +15,14 @@
 
 package io.netty.handler.codec.http2;
 
+import org.junit.Before;
+import org.junit.Test;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_UNSIGNED_INT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
-import org.junit.Before;
-import org.junit.Test;
 
 /**
  * Tests for {@link Http2Settings}.
@@ -77,21 +78,20 @@ public class Http2SettingsTest {
     }
 
     @Test
-    public void boundarySettingsShouldBeSet() {
-        final long overIntegerMaxValue = 1L << 31;
-        settings.maxHeaderListSize((int) overIntegerMaxValue);
-        assertEquals(Integer.MAX_VALUE, (long) settings.maxHeaderListSize());
+    public void headerListSizeUnsignedInt() {
+        settings.maxHeaderListSize(MAX_UNSIGNED_INT);
+        assertEquals(MAX_UNSIGNED_INT, (long) settings.maxHeaderListSize());
+    }
 
-        final long settingsValueUpperBound = (1L << 32) - 1L;
-        settings.maxHeaderListSize((int) settingsValueUpperBound);
-        assertEquals(Integer.MAX_VALUE, (long) settings.maxHeaderListSize());
+    @Test(expected = IllegalArgumentException.class)
+    public void headerListSizeBoundCheck() {
+        settings.maxHeaderListSize(Long.MAX_VALUE);
     }
 
     @Test
     public void headerTableSizeUnsignedInt() {
-        final long value = 1L << 31;
-        settings.put(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE, (Long) value);
-        assertEquals(value, (long) settings.get(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE));
+        settings.put(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE, (Long) MAX_UNSIGNED_INT);
+        assertEquals(MAX_UNSIGNED_INT, (long) settings.get(Http2CodecUtil.SETTINGS_HEADER_TABLE_SIZE));
     }
 
     @Test(expected = IllegalArgumentException.class)

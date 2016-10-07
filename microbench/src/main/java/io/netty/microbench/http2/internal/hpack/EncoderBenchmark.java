@@ -32,6 +32,8 @@
 package io.netty.microbench.http2.internal.hpack;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.Http2HeadersEncoder;
 import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -50,9 +52,11 @@ import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.IOException;
-import java.util.List;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static io.netty.microbench.http2.internal.hpack.HpackUtilBenchmark.newTestEncoder;
 
 @Fork(1)
 @Threads(1)
@@ -65,9 +69,6 @@ public class EncoderBenchmark extends AbstractMicrobenchmark {
     @Param
     public HeadersSize size;
 
-    @Param({ "4096" })
-    public int maxTableSize;
-
     @Param({ "true", "false" })
     public boolean sensitive;
 
@@ -77,13 +78,26 @@ public class EncoderBenchmark extends AbstractMicrobenchmark {
     @Param({ "true", "false" })
     public boolean limitToAscii;
 
-    private List<Header> headers;
+    private Http2Headers http2Headers;
     private ByteBuf output;
+    private Http2HeadersEncoder.SensitivityDetector sensitivityDetector;
 
     @Setup(Level.Trial)
     public void setup() {
-        headers = Util.headers(size, limitToAscii);
+        http2Headers = Util.http2Headers(size, limitToAscii);
+        if (duplicates) {
+            int size = http2Headers.size();
+            if (size > 0) {
+                Iterator<Map.Entry<CharSequence, CharSequence>> itr = http2Headers.iterator();
+                Map.Entry<CharSequence, CharSequence> entry = itr.next();
+                http2Headers.clear();
+                for (int i = 0; i < size; ++i) {
+                    http2Headers.add(entry.getKey(), entry.getValue());
+                }
+            }
+        }
         output = size.newOutBuffer();
+        sensitivityDetector = sensitive ? Http2HeadersEncoder.ALWAYS_SENSITIVE : Http2HeadersEncoder.NEVER_SENSITIVE;
     }
 
     @TearDown(Level.Trial)
@@ -93,21 +107,10 @@ public class EncoderBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
-    public void encode(Blackhole bh) throws IOException {
-        Encoder encoder = new Encoder(maxTableSize);
+    public void encode(Blackhole bh) throws Exception {
+        Encoder encoder = newTestEncoder();
         output.clear();
-        if (duplicates) {
-            // If duplicates is set, re-add the same header each time.
-            Header header = headers.get(0);
-            for (int i = 0; i < headers.size(); ++i) {
-                encoder.encodeHeader(output, header.name, header.value, sensitive);
-            }
-        } else {
-            for (int i = 0; i < headers.size(); ++i) {
-                Header header = headers.get(i);
-                encoder.encodeHeader(output, header.name, header.value, sensitive);
-            }
-        }
+        encoder.encodeHeaders(output, http2Headers, sensitivityDetector);
         bh.consume(output);
     }
 }

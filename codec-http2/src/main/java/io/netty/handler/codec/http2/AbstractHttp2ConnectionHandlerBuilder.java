@@ -58,6 +58,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *   <li>{@link #frameLogger(Http2FrameLogger)}</li>
  *   <li>{@link #headerSensitivityDetector(SensitivityDetector)}</li>
  *   <li>{@link #encoderEnforceMaxConcurrentStreams(boolean)}</li>
+ *   <li>{@link #encoderIgnoreMaxHeaderListSize(boolean)}</li>
  * </ul>
  *
  * <h3>Exposing necessary methods in a subclass</h3>
@@ -97,6 +98,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Http2FrameLogger frameLogger;
     private SensitivityDetector headerSensitivityDetector;
     private Boolean encoderEnforceMaxConcurrentStreams;
+    private Boolean encoderIgnoreMaxHeaderListSize;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -302,6 +304,19 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Sets if the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     * should be ignored when encoding headers.
+     * @param ignoreMaxHeaderListSize {@code true} to ignore
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>.
+     * @return this.
+     */
+    protected B encoderIgnoreMaxHeaderListSize(boolean ignoreMaxHeaderListSize) {
+        enforceNonCodecConstraints("encoderIgnoreMaxHeaderListSize");
+        this.encoderIgnoreMaxHeaderListSize = ignoreMaxHeaderListSize;
+        return self();
+    }
+
+    /**
      * Create a new {@link Http2ConnectionHandler}.
      */
     protected T build() {
@@ -320,7 +335,9 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     private T buildFromConnection(Http2Connection connection) {
         Http2FrameReader reader = new DefaultHttp2FrameReader(isValidateHeaders());
-        Http2FrameWriter writer = new DefaultHttp2FrameWriter(headerSensitivityDetector());
+        Http2FrameWriter writer = encoderIgnoreMaxHeaderListSize == null ?
+                new DefaultHttp2FrameWriter(headerSensitivityDetector()) :
+                new DefaultHttp2FrameWriter(headerSensitivityDetector(), encoderIgnoreMaxHeaderListSize);
 
         if (frameLogger != null) {
             reader = new Http2InboundFrameLogger(reader, frameLogger);
