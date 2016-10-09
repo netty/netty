@@ -69,7 +69,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     static {
         boolean hasParser = false;
         try {
-            // MessageLite.getParsetForType() is not available until protobuf 2.5.0.
+            // MessageLite.getParserForType() is not available until protobuf 2.5.0.
             MessageLite.class.getDeclaredMethod("getParserForType");
             hasParser = true;
         } catch (Throwable t) {
