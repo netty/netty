@@ -104,7 +104,7 @@ public class NonStickyEventExecutorGroupTest {
 
         for (int i = 1 ; i <= tasks; i++) {
             final int id = i;
-            executor.execute(new Runnable() {
+            futures.add(executor.submit(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -122,7 +122,7 @@ public class NonStickyEventExecutorGroupTest {
                         latch.countDown();
                     }
                 }
-            });
+            }));
         }
         latch.await();
         for (Future<?> future: futures) {
