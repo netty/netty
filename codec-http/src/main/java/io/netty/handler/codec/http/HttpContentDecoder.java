@@ -96,8 +96,12 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             // the correct value can be set only after all chunks are processed/decoded.
             // If buffering is not an issue, add HttpObjectAggregator down the chain, it will set the header.
             // Otherwise, rely on LastHttpContent message.
-            headers.remove(HttpHeaders.Names.CONTENT_LENGTH);
-            headers.set(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+            if (headers.contains(HttpHeaders.Names.CONTENT_LENGTH)) {
+                headers.remove(HttpHeaders.Names.CONTENT_LENGTH);
+                headers.set(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+            }
+            // Either it is already chunked or EOF terminated.
+            // See https://github.com/netty/netty/issues/5892
 
             // set new content encoding,
             CharSequence targetContentEncoding = getTargetContentEncoding(contentEncoding);
