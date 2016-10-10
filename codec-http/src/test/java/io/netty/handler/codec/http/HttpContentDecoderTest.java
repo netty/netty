@@ -422,7 +422,7 @@ public class HttpContentDecoderTest {
         int contentLength = 0;
         contentLength = calculateContentLength(req, contentLength);
 
-        byte[] receivedContent = readContent(req, contentLength);
+        byte[] receivedContent = readContent(req, contentLength, true);
 
         assertEquals(HELLO_WORLD, new String(receivedContent, CharsetUtil.US_ASCII));
 
@@ -449,7 +449,35 @@ public class HttpContentDecoderTest {
         int contentLength = 0;
         contentLength = calculateContentLength(resp, contentLength);
 
-        byte[] receivedContent = readContent(resp, contentLength);
+        byte[] receivedContent = readContent(resp, contentLength, true);
+
+        assertEquals(HELLO_WORLD, new String(receivedContent, CharsetUtil.US_ASCII));
+
+        assertHasInboundMessages(channel, true);
+        assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish());
+    }
+
+    // See https://github.com/netty/netty/issues/5892
+    @Test
+    public void testFullHttpResponseEOF() {
+        // test that ContentDecoder can be used after the ObjectAggregator
+        HttpResponseDecoder decoder = new HttpResponseDecoder(4096, 4096, 5);
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
+        String headers = "HTTP/1.1 200 OK\r\n" +
+                "Content-Encoding: gzip\r\n" +
+                "\r\n";
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(headers.getBytes(), GZ_HELLO_WORLD)));
+        // This should terminate it.
+        assertTrue(channel.finish());
+
+        Queue<Object> resp = channel.inboundMessages();
+        assertTrue(resp.size() > 1);
+        int contentLength = 0;
+        contentLength = calculateContentLength(resp, contentLength);
+
+        byte[] receivedContent = readContent(resp, contentLength, false);
 
         assertEquals(HELLO_WORLD, new String(receivedContent, CharsetUtil.US_ASCII));
 
@@ -484,7 +512,7 @@ public class HttpContentDecoderTest {
         return output;
     }
 
-    private static byte[] readContent(Queue<Object> req, int contentLength) {
+    private static byte[] readContent(Queue<Object> req, int contentLength, boolean hasTransferEncoding) {
         byte[] receivedContent = new byte[contentLength];
         int readCount = 0;
         for (Object o : req) {
@@ -493,6 +521,10 @@ public class HttpContentDecoderTest {
                 int readableBytes = b.readableBytes();
                 b.readBytes(receivedContent, readCount, readableBytes);
                 readCount += readableBytes;
+            }
+            if (o instanceof HttpMessage) {
+                assertEquals(hasTransferEncoding,
+                        ((HttpMessage) o).headers().contains(HttpHeaderNames.TRANSFER_ENCODING));
             }
         }
         return receivedContent;
