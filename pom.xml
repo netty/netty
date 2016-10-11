@@ -128,7 +128,7 @@
       </modules>
     </profile>
     <!--
-      Netty must be released from RHEL 6.7 x86_64 or compatible so that:
+      Netty must be released from RHEL 6.8 x86_64 or compatible so that:
 
         1) we ship x86_64 version of epoll transport officially, and
         2) we ensure the ABI compatibility with older GLIBC versions.
@@ -164,12 +164,12 @@
                     </requireProperty>
                     <requireFilesContent>
                       <message>
-                        Release process must be performed on RHEL 6.7 or its derivatives.
+                        Release process must be performed on RHEL 6.8 or its derivatives.
                       </message>
                       <files>
                         <file>/etc/redhat-release</file>
                       </files>
-                      <content>release 6.7</content>
+                      <content>release 6.8</content>
                     </requireFilesContent>
                   </rules>
                 </configuration>
