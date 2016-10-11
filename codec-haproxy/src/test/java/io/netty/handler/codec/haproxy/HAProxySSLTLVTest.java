@@ -16,7 +16,7 @@
 
 package io.netty.handler.codec.haproxy;
 
-import io.netty.handler.codec.haproxy.HAProxySSLTLV.CLIENT;
+import io.netty.handler.codec.haproxy.HAProxySSLTLV.Client;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -34,9 +34,9 @@ public class HAProxySSLTLVTest {
                 new HAProxySSLTLV(0, allClientsEnabled, Collections.<HAProxyTLV>emptyList(), new byte[0]);
 
         assertEquals(3, allClientsEnabledTLV.clients().size());
-        assertEquals(true, allClientsEnabledTLV.clients().contains(CLIENT.PP2_CLIENT_CERT_CONN));
-        assertEquals(true, allClientsEnabledTLV.clients().contains(CLIENT.PP2_CLIENT_SSL));
-        assertEquals(true, allClientsEnabledTLV.clients().contains(CLIENT.PP2_CLIENT_CERT_SESS));
+        assertEquals(true, allClientsEnabledTLV.clients().contains(Client.PP2_CLIENT_CERT_CONN));
+        assertEquals(true, allClientsEnabledTLV.clients().contains(Client.PP2_CLIENT_SSL));
+        assertEquals(true, allClientsEnabledTLV.clients().contains(Client.PP2_CLIENT_CERT_SESS));
 
         // 0b0000_0101
         final byte clientSSLandClientCertSessEnabled = 0x5;
@@ -46,9 +46,9 @@ public class HAProxySSLTLVTest {
                                   new byte[0]);
 
         assertEquals(2, clientSSLandClientCertSessTLV.clients().size());
-        assertEquals(false, clientSSLandClientCertSessTLV.clients().contains(CLIENT.PP2_CLIENT_CERT_CONN));
-        assertEquals(true, clientSSLandClientCertSessTLV.clients().contains(CLIENT.PP2_CLIENT_SSL));
-        assertEquals(true, clientSSLandClientCertSessTLV.clients().contains(CLIENT.PP2_CLIENT_CERT_SESS));
+        assertEquals(false, clientSSLandClientCertSessTLV.clients().contains(Client.PP2_CLIENT_CERT_CONN));
+        assertEquals(true, clientSSLandClientCertSessTLV.clients().contains(Client.PP2_CLIENT_SSL));
+        assertEquals(true, clientSSLandClientCertSessTLV.clients().contains(Client.PP2_CLIENT_CERT_SESS));
 
         // 0b0000_0000
         final byte noClientEnabled = 0x0;

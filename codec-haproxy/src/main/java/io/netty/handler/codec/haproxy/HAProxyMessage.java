@@ -248,7 +248,7 @@ public final class HAProxyMessage {
         final List<HAProxyTLV> haProxyTLVs = new ArrayList<HAProxyTLV>(4);
 
         while (header.isReadable()) {
-            final HAProxyTLV haProxyTLV = readNextTlv(header);
+            final HAProxyTLV haProxyTLV = readNextTLV(header);
 
             if (haProxyTLV == null) {
                 // We don't have a TLV available anymore, we can stop
@@ -263,7 +263,7 @@ public final class HAProxyMessage {
         return haProxyTLVs;
     }
 
-    private static HAProxyTLV readNextTlv(final ByteBuf header) {
+    private static HAProxyTLV readNextTLV(final ByteBuf header) {
 
         // We need at least 4 bytes for a TLV
         if (header.readableBytes() < 4) {
@@ -277,20 +277,24 @@ public final class HAProxyMessage {
         switch (type) {
         case PP2_TYPE_SSL:
             final byte[] rawContent = copyByteBufToByteArray(header, length);
-            final ByteBuf byteBuf = header.readBytes(length);
+            final ByteBuf byteBuf = header.readSlice(length);
             final byte client = byteBuf.readByte();
             final int verify = byteBuf.readInt();
 
-            final List<HAProxyTLV> encapsulatedTlvs = new ArrayList<HAProxyTLV>(4);
-            while (byteBuf.readableBytes() >= 4) {
-                final HAProxyTLV haProxyTLV = readNextTlv(byteBuf);
-                if (haProxyTLV == null) {
-                    break;
-                }
-                encapsulatedTlvs.add(haProxyTLV);
-            }
+            if (byteBuf.readableBytes() >= 4) {
 
-            return new HAProxySSLTLV(verify, client, encapsulatedTlvs, rawContent);
+                final List<HAProxyTLV> encapsulatedTlvs = new ArrayList<HAProxyTLV>(4);
+                while (byteBuf.readableBytes() >= 4) {
+                    final HAProxyTLV haProxyTLV = readNextTLV(byteBuf);
+                    if (haProxyTLV == null) {
+                        break;
+                    }
+                    encapsulatedTlvs.add(haProxyTLV);
+                }
+
+                return new HAProxySSLTLV(verify, client, encapsulatedTlvs, rawContent);
+            }
+            return new HAProxySSLTLV(verify, client, Collections.<HAProxyTLV>emptyList(), rawContent);
         // If we're not dealing with a SSL Type, we can use the same mechanism
         case PP2_TYPE_ALPN:
         case PP2_TYPE_AUTHORITY:
@@ -299,8 +303,8 @@ public final class HAProxyMessage {
         case PP2_TYPE_NETNS:
         case OTHER:
             final byte[] content = copyByteBufToByteArray(header, length);
-            // Manually set the reader index since the copy method did not increase the index
-            header.readerIndex(header.readerIndex() + content.length);
+            // Manually skip the bytes since the copy method did not increase the index
+            header.skipBytes(content.length);
             return new HAProxyTLV(type, typeAsByte, content);
         default:
             return null;
@@ -540,7 +544,7 @@ public final class HAProxyMessage {
      * <p>
      * TLVs are only available for the Proxy Protocol V2
      */
-    public List<HAProxyTLV> getTlvs() {
+    public List<HAProxyTLV> tlvs() {
         return tlvs;
     }
 }

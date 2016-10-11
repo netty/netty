@@ -22,6 +22,7 @@ import io.netty.handler.codec.ProtocolDetectionResult;
 import io.netty.handler.codec.ProtocolDetectionState;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.TransportProtocol;
+import io.netty.handler.codec.haproxy.HAProxySSLTLV.Client;
 import io.netty.util.CharsetUtil;
 import org.junit.Before;
 import org.junit.Test;
@@ -611,7 +612,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals("127.0.0.1", msg.destinationAddress());
         assertEquals(51622, msg.sourcePort());
         assertEquals(1881, msg.destinationPort());
-        final List<HAProxyTLV> tlvs = msg.getTlvs();
+        final List<HAProxyTLV> tlvs = msg.tlvs();
 
         assertEquals(3, tlvs.size());
         final HAProxyTLV firstTlv = tlvs.get(0);
@@ -619,9 +620,9 @@ public class HAProxyMessageDecoderTest {
         assertTrue(firstTlv instanceof HAProxySSLTLV);
         final HAProxySSLTLV sslTlv = (HAProxySSLTLV) firstTlv;
         assertEquals(0, sslTlv.verify());
-        assertEquals(true, sslTlv.clients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_SSL));
-        assertEquals(true, sslTlv.clients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_CERT_SESS));
-        assertEquals(false, sslTlv.clients().contains(HAProxySSLTLV.CLIENT.PP2_CLIENT_CERT_CONN));
+        assertEquals(true, sslTlv.clients().contains(Client.PP2_CLIENT_SSL));
+        assertEquals(true, sslTlv.clients().contains(Client.PP2_CLIENT_CERT_SESS));
+        assertEquals(false, sslTlv.clients().contains(Client.PP2_CLIENT_CERT_CONN));
 
         final HAProxyTLV secondTlv = tlvs.get(1);
 

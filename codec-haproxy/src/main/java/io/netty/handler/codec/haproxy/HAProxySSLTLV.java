@@ -31,12 +31,12 @@ public final class HAProxySSLTLV extends HAProxyTLV {
 
     private final int verify;
     private final List<HAProxyTLV> tlvs;
-    private final Set<CLIENT> clients;
+    private final Set<Client> clients;
 
     /**
      * The possible values of the clientfield bitmask
      */
-    public enum CLIENT {
+    public enum Client {
         PP2_CLIENT_SSL,
         PP2_CLIENT_CERT_CONN,
         PP2_CLIENT_CERT_SESS;
@@ -46,12 +46,11 @@ public final class HAProxySSLTLV extends HAProxyTLV {
      * Creates a new HAProxySSLTLV
      *
      * @param verify the verification result
-     * @param clientBitField the bitfield with {@link CLIENT} information
+     * @param clientBitField the bitfield with {@link Client} information
      * @param tlvs the encapsulated {@link HAProxyTLV}s
      * @param rawContent the raw TLV content
      */
     HAProxySSLTLV(final int verify, final byte clientBitField, final List<HAProxyTLV> tlvs, final byte[] rawContent) {
-
         super(Type.PP2_TYPE_SSL, (byte) 0x20, rawContent);
 
         checkNotNull(tlvs, "tlvs");
@@ -59,16 +58,20 @@ public final class HAProxySSLTLV extends HAProxyTLV {
         this.verify = verify;
         this.tlvs = Collections.unmodifiableList(tlvs);
 
-        // Now parse the bitmask
-        clients = new HashSet<CLIENT>();
-        if ((clientBitField & 0x1) != 0) {
-            clients.add(CLIENT.PP2_CLIENT_SSL);
-        }
-        if ((clientBitField & 0x2) != 0) {
-            clients.add(CLIENT.PP2_CLIENT_CERT_CONN);
-        }
-        if ((clientBitField & 0x4) != 0) {
-            clients.add(CLIENT.PP2_CLIENT_CERT_SESS);
+        if (clientBitField == 0) {
+            clients = Collections.emptySet();
+        } else {
+            // Now parse the bitmask
+            clients = new HashSet<Client>(4);
+            if ((clientBitField & 0x1) != 0) {
+                clients.add(Client.PP2_CLIENT_SSL);
+            }
+            if ((clientBitField & 0x2) != 0) {
+                clients.add(Client.PP2_CLIENT_CERT_CONN);
+            }
+            if ((clientBitField & 0x4) != 0) {
+                clients.add(Client.PP2_CLIENT_CERT_SESS);
+            }
         }
     }
 
@@ -80,9 +83,9 @@ public final class HAProxySSLTLV extends HAProxyTLV {
     }
 
     /**
-     * Returns an unmodifiable Set of {@link CLIENT} values for this SSL TLV
+     * Returns an unmodifiable Set of {@link Client} values for this SSL TLV
      */
-    public Set<CLIENT> clients() {
+    public Set<Client> clients() {
         return Collections.unmodifiableSet(clients);
     }
 
