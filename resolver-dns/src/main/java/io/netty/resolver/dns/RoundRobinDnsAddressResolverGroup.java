@@ -21,7 +21,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.RoundRobinInetSocketAddressResolver;
+import io.netty.resolver.RoundRobinInetAddressResolver;
 import io.netty.resolver.NameResolver;
 import io.netty.util.internal.UnstableApi;
 
@@ -48,10 +48,16 @@ public class RoundRobinDnsAddressResolverGroup extends DnsAddressResolverGroup {
         super(channelFactory, nameServerAddresses);
     }
 
+    /**
+     * We need to override this method, not
+     * {@link #newNameResolver(EventLoop, ChannelFactory, DnsServerAddresses)},
+     * because we need to eliminate possible caching of {@link io.netty.resolver.NameResolver#resolve}
+     * by {@link InflightNameResolver} created in {@link #newResolver(EventLoop, ChannelFactory, DnsServerAddresses)}.
+     */
     @Override
     protected final AddressResolver<InetSocketAddress> newAddressResolver(EventLoop eventLoop,
                                                                           NameResolver<InetAddress> resolver)
             throws Exception {
-        return new RoundRobinInetSocketAddressResolver(eventLoop, resolver);
+        return new RoundRobinInetAddressResolver(eventLoop, resolver).asAddressResolver();
     }
 }
