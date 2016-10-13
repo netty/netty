@@ -26,6 +26,7 @@ import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.PromiseNotificationUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -48,6 +49,15 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
  * </p>
  */
 public final class ChannelOutboundBuffer {
+    // Assuming a 64-bit JVM:
+    //  - 16 bytes object header
+    //  - 8 reference fields
+    //  - 2 long fields
+    //  - 2 int fields
+    //  - 1 boolean field
+    //  - padding
+    static final int CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD =
+            SystemPropertyUtil.getInt("io.netty.transport.outboundBufferEntrySizeOverhead", 96);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
 
@@ -128,7 +138,7 @@ public final class ChannelOutboundBuffer {
 
         // increment pending bytes after adding message to the unflushed arrays.
         // See https://github.com/netty/netty/issues/1619
-        incrementPendingOutboundBytes(size, false);
+        incrementPendingOutboundBytes(entry.pendingSize, false);
     }
 
     /**
@@ -783,7 +793,7 @@ public final class ChannelOutboundBuffer {
         static Entry newInstance(Object msg, int size, long total, ChannelPromise promise) {
             Entry entry = RECYCLER.get();
             entry.msg = msg;
-            entry.pendingSize = size;
+            entry.pendingSize = size + CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD;
             entry.total = total;
             entry.promise = promise;
             return entry;
