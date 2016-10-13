@@ -126,6 +126,18 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
         // ignore for SlicedByteBuf
     }
 
+    @Test(expected = UnsupportedOperationException.class)
+    @Override
+    public void testDuplicateCapacityChange() {
+        super.testDuplicateCapacityChange();
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    @Override
+    public void testRetainedDuplicateCapacityChange() {
+        super.testRetainedDuplicateCapacityChange();
+    }
+
     @Test
     @Override
     public void testForEachByteDesc2() {
