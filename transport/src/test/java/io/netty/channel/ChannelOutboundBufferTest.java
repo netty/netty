@@ -218,8 +218,8 @@ public class ChannelOutboundBufferTest {
             }
         });
 
-        ch.config().setWriteBufferLowWaterMark(128);
-        ch.config().setWriteBufferHighWaterMark(256);
+        ch.config().setWriteBufferLowWaterMark(128 + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD);
+        ch.config().setWriteBufferHighWaterMark(256 + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD);
 
         ch.write(buffer().writeZero(128));
         // Ensure exceeding the low watermark does not make channel unwritable.
@@ -235,7 +235,8 @@ public class ChannelOutboundBufferTest {
         // Ensure going down to the low watermark makes channel writable again by flushing the first write.
         assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
         assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
-        assertThat(ch.unsafe().outboundBuffer().totalPendingWriteBytes(), is(127L));
+        assertThat(ch.unsafe().outboundBuffer().totalPendingWriteBytes(),
+                is(127L + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD));
         assertThat(buf.toString(), is("false true "));
 
         safeClose(ch);
