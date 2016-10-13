@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -28,6 +29,12 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  */
 public final class PendingWriteQueue {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PendingWriteQueue.class);
+    // Assuming a 64-bit JVM:
+    //  - 16 bytes object header
+    //  - 4 reference fields
+    //  - 1 long fields
+    private static final int PENDING_WRITE_OVERHEAD =
+            SystemPropertyUtil.getInt("io.netty.transport.pendingWriteSizeOverhead", 64);
 
     private final ChannelHandlerContext ctx;
     private final ChannelOutboundBuffer buffer;
@@ -73,6 +80,17 @@ public final class PendingWriteQueue {
         return bytes;
     }
 
+    private int size(Object msg) {
+        // It is possible for writes to be triggered from removeAndFailAll(). To preserve ordering,
+        // we should add them to the queue and let removeAndFailAll() fail them later.
+        int messageSize = estimatorHandle.size(msg);
+        if (messageSize < 0) {
+            // Size may be unknow so just use 0
+            messageSize = 0;
+        }
+        return messageSize + PENDING_WRITE_OVERHEAD;
+    }
+
     /**
      * Add the given {@code msg} and {@link ChannelPromise}.
      */
@@ -86,11 +104,8 @@ public final class PendingWriteQueue {
         }
         // It is possible for writes to be triggered from removeAndFailAll(). To preserve ordering,
         // we should add them to the queue and let removeAndFailAll() fail them later.
-        int messageSize = estimatorHandle.size(msg);
-        if (messageSize < 0) {
-            // Size may be unknow so just use 0
-            messageSize = 0;
-        }
+        int messageSize = size(msg);
+
         PendingWrite write = PendingWrite.newInstance(msg, messageSize, promise);
         PendingWrite currentTail = tail;
         if (currentTail == null) {
