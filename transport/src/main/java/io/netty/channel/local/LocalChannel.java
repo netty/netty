@@ -107,7 +107,7 @@ public class LocalChannel extends AbstractChannel {
         config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
     }
 
-    LocalChannel(LocalServerChannel parent, LocalChannel peer) {
+    protected LocalChannel(LocalServerChannel parent, LocalChannel peer) {
         super(parent);
         config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
         this.peer = peer;
