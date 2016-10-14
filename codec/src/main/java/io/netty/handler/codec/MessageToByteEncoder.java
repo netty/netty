@@ -153,4 +153,8 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
      * @throws Exception    is thrown if an error accour
      */
     protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
+
+    protected boolean isPreferDirect() {
+        return preferDirect;
+    }
 }
