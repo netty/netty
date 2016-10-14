@@ -677,7 +677,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 // Protect against re-entrancy. Could happen if writing the frame fails, and error handling
                 // treating this is a connection handler and doing a graceful shutdown...
                 if (lastStreamId == connection().remote().lastStreamKnownByPeer()) {
-                    return promise;
+                    // Release the data and notify the promise
+                    debugData.release();
+                    return promise.setSuccess();
                 }
                 if (lastStreamId > connection.remote().lastStreamKnownByPeer()) {
                     throw connectionError(PROTOCOL_ERROR, "Last stream identifier must not increase between " +
