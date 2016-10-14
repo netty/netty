@@ -104,7 +104,7 @@ public class LocalChannel extends AbstractChannel {
         super(null);
     }
 
-    LocalChannel(LocalServerChannel parent, LocalChannel peer) {
+    protected LocalChannel(LocalServerChannel parent, LocalChannel peer) {
         super(parent);
         this.peer = peer;
         localAddress = parent.localAddress();
