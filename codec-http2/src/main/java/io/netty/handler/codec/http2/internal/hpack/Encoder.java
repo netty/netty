@@ -32,7 +32,6 @@
 package io.netty.handler.codec.http2.internal.hpack;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
