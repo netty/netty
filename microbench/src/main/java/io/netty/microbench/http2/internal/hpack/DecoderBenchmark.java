@@ -96,8 +96,9 @@ public class DecoderBenchmark extends AbstractMicrobenchmark {
         Encoder encoder = newTestEncoder();
         ByteBuf out = size.newOutBuffer();
         try {
-            encoder.encodeHeaders(out, headers, sensitive ? Http2HeadersEncoder.ALWAYS_SENSITIVE
-                                                          : Http2HeadersEncoder.NEVER_SENSITIVE);
+            encoder.encodeHeaders(3 /* randomly chosen */, out, headers,
+                                  sensitive ? Http2HeadersEncoder.ALWAYS_SENSITIVE
+                                            : Http2HeadersEncoder.NEVER_SENSITIVE);
             byte[] bytes = new byte[out.readableBytes()];
             out.readBytes(bytes);
             return bytes;

@@ -77,7 +77,7 @@ public class DefaultHttp2HeadersDecoderTest {
         for (int ix = 0; ix < entries.length;) {
             http2Headers.add(new AsciiString(entries[ix++], false), new AsciiString(entries[ix++], false));
         }
-        encoder.encodeHeaders(out, http2Headers, NEVER_SENSITIVE);
+        encoder.encodeHeaders(3 /* randomly chosen */, out, http2Headers, NEVER_SENSITIVE);
         return out;
     }
 }

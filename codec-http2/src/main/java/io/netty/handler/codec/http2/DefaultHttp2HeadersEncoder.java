@@ -59,7 +59,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
     }
 
     @Override
-    public void encodeHeaders(Http2Headers headers, ByteBuf buffer) throws Http2Exception {
+    public void encodeHeaders(int streamId, Http2Headers headers, ByteBuf buffer) throws Http2Exception {
         try {
             // If there was a change in the table size, serialize the output from the encoder
             // resulting from that change.
@@ -68,7 +68,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
                 tableSizeChangeOutput.clear();
             }
 
-            encoder.encodeHeaders(buffer, headers, sensitivityDetector);
+            encoder.encodeHeaders(streamId, buffer, headers, sensitivityDetector);
         } catch (Http2Exception e) {
             throw e;
         } catch (Throwable t) {

@@ -195,7 +195,7 @@ final class TestCase {
                 encoder.setMaxHeaderTableSize(buffer, maxHeaderTableSize);
             }
 
-            encoder.encodeHeaders(buffer, http2Headers, sensitivityDetector);
+            encoder.encodeHeaders(3 /* randomly chosen */, buffer, http2Headers, sensitivityDetector);
             byte[] bytes = new byte[buffer.readableBytes()];
             buffer.readBytes(bytes);
             return bytes;
