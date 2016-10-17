@@ -110,7 +110,7 @@ public class EncoderBenchmark extends AbstractMicrobenchmark {
     public void encode(Blackhole bh) throws Exception {
         Encoder encoder = newTestEncoder();
         output.clear();
-        encoder.encodeHeaders(output, http2Headers, sensitivityDetector);
+        encoder.encodeHeaders(3 /*randomly chosen*/, output, http2Headers, sensitivityDetector);
         bh.consume(output);
     }
 }

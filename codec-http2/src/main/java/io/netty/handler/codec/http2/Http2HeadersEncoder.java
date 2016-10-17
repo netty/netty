@@ -54,10 +54,11 @@ public interface Http2HeadersEncoder {
     /**
      * Encodes the given headers and writes the output headers block to the given output buffer.
      *
+     * @param streamId  the identifier of the stream for which the headers are encoded.
      * @param headers the headers to be encoded.
      * @param buffer the buffer to receive the encoded headers.
      */
-    void encodeHeaders(Http2Headers headers, ByteBuf buffer) throws Http2Exception;
+    void encodeHeaders(int streamId, Http2Headers headers, ByteBuf buffer) throws Http2Exception;
 
     /**
      * Get the {@link Configuration} for this {@link Http2HeadersEncoder}

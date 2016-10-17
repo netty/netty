@@ -303,7 +303,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             // Encode the entire header block into an intermediate buffer.
             headerBlock = ctx.alloc().buffer();
-            headersEncoder.encodeHeaders(headers, headerBlock);
+            headersEncoder.encodeHeaders(streamId, headers, headerBlock);
 
             // Read the first fragment (possibly everything).
             Http2Flags flags = new Http2Flags().paddingPresent(padding > 0);
@@ -427,7 +427,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             // Encode the entire header block.
             headerBlock = ctx.alloc().buffer();
-            headersEncoder.encodeHeaders(headers, headerBlock);
+            headersEncoder.encodeHeaders(streamId, headers, headerBlock);
 
             Http2Flags flags =
                     new Http2Flags().endOfStream(endStream).priorityPresent(hasPriority).paddingPresent(padding > 0);
