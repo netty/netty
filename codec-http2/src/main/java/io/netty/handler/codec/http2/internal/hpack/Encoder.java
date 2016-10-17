@@ -32,6 +32,7 @@
 package io.netty.handler.codec.http2.internal.hpack;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
@@ -47,6 +48,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.headerListSizeExceeded;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.INCREMENTAL;
@@ -102,16 +104,16 @@ public final class Encoder {
      *
      * <strong>The given {@link CharSequence}s must be immutable!</strong>
      */
-    public void encodeHeaders(ByteBuf out, Http2Headers headers, SensitivityDetector sensitivityDetector)
+    public void encodeHeaders(int streamId, ByteBuf out, Http2Headers headers, SensitivityDetector sensitivityDetector)
             throws Http2Exception {
         if (ignoreMaxHeaderListSize) {
             encodeHeadersIgnoreMaxHeaderListSize(out, headers, sensitivityDetector);
         } else {
-            encodeHeadersEnforceMaxHeaderListSize(out, headers, sensitivityDetector);
+            encodeHeadersEnforceMaxHeaderListSize(streamId, out, headers, sensitivityDetector);
         }
     }
 
-    private void encodeHeadersEnforceMaxHeaderListSize(ByteBuf out, Http2Headers headers,
+    private void encodeHeadersEnforceMaxHeaderListSize(int streamId, ByteBuf out, Http2Headers headers,
                                                        SensitivityDetector sensitivityDetector)
             throws Http2Exception {
         long headerSize = 0;
@@ -123,8 +125,7 @@ public final class Encoder {
             // overflow.
             headerSize += currHeaderSize;
             if (headerSize > maxHeaderListSize) {
-                throw connectionError(PROTOCOL_ERROR, "Header list size octets (%d) exceeds maxHeaderListSize (%d)",
-                        headerSize, maxHeaderListSize);
+                headerListSizeExceeded(streamId, maxHeaderListSize);
             }
             encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value), currHeaderSize);
         }
