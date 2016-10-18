@@ -88,4 +88,72 @@ public class DefaultDnsRecordDecoderTest {
             buffer.release();
         }
     }
+
+    @Test
+    public void testDecodeMessageCompression() throws Exception {
+        // See https://www.ietf.org/rfc/rfc1035 [4.1.4. Message compression]
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        byte[] rfcExample = new byte[] { 1, 'F', 3, 'I', 'S', 'I', 4, 'A', 'R', 'P', 'A',
+                0, 3, 'F', 'O', 'O',
+                (byte) 0xC0, 0, // this is 20 in the example
+                (byte) 0xC0, 6, // this is 26 in the example
+        };
+        DefaultDnsRawRecord rawPlainRecord = null;
+        DefaultDnsRawRecord rawUncompressedRecord = null;
+        DefaultDnsRawRecord rawUncompressedIndexedRecord = null;
+        ByteBuf buffer = Unpooled.wrappedBuffer(rfcExample);
+        try {
+            // First lets test that our utility funciton can correctly handle index references and decompression.
+            String plainName = DefaultDnsRecordDecoder.decodeName(buffer.duplicate());
+            assertEquals("F.ISI.ARPA.", plainName);
+            String uncompressedPlainName = DefaultDnsRecordDecoder.decodeName(buffer.duplicate().setIndex(16, 20));
+            assertEquals(plainName, uncompressedPlainName);
+            String uncompressedIndexedName = DefaultDnsRecordDecoder.decodeName(buffer.duplicate().setIndex(12, 20));
+            assertEquals("FOO." + plainName, uncompressedIndexedName);
+
+            // Now lets make sure out object parsing produces the same results for non PTR type (just use CNAME).
+            rawPlainRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+                    plainName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 0, 11);
+            assertEquals(plainName, rawPlainRecord.name());
+            assertEquals(plainName, DefaultDnsRecordDecoder.decodeName(rawPlainRecord.content()));
+
+            rawUncompressedRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+                    uncompressedPlainName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 16, 4);
+            assertEquals(uncompressedPlainName, rawUncompressedRecord.name());
+            assertEquals(uncompressedPlainName, DefaultDnsRecordDecoder.decodeName(rawUncompressedRecord.content()));
+
+            rawUncompressedIndexedRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+                    uncompressedIndexedName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 12, 8);
+            assertEquals(uncompressedIndexedName, rawUncompressedIndexedRecord.name());
+            assertEquals(uncompressedIndexedName,
+                         DefaultDnsRecordDecoder.decodeName(rawUncompressedIndexedRecord.content()));
+
+            // Now lets make sure out object parsing produces the same results for PTR type.
+            DnsPtrRecord ptrRecord = (DnsPtrRecord) decoder.decodeRecord(
+                    plainName, DnsRecordType.PTR, DnsRecord.CLASS_IN, 60, buffer, 0, 11);
+            assertEquals(plainName, ptrRecord.name());
+            assertEquals(plainName, ptrRecord.hostname());
+
+            ptrRecord = (DnsPtrRecord) decoder.decodeRecord(
+                    uncompressedPlainName, DnsRecordType.PTR, DnsRecord.CLASS_IN, 60, buffer, 16, 4);
+            assertEquals(uncompressedPlainName, ptrRecord.name());
+            assertEquals(uncompressedPlainName, ptrRecord.hostname());
+
+            ptrRecord = (DnsPtrRecord) decoder.decodeRecord(
+                    uncompressedIndexedName, DnsRecordType.PTR, DnsRecord.CLASS_IN, 60, buffer, 12, 8);
+            assertEquals(uncompressedIndexedName, ptrRecord.name());
+            assertEquals(uncompressedIndexedName, ptrRecord.hostname());
+        } finally {
+            if (rawPlainRecord != null) {
+                rawPlainRecord.release();
+            }
+            if (rawUncompressedRecord != null) {
+                rawUncompressedRecord.release();
+            }
+            if (rawUncompressedIndexedRecord != null) {
+                rawUncompressedIndexedRecord.release();
+            }
+            buffer.release();
+        }
+    }
 }
