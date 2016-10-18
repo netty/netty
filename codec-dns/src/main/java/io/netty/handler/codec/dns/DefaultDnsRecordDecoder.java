@@ -90,11 +90,16 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             String name, DnsRecordType type, int dnsClass, long timeToLive,
             ByteBuf in, int offset, int length) throws Exception {
 
+        // DNS message compression means that domain names may contain "pointers" to other positions in the packet
+        // to build a full message. This means the indexes are meaningful and we need the ability to reference the
+        // indexes un-obstructed, and thus we cannot use a slice here.
+        // See https://www.ietf.org/rfc/rfc1035 [4.1.4. Message compression]
         if (type == DnsRecordType.PTR) {
-            return new DefaultDnsPtrRecord(name, dnsClass, timeToLive, decodeName0(in.slice(offset, length)));
+            return new DefaultDnsPtrRecord(
+                    name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
         }
         return new DefaultDnsRawRecord(
-                name, type, dnsClass, timeToLive, in.retainedSlice(offset, length));
+                name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
     }
 
     /**
