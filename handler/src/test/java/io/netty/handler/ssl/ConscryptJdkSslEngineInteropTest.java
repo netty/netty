@@ -15,8 +15,13 @@
  */
 package io.netty.handler.ssl;
 
+import java.security.Provider;
+import org.conscrypt.OpenSSLProvider;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import javax.net.ssl.SSLException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -24,12 +29,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
-import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
-public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
+public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
     @Parameterized.Parameters(name = "{index}: bufferType = {0}")
     public static Collection<Object> data() {
@@ -40,13 +43,13 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
         return params;
     }
 
-    public JdkOpenSslEngineInteroptTest(BufferType type) {
+    public ConscryptJdkSslEngineInteropTest(BufferType type) {
         super(type);
     }
 
     @BeforeClass
-    public static void checkOpenSsl() {
-        assumeTrue(OpenSsl.isAvailable());
+    public static void checkConscrypt() {
+        assumeTrue(ConscryptAlpnSslEngine.isAvailable());
     }
 
     @Override
@@ -56,53 +59,56 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @Override
     protected SslProvider sslServerProvider() {
-        return SslProvider.OPENSSL;
+        return SslProvider.JDK;
+    }
+
+    @Override
+    protected Provider clientSslContextProvider() {
+        return new OpenSSLProvider();
+    }
+
+    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @Override
+    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() throws Exception {
+    }
+
+    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @Override
+    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
     }
 
     @Override
     @Test
     public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth() throws Exception {
-        checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth();
     }
 
     @Override
     @Test
     public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth() throws Exception {
-        checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth();
     }
 
     @Override
     @Test
     public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth() throws Exception {
-        checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth();
     }
 
     @Override
     @Test
-    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() throws Exception {
-        checkShouldUseKeyManagerFactory();
-        super.testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth();
+    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
+        super.testClientHostnameValidationSuccess();
     }
 
     @Override
     @Test
-    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
-        checkShouldUseKeyManagerFactory();
-        super.testMutualAuthValidClientCertChainTooLongFailRequireClientAuth();
+    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
+        super.testClientHostnameValidationFail();
     }
 
     @Override
-    protected void mySetupMutualAuthServerInitSslHandler(SslHandler handler) {
-        ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) handler.engine();
-        engine.setVerify(SSL_CVERIFY_IGNORED, 1);
-    }
-
-    @Override
-    protected boolean mySetupMutualAuthServerIsValidClientException(Throwable cause) {
-        // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
-        return super.mySetupMutualAuthServerIsValidClientException(cause) || causedBySSLException(cause);
+    protected boolean mySetupMutualAuthServerIsValidException(Throwable cause) {
+        return super.mySetupMutualAuthServerIsValidException(cause) || causedBySSLException(cause);
     }
 }

@@ -45,8 +45,6 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -61,8 +59,7 @@ import java.nio.channels.ClosedChannelException;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.security.Provider;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -86,7 +83,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.verify;
 
-@RunWith(Parameterized.class)
 public abstract class SSLEngineTest {
 
     private static final String X509_CERT_PEM =
@@ -200,15 +196,6 @@ public abstract class SSLEngineTest {
         Direct,
         Heap,
         Mixed
-    }
-
-    @Parameterized.Parameters(name = "{index}: bufferType = {0}")
-    public static Collection<Object> data() {
-        List<Object> params = new ArrayList<Object>();
-        for (BufferType type: BufferType.values()) {
-            params.add(type);
-        }
-        return params;
     }
 
     private final BufferType type;
@@ -1356,6 +1343,13 @@ public abstract class SSLEngineTest {
 
     protected abstract SslProvider sslServerProvider();
 
+    protected Provider clientSslContextProvider() {
+        return null;
+    }
+    protected Provider serverSslContextProvider() {
+        return null;
+    }
+
     /**
      * Called from the test cleanup code and can be used to release the {@code ctx} if it must be done manually.
      */
@@ -1391,6 +1385,7 @@ public abstract class SSLEngineTest {
 
         setupHandlers(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
                         .sslProvider(sslServerProvider())
+                        .sslContextProvider(serverSslContextProvider())
                         .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                         .applicationProtocolConfig(serverApn)
                         .sessionCacheSize(0)
@@ -1399,6 +1394,7 @@ public abstract class SSLEngineTest {
 
                 SslContextBuilder.forClient()
                         .sslProvider(sslClientProvider())
+                        .sslContextProvider(clientSslContextProvider())
                         .applicationProtocolConfig(clientApn)
                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
                         .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
