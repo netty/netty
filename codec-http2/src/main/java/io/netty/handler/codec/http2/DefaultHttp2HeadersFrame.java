@@ -79,6 +79,7 @@ public final class DefaultHttp2HeadersFrame extends AbstractHttp2StreamFrame imp
         return headers;
     }
 
+    @Override
     public boolean endStream() {
         return endStream;
     }

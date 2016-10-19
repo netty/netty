@@ -179,11 +179,6 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
     private ChannelHandlerContext ctx;
     private ChannelHandlerContext http2HandlerCtx;
 
-    private Http2Stream2Impl pendingOutboundStreamsTail;
-
-    /** Lock protecting modifications to idle outbound streams. **/
-    private final Object lock = new Object();
-
     /** Number of buffered streams if the {@link StreamBufferingEncoder} is used. **/
     private int numBufferedStreams;
 
@@ -511,7 +506,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
         protected void onStreamError(ChannelHandlerContext ctx, Throwable cause,
                                      Http2Exception.StreamException streamException) {
             int streamId = streamException.streamId();
-            Http2Stream connectionStream = connection().stream(streamId);
+            Http2Stream connectionStream = super.connection().stream(streamId);
             if (connectionStream == null) {
                 LOG.warn("Stream exception thrown for unkown stream.", cause);
                 // Write a RST_STREAM
@@ -593,7 +588,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
             return 0;
         }
 
-        private <V> Http2Stream2 requireStream(int streamId) {
+        private Http2Stream2 requireStream(int streamId) {
             Http2Stream2 stream = connection().stream(streamId).getProperty(streamKey);
             if (stream == null) {
                 throw new IllegalStateException("Stream object required for identifier: " + streamId);

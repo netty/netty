@@ -25,7 +25,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.codec.http2.Http2MultiplexCodec.Http2StreamChannel;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.UnstableApi;
 
