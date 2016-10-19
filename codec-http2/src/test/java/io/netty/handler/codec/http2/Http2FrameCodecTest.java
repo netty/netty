@@ -47,6 +47,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.handler.codec.http2.Http2Stream2.CONNECTION_STREAM;
@@ -441,20 +442,6 @@ public class Http2FrameCodecTest {
     }
 
     @Test(timeout = 1000)
-    public void createAndCloseIdleStreamObject() {
-        Http2Stream2 stream = frameCodec.newStream();
-
-        assertNotNull(stream);
-        assertFalse(isStreamIdValid(stream.id()));
-        assertFalse(stream.closeFuture().isDone());
-        assertFalse(stream.closeFuture().isCancellable());
-
-        channel.close().syncUninterruptibly();
-
-        assertTrue(stream.closeFuture().isDone());
-    }
-
-    @Test(timeout = 1000)
     public void newOutboundStream() {
         final Http2Stream2 stream = frameCodec.newStream();
 
@@ -509,25 +496,6 @@ public class Http2FrameCodecTest {
         channel.flush();
 
         assertTrue(promise2.syncUninterruptibly().isSuccess());
-    }
-
-    @Test
-    public void closeFutureShouldCompleteIfStreamFailsToBecomeActive() throws Exception {
-        setUp(Http2FrameCodecBuilder.forServer().bufferOutboundStreams(true),
-              new Http2Settings().maxConcurrentStreams(0));
-
-        Http2Stream2 stream = frameCodec.newStream();
-        ChannelPromise promise = channel.newPromise();
-
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream), promise);
-
-        assertTrue(isStreamIdValid(stream.id()));
-        assertFalse(promise.isDone());
-        assertFalse(stream.closeFuture().isDone());
-
-        promise.setFailure(new Exception());
-
-        assertTrue(stream.closeFuture().isDone());
     }
 
     @Test
@@ -655,6 +623,25 @@ public class Http2FrameCodecTest {
         expectedStreams.add(activeInbond);
         expectedStreams.add(activeOutbound);
         assertEquals(expectedStreams, activeStreams);
+    }
+
+    @Test
+    public void streamShouldBeOpenInListener() {
+        final Http2Stream2 stream2 = frameCodec.newStream();
+        assertEquals(State.IDLE, stream2.state());
+
+        final AtomicBoolean listenerExecuted = new AtomicBoolean();
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2))
+                .addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        assertTrue(future.isSuccess());
+                        assertEquals(State.OPEN, stream2.state());
+                        listenerExecuted.set(true);
+                    }
+                });
+
+        assertTrue(listenerExecuted.get());
     }
 
     private static ChannelPromise anyChannelPromise() {

@@ -30,6 +30,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
+import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
@@ -634,6 +635,11 @@ public class Http2MultiplexCodecTest {
         @Override
         public Object managedState() {
             return managedState;
+        }
+
+        @Override
+        public State state() {
+            return State.OPEN;
         }
 
         @Override
