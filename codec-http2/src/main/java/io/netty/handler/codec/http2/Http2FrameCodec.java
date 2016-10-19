@@ -23,8 +23,10 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http2.Http2Connection.PropertyKey;
+import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2ChannelClosedException;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -136,7 +138,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
  *
  * <p>The HTTP/2 standard allows for an endpoint to limit the maximum number of concurrently active streams via the
  * {@code SETTINGS_MAX_CONCURRENT_STREAMS} setting. When this limit is reached, no new streams can be created. However,
- * the {@link Http2FrameCodec} can be build with {@link Http2FrameCodecBuilder#bufferOutgoingStreams} enabled, in which
+ * the {@link Http2FrameCodec} can be build with {@link Http2FrameCodecBuilder#bufferOutboundStreams} enabled, in which
  * case a new stream and its associated frames will be buffered until either the limit is increased or an active
  * stream is closed. It's, however, possible that a buffered stream will never become active. That is, the channel might
  * get closed or a GO_AWAY frame might be received. In the first case, all writes of buffered streams will fail with a
@@ -206,9 +208,6 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
     /**
      * Creates a new outbound/local stream.
      *
-     * <p>The object is added to a list of idle streams, so that in case the stream object is never made active, the
-     * {@link Http2Stream2#closeFuture()} still completes.
-     *
      * <p>This method may only be called after the handler has been added to a {@link io.netty.channel.ChannelPipeline}.
      *
      * <p>This method is thread-safe.
@@ -244,11 +243,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
             throw new IllegalStateException("Channel handler not added to a channel pipeline.");
         }
 
-        Http2Stream2Impl stream = new Http2Stream2Impl(ctx0.channel());
-
-        addPendingStream(stream);
-
-        return stream;
+        return new Http2Stream2Impl(ctx0.channel());
     }
 
     /**
@@ -269,10 +264,8 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
                      * stream is active without a {@link Http2Stream2} object attached, as it's set in a listener of
                      * the HEADERS frame write.
                      */
-                    stream2 = findPendingStream(stream.id());
-                    if (stream2 == null) {
-                        throw new AssertionError("All active streams must have a stream object attached.");
-                    }
+                    // TODO(buchgr): Remove once Http2Stream2 and Http2Stream are merged.
+                    return true;
                 }
                 try {
                     return streamVisitor.visit(stream2);
@@ -306,13 +299,11 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
      */
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        cleanupPendingStreams();
         ctx.pipeline().remove(http2Handler);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        cleanupPendingStreams();
         super.channelInactive(ctx);
     }
 
@@ -473,6 +464,10 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
             // Set the stream id before completing the promise, as any listener added by a user will be executed
             // before the below listener, and so the stream identifier is accessible in a user's listener.
             stream.id(streamId);
+            // Ensure that the listener gets executed before any listeners a user might have attached.
+            // TODO(buchgr): Once Http2Stream2 and Http2Stream are merged this is no longer necessary.
+            ChannelPromiseNotifier promiseNotifier = new ChannelPromiseNotifier(promise);
+            promise = ctx.newPromise();
             promise.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -481,13 +476,13 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
                     Http2Stream connectionStream = connection.stream(streamId);
                     if (future.isSuccess() && connectionStream != null) {
                         connectionStream.setProperty(streamKey, stream);
+                        stream.legacyStream = connectionStream;
                     } else {
                         stream.setClosed();
                     }
-
-                    removePendingStream(stream);
                 }
             });
+            promise.addListener(promiseNotifier);
         }
         http2Handler.encoder().writeHeaders(http2HandlerCtx, streamId, headersFrame.headers(), headersFrame.padding(),
                                             headersFrame.endStream(), promise);
@@ -501,7 +496,9 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
                 return;
             }
 
-            stream.setProperty(streamKey, new Http2Stream2Impl(ctx.channel()).id(stream.id()));
+            Http2Stream2Impl stream2 = new Http2Stream2Impl(ctx.channel()).id(stream.id());
+            stream2.legacyStream = stream;
+            stream.setProperty(streamKey, stream2);
         }
 
         @Override
@@ -530,7 +527,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
         }
 
         /**
-         * Exceptions for streams unknown streams, that is streams that have no {@link Http2Stream2} object attached
+         * Exceptions for unknown streams, that is streams that have no {@link Http2Stream2} object attached
          * are simply logged and replied to by sending a RST_STREAM frame. There is not much value in propagating such
          * exceptions through the pipeline, as a user will not have any additional information / state about this
          * stream and thus can't do any meaningful error handling.
@@ -541,26 +538,21 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
             int streamId = streamException.streamId();
             Http2Stream connectionStream = connection().stream(streamId);
             if (connectionStream == null) {
-                Http2Stream2 stream2 = findPendingStream(streamId);
-                if (stream2 == null) {
-                    LOG.warn("Stream exception thrown for unkown stream.", cause);
-                    // Write a RST_STREAM
-                    super.onStreamError(ctx, cause, streamException);
-                    return;
-                }
-
-                fireHttp2Stream2Exception(stream2, streamException.error(), cause);
-            } else {
-                Http2Stream2 stream2 = connectionStream.getProperty(streamKey);
-                if (stream2 == null) {
-                    LOG.warn("Stream exception thrown without stream object attached.", cause);
-                    // Write a RST_STREAM
-                    super.onStreamError(ctx, cause, streamException);
-                    return;
-                }
-
-                fireHttp2Stream2Exception(stream2, streamException.error(), cause);
+                LOG.warn("Stream exception thrown for unkown stream.", cause);
+                // Write a RST_STREAM
+                super.onStreamError(ctx, cause, streamException);
+                return;
             }
+
+            Http2Stream2 stream2 = connectionStream.getProperty(streamKey);
+            if (stream2 == null) {
+                LOG.warn("Stream exception thrown without stream object attached.", cause);
+                // Write a RST_STREAM
+                super.onStreamError(ctx, cause, streamException);
+                return;
+            }
+
+            fireHttp2Stream2Exception(stream2, streamException.error(), cause);
         }
 
         @Override
@@ -638,13 +630,12 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
     /**
      * {@link Http2Stream2} implementation.
      */
+    // TODO(buchgr): Merge Http2Stream2 and Http2Stream.
     static final class Http2Stream2Impl extends DefaultChannelPromise implements Http2Stream2 {
-
-        private Http2Stream2Impl prev;
-        private Http2Stream2Impl next;
 
         private volatile int id = -1;
         private volatile Object managedState;
+        private volatile Http2Stream legacyStream;
 
         Http2Stream2Impl(Channel channel) {
             super(channel);
@@ -677,7 +668,18 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
         }
 
         @Override
+        public State state() {
+            Http2Stream stream0 = legacyStream;
+            return stream0 == null
+                    ? State.IDLE
+                    : stream0.state();
+        }
+
+        @Override
         public ChannelFuture closeFuture() {
+            if (state() == State.IDLE) {
+                throw new IllegalStateException("This method may not be called on IDLE streams.");
+            }
             return this;
         }
 
@@ -718,65 +720,6 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
         @Override
         public String toString() {
             return String.valueOf(id);
-        }
-    }
-
-    private void addPendingStream(Http2Stream2Impl stream) {
-        synchronized (lock) {
-            if (pendingOutboundStreamsTail == null) {
-                pendingOutboundStreamsTail = stream;
-                return;
-            }
-
-            pendingOutboundStreamsTail.next = stream;
-            stream.prev = pendingOutboundStreamsTail;
-        }
-    }
-
-    private void removePendingStream(Http2Stream2Impl stream) {
-        try {
-            synchronized (lock) {
-                if (pendingOutboundStreamsTail == null) {
-                    return;
-                }
-
-                if (pendingOutboundStreamsTail == stream) {
-                    pendingOutboundStreamsTail = null;
-                }
-
-                stream.prev = stream.next;
-                if (stream.next != null) {
-                    stream.next.prev = stream.prev;
-                }
-            }
-        } finally {
-            // Avoid GC nepotism
-            stream.next = null;
-            stream.prev = null;
-        }
-    }
-
-    private Http2Stream2 findPendingStream(int streamId) {
-        if (isOutboundStream(server, streamId)) {
-            synchronized (lock) {
-                Http2Stream2Impl idleStream = pendingOutboundStreamsTail;
-                while (idleStream != null) {
-                    if (idleStream.id() == streamId) {
-                        return idleStream;
-                    }
-                    idleStream = idleStream.prev;
-                }
-            }
-        }
-        return null;
-    }
-
-    private void cleanupPendingStreams() {
-        synchronized (lock) {
-            while (pendingOutboundStreamsTail != null) {
-                pendingOutboundStreamsTail.setClosed();
-                pendingOutboundStreamsTail = pendingOutboundStreamsTail.prev;
-            }
         }
     }
 }

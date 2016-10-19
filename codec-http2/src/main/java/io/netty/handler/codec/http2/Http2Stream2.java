@@ -17,6 +17,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelFuture;
+import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -47,6 +48,11 @@ public interface Http2Stream2 {
 
         @Override
         public Object managedState() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public State state() {
             throw new UnsupportedOperationException();
         }
 
@@ -85,10 +91,17 @@ public interface Http2Stream2 {
     Object managedState();
 
     /**
-     * A {@link ChannelFuture} that will complete when a stream or the channel are closed (whatever happens first).
+     * Returns the state of this stream.
+     */
+    State state();
+
+    /**
+     * A {@link ChannelFuture} that will complete when the stream or the {@link io.netty.channel.Channel} are closed
+     * (whatever happens first).
      *
-     * <p>The {@link ChannelFuture} is guaranteed to be completed eventually, even if the stream never became active,
-     * and will always succeed.
+     * <p><strong>NOTE:</strong> It's not safe to call this method on a stream in {@link State#IDLE} state.
+     *
+     * @throws IllegalStateException    if this method is called on a stream in {@link State#IDLE} state.
      */
     ChannelFuture closeFuture();
 }
