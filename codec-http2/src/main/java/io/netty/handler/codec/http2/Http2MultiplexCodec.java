@@ -174,6 +174,14 @@ public class Http2MultiplexCodec extends Http2ChannelDuplexHandler {
             childChannel = requireChildChannel(stream);
         }
 
+        stream.closeFuture().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future)  {
+                childChannel.streamClosedWithoutError = true;
+                childChannel.fireChildRead(AbstractHttp2StreamChannel.CLOSE_MESSAGE);
+            }
+        });
+
         assert !childChannel.isWritable();
         childChannel.incrementOutboundFlowControlWindow(initialOutboundStreamWindow);
         childChannel.pipeline().fireChannelWritabilityChanged();
@@ -329,13 +337,6 @@ public class Http2MultiplexCodec extends Http2ChannelDuplexHandler {
         Http2StreamChannel(Channel parentChannel, Http2Stream2 stream) {
             super(parentChannel, stream);
             stream.managedState(this);
-            stream.closeFuture().addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future)  {
-                    streamClosedWithoutError = true;
-                    fireChildRead(CLOSE_MESSAGE);
-                }
-            });
         }
 
         @Override
