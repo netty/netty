@@ -16,9 +16,9 @@
 
 package io.netty.util;
 
-import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -143,21 +143,16 @@ public class ResourceLeakDetector<T> {
         return level;
     }
 
-    /** the linked list of active resources */
-    private final DefaultResourceLeak head = new DefaultResourceLeak(null);
-    private final DefaultResourceLeak tail = new DefaultResourceLeak(null);
+    /** the collection of active resources */
+    private final ConcurrentMap<DefaultResourceLeak, Boolean> allLeaks = PlatformDependent.newConcurrentHashMap();
 
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<Object>();
     private final ConcurrentMap<String, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
 
     private final String resourceType;
     private final int samplingInterval;
-    private final int mask;
     private final long maxActive;
-    private long active;
     private final AtomicBoolean loggedTooManyActive = new AtomicBoolean();
-
-    private long leakCheckCnt;
 
     /**
      * @deprecated use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}.
@@ -198,14 +193,8 @@ public class ResourceLeakDetector<T> {
         }
 
         this.resourceType = resourceType;
-        this.samplingInterval = MathUtil.safeFindNextPositivePowerOfTwo(samplingInterval);
-        // samplingInterval is a power of two so we calculate a mask that we can use to
-        // check if we need to do any leak detection or not.
-        mask = this.samplingInterval - 1;
+        this.samplingInterval = samplingInterval;
         this.maxActive = maxActive;
-
-        head.next = tail;
-        tail.prev = head;
     }
 
     /**
@@ -221,7 +210,7 @@ public class ResourceLeakDetector<T> {
         }
 
         if (level.ordinal() < Level.PARANOID.ordinal()) {
-            if ((++ leakCheckCnt & mask) == 0) {
+            if ((ThreadLocalRandom.current().nextInt(0, samplingInterval)) == 0) {
                 reportLeak(level);
                 return new DefaultResourceLeak(obj);
             } else {
@@ -248,7 +237,7 @@ public class ResourceLeakDetector<T> {
 
         // Report too many instances.
         int samplingInterval = level == Level.PARANOID? 1 : this.samplingInterval;
-        if (active * samplingInterval > maxActive && loggedTooManyActive.compareAndSet(false, true)) {
+        if (allLeaks.size() * samplingInterval > maxActive && loggedTooManyActive.compareAndSet(false, true)) {
             reportInstancesLeak(resourceType);
         }
 
@@ -314,9 +303,6 @@ public class ResourceLeakDetector<T> {
     private final class DefaultResourceLeak extends PhantomReference<Object> implements ResourceLeak {
         private final String creationRecord;
         private final Deque<String> lastRecords = new ArrayDeque<String>();
-        private final AtomicBoolean freed;
-        private DefaultResourceLeak prev;
-        private DefaultResourceLeak next;
         private int removedRecords;
 
         DefaultResourceLeak(Object referent) {
@@ -330,18 +316,9 @@ public class ResourceLeakDetector<T> {
                     creationRecord = null;
                 }
 
-                // TODO: Use CAS to update the list.
-                synchronized (head) {
-                    prev = head;
-                    next = head.next;
-                    head.next.prev = this;
-                    head.next = this;
-                    active ++;
-                }
-                freed = new AtomicBoolean();
+                allLeaks.put(this, Boolean.TRUE);
             } else {
                 creationRecord = null;
-                freed = new AtomicBoolean(true);
             }
         }
 
@@ -374,17 +351,8 @@ public class ResourceLeakDetector<T> {
 
         @Override
         public boolean close() {
-            if (freed.compareAndSet(false, true)) {
-                synchronized (head) {
-                    active --;
-                    prev.next = next;
-                    next.prev = prev;
-                    prev = null;
-                    next = null;
-                }
-                return true;
-            }
-            return false;
+            // Use the ConcurrentMap remove method, which avoids allocating an iterator.
+            return allLeaks.remove(this, Boolean.TRUE);
         }
 
         @Override
