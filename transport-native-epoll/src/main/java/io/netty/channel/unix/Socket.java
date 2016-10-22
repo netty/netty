@@ -319,6 +319,15 @@ public final class Socket extends FileDescriptor {
         return getSoError(fd);
     }
 
+    /*
+    * Returns the credentials of the peer unix domain socket
+    * encapsulated in the PeerCredentials class.
+    * @return PeerCredentials
+    */
+    public PeerCredentials getPeerCredentials() throws IOException {
+        return peerCredentials(fd);
+    }
+
     public void setKeepAlive(boolean keepAlive) throws IOException {
         setKeepAlive(fd, keepAlive ? 1 : 0);
     }
@@ -428,4 +437,5 @@ public final class Socket extends FileDescriptor {
     private static native void setSoLinger(int fd, int soLinger) throws IOException;
     private static native void setTcpDeferAccept(int fd, int deferAccept) throws IOException;
     private static native void setTcpQuickAck(int fd, int quickAck) throws IOException;
+    private static native PeerCredentials peerCredentials(int fd) throws IOException;
 }
