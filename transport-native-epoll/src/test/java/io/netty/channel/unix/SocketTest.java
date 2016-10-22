@@ -16,6 +16,7 @@
 package io.netty.channel.unix;
 
 import io.netty.channel.epoll.Epoll;
+import java.io.File;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -95,5 +96,31 @@ public class SocketTest {
         Socket socket = Socket.newSocketStream();
         socket.close();
         socket.close();
+    }
+
+    @Test
+    public void testPeerCreds() throws IOException {
+        Socket s1 = Socket.newSocketDomain();
+        Socket s2 = Socket.newSocketDomain();
+        File domainSocketFile = null;
+
+        try {
+            domainSocketFile = File.createTempFile("netty-test", "sckt");
+            DomainSocketAddress dsa = new DomainSocketAddress(domainSocketFile);
+            s1.bind(dsa);
+            s1.listen(1);
+
+            assertTrue(s2.connect(dsa));
+            byte [] addr = new byte[64];
+            s1.accept(addr);
+            PeerCredentials pc = s1.getPeerCredentials();
+            assertNotEquals(pc.uid(), -1);
+        } finally {
+            s1.close();
+            s2.close();
+            if (domainSocketFile != null) {
+                domainSocketFile.delete();
+            }
+        }
     }
 }

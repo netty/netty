@@ -319,6 +319,10 @@ public final class Socket extends FileDescriptor {
         return getSoError(fd);
     }
 
+    public PeerCredentials getPeerCredentials() throws IOException {
+        return getPeerCredentials(fd);
+    }
+
     public void setKeepAlive(boolean keepAlive) throws IOException {
         setKeepAlive(fd, keepAlive ? 1 : 0);
     }
@@ -419,6 +423,7 @@ public final class Socket extends FileDescriptor {
     private static native int getSoError(int fd) throws IOException;
     private static native int getTcpDeferAccept(int fd) throws IOException;
     private static native int isTcpQuickAck(int fd) throws IOException;
+    private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
 
     private static native void setKeepAlive(int fd, int keepAlive) throws IOException;
     private static native void setReceiveBufferSize(int fd, int receiveBufferSize) throws IOException;

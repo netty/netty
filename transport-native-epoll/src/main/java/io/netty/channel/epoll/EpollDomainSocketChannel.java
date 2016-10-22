@@ -22,11 +22,13 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
 
 import java.net.SocketAddress;
 
 import static io.netty.channel.unix.Socket.newSocketDomain;
+import java.io.IOException;
 
 public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel implements DomainSocketChannel {
     private final EpollDomainSocketChannelConfig config = new EpollDomainSocketChannelConfig(this);
@@ -130,6 +132,14 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
             return msg;
         }
         return super.filterOutboundMessage(msg);
+    }
+
+    /**
+     * Returns the unix credentials (uid, gid, pid) of the peer
+     * <a href=http://man7.org/linux/man-pages/man7/socket.7.html>SO_PEERCRED</a>
+     */
+    public PeerCredentials peerCredentials() throws IOException {
+        return fd().getPeerCredentials();
     }
 
     private final class EpollDomainUnsafe extends EpollStreamUnsafe {
