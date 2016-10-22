@@ -439,7 +439,7 @@ public final class PlatformDependent {
                 ((long) bytes[offset + 4] & 0xff) << 32 |
                 ((long) bytes[offset + 5] & 0xff) << 40 |
                 ((long) bytes[offset + 6] & 0xff) << 48 |
-                ((long) bytes[offset + 7] & 0xff) << 56;
+                (long) bytes[offset + 7] << 56;
     }
 
     private static int getIntSafe(byte[] bytes, int offset) {
@@ -466,8 +466,13 @@ public final class PlatformDependent {
      * Identical to {@link PlatformDependent0#hashCodeAsciiCompute(long, int)} but for {@link CharSequence}.
      */
     private static int hashCodeAsciiCompute(CharSequence value, int offset, int hash) {
-        // masking with 0x1f reduces the number of overall bits that impact the hash code but makes the hash
-        // code the same regardless of character case (upper case or lower case hash is the same).
+        if (BIG_ENDIAN_NATIVE_ORDER) {
+            return hash * HASH_CODE_C1 +
+                    // Low order int
+                    hashCodeAsciiSanitizeInt(value, offset + 4) * HASH_CODE_C2 +
+                    // High order int
+                    hashCodeAsciiSanitizeInt(value, offset);
+        }
         return hash * HASH_CODE_C1 +
                 // Low order int
                 hashCodeAsciiSanitizeInt(value, offset) * HASH_CODE_C2 +
@@ -481,7 +486,7 @@ public final class PlatformDependent {
     private static int hashCodeAsciiSanitizeInt(CharSequence value, int offset) {
         if (BIG_ENDIAN_NATIVE_ORDER) {
             // mimic a unsafe.getInt call on a big endian machine
-            return (value.charAt(offset) & 0x1f) |
+            return (value.charAt(offset + 3) & 0x1f) |
                    (value.charAt(offset + 2) & 0x1f) << 8 |
                    (value.charAt(offset + 1) & 0x1f) << 16 |
                    (value.charAt(offset) & 0x1f) << 24;
