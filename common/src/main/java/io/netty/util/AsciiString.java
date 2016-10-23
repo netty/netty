@@ -466,6 +466,33 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
+     * Compares the specified string to this string using the ASCII values of the characters, ignoring case differences.
+     *
+     * @param string the string to compare.
+     * @return 0 if the strings are equal, a negative integer if this string is before the specified string, or a
+     *         positive integer if this string is after the specified string, ignoring case differences.
+     * @throws NullPointerException if {@code string} is {@code null}.
+     */
+    public int compareToIgnoreCase(CharSequence string) {
+        if (this == string) {
+            return 0;
+        }
+
+        int result;
+        int length1 = length();
+        int length2 = string.length();
+        int minLength = Math.min(length1, length2);
+        for (int i = 0, j = arrayOffset(); i < minLength; i++, j++) {
+            result = b2c(toLowerCase(value[j])) - toLowerCase(string.charAt(i));
+            if (result != 0) {
+                return result;
+            }
+        }
+
+        return length1 - length2;
+    }
+
+    /**
      * Concatenates this string and the specified string.
      *
      * @param string the string to concatenate

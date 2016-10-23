@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.cookie;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.handler.codec.http.HttpHeaderDateFormat;
+import io.netty.util.AsciiString;
 
 import java.text.ParsePosition;
 import java.util.Date;
@@ -52,7 +53,17 @@ public final class ClientCookieDecoder extends CookieDecoder {
      *
      * @return the decoded {@link Cookie}
      */
+    @Deprecated
     public Cookie decode(String header) {
+        return decode(new AsciiString(header));
+    }
+
+    /**
+     * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.
+     *
+     * @return the decoded {@link Cookie}
+     */
+    public Cookie decode(AsciiString header) {
         final int headerLen = checkNotNull(header, "header").length();
 
         if (headerLen == 0) {
@@ -149,17 +160,17 @@ public final class ClientCookieDecoder extends CookieDecoder {
 
     private static class CookieBuilder {
 
-        private final String header;
+        private final AsciiString header;
         private final DefaultCookie cookie;
-        private String domain;
-        private String path;
+        private AsciiString domain;
+        private AsciiString path;
         private long maxAge = Long.MIN_VALUE;
         private int expiresStart;
         private int expiresEnd;
         private boolean secure;
         private boolean httpOnly;
 
-        public CookieBuilder(DefaultCookie cookie, String header) {
+        public CookieBuilder(DefaultCookie cookie, AsciiString header) {
             this.cookie = cookie;
             this.header = header;
         }
@@ -169,9 +180,9 @@ public final class ClientCookieDecoder extends CookieDecoder {
             if (maxAge != Long.MIN_VALUE) {
                 return maxAge;
             } else {
-                String expires = computeValue(expiresStart, expiresEnd);
+                AsciiString expires = computeValue(expiresStart, expiresEnd);
                 if (expires != null) {
-                    Date expiresDate = HttpHeaderDateFormat.get().parse(expires, new ParsePosition(0));
+                    Date expiresDate = HttpHeaderDateFormat.get().parse(expires.toString(), new ParsePosition(0));
                     if (expiresDate != null) {
                         long maxAgeMillis = expiresDate.getTime() - System.currentTimeMillis();
                         return maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0 ? 1 : 0);
@@ -244,7 +255,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
                 expiresStart = valueStart;
                 expiresEnd = valueEnd;
             } else if (header.regionMatches(true, nameStart, CookieHeaderNames.MAX_AGE, 0, 7)) {
-                setMaxAge(computeValue(valueStart, valueEnd));
+                setMaxAge(computeValue(valueStart, valueEnd).toString());
             }
         }
 
@@ -254,8 +265,8 @@ public final class ClientCookieDecoder extends CookieDecoder {
             }
         }
 
-        private String computeValue(int valueStart, int valueEnd) {
-            return valueStart == -1 || valueStart == valueEnd ? null : header.substring(valueStart, valueEnd);
+        private AsciiString computeValue(int valueStart, int valueEnd) {
+            return valueStart == -1 || valueStart == valueEnd ? null : header.subSequence(valueStart, valueEnd);
         }
     }
 }

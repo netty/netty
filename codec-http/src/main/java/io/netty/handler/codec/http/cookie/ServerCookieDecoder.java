@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.cookie;
 
+import io.netty.util.AsciiString;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import java.util.Collections;
@@ -61,7 +63,17 @@ public final class ServerCookieDecoder extends CookieDecoder {
      *
      * @return the decoded {@link Cookie}
      */
+    @Deprecated
     public Set<Cookie> decode(String header) {
+        return decodeAsciiString(new AsciiString(header));
+    }
+
+    /**
+     * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.
+     *
+     * @return the decoded {@link Cookie}
+     */
+    public Set<Cookie> decodeAsciiString(AsciiString header) {
         final int headerLen = checkNotNull(header, "header").length();
 
         if (headerLen == 0) {
@@ -75,7 +87,7 @@ public final class ServerCookieDecoder extends CookieDecoder {
         boolean rfc2965Style = false;
         if (header.regionMatches(true, 0, RFC2965_VERSION, 0, RFC2965_VERSION.length())) {
             // RFC 2965 style cookie, move to after version value
-            i = header.indexOf(';') + 1;
+            i = header.indexOf(";") + 1;
             rfc2965Style = true;
         }
 
