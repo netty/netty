@@ -208,6 +208,8 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
         if (initialMessage != null) {
             sendToProxyServer(initialMessage);
         }
+
+        readIfNeeded(ctx);
     }
 
     /**
@@ -384,9 +386,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
         if (suppressChannelReadComplete) {
             suppressChannelReadComplete = false;
 
-            if (!ctx.channel().config().isAutoRead()) {
-                ctx.read();
-            }
+            readIfNeeded(ctx);
         } else {
             ctx.fireChannelReadComplete();
         }
@@ -409,6 +409,12 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
             ctx.flush();
         } else {
             flushedPrematurely = true;
+        }
+    }
+
+    private static void readIfNeeded(ChannelHandlerContext ctx) {
+        if (!ctx.channel().config().isAutoRead()) {
+            ctx.read();
         }
     }
 
