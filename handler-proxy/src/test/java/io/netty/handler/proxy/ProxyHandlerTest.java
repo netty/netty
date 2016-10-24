@@ -26,6 +26,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -61,6 +62,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.*;
@@ -363,9 +365,16 @@ public class ProxyHandlerTest {
         final Queue<Throwable> exceptions = new LinkedBlockingQueue<Throwable>();
         volatile int eventCount;
 
+        private static void readIfNeeded(ChannelHandlerContext ctx) {
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
+        }
+
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ctx.writeAndFlush(Unpooled.copiedBuffer("A\n", CharsetUtil.US_ASCII));
+            readIfNeeded(ctx);
         }
 
         @Override
@@ -378,6 +387,7 @@ public class ProxyHandlerTest {
                     // ProxyHandlers in the pipeline.  Therefore, we send the 'B' message only on the first event.
                     ctx.writeAndFlush(Unpooled.copiedBuffer("B\n", CharsetUtil.US_ASCII));
                 }
+                readIfNeeded(ctx);
             }
         }
 
@@ -388,6 +398,7 @@ public class ProxyHandlerTest {
             if ("2".equals(str)) {
                 ctx.writeAndFlush(Unpooled.copiedBuffer("C\n", CharsetUtil.US_ASCII));
             }
+            readIfNeeded(ctx);
         }
 
         @Override
@@ -523,6 +534,7 @@ public class ProxyHandlerTest {
             Bootstrap b = new Bootstrap();
             b.group(group);
             b.channel(NioSocketChannel.class);
+            b.option(ChannelOption.AUTO_READ, ThreadLocalRandom.current().nextBoolean());
             b.resolver(NoopAddressResolverGroup.INSTANCE);
             b.handler(new ChannelInitializer<SocketChannel>() {
                 @Override
