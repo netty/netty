@@ -412,7 +412,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
         }
     }
 
-    private void readIfNeeded(ChannelHandlerContext ctx) {
+    private static void readIfNeeded(ChannelHandlerContext ctx) {
         if (!ctx.channel().config().isAutoRead()) {
             ctx.read();
         }
