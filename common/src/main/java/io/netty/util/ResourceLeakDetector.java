@@ -352,6 +352,7 @@ public class ResourceLeakDetector<T> {
 
         @Override
         public boolean close() {
+            // Use the ConcurrentMap remove method, which avoids allocating an iterator.
             return allLeaks.remove(this, Boolean.TRUE);
         }
 
