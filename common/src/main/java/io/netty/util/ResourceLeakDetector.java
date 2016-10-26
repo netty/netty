@@ -153,7 +153,6 @@ public class ResourceLeakDetector<T> {
     private final int samplingInterval;
     private final long maxActive;
     private final AtomicBoolean loggedTooManyActive = new AtomicBoolean();
-    private final ThreadLocalRandom random = ThreadLocalRandom.current();
 
     /**
      * @deprecated use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}.
@@ -211,7 +210,7 @@ public class ResourceLeakDetector<T> {
         }
 
         if (level.ordinal() < Level.PARANOID.ordinal()) {
-            if ((random.nextInt(0, samplingInterval)) == 0) {
+            if ((ThreadLocalRandom.current().nextInt(0, samplingInterval)) == 0) {
                 reportLeak(level);
                 return new DefaultResourceLeak(obj);
             } else {
