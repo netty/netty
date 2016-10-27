@@ -1010,13 +1010,24 @@ public abstract class SslContext {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
         X509Certificate[] x509Certs = new X509Certificate[certs.length];
 
+        int i = 0;
         try {
-            for (int i = 0; i < certs.length; i++) {
-                x509Certs[i] = (X509Certificate) cf.generateCertificate(new ByteBufInputStream(certs[i]));
+            for (; i < certs.length; i++) {
+                InputStream is = new ByteBufInputStream(certs[i], true);
+                try {
+                    x509Certs[i] = (X509Certificate) cf.generateCertificate(is);
+                } finally {
+                    try {
+                        is.close();
+                    } catch (IOException e) {
+                        // This is not expected to happen, but re-throw in case it does.
+                        throw new RuntimeException(e);
+                    }
+                }
             }
         } finally {
-            for (ByteBuf buf: certs) {
-                buf.release();
+            for (; i < certs.length; i++) {
+                certs[i].release();
             }
         }
         return x509Certs;
