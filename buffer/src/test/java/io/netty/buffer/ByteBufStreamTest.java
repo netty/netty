@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import org.junit.Test;
 
 import java.io.EOFException;
@@ -30,7 +32,7 @@ public class ByteBufStreamTest {
 
     @Test
     public void testAll() throws Exception {
-        ByteBuf buf = Unpooled.buffer(0, 65536);
+        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(0, 65536));
 
         try {
             new ByteBufOutputStream(null);
@@ -40,133 +42,140 @@ public class ByteBufStreamTest {
         }
 
         ByteBufOutputStream out = new ByteBufOutputStream(buf);
-        assertSame(buf, out.buffer());
-        out.writeBoolean(true);
-        out.writeBoolean(false);
-        out.writeByte(42);
-        out.writeByte(224);
-        out.writeBytes("Hello, World!");
-        out.writeChars("Hello, World");
-        out.writeChar('!');
-        out.writeDouble(42.0);
-        out.writeFloat(42.0f);
-        out.writeInt(42);
-        out.writeLong(42);
-        out.writeShort(42);
-        out.writeShort(49152);
-        out.writeUTF("Hello, World!");
-        out.writeBytes("The first line\r\r\n");
-        out.write(EMPTY_BYTES);
-        out.write(new byte[] { 1, 2, 3, 4 });
-        out.write(new byte[] { 1, 3, 3, 4 }, 0, 0);
-        out.close();
+        try {
+            assertSame(buf, out.buffer());
+            out.writeBoolean(true);
+            out.writeBoolean(false);
+            out.writeByte(42);
+            out.writeByte(224);
+            out.writeBytes("Hello, World!");
+            out.writeChars("Hello, World");
+            out.writeChar('!');
+            out.writeDouble(42.0);
+            out.writeFloat(42.0f);
+            out.writeInt(42);
+            out.writeLong(42);
+            out.writeShort(42);
+            out.writeShort(49152);
+            out.writeUTF("Hello, World!");
+            out.writeBytes("The first line\r\r\n");
+            out.write(EMPTY_BYTES);
+            out.write(new byte[]{1, 2, 3, 4});
+            out.write(new byte[]{1, 3, 3, 4}, 0, 0);
+        } finally {
+            out.close();
+        }
 
         try {
-            new ByteBufInputStream(null);
+            new ByteBufInputStream(null, true);
             fail();
         } catch (NullPointerException e) {
             // Expected
         }
 
         try {
-            new ByteBufInputStream(null, 0);
+            new ByteBufInputStream(null, 0, true);
             fail();
         } catch (NullPointerException e) {
             // Expected
         }
 
         try {
-            new ByteBufInputStream(buf, -1);
+            new ByteBufInputStream(buf.retainedSlice(), -1, true);
         } catch (IllegalArgumentException e) {
             // Expected
         }
 
         try {
-            new ByteBufInputStream(buf, buf.capacity() + 1);
+            new ByteBufInputStream(buf.retainedSlice(), buf.capacity() + 1, true);
         } catch (IndexOutOfBoundsException e) {
             // Expected
         }
 
-        ByteBufInputStream in = new ByteBufInputStream(buf);
-
-        assertTrue(in.markSupported());
-        in.mark(Integer.MAX_VALUE);
-
-        assertEquals(buf.writerIndex(), in.skip(Long.MAX_VALUE));
-        assertFalse(buf.isReadable());
-
-        in.reset();
-        assertEquals(0, buf.readerIndex());
-
-        assertEquals(4, in.skip(4));
-        assertEquals(4, buf.readerIndex());
-        in.reset();
-
-        assertTrue(in.readBoolean());
-        assertFalse(in.readBoolean());
-        assertEquals(42, in.readByte());
-        assertEquals(224, in.readUnsignedByte());
-
-        byte[] tmp = new byte[13];
-        in.readFully(tmp);
-        assertEquals("Hello, World!", new String(tmp, "ISO-8859-1"));
-
-        assertEquals('H', in.readChar());
-        assertEquals('e', in.readChar());
-        assertEquals('l', in.readChar());
-        assertEquals('l', in.readChar());
-        assertEquals('o', in.readChar());
-        assertEquals(',', in.readChar());
-        assertEquals(' ', in.readChar());
-        assertEquals('W', in.readChar());
-        assertEquals('o', in.readChar());
-        assertEquals('r', in.readChar());
-        assertEquals('l', in.readChar());
-        assertEquals('d', in.readChar());
-        assertEquals('!', in.readChar());
-
-        assertEquals(42.0, in.readDouble(), 0.0);
-        assertEquals(42.0f, in.readFloat(), 0.0);
-        assertEquals(42, in.readInt());
-        assertEquals(42, in.readLong());
-        assertEquals(42, in.readShort());
-        assertEquals(49152, in.readUnsignedShort());
-
-        assertEquals("Hello, World!", in.readUTF());
-        assertEquals("The first line", in.readLine());
-        assertEquals("", in.readLine());
-
-        assertEquals(4, in.read(tmp));
-        assertEquals(1, tmp[0]);
-        assertEquals(2, tmp[1]);
-        assertEquals(3, tmp[2]);
-        assertEquals(4, tmp[3]);
-
-        assertEquals(-1, in.read());
-        assertEquals(-1, in.read(tmp));
-
+        ByteBufInputStream in = new ByteBufInputStream(buf, true);
         try {
-            in.readByte();
-            fail();
-        } catch (EOFException e) {
-            // Expected
-        }
+            assertTrue(in.markSupported());
+            in.mark(Integer.MAX_VALUE);
 
-        try {
-            in.readFully(tmp, 0, -1);
-            fail();
-        } catch (IndexOutOfBoundsException e) {
-            // Expected
-        }
+            assertEquals(buf.writerIndex(), in.skip(Long.MAX_VALUE));
+            assertFalse(buf.isReadable());
 
-        try {
+            in.reset();
+            assertEquals(0, buf.readerIndex());
+
+            assertEquals(4, in.skip(4));
+            assertEquals(4, buf.readerIndex());
+            in.reset();
+
+            assertTrue(in.readBoolean());
+            assertFalse(in.readBoolean());
+            assertEquals(42, in.readByte());
+            assertEquals(224, in.readUnsignedByte());
+
+            byte[] tmp = new byte[13];
             in.readFully(tmp);
-            fail();
-        } catch (EOFException e) {
-            // Expected
-        }
+            assertEquals("Hello, World!", new String(tmp, "ISO-8859-1"));
 
-        in.close();
+            assertEquals('H', in.readChar());
+            assertEquals('e', in.readChar());
+            assertEquals('l', in.readChar());
+            assertEquals('l', in.readChar());
+            assertEquals('o', in.readChar());
+            assertEquals(',', in.readChar());
+            assertEquals(' ', in.readChar());
+            assertEquals('W', in.readChar());
+            assertEquals('o', in.readChar());
+            assertEquals('r', in.readChar());
+            assertEquals('l', in.readChar());
+            assertEquals('d', in.readChar());
+            assertEquals('!', in.readChar());
+
+            assertEquals(42.0, in.readDouble(), 0.0);
+            assertEquals(42.0f, in.readFloat(), 0.0);
+            assertEquals(42, in.readInt());
+            assertEquals(42, in.readLong());
+            assertEquals(42, in.readShort());
+            assertEquals(49152, in.readUnsignedShort());
+
+            assertEquals("Hello, World!", in.readUTF());
+            assertEquals("The first line", in.readLine());
+            assertEquals("", in.readLine());
+
+            assertEquals(4, in.read(tmp));
+            assertEquals(1, tmp[0]);
+            assertEquals(2, tmp[1]);
+            assertEquals(3, tmp[2]);
+            assertEquals(4, tmp[3]);
+
+            assertEquals(-1, in.read());
+            assertEquals(-1, in.read(tmp));
+
+            try {
+                in.readByte();
+                fail();
+            } catch (EOFException e) {
+                // Expected
+            }
+
+            try {
+                in.readFully(tmp, 0, -1);
+                fail();
+            } catch (IndexOutOfBoundsException e) {
+                // Expected
+            }
+
+            try {
+                in.readFully(tmp);
+                fail();
+            } catch (EOFException e) {
+                // Expected
+            }
+        } finally {
+            // Ownership was transferred to the ByteBufOutputStream, before we close we must retain the underlying
+            // buffer.
+            buf.retain();
+            in.close();
+        }
 
         assertEquals(buf.readerIndex(), in.readBytes());
     }
@@ -175,7 +184,7 @@ public class ByteBufStreamTest {
     public void testReadLine() throws Exception {
         Charset utf8 = Charset.forName("UTF-8");
         ByteBuf buf = Unpooled.buffer();
-        ByteBufInputStream in = new ByteBufInputStream(buf);
+        ByteBufInputStream in = new ByteBufInputStream(buf, true);
 
         String s = in.readLine();
         assertNull(s);

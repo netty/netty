@@ -175,16 +175,23 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         final int length = in.readableBytes();
-        final InputStream bbIn = new ByteBufInputStream(in);
-
-        final ByteBufOutputStream bbOut = new ByteBufOutputStream(out);
-        bbOut.writeByte(properties);
-        bbOut.writeInt(littleEndianDictionarySize);
-        bbOut.writeLong(Long.reverseBytes(length));
-        encoder.code(bbIn, bbOut, -1, -1, null);
-
-        bbIn.close();
-        bbOut.close();
+        InputStream bbIn = null;
+        ByteBufOutputStream bbOut = null;
+        try {
+            bbIn = new ByteBufInputStream(in);
+            bbOut = new ByteBufOutputStream(out);
+            bbOut.writeByte(properties);
+            bbOut.writeInt(littleEndianDictionarySize);
+            bbOut.writeLong(Long.reverseBytes(length));
+            encoder.code(bbIn, bbOut, -1, -1, null);
+        } finally {
+            if (bbIn != null) {
+                bbIn.close();
+            }
+            if (bbOut != null) {
+                bbOut.close();
+            }
+        }
     }
 
     @Override

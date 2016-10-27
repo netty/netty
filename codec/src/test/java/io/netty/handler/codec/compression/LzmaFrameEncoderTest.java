@@ -80,21 +80,28 @@ public class LzmaFrameEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        InputStream is = new ByteBufInputStream(compressed);
-        LzmaInputStream lzmaIs = new LzmaInputStream(is, new Decoder());
-
+        InputStream is = new ByteBufInputStream(compressed, true);
+        LzmaInputStream lzmaIs = null;
         byte[] decompressed = new byte[originalLength];
-        int remaining = originalLength;
-        while (remaining > 0) {
-            int read = lzmaIs.read(decompressed, originalLength - remaining, remaining);
-            if (read > 0) {
-                remaining -= read;
+        try {
+            lzmaIs = new LzmaInputStream(is, new Decoder());
+            int remaining = originalLength;
+            while (remaining > 0) {
+                int read = lzmaIs.read(decompressed, originalLength - remaining, remaining);
+                if (read > 0) {
+                    remaining -= read;
+                } else {
+                    break;
+                }
+            }
+            assertEquals(-1, lzmaIs.read());
+        } finally {
+            if (lzmaIs != null) {
+                lzmaIs.close();
             } else {
-                break;
+                is.close();
             }
         }
-        assertEquals(-1, lzmaIs.read());
-        lzmaIs.close();
 
         return Unpooled.wrappedBuffer(decompressed);
     }
