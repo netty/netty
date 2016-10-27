@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.ScatteringByteChannel;
@@ -288,14 +289,21 @@ public class FixedCompositeByteBufTest {
         ByteBuf composite = unmodifiableBuffer(buf1, buf2, buf3);
         ByteBuf copy = directBuffer(3);
         ByteBuf copy2 = buffer(3);
-        composite.getBytes(0, new ByteBufOutputStream(copy), 3);
-        composite.getBytes(0, new ByteBufOutputStream(copy2), 3);
-        assertEquals(0, ByteBufUtil.compare(copy, composite));
-        assertEquals(0, ByteBufUtil.compare(copy2, composite));
-        assertEquals(0, ByteBufUtil.compare(copy, copy2));
-        copy.release();
-        copy2.release();
-        composite.release();
+        OutputStream copyStream = new ByteBufOutputStream(copy);
+        OutputStream copy2Stream = new ByteBufOutputStream(copy2);
+        try {
+            composite.getBytes(0, copyStream, 3);
+            composite.getBytes(0, copy2Stream, 3);
+            assertEquals(0, ByteBufUtil.compare(copy, composite));
+            assertEquals(0, ByteBufUtil.compare(copy2, composite));
+            assertEquals(0, ByteBufUtil.compare(copy, copy2));
+        } finally {
+            copy.release();
+            copy2.release();
+            copyStream.close();
+            copy2Stream.close();
+            composite.release();
+        }
     }
 
     @Test

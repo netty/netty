@@ -25,8 +25,11 @@ import org.junit.Test;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.sameInstance;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings("DynamicRegexReplaceableByCompiledPattern")
 public class DefaultChannelIdTest {
@@ -63,11 +66,19 @@ public class DefaultChannelIdTest {
 
         ByteBuf buf = Unpooled.buffer();
         ObjectOutputStream out = new ObjectOutputStream(new ByteBufOutputStream(buf));
-        out.writeObject(a);
-        out.flush();
+        try {
+            out.writeObject(a);
+            out.flush();
+        } finally {
+            out.close();
+        }
 
-        ObjectInputStream in = new ObjectInputStream(new ByteBufInputStream(buf));
-        b = (ChannelId) in.readObject();
+        ObjectInputStream in = new ObjectInputStream(new ByteBufInputStream(buf, true));
+        try {
+            b = (ChannelId) in.readObject();
+        } finally {
+            in.close();
+        }
 
         assertThat(a, is(b));
         assertThat(a, is(not(sameInstance(b))));

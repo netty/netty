@@ -71,14 +71,11 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
             return null;
         }
 
-        ObjectInputStream is = new CompactObjectInputStream(new ByteBufInputStream(frame), classResolver);
-        Object result = is.readObject();
-        is.close();
-        return result;
-    }
-
-    @Override
-    protected ByteBuf extractFrame(ChannelHandlerContext ctx, ByteBuf buffer, int index, int length) {
-        return buffer.slice(index, length);
+        ObjectInputStream ois = new CompactObjectInputStream(new ByteBufInputStream(frame, true), classResolver);
+        try {
+            return ois.readObject();
+        } finally {
+            ois.close();
+        }
     }
 }

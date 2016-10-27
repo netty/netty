@@ -300,16 +300,19 @@ public abstract class ZlibTest {
         }
 
         ByteBuf decoded = Unpooled.buffer();
-        GZIPInputStream stream = new GZIPInputStream(new ByteBufInputStream(encoded));
-        byte[] buf = new byte[8192];
-        for (;;) {
-            int readBytes = stream.read(buf);
-            if (readBytes < 0) {
-                break;
+        GZIPInputStream stream = new GZIPInputStream(new ByteBufInputStream(encoded, true));
+        try {
+            byte[] buf = new byte[8192];
+            for (;;) {
+                int readBytes = stream.read(buf);
+                if (readBytes < 0) {
+                    break;
+                }
+                decoded.writeBytes(buf, 0, readBytes);
             }
-            decoded.writeBytes(buf, 0, readBytes);
+        } finally {
+            stream.close();
         }
-        stream.close();
 
         if (data != null) {
             assertEquals(Unpooled.wrappedBuffer(data), decoded);
@@ -317,7 +320,6 @@ public abstract class ZlibTest {
             assertFalse(decoded.isReadable());
         }
 
-        encoded.release();
         decoded.release();
     }
 

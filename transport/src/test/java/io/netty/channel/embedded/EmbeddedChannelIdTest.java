@@ -15,17 +15,17 @@
  */
 package io.netty.channel.embedded;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-
-import org.junit.Assert;
-import org.junit.Test;
-
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelId;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 public class EmbeddedChannelIdTest {
 
@@ -34,14 +34,21 @@ public class EmbeddedChannelIdTest {
         // test that a deserialized instance works the same as a normal instance (issue #2869)
         ChannelId normalInstance = EmbeddedChannelId.INSTANCE;
 
-        ByteBufOutputStream buffer = new ByteBufOutputStream(Unpooled.buffer());
-        ObjectOutputStream outStream = new ObjectOutputStream(buffer);
-        outStream.writeObject(normalInstance);
-        outStream.close();
+        ByteBuf buf = Unpooled.buffer();
+        ObjectOutputStream outStream = new ObjectOutputStream(new ByteBufOutputStream(buf));
+        try {
+            outStream.writeObject(normalInstance);
+        } finally {
+            outStream.close();
+        }
 
-        ObjectInputStream inStream = new ObjectInputStream(new ByteBufInputStream(buffer.buffer()));
-        ChannelId deserializedInstance = (ChannelId) inStream.readObject();
-        inStream.close();
+        ObjectInputStream inStream = new ObjectInputStream(new ByteBufInputStream(buf, true));
+        final ChannelId deserializedInstance;
+        try {
+            deserializedInstance = (ChannelId) inStream.readObject();
+        } finally {
+            inStream.close();
+        }
 
         Assert.assertEquals(normalInstance, deserializedInstance);
         Assert.assertEquals(normalInstance.hashCode(), deserializedInstance.hashCode());

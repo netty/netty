@@ -34,21 +34,28 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        InputStream is = new ByteBufInputStream(compressed);
-        LZ4BlockInputStream lz4Is = new LZ4BlockInputStream(is);
-
+        InputStream is = new ByteBufInputStream(compressed, true);
+        LZ4BlockInputStream lz4Is = null;
         byte[] decompressed = new byte[originalLength];
-        int remaining = originalLength;
-        while (remaining > 0) {
-            int read = lz4Is.read(decompressed, originalLength - remaining, remaining);
-            if (read > 0) {
-                remaining -= read;
+        try {
+            lz4Is = new LZ4BlockInputStream(is);
+            int remaining = originalLength;
+            while (remaining > 0) {
+                int read = lz4Is.read(decompressed, originalLength - remaining, remaining);
+                if (read > 0) {
+                    remaining -= read;
+                } else {
+                    break;
+                }
+            }
+            assertEquals(-1, lz4Is.read());
+        } finally {
+            if (lz4Is != null) {
+                lz4Is.close();
             } else {
-                break;
+                is.close();
             }
         }
-        assertEquals(-1, lz4Is.read());
-        lz4Is.close();
 
         return Unpooled.wrappedBuffer(decompressed);
     }
