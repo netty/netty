@@ -31,6 +31,7 @@ public class LzfEncoderTest extends AbstractEncoderTest {
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
         byte[] compressedArray = new byte[compressed.readableBytes()];
         compressed.readBytes(compressedArray);
+        compressed.release();
 
         byte[] decompressed = LZFDecoder.decode(compressedArray);
         return Unpooled.wrappedBuffer(decompressed);

@@ -42,11 +42,19 @@ public class ObjectEncoder extends MessageToByteEncoder<Serializable> {
         int startIdx = out.writerIndex();
 
         ByteBufOutputStream bout = new ByteBufOutputStream(out);
-        bout.write(LENGTH_PLACEHOLDER);
-        ObjectOutputStream oout = new CompactObjectOutputStream(bout);
-        oout.writeObject(msg);
-        oout.flush();
-        oout.close();
+        ObjectOutputStream oout = null;
+        try {
+            bout.write(LENGTH_PLACEHOLDER);
+            oout = new CompactObjectOutputStream(bout);
+            oout.writeObject(msg);
+            oout.flush();
+        } finally {
+            if (oout != null) {
+                oout.close();
+            } else {
+                bout.close();
+            }
+        }
 
         int endIdx = out.writerIndex();
 

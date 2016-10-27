@@ -120,8 +120,6 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
         while ((msg = channel.readOutbound()) != null) {
             compressed.addComponent(true, msg);
         }
-        ByteBuf decompressed =  decompress(compressed, dataLength);
-        compressed.release();
-        return decompressed;
+        return decompress(compressed, dataLength);
     }
 }
