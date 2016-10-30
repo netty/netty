@@ -59,6 +59,8 @@ import javax.net.ssl.SSLSessionContext;
 import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.OpenSsl.memoryAddress;
+import static io.netty.util.internal.EmptyArrays.EMPTY_CERTIFICATES;
+import static io.netty.util.internal.EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_UNWRAP;
@@ -1308,6 +1310,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return pendingStatus > 0 ? NEED_WRAP : NEED_UNWRAP;
     }
 
+    private static boolean isEmpty(Object[] arr) {
+        return arr == null || arr.length == 0;
+    }
+
+    private static boolean isEmpty(byte[] cert) {
+        return cert == null || cert.length == 0;
+    }
+
     private SSLEngineResult.HandshakeStatus handshake() throws SSLException {
         if (handshakeState == HandshakeState.FINISHED) {
             return FINISHED;
@@ -1595,9 +1605,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // These are guarded by synchronized(OpenSslEngine.this) as handshakeFinished() may be triggered by any
         // thread.
         private X509Certificate[] x509PeerCerts;
+        private Certificate[] peerCerts;
         private String protocol;
         private String applicationProtocol;
-        private Certificate[] peerCerts;
         private String cipher;
         private byte[] id;
         private long creationTime;
@@ -1747,51 +1757,45 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         private void initPeerCerts() {
             // Return the full chain from the JNI layer.
             byte[][] chain = SSL.getPeerCertChain(ssl);
-            final byte[] clientCert;
-            if (!clientMode) {
+            if (clientMode) {
+                if (isEmpty(chain)) {
+                    peerCerts = EMPTY_CERTIFICATES;
+                    x509PeerCerts = EMPTY_JAVAX_X509_CERTIFICATES;
+                } else {
+                    peerCerts = new Certificate[chain.length];
+                    x509PeerCerts = new X509Certificate[chain.length];
+                    initCerts(chain, 0);
+                }
+            } else {
                 // if used on the server side SSL_get_peer_cert_chain(...) will not include the remote peer
                 // certificate. We use SSL_get_peer_certificate to get it in this case and add it to our
                 // array later.
                 //
                 // See https://www.openssl.org/docs/ssl/SSL_get_peer_cert_chain.html
-                clientCert = SSL.getPeerCertificate(ssl);
-            } else {
-                clientCert = null;
-            }
-
-            if (chain == null || chain.length == 0) {
-                if (clientCert == null || clientCert.length == 0) {
-                    peerCerts = EmptyArrays.EMPTY_CERTIFICATES;
-                    x509PeerCerts = EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
+                byte[] clientCert = SSL.getPeerCertificate(ssl);
+                if (isEmpty(clientCert)) {
+                    peerCerts = EMPTY_CERTIFICATES;
+                    x509PeerCerts = EMPTY_JAVAX_X509_CERTIFICATES;
                 } else {
-                    peerCerts = new Certificate[1];
-                    x509PeerCerts = new X509Certificate[1];
-
-                    peerCerts[0] = new OpenSslX509Certificate(clientCert);
-                    x509PeerCerts[0] = new OpenSslJavaxX509Certificate(clientCert);
+                    if (isEmpty(chain)) {
+                        peerCerts = new Certificate[] {new OpenSslX509Certificate(clientCert)};
+                        x509PeerCerts = new X509Certificate[] {new OpenSslJavaxX509Certificate(clientCert)};
+                    } else {
+                        peerCerts = new Certificate[chain.length + 1];
+                        x509PeerCerts = new X509Certificate[chain.length + 1];
+                        peerCerts[0] = new OpenSslX509Certificate(clientCert);
+                        x509PeerCerts[0] = new OpenSslJavaxX509Certificate(clientCert);
+                        initCerts(chain, 1);
+                    }
                 }
-            } else if (clientCert == null || clientCert.length == 0) {
-                peerCerts = new Certificate[chain.length];
-                x509PeerCerts = new X509Certificate[chain.length];
+            }
+        }
 
-                for (int a = 0; a < chain.length; ++a) {
-                    byte[] bytes = chain[a];
-                    peerCerts[a] = new OpenSslX509Certificate(bytes);
-                    x509PeerCerts[a] = new OpenSslJavaxX509Certificate(bytes);
-                }
-            } else {
-                int len = clientCert.length + 1;
-                peerCerts = new Certificate[len];
-                x509PeerCerts = new X509Certificate[len];
-
-                peerCerts[0] = new OpenSslX509Certificate(clientCert);
-                x509PeerCerts[0] = new OpenSslJavaxX509Certificate(clientCert);
-
-                for (int a = 0, i = 1; a < chain.length; ++a, ++i) {
-                    byte[] bytes = chain[a];
-                    peerCerts[i] = new OpenSslX509Certificate(bytes);
-                    x509PeerCerts[i] = new OpenSslJavaxX509Certificate(bytes);
-                }
+        private void initCerts(byte[][] chain, int startPos) {
+            for (int i = 0; i < chain.length; i++) {
+                int certPos = startPos + i;
+                peerCerts[certPos] = new OpenSslX509Certificate(chain[i]);
+                x509PeerCerts[certPos] = new OpenSslJavaxX509Certificate(chain[i]);
             }
         }
 
@@ -1859,7 +1863,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         @Override
         public Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
             synchronized (ReferenceCountedOpenSslEngine.this) {
-                if (peerCerts == null || peerCerts.length == 0) {
+                if (isEmpty(peerCerts)) {
                     throw new SSLPeerUnverifiedException("peer not verified");
                 }
                 return peerCerts.clone();
@@ -1877,7 +1881,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         @Override
         public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
             synchronized (ReferenceCountedOpenSslEngine.this) {
-                if (x509PeerCerts == null || x509PeerCerts.length == 0) {
+                if (isEmpty(x509PeerCerts)) {
                     throw new SSLPeerUnverifiedException("peer not verified");
                 }
                 return x509PeerCerts.clone();
