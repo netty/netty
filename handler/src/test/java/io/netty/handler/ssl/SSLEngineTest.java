@@ -53,6 +53,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -64,6 +65,7 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSession;
+import javax.security.cert.X509Certificate;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -866,7 +868,28 @@ public abstract class SSLEngineTest {
                         if (evt instanceof SslHandshakeCompletionEvent) {
                             Throwable cause = ((SslHandshakeCompletionEvent) evt).cause();
                             if (cause == null) {
-                                promise.setSuccess(null);
+                                SSLSession session = ((SslHandler) ctx.pipeline().first()).engine().getSession();
+                                X509Certificate[] peerCertificateChain = session.getPeerCertificateChain();
+                                Certificate[] peerCertificates = session.getPeerCertificates();
+                                if (peerCertificateChain == null) {
+                                    promise.setFailure(new NullPointerException("peerCertificateChain"));
+                                } else if (peerCertificates == null) {
+                                    promise.setFailure(new NullPointerException("peerCertificates"));
+                                } else if (peerCertificateChain.length + peerCertificates.length != 4) {
+                                    String excTxtFmt = "peerCertificateChain.length:%s, peerCertificates.length:%s";
+                                    promise.setFailure(new IllegalStateException(String.format(excTxtFmt,
+                                            peerCertificateChain.length,
+                                            peerCertificates.length)));
+                                } else {
+                                    for (int i = 0; i < peerCertificateChain.length; i++) {
+                                        if (peerCertificateChain[i] == null || peerCertificates[i] == null) {
+                                            promise.setFailure(
+                                                    new IllegalStateException("Certificate in chain is null"));
+                                            return;
+                                        }
+                                    }
+                                    promise.setSuccess(null);
+                                }
                             } else {
                                 promise.setFailure(cause);
                             }
