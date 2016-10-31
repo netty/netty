@@ -15,8 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.InternalThreadLocalMap;
-
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -34,7 +33,7 @@ public final class IdentityCipherSuiteFilter implements CipherSuiteFilter {
         if (ciphers == null) {
             return defaultCiphers.toArray(new String[defaultCiphers.size()]);
         } else {
-            List<String> newCiphers = InternalThreadLocalMap.get().arrayList(supportedCiphers.size());
+            List<String> newCiphers = new ArrayList<String>(supportedCiphers.size());
             for (String c : ciphers) {
                 if (c == null) {
                     break;
