@@ -35,10 +35,6 @@ import java.io.Serializable;
  * {@link ObjectInputStream} and {@link ObjectOutputStream}.
  */
 public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> {
-
-    private static final AttributeKey<ObjectOutputStream> OOS =
-            AttributeKey.valueOf(CompatibleObjectEncoder.class, "OOS");
-
     private final int resetInterval;
     private int writtenObjects;
 
@@ -77,17 +73,8 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
 
     @Override
     protected void encode(ChannelHandlerContext ctx, Serializable msg, ByteBuf out) throws Exception {
-        Attribute<ObjectOutputStream> oosAttr = ctx.attr(OOS);
-        ObjectOutputStream oos = oosAttr.get();
-        if (oos == null) {
-            oos = newObjectOutputStream(new ByteBufOutputStream(out));
-            ObjectOutputStream newOos = oosAttr.setIfAbsent(oos);
-            if (newOos != null) {
-                oos = newOos;
-            }
-        }
-
-        synchronized (oos) {
+        ObjectOutputStream oos = newObjectOutputStream(new ByteBufOutputStream(out));
+        try {
             if (resetInterval != 0) {
                 // Resetting will prevent OOM on the receiving side.
                 writtenObjects ++;
@@ -98,6 +85,8 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
 
             oos.writeObject(msg);
             oos.flush();
+        } finally {
+            oos.close();
         }
     }
 }
