@@ -16,7 +16,6 @@
 
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -243,7 +242,7 @@ public abstract class DnsServerAddresses {
             throw new NullPointerException("addresses");
         }
 
-        List<InetSocketAddress> list = InternalThreadLocalMap.get().arrayList(addresses.length);
+        List<InetSocketAddress> list = new ArrayList<InetSocketAddress>(addresses.length);
         for (InetSocketAddress a: addresses) {
             if (a == null) {
                 break;
