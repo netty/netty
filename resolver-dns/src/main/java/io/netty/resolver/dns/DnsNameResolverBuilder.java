@@ -23,9 +23,9 @@ import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.resolver.HostsFileEntriesResolver;
-import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -160,8 +160,8 @@ public final class DnsNameResolverBuilder {
     public DnsNameResolverBuilder resolvedAddressTypes(InternetProtocolFamily... resolvedAddressTypes) {
         checkNotNull(resolvedAddressTypes, "resolvedAddressTypes");
 
-        final List<InternetProtocolFamily> list =
-                InternalThreadLocalMap.get().arrayList(InternetProtocolFamily.values().length);
+        final List<InternetProtocolFamily> list = new ArrayList<InternetProtocolFamily>(
+                InternetProtocolFamily.values().length);
 
         for (InternetProtocolFamily f : resolvedAddressTypes) {
             if (f == null) {
@@ -197,8 +197,8 @@ public final class DnsNameResolverBuilder {
     public DnsNameResolverBuilder resolvedAddressTypes(Iterable<InternetProtocolFamily> resolvedAddressTypes) {
         checkNotNull(resolvedAddressTypes, "resolveAddressTypes");
 
-        final List<InternetProtocolFamily> list =
-                InternalThreadLocalMap.get().arrayList(InternetProtocolFamily.values().length);
+        final List<InternetProtocolFamily> list = new ArrayList<InternetProtocolFamily>(
+                InternetProtocolFamily.values().length);
 
         for (InternetProtocolFamily f : resolvedAddressTypes) {
             if (f == null) {
@@ -299,8 +299,7 @@ public final class DnsNameResolverBuilder {
     public DnsNameResolverBuilder searchDomains(Iterable<String> searchDomains) {
         checkNotNull(searchDomains, "searchDomains");
 
-        final List<String> list =
-            InternalThreadLocalMap.get().arrayList(4);
+        final List<String> list = new ArrayList<String>(4);
 
         for (String f : searchDomains) {
             if (f == null) {

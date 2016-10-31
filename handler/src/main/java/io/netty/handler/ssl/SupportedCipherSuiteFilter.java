@@ -15,9 +15,8 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.InternalThreadLocalMap;
-
 import javax.net.ssl.SSLEngine;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -41,10 +40,10 @@ public final class SupportedCipherSuiteFilter implements CipherSuiteFilter {
 
         final List<String> newCiphers;
         if (ciphers == null) {
-            newCiphers = InternalThreadLocalMap.get().arrayList(defaultCiphers.size());
+            newCiphers = new ArrayList<String>(defaultCiphers.size());
             ciphers = defaultCiphers;
         } else {
-            newCiphers = InternalThreadLocalMap.get().arrayList(supportedCiphers.size());
+            newCiphers = new ArrayList<String>(supportedCiphers.size());
         }
         for (String c : ciphers) {
             if (c == null) {
