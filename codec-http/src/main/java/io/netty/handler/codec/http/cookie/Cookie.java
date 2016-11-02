@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.cookie;
 
+import io.netty.util.AsciiString;
+
 /**
  * An interface defining an
  * <a href="http://en.wikipedia.org/wiki/HTTP_cookie">HTTP cookie</a>.
@@ -26,14 +28,30 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @return The name of this {@link Cookie}
      */
+    @Deprecated
     String name();
+
+    /**
+     * Returns the name of this {@link Cookie}.
+     *
+     * @return The name of this {@link Cookie}
+     */
+    AsciiString asciiName();
 
     /**
      * Returns the value of this {@link Cookie}.
      *
-     * @return The value of this {@link Cookie}
+     * @return The value of this {@link Cookie}7u
      */
+    @Deprecated
     String value();
+
+    /**
+     * Returns the value of this {@link Cookie}.
+     *
+     * @return The value of this {@link Cookie}7u
+     */
+    AsciiString asciiValue();
 
     /**
      * Sets the value of this {@link Cookie}.
@@ -41,6 +59,13 @@ public interface Cookie extends Comparable<Cookie> {
      * @param value The value to set
      */
     void setValue(String value);
+
+    /**
+     * Sets the value of this {@link Cookie}.
+     *
+     * @param value The value to set
+     */
+    void setValue(AsciiString value);
 
     /**
      * Returns true if the raw value of this {@link Cookie},
@@ -63,7 +88,15 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @return The domain of this {@link Cookie}
      */
+    @Deprecated
     String domain();
+
+    /**
+     * Returns the domain of this {@link Cookie}.
+     *
+     * @return The domain of this {@link Cookie}
+     */
+    AsciiString asciiDomain();
 
     /**
      * Sets the domain of this {@link Cookie}.
@@ -73,11 +106,26 @@ public interface Cookie extends Comparable<Cookie> {
     void setDomain(String domain);
 
     /**
+     * Sets the domain of this {@link Cookie}.
+     *
+     * @param domain The domain to use
+     */
+    void setDomain(AsciiString domain);
+
+    /**
      * Returns the path of this {@link Cookie}.
      *
      * @return The {@link Cookie}'s path
      */
+    @Deprecated
     String path();
+
+    /**
+     * Returns the path of this {@link Cookie}.
+     *
+     * @return The {@link Cookie}'s path
+     */
+    AsciiString asciiPath();
 
     /**
      * Sets the path of this {@link Cookie}.
@@ -85,6 +133,13 @@ public interface Cookie extends Comparable<Cookie> {
      * @param path The path to use for this {@link Cookie}
      */
     void setPath(String path);
+
+    /**
+     * Sets the path of this {@link Cookie}.
+     *
+     * @param path The path to use for this {@link Cookie}
+     */
+    void setPath(AsciiString path);
 
     /**
      * Returns the maximum age of this {@link Cookie} in seconds or {@link Long#MIN_VALUE} if unspecified

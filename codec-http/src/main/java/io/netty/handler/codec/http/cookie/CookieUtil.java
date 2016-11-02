@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.cookie;
 
 import io.netty.handler.codec.http.HttpConstants;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.InternalThreadLocalMap;
 
 import java.util.BitSet;
@@ -84,18 +85,22 @@ final class CookieUtil {
      * @param buf a buffer where some cookies were maybe encoded
      * @return the buffer String without the trailing separator, or null if no cookie was appended.
      */
-    static String stripTrailingSeparatorOrNull(StringBuilder buf) {
+    static AsciiString stripTrailingSeparatorOrNull(StringBuilder buf) {
         return buf.length() == 0 ? null : stripTrailingSeparator(buf);
     }
 
-    static String stripTrailingSeparator(StringBuilder buf) {
+    static AsciiString stripTrailingSeparator(StringBuilder buf) {
         if (buf.length() > 0) {
             buf.setLength(buf.length() - 2);
         }
-        return buf.toString();
+        return new AsciiString(buf);
     }
 
-    static void add(StringBuilder sb, String name, long val) {
+    static String toStringOrNull(AsciiString as) {
+        return as == null ? null : as.toString();
+    }
+
+    static void add(StringBuilder sb, AsciiString name, long val) {
         sb.append(name);
         sb.append((char) HttpConstants.EQUALS);
         sb.append(val);
@@ -103,7 +108,7 @@ final class CookieUtil {
         sb.append((char) HttpConstants.SP);
     }
 
-    static void add(StringBuilder sb, String name, String val) {
+    static void add(StringBuilder sb, AsciiString name, AsciiString val) {
         sb.append(name);
         sb.append((char) HttpConstants.EQUALS);
         sb.append(val);
@@ -111,15 +116,15 @@ final class CookieUtil {
         sb.append((char) HttpConstants.SP);
     }
 
-    static void add(StringBuilder sb, String name) {
+    static void add(StringBuilder sb, AsciiString name) {
         sb.append(name);
         sb.append((char) HttpConstants.SEMICOLON);
         sb.append((char) HttpConstants.SP);
     }
 
-    static void addQuoted(StringBuilder sb, String name, String val) {
+    static void addQuoted(StringBuilder sb, AsciiString name, AsciiString val) {
         if (val == null) {
-            val = "";
+            val = AsciiString.EMPTY_STRING;
         }
 
         sb.append(name);
@@ -162,7 +167,7 @@ final class CookieUtil {
         return cs;
     }
 
-    static String validateAttributeValue(String name, String value) {
+    static AsciiString validateAttributeValue(String name, AsciiString value) {
         if (value == null) {
             return null;
         }

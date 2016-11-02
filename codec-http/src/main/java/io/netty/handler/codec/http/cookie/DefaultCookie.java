@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.cookie;
 
+import io.netty.util.AsciiString;
+
 import static io.netty.handler.codec.http.cookie.CookieUtil.*;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -23,19 +25,19 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public class DefaultCookie implements Cookie {
 
-    private final String name;
-    private String value;
+    private final AsciiString name;
+    private AsciiString value;
     private boolean wrap;
-    private String domain;
-    private String path;
+    private AsciiString domain;
+    private AsciiString path;
     private long maxAge = Long.MIN_VALUE;
     private boolean secure;
     private boolean httpOnly;
 
     /**
-     * Creates a new cookie with the specified name and value.
+     * Creates a new cookie with the specified {@link AsciiString} name and value.
      */
-    public DefaultCookie(String name, String value) {
+    public DefaultCookie(AsciiString name, AsciiString value) {
         name = checkNotNull(name, "name").trim();
         if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
@@ -44,19 +46,44 @@ public class DefaultCookie implements Cookie {
         setValue(value);
     }
 
+    /**
+     * Creates a new cookie with the specified name and value.
+     */
+    @Deprecated
+    public DefaultCookie(String name, String value) {
+        this(new AsciiString(name), new AsciiString(value));
+    }
+
     @Override
+    @Deprecated
     public String name() {
+        return toStringOrNull(name);
+    }
+
+    @Override
+    public AsciiString asciiName() {
         return name;
     }
 
     @Override
+    @Deprecated
     public String value() {
+        return toStringOrNull(value);
+    }
+
+    @Override
+    public AsciiString asciiValue() {
         return value;
     }
 
     @Override
-    public void setValue(String value) {
+    public void setValue(AsciiString value) {
         this.value = checkNotNull(value, "value");
+    }
+
+    @Override
+    public void setValue(String value) {
+        this.value = checkNotNull(new AsciiString(value), "value");
     }
 
     @Override
@@ -70,22 +97,44 @@ public class DefaultCookie implements Cookie {
     }
 
     @Override
+    @Deprecated
     public String domain() {
+        return toStringOrNull(domain);
+    }
+
+    @Override
+    public AsciiString asciiDomain() {
         return domain;
     }
 
     @Override
-    public void setDomain(String domain) {
+    public void setDomain(AsciiString domain) {
         this.domain = validateAttributeValue("domain", domain);
     }
 
     @Override
+    public void setDomain(String domain) {
+        setDomain(new AsciiString(domain));
+    }
+
+    @Override
+    @Deprecated
     public String path() {
+        return toStringOrNull(path);
+    }
+
+    @Override
+    public AsciiString asciiPath() {
         return path;
     }
 
     @Override
     public void setPath(String path) {
+        setPath(new AsciiString(path));
+    }
+
+    @Override
+    public void setPath(AsciiString path) {
         this.path = validateAttributeValue("path", path);
     }
 
@@ -135,28 +184,28 @@ public class DefaultCookie implements Cookie {
         }
 
         Cookie that = (Cookie) o;
-        if (!name().equals(that.name())) {
+        if (!asciiName().equals(that.asciiName())) {
             return false;
         }
 
-        if (path() == null) {
-            if (that.path() != null) {
+        if (asciiPath() == null) {
+            if (that.asciiPath() != null) {
                 return false;
             }
-        } else if (that.path() == null) {
+        } else if (that.asciiPath() == null) {
             return false;
-        } else if (!path().equals(that.path())) {
+        } else if (!asciiPath().equals(that.asciiPath())) {
             return false;
         }
 
-        if (domain() == null) {
-            if (that.domain() != null) {
+        if (asciiDomain() == null) {
+            if (that.asciiDomain() != null) {
                 return false;
             }
-        } else if (that.domain() == null) {
+        } else if (that.asciiDomain() == null) {
             return false;
         } else {
-            return domain().equalsIgnoreCase(that.domain());
+            return asciiDomain().contentEqualsIgnoreCase(that.asciiDomain());
         }
 
         return true;
@@ -164,32 +213,32 @@ public class DefaultCookie implements Cookie {
 
     @Override
     public int compareTo(Cookie c) {
-        int v = name().compareTo(c.name());
+        int v = asciiName().compareTo(c.asciiName());
         if (v != 0) {
             return v;
         }
 
-        if (path() == null) {
-            if (c.path() != null) {
+        if (asciiPath() == null) {
+            if (c.asciiPath() != null) {
                 return -1;
             }
-        } else if (c.path() == null) {
+        } else if (c.asciiPath() == null) {
             return 1;
         } else {
-            v = path().compareTo(c.path());
+            v = asciiPath().compareTo(c.asciiPath());
             if (v != 0) {
                 return v;
             }
         }
 
-        if (domain() == null) {
-            if (c.domain() != null) {
+        if (asciiDomain() == null) {
+            if (c.asciiDomain() != null) {
                 return -1;
             }
-        } else if (c.domain() == null) {
+        } else if (c.asciiDomain() == null) {
             return 1;
         } else {
-            v = domain().compareToIgnoreCase(c.domain());
+            v = asciiDomain().compareToIgnoreCase(c.asciiDomain());
             return v;
         }
 
@@ -206,22 +255,22 @@ public class DefaultCookie implements Cookie {
      */
     @Deprecated
     protected String validateValue(String name, String value) {
-        return validateAttributeValue(name, value);
+        return validateAttributeValue(name, new AsciiString(value)).toString();
     }
 
     @Override
     public String toString() {
         StringBuilder buf = stringBuilder()
-            .append(name())
+            .append(asciiName())
             .append('=')
-            .append(value());
-        if (domain() != null) {
+            .append(asciiValue());
+        if (asciiDomain() != null) {
             buf.append(", domain=")
-               .append(domain());
+               .append(asciiDomain());
         }
-        if (path() != null) {
+        if (asciiPath() != null) {
             buf.append(", path=")
-               .append(path());
+               .append(asciiPath());
         }
         if (maxAge() >= 0) {
             buf.append(", maxAge=")

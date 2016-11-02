@@ -21,6 +21,7 @@ import static io.netty.handler.codec.http.cookie.CookieUtil.unwrapValue;
 
 import java.nio.CharBuffer;
 
+import io.netty.util.AsciiString;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -37,7 +38,7 @@ public abstract class CookieDecoder {
         this.strict = strict;
     }
 
-    protected DefaultCookie initCookie(String header, int nameBegin, int nameEnd, int valueBegin, int valueEnd) {
+    protected DefaultCookie initCookie(AsciiString header, int nameBegin, int nameEnd, int valueBegin, int valueEnd) {
         if (nameBegin == -1 || nameBegin == nameEnd) {
             logger.debug("Skipping cookie with null name");
             return null;
@@ -56,7 +57,7 @@ public abstract class CookieDecoder {
             return null;
         }
 
-        final String name = header.substring(nameBegin, nameEnd);
+        final AsciiString name = header.subSequence(nameBegin, nameEnd);
 
         int invalidOctetPos;
         if (strict && (invalidOctetPos = firstInvalidCookieNameOctet(name)) >= 0) {
@@ -77,7 +78,7 @@ public abstract class CookieDecoder {
             return null;
         }
 
-        DefaultCookie cookie = new DefaultCookie(name, unwrappedValue.toString());
+        DefaultCookie cookie = new DefaultCookie(name, new AsciiString(unwrappedValue));
         cookie.setWrap(wrap);
         return cookie;
     }

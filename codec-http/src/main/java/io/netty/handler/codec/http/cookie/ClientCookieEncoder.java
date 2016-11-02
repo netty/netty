@@ -15,13 +15,10 @@
  */
 package io.netty.handler.codec.http.cookie;
 
-import static io.netty.handler.codec.http.cookie.CookieUtil.add;
-import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
-import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
-import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
-import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparatorOrNull;
+import static io.netty.handler.codec.http.cookie.CookieUtil.*;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.AsciiString;
 import io.netty.util.internal.InternalThreadLocalMap;
 
 import java.util.Arrays;
@@ -74,8 +71,22 @@ public final class ClientCookieEncoder extends CookieEncoder {
      *            the cookie value
      * @return a Rfc6265 style Cookie header value
      */
+    @Deprecated
     public String encode(String name, String value) {
         return encode(new DefaultCookie(name, value));
+    }
+
+    /**
+     * Encodes the specified cookie into a Cookie header value.
+     *
+     * @param name
+     *            the cookie name
+     * @param value
+     *            the cookie value
+     * @return a Rfc6265 style Cookie header value
+     */
+    public AsciiString encode(AsciiString name, AsciiString value) {
+        return encodeAsciiString(new DefaultCookie(name, value));
     }
 
     /**
@@ -84,7 +95,18 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * @param cookie the specified cookie
      * @return a Rfc6265 style Cookie header value
      */
+    @Deprecated
     public String encode(Cookie cookie) {
+        return toStringOrNull(encodeAsciiString(cookie));
+    }
+
+    /**
+     * Encodes the specified cookie into a Cookie header value.
+     *
+     * @param cookie the specified cookie
+     * @return a Rfc6265 style Cookie header value
+     */
+    public AsciiString encodeAsciiString(Cookie cookie) {
         StringBuilder buf = stringBuilder();
         encode(buf, checkNotNull(cookie, "cookie"));
         return stripTrailingSeparator(buf);
@@ -97,8 +119,8 @@ public final class ClientCookieEncoder extends CookieEncoder {
     private static final Comparator<Cookie> COOKIE_COMPARATOR = new Comparator<Cookie>() {
         @Override
         public int compare(Cookie c1, Cookie c2) {
-            String path1 = c1.path();
-            String path2 = c2.path();
+            AsciiString path1 = c1.asciiPath();
+            AsciiString path2 = c2.asciiPath();
             // Cookies with unspecified path default to the path of the request. We don't
             // know the request path here, but we assume that the length of an unspecified
             // path is longer than any specified path (i.e. pathless cookies come first),
@@ -123,7 +145,19 @@ public final class ClientCookieEncoder extends CookieEncoder {
      *            some cookies
      * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
      */
+    @Deprecated
     public String encode(Cookie... cookies) {
+        return toStringOrNull(encodeAsciiString(cookies));
+    }
+
+    /**
+     * Encodes the specified cookies into a single Cookie header value.
+     *
+     * @param cookies
+     *            some cookies
+     * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
+     */
+    public AsciiString encodeAsciiString(Cookie... cookies) {
         if (checkNotNull(cookies, "cookies").length == 0) {
             return null;
         }
@@ -154,7 +188,19 @@ public final class ClientCookieEncoder extends CookieEncoder {
      *            some cookies
      * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
      */
+    @Deprecated
     public String encode(Collection<? extends Cookie> cookies) {
+        return toStringOrNull(encodeAsciiString(cookies));
+    }
+
+    /**
+     * Encodes the specified cookies into a single Cookie header value.
+     *
+     * @param cookies
+     *            some cookies
+     * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
+     */
+    public AsciiString encodeAsciiString(Collection<? extends Cookie> cookies) {
         if (checkNotNull(cookies, "cookies").isEmpty()) {
             return null;
         }
@@ -184,7 +230,18 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * @param cookies some cookies
      * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
      */
+    @Deprecated
     public String encode(Iterable<? extends Cookie> cookies) {
+        return toStringOrNull(encodeAsciiString(cookies));
+    }
+
+    /**
+     * Encodes the specified cookies into a single Cookie header value.
+     *
+     * @param cookies some cookies
+     * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
+     */
+    public AsciiString encodeAsciiString(Iterable<? extends Cookie> cookies) {
         Iterator<? extends Cookie> cookiesIt = checkNotNull(cookies, "cookies").iterator();
         if (!cookiesIt.hasNext()) {
             return null;
@@ -216,8 +273,8 @@ public final class ClientCookieEncoder extends CookieEncoder {
     }
 
     private void encode(StringBuilder buf, Cookie c) {
-        final String name = c.name();
-        final String value = c.value() != null ? c.value() : "";
+        final AsciiString name = c.asciiName();
+        final AsciiString value = c.asciiValue() != null ? c.asciiValue() : AsciiString.EMPTY_STRING;
 
         validateCookie(name, value);
 

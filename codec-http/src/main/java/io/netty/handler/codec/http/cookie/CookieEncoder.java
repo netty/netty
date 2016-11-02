@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.cookie;
 
+import io.netty.util.AsciiString;
+
 import static io.netty.handler.codec.http.cookie.CookieUtil.firstInvalidCookieNameOctet;
 import static io.netty.handler.codec.http.cookie.CookieUtil.firstInvalidCookieValueOctet;
 import static io.netty.handler.codec.http.cookie.CookieUtil.unwrapValue;
@@ -30,7 +32,7 @@ public abstract class CookieEncoder {
         this.strict = strict;
     }
 
-    protected void validateCookie(String name, String value) {
+    protected void validateCookie(AsciiString name, AsciiString value) {
         if (strict) {
             int pos;
 
