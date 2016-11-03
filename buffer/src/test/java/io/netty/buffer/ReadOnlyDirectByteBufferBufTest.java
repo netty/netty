@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 
-import static io.netty.util.ReferenceCountUtil.releaseLater;
-
 public class ReadOnlyDirectByteBufferBufTest {
 
     protected ByteBuf buffer(ByteBuffer buffer) {
@@ -37,62 +35,95 @@ public class ReadOnlyDirectByteBufferBufTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testConstructWithWritable() {
-        releaseLater(buffer(allocate(1)));
+        buffer(allocate(1));
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetByte() {
-        ByteBuf buf = releaseLater(buffer(allocate(8).asReadOnlyBuffer()));
-        buf.setByte(0, 1);
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            buf.setByte(0, 1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetInt() {
-        ByteBuf buf = releaseLater(buffer(allocate(8).asReadOnlyBuffer()));
-        buf.setInt(0, 1);
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            buf.setInt(0, 1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetShort() {
-        ByteBuf buf = releaseLater(buffer(allocate(8).asReadOnlyBuffer()));
-        buf.setShort(0, 1);
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            buf.setShort(0, 1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetMedium() {
-        ByteBuf buf = releaseLater(buffer(allocate(8).asReadOnlyBuffer()));
-        buf.setMedium(0, 1);
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            buf.setMedium(0, 1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetLong() {
-        ByteBuf buf = releaseLater(buffer(allocate(8).asReadOnlyBuffer()));
-        buf.setLong(0, 1);
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            buf.setLong(0, 1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetBytesViaArray() {
-        ByteBuf buf = releaseLater(buffer(allocate(8).asReadOnlyBuffer()));
-        buf.setBytes(0, "test".getBytes());
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            buf.setBytes(0, "test".getBytes());
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetBytesViaBuffer() {
-        ByteBuf buf = releaseLater(buffer(allocate(8).asReadOnlyBuffer()));
-        buf.setBytes(0, Unpooled.copyInt(1));
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        ByteBuf copy = Unpooled.copyInt(1);
+        try {
+            buf.setBytes(0, copy);
+        } finally {
+            buf.release();
+            copy.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetBytesViaStream() throws IOException {
-        ByteBuf buf = releaseLater(buffer(ByteBuffer.allocateDirect(8).asReadOnlyBuffer()));
-        buf.setBytes(0, new ByteArrayInputStream("test".getBytes()), 2);
-        buf.release();
+        ByteBuf buf = buffer(ByteBuffer.allocateDirect(8).asReadOnlyBuffer());
+        try {
+            buf.setBytes(0, new ByteArrayInputStream("test".getBytes()), 2);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test
     public void testGetReadByte() {
-        ByteBuf buf = releaseLater(buffer(
-                ((ByteBuffer) allocate(2).put(new byte[] { (byte) 1, (byte) 2 }).flip()).asReadOnlyBuffer()));
+        ByteBuf buf = buffer(
+                ((ByteBuffer) allocate(2).put(new byte[] { (byte) 1, (byte) 2 }).flip()).asReadOnlyBuffer());
 
         Assert.assertEquals(1, buf.getByte(0));
         Assert.assertEquals(2, buf.getByte(1));
@@ -100,11 +131,13 @@ public class ReadOnlyDirectByteBufferBufTest {
         Assert.assertEquals(1, buf.readByte());
         Assert.assertEquals(2, buf.readByte());
         Assert.assertFalse(buf.isReadable());
+
+        buf.release();
     }
 
     @Test
     public void testGetReadInt() {
-        ByteBuf buf = releaseLater(buffer(((ByteBuffer) allocate(8).putInt(1).putInt(2).flip()).asReadOnlyBuffer()));
+        ByteBuf buf = buffer(((ByteBuffer) allocate(8).putInt(1).putInt(2).flip()).asReadOnlyBuffer());
 
         Assert.assertEquals(1, buf.getInt(0));
         Assert.assertEquals(2, buf.getInt(4));
@@ -112,12 +145,14 @@ public class ReadOnlyDirectByteBufferBufTest {
         Assert.assertEquals(1, buf.readInt());
         Assert.assertEquals(2, buf.readInt());
         Assert.assertFalse(buf.isReadable());
+
+        buf.release();
     }
 
     @Test
     public void testGetReadShort() {
-        ByteBuf buf = releaseLater(buffer(((ByteBuffer) allocate(8)
-                .putShort((short) 1).putShort((short) 2).flip()).asReadOnlyBuffer()));
+        ByteBuf buf = buffer(((ByteBuffer) allocate(8)
+                .putShort((short) 1).putShort((short) 2).flip()).asReadOnlyBuffer());
 
         Assert.assertEquals(1, buf.getShort(0));
         Assert.assertEquals(2, buf.getShort(2));
@@ -125,12 +160,14 @@ public class ReadOnlyDirectByteBufferBufTest {
         Assert.assertEquals(1, buf.readShort());
         Assert.assertEquals(2, buf.readShort());
         Assert.assertFalse(buf.isReadable());
+
+        buf.release();
     }
 
     @Test
     public void testGetReadLong() {
-        ByteBuf buf = releaseLater(buffer(((ByteBuffer) allocate(16)
-                .putLong(1).putLong(2).flip()).asReadOnlyBuffer()));
+        ByteBuf buf = buffer(((ByteBuffer) allocate(16)
+                .putLong(1).putLong(2).flip()).asReadOnlyBuffer());
 
         Assert.assertEquals(1, buf.getLong(0));
         Assert.assertEquals(2, buf.getLong(8));
@@ -138,37 +175,47 @@ public class ReadOnlyDirectByteBufferBufTest {
         Assert.assertEquals(1, buf.readLong());
         Assert.assertEquals(2, buf.readLong());
         Assert.assertFalse(buf.isReadable());
+
+        buf.release();
     }
 
     @Test
     public void testCopy() {
-        ByteBuf buf = releaseLater(buffer(((ByteBuffer) allocate(16).putLong(1).putLong(2).flip()).asReadOnlyBuffer()));
-        ByteBuf copy = releaseLater(buf.copy());
+        ByteBuf buf = buffer(((ByteBuffer) allocate(16).putLong(1).putLong(2).flip()).asReadOnlyBuffer());
+        ByteBuf copy = buf.copy();
 
         Assert.assertEquals(buf, copy);
+
+        buf.release();
+        copy.release();
     }
 
     @Test
     public void testCopyWithOffset() {
-        ByteBuf buf = releaseLater(buffer(((ByteBuffer) allocate(16).putLong(1).putLong(2).flip()).asReadOnlyBuffer()));
-        ByteBuf copy = releaseLater(buf.copy(1, 9));
+        ByteBuf buf = buffer(((ByteBuffer) allocate(16).putLong(1).putLong(2).flip()).asReadOnlyBuffer());
+        ByteBuf copy = buf.copy(1, 9);
 
         Assert.assertEquals(buf.slice(1, 9), copy);
+
+        buf.release();
+        copy.release();
     }
 
     // Test for https://github.com/netty/netty/issues/1708
     @Test
     public void testWrapBufferWithNonZeroPosition() {
-        ByteBuf buf = releaseLater(buffer(((ByteBuffer) allocate(16)
-                .putLong(1).flip().position(1)).asReadOnlyBuffer()));
+        ByteBuf buf = buffer(((ByteBuffer) allocate(16)
+                .putLong(1).flip().position(1)).asReadOnlyBuffer());
 
         ByteBuf slice = buf.slice();
         Assert.assertEquals(buf, slice);
+
+        buf.release();
     }
 
     @Test
     public void testWrapBufferRoundTrip() {
-        ByteBuf buf = releaseLater(buffer(((ByteBuffer) allocate(16).putInt(1).putInt(2).flip()).asReadOnlyBuffer()));
+        ByteBuf buf = buffer(((ByteBuffer) allocate(16).putInt(1).putInt(2).flip()).asReadOnlyBuffer());
 
         Assert.assertEquals(1, buf.readInt());
 
@@ -176,5 +223,7 @@ public class ReadOnlyDirectByteBufferBufTest {
 
         // Ensure this can be accessed without throwing a BufferUnderflowException
         Assert.assertEquals(2, nioBuffer.getInt());
+
+        buf.release();
     }
 }

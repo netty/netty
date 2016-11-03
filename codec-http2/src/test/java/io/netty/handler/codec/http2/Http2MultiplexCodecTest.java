@@ -39,7 +39,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static io.netty.util.ReferenceCountUtil.release;
-import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -93,8 +92,8 @@ public class Http2MultiplexCodecTest {
 
         Http2StreamActiveEvent streamActive = new Http2StreamActiveEvent(streamId);
         Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(request).streamId(streamId);
-        Http2DataFrame dataFrame1 = releaseLater(new DefaultHttp2DataFrame(bb("hello")).streamId(streamId));
-        Http2DataFrame dataFrame2 = releaseLater(new DefaultHttp2DataFrame(bb("world")).streamId(streamId));
+        Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("hello")).streamId(streamId);
+        Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("world")).streamId(streamId);
 
         assertFalse(inboundHandler.isChannelActive());
         parentChannel.pipeline().fireUserEventTriggered(streamActive);
@@ -109,6 +108,9 @@ public class Http2MultiplexCodecTest {
         assertEquals(dataFrame1, inboundHandler.readInbound());
         assertEquals(dataFrame2, inboundHandler.readInbound());
         assertNull(inboundHandler.readInbound());
+
+        dataFrame1.release();
+        dataFrame2.release();
     }
 
     @Test
