@@ -26,50 +26,47 @@ import org.junit.Test;
 
 
 public class WebSocketFrameAggregatorTest {
-    private final ByteBuf content1 = ReferenceCountUtil.releaseLater(
-            Unpooled.copiedBuffer("Content1", CharsetUtil.UTF_8));
-    private final ByteBuf content2 = ReferenceCountUtil.releaseLater(
-            Unpooled.copiedBuffer("Content2", CharsetUtil.UTF_8));
-    private final ByteBuf content3 = ReferenceCountUtil.releaseLater(
-            Unpooled.copiedBuffer("Content3", CharsetUtil.UTF_8));
-    private final ByteBuf aggregatedContent = ReferenceCountUtil.releaseLater(
-            Unpooled.buffer().writeBytes(content1.duplicate())
-                    .writeBytes(content2.duplicate()).writeBytes(content3.duplicate()));
+    private static final byte[] content1 = "Content1".getBytes(CharsetUtil.UTF_8);
+    private static final byte[] content2 = "Content2".getBytes(CharsetUtil.UTF_8);
+    private static final byte[] content3 = "Content3".getBytes(CharsetUtil.UTF_8);
+    private static final byte[] aggregatedContent = new byte[content1.length + content2.length + content3.length];
+    static {
+        System.arraycopy(content1, 0, aggregatedContent, 0, content1.length);
+        System.arraycopy(content2, 0, aggregatedContent, content1.length, content2.length);
+        System.arraycopy(content3, 0, aggregatedContent, content1.length + content2.length, content3.length);
+    }
+
     @Test
     public void testAggregationBinary() {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(Integer.MAX_VALUE));
-        channel.writeInbound(new BinaryWebSocketFrame(true, 1, content1.copy()));
-        channel.writeInbound(new BinaryWebSocketFrame(false, 0, content1.copy()));
-        channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
-        channel.writeInbound(new PingWebSocketFrame(content1.copy()));
-        channel.writeInbound(new PongWebSocketFrame(content1.copy()));
-        channel.writeInbound(new ContinuationWebSocketFrame(true, 0, content3.copy()));
+        channel.writeInbound(new BinaryWebSocketFrame(true, 1, Unpooled.wrappedBuffer(content1)));
+        channel.writeInbound(new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content1)));
+        channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
+        channel.writeInbound(new PingWebSocketFrame(Unpooled.wrappedBuffer(content1)));
+        channel.writeInbound(new PongWebSocketFrame(Unpooled.wrappedBuffer(content1)));
+        channel.writeInbound(new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(content3)));
 
         Assert.assertTrue(channel.finish());
 
         BinaryWebSocketFrame frame = channel.readInbound();
         Assert.assertTrue(frame.isFinalFragment());
         Assert.assertEquals(1, frame.rsv());
-        Assert.assertEquals(content1, frame.content());
-        frame.release();
+        Assert.assertArrayEquals(content1, toBytes(frame.content()));
 
         PingWebSocketFrame frame2 = channel.readInbound();
         Assert.assertTrue(frame2.isFinalFragment());
         Assert.assertEquals(0, frame2.rsv());
-        Assert.assertEquals(content1, frame2.content());
-        frame2.release();
+        Assert.assertArrayEquals(content1, toBytes(frame2.content()));
 
         PongWebSocketFrame frame3 = channel.readInbound();
         Assert.assertTrue(frame3.isFinalFragment());
         Assert.assertEquals(0, frame3.rsv());
-        Assert.assertEquals(content1, frame3.content());
-        frame3.release();
+        Assert.assertArrayEquals(content1, toBytes(frame3.content()));
 
         BinaryWebSocketFrame frame4 = channel.readInbound();
         Assert.assertTrue(frame4.isFinalFragment());
         Assert.assertEquals(0, frame4.rsv());
-        Assert.assertEquals(aggregatedContent, frame4.content());
-        frame4.release();
+        Assert.assertArrayEquals(aggregatedContent, toBytes(frame4.content()));
 
         Assert.assertNull(channel.readInbound());
     }
@@ -77,38 +74,34 @@ public class WebSocketFrameAggregatorTest {
     @Test
     public void testAggregationText() {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(Integer.MAX_VALUE));
-        channel.writeInbound(new TextWebSocketFrame(true, 1, content1.copy()));
-        channel.writeInbound(new TextWebSocketFrame(false, 0, content1.copy()));
-        channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
-        channel.writeInbound(new PingWebSocketFrame(content1.copy()));
-        channel.writeInbound(new PongWebSocketFrame(content1.copy()));
-        channel.writeInbound(new ContinuationWebSocketFrame(true, 0, content3.copy()));
+        channel.writeInbound(new TextWebSocketFrame(true, 1, Unpooled.wrappedBuffer(content1)));
+        channel.writeInbound(new TextWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content1)));
+        channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
+        channel.writeInbound(new PingWebSocketFrame(Unpooled.wrappedBuffer(content1)));
+        channel.writeInbound(new PongWebSocketFrame(Unpooled.wrappedBuffer(content1)));
+        channel.writeInbound(new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(content3)));
 
         Assert.assertTrue(channel.finish());
 
         TextWebSocketFrame frame = channel.readInbound();
         Assert.assertTrue(frame.isFinalFragment());
         Assert.assertEquals(1, frame.rsv());
-        Assert.assertEquals(content1, frame.content());
-        frame.release();
+        Assert.assertArrayEquals(content1, toBytes(frame.content()));
 
         PingWebSocketFrame frame2 = channel.readInbound();
         Assert.assertTrue(frame2.isFinalFragment());
         Assert.assertEquals(0, frame2.rsv());
-        Assert.assertEquals(content1, frame2.content());
-        frame2.release();
+        Assert.assertArrayEquals(content1, toBytes(frame2.content()));
 
         PongWebSocketFrame frame3 = channel.readInbound();
         Assert.assertTrue(frame3.isFinalFragment());
         Assert.assertEquals(0, frame3.rsv());
-        Assert.assertEquals(content1, frame3.content());
-        frame3.release();
+        Assert.assertArrayEquals(content1, toBytes(frame3.content()));
 
         TextWebSocketFrame frame4 = channel.readInbound();
         Assert.assertTrue(frame4.isFinalFragment());
         Assert.assertEquals(0, frame4.rsv());
-        Assert.assertEquals(aggregatedContent, frame4.content());
-        frame4.release();
+        Assert.assertArrayEquals(aggregatedContent, toBytes(frame4.content()));
 
         Assert.assertNull(channel.readInbound());
     }
@@ -116,27 +109,27 @@ public class WebSocketFrameAggregatorTest {
     @Test
     public void textFrameTooBig() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(8));
-        channel.writeInbound(new BinaryWebSocketFrame(true, 1, content1.copy()));
-        channel.writeInbound(new BinaryWebSocketFrame(false, 0, content1.copy()));
+        channel.writeInbound(new BinaryWebSocketFrame(true, 1, Unpooled.wrappedBuffer(content1)));
+        channel.writeInbound(new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content1)));
         try {
-            channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
+            channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
             Assert.fail();
         } catch (TooLongFrameException e) {
             // expected
         }
-        channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
-        channel.writeInbound(new ContinuationWebSocketFrame(true, 0, content2.copy()));
+        channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
+        channel.writeInbound(new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(content2)));
 
-        channel.writeInbound(new BinaryWebSocketFrame(true, 1, content1.copy()));
-        channel.writeInbound(new BinaryWebSocketFrame(false, 0, content1.copy()));
+        channel.writeInbound(new BinaryWebSocketFrame(true, 1, Unpooled.wrappedBuffer(content1)));
+        channel.writeInbound(new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content1)));
         try {
-            channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
+            channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
             Assert.fail();
         } catch (TooLongFrameException e) {
             // expected
         }
-        channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
-        channel.writeInbound(new ContinuationWebSocketFrame(true, 0, content2.copy()));
+        channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
+        channel.writeInbound(new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(content2)));
         for (;;) {
             Object msg = channel.readInbound();
             if (msg == null) {
@@ -145,5 +138,12 @@ public class WebSocketFrameAggregatorTest {
             ReferenceCountUtil.release(msg);
         }
         channel.finish();
+    }
+
+    private static byte[] toBytes(ByteBuf buf) {
+        byte[] bytes = new byte[buf.readableBytes()];
+        buf.readBytes(bytes);
+        buf.release();
+        return bytes;
     }
 }

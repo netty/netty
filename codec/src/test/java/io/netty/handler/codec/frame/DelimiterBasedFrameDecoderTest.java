@@ -25,7 +25,6 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
-import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
 public class DelimiterBasedFrameDecoderTest {
@@ -45,8 +44,10 @@ public class DelimiterBasedFrameDecoderTest {
             }
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 'A', 0 }));
-            ByteBuf buf = releaseLater((ByteBuf) ch.readInbound());
+            ByteBuf buf = ch.readInbound();
             assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+
+            buf.release();
         }
     }
 
@@ -64,8 +65,10 @@ public class DelimiterBasedFrameDecoderTest {
             }
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 'A', 0 }));
-            ByteBuf buf = releaseLater((ByteBuf) ch.readInbound());
+            ByteBuf buf = ch.readInbound();
             assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+
+            buf.release();
         }
     }
 }
