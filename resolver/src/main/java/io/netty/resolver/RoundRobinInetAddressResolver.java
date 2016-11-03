@@ -19,13 +19,15 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A {@link NameResolver} that resolves {@link InetAddress} and force Round Robin by choosing a single address
@@ -36,6 +38,7 @@ import java.util.List;
 @UnstableApi
 public class RoundRobinInetAddressResolver extends InetNameResolver {
     private final NameResolver<InetAddress> nameResolver;
+    private final AtomicInteger index = new AtomicInteger();
 
     /**
      * @param executor the {@link EventExecutor} which is used to notify the listeners of the {@link Future} returned by
@@ -52,29 +55,46 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
         // hijack the doResolve request, but do a doResolveAll request under the hood.
         // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
         // because an unresolved address always has a host name.
-        resolveAll(inetHost).addListener(new FutureListener<List<InetAddress>>() {
-                    @Override
-                    public void operationComplete(Future<List<InetAddress>> future) throws Exception {
-                        if (future.isSuccess()) {
-                            List<InetAddress> inetAddresses = future.getNow();
-                            int numAddresses = inetAddresses.size();
-                            if (numAddresses == 0) {
-                                promise.setFailure(new UnknownHostException(inetHost));
-                            } else {
-                                // if there are multiple addresses: we shall pick one at random
-                                // this is to support the round robin distribution
-                                promise.setSuccess(inetAddresses.get(
-                                        numAddresses == 1 ? 0 : ThreadLocalRandom.current().nextInt(numAddresses)));
-                            }
-                        } else {
-                            promise.setFailure(future.cause());
-                        }
+        nameResolver.resolveAll(inetHost).addListener(new FutureListener<List<InetAddress>>() {
+            @Override
+            public void operationComplete(Future<List<InetAddress>> future) throws Exception {
+                if (future.isSuccess()) {
+                    List<InetAddress> inetAddresses = future.getNow();
+                    int numAddresses = inetAddresses.size();
+                    if (numAddresses > 0) {
+                        // if there are multiple addresses: we shall pick one by one
+                        // to support the round robin distribution
+                        promise.setSuccess(inetAddresses.get(index.getAndIncrement() % numAddresses));
+                    } else {
+                        promise.setFailure(new UnknownHostException(inetHost));
                     }
-                });
+                } else {
+                    promise.setFailure(future.cause());
+                }
+            }
+        });
     }
 
     @Override
-    protected void doResolveAll(String inetHost, Promise<List<InetAddress>> promise) throws Exception {
-        nameResolver.resolveAll(inetHost, promise);
+    protected void doResolveAll(String inetHost, final Promise<List<InetAddress>> promise) throws Exception {
+        nameResolver.resolveAll(inetHost).addListener(new FutureListener<List<InetAddress>>() {
+            @Override
+            public void operationComplete(Future<List<InetAddress>> future) throws Exception {
+                if (future.isSuccess()) {
+                    List<InetAddress> inetAddresses = future.getNow();
+                    if (!inetAddresses.isEmpty()) {
+                        // create a copy to make sure that it's modifiable random access collection
+                        List<InetAddress> result = new ArrayList<InetAddress>(inetAddresses);
+                        // rotate by different distance each time to force round robin distribution
+                        Collections.rotate(result, index.getAndIncrement());
+                        promise.setSuccess(result);
+                    } else {
+                        promise.setSuccess(inetAddresses);
+                    }
+                } else {
+                    promise.setFailure(future.cause());
+                }
+            }
+        });
     }
 }
