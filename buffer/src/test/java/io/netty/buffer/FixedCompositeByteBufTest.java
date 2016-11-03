@@ -33,6 +33,7 @@ import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.compositeBuffer;
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unmodifiableBuffer;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 
 import static org.junit.Assert.*;
 
@@ -65,98 +66,148 @@ public class FixedCompositeByteBufTest {
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetBoolean() {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setBoolean(0, true);
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        try {
+            buf.setBoolean(0, true);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetByte() {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setByte(0, 1);
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        try {
+            buf.setByte(0, 1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetBytesWithByteBuf() {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setBytes(0, Unpooled.wrappedBuffer(new byte[4]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        ByteBuf src = wrappedBuffer(new byte[4]);
+        try {
+            buf.setBytes(0, src);
+        } finally {
+            buf.release();
+            src.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetBytesWithByteBuffer() {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setBytes(0, ByteBuffer.wrap(new byte[4]));
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        try {
+            buf.setBytes(0, ByteBuffer.wrap(new byte[4]));
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
-         public void testSetBytesWithInputStream() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setBytes(0, new ByteArrayInputStream(new byte[4]), 4);
+    public void testSetBytesWithInputStream() throws IOException {
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        try {
+            buf.setBytes(0, new ByteArrayInputStream(new byte[4]), 4);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetBytesWithChannel() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setBytes(0, new ScatteringByteChannel() {
-            @Override
-            public long read(ByteBuffer[] dsts, int offset, int length) {
-                return 0;
-            }
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        try {
+            buf.setBytes(0, new ScatteringByteChannel() {
+                @Override
+                public long read(ByteBuffer[] dsts, int offset, int length) {
+                    return 0;
+                }
 
-            @Override
-            public long read(ByteBuffer[] dsts) {
-                return 0;
-            }
+                @Override
+                public long read(ByteBuffer[] dsts) {
+                    return 0;
+                }
 
-            @Override
-            public int read(ByteBuffer dst) {
-                return 0;
-            }
+                @Override
+                public int read(ByteBuffer dst) {
+                    return 0;
+                }
 
-            @Override
-            public boolean isOpen() {
-                return true;
-            }
+                @Override
+                public boolean isOpen() {
+                    return true;
+                }
 
-            @Override
-            public void close() {
-            }
-        }, 4);
+                @Override
+                public void close() {
+                }
+            }, 4);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetChar() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setChar(0, 'b');
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        try {
+            buf.setChar(0, 'b');
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetDouble() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setDouble(0, 1);
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        try {
+            buf.setDouble(0, 1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetFloat() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setFloat(0, 1);
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        try {
+            buf.setFloat(0, 1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetInt() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setInt(0, 1);
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        try {
+            buf.setInt(0, 1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetLong() {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setLong(0, 1);
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        try {
+            buf.setLong(0, 1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetMedium() throws IOException {
-        ByteBuf buf = newBuffer(Unpooled.wrappedBuffer(new byte[8]));
-        buf.setMedium(0, 1);
+        ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
+        try {
+            buf.setMedium(0, 1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test

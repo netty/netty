@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import java.io.EOFException;
@@ -31,7 +30,7 @@ public class ByteBufStreamTest {
 
     @Test
     public void testAll() throws Exception {
-        ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer(0, 65536));
+        ByteBuf buf = Unpooled.buffer(0, 65536);
 
         try {
             new ByteBufOutputStream(null);
@@ -177,6 +176,8 @@ public class ByteBufStreamTest {
         }
 
         assertEquals(buf.readerIndex(), in.readBytes());
+
+        buf.release();
     }
 
     @Test

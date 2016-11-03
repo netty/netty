@@ -54,7 +54,9 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
         writeUpgradeRequest(ch);
-        assertEquals(SWITCHING_PROTOCOLS, ReferenceCountUtil.releaseLater(responses.remove()).getStatus());
+        FullHttpResponse response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.getStatus());
+        response.release();
         assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
     }
 
@@ -63,10 +65,15 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel ch = createChannel();
 
         writeUpgradeRequest(ch);
-        assertEquals(SWITCHING_PROTOCOLS, ReferenceCountUtil.releaseLater(responses.remove()).getStatus());
+
+        FullHttpResponse response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.getStatus());
+        response.release();
 
         ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/test"));
-        assertEquals(FORBIDDEN, ReferenceCountUtil.releaseLater(responses.remove()).getStatus());
+        response = responses.remove();
+        assertEquals(FORBIDDEN, response.getStatus());
+        response.release();
     }
 
     @Test
@@ -82,9 +89,10 @@ public class WebSocketServerProtocolHandlerTest {
 
         ch.writeInbound(httpRequestWithEntity);
 
-        FullHttpResponse response = ReferenceCountUtil.releaseLater(responses.remove());
+        FullHttpResponse response = responses.remove();
         assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket handshake request: missing upgrade", getResponseMessage(response));
+        response.release();
     }
 
     @Test
@@ -101,9 +109,10 @@ public class WebSocketServerProtocolHandlerTest {
 
         ch.writeInbound(httpRequest);
 
-        FullHttpResponse response = ReferenceCountUtil.releaseLater(responses.remove());
+        FullHttpResponse response = responses.remove();
         assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket request: missing key", getResponseMessage(response));
+        response.release();
     }
 
     @Test

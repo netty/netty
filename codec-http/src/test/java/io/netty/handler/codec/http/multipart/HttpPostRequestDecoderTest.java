@@ -35,8 +35,11 @@ import org.junit.Test;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 
-import static io.netty.util.ReferenceCountUtil.*;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /** {@link HttpPostRequestDecoder} test case. */
 public class HttpPostRequestDecoderTest {
@@ -83,8 +86,8 @@ public class HttpPostRequestDecoderTest {
             // Create decoder instance to test.
             final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
 
-            decoder.offer(releaseLater(new DefaultHttpContent(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8))));
-            decoder.offer(releaseLater(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
+            decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8)));
+            decoder.offer(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
 
             // Validate it's enough chunks to decode upload.
             assertTrue(decoder.hasNext());
@@ -253,8 +256,8 @@ public class HttpPostRequestDecoderTest {
         aSmallBuf.writeBytes(aBytes, 0, split);
         aLargeBuf.writeBytes(aBytes, split, aBytes.length - split);
 
-        aDecoder.offer(releaseLater(new DefaultHttpContent(aSmallBuf)));
-        aDecoder.offer(releaseLater(new DefaultHttpContent(aLargeBuf)));
+        aDecoder.offer(new DefaultHttpContent(aSmallBuf));
+        aDecoder.offer(new DefaultHttpContent(aLargeBuf));
 
         aDecoder.offer(LastHttpContent.EMPTY_LAST_CONTENT);
 

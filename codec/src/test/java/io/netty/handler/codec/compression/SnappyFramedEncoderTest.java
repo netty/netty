@@ -22,7 +22,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
 import org.junit.Test;
 
-import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.junit.Assert.*;
 
 public class SnappyFramedEncoderTest {
@@ -46,8 +45,11 @@ public class SnappyFramedEncoderTest {
             (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
              0x01, 0x09, 0x00, 0x00, 0x6f, -0x68, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y'
         });
+        ByteBuf actual = (ByteBuf) channel.readOutbound();
+        assertEquals(expected, actual);
 
-        assertEquals(releaseLater(expected), releaseLater(channel.readOutbound()));
+        expected.release();
+        actual.release();
     }
 
     @Test
@@ -67,8 +69,11 @@ public class SnappyFramedEncoderTest {
                    'n', 'e', 't', 't', 'y',
                    0x3a, 0x05, 0x00
         });
+        ByteBuf actual = (ByteBuf) channel.readOutbound();
+        assertEquals(expected, actual);
 
-        assertEquals(releaseLater(expected), releaseLater(channel.readOutbound()));
+        expected.release();
+        actual.release();
     }
 
     @Test
@@ -96,8 +101,11 @@ public class SnappyFramedEncoderTest {
             }
             actual.addComponent(true, m);
         }
-        assertEquals(releaseLater(expected), releaseLater(actual));
-        in.release();
+
+        assertEquals(expected, actual);
+
+        expected.release();
+        actual.release();
     }
 
     /**

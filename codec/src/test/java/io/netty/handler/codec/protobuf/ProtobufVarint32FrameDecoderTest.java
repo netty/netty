@@ -21,7 +21,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static io.netty.buffer.Unpooled.*;
-import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static org.hamcrest.core.Is.*;
 import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
@@ -42,10 +41,17 @@ public class ProtobufVarint32FrameDecoderTest {
         assertThat(ch.readInbound(), is(nullValue()));
         ch.writeInbound(wrappedBuffer(b, 1, 2));
         assertThat(ch.readInbound(), is(nullValue()));
-        ch.writeInbound(wrappedBuffer(b, 3, b.length - 3));
-        assertThat(
-                releaseLater((ByteBuf) ch.readInbound()),
-                is(releaseLater(wrappedBuffer(new byte[] { 1, 1, 1, 1 }))));
+
+        assertTrue(ch.writeInbound(wrappedBuffer(b, 3, b.length - 3)));
+
+        ByteBuf expected = wrappedBuffer(new byte[] { 1, 1, 1, 1 });
+        ByteBuf actual = (ByteBuf) ch.readInbound();
+
+        assertThat(expected, is(actual));
+        assertFalse(ch.finish());
+
+        expected.release();
+        actual.release();
     }
 
     @Test
@@ -60,7 +66,17 @@ public class ProtobufVarint32FrameDecoderTest {
         assertThat(ch.readInbound(), is(nullValue()));
         ch.writeInbound(wrappedBuffer(b, 127, 600));
         assertThat(ch.readInbound(), is(nullValue()));
-        ch.writeInbound(wrappedBuffer(b, 727, b.length - 727));
-        assertThat(releaseLater((ByteBuf) ch.readInbound()), is(releaseLater(wrappedBuffer(b, 2, b.length - 2))));
+
+        assertFalse(ch.writeInbound(wrappedBuffer(b, 127, 600)));
+        assertThat(ch.readInbound(), is(nullValue()));
+        assertTrue(ch.writeInbound(wrappedBuffer(b, 727, b.length - 727)));
+
+        ByteBuf expected = wrappedBuffer(b, 2, b.length - 2);
+        ByteBuf actual = (ByteBuf) ch.readInbound();
+        assertThat(expected, is(actual));
+        assertTrue(ch.finishAndReleaseAll());
+
+        expected.release();
+        actual.release();
     }
 }

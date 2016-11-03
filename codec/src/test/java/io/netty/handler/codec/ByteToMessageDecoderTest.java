@@ -87,7 +87,7 @@ public class ByteToMessageDecoderTest {
      */
     @Test
     public void testInternalBufferClearReadAll() {
-        final ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer().writeBytes(new byte[] {'a'}));
+        final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a'});
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
             @Override
             protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -109,7 +109,7 @@ public class ByteToMessageDecoderTest {
      */
     @Test
     public void testInternalBufferClearReadPartly() {
-        final ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer().writeBytes(new byte[] {'a', 'b'}));
+        final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a', 'b'});
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
             @Override
             protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -134,7 +134,7 @@ public class ByteToMessageDecoderTest {
     @Test
     public void testFireChannelReadCompleteOnInactive() throws InterruptedException {
         final BlockingQueue<Integer> queue = new LinkedBlockingDeque<Integer>();
-        final ByteBuf buf = ReferenceCountUtil.releaseLater(Unpooled.buffer().writeBytes(new byte[] {'a', 'b'}));
+        final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a', 'b'});
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
             @Override
             protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {

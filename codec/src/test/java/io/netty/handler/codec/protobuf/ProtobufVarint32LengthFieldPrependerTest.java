@@ -21,8 +21,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static io.netty.buffer.Unpooled.*;
-import static io.netty.util.ReferenceCountUtil.releaseLater;
-import static org.hamcrest.core.Is.*;
 import static org.junit.Assert.*;
 
 public class ProtobufVarint32LengthFieldPrependerTest {
@@ -37,8 +35,15 @@ public class ProtobufVarint32LengthFieldPrependerTest {
     @Test
     public void testTinyEncode() {
         byte[] b = { 4, 1, 1, 1, 1 };
-        ch.writeOutbound(wrappedBuffer(b, 1, b.length - 1));
-        assertThat(releaseLater((ByteBuf) ch.readOutbound()), is(releaseLater(wrappedBuffer(b))));
+        assertTrue(ch.writeOutbound(wrappedBuffer(b, 1, b.length - 1)));
+        ByteBuf expected = wrappedBuffer(b);
+        ByteBuf actual = (ByteBuf) ch.readOutbound();
+        assertEquals(expected, actual);
+
+        assertFalse(ch.finish());
+
+        expected.release();
+        actual.release();
     }
 
     @Test
@@ -49,7 +54,15 @@ public class ProtobufVarint32LengthFieldPrependerTest {
         }
         b[0] = -2;
         b[1] = 15;
-        ch.writeOutbound(wrappedBuffer(b, 2, b.length - 2));
-        assertThat(releaseLater((ByteBuf) ch.readOutbound()), is(releaseLater(wrappedBuffer(b))));
+        assertTrue(ch.writeOutbound(wrappedBuffer(b, 2, b.length - 2)));
+
+        ByteBuf expected = wrappedBuffer(b);
+        ByteBuf actual = (ByteBuf) ch.readOutbound();
+
+        assertEquals(expected, actual);
+        assertFalse(ch.finish());
+
+        expected.release();
+        actual.release();
     }
 }
