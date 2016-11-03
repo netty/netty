@@ -31,13 +31,12 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.ReferenceCountUtil;
 
 public final class WebSocketExtensionTestUtil {
 
     public static HttpRequest newUpgradeRequest(String ext) {
-        HttpRequest req = ReferenceCountUtil.releaseLater(new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.GET, "/chat"));
+        HttpRequest req = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "/chat");
 
         req.headers().set(HttpHeaderNames.HOST, "server.example.com");
         req.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString().toLowerCase());
@@ -51,8 +50,8 @@ public final class WebSocketExtensionTestUtil {
     }
 
     public static HttpResponse newUpgradeResponse(String ext) {
-        HttpResponse res = ReferenceCountUtil.releaseLater(new DefaultHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS));
+        HttpResponse res = new DefaultHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
 
         res.headers().set(HttpHeaderNames.HOST, "server.example.com");
         res.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString().toLowerCase());

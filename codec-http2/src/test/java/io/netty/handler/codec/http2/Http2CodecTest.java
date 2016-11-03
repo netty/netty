@@ -28,7 +28,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.util.ReferenceCountUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -129,7 +128,7 @@ public class Http2CodecTest {
         Http2Headers headers = new DefaultHttp2Headers();
         childChannel.write(new DefaultHttp2HeadersFrame(headers));
         ByteBuf data = Unpooled.buffer(100).writeZero(100);
-        childChannel.writeAndFlush(ReferenceCountUtil.releaseLater(new DefaultHttp2DataFrame(data, true)));
+        childChannel.writeAndFlush(new DefaultHttp2DataFrame(data, true));
 
         Http2HeadersFrame headersFrame = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(headersFrame);
@@ -138,10 +137,10 @@ public class Http2CodecTest {
 
         Http2DataFrame dataFrame = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(dataFrame);
-        ReferenceCountUtil.releaseLater(dataFrame);
         assertEquals(3, dataFrame.streamId());
         assertEquals(data.resetReaderIndex(), dataFrame.content());
         assertTrue(dataFrame.isEndStream());
+        dataFrame.release();
 
         childChannel.close();
 
