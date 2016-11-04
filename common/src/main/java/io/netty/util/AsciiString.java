@@ -1690,7 +1690,6 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @param startPos  the start position, negative treated as zero
      * @return the first index of the search CharSequence (always &ge; startPos),
      *  -1 if no match or {@code null} string input
-     * @throws NullPointerException if {@code cs} or {@code string} is {@code null}.
      */
     public static int indexOfIgnoreCase(final CharSequence str, final CharSequence searchStr, int startPos) {
         if (str == null || searchStr == null) {
@@ -1744,7 +1743,6 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @param startPos  the start position, negative treated as zero
      * @return the first index of the search CharSequence (always &ge; startPos),
      *  -1 if no match or {@code null} string input
-     * @throws NullPointerException if {@code cs} or {@code string} is {@code null}.
      */
     public static int indexOfIgnoreCaseAscii(final CharSequence str, final CharSequence searchStr, int startPos) {
         if (str == null || searchStr == null) {
