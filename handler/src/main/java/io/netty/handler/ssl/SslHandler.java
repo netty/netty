@@ -197,14 +197,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * {@code true} if and only if {@link SSLEngine} expects a direct buffer.
      */
     private final boolean wantsDirectBuffer;
-    /**
-     * {@code true} if and only if {@link SSLEngine#wrap(ByteBuffer, ByteBuffer)} requires the output buffer
-     * to be always as large as {@link #maxPacketBufferSize} even if the input buffer contains small amount of data.
-     * <p>
-     * If this flag is {@code false}, we allocate a smaller output buffer.
-     * </p>
-     */
-    private final boolean wantsLargeOutboundNetworkBuffer;
 
     // END Platform-dependent flags
 
@@ -283,7 +275,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         boolean opensslEngine = engine instanceof OpenSslEngine;
         wantsDirectBuffer = opensslEngine;
-        wantsLargeOutboundNetworkBuffer = !opensslEngine;
 
         /**
          * When using JDK {@link SSLEngine}, we use {@link #MERGE_CUMULATOR} because it works only with
@@ -516,7 +507,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                 ByteBuf buf = (ByteBuf) msg;
                 if (out == null) {
-                    out = allocateOutNetBuf(ctx, buf.readableBytes());
+                    out = allocateOutNetBuf(ctx);
                 }
 
                 SSLEngineResult result = wrap(alloc, engine, buf, out);
@@ -599,7 +590,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // See https://github.com/netty/netty/issues/5860
             while (!ctx.isRemoved()) {
                 if (out == null) {
-                    out = allocateOutNetBuf(ctx, 0);
+                    out = allocateOutNetBuf(ctx);
                 }
                 SSLEngineResult result = wrap(alloc, engine, Unpooled.EMPTY_BUFFER, out);
 
@@ -1477,14 +1468,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Allocates an outbound network buffer for {@link SSLEngine#wrap(ByteBuffer, ByteBuffer)} which can encrypt
      * the specified amount of pending bytes.
      */
-    private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx, int pendingBytes) {
-        if (wantsLargeOutboundNetworkBuffer) {
-            return allocate(ctx, maxPacketBufferSize);
-        } else {
-            return allocate(ctx, Math.min(
-                    pendingBytes + OpenSslEngine.MAX_ENCRYPTION_OVERHEAD_LENGTH,
-                    maxPacketBufferSize));
-        }
+    private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx) {
+        return allocate(ctx, maxPacketBufferSize);
     }
 
     private final class LazyChannelPromise extends DefaultPromise<Channel> {
