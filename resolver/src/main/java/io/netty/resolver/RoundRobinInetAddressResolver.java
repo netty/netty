@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @UnstableApi
 public class RoundRobinInetAddressResolver extends InetNameResolver {
     private final NameResolver<InetAddress> nameResolver;
-    private final AtomicInteger index = new AtomicInteger();
+    private final AtomicInteger counter = new AtomicInteger();
 
     /**
      * @param executor the {@link EventExecutor} which is used to notify the listeners of the {@link Future} returned by
@@ -64,7 +64,7 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
                     if (numAddresses > 0) {
                         // if there are multiple addresses: we shall pick one by one
                         // to support the round robin distribution
-                        promise.setSuccess(inetAddresses.get(index.getAndIncrement() % numAddresses));
+                        promise.setSuccess(inetAddresses.get(toIndex(counter.getAndIncrement(), numAddresses)));
                     } else {
                         promise.setFailure(new UnknownHostException(inetHost));
                     }
@@ -86,7 +86,7 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
                         // create a copy to make sure that it's modifiable random access collection
                         List<InetAddress> result = new ArrayList<InetAddress>(inetAddresses);
                         // rotate by different distance each time to force round robin distribution
-                        Collections.rotate(result, index.getAndIncrement());
+                        Collections.rotate(result, counter.getAndIncrement());
                         promise.setSuccess(result);
                     } else {
                         promise.setSuccess(inetAddresses);
@@ -96,5 +96,18 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
                 }
             }
         });
+    }
+
+    /**
+     * @param anyInt any integer value to covert
+     * @param len max limit of range
+     * @return integer in 0..len-1 range, using formula {@code (anyInt % len + anyInt) % len}
+     */
+    protected static int toIndex(int anyInt, int len) {
+        int index = anyInt % len;
+        if (index < 0) {
+            index = index + len;
+        }
+        return index;
     }
 }
