@@ -21,6 +21,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
 
+import java.nio.ByteBuffer;
+
 /**
  * Constants for SSL packets.
  */
@@ -109,6 +111,92 @@ final class SslUtils {
                     packetLength = (buffer.getShort(offset) & 0x7FFF) + 2;
                 } else {
                     packetLength = (buffer.getShort(offset) & 0x3FFF) + 3;
+                }
+                if (packetLength <= headerLength) {
+                    return -1;
+                }
+            } else {
+                return -1;
+            }
+        }
+        return packetLength;
+    }
+
+    private static short unsignedByte(byte b) {
+        return (short) (b & 0xFF);
+    }
+
+    private static int unsignedShort(short s) {
+        return s & 0xFFFF;
+    }
+
+    static int getEncryptedPacketLength(ByteBuffer[] buffers, int offset) {
+        ByteBuffer buffer = buffers[offset];
+
+        // Check if everything we need is in one ByteBuffer. If so we can make use of the fast-path.
+        if (buffer.remaining() >= SslUtils.SSL_RECORD_HEADER_LENGTH) {
+            return getEncryptedPacketLength(buffer);
+        }
+
+        // We need to copy 5 bytes into a temporary buffer so we can parse out the packet length easily.
+        ByteBuffer tmp = ByteBuffer.allocate(5);
+
+        do {
+            buffer = buffers[offset++].duplicate();
+            if (buffer.remaining() > tmp.remaining()) {
+                buffer.limit(buffer.position() + tmp.remaining());
+            }
+            tmp.put(buffer);
+        } while (tmp.hasRemaining());
+
+        // Done, flip the buffer so we can read from it.
+        tmp.flip();
+        return getEncryptedPacketLength(tmp);
+    }
+
+    private static int getEncryptedPacketLength(ByteBuffer buffer) {
+        int packetLength = 0;
+        int pos = buffer.position();
+        // SSLv3 or TLS - Check ContentType
+        boolean tls;
+        switch (unsignedByte(buffer.get(pos))) {
+            case SslUtils.SSL_CONTENT_TYPE_CHANGE_CIPHER_SPEC:
+            case SslUtils.SSL_CONTENT_TYPE_ALERT:
+            case SslUtils.SSL_CONTENT_TYPE_HANDSHAKE:
+            case SslUtils.SSL_CONTENT_TYPE_APPLICATION_DATA:
+                tls = true;
+                break;
+            default:
+                // SSLv2 or bad data
+                tls = false;
+        }
+
+        if (tls) {
+            // SSLv3 or TLS - Check ProtocolVersion
+            int majorVersion = unsignedByte(buffer.get(pos + 1));
+            if (majorVersion == 3) {
+                // SSLv3 or TLS
+                packetLength = unsignedShort(buffer.getShort(pos + 3)) + SslUtils.SSL_RECORD_HEADER_LENGTH;
+                if (packetLength <= SslUtils.SSL_RECORD_HEADER_LENGTH) {
+                    // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
+                    tls = false;
+                }
+            } else {
+                // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
+                tls = false;
+            }
+        }
+
+        if (!tls) {
+            // SSLv2 or bad data - Check the version
+            int headerLength = (unsignedByte(buffer.get(pos)) & 0x80) != 0 ? 2 : 3;
+            int majorVersion = unsignedByte(buffer.get(pos + headerLength + 1));
+            if (majorVersion == 2 || majorVersion == 3) {
+                // SSLv2
+                if (headerLength == 2) {
+                    packetLength = (buffer.getShort(pos) & 0x7FFF) + 2;
+                } else {
+                    packetLength = (buffer.getShort(pos) & 0x3FFF) + 3;
                 }
                 if (packetLength <= headerLength) {
                     return -1;

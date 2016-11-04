@@ -67,6 +67,7 @@ import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_UNWRAP;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_WRAP;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING;
 import static javax.net.ssl.SSLEngineResult.Status.BUFFER_OVERFLOW;
+import static javax.net.ssl.SSLEngineResult.Status.BUFFER_UNDERFLOW;
 import static javax.net.ssl.SSLEngineResult.Status.CLOSED;
 import static javax.net.ssl.SSLEngineResult.Status.OK;
 
@@ -416,9 +417,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     /**
      * Write encrypted data to the OpenSSL network BIO.
      */
-    private int writeEncryptedData(final ByteBuffer src) {
+    private int writeEncryptedData(final ByteBuffer src, int len) {
         final int pos = src.position();
-        final int len = src.remaining();
         final int netWrote;
         if (src.isDirect()) {
             final long addr = Buffer.address(src) + pos;
@@ -430,8 +430,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             final ByteBuf buf = alloc.directBuffer(len);
             try {
                 final long addr = memoryAddress(buf);
-
-                buf.setBytes(0, src);
+                int newLimit = pos + len;
+                if (newLimit != src.remaining()) {
+                    buf.setBytes(0, (ByteBuffer) src.duplicate().position(pos).limit(newLimit));
+                } else {
+                    buf.setBytes(0, src);
+                }
 
                 netWrote = SSL.writeToBIO(networkBIO, addr, len);
                 if (netWrote >= 0) {
@@ -601,6 +605,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
             }
 
+            if (dst.remaining() < MAX_ENCRYPTED_PACKET_LENGTH) {
+                // Can not hold the maximum packet so we need to tell the caller to use a bigger destination
+                // buffer.
+                return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), 0, 0);
+            }
             // There was no pending data in the network BIO -- encrypt any application data
             int bytesProduced = 0;
             int bytesConsumed = 0;
@@ -775,9 +784,29 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
             }
 
-            // Write encrypted data to network BIO
+            if (len < SslUtils.SSL_RECORD_HEADER_LENGTH) {
+                return new SSLEngineResult(BUFFER_UNDERFLOW, getHandshakeStatus(), 0, 0);
+            }
+
+            int packetLength = SslUtils.getEncryptedPacketLength(srcs, srcsOffset);
+            if (packetLength - SslUtils.SSL_RECORD_HEADER_LENGTH > capacity) {
+                // No enough space in the destination buffer so signal the caller
+                // that the buffer needs to be increased.
+                return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), 0, 0);
+            }
+
+            if (len < packetLength) {
+                // We either have no enough data to read the packet length at all or not enough for reading
+                // the whole packet.
+                return new SSLEngineResult(BUFFER_UNDERFLOW, getHandshakeStatus(), 0, 0);
+            }
+
             int bytesConsumed = 0;
             if (srcsOffset < srcsEndOffset) {
+
+                // Write encrypted data to network BIO
+                int packetLengthRemaining = packetLength;
+
                 do {
                     ByteBuffer src = srcs[srcsOffset];
                     int remaining = src.remaining();
@@ -787,9 +816,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         srcsOffset++;
                         continue;
                     }
-                    int written = writeEncryptedData(src);
+                    // Write more encrypted data into the BIO. Ensure we only read one packet at a time as
+                    // stated in the SSLEngine javadocs.
+                    int written = writeEncryptedData(src, Math.min(packetLengthRemaining, src.remaining()));
                     if (written > 0) {
-                        bytesConsumed += written;
+                        packetLengthRemaining -= written;
+                        if (packetLengthRemaining == 0) {
+                            // A whole packet has been consumed.
+                            break;
+                        }
 
                         if (written == remaining) {
                             srcsOffset++;
@@ -808,6 +843,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         break;
                     }
                 } while (srcsOffset < srcsEndOffset);
+                bytesConsumed = packetLength - packetLengthRemaining;
             }
 
             // Number of produced bytes
