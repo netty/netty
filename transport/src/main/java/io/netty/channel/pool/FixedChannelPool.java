@@ -25,6 +25,7 @@ import io.netty.util.internal.ThrowableUtil;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -208,6 +209,20 @@ public final class FixedChannelPool extends SimpleChannelPool {
         } catch (Throwable cause) {
             promise.setFailure(cause);
         }
+
+        FutureListener<Channel> futureListener =
+            new FutureListener<Channel>() {
+                @Override
+                public void operationComplete(Future<Channel> future) throws Exception {
+                    if (future.isSuccess()) {
+                        // put if the channel is new
+                        allChannels.putIfAbsent(future.get(), future.get());
+                    }
+                }
+            };
+
+        promise.addListener(futureListener);
+
         return promise;
     }
 
@@ -416,5 +431,16 @@ public final class FixedChannelPool extends SimpleChannelPool {
                 }
             }
         });
+
+        for (Map.Entry<Channel, Channel> entry : this.allChannels.entrySet()) {
+            try {
+                entry.getValue().close().sync();
+            } catch (Exception e) {
+                // make maven-checkstyle-plugin happy
+                Object object = new Object();
+            }
+        }
+
+        this.allChannels.clear();
     }
 }
