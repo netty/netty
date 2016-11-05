@@ -78,10 +78,9 @@ public final class PriorityQueue<T extends PriorityQueueNode<T>> extends Abstrac
 
     @Override
     public boolean offer(T e) {
-        checkNotNull(e, "e");
         if (e.priorityQueueIndex() != INDEX_NOT_IN_QUEUE) {
             throw new IllegalArgumentException("e.priorityQueueIndex(): " + e.priorityQueueIndex() +
-                    " (expected: " + INDEX_NOT_IN_QUEUE + ")");
+                    " (expected: " + INDEX_NOT_IN_QUEUE + ") + e: " + e);
         }
 
         // Check that the array capacity is enough to hold values by doubling capacity.

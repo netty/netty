@@ -25,7 +25,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
 
 /**
@@ -85,7 +84,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
                     if (state.activeCountForTree != 0) {
                         State pState = state(parent);
                         pState.offerAndInitializePseudoTime(state);
-                        pState.isActiveCountChangeForTree(state.activeCountForTree);
+                        pState.activeCountChangeForTree(state.activeCountForTree);
                     }
                 }
             }
@@ -98,7 +97,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
                     if (state.activeCountForTree != 0) {
                         State pState = state(parent);
                         pState.remove(state);
-                        pState.isActiveCountChangeForTree(-state.activeCountForTree);
+                        pState.activeCountChangeForTree(-state.activeCountForTree);
                     }
                 }
             }
@@ -113,8 +112,6 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
 
     @Override
     public boolean distribute(int maxBytes, Writer writer) throws Http2Exception {
-        checkNotNull(writer, "writer");
-
         // As long as there is some active frame we should write at least 1 time.
         if (connectionState.activeCountForTree == 0) {
             return false;
@@ -146,7 +143,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
     }
 
     private int distribute(int maxBytes, Writer writer, State state) throws Http2Exception {
-        if (state.active) {
+        if (state.isActive()) {
             int nsent = min(maxBytes, state.streamableBytes);
             state.write(nsent, writer);
             if (nsent == 0 && maxBytes != 0) {
@@ -176,10 +173,11 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         long oldTotalQueuedWeights = state.totalQueuedWeights;
         State childState = state.poll();
         State nextChildState = state.peek();
+        childState.setDistributing();
         try {
             assert nextChildState == null || nextChildState.pseudoTimeToWrite >= childState.pseudoTimeToWrite :
-                "nextChildState.pseudoTime(" + nextChildState.pseudoTimeToWrite + ") < " + " childState.pseudoTime(" +
-                    childState.pseudoTimeToWrite + ")";
+                "nextChildState[" + nextChildState.stream.id() + "].pseudoTime(" + nextChildState.pseudoTimeToWrite +
+                ") < " + " childState[" + childState.stream.id() + "].pseudoTime(" + childState.pseudoTimeToWrite + ")";
             int nsent = distribute(nextChildState == null ? maxBytes :
                             min(maxBytes, (int) min((nextChildState.pseudoTimeToWrite - childState.pseudoTimeToWrite) *
                                                 childState.stream.weight() / oldTotalQueuedWeights + allocationQuantum,
@@ -191,7 +189,8 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
             childState.updatePseudoTime(state, nsent, oldTotalQueuedWeights);
             return nsent;
         } finally {
-            // Do in finally to ensure the internal state is not corrupted if an exception is thrown.
+            childState.unsetDistributing();
+            // Do in finally to ensure the internal flags is not corrupted if an exception is thrown.
             // The offer operation is delayed until we unroll up the recursive stack, so we don't have to remove from
             // the priority queue due to a write operation.
             if (childState.activeCountForTree != 0) {
@@ -215,11 +214,13 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
      * The remote flow control state for a single stream.
      */
     private final class State implements PriorityQueueNode<State> {
+        private static final int STATE_IS_ACTIVE = 0x1;
+        private static final int STATE_IS_DISTRIBUTING = 0x2;
         final Http2Stream stream;
         private final Queue<State> queue;
         int streamableBytes;
         /**
-         * Count of nodes rooted at this sub tree with {@link #active} equal to {@code true}.
+         * Count of nodes rooted at this sub tree with {@link #isActive()} equal to {@code true}.
          */
         int activeCountForTree;
         private int priorityQueueIndex = INDEX_NOT_IN_QUEUE;
@@ -228,11 +229,11 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
          */
         long pseudoTimeToWrite;
         /**
-         * A pseudo time maintained for immediate children to base their {@link pseudoTimeToSend} off of.
+         * A pseudo time maintained for immediate children to base their {@link #pseudoTimeToWrite} off of.
          */
         long pseudoTime;
         long totalQueuedWeights;
-        boolean active;
+        private byte flags;
 
         State(Http2Stream stream) {
             this(stream, 0);
@@ -251,24 +252,41 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
             }
         }
 
-        void isActiveCountChangeForTree(int increment) {
+        void activeCountChangeForTree(int increment) {
             assert activeCountForTree + increment >= 0;
             activeCountForTree += increment;
             if (!stream.isRoot()) {
                 State pState = state(stream.parent());
+                assert activeCountForTree != increment ||
+                       priorityQueueIndex == INDEX_NOT_IN_QUEUE ||
+                       pState.queue.contains(this) :
+                     "State[" + stream.id() + "].activeCountForTree changed from 0 to " + increment + " is in a queue" +
+                     ", but not in parent[ " + pState.stream.id() + "]'s queue";
                 if (activeCountForTree == 0) {
                     pState.remove(this);
-                } else if (activeCountForTree - increment == 0) { // if frame count was 0 but is now not, then queue.
+                } else if (activeCountForTree == increment && !isDistributing()) {
+                    // If frame count was 0 but is now not, and this node is not already in a queue (assumed to be
+                    // pState's queue) then enqueue it. If this State object is being processed the pseudoTime for this
+                    // node should not be adjusted, and the node will be added back to the queue/tree structure after it
+                    // is done being processed. This may happen if the activeCountForTree == 0 (a node which can't
+                    // stream anything and is blocked) is at/near root of the tree, and is poped off the queue during
+                    // processing, and then put back on the queue because a child changes position in the priority tree
+                    // (or is closed because it is not blocked and finished writing all data).
                     pState.offerAndInitializePseudoTime(this);
                 }
-                pState.isActiveCountChangeForTree(increment);
+                pState.activeCountChangeForTree(increment);
             }
         }
 
         void updateStreamableBytes(int newStreamableBytes, boolean isActive) {
-            if (this.active != isActive) {
-                isActiveCountChangeForTree(isActive ? 1 : -1);
-                this.active = isActive;
+            if (isActive() != isActive) {
+                if (isActive) {
+                    activeCountChangeForTree(1);
+                    setActive();
+                } else {
+                    activeCountChangeForTree(-1);
+                    unsetActive();
+                }
             }
 
             streamableBytes = newStreamableBytes;
@@ -324,6 +342,30 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
             updateStreamableBytes(0, false);
         }
 
+        boolean isActive() {
+            return (flags & STATE_IS_ACTIVE) != 0;
+        }
+
+        private void setActive() {
+            flags |= STATE_IS_ACTIVE;
+        }
+
+        private void unsetActive() {
+            flags &= ~STATE_IS_ACTIVE;
+        }
+
+        boolean isDistributing() {
+            return (flags & STATE_IS_DISTRIBUTING) != 0;
+        }
+
+        void setDistributing() {
+            flags |= STATE_IS_DISTRIBUTING;
+        }
+
+        void unsetDistributing() {
+            flags &= ~STATE_IS_DISTRIBUTING;
+        }
+
         @Override
         public int compareTo(State o) {
             return MathUtil.compare(pseudoTimeToWrite, o.pseudoTimeToWrite);
@@ -337,6 +379,35 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         @Override
         public void priorityQueueIndex(int i) {
             priorityQueueIndex = i;
+        }
+
+        @Override
+        public String toString() {
+            // Use activeCountForTree as a rough estimate for how many nodes are in this subtree.
+            StringBuilder sb = new StringBuilder(256 * (activeCountForTree > 0 ? activeCountForTree : 1));
+            toString(sb);
+            return sb.toString();
+        }
+
+        private void toString(StringBuilder sb) {
+            sb.append("{stream ").append(stream.id())
+                    .append(" streamableBytes ").append(streamableBytes)
+                    .append(" activeCountForTree ").append(activeCountForTree)
+                    .append(" priorityQueueIndex ").append(priorityQueueIndex)
+                    .append(" pseudoTimeToWrite ").append(pseudoTimeToWrite)
+                    .append(" pseudoTime ").append(pseudoTime)
+                    .append(" flags ").append(flags)
+                    .append(" queue.size() ").append(queue.size()).append("} [");
+
+            if (!queue.isEmpty()) {
+                for (State s : queue) {
+                    s.toString(sb);
+                    sb.append(", ");
+                }
+                // Remove the last ", "
+                sb.setLength(sb.length() - 2);
+            }
+            sb.append(']');
         }
     }
 }
