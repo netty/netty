@@ -45,19 +45,44 @@ public final class Http2Codec extends ChannelDuplexHandler {
     }
 
     /**
+     * Construct a new handler whose child channels run in the same event loop as this handler.
+     *
+     * @param server {@code true} this is a server
+     * @param streamHandler the handler added to channels for remotely-created streams. It must be
+     *     {@link ChannelHandler.Sharable}. {@code null} if the event loop from the parent channel should be used.
+     * @param initialSettings non default initial settings to send to peer
+     */
+    public Http2Codec(boolean server, ChannelHandler streamHandler, Http2Settings initialSettings) {
+        this(server, new Http2StreamChannelBootstrap().handler(streamHandler), HTTP2_FRAME_LOGGER,
+            initialSettings);
+    }
+
+    /**
      * Construct a new handler whose child channels run in a different event loop.
      *
      * @param server {@code true} this is a server
      * @param bootstrap bootstrap used to instantiate child channels for remotely-created streams.
      */
     public Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap, Http2FrameLogger frameLogger) {
-        this(server, bootstrap, new DefaultHttp2FrameWriter(), frameLogger);
+        this(server, bootstrap, new DefaultHttp2FrameWriter(), frameLogger, new Http2Settings());
+    }
+
+    /**
+     * Construct a new handler whose child channels run in a different event loop.
+     *
+     * @param server {@code true} this is a server
+     * @param bootstrap bootstrap used to instantiate child channels for remotely-created streams.
+     * @param initialSettings non default initial settings to send to peer
+     */
+    public Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap, Http2FrameLogger frameLogger,
+                      Http2Settings initialSettings) {
+        this(server, bootstrap, new DefaultHttp2FrameWriter(), frameLogger, initialSettings);
     }
 
     // Visible for testing
     Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap, Http2FrameWriter frameWriter,
-               Http2FrameLogger frameLogger) {
-        frameCodec = new Http2FrameCodec(server, frameWriter, frameLogger);
+               Http2FrameLogger frameLogger, Http2Settings initialSettings) {
+        frameCodec = new Http2FrameCodec(server, frameWriter, frameLogger, initialSettings);
         multiplexCodec = new Http2MultiplexCodec(server, bootstrap);
     }
 

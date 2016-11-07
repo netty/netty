@@ -127,11 +127,12 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
      * @param server {@code true} this is a server
      */
     public Http2FrameCodec(boolean server, Http2FrameLogger frameLogger) {
-        this(server, new DefaultHttp2FrameWriter(), frameLogger);
+        this(server, new DefaultHttp2FrameWriter(), frameLogger, new Http2Settings());
     }
 
     // Visible for testing
-    Http2FrameCodec(boolean server, Http2FrameWriter frameWriter, Http2FrameLogger frameLogger) {
+    Http2FrameCodec(boolean server, Http2FrameWriter frameWriter, Http2FrameLogger frameLogger,
+                    Http2Settings initialSettings) {
         Http2Connection connection = new DefaultHttp2Connection(server);
         frameWriter = new Http2OutboundFrameLogger(frameWriter, frameLogger);
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
@@ -139,7 +140,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
         Http2FrameReader reader = new Http2InboundFrameLogger(frameReader, frameLogger);
         Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
         decoder.frameListener(new FrameListener());
-        http2Handler = new InternalHttp2ConnectionHandler(decoder, encoder, new Http2Settings());
+        http2Handler = new InternalHttp2ConnectionHandler(decoder, encoder, initialSettings);
         http2Handler.connection().addListener(new ConnectionListener());
         this.server = server;
     }
