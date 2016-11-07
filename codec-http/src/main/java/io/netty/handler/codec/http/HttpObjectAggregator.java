@@ -222,15 +222,6 @@ public class HttpObjectAggregator
     protected void handleOversizedMessage(final ChannelHandlerContext ctx, HttpMessage oversized) throws Exception {
         if (oversized instanceof HttpRequest) {
             // send back a 413 and close the connection
-            ChannelFutureListener listener = new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (!future.isSuccess()) {
-                        logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
-                        ctx.close();
-                    }
-                }
-            };
 
             // If the client started to send data already, close because it's impossible to recover.
             // If keep-alive is off and 'Expect: 100-continue' is missing, no need to leave the connection open.
@@ -238,10 +229,25 @@ public class HttpObjectAggregator
                 !HttpUtil.is100ContinueExpected(oversized) && !HttpUtil.isKeepAlive(oversized)) {
 
                 ChannelFuture future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
-                future.addListener(listener);
-                future.addListener(ChannelFutureListener.CLOSE);
+                future.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (!future.isSuccess()) {
+                            logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
+                        }
+                        ctx.close();
+                    }
+                });
             } else {
-                ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener(listener);
+                ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (!future.isSuccess()) {
+                            logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
+                            ctx.close();
+                        }
+                    }
+                });
             }
 
             // If an oversized request was handled properly and the connection is still alive
