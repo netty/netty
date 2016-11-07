@@ -70,7 +70,8 @@ public class Http2FrameCodecTest {
     @Before
     public void setUp() throws Exception {
         frameWriter = spy(new VerifiableHttp2FrameWriter());
-        framingCodec = new Http2FrameCodec(true, frameWriter, new Http2FrameLogger(LogLevel.TRACE));
+        framingCodec = new Http2FrameCodec(true, frameWriter, new Http2FrameLogger(LogLevel.TRACE),
+                                           new Http2Settings());
         frameListener = ((DefaultHttp2ConnectionDecoder) framingCodec.connectionHandler().decoder())
                 .internalFrameListener();
         inboundHandler = new LastInboundHandler();
