@@ -98,7 +98,7 @@ public final class PlatformDependent {
     private static final int DEFAULT_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * MPSC_CHUNK_SIZE;
     private static final int MAX_ALLOWED_MPSC_CAPACITY = Pow2.MAX_POW2;
 
-    private static final long BYTE_ARRAY_BASE_OFFSET = PlatformDependent0.byteArrayBaseOffset();
+    private static final long BYTE_ARRAY_BASE_OFFSET = byteArrayBaseOffset0();
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
 
@@ -1376,6 +1376,13 @@ public final class PlatformDependent {
             return -1;
         }
         return PlatformDependent0.addressSize();
+    }
+
+    private static long byteArrayBaseOffset0() {
+        if (!hasUnsafe()) {
+            return -1;
+        }
+        return PlatformDependent0.byteArrayBaseOffset();
     }
 
     private static boolean equalsSafe(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
