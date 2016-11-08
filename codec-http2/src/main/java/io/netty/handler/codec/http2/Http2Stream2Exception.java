@@ -13,28 +13,30 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
- * HTTP/2 HEADERS frame.
+ * A HTTP/2 exception for a specific {@link Http2Stream2}.
  */
-@UnstableApi
-public interface Http2HeadersFrame extends Http2StreamFrame {
+public class Http2Stream2Exception extends Exception {
 
-    /**
-     * A complete header list. CONTINUATION frames are automatically handled.
-     */
-    Http2Headers headers();
+    private static final long serialVersionUID = -4407186173493887044L;
 
-    /**
-     * Frame padding to use. Must be non-negative and less than 256.
-     */
-    int padding();
+    private final Http2Error error;
+    private final Http2Stream2 stream;
 
-    /**
-     * Returns {@code true} if the END_STREAM flag ist set.
-     */
-    boolean endStream();
+    public <T> Http2Stream2Exception(Http2Stream2 stream, Http2Error error, Throwable cause) {
+        super(cause.getMessage(), cause);
+        this.stream = stream;
+        this.error = error;
+    }
+
+    public Http2Error error() {
+        return error;
+    }
+
+    public Http2Stream2 stream() {
+        return stream;
+    }
 }

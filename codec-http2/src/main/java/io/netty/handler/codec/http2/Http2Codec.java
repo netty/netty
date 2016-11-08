@@ -57,7 +57,11 @@ public final class Http2Codec extends ChannelDuplexHandler {
     // Visible for testing
     Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap, Http2FrameWriter frameWriter,
                Http2FrameLogger frameLogger) {
-        frameCodec = new Http2FrameCodec(server, frameWriter, frameLogger);
+        Http2FrameCodecBuilder frameBuilder = server
+                ? Http2FrameCodecBuilder.forServer()
+                : Http2FrameCodecBuilder.forClient();
+        frameBuilder.frameWriter(frameWriter).frameLogger(frameLogger);
+        frameCodec = frameBuilder.build();
         multiplexCodec = new Http2MultiplexCodec(server, bootstrap);
     }
 

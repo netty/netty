@@ -34,6 +34,8 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
@@ -107,6 +109,13 @@ public final class Http2CodecUtil {
     public static final int DEFAULT_HEADER_TABLE_SIZE = 4096;
     public static final int DEFAULT_HEADER_LIST_SIZE = 8192;
     public static final int DEFAULT_MAX_FRAME_SIZE = MAX_FRAME_SIZE_LOWER_BOUND;
+    public static final long DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = MILLISECONDS.convert(30, SECONDS);
+
+    /**
+     * The assumed minimum value for {@code SETTINGS_MAX_CONCURRENT_STREAMS} as
+     * recommended by the HTTP/2 spec.
+     */
+    public static final int SMALLEST_MAX_CONCURRENT_STREAMS = 100;
 
     /**
      * Returns {@code true} if the stream is an outbound stream.
@@ -125,12 +134,6 @@ public final class Http2CodecUtil {
     public static boolean isStreamIdValid(int streamId) {
         return streamId >= 0;
     }
-
-    /**
-     * The assumed minimum value for {@code SETTINGS_MAX_CONCURRENT_STREAMS} as
-     * recommended by the HTTP/2 spec.
-     */
-    public static final int SMALLEST_MAX_CONCURRENT_STREAMS = 100;
 
     /**
      * Indicates whether or not the given value for max frame size falls within the valid range.

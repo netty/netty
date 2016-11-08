@@ -19,27 +19,20 @@ package io.netty.handler.codec.http2;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * This event is emitted by the {@link Http2FrameCodec} when a stream becomes active.
+ * A visitor that allows to iterate over a collection of {@link Http2Stream2}s.
  */
 @UnstableApi
-public class Http2StreamActiveEvent extends AbstractHttp2StreamStateEvent {
-
-    private final Http2HeadersFrame headers;
-
-    public Http2StreamActiveEvent(int streamId) {
-        this(streamId, null);
-    }
-
-    public Http2StreamActiveEvent(int streamId, Http2HeadersFrame headers) {
-        super(streamId);
-        this.headers = headers;
-    }
+public interface Http2Stream2Visitor {
 
     /**
-     * For outbound streams, this method returns the <em>same</em> {@link Http2HeadersFrame} object as the one that
-     * made the stream active. For inbound streams, this method returns {@code null}.
+     * This method is called once for each stream of the collection.
+     *
+     * <p>If an {@link Exception} is thrown, the loop is stopped.
+     *
+     * @return <ul>
+     *         <li>{@code true} if the visitor wants to continue the loop and handle the stream.</li>
+     *         <li>{@code false} if the visitor wants to stop handling the stream and abort the loop.</li>
+     *         </ul>
      */
-    public Http2HeadersFrame headers() {
-        return headers;
-    }
+    boolean visit(Http2Stream2 stream);
 }

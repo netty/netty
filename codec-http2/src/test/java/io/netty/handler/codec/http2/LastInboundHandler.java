@@ -39,9 +39,11 @@ public class LastInboundHandler extends ChannelDuplexHandler {
     private Throwable lastException;
     private ChannelHandlerContext ctx;
     private boolean channelActive;
+    private String writabilityStates = "";
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) {
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        super.handlerAdded(ctx);
         this.ctx = ctx;
     }
 
@@ -58,6 +60,10 @@ public class LastInboundHandler extends ChannelDuplexHandler {
         return channelActive;
     }
 
+    public String writabilityStates() {
+        return writabilityStates;
+    }
+
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (!channelActive) {
@@ -65,6 +71,16 @@ public class LastInboundHandler extends ChannelDuplexHandler {
         }
         channelActive = false;
         super.channelInactive(ctx);
+    }
+
+    @Override
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        if (writabilityStates == "") {
+            writabilityStates = String.valueOf(ctx.channel().isWritable());
+        } else {
+            writabilityStates += "," + ctx.channel().isWritable();
+        }
+        super.channelWritabilityChanged(ctx);
     }
 
     @Override

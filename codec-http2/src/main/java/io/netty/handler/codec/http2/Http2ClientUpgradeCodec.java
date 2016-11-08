@@ -25,6 +25,7 @@ import static io.netty.util.ReferenceCountUtil.release;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -47,6 +48,15 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
 
     private final String handlerName;
     private final Http2ConnectionHandler connectionHandler;
+    private final ChannelHandler upgradeToHandler;
+
+    public Http2ClientUpgradeCodec(Http2FrameCodec frameCodec, ChannelHandler upgradeToHandler) {
+        this(null, frameCodec, upgradeToHandler);
+    }
+
+    public Http2ClientUpgradeCodec(String handlerName, Http2FrameCodec frameCodec, ChannelHandler upgradeToHandler) {
+        this(handlerName, frameCodec.connectionHandler(), upgradeToHandler);
+    }
 
     /**
      * Creates the codec using a default name for the connection handler when adding to the
@@ -55,7 +65,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
      * @param connectionHandler the HTTP/2 connection handler
      */
     public Http2ClientUpgradeCodec(Http2ConnectionHandler connectionHandler) {
-        this(null, connectionHandler);
+        this((String) null, connectionHandler);
     }
 
     /**
@@ -66,8 +76,14 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
      * @param connectionHandler the HTTP/2 connection handler
      */
     public Http2ClientUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler) {
+        this(handlerName, connectionHandler, connectionHandler);
+    }
+
+    private Http2ClientUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler, ChannelHandler
+                                    upgradeToHandler) {
         this.handlerName = handlerName;
         this.connectionHandler = checkNotNull(connectionHandler, "connectionHandler");
+        this.upgradeToHandler = checkNotNull(upgradeToHandler, "upgradeToHandler");
     }
 
     @Override
@@ -90,7 +106,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
         connectionHandler.onHttpClientUpgrade();
 
         // Add the handler to the pipeline.
-        ctx.pipeline().addAfter(ctx.name(), handlerName, connectionHandler);
+        ctx.pipeline().addAfter(ctx.name(), handlerName, upgradeToHandler);
     }
 
     /**

@@ -26,11 +26,6 @@ import io.netty.util.internal.UnstableApi;
 public interface Http2DataFrame extends Http2StreamFrame, ByteBufHolder {
 
     /**
-     * {@code true} if this frame is the last one in this direction of the stream.
-     */
-    boolean isEndStream();
-
-    /**
      * Frame padding to use. Will be non-negative and less than 256.
      */
     int padding();
@@ -40,6 +35,11 @@ public interface Http2DataFrame extends Http2StreamFrame, ByteBufHolder {
      */
     @Override
     ByteBuf content();
+
+    /**
+     * Returns {@code true} if the END_STREAM flag ist set.
+     */
+    boolean endStream();
 
     @Override
     Http2DataFrame copy();
