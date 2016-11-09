@@ -15,7 +15,6 @@
  */
 package io.netty.util;
 
-import com.google.common.base.Supplier;
 import org.junit.Test;
 
 import java.util.concurrent.BlockingQueue;
@@ -24,7 +23,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -64,13 +62,20 @@ public class HashedWheelTimerTest {
         timer.stop();
     }
 
-    @Test
+    @Test(timeout = 3000)
     public void testStopTimer() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(3);
         final Timer timerProcessed = new HashedWheelTimer();
         for (int i = 0; i < 3; i ++) {
-            timerProcessed.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS);
+            timerProcessed.newTimeout(new TimerTask() {
+                @Override
+                public void run(final Timeout timeout) throws Exception {
+                    latch.countDown();
+                }
+            }, 1, TimeUnit.MILLISECONDS);
         }
-        Thread.sleep(1000L); // sleep for a second
+
+        latch.await();
         assertEquals("Number of unprocessed timeouts should be 0", 0, timerProcessed.stop().size());
 
         final Timer timerUnprocessed = new HashedWheelTimer();
@@ -85,57 +90,46 @@ public class HashedWheelTimerTest {
         assertFalse("Number of unprocessed timeouts should be greater than 0", timerUnprocessed.stop().isEmpty());
     }
 
-    @Test
+    @Test(timeout = 3000)
     public void testTimerShouldThrowExceptionAfterShutdownForNewTimeouts() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(3);
         final Timer timer = new HashedWheelTimer();
         for (int i = 0; i < 3; i ++) {
             timer.newTimeout(new TimerTask() {
                 @Override
                 public void run(Timeout timeout) throws Exception {
+                    latch.countDown();
                 }
             }, 1, TimeUnit.MILLISECONDS);
         }
 
+        latch.await();
         timer.stop();
 
-        waitUntilTrue(1000, new Supplier<Boolean>() {
-            @Override
-            public Boolean get() {
-                try {
-                    timer.newTimeout(new TimerTask() {
-                        @Override
-                        public void run(Timeout timeout) throws Exception {
-                            fail("This should not run");
-                        }
-                    }, 1, TimeUnit.SECONDS);
-                    return false;
-                } catch (IllegalStateException e) {
-                    return true;
-                }
-            }
-        });
+        try {
+            timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS);
+            fail("Expected exception didn't occur.");
+        } catch (IllegalStateException ignored) {
+            // expected
+        }
     }
 
-    @Test
+    @Test(timeout = 5000)
     public void testTimerOverflowWheelLength() throws InterruptedException {
         final HashedWheelTimer timer = new HashedWheelTimer(
             Executors.defaultThreadFactory(), 100, TimeUnit.MILLISECONDS, 32);
-        final AtomicInteger counter = new AtomicInteger();
+        final CountDownLatch latch = new CountDownLatch(3);
 
         timer.newTimeout(new TimerTask() {
             @Override
             public void run(final Timeout timeout) throws Exception {
-                counter.incrementAndGet();
-                timer.newTimeout(this, 1, TimeUnit.SECONDS);
+                timer.newTimeout(this, 100, TimeUnit.MILLISECONDS);
+                latch.countDown();
             }
-        }, 1, TimeUnit.SECONDS);
-        waitUntilTrue(3500, new Supplier<Boolean>() {
-            @Override
-            public Boolean get() {
-                return 3 == counter.get();
-            }
-        });
-        timer.stop();
+        }, 100, TimeUnit.MILLISECONDS);
+
+        latch.await();
+        assertFalse(timer.stop().isEmpty());
     }
 
     @Test
@@ -170,10 +164,10 @@ public class HashedWheelTimerTest {
     public void testRejectedExecutionExceptionWhenTooManyTimeoutsAreAddedBackToBack() {
         HashedWheelTimer timer = new HashedWheelTimer(Executors.defaultThreadFactory(), 100,
             TimeUnit.MILLISECONDS, 32, true, 2);
-        timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
-        timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
+        timer.newTimeout(createNoOpTimerTask(), 5, TimeUnit.SECONDS);
+        timer.newTimeout(createNoOpTimerTask(), 5, TimeUnit.SECONDS);
         try {
-            timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
+            timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS);
             fail("Timer allowed adding 3 timeouts when maxPendingTimeouts was 2");
         } catch (RejectedExecutionException e) {
             // Expected
@@ -185,54 +179,53 @@ public class HashedWheelTimerTest {
     @Test
     public void testNewTimeoutShouldStopThrowingRejectedExecutionExceptionWhenExistingTimeoutIsCancelled()
         throws InterruptedException {
-        final HashedWheelTimer timer = new HashedWheelTimer(Executors.defaultThreadFactory(), 100,
+        final int tickDurationMs = 100;
+        final HashedWheelTimer timer = new HashedWheelTimer(Executors.defaultThreadFactory(), tickDurationMs,
             TimeUnit.MILLISECONDS, 32, true, 2);
-        timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
-        Timeout timeoutToCancel = timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
-        timeoutToCancel.cancel();
-        waitUntilNewTimeoutCanBeAdded(200, timer, 1000);
-    }
+        timer.newTimeout(createNoOpTimerTask(), 5, TimeUnit.SECONDS);
+        Timeout timeoutToCancel = timer.newTimeout(createNoOpTimerTask(), 5, TimeUnit.SECONDS);
+        assertTrue(timeoutToCancel.cancel());
 
-    @Test
-    public void testNewTimeoutShouldStopThrowingRejectedExecutionExceptionWhenExistingTimeoutIsExecuted()
-        throws InterruptedException {
-        final HashedWheelTimer timer = new HashedWheelTimer(Executors.defaultThreadFactory(), 25,
-            TimeUnit.MILLISECONDS, 4, true, 2);
-        timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.SECONDS);
-        timer.newTimeout(createNoOpTimerTask(), 90, TimeUnit.MILLISECONDS);
-        waitUntilNewTimeoutCanBeAdded(200, timer, 200);
+        Thread.sleep(tickDurationMs * 5);
+
+        final CountDownLatch secondLatch = new CountDownLatch(1);
+        timer.newTimeout(createCountDownLatchTimerTask(secondLatch), 90, TimeUnit.MILLISECONDS);
+
+        secondLatch.await();
         timer.stop();
     }
 
-    private static void waitUntilNewTimeoutCanBeAdded(final long timeoutMilli,
-        final HashedWheelTimer timer, final long newTimeoutDelay) {
-        waitUntilTrue(timeoutMilli, new Supplier<Boolean>() {
-            @Override
-            public Boolean get() {
-                try {
-                    timer.newTimeout(createNoOpTimerTask(), newTimeoutDelay, TimeUnit.MILLISECONDS);
-                    return true;
-                } catch (RejectedExecutionException e) {
-                    return false;
-                }
-            }
-        });
-    }
+    @Test(timeout = 3000)
+    public void testNewTimeoutShouldStopThrowingRejectedExecutionExceptionWhenExistingTimeoutIsExecuted()
+        throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final HashedWheelTimer timer = new HashedWheelTimer(Executors.defaultThreadFactory(), 25,
+            TimeUnit.MILLISECONDS, 4, true, 2);
+        timer.newTimeout(createNoOpTimerTask(), 5, TimeUnit.SECONDS);
+        timer.newTimeout(createCountDownLatchTimerTask(latch), 90, TimeUnit.MILLISECONDS);
 
-    private static void waitUntilTrue(long timeoutMilli, Supplier<Boolean> condition) {
-        long startTime = System.currentTimeMillis();
-        while (System.currentTimeMillis() - startTime < timeoutMilli) {
-            if (condition.get()) {
-                return;
-            }
-        }
-        throw new AssertionError("Timed out waiting for condition to be true.");
+        latch.await();
+
+        final CountDownLatch secondLatch = new CountDownLatch(1);
+        timer.newTimeout(createCountDownLatchTimerTask(secondLatch), 90, TimeUnit.MILLISECONDS);
+
+        secondLatch.await();
+        timer.stop();
     }
 
     private static TimerTask createNoOpTimerTask() {
         return new TimerTask() {
             @Override
             public void run(final Timeout timeout) throws Exception {
+            }
+        };
+    }
+
+    private static TimerTask createCountDownLatchTimerTask(final CountDownLatch latch) {
+        return new TimerTask() {
+            @Override
+            public void run(final Timeout timeout) throws Exception {
+                latch.countDown();
             }
         };
     }
