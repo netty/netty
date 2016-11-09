@@ -52,6 +52,18 @@ public abstract class WebSocketClientHandshakerTest {
         }
     }
 
+    @Test
+    public void testRawPathWithQuery() {
+        URI uri = URI.create("ws://localhost:9999/path%20with%20ws?a=b%20c");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri);
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals("/path%20with%20ws?a=b%20c", request.uri());
+        } finally {
+            request.release();
+        }
+    }
+
     @Test(timeout = 3000)
     public void testHttpResponseAndFrameInSameBuffer() {
         testHttpResponseAndFrameInSameBuffer(false);
