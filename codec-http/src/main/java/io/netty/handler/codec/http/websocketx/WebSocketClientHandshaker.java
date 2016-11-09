@@ -434,7 +434,7 @@ public abstract class WebSocketClientHandshaker {
      */
     static String rawPath(URI wsURL) {
         String path = wsURL.getRawPath();
-        String query = wsURL.getQuery();
+        String query = wsURL.getRawQuery();
         if (query != null && !query.isEmpty()) {
             path = path + '?' + query;
         }
