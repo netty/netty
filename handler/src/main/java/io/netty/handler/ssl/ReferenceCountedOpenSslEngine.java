@@ -379,10 +379,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      *
      * Calling this function with src.remaining == 0 is undefined.
      */
-    private int writePlaintextData(final ByteBuffer src) {
+    private int writePlaintextData(final ByteBuffer src, int len) {
         final int pos = src.position();
         final int limit = src.limit();
-        final int len = Math.min(limit - pos, MAX_PLAINTEXT_LENGTH);
         final int sslWrote;
 
         if (src.isDirect()) {
@@ -614,7 +613,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             int bytesProduced = 0;
             int bytesConsumed = 0;
             int endOffset = offset + length;
-            for (int i = offset; i < endOffset; ++i) {
+
+            loop: for (int i = offset; i < endOffset; ++i) {
                 final ByteBuffer src = srcs[i];
                 if (src == null) {
                     throw new IllegalArgumentException("srcs[" + i + "] is null");
@@ -622,7 +622,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 while (src.hasRemaining()) {
                     final SSLEngineResult pendingNetResult;
                     // Write plaintext application data to the SSL engine
-                    int result = writePlaintextData(src);
+                    int result = writePlaintextData(
+                            src, Math.min(src.remaining(), MAX_PLAINTEXT_LENGTH - bytesConsumed));
+
                     if (result > 0) {
                         bytesConsumed += result;
 
@@ -632,6 +634,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 return pendingNetResult;
                             }
                             bytesProduced = pendingNetResult.bytesProduced();
+                        }
+                        if (bytesConsumed == MAX_PLAINTEXT_LENGTH) {
+                            // If we consumed the maximum amount of bytes for the plaintext length break out of the
+                            // loop and start to fill the dst buffer.
+                            break loop;
                         }
                     } else {
                         int sslError = SSL.getError(ssl, result);
