@@ -19,6 +19,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
@@ -27,7 +28,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A {@link NameResolver} that resolves {@link InetAddress} and force Round Robin by choosing a single address
@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @UnstableApi
 public class RoundRobinInetAddressResolver extends InetNameResolver {
     private final NameResolver<InetAddress> nameResolver;
-    private final AtomicInteger index = new AtomicInteger();
 
     /**
      * @param executor the {@link EventExecutor} which is used to notify the listeners of the {@link Future} returned by
@@ -64,7 +63,7 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
                     if (numAddresses > 0) {
                         // if there are multiple addresses: we shall pick one by one
                         // to support the round robin distribution
-                        promise.setSuccess(inetAddresses.get(index.getAndIncrement() % numAddresses));
+                        promise.setSuccess(inetAddresses.get(randomIndex(numAddresses)));
                     } else {
                         promise.setFailure(new UnknownHostException(inetHost));
                     }
@@ -86,7 +85,7 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
                         // create a copy to make sure that it's modifiable random access collection
                         List<InetAddress> result = new ArrayList<InetAddress>(inetAddresses);
                         // rotate by different distance each time to force round robin distribution
-                        Collections.rotate(result, index.getAndIncrement());
+                        Collections.rotate(result, randomIndex(inetAddresses.size()));
                         promise.setSuccess(result);
                     } else {
                         promise.setSuccess(inetAddresses);
@@ -96,5 +95,9 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
                 }
             }
         });
+    }
+
+    private static int randomIndex(int numAddresses) {
+        return numAddresses == 1 ? 0 : ThreadLocalRandom.current().nextInt(numAddresses);
     }
 }
