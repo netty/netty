@@ -694,25 +694,71 @@ public abstract class SSLEngineTest {
         SSLEngineResult clientResult;
         SSLEngineResult serverResult;
 
+        boolean clientHandshakeFinished = false;
+        boolean serverHandshakeFinished = false;
+
         do {
+            int cTOsPos = cTOs.position();
+            int sTOcPos = sTOc.position();
+
             clientResult = clientEngine.wrap(empty, cTOs);
             runDelegatedTasks(clientResult, clientEngine);
             serverResult = serverEngine.wrap(empty, sTOc);
             runDelegatedTasks(serverResult, serverEngine);
+
+            // Verify that the consumed and produced number match what is in the buffers now.
+            assertEquals(empty.remaining(), clientResult.bytesConsumed());
+            assertEquals(empty.remaining(), serverResult.bytesConsumed());
+            assertEquals(cTOs.position() - cTOsPos,  clientResult.bytesProduced());
+            assertEquals(sTOc.position() - sTOcPos, serverResult.bytesProduced());
+
             cTOs.flip();
             sTOc.flip();
+
+            // Verify that we only had one SSLEngineResult.HandshakeStatus.FINISHED
+            if (isHandshakeFinished(clientResult)) {
+                assertFalse(clientHandshakeFinished);
+                clientHandshakeFinished = true;
+            }
+            if (isHandshakeFinished(serverResult)) {
+                assertFalse(serverHandshakeFinished);
+                serverHandshakeFinished = true;
+            }
+
+            cTOsPos = cTOs.position();
+            sTOcPos = sTOc.position();
+
+            int clientAppReadBufferPos = clientAppReadBuffer.position();
+            int serverAppReadBufferPos = serverAppReadBuffer.position();
+
             clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
             runDelegatedTasks(clientResult, clientEngine);
             serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
             runDelegatedTasks(serverResult, serverEngine);
+
+            // Verify that the consumed and produced number match what is in the buffers now.
+            assertEquals(sTOc.position() - sTOcPos, clientResult.bytesConsumed());
+            assertEquals(cTOs.position() - cTOsPos, serverResult.bytesConsumed());
+            assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos, clientResult.bytesProduced());
+            assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos, serverResult.bytesProduced());
+
             cTOs.compact();
             sTOc.compact();
-        } while (isHandshaking(clientResult) || isHandshaking(serverResult));
+
+            // Verify that we only had one SSLEngineResult.HandshakeStatus.FINISHED
+            if (isHandshakeFinished(clientResult)) {
+                assertFalse(clientHandshakeFinished);
+                clientHandshakeFinished = true;
+            }
+            if (isHandshakeFinished(serverResult)) {
+                assertFalse(serverHandshakeFinished);
+                serverHandshakeFinished = true;
+            }
+        } while (!clientHandshakeFinished || !serverHandshakeFinished);
     }
 
-    private static boolean isHandshaking(SSLEngineResult result) {
-        return result.getHandshakeStatus() != SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING &&
-                result.getHandshakeStatus() != SSLEngineResult.HandshakeStatus.FINISHED;
+    private static boolean isHandshakeFinished(SSLEngineResult result) {
+        return result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED;
     }
 
     private static void runDelegatedTasks(SSLEngineResult result, SSLEngine engine) {
@@ -992,6 +1038,48 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
+        }
+    }
+
+    @Test
+    public void testPacketBufferSizeLimit() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .trustManager(cert.cert())
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            // Allocate an buffer that is bigger then the max plain record size.
+            ByteBuffer plainServerOut = ByteBuffer.allocate(server.getSession().getApplicationBufferSize() * 2);
+
+            handshake(client, server);
+
+            // Fill the whole buffer and flip it.
+            plainServerOut.position(plainServerOut.capacity());
+            plainServerOut.flip();
+
+            ByteBuffer encryptedServerToClient = ByteBuffer.allocate(server.getSession().getPacketBufferSize());
+
+            int encryptedServerToClientPos = encryptedServerToClient.position();
+            int plainServerOutPos = plainServerOut.position();
+            SSLEngineResult result = server.wrap(plainServerOut, encryptedServerToClient);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(plainServerOut.position() - plainServerOutPos, result.bytesConsumed());
+            assertEquals(encryptedServerToClient.position() - encryptedServerToClientPos, result.bytesProduced());
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+            cert.delete();
         }
     }
 }
