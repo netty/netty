@@ -179,8 +179,87 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private static final ClosedChannelException CHANNEL_CLOSED = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), SslHandler.class, "channelInactive(...)");
 
+    private enum SslEngineType {
+        TCNATIVE(true, COMPOSITE_CUMULATOR) {
+            @Override
+            SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
+                    throws SSLException {
+                int nioBufferCount = in.nioBufferCount();
+                int writerIndex = out.writerIndex();
+                final SSLEngineResult result;
+                if (nioBufferCount > 1) {
+                    /**
+                     * If {@link OpenSslEngine} is in use,
+                     * we can use a special {@link OpenSslEngine#unwrap(ByteBuffer[], ByteBuffer[])} method
+                     * that accepts multiple {@link ByteBuffer}s without additional memory copies.
+                     */
+                    OpenSslEngine opensslEngine = (OpenSslEngine) handler.engine;
+                    try {
+                        handler.singleBuffer[0] = toByteBuffer(out, writerIndex,
+                            out.writableBytes());
+                        result = opensslEngine.unwrap(in.nioBuffers(readerIndex, len), handler.singleBuffer);
+                        out.writerIndex(writerIndex + result.bytesProduced());
+                    } finally {
+                        handler.singleBuffer[0] = null;
+                    }
+                } else {
+                    result = handler.engine.unwrap(toByteBuffer(in, readerIndex, len),
+                        toByteBuffer(out, writerIndex, out.writableBytes()));
+                }
+                out.writerIndex(writerIndex + result.bytesProduced());
+                return result;
+            }
+        },
+        JDK(false, MERGE_CUMULATOR) {
+            @Override
+            SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
+                    throws SSLException {
+                int writerIndex = out.writerIndex();
+                final SSLEngineResult result = handler.engine.unwrap(toByteBuffer(in, readerIndex, len),
+                    toByteBuffer(out, writerIndex, out.writableBytes()));
+                out.writerIndex(writerIndex + result.bytesProduced());
+                return result;
+            }
+        };
+
+        static SslEngineType forEngine(SSLEngine engine) {
+            if (engine instanceof OpenSslEngine) {
+                return TCNATIVE;
+            }
+            return JDK;
+        }
+
+        SslEngineType(boolean wantsDirectBuffer, Cumulator cumulator) {
+            this.wantsDirectBuffer = wantsDirectBuffer;
+            this.cumulator = cumulator;
+        }
+
+        abstract SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
+                throws SSLException;
+
+        // BEGIN Platform-dependent flags
+
+        /**
+         * {@code true} if and only if {@link SSLEngine} expects a direct buffer.
+         */
+        final boolean wantsDirectBuffer;
+
+        // END Platform-dependent flags
+
+        /**
+         * When using JDK {@link SSLEngine}, we use {@link #MERGE_CUMULATOR} because it works only with
+         * one {@link ByteBuffer}.
+         *
+         * When using {@link OpenSslEngine}, we can use {@link #COMPOSITE_CUMULATOR} because it has
+         * {@link OpenSslEngine#unwrap(ByteBuffer[], ByteBuffer[])} which works with multiple {@link ByteBuffer}s
+         * and which does not need to do extra memory copies.
+         */
+        final Cumulator cumulator;
+    }
+
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
+    private final SslEngineType engineType;
     private final int maxPacketBufferSize;
     private final Executor delegatedTaskExecutor;
 
@@ -190,15 +269,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * creation.
      */
     private final ByteBuffer[] singleBuffer = new ByteBuffer[1];
-
-    // BEGIN Platform-dependent flags
-
-    /**
-     * {@code true} if and only if {@link SSLEngine} expects a direct buffer.
-     */
-    private final boolean wantsDirectBuffer;
-
-    // END Platform-dependent flags
 
     private final boolean startTls;
     private boolean sentFirstMessage;
@@ -269,22 +339,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             throw new NullPointerException("delegatedTaskExecutor");
         }
         this.engine = engine;
+        this.engineType = SslEngineType.forEngine(engine);
         this.delegatedTaskExecutor = delegatedTaskExecutor;
         this.startTls = startTls;
         maxPacketBufferSize = engine.getSession().getPacketBufferSize();
-
-        boolean opensslEngine = engine instanceof OpenSslEngine;
-        wantsDirectBuffer = opensslEngine;
-
-        /**
-         * When using JDK {@link SSLEngine}, we use {@link #MERGE_CUMULATOR} because it works only with
-         * one {@link ByteBuffer}.
-         *
-         * When using {@link OpenSslEngine}, we can use {@link #COMPOSITE_CUMULATOR} because it has
-         * {@link OpenSslEngine#unwrap(ByteBuffer[], ByteBuffer[])} which works with multiple {@link ByteBuffer}s
-         * and which does not need to do extra memory copies.
-         */
-        setCumulator(opensslEngine? COMPOSITE_CUMULATOR : MERGE_CUMULATOR);
+        setCumulator(engineType.cumulator);
     }
 
     public long getHandshakeTimeoutMillis() {
@@ -662,7 +721,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // We will call SslEngine.wrap(ByteBuffer[], ByteBuffer) to allow efficient handling of
             // CompositeByteBuf without force an extra memory copy when CompositeByteBuffer.nioBuffer() is called.
             final ByteBuffer[] in0;
-            if (in.isDirect() || !wantsDirectBuffer) {
+            if (in.isDirect() || !engineType.wantsDirectBuffer) {
                 // As CompositeByteBuf.nioBufferCount() can be expensive (as it needs to check all composed ByteBuf
                 // to calculate the count) we will just assume a CompositeByteBuf contains more then 1 ByteBuf.
                 // The worst that can happen is that we allocate an extra ByteBuffer[] in CompositeByteBuf.nioBuffers()
@@ -956,7 +1015,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
             while (!ctx.isRemoved()) {
-                final SSLEngineResult result = unwrap(engine, packet, offset, length, decodeOut);
+                final SSLEngineResult result = engineType.unwrap(this, packet, offset, length, decodeOut);
                 final Status status = result.getStatus();
                 final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                 final int produced = result.bytesProduced();
@@ -1063,33 +1122,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
         }
         return decoded;
-    }
-
-    private SSLEngineResult unwrap(
-            SSLEngine engine, ByteBuf in, int readerIndex, int len, ByteBuf out) throws SSLException {
-        int nioBufferCount = in.nioBufferCount();
-        int writerIndex = out.writerIndex();
-        final SSLEngineResult result;
-        if (engine instanceof OpenSslEngine && nioBufferCount > 1) {
-            /**
-             * If {@link OpenSslEngine} is in use,
-             * we can use a special {@link OpenSslEngine#unwrap(ByteBuffer[], ByteBuffer[])} method
-             * that accepts multiple {@link ByteBuffer}s without additional memory copies.
-             */
-            OpenSslEngine opensslEngine = (OpenSslEngine) engine;
-            try {
-                singleBuffer[0] = toByteBuffer(out, writerIndex, out.writableBytes());
-                result = opensslEngine.unwrap(in.nioBuffers(readerIndex, len), singleBuffer);
-                out.writerIndex(writerIndex + result.bytesProduced());
-            } finally {
-                singleBuffer[0] = null;
-            }
-        } else {
-            result = engine.unwrap(toByteBuffer(in, readerIndex, len),
-                                                   toByteBuffer(out, writerIndex, out.writableBytes()));
-        }
-        out.writerIndex(writerIndex + result.bytesProduced());
-        return result;
     }
 
     private static ByteBuffer toByteBuffer(ByteBuf out, int index, int len) {
@@ -1457,7 +1489,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     private ByteBuf allocate(ChannelHandlerContext ctx, int capacity) {
         ByteBufAllocator alloc = ctx.alloc();
-        if (wantsDirectBuffer) {
+        if (engineType.wantsDirectBuffer) {
             return alloc.directBuffer(capacity);
         } else {
             return alloc.buffer(capacity);
