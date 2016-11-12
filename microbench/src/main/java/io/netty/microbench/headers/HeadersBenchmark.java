@@ -54,7 +54,7 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
         return (name.startsWith(":")) ? name.substring(1) : name;
     }
 
-    private static String toHttp2Name(String name) {
+    static String toHttp2Name(String name) {
         name = name.toLowerCase();
         return (name.equals("host")) ? "xhost" : name;
     }
