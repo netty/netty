@@ -153,7 +153,7 @@ public class DefaultHttp2HeadersTest {
         }
     }
 
-    private static void verifyPseudoHeadersFirst(Http2Headers headers) {
+    static void verifyPseudoHeadersFirst(Http2Headers headers) {
         CharSequence lastNonPseudoName = null;
         for (Entry<CharSequence, CharSequence> entry: headers) {
             if (entry.getKey().length() == 0 || entry.getKey().charAt(0) != ':') {
