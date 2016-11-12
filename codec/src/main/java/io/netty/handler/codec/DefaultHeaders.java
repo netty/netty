@@ -974,7 +974,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
         @Override
         public void remove() {
-            throw new UnsupportedOperationException("read-only iterator");
+            throw new UnsupportedOperationException("read only");
         }
     }
 
