@@ -15,12 +15,11 @@
  */
 package io.netty.handler.codec.http.cookie;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import io.netty.handler.codec.http.HttpHeaderDateFormatter;
 
-import io.netty.handler.codec.http.HttpHeaderDateFormat;
-
-import java.text.ParsePosition;
 import java.util.Date;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie decoder to be used client side.
@@ -168,14 +167,11 @@ public final class ClientCookieDecoder extends CookieDecoder {
             // max age has precedence over expires
             if (maxAge != Long.MIN_VALUE) {
                 return maxAge;
-            } else {
-                String expires = computeValue(expiresStart, expiresEnd);
-                if (expires != null) {
-                    Date expiresDate = HttpHeaderDateFormat.get().parse(expires, new ParsePosition(0));
-                    if (expiresDate != null) {
-                        long maxAgeMillis = expiresDate.getTime() - System.currentTimeMillis();
-                        return maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0 ? 1 : 0);
-                    }
+            } else if (isValueDefined(expiresStart, expiresEnd)) {
+                Date expiresDate = HttpHeaderDateFormatter.parse(header, expiresStart, expiresEnd);
+                if (expiresDate != null) {
+                    long maxAgeMillis = expiresDate.getTime() - System.currentTimeMillis();
+                    return maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0 ? 1 : 0);
                 }
             }
             return Long.MIN_VALUE;
@@ -254,8 +250,12 @@ public final class ClientCookieDecoder extends CookieDecoder {
             }
         }
 
+        private static boolean isValueDefined(int valueStart, int valueEnd) {
+            return valueStart != -1 && valueStart != valueEnd;
+        }
+
         private String computeValue(int valueStart, int valueEnd) {
-            return valueStart == -1 || valueStart == valueEnd ? null : header.substring(valueStart, valueEnd);
+            return isValueDefined(valueStart, valueEnd) ? header.substring(valueStart, valueEnd) : null;
         }
     }
 }

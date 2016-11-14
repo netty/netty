@@ -15,16 +15,8 @@
  */
 package io.netty.handler.codec.http.cookie;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
+import io.netty.handler.codec.http.HttpHeaderDateFormatter;
 import org.junit.Test;
-
-import io.netty.handler.codec.http.HttpHeaderDateFormat;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -33,12 +25,14 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.TimeZone;
 
+import static org.junit.Assert.*;
+
 public class ClientCookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV0() {
         String cookieString = "myCookie=myValue;expires=XXX;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
-        cookieString = cookieString.replace("XXX", HttpHeaderDateFormat.get()
-                .format(new Date(System.currentTimeMillis() + 50000)));
+        cookieString = cookieString.replace("XXX",
+                HttpHeaderDateFormatter.format(new Date(System.currentTimeMillis() + 50000)));
 
         Cookie cookie = ClientCookieDecoder.STRICT.decode(cookieString);
         assertNotNull(cookie);
