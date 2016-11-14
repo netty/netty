@@ -19,7 +19,6 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.ThreadLocalRandom;
-
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -48,11 +47,22 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty.buffer.Unpooled.*;
-import static io.netty.util.ReferenceCountUtil.*;
-import static io.netty.util.internal.EmptyArrays.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
+import static io.netty.buffer.Unpooled.buffer;
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.directBuffer;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.util.ReferenceCountUtil.releaseLater;
+import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * An abstract test class for channel buffers
@@ -2922,8 +2932,231 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testRetainedSliceAndRetainedDuplicateContentIsExpected() {
+        ByteBuf buf = newBuffer(8).resetWriterIndex();
+        ByteBuf expected1 = newBuffer(6).resetWriterIndex();
+        ByteBuf expected2 = newBuffer(5).resetWriterIndex();
+        ByteBuf expected3 = newBuffer(4).resetWriterIndex();
+        ByteBuf expected4 = newBuffer(3).resetWriterIndex();
+        buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
+        expected1.writeBytes(new byte[] {2, 3, 4, 5, 6, 7});
+        expected2.writeBytes(new byte[] {3, 4, 5, 6, 7});
+        expected3.writeBytes(new byte[] {4, 5, 6, 7});
+        expected4.writeBytes(new byte[] {5, 6, 7});
+
+        ByteBuf slice1 = buf.retainedSlice(buf.readerIndex() + 1, 6);
+        assertEquals(0, slice1.compareTo(expected1));
+        assertEquals(0, slice1.compareTo(buf.slice(buf.readerIndex() + 1, 6)));
+        // Simulate a handler that releases the original buffer, and propagates a slice.
+        buf.release();
+
+        // Advance the reader index on the slice.
+        slice1.readByte();
+
+        ByteBuf dup1 = slice1.retainedDuplicate();
+        assertEquals(0, dup1.compareTo(expected2));
+        assertEquals(0, dup1.compareTo(slice1.duplicate()));
+
+        // Advance the reader index on dup1.
+        dup1.readByte();
+
+        ByteBuf dup2 = dup1.duplicate();
+        assertEquals(0, dup2.compareTo(expected3));
+
+        // Advance the reader index on dup2.
+        dup2.readByte();
+
+        ByteBuf slice2 = dup2.retainedSlice(dup2.readerIndex(), 3);
+        assertEquals(0, slice2.compareTo(expected4));
+        assertEquals(0, slice2.compareTo(dup2.slice(dup2.readerIndex(), 3)));
+
+        // Cleanup the expected buffers used for testing.
+        assertTrue(expected1.release());
+        assertTrue(expected2.release());
+        assertTrue(expected3.release());
+        assertTrue(expected4.release());
+
+        slice2.release();
+        dup2.release();
+
+        assertEquals(slice2.refCnt(), dup2.refCnt());
+        assertEquals(dup2.refCnt(), dup1.refCnt());
+
+        // The handler is now done with the original slice
+        assertTrue(slice1.release());
+
+        // Reference counting may be shared, or may be independently tracked, but at this point all buffers should
+        // be deallocated and have a reference count of 0.
+        assertEquals(0, buf.refCnt());
+        assertEquals(0, slice1.refCnt());
+        assertEquals(0, slice2.refCnt());
+        assertEquals(0, dup1.refCnt());
+        assertEquals(0, dup2.refCnt());
+    }
+
+    @Test
+    public void testRetainedDuplicateAndRetainedSliceContentIsExpected() {
+        ByteBuf buf = newBuffer(8).resetWriterIndex();
+        ByteBuf expected1 = newBuffer(6).resetWriterIndex();
+        ByteBuf expected2 = newBuffer(5).resetWriterIndex();
+        ByteBuf expected3 = newBuffer(4).resetWriterIndex();
+        buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
+        expected1.writeBytes(new byte[] {2, 3, 4, 5, 6, 7});
+        expected2.writeBytes(new byte[] {3, 4, 5, 6, 7});
+        expected3.writeBytes(new byte[] {5, 6, 7});
+
+        ByteBuf dup1 = buf.retainedDuplicate();
+        assertEquals(0, dup1.compareTo(buf));
+        assertEquals(0, dup1.compareTo(buf.slice()));
+        // Simulate a handler that releases the original buffer, and propagates a slice.
+        buf.release();
+
+        // Advance the reader index on the dup.
+        dup1.readByte();
+
+        ByteBuf slice1 = dup1.retainedSlice(dup1.readerIndex(), 6);
+        assertEquals(0, slice1.compareTo(expected1));
+        assertEquals(0, slice1.compareTo(slice1.duplicate()));
+
+        // Advance the reader index on slice1.
+        slice1.readByte();
+
+        ByteBuf dup2 = slice1.duplicate();
+        assertEquals(0, dup2.compareTo(slice1));
+
+        // Advance the reader index on dup2.
+        dup2.readByte();
+
+        ByteBuf slice2 = dup2.retainedSlice(dup2.readerIndex() + 1, 3);
+        assertEquals(0, slice2.compareTo(expected3));
+        assertEquals(0, slice2.compareTo(dup2.slice(dup2.readerIndex() + 1, 3)));
+
+        // Cleanup the expected buffers used for testing.
+        assertTrue(expected1.release());
+        assertTrue(expected2.release());
+        assertTrue(expected3.release());
+
+        slice2.release();
+        slice1.release();
+
+        assertEquals(slice2.refCnt(), dup2.refCnt());
+        assertEquals(dup2.refCnt(), slice1.refCnt());
+
+        // The handler is now done with the original slice
+        assertTrue(dup1.release());
+
+        // Reference counting may be shared, or may be independently tracked, but at this point all buffers should
+        // be deallocated and have a reference count of 0.
+        assertEquals(0, buf.refCnt());
+        assertEquals(0, slice1.refCnt());
+        assertEquals(0, slice2.refCnt());
+        assertEquals(0, dup1.refCnt());
+        assertEquals(0, dup2.refCnt());
+    }
+
+    @Test
     public void testRetainedSliceContents() {
         testSliceContents(true);
+    }
+
+    @Test
+    public void testMultipleLevelRetainedSlice1() {
+        testMultipleLevelRetainedSliceWithNonRetained(true, true);
+    }
+
+    @Test
+    public void testMultipleLevelRetainedSlice2() {
+        testMultipleLevelRetainedSliceWithNonRetained(true, false);
+    }
+
+    @Test
+    public void testMultipleLevelRetainedSlice3() {
+        testMultipleLevelRetainedSliceWithNonRetained(false, true);
+    }
+
+    @Test
+    public void testMultipleLevelRetainedSlice4() {
+        testMultipleLevelRetainedSliceWithNonRetained(false, false);
+    }
+
+    @Test
+    public void testRetainedSliceReleaseOriginal1() {
+        testSliceReleaseOriginal(true, true);
+    }
+
+    @Test
+    public void testRetainedSliceReleaseOriginal2() {
+        testSliceReleaseOriginal(true, false);
+    }
+
+    @Test
+    public void testRetainedSliceReleaseOriginal3() {
+        testSliceReleaseOriginal(false, true);
+    }
+
+    @Test
+    public void testRetainedSliceReleaseOriginal4() {
+        testSliceReleaseOriginal(false, false);
+    }
+
+    @Test
+    public void testRetainedDuplicateReleaseOriginal1() {
+        testDuplicateReleaseOriginal(true, true);
+    }
+
+    @Test
+    public void testRetainedDuplicateReleaseOriginal2() {
+        testDuplicateReleaseOriginal(true, false);
+    }
+
+    @Test
+    public void testRetainedDuplicateReleaseOriginal3() {
+        testDuplicateReleaseOriginal(false, true);
+    }
+
+    @Test
+    public void testRetainedDuplicateReleaseOriginal4() {
+        testDuplicateReleaseOriginal(false, false);
+    }
+
+    @Test
+    public void testMultipleRetainedSliceReleaseOriginal1() {
+        testMultipleRetainedSliceReleaseOriginal(true, true);
+    }
+
+    @Test
+    public void testMultipleRetainedSliceReleaseOriginal2() {
+        testMultipleRetainedSliceReleaseOriginal(true, false);
+    }
+
+    @Test
+    public void testMultipleRetainedSliceReleaseOriginal3() {
+        testMultipleRetainedSliceReleaseOriginal(false, true);
+    }
+
+    @Test
+    public void testMultipleRetainedSliceReleaseOriginal4() {
+        testMultipleRetainedSliceReleaseOriginal(false, false);
+    }
+
+    @Test
+    public void testMultipleRetainedDuplicateReleaseOriginal1() {
+        testMultipleRetainedDuplicateReleaseOriginal(true, true);
+    }
+
+    @Test
+    public void testMultipleRetainedDuplicateReleaseOriginal2() {
+        testMultipleRetainedDuplicateReleaseOriginal(true, false);
+    }
+
+    @Test
+    public void testMultipleRetainedDuplicateReleaseOriginal3() {
+        testMultipleRetainedDuplicateReleaseOriginal(false, true);
+    }
+
+    @Test
+    public void testMultipleRetainedDuplicateReleaseOriginal4() {
+        testMultipleRetainedDuplicateReleaseOriginal(false, false);
     }
 
     @Test
@@ -3028,6 +3261,214 @@ public abstract class AbstractByteBufTest {
                 slice.release();
             }
         }
+    }
+
+    private void testSliceReleaseOriginal(boolean retainedSlice1, boolean retainedSlice2) {
+        ByteBuf buf = newBuffer(8).resetWriterIndex();
+        ByteBuf expected1 = newBuffer(3).resetWriterIndex();
+        ByteBuf expected2 = newBuffer(2).resetWriterIndex();
+        buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
+        expected1.writeBytes(new byte[] {6, 7, 8});
+        expected2.writeBytes(new byte[] {7, 8});
+        ByteBuf slice1 = retainedSlice1 ? buf.retainedSlice(buf.readerIndex() + 5, 3)
+                                        : buf.slice(buf.readerIndex() + 5, 3).retain();
+        assertEquals(0, slice1.compareTo(expected1));
+        // Simulate a handler that releases the original buffer, and propagates a slice.
+        buf.release();
+
+        ByteBuf slice2 = retainedSlice2 ? slice1.retainedSlice(slice1.readerIndex() + 1, 2)
+                                        : slice1.slice(slice1.readerIndex() + 1, 2).retain();
+        assertEquals(0, slice2.compareTo(expected2));
+
+        // Cleanup the expected buffers used for testing.
+        assertTrue(expected1.release());
+        assertTrue(expected2.release());
+
+        // The handler created a slice of the slice and is now done with it.
+        slice2.release();
+
+        // The handler is now done with the original slice
+        assertTrue(slice1.release());
+
+        // Reference counting may be shared, or may be independently tracked, but at this point all buffers should
+        // be deallocated and have a reference count of 0.
+        assertEquals(0, buf.refCnt());
+        assertEquals(0, slice1.refCnt());
+        assertEquals(0, slice2.refCnt());
+    }
+
+    private void testMultipleLevelRetainedSliceWithNonRetained(boolean doSlice1, boolean doSlice2) {
+        ByteBuf buf = newBuffer(8).resetWriterIndex();
+        ByteBuf expected1 = newBuffer(6).resetWriterIndex();
+        ByteBuf expected2 = newBuffer(4).resetWriterIndex();
+        ByteBuf expected3 = newBuffer(2).resetWriterIndex();
+        ByteBuf expected4SliceSlice = newBuffer(1).resetWriterIndex();
+        ByteBuf expected4DupSlice = newBuffer(1).resetWriterIndex();
+        buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
+        expected1.writeBytes(new byte[] {2, 3, 4, 5, 6, 7});
+        expected2.writeBytes(new byte[] {3, 4, 5, 6});
+        expected3.writeBytes(new byte[] {4, 5});
+        expected4SliceSlice.writeBytes(new byte[] {5});
+        expected4DupSlice.writeBytes(new byte[] {4});
+
+        ByteBuf slice1 = buf.retainedSlice(buf.readerIndex() + 1, 6);
+        assertEquals(0, slice1.compareTo(expected1));
+        // Simulate a handler that releases the original buffer, and propagates a slice.
+        buf.release();
+
+        ByteBuf slice2 = slice1.retainedSlice(slice1.readerIndex() + 1, 4);
+        assertEquals(0, slice2.compareTo(expected2));
+
+        ByteBuf slice3 = doSlice1 ? slice2.slice(slice2.readerIndex() + 1, 2) : slice2.duplicate();
+        if (doSlice1) {
+            assertEquals(0, slice3.compareTo(expected3));
+        } else {
+            assertEquals(0, slice3.compareTo(expected2));
+        }
+
+        ByteBuf slice4 = doSlice2 ? slice3.slice(slice3.readerIndex() + 1, 1) : slice3.duplicate();
+        if (doSlice1 && doSlice2) {
+            assertEquals(0, slice4.compareTo(expected4SliceSlice));
+        } else if (doSlice2) {
+            assertEquals(0, slice4.compareTo(expected4DupSlice));
+        } else {
+            assertEquals(0, slice3.compareTo(slice4));
+        }
+
+        // Cleanup the expected buffers used for testing.
+        assertTrue(expected1.release());
+        assertTrue(expected2.release());
+        assertTrue(expected3.release());
+        assertTrue(expected4SliceSlice.release());
+        assertTrue(expected4DupSlice.release());
+
+        // Slice 4, 3, and 2 should effectively "share" a reference count.
+        slice4.release();
+        assertEquals(slice3.refCnt(), slice2.refCnt());
+        assertEquals(slice3.refCnt(), slice4.refCnt());
+
+        // Slice 1 should also release the original underlying buffer without throwing exceptions
+        assertTrue(slice1.release());
+
+        // Reference counting may be shared, or may be independently tracked, but at this point all buffers should
+        // be deallocated and have a reference count of 0.
+        assertEquals(0, buf.refCnt());
+        assertEquals(0, slice1.refCnt());
+        assertEquals(0, slice2.refCnt());
+        assertEquals(0, slice3.refCnt());
+    }
+
+    private void testDuplicateReleaseOriginal(boolean retainedDuplicate1, boolean retainedDuplicate2) {
+        ByteBuf buf = newBuffer(8).resetWriterIndex();
+        ByteBuf expected = newBuffer(8).resetWriterIndex();
+        buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
+        expected.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+        ByteBuf dup1 = retainedDuplicate1 ? buf.retainedDuplicate()
+                                          : buf.duplicate().retain();
+        assertEquals(0, dup1.compareTo(expected));
+        // Simulate a handler that releases the original buffer, and propagates a slice.
+        buf.release();
+
+        ByteBuf dup2 = retainedDuplicate2 ? dup1.retainedDuplicate()
+                                          : dup1.duplicate().retain();
+        assertEquals(0, dup2.compareTo(expected));
+
+        // Cleanup the expected buffers used for testing.
+        assertTrue(expected.release());
+
+        // The handler created a slice of the slice and is now done with it.
+        dup2.release();
+
+        // The handler is now done with the original slice
+        assertTrue(dup1.release());
+
+        // Reference counting may be shared, or may be independently tracked, but at this point all buffers should
+        // be deallocated and have a reference count of 0.
+        assertEquals(0, buf.refCnt());
+        assertEquals(0, dup1.refCnt());
+        assertEquals(0, dup2.refCnt());
+    }
+
+    private void testMultipleRetainedSliceReleaseOriginal(boolean retainedSlice1, boolean retainedSlice2) {
+        ByteBuf buf = newBuffer(8).resetWriterIndex();
+        ByteBuf expected1 = newBuffer(3).resetWriterIndex();
+        ByteBuf expected2 = newBuffer(2).resetWriterIndex();
+        ByteBuf expected3 = newBuffer(2).resetWriterIndex();
+        buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
+        expected1.writeBytes(new byte[] {6, 7, 8});
+        expected2.writeBytes(new byte[] {7, 8});
+        expected3.writeBytes(new byte[] {6, 7});
+        ByteBuf slice1 = retainedSlice1 ? buf.retainedSlice(buf.readerIndex() + 5, 3)
+                                        : buf.slice(buf.readerIndex() + 5, 3).retain();
+        assertEquals(0, slice1.compareTo(expected1));
+        // Simulate a handler that releases the original buffer, and propagates a slice.
+        buf.release();
+
+        ByteBuf slice2 = retainedSlice2 ? slice1.retainedSlice(slice1.readerIndex() + 1, 2)
+                                        : slice1.slice(slice1.readerIndex() + 1, 2).retain();
+        assertEquals(0, slice2.compareTo(expected2));
+
+        // The handler created a slice of the slice and is now done with it.
+        slice2.release();
+
+        ByteBuf slice3 = slice1.retainedSlice(slice1.readerIndex(), 2);
+        assertEquals(0, slice3.compareTo(expected3));
+
+        // The handler created another slice of the slice and is now done with it.
+        slice3.release();
+
+        // The handler is now done with the original slice
+        assertTrue(slice1.release());
+
+        // Cleanup the expected buffers used for testing.
+        assertTrue(expected1.release());
+        assertTrue(expected2.release());
+        assertTrue(expected3.release());
+
+        // Reference counting may be shared, or may be independently tracked, but at this point all buffers should
+        // be deallocated and have a reference count of 0.
+        assertEquals(0, buf.refCnt());
+        assertEquals(0, slice1.refCnt());
+        assertEquals(0, slice2.refCnt());
+        assertEquals(0, slice3.refCnt());
+    }
+
+    private void testMultipleRetainedDuplicateReleaseOriginal(boolean retainedDuplicate1, boolean retainedDuplicate2) {
+        ByteBuf buf = newBuffer(8).resetWriterIndex();
+        ByteBuf expected = newBuffer(8).resetWriterIndex();
+        buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
+        expected.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+        ByteBuf dup1 = retainedDuplicate1 ? buf.retainedDuplicate()
+                                          : buf.duplicate().retain();
+        assertEquals(0, dup1.compareTo(expected));
+        // Simulate a handler that releases the original buffer, and propagates a slice.
+        buf.release();
+
+        ByteBuf dup2 = retainedDuplicate2 ? dup1.retainedDuplicate()
+                                          : dup1.duplicate().retain();
+        assertEquals(0, dup2.compareTo(expected));
+
+        // The handler created a slice of the slice and is now done with it.
+        dup2.release();
+
+        ByteBuf dup3 = dup1.retainedDuplicate();
+        assertEquals(0, dup3.compareTo(expected));
+
+        // The handler created another slice of the slice and is now done with it.
+        dup3.release();
+
+        // The handler is now done with the original slice
+        assertTrue(dup1.release());
+
+        // Cleanup the expected buffers used for testing.
+        assertTrue(expected.release());
+
+        // Reference counting may be shared, or may be independently tracked, but at this point all buffers should
+        // be deallocated and have a reference count of 0.
+        assertEquals(0, buf.refCnt());
+        assertEquals(0, dup1.refCnt());
+        assertEquals(0, dup2.refCnt());
+        assertEquals(0, dup3.refCnt());
     }
 
     private void testDuplicateContents(boolean retainedDuplicate) {
