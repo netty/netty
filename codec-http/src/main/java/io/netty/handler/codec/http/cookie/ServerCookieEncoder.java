@@ -20,7 +20,9 @@ import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import io.netty.handler.codec.http.HttpHeaderDateFormat;
+
+import io.netty.handler.codec.http.HttpHeaderDateFormatter;
+import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpRequest;
 
 import java.util.ArrayList;
@@ -102,7 +104,11 @@ public final class ServerCookieEncoder extends CookieEncoder {
         if (cookie.maxAge() != Long.MIN_VALUE) {
             add(buf, CookieHeaderNames.MAX_AGE, cookie.maxAge());
             Date expires = new Date(cookie.maxAge() * 1000 + System.currentTimeMillis());
-            add(buf, CookieHeaderNames.EXPIRES, HttpHeaderDateFormat.get().format(expires));
+            buf.append(CookieHeaderNames.EXPIRES);
+            buf.append((char) HttpConstants.EQUALS);
+            HttpHeaderDateFormatter.append(expires, buf);
+            buf.append((char) HttpConstants.SEMICOLON);
+            buf.append((char) HttpConstants.SP);
         }
 
         if (cookie.path() != null) {
