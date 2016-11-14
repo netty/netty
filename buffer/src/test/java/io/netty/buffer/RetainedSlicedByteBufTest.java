@@ -24,7 +24,8 @@ public class RetainedSlicedByteBufTest extends SlicedByteBufTest {
     @Override
     protected ByteBuf newBuffer(int length) {
         ByteBuf wrapped = Unpooled.wrappedBuffer(new byte[length * 2]);
-        ByteBuf buffer = wrapped.retainedSlice(ThreadLocalRandom.current().nextInt(length - 1) + 1, length);
+        ByteBuf buffer = wrapped.retainedSlice(length > 1 ? ThreadLocalRandom.current().nextInt(length - 1) + 1 : 0,
+                                               length);
         wrapped.release();
 
         assertEquals(0, buffer.readerIndex());

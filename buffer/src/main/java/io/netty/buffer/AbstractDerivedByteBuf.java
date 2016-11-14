@@ -33,40 +33,68 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
 
     @Override
     public final int refCnt() {
+        return refCnt0();
+    }
+
+    int refCnt0() {
         return unwrap().refCnt();
     }
 
     @Override
     public final ByteBuf retain() {
+        return retain0();
+    }
+
+    ByteBuf retain0() {
         unwrap().retain();
         return this;
     }
 
     @Override
     public final ByteBuf retain(int increment) {
+        return retain0(increment);
+    }
+
+    ByteBuf retain0(int increment) {
         unwrap().retain(increment);
         return this;
     }
 
     @Override
     public final ByteBuf touch() {
+        return touch0();
+    }
+
+    ByteBuf touch0() {
         unwrap().touch();
         return this;
     }
 
     @Override
     public final ByteBuf touch(Object hint) {
+        return touch0(hint);
+    }
+
+    ByteBuf touch0(Object hint) {
         unwrap().touch(hint);
         return this;
     }
 
     @Override
     public final boolean release() {
+        return release0();
+    }
+
+    boolean release0() {
         return unwrap().release();
     }
 
     @Override
     public final boolean release(int decrement) {
+        return unwrap().release(decrement);
+    }
+
+    boolean release0(int decrement) {
         return unwrap().release(decrement);
     }
 

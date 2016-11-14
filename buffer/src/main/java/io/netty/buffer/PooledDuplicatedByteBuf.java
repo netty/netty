@@ -40,7 +40,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
     static PooledDuplicatedByteBuf newInstance(AbstractByteBuf unwrapped, ByteBuf wrapped,
                                                int readerIndex, int writerIndex) {
         final PooledDuplicatedByteBuf duplicate = RECYCLER.get();
-        duplicate.init(unwrapped, wrapped, readerIndex, writerIndex, wrapped.maxCapacity());
+        duplicate.init(unwrapped, wrapped, readerIndex, writerIndex, unwrapped.maxCapacity());
         duplicate.markReaderIndex();
         duplicate.markWriterIndex();
 
@@ -88,13 +88,15 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
     }
 
     @Override
-    public ByteBuf slice(int index, int length) {
-        return unwrap().slice(index, length);
+    public ByteBuf retainedSlice(int index, int length) {
+        return PooledSlicedByteBuf.newInstance(unwrap(), this, index, length);
     }
 
     @Override
-    public ByteBuf retainedSlice(int index, int length) {
-        return PooledSlicedByteBuf.newInstance(unwrap(), this, index, length);
+    public ByteBuf duplicate() {
+        ByteBuf duplicate = duplicate0();
+        duplicate.setIndex(readerIndex(), writerIndex());
+        return duplicate;
     }
 
     @Override
