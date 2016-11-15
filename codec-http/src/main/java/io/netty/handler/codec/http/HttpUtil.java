@@ -356,6 +356,7 @@ public final class HttpUtil {
     /**
      * Fetch charset from message's Content-Type header.
      *
+     * @param message entity to fetch Content-Type header from
      * @return the charset from message's Content-Type header or {@link io.netty.util.CharsetUtil#ISO_8859_1}
      * if charset is not presented or unparsable
      */
@@ -364,13 +365,39 @@ public final class HttpUtil {
     }
 
     /**
+     * Fetch charset from Content-Type header value.
+     *
+     * @param contentTypeValue Content-Type header value to parse
+     * @return the charset from message's Content-Type header or {@link io.netty.util.CharsetUtil#ISO_8859_1}
+     * if charset is not presented or unparsable
+     */
+    public static Charset getCharset(CharSequence contentTypeValue) {
+        return getCharset(contentTypeValue, CharsetUtil.ISO_8859_1);
+    }
+
+    /**
      * Fetch charset from message's Content-Type header.
      *
+     * @param message entity to fetch Content-Type header from
+     * @param defaultCharset result to use in case of empty, incorrect or doesn't conain required part header value
      * @return the charset from message's Content-Type header or {@code defaultCharset}
      * if charset is not presented or unparsable
      */
     public static Charset getCharset(HttpMessage message, Charset defaultCharset) {
-        CharSequence charsetCharSequence = getCharsetAsSequence(message);
+        CharSequence contentTypeValue = message.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        return getCharset(contentTypeValue, defaultCharset);
+    }
+
+    /**
+     * Fetch charset from Content-Type header value.
+     *
+     * @param contentTypeValue Content-Type header value to parse
+     * @param defaultCharset result to use in case of empty, incorrect or doesn't conain required part header value
+     * @return the charset from message's Content-Type header or {@code defaultCharset}
+     * if charset is not presented or unparsable
+     */
+    public static Charset getCharset(CharSequence contentTypeValue, Charset defaultCharset) {
+        CharSequence charsetCharSequence = getCharsetAsSequence(contentTypeValue);
         if (charsetCharSequence != null) {
             try {
                 return Charset.forName(charsetCharSequence.toString());
@@ -388,6 +415,7 @@ public final class HttpUtil {
      * A lot of sites/possibly clients have charset="CHARSET", for example charset="utf-8". Or "utf8" instead of "utf-8"
      * This is not according to standard, but this method provide an ability to catch desired mistakes manually in code
      *
+     * @param message entity to fetch Content-Type header from
      * @return the {@code CharSequence} with charset from message's Content-Type header
      * or {@code null} if charset is not presented
      * @deprecated use {@link #getCharsetAsSequence(HttpMessage)}
@@ -408,6 +436,20 @@ public final class HttpUtil {
      */
     public static CharSequence getCharsetAsSequence(HttpMessage message) {
         CharSequence contentTypeValue = message.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        return getCharsetAsSequence(contentTypeValue);
+    }
+
+    /**
+     * Fetch charset from Content-Type header value as a char sequence.
+     *
+     * A lot of sites/possibly clients have charset="CHARSET", for example charset="utf-8". Or "utf8" instead of "utf-8"
+     * This is not according to standard, but this method provide an ability to catch desired mistakes manually in code
+     *
+     * @param contentTypeValue Content-Type header value to parse
+     * @return the {@code CharSequence} with charset from message's Content-Type header
+     * or {@code null} if charset is not presented
+     */
+    public static CharSequence getCharsetAsSequence(CharSequence contentTypeValue) {
         if (contentTypeValue != null) {
             int indexOfCharset = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, CHARSET_EQUALS, 0);
             if (indexOfCharset != AsciiString.INDEX_NOT_FOUND) {
@@ -423,6 +465,7 @@ public final class HttpUtil {
     /**
      * Fetch MIME type part from message's Content-Type header as a char sequence.
      *
+     * @param message entity to fetch Content-Type header from
      * @return the MIME type as a {@code CharSequence} from message's Content-Type header
      * or {@code null} if content-type header or MIME type part of this header are not presented
      * <p/>
@@ -432,6 +475,21 @@ public final class HttpUtil {
      */
     public static CharSequence getMimeType(HttpMessage message) {
         CharSequence contentTypeValue = message.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        return getMimeType(contentTypeValue);
+    }
+
+    /**
+     * Fetch MIME type part from Content-Type header value as a char sequence.
+     *
+     * @param contentTypeValue Content-Type header value to parse
+     * @return the MIME type as a {@code CharSequence} from message's Content-Type header
+     * or {@code null} if content-type header or MIME type part of this header are not presented
+     * <p/>
+     * "content-type: text/html; charset=utf-8" - "text/html" will be returned <br/>
+     * "content-type: text/html" - "text/html" will be returned <br/>
+     * "content-type: " or no header - {@code null} we be returned
+     */
+    public static CharSequence getMimeType(CharSequence contentTypeValue) {
         if (contentTypeValue != null) {
             int indexOfSemicolon = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, SEMICOLON, 0);
             if (indexOfSemicolon != AsciiString.INDEX_NOT_FOUND) {
