@@ -88,6 +88,7 @@ public class Http2ConnectionRoundtripTest {
     private ServerBootstrap sb;
     private Bootstrap cb;
     private Channel serverChannel;
+    private volatile Channel serverConnectedChannel;
     private Channel clientChannel;
     private FrameCountDown serverFrameCountDown;
     private CountDownLatch requestLatch;
@@ -112,6 +113,10 @@ public class Http2ConnectionRoundtripTest {
         if (serverChannel != null) {
             serverChannel.close().sync();
             serverChannel = null;
+        }
+        if (serverConnectedChannel != null) {
+            serverConnectedChannel.close().sync();
+            serverConnectedChannel = null;
         }
         Future<?> serverGroup = sb.config().group().shutdownGracefully(0, 0, MILLISECONDS);
         Future<?> serverChildGroup = sb.config().childGroup().shutdownGracefully(0, 0, MILLISECONDS);
@@ -537,6 +542,7 @@ public class Http2ConnectionRoundtripTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
+                serverConnectedChannel = ch;
                 ChannelPipeline p = ch.pipeline();
                 serverFrameCountDown =
                         new FrameCountDown(serverListener, serverSettingsAckLatch,
