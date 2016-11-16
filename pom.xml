@@ -723,6 +723,9 @@
             <ignore>javax.net.ssl.SSLParameters</ignore>
             <ignore>java.security.AlgorithmConstraints</ignore>
             <ignore>java.security.cert.CertificateRevokedException</ignore>
+            <ignore>java.security.cert.CertPathValidatorException</ignore>
+            <ignore>java.security.cert.CertPathValidatorException$Reason</ignore>
+            <ignore>java.security.cert.CertPathValidatorException$BasicReason</ignore>
 
             <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
 
