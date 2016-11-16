@@ -18,7 +18,6 @@ package io.netty.handler.codec.http;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
@@ -57,10 +56,10 @@ public class HttpUtilTest {
     public void testGetCharsetAsRawString() {
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=\"utf8\"");
-        assertEquals("\"utf8\"", HttpUtil.getCharsetAsString(message));
+        assertEquals("\"utf8\"", HttpUtil.getCharsetAsSequence(message));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html");
-        assertNull(HttpUtil.getCharsetAsString(message));
+        assertNull(HttpUtil.getCharsetAsSequence(message));
     }
 
     @Test
@@ -80,13 +79,13 @@ public class HttpUtilTest {
         assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html");
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, StandardCharsets.UTF_8));
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, CharsetUtil.UTF_8));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTFFF");
         assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(message));
 
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTFFF");
-        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, StandardCharsets.UTF_8));
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message, CharsetUtil.UTF_8));
     }
 
     @Test

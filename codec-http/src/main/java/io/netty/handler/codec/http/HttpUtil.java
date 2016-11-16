@@ -352,7 +352,7 @@ public final class HttpUtil {
      * if charset is not presented or unparsable
      */
     public static Charset getCharset(HttpMessage message, Charset defaultCharset) {
-        CharSequence charsetCharSequence = getCharsetAsString(message);
+        CharSequence charsetCharSequence = getCharsetAsSequence(message);
         if (charsetCharSequence != null) {
             try {
                 return Charset.forName(charsetCharSequence.toString());
@@ -372,8 +372,23 @@ public final class HttpUtil {
      *
      * @return the {@code CharSequence} with charset from message's Content-Type header
      * or {@code null} if charset is not presented
+     * @deprecated use {@link #getCharsetAsSequence(HttpMessage)}
      */
+    @Deprecated
     public static CharSequence getCharsetAsString(HttpMessage message) {
+        return getCharsetAsSequence(message);
+    }
+
+    /**
+     * Fetch charset from message's Content-Type header as a char sequence.
+     *
+     * A lot of sites/possibly clients have charset="CHARSET", for example charset="utf-8". Or "utf8" instead of "utf-8"
+     * This is not according to standard, but this method provide an ability to catch desired mistakes manually in code
+     *
+     * @return the {@code CharSequence} with charset from message's Content-Type header
+     * or {@code null} if charset is not presented
+     */
+    public static CharSequence getCharsetAsSequence(HttpMessage message) {
         CharSequence contentTypeValue = message.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentTypeValue != null) {
             int indexOfCharset = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, CHARSET_EQUALS, 0);
