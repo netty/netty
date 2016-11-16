@@ -183,7 +183,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         TCNATIVE(true, COMPOSITE_CUMULATOR) {
             @Override
             SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
-                throws SSLException {
+                    throws SSLException {
                 int nioBufferCount = in.nioBufferCount();
                 int writerIndex = out.writerIndex();
                 final SSLEngineResult result;
@@ -197,8 +197,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     try {
                         handler.singleBuffer[0] = toByteBuffer(out, writerIndex,
                             out.writableBytes());
-                        result = opensslEngine
-                            .unwrap(in.nioBuffers(readerIndex, len), handler.singleBuffer);
+                        result = opensslEngine.unwrap(in.nioBuffers(readerIndex, len), handler.singleBuffer);
                         out.writerIndex(writerIndex + result.bytesProduced());
                     } finally {
                         handler.singleBuffer[0] = null;
@@ -213,9 +212,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         },
         JDK(false, MERGE_CUMULATOR) {
             @Override
-            SSLEngineResult unwrap(SslHandler handler, ByteBuf in,
-                int readerIndex, int len,
-                ByteBuf out) throws SSLException {
+            SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
+                    throws SSLException {
                 int writerIndex = out.writerIndex();
                 final SSLEngineResult result = handler.engine.unwrap(toByteBuffer(in, readerIndex, len),
                     toByteBuffer(out, writerIndex, out.writableBytes()));
@@ -236,8 +234,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             this.cumulator = cumulator;
         }
 
-        abstract SSLEngineResult unwrap(SslHandler handler,
-            ByteBuf in, int readerIndex, int len, ByteBuf out) throws SSLException;
+        abstract SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
+                throws SSLException;
 
         // BEGIN Platform-dependent flags
 
