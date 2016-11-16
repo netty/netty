@@ -35,6 +35,7 @@ import org.apache.tomcat.jni.SSLContext;
 import java.security.AccessController;
 import java.security.PrivateKey;
 import java.security.PrivilegedAction;
+import java.security.cert.CertPathValidatorException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
@@ -605,7 +606,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 e.initCause(cause);
                 engine.handshakeException = e;
 
+                // Try to extract the correct error code that should be used.
                 if (cause instanceof OpenSslCertificateException) {
+                    // This will never return a negative error code as its validated when constructing the
+                    // OpenSslCertificateException.
                     return ((OpenSslCertificateException) cause).errorCode();
                 }
                 if (cause instanceof CertificateExpiredException) {
@@ -614,9 +618,34 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 if (cause instanceof CertificateNotYetValidException) {
                     return CertificateVerifier.X509_V_ERR_CERT_NOT_YET_VALID;
                 }
-                if (PlatformDependent.javaVersion() >= 7 && cause instanceof CertificateRevokedException) {
-                    return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
+                if (PlatformDependent.javaVersion() >= 7) {
+                    if (cause instanceof CertificateRevokedException) {
+                        return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
+                    }
+
+                    // The X509TrustManagerImpl uses a Validator which wraps a CertPathValidatorException into
+                    // an CertificateException. So we need to handle the wrapped CertPathValidatorException to be
+                    // able to send the correct alert.
+                    Throwable wrapped = cause.getCause();
+                    while (wrapped != null) {
+                        if (wrapped instanceof CertPathValidatorException) {
+                            CertPathValidatorException ex = (CertPathValidatorException) wrapped;
+                            CertPathValidatorException.Reason reason = ex.getReason();
+                            if (reason == CertPathValidatorException.BasicReason.EXPIRED) {
+                                return CertificateVerifier.X509_V_ERR_CERT_HAS_EXPIRED;
+                            }
+                            if (reason == CertPathValidatorException.BasicReason.NOT_YET_VALID) {
+                                return CertificateVerifier.X509_V_ERR_CERT_NOT_YET_VALID;
+                            }
+                            if (reason == CertPathValidatorException.BasicReason.REVOKED) {
+                                return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
+                            }
+                        }
+                        wrapped = wrapped.getCause();
+                    }
                 }
+
+                // Could not detect a specific error code to use, so fallback to a default code.
                 return CertificateVerifier.X509_V_ERR_UNSPECIFIED;
             }
         }
