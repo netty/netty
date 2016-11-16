@@ -31,6 +31,8 @@ import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
@@ -45,9 +47,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  * A {@link Channel} for the local transport.
  */
 public class LocalChannel extends AbstractChannel {
-
-    private enum State { OPEN, BOUND, CONNECTED, CLOSED }
-
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannel.class);
     @SuppressWarnings({ "rawtypes" })
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER;
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
@@ -56,6 +56,8 @@ public class LocalChannel extends AbstractChannel {
             new ClosedChannelException(), LocalChannel.class, "doWrite(...)");
     private static final ClosedChannelException DO_CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), LocalChannel.class, "doClose()");
+
+    private enum State { OPEN, BOUND, CONNECTED, CLOSED }
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
     // To further optimize this we could write our own SPSC queue.
@@ -241,50 +243,57 @@ public class LocalChannel extends AbstractChannel {
             // channelRead.
             state = State.CLOSED;
 
+            // Preserve order of event and force a read operation now before the close operation is processed.
+            finishPeerRead(this);
+
             ChannelPromise promise = connectPromise;
             if (promise != null) {
                 // Use tryFailure() instead of setFailure() to avoid the race against cancel().
                 promise.tryFailure(DO_CLOSE_CLOSED_CHANNEL_EXCEPTION);
                 connectPromise = null;
             }
-
-            // To preserve ordering of events we must process any pending reads
-            if (writeInProgress && peer != null) {
-                finishPeerRead(peer);
-            }
         }
 
-        if (peer != null && peer.isActive()) {
+        if (peer != null) {
+            this.peer = null;
             // Need to execute the close in the correct EventLoop (see https://github.com/netty/netty/issues/1777).
             // Also check if the registration was not done yet. In this case we submit the close to the EventLoop
             // to make sure its run after the registration completes (see https://github.com/netty/netty/issues/2144).
-            if (peer.eventLoop().inEventLoop() && !registerInProgress) {
-                doPeerClose(peer, peer.writeInProgress);
+            EventLoop peerEventLoop = peer.eventLoop();
+            final boolean peerIsActive = peer.isActive();
+            if (peerEventLoop.inEventLoop() && !registerInProgress) {
+                peer.tryClose(peerIsActive);
             } else {
-                // This value may change, and so we should save it before executing the Runnable.
-                final boolean peerWriteInProgress = peer.writeInProgress;
                 try {
-                    peer.eventLoop().execute(new Runnable() {
+                    peerEventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
-                            doPeerClose(peer, peerWriteInProgress);
+                            peer.tryClose(peerIsActive);
                         }
                     });
-                } catch (RuntimeException e) {
-                    // The peer close may attempt to drain this.inboundBuffers. If that fails make sure it is drained.
+                } catch (Throwable cause) {
+                    logger.warn("Releasing Inbound Queues for channels {}-{} because exception occurred!",
+                            this, peer, cause);
                     releaseInboundBuffers();
-                    throw e;
+                    if (peerEventLoop.inEventLoop()) {
+                        peer.releaseInboundBuffers();
+                    } else {
+                        // inboundBuffers is a SPSC so we may leak if the event loop is shutdown prematurely or rejects
+                        // the close Runnable but give a best effort.
+                        peer.close();
+                    }
+                    PlatformDependent.throwException(cause);
                 }
             }
-            this.peer = null;
         }
     }
 
-    private void doPeerClose(LocalChannel peer, boolean peerWriteInProgress) {
-        if (peerWriteInProgress) {
-            finishPeerRead0(this);
+    private void tryClose(boolean isActive) {
+        if (isActive) {
+            unsafe().close(unsafe().voidPromise());
+        } else {
+            releaseInboundBuffers();
         }
-        peer.unsafe().close(peer.unsafe().voidPromise());
     }
 
     @Override
@@ -325,9 +334,11 @@ public class LocalChannel extends AbstractChannel {
         } else {
             try {
                 eventLoop().execute(readTask);
-            } catch (RuntimeException e) {
-                releaseInboundBuffers();
-                throw e;
+            } catch (Throwable cause) {
+                logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
+                close();
+                peer.close();
+                PlatformDependent.throwException(cause);
             }
         }
     }
@@ -402,19 +413,22 @@ public class LocalChannel extends AbstractChannel {
             } else {
                 peer.eventLoop().execute(finishPeerReadTask);
             }
-        } catch (RuntimeException e) {
-            peer.releaseInboundBuffers();
-            throw e;
+        } catch (Throwable cause) {
+            logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
+            close();
+            peer.close();
+            PlatformDependent.throwException(cause);
         }
     }
 
     private void releaseInboundBuffers() {
-        for (;;) {
-            Object o = inboundBuffer.poll();
-            if (o == null) {
-                break;
-            }
-            ReferenceCountUtil.release(o);
+        if (readInProgress) {
+            return;
+        }
+        Queue<Object> inboundBuffer = this.inboundBuffer;
+        Object msg;
+        while ((msg = inboundBuffer.poll()) != null) {
+            ReferenceCountUtil.release(msg);
         }
     }
 
