@@ -22,9 +22,13 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
+import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLProtocolException;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -36,10 +40,13 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.EmptyArrays;
+import org.junit.Assume;
 import org.junit.Test;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -54,7 +61,11 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 
+import java.io.File;
 import java.net.InetSocketAddress;
+import java.security.KeyStore;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 
 public class SslHandlerTest {
 
@@ -241,5 +252,114 @@ public class SslHandlerTest {
                 });
             }
         };
+    }
+
+    @Test(timeout = 10000)
+    public void testAlertProducedAndSendJdk() throws Exception {
+        testAlertProducedAndSend(SslProvider.JDK);
+    }
+
+    @Test(timeout = 10000)
+    public void testAlertProducedAndSendOpenSsl() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        testAlertProducedAndSend(SslProvider.OPENSSL);
+        testAlertProducedAndSend(SslProvider.OPENSSL_REFCNT);
+    }
+
+    private void testAlertProducedAndSend(SslProvider provider) throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+
+        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(provider)
+                .trustManager(new SimpleTrustManagerFactory() {
+                    @Override
+                    protected void engineInit(KeyStore keyStore) { }
+                    @Override
+                    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) { }
+
+                    @Override
+                    protected TrustManager[] engineGetTrustManagers() {
+                        return new TrustManager[] { new X509TrustManager() {
+
+                            @Override
+                            public void checkClientTrusted(X509Certificate[] x509Certificates, String s)
+                                    throws CertificateException {
+                                // Fail verification which should produce an alert that is send back to the client.
+                                throw new CertificateException();
+                            }
+
+                            @Override
+                            public void checkServerTrusted(X509Certificate[] x509Certificates, String s) {
+                                // NOOP
+                            }
+
+                            @Override
+                            public X509Certificate[] getAcceptedIssuers() {
+                                return EmptyArrays.EMPTY_X509_CERTIFICATES;
+                            }
+                        } };
+                    }
+                }).clientAuth(ClientAuth.REQUIRE).build();
+
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .keyManager(new File(getClass().getResource("test.crt").getFile()),
+                        new File(getClass().getResource("test_unencrypted.pem").getFile()))
+                .sslProvider(provider).build();
+
+        NioEventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            final Promise<Void> promise = group.next().newPromise();
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    // Just trigger a close
+                                    ctx.close();
+                                }
+                            });
+                        }
+                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            cc = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    if (cause.getCause() instanceof SSLException) {
+                                        // We received the alert and so produce an SSLException.
+                                        promise.setSuccess(null);
+                                    }
+                                }
+                            });
+                        }
+                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+
+            promise.syncUninterruptibly();
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
+
+            ReferenceCountUtil.release(sslServerCtx);
+            ReferenceCountUtil.release(sslClientCtx);
+        }
     }
 }

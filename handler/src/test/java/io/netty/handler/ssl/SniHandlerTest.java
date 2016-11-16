@@ -180,10 +180,8 @@ public class SniHandlerTest {
                 // expected
             }
 
-            // Just call finish and not assert the return value. This is because OpenSSL correct produces an alert
-            // while the JDK SSLEngineImpl does not atm.
-            // See https://github.com/netty/netty/issues/5874
-            ch.finish();
+            // This should produce an alert
+            assertTrue(ch.finish());
 
             assertThat(handler.hostname(), is("chat4.leancloud.cn"));
             assertThat(handler.sslContext(), is(leanContext));
