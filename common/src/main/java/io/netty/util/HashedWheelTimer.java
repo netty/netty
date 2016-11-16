@@ -706,8 +706,9 @@ public class HashedWheelTimer implements Timer {
 
             // process all timeouts
             while (timeout != null) {
-                boolean remove = false;
+                HashedWheelTimeout next = timeout.next;
                 if (timeout.remainingRounds <= 0) {
+                    next = remove(timeout);
                     if (timeout.deadline <= deadline) {
                         timeout.expire();
                     } else {
@@ -715,22 +716,16 @@ public class HashedWheelTimer implements Timer {
                         throw new IllegalStateException(String.format(
                                 "timeout.deadline (%d) > deadline (%d)", timeout.deadline, deadline));
                     }
-                    remove = true;
                 } else if (timeout.isCancelled()) {
-                    remove = true;
+                    next = remove(timeout);
                 } else {
                     timeout.remainingRounds --;
-                }
-                // store reference to next as we may null out timeout.next in the remove block.
-                HashedWheelTimeout next = timeout.next;
-                if (remove) {
-                    remove(timeout);
                 }
                 timeout = next;
             }
         }
 
-        public void remove(HashedWheelTimeout timeout) {
+        public HashedWheelTimeout remove(HashedWheelTimeout timeout) {
             HashedWheelTimeout next = timeout.next;
             // remove timeout that was either processed or cancelled by updating the linked-list
             if (timeout.prev != null) {
@@ -759,6 +754,7 @@ public class HashedWheelTimer implements Timer {
             if (timeout.timer.shouldLimitTimeouts()) {
                 timeout.timer.pendingTimeouts.decrementAndGet();
             }
+            return next;
         }
 
         /**
