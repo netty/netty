@@ -88,7 +88,7 @@ public class InboundHttp2ToHttpAdapterTest {
     private ServerBootstrap sb;
     private Bootstrap cb;
     private Channel serverChannel;
-    private Channel serverConnectedChannel;
+    private volatile Channel serverConnectedChannel;
     private Channel clientChannel;
     private CountDownLatch serverLatch;
     private CountDownLatch clientLatch;
@@ -118,15 +118,16 @@ public class InboundHttp2ToHttpAdapterTest {
             serverChannel.close().sync();
             serverChannel = null;
         }
+        if (serverConnectedChannel != null) {
+            serverConnectedChannel.close().sync();
+            serverConnectedChannel = null;
+        }
         Future<?> serverGroup = sb.config().group().shutdownGracefully(0, 0, MILLISECONDS);
         Future<?> serverChildGroup = sb.config().childGroup().shutdownGracefully(0, 0, MILLISECONDS);
         Future<?> clientGroup = cb.config().group().shutdownGracefully(0, 0, MILLISECONDS);
         serverGroup.sync();
         serverChildGroup.sync();
         clientGroup.sync();
-        clientDelegator = null;
-        serverDelegator = null;
-        serverConnectedChannel = null;
     }
 
     @Test
@@ -763,6 +764,7 @@ public class InboundHttp2ToHttpAdapterTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
+                serverConnectedChannel = ch;
                 ChannelPipeline p = ch.pipeline();
                 Http2Connection connection = new DefaultHttp2Connection(true);
 
@@ -779,7 +781,6 @@ public class InboundHttp2ToHttpAdapterTest {
 
                 serverDelegator = new HttpResponseDelegator(serverListener, serverLatch, serverLatch2);
                 p.addLast(serverDelegator);
-                serverConnectedChannel = ch;
                 settingsDelegator = new HttpSettingsDelegator(settingsListener, settingsLatch);
                 p.addLast(settingsDelegator);
                 serverChannelLatch.countDown();

@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.http.HttpMethod.CONNECT;
 import static io.netty.handler.codec.http.HttpMethod.GET;
@@ -89,6 +90,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     private ServerBootstrap sb;
     private Bootstrap cb;
     private Channel serverChannel;
+    private volatile Channel serverConnectedChannel;
     private Channel clientChannel;
     private CountDownLatch requestLatch;
     private CountDownLatch serverSettingsAckLatch;
@@ -109,6 +111,10 @@ public class HttpToHttp2ConnectionHandlerTest {
         if (serverChannel != null) {
             serverChannel.close().sync();
             serverChannel = null;
+        }
+        if (serverConnectedChannel != null) {
+            serverConnectedChannel.close().sync();
+            serverConnectedChannel = null;
         }
         Future<?> serverGroup = sb.config().group().shutdownGracefully(0, 0, MILLISECONDS);
         Future<?> serverChildGroup = sb.config().childGroup().shutdownGracefully(0, 0, MILLISECONDS);
@@ -493,6 +499,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     }
 
     private void bootstrapEnv(int requestCountDown, int serverSettingsAckCount, int trailersCount) throws Exception {
+        final CountDownLatch serverChannelLatch = new CountDownLatch(1);
         requestLatch = new CountDownLatch(requestCountDown);
         serverSettingsAckLatch = new CountDownLatch(serverSettingsAckCount);
         trailersLatch = trailersCount == 0 ? null : new CountDownLatch(trailersCount);
@@ -505,6 +512,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
+                serverConnectedChannel = ch;
                 ChannelPipeline p = ch.pipeline();
                 serverFrameCountDown =
                         new FrameCountDown(serverListener, serverSettingsAckLatch, requestLatch, null, trailersLatch);
@@ -512,6 +520,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                            .server(true)
                            .frameListener(serverFrameCountDown)
                            .build());
+                serverChannelLatch.countDown();
             }
         });
 
@@ -535,6 +544,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         ChannelFuture ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
+        assertTrue(serverChannelLatch.await(2, TimeUnit.SECONDS));
     }
 
     private void verifyHeadersOnly(Http2Headers expected, ChannelPromise writePromise, ChannelFuture writeFuture)
