@@ -23,6 +23,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
@@ -33,6 +34,9 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static junit.framework.TestCase.assertFalse;
@@ -47,6 +51,7 @@ public class Http2CodecTest {
 
     private static EventLoopGroup group;
     private Channel serverChannel;
+    private volatile Channel serverConnectedChannel;
     private Channel clientChannel;
     private LastInboundHandler serverLastInboundHandler;
 
@@ -57,12 +62,20 @@ public class Http2CodecTest {
 
     @Before
     public void setUp() throws InterruptedException {
+        final CountDownLatch serverChannelLatch = new CountDownLatch(1);
         LocalAddress serverAddress = new LocalAddress(getClass().getName());
         serverLastInboundHandler = new SharableLastInboundHandler();
         ServerBootstrap sb = new ServerBootstrap()
                 .channel(LocalServerChannel.class)
                 .group(group)
-                .childHandler(new Http2Codec(true, serverLastInboundHandler));
+                .childHandler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) throws Exception {
+                        serverConnectedChannel = ch;
+                        ch.pipeline().addLast(new Http2Codec(true, serverLastInboundHandler));
+                        serverChannelLatch.countDown();
+                    }
+                });
         serverChannel = sb.bind(serverAddress).sync().channel();
 
         Bootstrap cb = new Bootstrap()
@@ -70,6 +83,7 @@ public class Http2CodecTest {
                 .group(group)
                 .handler(new Http2Codec(false, new TestChannelInitializer()));
         clientChannel = cb.connect(serverAddress).sync().channel();
+        assertTrue(serverChannelLatch.await(2, TimeUnit.SECONDS));
     }
 
     @AfterClass
@@ -81,6 +95,10 @@ public class Http2CodecTest {
     public void tearDown() throws Exception {
         clientChannel.close().sync();
         serverChannel.close().sync();
+        if (serverConnectedChannel != null) {
+            serverConnectedChannel.close().sync();
+            serverConnectedChannel = null;
+        }
     }
 
     @Test
