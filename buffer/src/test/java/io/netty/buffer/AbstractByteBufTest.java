@@ -52,7 +52,6 @@ import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static io.netty.util.ReferenceCountUtil.releaseLater;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertArrayEquals;
@@ -1729,19 +1728,15 @@ public abstract class AbstractByteBufTest {
 
         // Make sure all properties are copied.
         ByteBuf duplicate = buffer.duplicate();
-        assertEquals(buffer.readerIndex(), duplicate.readerIndex());
-        assertEquals(buffer.writerIndex(), duplicate.writerIndex());
-        assertEquals(buffer.capacity(), duplicate.capacity());
         assertSame(buffer.order(), duplicate.order());
-        for (int i = 0; i < duplicate.capacity(); i ++) {
-            assertEquals(buffer.getByte(i), duplicate.getByte(i));
-        }
+        assertEquals(buffer.readableBytes(), duplicate.readableBytes());
+        assertEquals(0, buffer.compareTo(duplicate));
 
         // Make sure the buffer content is shared.
         buffer.setByte(readerIndex, (byte) (buffer.getByte(readerIndex) + 1));
-        assertEquals(buffer.getByte(readerIndex), duplicate.getByte(readerIndex));
-        duplicate.setByte(1, (byte) (duplicate.getByte(1) + 1));
-        assertEquals(buffer.getByte(1), duplicate.getByte(1));
+        assertEquals(buffer.getByte(readerIndex), duplicate.getByte(duplicate.readerIndex()));
+        duplicate.setByte(duplicate.readerIndex(), (byte) (duplicate.getByte(duplicate.readerIndex()) + 1));
+        assertEquals(buffer.getByte(readerIndex), duplicate.getByte(duplicate.readerIndex()));
     }
 
     @Test
@@ -3411,6 +3406,15 @@ public abstract class AbstractByteBufTest {
 
         ByteBuf slice2 = slice1.retainedSlice(slice1.readerIndex() + 1, 4);
         assertEquals(0, slice2.compareTo(expected2));
+        assertEquals(0, slice2.compareTo(slice2.duplicate()));
+        assertEquals(0, slice2.compareTo(slice2.slice()));
+
+        ByteBuf tmpBuf = slice2.retainedDuplicate();
+        assertEquals(0, slice2.compareTo(tmpBuf));
+        tmpBuf.release();
+        tmpBuf = slice2.retainedSlice();
+        assertEquals(0, slice2.compareTo(tmpBuf));
+        tmpBuf.release();
 
         ByteBuf slice3 = doSlice1 ? slice2.slice(slice2.readerIndex() + 1, 2) : slice2.duplicate();
         if (doSlice1) {
@@ -3540,6 +3544,15 @@ public abstract class AbstractByteBufTest {
         ByteBuf dup2 = retainedDuplicate2 ? dup1.retainedDuplicate()
                                           : dup1.duplicate().retain();
         assertEquals(0, dup2.compareTo(expected));
+        assertEquals(0, dup2.compareTo(dup2.duplicate()));
+        assertEquals(0, dup2.compareTo(dup2.slice()));
+
+        ByteBuf tmpBuf = dup2.retainedDuplicate();
+        assertEquals(0, dup2.compareTo(tmpBuf));
+        tmpBuf.release();
+        tmpBuf = dup2.retainedSlice();
+        assertEquals(0, dup2.compareTo(tmpBuf));
+        tmpBuf.release();
 
         // The handler created a slice of the slice and is now done with it.
         dup2.release();
@@ -3574,7 +3587,7 @@ public abstract class AbstractByteBufTest {
             ByteBuf b = dup.retainedDuplicate();
             assertEquals(0, dup.compareTo(b));
             b.release();
-            assertEquals(0, dup.compareTo(dup.slice(0, dup.capacity())));
+            assertEquals(0, dup.compareTo(dup.slice(dup.readerIndex(), dup.readableBytes())));
         } finally {
             if (retainedDuplicate) {
                 dup.release();

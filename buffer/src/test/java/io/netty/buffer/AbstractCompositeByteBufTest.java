@@ -27,10 +27,23 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import static io.netty.buffer.Unpooled.*;
-import static io.netty.util.internal.EmptyArrays.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.buffer;
+import static io.netty.buffer.Unpooled.compositeBuffer;
+import static io.netty.buffer.Unpooled.directBuffer;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * An abstract test class for composite channel buffers
@@ -567,13 +580,15 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         buf.release();
     }
 
+    @SuppressWarnings("deprecation")
     @Test
-    public void testComponentMustBeSlice() {
+    public void testComponentMustBeDuplicate() {
         CompositeByteBuf buf = compositeBuffer();
-        buf.addComponent(buffer(4).setIndex(1, 3));
-        assertThat(buf.component(0), is(instanceOf(AbstractUnpooledSlicedByteBuf.class)));
-        assertThat(buf.component(0).capacity(), is(2));
-        assertThat(buf.component(0).maxCapacity(), is(2));
+        buf.addComponent(buffer(4, 6).setIndex(1, 3));
+        assertThat(buf.component(0), is(instanceOf(AbstractDerivedByteBuf.class)));
+        assertThat(buf.component(0).capacity(), is(4));
+        assertThat(buf.component(0).maxCapacity(), is(6));
+        assertThat(buf.component(0).readableBytes(), is(2));
         buf.release();
     }
 

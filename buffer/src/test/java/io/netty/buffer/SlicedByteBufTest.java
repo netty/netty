@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.ThreadLocalRandom;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -138,16 +139,14 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
         // Ignore for SlicedByteBuf
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Ignore("Sliced ByteBuf objects don't allow the capacity to change. So this test would fail and shouldn't be run")
     @Override
     public void testDuplicateCapacityChange() {
-        super.testDuplicateCapacityChange();
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Ignore("Sliced ByteBuf objects don't allow the capacity to change. So this test would fail and shouldn't be run")
     @Override
     public void testRetainedDuplicateCapacityChange() {
-        super.testRetainedDuplicateCapacityChange();
     }
 
     @Test
