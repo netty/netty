@@ -224,16 +224,8 @@ final class PlatformDependent0 {
                         Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
                         unalignedMethod.setAccessible(true);
                         return unalignedMethod.invoke(null);
-                    } catch (ClassNotFoundException e) {
-                        return e;
-                    } catch (NoSuchMethodException e) {
-                        return e;
-                    } catch (InvocationTargetException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
-                        return e;
-                    } catch (SecurityException e) {
-                        return e;
+                    } catch (Throwable cause) {
+                        return cause;
                     }
                 }
             });
@@ -245,8 +237,8 @@ final class PlatformDependent0 {
                 String arch = SystemPropertyUtil.get("os.arch", "");
                 //noinspection DynamicRegexReplaceableByCompiledPattern
                 unaligned = arch.matches("^(i[3-6]86|x86(_64)?|x64|amd64)$");
-                Exception e = (Exception) maybeUnaligned;
-                logger.debug("java.nio.Bits.unaligned: unavailable, " + unaligned, e);
+                Throwable t = (Throwable) maybeUnaligned;
+                logger.debug("java.nio.Bits.unaligned: unavailable {}", unaligned, t);
             }
 
             UNALIGNED = unaligned;
