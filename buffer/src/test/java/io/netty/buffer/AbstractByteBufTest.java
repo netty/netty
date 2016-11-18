@@ -43,10 +43,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty.buffer.Unpooled.*;
-import static io.netty.util.internal.EmptyArrays.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
+import static io.netty.buffer.Unpooled.buffer;
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.directBuffer;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * An abstract test class for channel buffers
@@ -1449,19 +1460,15 @@ public abstract class AbstractByteBufTest {
 
         // Make sure all properties are copied.
         ByteBuf duplicate = buffer.duplicate();
-        assertEquals(buffer.readerIndex(), duplicate.readerIndex());
-        assertEquals(buffer.writerIndex(), duplicate.writerIndex());
-        assertEquals(buffer.capacity(), duplicate.capacity());
         assertSame(buffer.order(), duplicate.order());
-        for (int i = 0; i < duplicate.capacity(); i ++) {
-            assertEquals(buffer.getByte(i), duplicate.getByte(i));
-        }
+        assertEquals(buffer.readableBytes(), duplicate.readableBytes());
+        assertEquals(0, buffer.compareTo(duplicate));
 
         // Make sure the buffer content is shared.
         buffer.setByte(readerIndex, (byte) (buffer.getByte(readerIndex) + 1));
-        assertEquals(buffer.getByte(readerIndex), duplicate.getByte(readerIndex));
-        duplicate.setByte(1, (byte) (duplicate.getByte(1) + 1));
-        assertEquals(buffer.getByte(1), duplicate.getByte(1));
+        assertEquals(buffer.getByte(readerIndex), duplicate.getByte(duplicate.readerIndex()));
+        duplicate.setByte(duplicate.readerIndex(), (byte) (duplicate.getByte(duplicate.readerIndex()) + 1));
+        assertEquals(buffer.getByte(readerIndex), duplicate.getByte(duplicate.readerIndex()));
     }
 
     @Test

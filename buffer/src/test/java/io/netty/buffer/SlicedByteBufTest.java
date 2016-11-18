@@ -15,13 +15,16 @@
  */
 package io.netty.buffer;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Random;
 import java.nio.ByteBuffer;
+import java.util.Random;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests sliced channel buffers
@@ -38,6 +41,7 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
         return buffer;
     }
 
+    @SuppressWarnings("deprecation")
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
         new SlicedByteBuf(null, 0, 0);
@@ -147,6 +151,7 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
             wrapped.readerIndex(2);
             wrapped.markWriterIndex();
             wrapped.markReaderIndex();
+            @SuppressWarnings("deprecation")
             ByteBuf slice = new SlicedByteBuf(wrapped, 4, 4);
             assertEquals(0, slice.readerIndex());
             assertEquals(4, slice.writerIndex());
