@@ -91,7 +91,7 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
 
     @Override
     public final boolean release(int decrement) {
-        return unwrap().release(decrement);
+        return release0(decrement);
     }
 
     boolean release0(int decrement) {

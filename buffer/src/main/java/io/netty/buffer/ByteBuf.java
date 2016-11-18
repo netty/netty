@@ -2135,12 +2135,14 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * Returns a buffer which shares the whole region of this buffer.
      * Modifying the content of the returned buffer or this buffer affects
      * each other's content while they maintain separate indexes and marks.
-     * This method is identical to {@code buf.slice(0, buf.capacity())}.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
      * <p>
      * The reader and writer marks will not be duplicated. Also be aware that this method will
      * NOT call {@link #retain()} and so the reference count will NOT be increased.
+     * @return A buffer whose readable content is equivalent to the buffer returned by {@link #slice()}.
+     * However this buffer will share the capacity of the underlying buffer, and therefore allows access to all of the
+     * underlying content if necessary.
      */
     public abstract ByteBuf duplicate();
 

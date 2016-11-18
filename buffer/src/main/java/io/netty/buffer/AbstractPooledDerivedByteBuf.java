@@ -269,15 +269,13 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
         @Override
         public ByteBuf duplicate() {
-            // Capacity is not allowed to change for a sliced ByteBuf, so length == capacity()
-            final ByteBuf duplicate = slice(0, capacity());
-            duplicate.setIndex(readerIndex(), writerIndex());
-            return duplicate;
+            return new PooledNonRetainedDuplicateByteBuf(referenceCountDelegate, unwrap())
+                    .setIndex(idx(readerIndex()), idx(writerIndex()));
         }
 
         @Override
         public ByteBuf retainedDuplicate() {
-            return PooledDuplicatedByteBuf.newInstance(unwrap(), this, readerIndex(), writerIndex());
+            return PooledDuplicatedByteBuf.newInstance(unwrap(), this, idx(readerIndex()), idx(writerIndex()));
         }
 
         @Override

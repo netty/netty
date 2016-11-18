@@ -113,15 +113,12 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public ByteBuf duplicate() {
-        ByteBuf duplicate = duplicate0();
-        duplicate.setIndex(idx(readerIndex()), adjustment + capacity());
-        return duplicate;
+        return duplicate0().setIndex(idx(readerIndex()), idx(writerIndex()));
     }
 
     @Override
     public ByteBuf retainedDuplicate() {
-        // Capacity is not allowed to change for a sliced ByteBuf, so length == capacity()
-        return PooledDuplicatedByteBuf.newInstance(unwrap(), this, idx(readerIndex()), adjustment + capacity());
+        return PooledDuplicatedByteBuf.newInstance(unwrap(), this, idx(readerIndex()), idx(writerIndex()));
     }
 
     @Override

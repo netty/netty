@@ -94,9 +94,7 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
 
     @Override
     public ByteBuf duplicate() {
-        ByteBuf duplicate = duplicate0();
-        duplicate.setIndex(readerIndex(), writerIndex());
-        return duplicate;
+        return duplicate0().setIndex(readerIndex(), writerIndex());
     }
 
     @Override
