@@ -1163,9 +1163,11 @@ public final class PlatformDependent {
 
     private static long maxDirectMemory0() {
         long maxDirectMemory = 0;
+        ClassLoader systemClassLoader = null;
         try {
             // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
-            Class<?> vmClass = Class.forName("sun.misc.VM", true, getSystemClassLoader());
+            systemClassLoader = getSystemClassLoader();
+            Class<?> vmClass = Class.forName("sun.misc.VM", true, systemClassLoader);
             Method m = vmClass.getDeclaredMethod("maxDirectMemory");
             maxDirectMemory = ((Number) m.invoke(null)).longValue();
         } catch (Throwable ignored) {
@@ -1180,9 +1182,9 @@ public final class PlatformDependent {
             // Now try to get the JVM option (-XX:MaxDirectMemorySize) and parse it.
             // Note that we are using reflection because Android doesn't have these classes.
             Class<?> mgmtFactoryClass = Class.forName(
-                    "java.lang.management.ManagementFactory", true, getSystemClassLoader());
+                    "java.lang.management.ManagementFactory", true, systemClassLoader);
             Class<?> runtimeClass = Class.forName(
-                    "java.lang.management.RuntimeMXBean", true, getSystemClassLoader());
+                    "java.lang.management.RuntimeMXBean", true, systemClassLoader);
 
             Object runtime = mgmtFactoryClass.getDeclaredMethod("getRuntimeMXBean").invoke(null);
 

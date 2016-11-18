@@ -171,10 +171,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                             "sun.nio.ch.SelectorImpl",
                             false,
                             PlatformDependent.getSystemClassLoader());
-                } catch (ClassNotFoundException e) {
-                    return e;
-                } catch (SecurityException e) {
-                    return e;
+                } catch (Throwable cause) {
+                    return cause;
                 }
             }
         });
@@ -182,9 +180,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         if (!(maybeSelectorImplClass instanceof Class) ||
                 // ensure the current selector implementation is what we can instrument.
                 !((Class<?>) maybeSelectorImplClass).isAssignableFrom(selector.getClass())) {
-            if (maybeSelectorImplClass instanceof Exception) {
-                Exception e = (Exception) maybeSelectorImplClass;
-                logger.trace("failed to instrument a special java.util.Set into: {}", selector, e);
+            if (maybeSelectorImplClass instanceof Throwable) {
+                Throwable t = (Throwable) maybeSelectorImplClass;
+                logger.trace("failed to instrument a special java.util.Set into: {}", selector, t);
             }
             return selector;
         }
