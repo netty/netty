@@ -29,7 +29,6 @@ public final class HAProxySSLTLV extends HAProxyTLV {
     private final List<HAProxyTLV> tlvs;
     private final byte clientBitField;
 
-
     /**
      * Creates a new HAProxySSLTLV
      *
@@ -45,7 +44,6 @@ public final class HAProxySSLTLV extends HAProxyTLV {
         this.verify = verify;
         this.tlvs = Collections.unmodifiableList(tlvs);
         this.clientBitField = clientBitField;
-
     }
 
     /**
