@@ -238,28 +238,19 @@ public final class HAProxyMessage {
     }
 
     private static List<HAProxyTLV> readTlvs(final ByteBuf header) {
-
-        // We need at least 4 byte for a valid TLV. If we have less bytes available, we need to ignore
-        if (header.readableBytes() < 4) {
+        HAProxyTLV haProxyTLV = readNextTLV(header);
+        if (haProxyTLV == null) {
             return Collections.emptyList();
         }
-
         // In most cases there are less than 4 TLVs available
-        final List<HAProxyTLV> haProxyTLVs = new ArrayList<HAProxyTLV>(4);
+        List<HAProxyTLV> haProxyTLVs = new ArrayList<HAProxyTLV>(4);
 
-        while (header.isReadable()) {
-            final HAProxyTLV haProxyTLV = readNextTLV(header);
-
-            if (haProxyTLV == null) {
-                // We don't have a TLV available anymore, we can stop
-                break;
-            }
+        do {
             haProxyTLVs.add(haProxyTLV);
             if (haProxyTLV instanceof HAProxySSLTLV) {
                 haProxyTLVs.addAll(((HAProxySSLTLV) haProxyTLV).encapsulatedTLVs());
             }
-        }
-
+        } while ((haProxyTLV = readNextTLV(header)) != null);
         return haProxyTLVs;
     }
 

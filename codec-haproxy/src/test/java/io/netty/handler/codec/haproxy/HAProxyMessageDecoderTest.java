@@ -22,7 +22,6 @@ import io.netty.handler.codec.ProtocolDetectionResult;
 import io.netty.handler.codec.ProtocolDetectionState;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.TransportProtocol;
-import io.netty.handler.codec.haproxy.HAProxySSLTLV.Client;
 import io.netty.util.CharsetUtil;
 import org.junit.Before;
 import org.junit.Test;
@@ -617,12 +616,11 @@ public class HAProxyMessageDecoderTest {
         assertEquals(3, tlvs.size());
         final HAProxyTLV firstTlv = tlvs.get(0);
         assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL, firstTlv.type());
-        assertTrue(firstTlv instanceof HAProxySSLTLV);
         final HAProxySSLTLV sslTlv = (HAProxySSLTLV) firstTlv;
         assertEquals(0, sslTlv.verify());
-        assertEquals(true, sslTlv.clients().contains(Client.PP2_CLIENT_SSL));
-        assertEquals(true, sslTlv.clients().contains(Client.PP2_CLIENT_CERT_SESS));
-        assertEquals(false, sslTlv.clients().contains(Client.PP2_CLIENT_CERT_CONN));
+        assertEquals(true, sslTlv.isPP2ClientSSL());
+        assertEquals(true, sslTlv.isPP2ClientCertSess());
+        assertEquals(false, sslTlv.isPP2ClientCertConn());
 
         final HAProxyTLV secondTlv = tlvs.get(1);
 

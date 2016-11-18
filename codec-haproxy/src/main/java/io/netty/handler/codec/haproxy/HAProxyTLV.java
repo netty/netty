@@ -110,11 +110,4 @@ public class HAProxyTLV {
         return typeByteValue;
     }
 
-    /**
-     * Returns <code>true</code> if this TLV encapsulates another TLV (this is typically only the case
-     * for {@link HAProxySSLTLV}s
-     */
-    public boolean encapsulatesOtherTLVs() {
-        return false;
-    }
 }
