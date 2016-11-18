@@ -23,8 +23,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -33,9 +33,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * Channel handler that allows to easily access inbound messages.
  */
 public class LastInboundHandler extends ChannelDuplexHandler {
-    private final Queue<Object> inboundMessages = new ArrayDeque<Object>();
-    private final Queue<Object> userEvents = new ArrayDeque<Object>();
-    private final Queue<Object> inboundMessagesAndUserEvents = new ArrayDeque<Object>();
+    private final List<Object> queue = new ArrayList<Object>();
     private Throwable lastException;
     private ChannelHandlerContext ctx;
     private boolean channelActive;
@@ -69,14 +67,12 @@ public class LastInboundHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        inboundMessages.add(msg);
-        inboundMessagesAndUserEvents.add(msg);
+        queue.add(msg);
     }
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        userEvents.add(evt);
-        inboundMessagesAndUserEvents.add(evt);
+        queue.add(new UserEvent(evt));
     }
 
     @Override
@@ -99,11 +95,15 @@ public class LastInboundHandler extends ChannelDuplexHandler {
 
     @SuppressWarnings("unchecked")
     public <T> T readInbound() {
-        T message = (T) inboundMessages.poll();
-        if (message == inboundMessagesAndUserEvents.peek()) {
-            inboundMessagesAndUserEvents.poll();
+        for (int i = 0; i < queue.size(); i++) {
+            Object o = queue.get(i);
+            if (!(o instanceof UserEvent)) {
+                queue.remove(i);
+                return (T) o;
+            }
         }
-        return message;
+
+        return null;
     }
 
     public <T> T blockingReadInbound() {
@@ -116,27 +116,30 @@ public class LastInboundHandler extends ChannelDuplexHandler {
 
     @SuppressWarnings("unchecked")
     public <T> T readUserEvent() {
-        T message = (T) userEvents.poll();
-        if (message == inboundMessagesAndUserEvents.peek()) {
-            inboundMessagesAndUserEvents.poll();
+        for (int i = 0; i < queue.size(); i++) {
+            Object o = queue.get(i);
+            if (o instanceof UserEvent) {
+                queue.remove(i);
+                return (T) ((UserEvent) o).evt;
+            }
         }
-        return message;
+
+        return null;
     }
 
     /**
      * Useful to test order of events and messages.
      */
     @SuppressWarnings("unchecked")
-    public <T> T readInboundMessagesAndEvents() {
-        T message = (T) inboundMessagesAndUserEvents.poll();
-
-        if (message == inboundMessages.peek()) {
-            inboundMessages.poll();
-        } else if (message == userEvents.peek()) {
-            userEvents.poll();
+    public <T> T readInboundMessageOrUserEvent() {
+        if (queue.isEmpty()) {
+            return null;
         }
-
-        return message;
+        Object o = queue.remove(0);
+        if (o instanceof UserEvent) {
+            return (T) ((UserEvent) o).evt;
+        }
+        return (T) o;
     }
 
     public void writeOutbound(Object... msgs) throws Exception {
@@ -153,12 +156,20 @@ public class LastInboundHandler extends ChannelDuplexHandler {
     public void finishAndReleaseAll() throws Exception {
         checkException();
         Object o;
-        while ((o = readInboundMessagesAndEvents()) != null) {
+        while ((o = readInboundMessageOrUserEvent()) != null) {
             ReferenceCountUtil.release(o);
         }
     }
 
     public Channel channel() {
         return ctx.channel();
+    }
+
+    private static final class UserEvent {
+        private final Object evt;
+
+        UserEvent(Object evt) {
+            this.evt = evt;
+        }
     }
 }
