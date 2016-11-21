@@ -213,7 +213,7 @@ public final class ServerCookieEncoder extends CookieEncoder {
         Map<String, Integer> nameToIndex = strict && cookiesIt.hasNext() ? new HashMap<String, Integer>() : null;
         int i = 0;
         encoded.add(encode(firstCookie));
-        boolean hasDupdName = nameToIndex != null ? nameToIndex.put(firstCookie.name(), i++) != null : false;
+        boolean hasDupdName = nameToIndex != null && nameToIndex.put(firstCookie.name(), i++) != null;
         while (cookiesIt.hasNext()) {
             Cookie c = cookiesIt.next();
             encoded.add(encode(c));

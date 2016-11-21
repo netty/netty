@@ -1308,13 +1308,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o instanceof ByteBuf) {
-            return ByteBufUtil.equals(this, (ByteBuf) o);
-        }
-        return false;
+        return this == o || (o instanceof ByteBuf && ByteBufUtil.equals(this, (ByteBuf) o));
     }
 
     @Override
