@@ -79,6 +79,11 @@ public class HttpHeaderDateFormatterTest {
     }
 
     @Test
+    public void testParseMidnight() {
+        assertEquals(new Date(784080000000L), parse("Sunday, 6 Nov 1994 00:00:00 GMT"));
+    }
+
+    @Test
     public void testParseInvalidInput() {
         // missing field
         assertNull(parse("Sun, Nov 1994 08:49:37 GMT"));
@@ -96,6 +101,10 @@ public class HttpHeaderDateFormatterTest {
         assertNull(parse("Sun, 6 Nov 1994 28:49:37 GMT"));
         assertNull(parse("Sun, 6 Nov 1994 08:69:37 GMT"));
         assertNull(parse("Sun, 6 Nov 1994 08:49:67 GMT"));
+        //wrong number of digits in timestamp
+        assertNull(parse("Sunday, 6 Nov 1994 0:0:000 GMT"));
+        assertNull(parse("Sunday, 6 Nov 1994 0:000:0 GMT"));
+        assertNull(parse("Sunday, 6 Nov 1994 000:0:0 GMT"));
     }
 
     @Test
