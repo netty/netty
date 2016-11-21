@@ -13,10 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.microbench.http;
+package io.netty.handler.codec;
 
 import io.netty.handler.codec.http.HttpHeaderDateFormat;
-import io.netty.handler.codec.http.HttpHeaderDateFormatter;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 
@@ -24,14 +23,14 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 @OutputTimeUnit(TimeUnit.SECONDS)
-public class HttpHeaderDateFormatterBenchmark {
+public class DateFormatterBenchmark {
 
     private static final String DATE_STRING = "Sun, 27 Nov 2016 19:18:46 GMT";
     private static final Date DATE = new Date(784111777000L);
 
     @Benchmark
     public Date parseHttpHeaderDateFormatter() {
-        return HttpHeaderDateFormatter.parse(DATE_STRING);
+        return DateFormatter.parseHttpDate(DATE_STRING);
     }
 
     @Benchmark
@@ -41,7 +40,7 @@ public class HttpHeaderDateFormatterBenchmark {
 
     @Benchmark
     public String formatHttpHeaderDateFormatter() {
-        return HttpHeaderDateFormatter.format(DATE);
+        return DateFormatter.format(DATE);
     }
 
     @Benchmark

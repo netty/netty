@@ -18,13 +18,15 @@ package io.netty.handler.codec.http;
 import static io.netty.handler.codec.http.CookieUtil.firstInvalidCookieNameOctet;
 import static io.netty.handler.codec.http.CookieUtil.firstInvalidCookieValueOctet;
 import static io.netty.handler.codec.http.CookieUtil.unwrapValue;
+
+import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -152,14 +154,10 @@ public final class CookieDecoder {
                 } else if (CookieHeaderNames.PATH.equalsIgnoreCase(name)) {
                     path = value;
                 } else if (CookieHeaderNames.EXPIRES.equalsIgnoreCase(name)) {
-                    try {
-                        long maxAgeMillis =
-                            HttpHeaderDateFormat.get().parse(value).getTime() -
-                            System.currentTimeMillis();
-
+                    Date date = DateFormatter.parseHttpDate(value);
+                    if (date != null) {
+                        long maxAgeMillis = date.getTime() - System.currentTimeMillis();
                         maxAge = maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0? 1 : 0);
-                    } catch (ParseException e) {
-                        // Ignore.
                     }
                 } else if (CookieHeaderNames.MAX_AGE.equalsIgnoreCase(name)) {
                     maxAge = Integer.parseInt(value);

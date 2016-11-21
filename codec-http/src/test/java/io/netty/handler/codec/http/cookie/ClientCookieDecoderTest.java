@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.cookie;
 
-import io.netty.handler.codec.http.HttpHeaderDateFormatter;
+import io.netty.handler.codec.DateFormatter;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -30,26 +30,18 @@ import static org.junit.Assert.*;
 public class ClientCookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV0() {
-        String cookieString = "myCookie=myValue;expires=XXX;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
-        cookieString = cookieString.replace("XXX",
-                HttpHeaderDateFormatter.format(new Date(System.currentTimeMillis() + 50000)));
+        String cookieString = "myCookie=myValue;expires="
+                + DateFormatter.format(new Date(System.currentTimeMillis() + 50000))
+                + ";path=/apathsomewhere;domain=.adomainsomewhere;secure;";
 
         Cookie cookie = ClientCookieDecoder.STRICT.decode(cookieString);
         assertNotNull(cookie);
         assertEquals("myValue", cookie.value());
         assertEquals(".adomainsomewhere", cookie.domain());
-
-        boolean fail = true;
-        for (int i = 40; i <= 60; i++) {
-            if (cookie.maxAge() == i) {
-                fail = false;
-                break;
-            }
-        }
-        if (fail) {
-            fail("expected: 50, actual: " + cookie.maxAge());
-        }
-
+        assertNotEquals("maxAge should be defined when parsing cookie " + cookieString,
+                Long.MIN_VALUE, cookie.maxAge());
+        assertTrue("maxAge should be about 50ms when parsing cookie " + cookieString,
+                cookie.maxAge() >= 40 && cookie.maxAge() <= 60);
         assertEquals("/apathsomewhere", cookie.path());
         assertTrue(cookie.isSecure());
     }
