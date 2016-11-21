@@ -313,10 +313,8 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof DefaultHttpHeaders)) {
-            return false;
-        }
-        return headers.equals(((DefaultHttpHeaders) o).headers, CASE_SENSITIVE_HASHER);
+        return o instanceof DefaultHttpHeaders
+                && headers.equals(((DefaultHttpHeaders) o).headers, CASE_SENSITIVE_HASHER);
     }
 
     @Override

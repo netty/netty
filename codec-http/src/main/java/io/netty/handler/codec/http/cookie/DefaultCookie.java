@@ -153,8 +153,6 @@ public class DefaultCookie implements Cookie {
             if (that.domain() != null) {
                 return false;
             }
-        } else if (that.domain() == null) {
-            return false;
         } else {
             return domain().equalsIgnoreCase(that.domain());
         }

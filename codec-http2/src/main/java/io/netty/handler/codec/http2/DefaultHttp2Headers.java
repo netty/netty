@@ -120,11 +120,7 @@ public class DefaultHttp2Headers
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof Http2Headers)) {
-            return false;
-        }
-
-        return equals((Http2Headers) o, CASE_SENSITIVE_HASHER);
+        return o instanceof Http2Headers && equals((Http2Headers) o, CASE_SENSITIVE_HASHER);
     }
 
     @Override
