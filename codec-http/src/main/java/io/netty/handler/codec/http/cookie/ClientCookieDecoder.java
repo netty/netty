@@ -82,45 +82,42 @@ public final class ClientCookieDecoder extends CookieDecoder {
             }
 
             int nameBegin = i;
-            int nameEnd = i;
-            int valueBegin = -1;
-            int valueEnd = -1;
+            int nameEnd;
+            int valueBegin;
+            int valueEnd;
 
-            if (i != headerLen) {
-                keyValLoop: for (;;) {
+            for (;;) {
+                char curChar = header.charAt(i);
+                if (curChar == ';') {
+                    // NAME; (no value till ';')
+                    nameEnd = i;
+                    valueBegin = valueEnd = -1;
+                    break;
 
-                    char curChar = header.charAt(i);
-                    if (curChar == ';') {
-                        // NAME; (no value till ';')
-                        nameEnd = i;
-                        valueBegin = valueEnd = -1;
-                        break keyValLoop;
-
-                    } else if (curChar == '=') {
-                        // NAME=VALUE
-                        nameEnd = i;
-                        i++;
-                        if (i == headerLen) {
-                            // NAME= (empty value, i.e. nothing after '=')
-                            valueBegin = valueEnd = 0;
-                            break keyValLoop;
-                        }
-
-                        valueBegin = i;
-                        // NAME=VALUE;
-                        int semiPos = header.indexOf(';', i);
-                        valueEnd = i = semiPos > 0 ? semiPos : headerLen;
-                        break keyValLoop;
-                    } else {
-                        i++;
-                    }
-
+                } else if (curChar == '=') {
+                    // NAME=VALUE
+                    nameEnd = i;
+                    i++;
                     if (i == headerLen) {
-                        // NAME (no value till the end of string)
-                        nameEnd = headerLen;
-                        valueBegin = valueEnd = -1;
+                        // NAME= (empty value, i.e. nothing after '=')
+                        valueBegin = valueEnd = 0;
                         break;
                     }
+
+                    valueBegin = i;
+                    // NAME=VALUE;
+                    int semiPos = header.indexOf(';', i);
+                    valueEnd = i = semiPos > 0 ? semiPos : headerLen;
+                    break;
+                } else {
+                    i++;
+                }
+
+                if (i == headerLen) {
+                    // NAME (no value till the end of string)
+                    nameEnd = headerLen;
+                    valueBegin = valueEnd = -1;
+                    break;
                 }
             }
 
@@ -158,7 +155,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
         private boolean secure;
         private boolean httpOnly;
 
-        public CookieBuilder(DefaultCookie cookie, String header) {
+        CookieBuilder(DefaultCookie cookie, String header) {
             this.cookie = cookie;
             this.header = header;
         }
@@ -177,7 +174,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
             return Long.MIN_VALUE;
         }
 
-        public Cookie cookie() {
+        Cookie cookie() {
             cookie.setDomain(domain);
             cookie.setPath(path);
             cookie.setMaxAge(mergeMaxAgeAndExpires());
@@ -199,7 +196,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
          * @param valueEnd
          *            where the value ends in the header
          */
-        public void appendAttribute(int keyStart, int keyEnd, int valueStart, int valueEnd) {
+        void appendAttribute(int keyStart, int keyEnd, int valueStart, int valueEnd) {
             int length = keyEnd - keyStart;
 
             if (length == 4) {
@@ -209,7 +206,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
             } else if (length == 7) {
                 parse7(keyStart, valueStart, valueEnd);
             } else if (length == 8) {
-                parse8(keyStart, valueStart, valueEnd);
+                parse8(keyStart);
             }
         }
 
@@ -244,7 +241,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
             }
         }
 
-        private void parse8(int nameStart, int valueStart, int valueEnd) {
+        private void parse8(int nameStart) {
             if (header.regionMatches(true, nameStart, CookieHeaderNames.HTTPONLY, 0, 8)) {
                 httpOnly = true;
             }

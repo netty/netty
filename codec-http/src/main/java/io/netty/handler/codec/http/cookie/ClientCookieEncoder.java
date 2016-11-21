@@ -34,9 +34,6 @@ import java.util.List;
  * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used client side, so
  * only name=value pairs are sent.
  *
- * User-Agents are not supposed to interpret cookies, so, if present, {@link Cookie#rawValue()} will be used.
- * Otherwise, {@link Cookie#value()} will be used unquoted.
- *
  * Note that multiple cookies are supposed to be sent at once in a single "Cookie" header.
  *
  * <pre>

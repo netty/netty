@@ -328,8 +328,8 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T addObject(K name, Object... values) {
-        for (int i = 0; i < values.length; i++) {
-            addObject(name, values[i]);
+        for (Object value: values) {
+            addObject(name, value);
         }
         return thisT();
     }
