@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.cookie;
 
-import io.netty.handler.codec.http.HttpHeaderDateFormatter;
+import io.netty.handler.codec.DateFormatter;
 
 import java.util.Date;
 
@@ -168,7 +168,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
             if (maxAge != Long.MIN_VALUE) {
                 return maxAge;
             } else if (isValueDefined(expiresStart, expiresEnd)) {
-                Date expiresDate = HttpHeaderDateFormatter.parse(header, expiresStart, expiresEnd);
+                Date expiresDate = DateFormatter.parseHttpDate(header, expiresStart, expiresEnd);
                 if (expiresDate != null) {
                     long maxAgeMillis = expiresDate.getTime() - System.currentTimeMillis();
                     return maxAgeMillis / 1000 + (maxAgeMillis % 1000 != 0 ? 1 : 0);

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.codec;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -43,7 +43,7 @@ import java.util.TimeZone;
  * @see <a href="https://tools.ietf.org/html/rfc6265#section-5.1.1">RFC6265</a> for the parsing side
  * @see <a href="https://tools.ietf.org/html/rfc1123#page-55">RFC1123</a> for the encoding side.
  */
-public final class HttpHeaderDateFormatter {
+public final class DateFormatter {
 
     private static final BitSet DELIMITERS = new BitSet();
     static {
@@ -68,11 +68,11 @@ public final class HttpHeaderDateFormatter {
     private static final String[] CALENDAR_MONTH_TO_SHORT_NAME =
             new String[]{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-    private static final FastThreadLocal<HttpHeaderDateFormatter> INSTANCES =
-            new FastThreadLocal<HttpHeaderDateFormatter>() {
+    private static final FastThreadLocal<DateFormatter> INSTANCES =
+            new FastThreadLocal<DateFormatter>() {
                 @Override
-                protected HttpHeaderDateFormatter initialValue() {
-                    return new HttpHeaderDateFormatter();
+                protected DateFormatter initialValue() {
+                    return new DateFormatter();
                 }
             };
 
@@ -81,8 +81,8 @@ public final class HttpHeaderDateFormatter {
      * @param txt text to parse
      * @return a {@link Date}, or null if text couldn't be parsed
      */
-    public static Date parse(CharSequence txt) {
-        return parse(txt, 0, txt.length());
+    public static Date parseHttpDate(CharSequence txt) {
+        return parseHttpDate(txt, 0, txt.length());
     }
 
     /**
@@ -92,7 +92,7 @@ public final class HttpHeaderDateFormatter {
      * @param end the end index inside <code>txt</code>
      * @return a {@link Date}, or null if text couldn't be parsed
      */
-    public static Date parse(CharSequence txt, int start, int end) {
+    public static Date parseHttpDate(CharSequence txt, int start, int end) {
         int length = end - start;
         if (length == 0) {
             return null;
@@ -124,8 +124,8 @@ public final class HttpHeaderDateFormatter {
         return formatter().append0(checkNotNull(date, "date"), checkNotNull(sb, "sb"));
     }
 
-    private static HttpHeaderDateFormatter formatter() {
-        HttpHeaderDateFormatter formatter = INSTANCES.get();
+    private static DateFormatter formatter() {
+        DateFormatter formatter = INSTANCES.get();
         formatter.reset();
         return formatter;
     }
@@ -156,7 +156,7 @@ public final class HttpHeaderDateFormatter {
     private boolean yearFound;
     private int year;
 
-    private HttpHeaderDateFormatter() {
+    private DateFormatter() {
         reset();
     }
 
@@ -171,7 +171,7 @@ public final class HttpHeaderDateFormatter {
         month = -1;
         yearFound = false;
         year = -1;
-        cal.set(Calendar.MILLISECOND, 0);
+        cal.clear();
         sb.setLength(0);
     }
 

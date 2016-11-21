@@ -14,11 +14,11 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.handler.codec.DefaultHeaders.HeaderDateFormat;
 import io.netty.util.AsciiString;
 import io.netty.util.internal.PlatformDependent;
 
 import java.text.ParseException;
+import java.util.Date;
 
 /**
  * Converts to/from native types, general {@link Object}, and {@link CharSequence}s.
@@ -126,12 +126,12 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public long convertToTimeMillis(CharSequence value) {
-        try {
-            return HeaderDateFormat.get().parse(value.toString());
-        } catch (ParseException e) {
-            PlatformDependent.throwException(e);
+        Date date = DateFormatter.parseHttpDate(value);
+        if (date == null) {
+            PlatformDependent.throwException(new ParseException("header can't be parsed into a Date: " + value, 0));
             return 0;
         }
+        return date.getTime();
     }
 
     @Override

@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 
@@ -839,7 +840,11 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         if (value == null) {
             throw new ParseException("header not found: " + name, 0);
         }
-        return HttpHeaderDateFormat.get().parse(value);
+        Date date = DateFormatter.parseHttpDate(value);
+        if (date == null) {
+            throw new ParseException("header can't be parsed into a Date: " + value, 0);
+        }
+        return date;
     }
 
     /**
@@ -865,15 +870,8 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     @Deprecated
     public static Date getDateHeader(HttpMessage message, CharSequence name, Date defaultValue) {
         final String value = getHeader(message, name);
-        if (value == null) {
-            return defaultValue;
-        }
-
-        try {
-            return HttpHeaderDateFormat.get().parse(value);
-        } catch (ParseException ignored) {
-            return defaultValue;
-        }
+        Date date = DateFormatter.parseHttpDate(value);
+        return date != null ? date : defaultValue;
     }
 
     /**
@@ -897,7 +895,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     @Deprecated
     public static void setDateHeader(HttpMessage message, CharSequence name, Date value) {
         if (value != null) {
-            message.headers().set(name, HttpHeaderDateFormat.get().format(value));
+            message.headers().set(name, DateFormatter.format(value));
         } else {
             message.headers().set(name, null);
         }
