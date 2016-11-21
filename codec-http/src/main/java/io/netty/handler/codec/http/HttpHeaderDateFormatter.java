@@ -188,40 +188,43 @@ public final class HttpHeaderDateFormatter {
         int localSeconds = -1;
         int currentPartNumber = 0;
         int currentPartValue = 0;
+        int numDigits = 0;
 
         for (int i = tokenStart; i < tokenEnd; i++) {
             char c = txt.charAt(i);
             if (isDigit(c)) {
                 currentPartValue = currentPartValue * 10 + getNumericalValue(c);
+                if (++numDigits > 2) {
+                  return false; // too many digits in this part
+                }
             } else if (c == ':') {
-                if (currentPartValue == 0) {
-                    // invalid :: (nothing in between)
+                if (numDigits == 0) {
+                    // no digits between separators
                     return false;
                 }
                 switch (currentPartNumber) {
                     case 0:
                         // flushing hours
                         localHours = currentPartValue;
-                        currentPartValue = 0;
-                        currentPartNumber++;
                         break;
                     case 1:
                         // flushing minutes
                         localMinutes = currentPartValue;
-                        currentPartValue = 0;
-                        currentPartNumber++;
                         break;
                     default:
                         // invalid, too many :
                         return false;
                 }
+                currentPartValue = 0;
+                currentPartNumber++;
+                numDigits = 0;
             } else {
                 // invalid char
                 return false;
             }
         }
 
-        if (currentPartValue > 0) {
+        if (numDigits > 0) {
             // pending seconds
             localSeconds = currentPartValue;
         }
