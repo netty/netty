@@ -193,16 +193,16 @@ public class PooledByteBufAllocatorTest {
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numHeapArenas, 0, 8192, 1);
 
-        CountDownLatch tcache0 = createNewThreadCache(allocator);
+        ThreadCache tcache0 = createNewThreadCache(allocator);
         assertEquals(1, allocator.numThreadLocalCaches());
 
-        CountDownLatch tcache1 = createNewThreadCache(allocator);
+        ThreadCache tcache1 = createNewThreadCache(allocator);
         assertEquals(2, allocator.numThreadLocalCaches());
 
-        destroyThreadCache(tcache0);
+        tcache0.destroy();
         assertEquals(1, allocator.numThreadLocalCaches());
 
-        destroyThreadCache(tcache1);
+        tcache1.destroy();
         assertEquals(0, allocator.numThreadLocalCaches());
     }
 
@@ -212,32 +212,33 @@ public class PooledByteBufAllocatorTest {
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
 
-        CountDownLatch tcache0 = createNewThreadCache(allocator);
-        CountDownLatch tcache1 = createNewThreadCache(allocator);
+        ThreadCache tcache0 = createNewThreadCache(allocator);
+        ThreadCache tcache1 = createNewThreadCache(allocator);
         assertEquals(2, allocator.numThreadLocalCaches());
         assertEquals(1, allocator.heapArenas().get(0).numThreadCaches());
         assertEquals(1, allocator.heapArenas().get(1).numThreadCaches());
         assertEquals(1, allocator.directArenas().get(0).numThreadCaches());
         assertEquals(1, allocator.directArenas().get(0).numThreadCaches());
 
-        destroyThreadCache(tcache1);
+        tcache1.destroy();
+
         assertEquals(1, allocator.numThreadLocalCaches());
         assertEquals(1, allocator.heapArenas().get(0).numThreadCaches());
         assertEquals(0, allocator.heapArenas().get(1).numThreadCaches());
         assertEquals(1, allocator.directArenas().get(0).numThreadCaches());
         assertEquals(0, allocator.directArenas().get(1).numThreadCaches());
 
-        CountDownLatch tcache2 = createNewThreadCache(allocator);
+        ThreadCache tcache2 = createNewThreadCache(allocator);
         assertEquals(2, allocator.numThreadLocalCaches());
         assertEquals(1, allocator.heapArenas().get(0).numThreadCaches());
         assertEquals(1, allocator.heapArenas().get(1).numThreadCaches());
         assertEquals(1, allocator.directArenas().get(0).numThreadCaches());
         assertEquals(1, allocator.directArenas().get(1).numThreadCaches());
 
-        destroyThreadCache(tcache0);
+        tcache0.destroy();
         assertEquals(1, allocator.numThreadLocalCaches());
 
-        destroyThreadCache(tcache2);
+        tcache2.destroy();
         assertEquals(0, allocator.numThreadLocalCaches());
         assertEquals(0, allocator.heapArenas().get(0).numThreadCaches());
         assertEquals(0, allocator.heapArenas().get(1).numThreadCaches());
@@ -245,16 +246,11 @@ public class PooledByteBufAllocatorTest {
         assertEquals(0, allocator.directArenas().get(1).numThreadCaches());
     }
 
-    private static void destroyThreadCache(CountDownLatch tcache) {
-        tcache.countDown();
-        LockSupport.parkNanos(MILLISECONDS.toNanos(100));
-    }
-
-    private static CountDownLatch createNewThreadCache(final PooledByteBufAllocator allocator)
+    private static ThreadCache createNewThreadCache(final PooledByteBufAllocator allocator)
             throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final CountDownLatch cacheLatch = new CountDownLatch(1);
-        Thread t = new FastThreadLocalThread(new Runnable() {
+        final Thread t = new FastThreadLocalThread(new Runnable() {
 
             @Override
             public void run() {
@@ -281,7 +277,17 @@ public class PooledByteBufAllocatorTest {
         // Wait until we allocated a buffer and so be sure the thread was started and the cache exists.
         cacheLatch.await();
 
-        return latch;
+        return new ThreadCache() {
+            @Override
+            public void destroy() throws InterruptedException {
+                latch.countDown();
+                t.join();
+            }
+        };
+    }
+
+    private interface ThreadCache {
+        void destroy() throws InterruptedException;
     }
 
     @Test
