@@ -15,24 +15,17 @@
 package io.netty.handler.codec;
 
 import io.netty.util.HashingStrategy;
-import io.netty.util.concurrent.FastThreadLocal;
 
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.TimeZone;
 
 import static io.netty.util.HashingStrategy.JAVA_HASHER;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
@@ -958,77 +951,6 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @SuppressWarnings("unchecked")
     private T thisT() {
         return (T) this;
-    }
-
-    /**
-     * This {@link DateFormat} decodes 3 formats of {@link Date}.
-     *
-     * <ul>
-     * <li>Sun, 06 Nov 1994 08:49:37 GMT: standard specification, the only one with valid generation</li>
-     * <li>Sun, 06 Nov 1994 08:49:37 GMT: obsolete specification</li>
-     * <li>Sun Nov 6 08:49:37 1994: obsolete specification</li>
-     * </ul>
-     */
-    public static final class HeaderDateFormat {
-        private static final FastThreadLocal<HeaderDateFormat> dateFormatThreadLocal =
-                new FastThreadLocal<HeaderDateFormat>() {
-                    @Override
-                    protected HeaderDateFormat initialValue() {
-                        return new HeaderDateFormat();
-                    }
-                };
-
-        static HeaderDateFormat get() {
-            return dateFormatThreadLocal.get();
-        }
-
-        /**
-         * Standard date format:
-         *
-         * <pre>
-         * Sun, 06 Nov 1994 08:49:37 GMT -> E, d MMM yyyy HH:mm:ss z
-         * </pre>
-         */
-        private final DateFormat dateFormat1 = new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH);
-
-        /**
-         * First obsolete format:
-         *
-         * <pre>
-         * Sunday, 06-Nov-94 08:49:37 GMT -> E, d-MMM-y HH:mm:ss z
-         * </pre>
-         */
-        private final DateFormat dateFormat2 = new SimpleDateFormat("E, dd-MMM-yy HH:mm:ss z", Locale.ENGLISH);
-
-        /**
-         * Second obsolete format
-         *
-         * <pre>
-         * Sun Nov 6 08:49:37 1994 -> EEE, MMM d HH:mm:ss yyyy
-         * </pre>
-         */
-        private final DateFormat dateFormat3 = new SimpleDateFormat("E MMM d HH:mm:ss yyyy", Locale.ENGLISH);
-
-        private HeaderDateFormat() {
-            TimeZone tz = TimeZone.getTimeZone("GMT");
-            dateFormat1.setTimeZone(tz);
-            dateFormat2.setTimeZone(tz);
-            dateFormat3.setTimeZone(tz);
-        }
-
-        long parse(String text) throws ParseException {
-            Date date = dateFormat1.parse(text);
-            if (date == null) {
-                date = dateFormat2.parse(text);
-            }
-            if (date == null) {
-                date = dateFormat3.parse(text);
-            }
-            if (date == null) {
-                throw new ParseException(text, 0);
-            }
-            return date.getTime();
-        }
     }
 
     private final class HeaderIterator implements Iterator<Map.Entry<K, V>> {

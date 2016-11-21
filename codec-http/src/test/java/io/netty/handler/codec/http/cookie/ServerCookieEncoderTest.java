@@ -19,7 +19,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import io.netty.handler.codec.http.HttpHeaderDateFormat;
+import io.netty.handler.codec.DateFormatter;
 
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ public class ServerCookieEncoderTest {
 
         Matcher matcher = Pattern.compile(result).matcher(encodedCookie);
         assertTrue(matcher.find());
-        Date expiresDate = HttpHeaderDateFormat.get().parse(matcher.group(1));
+        Date expiresDate = DateFormatter.parseHttpDate(matcher.group(1));
         long diff = (expiresDate.getTime() - System.currentTimeMillis()) / 1000;
         // 2 secs should be fine
         assertTrue(Math.abs(diff - maxAge) <= 2);
