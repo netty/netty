@@ -422,9 +422,8 @@ public class LocalChannel extends AbstractChannel {
     }
 
     private void releaseInboundBuffers() {
-        if (readInProgress) {
-            return;
-        }
+        assert eventLoop() == null || eventLoop().inEventLoop();
+        readInProgress = false;
         Queue<Object> inboundBuffer = this.inboundBuffer;
         Object msg;
         while ((msg = inboundBuffer.poll()) != null) {
