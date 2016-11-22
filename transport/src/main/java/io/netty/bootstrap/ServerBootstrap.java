@@ -219,6 +219,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         private final ChannelHandler childHandler;
         private final Entry<ChannelOption<?>, Object>[] childOptions;
         private final Entry<AttributeKey<?>, Object>[] childAttrs;
+        private final Class<LoadedRunnable> recoverTaskClazz;
 
         ServerBootstrapAcceptor(
                 EventLoopGroup childGroup, ChannelHandler childHandler,
@@ -227,6 +228,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             this.childHandler = childHandler;
             this.childOptions = childOptions;
             this.childAttrs = childAttrs;
+            this.recoverTaskClazz = LoadedRunnable.class;
         }
 
         @Override
@@ -276,16 +278,25 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 // stop accept new connections for 1 second to allow the channel to recover
                 // See https://github.com/netty/netty/issues/1328
                 config.setAutoRead(false);
-                ctx.channel().eventLoop().schedule(new Runnable() {
-                    @Override
-                    public void run() {
-                        config.setAutoRead(true);
-                    }
-                }, 1, TimeUnit.SECONDS);
+                LoadedRunnable loadedRunnable = recoverTaskClazz.newInstance();
+                loadedRunnable.config = config;
+                ctx.channel().eventLoop().schedule(loadedRunnable, 1, TimeUnit.SECONDS);
             }
             // still let the exceptionCaught event flow through the pipeline to give the user
             // a chance to do something with it
             ctx.fireExceptionCaught(cause);
+        }
+
+        class LoadedRunnable implements Runnable {
+
+            private ChannelConfig config;
+
+            @Override
+            public void run() {
+                if (config != null) {
+                    config.setAutoRead(true);
+                }
+            }
         }
     }
 
