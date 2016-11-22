@@ -87,6 +87,11 @@ public class SslHandlerTest {
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{2, 0, 0, 1, 0}));
             fail();
         } catch (DecoderException e) {
+            // Be sure we cleanup the channel and release any pending messages that may have been generated because
+            // of an alert.
+            // See https://github.com/netty/netty/issues/6057.
+            ch.finishAndReleaseAll();
+
             // The pushed message is invalid, so it should raise an exception if it decoded the message correctly.
             assertThat(e.getCause(), is(instanceOf(SSLProtocolException.class)));
         }
@@ -99,7 +104,11 @@ public class SslHandlerTest {
 
         EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
-        ch.writeOutbound(new Object());
+        try {
+            ch.writeOutbound(new Object());
+        } finally {
+            ch.finishAndReleaseAll();
+        }
     }
 
     @Test
@@ -118,6 +127,7 @@ public class SslHandlerTest {
                 assertEquals(1, ((ReferenceCounted) sslContext).refCnt());
                 assertEquals(1, ((ReferenceCounted) sslEngine).refCnt());
 
+                assertTrue(ch.finishAndReleaseAll());
                 ch.close().syncUninterruptibly();
 
                 assertEquals(1, ((ReferenceCounted) sslContext).refCnt());
