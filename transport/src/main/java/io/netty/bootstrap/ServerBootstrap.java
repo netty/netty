@@ -287,7 +287,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             ctx.fireExceptionCaught(cause);
         }
 
-        class LoadedRunnable implements Runnable {
+        static class LoadedRunnable implements Runnable {
 
             private ChannelConfig config;
 
