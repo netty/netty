@@ -168,7 +168,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel ch) throws Exception {
+            public void initChannel(final Channel ch) throws Exception {
                 final ChannelPipeline pipeline = ch.pipeline();
                 ChannelHandler handler = config.handler();
                 if (handler != null) {
@@ -183,7 +183,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                     @Override
                     public void run() {
                         pipeline.addLast(new ServerBootstrapAcceptor(
-                                currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
+                                ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
                     }
                 });
             }
@@ -219,14 +219,27 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         private final ChannelHandler childHandler;
         private final Entry<ChannelOption<?>, Object>[] childOptions;
         private final Entry<AttributeKey<?>, Object>[] childAttrs;
+        private final Runnable enableAutoReadTask;
 
         ServerBootstrapAcceptor(
-                EventLoopGroup childGroup, ChannelHandler childHandler,
+                final Channel channel, EventLoopGroup childGroup, ChannelHandler childHandler,
                 Entry<ChannelOption<?>, Object>[] childOptions, Entry<AttributeKey<?>, Object>[] childAttrs) {
             this.childGroup = childGroup;
             this.childHandler = childHandler;
             this.childOptions = childOptions;
             this.childAttrs = childAttrs;
+
+            // Task which is scheduled to re-enable auto-read.
+            // It's important to create this Runnable before we try to submit it as otherwise the URLClassLoader may
+            // not be able to load the class because of the file limit it already reached.
+            //
+            // See https://github.com/netty/netty/issues/1328
+            enableAutoReadTask = new Runnable() {
+                @Override
+                public void run() {
+                    channel.config().setAutoRead(true);
+                }
+            };
         }
 
         @Override
@@ -268,12 +281,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 // stop accept new connections for 1 second to allow the channel to recover
                 // See https://github.com/netty/netty/issues/1328
                 config.setAutoRead(false);
-                ctx.channel().eventLoop().schedule(new Runnable() {
-                    @Override
-                    public void run() {
-                        config.setAutoRead(true);
-                    }
-                }, 1, TimeUnit.SECONDS);
+                ctx.channel().eventLoop().schedule(enableAutoReadTask, 1, TimeUnit.SECONDS);
             }
             // still let the exceptionCaught event flow through the pipeline to give the user
             // a chance to do something with it
