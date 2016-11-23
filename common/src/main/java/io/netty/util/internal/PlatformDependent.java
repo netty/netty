@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -78,6 +79,9 @@ public final class PlatformDependent {
     private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
             "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
 
+    private static final Pattern PAGE_ALIGNED_DIRECT_MEMORY_ARG_PATTERN = Pattern.compile(
+            "\\s*-Dsun.nio.PageAlignDirectMemory\\s*=\\s*([a-z]+)\\s*$");
+
     private static final boolean IS_ANDROID = isAndroid0();
     private static final boolean IS_WINDOWS = isWindows0();
     private static volatile Boolean IS_ROOT;
@@ -92,6 +96,8 @@ public final class PlatformDependent {
     private static final boolean DIRECT_BUFFER_PREFERRED =
             HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
+    private static final boolean IS_DIRECT_MEMORY_PAGE_ALIGNED = isDirectMemoryPageAligned0();
+    private static final _Bits _BITS;
 
     private static final int MPSC_CHUNK_SIZE =  1024;
     private static final int MIN_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * 2;
@@ -152,6 +158,102 @@ public final class PlatformDependent {
         }
         DIRECT_MEMORY_LIMIT = maxDirectMemory;
         logger.debug("io.netty.maxDirectMemory: {} bytes", maxDirectMemory);
+
+        _BITS = _Bits.getBits();
+    }
+
+    /**
+     * Util class to expose {@link java.nio.Bits} methods for
+     * direct memory management.
+     */
+    static class _Bits {
+
+        static final boolean pa = IS_DIRECT_MEMORY_PAGE_ALIGNED;
+        static final int ps = PlatformDependent0.UNSAFE.pageSize();
+
+        /** Hidden method to reserve memory */
+        Method reserveMemoryMethod;
+
+        /** Hidden method to unreserve memory */
+        Method unreserveMemoryMethod;
+
+        /**
+         * @return a new hook for direct memory management. It can be disabled
+         * by setting {@code -Dio.netty.nio.memory.tracking.enable=false}
+         */
+        static _Bits getBits() {
+            try {
+                if (!Boolean.parseBoolean(SystemPropertyUtil.get("io.netty.nio.memory.tracking.enable", "true"))) {
+                    return null;
+                }
+                return new _Bits();
+            } catch (Exception e) {
+                logger.warn("Failed to initialize nio hook.", e);
+                return null;
+            }
+        }
+
+        /**
+         * Constructor.
+         */
+        _Bits() throws ClassNotFoundException, NoSuchMethodException, SecurityException {
+            Class<?> nioBitsClass = Class.forName("java.nio.Bits");
+
+            // Methods
+            reserveMemoryMethod = nioBitsClass.getDeclaredMethod("reserveMemory", long.class, int.class);
+            reserveMemoryMethod.setAccessible(true);
+            unreserveMemoryMethod = nioBitsClass.getDeclaredMethod("unreserveMemory", long.class, int.class);
+            unreserveMemoryMethod.setAccessible(true);
+        }
+
+        /**
+         * Hook for calling {@link java.nio.Bits#reserveMemory(long,int)}
+         * @param capacity the amount of direct memory to allocate
+         */
+        void reserveMemory(int capacity) {
+            long size = Math.max(1L, capacity + (pa ? ps : 0));
+            try {
+                reserveMemoryMethod.invoke(null, size, capacity);
+            } catch (InvocationTargetException e) {
+                handleInvocationTargetException(e);
+            } catch (IllegalArgumentException e) {
+                logger.warn("Failed reserving  " + capacity + " bytes of memory.", e);
+            } catch (IllegalAccessException e) {
+                logger.warn("Failed reserving  " + capacity + " bytes of memory.", e);
+            }
+        }
+
+        /**
+         * Hook for calling {@link java.nio.Bits#unreserveMemory(long,int)}
+         * @param capacity the amount of direct memory to deallocate
+         */
+        void unreserveMemory(int capacity) {
+            long size = Math.max(1L, capacity + (pa ? ps : 0));
+            try {
+                unreserveMemoryMethod.invoke(null, size, capacity);
+            } catch (InvocationTargetException e) {
+                handleInvocationTargetException(e);
+            } catch (IllegalAccessException e) {
+                logger.warn("Failed unreserving  " + capacity + " bytes of memory.", e);
+            } catch (IllegalArgumentException e) {
+                logger.warn("Failed unreserving  " + capacity + " bytes of memory.", e);
+            }
+        }
+
+        /**
+         * May eventually bubble up an {@link OutOfMemoryError}.
+         *
+         * @param e the {@link InvocationTargetException} thrown by {@link #reserveMemory(long)}
+         * or {@link #unreserveMemory(long)}.
+         */
+        static void handleInvocationTargetException(InvocationTargetException e) {
+            Throwable targetException = e.getTargetException();
+            if (targetException instanceof Error) {
+                throw (Error) targetException;
+            } else {
+                logger.warn("Failed invoking method.", e);
+            }
+        }
     }
 
     /**
@@ -227,6 +329,13 @@ public final class PlatformDependent {
      */
     public static long maxDirectMemory() {
         return MAX_DIRECT_MEMORY;
+    }
+
+    /**
+     * Returns {@code true} if the direct buffers should be page aligned.
+     */
+    public static boolean isDirectMemoryPageAligned() {
+        return IS_DIRECT_MEMORY_PAGE_ALIGNED;
     }
 
     /**
@@ -621,13 +730,21 @@ public final class PlatformDependent {
     }
 
     private static void incrementMemoryCounter(int capacity) {
+        // Try to use the hook
+        if (_BITS != null) {
+            _BITS.reserveMemory(capacity);
+            return;
+        }
+
+        // Otherwise, fallback on the old implementation
         if (DIRECT_MEMORY_COUNTER != null) {
             for (;;) {
                 long usedMemory = DIRECT_MEMORY_COUNTER.get();
                 long newUsedMemory = usedMemory + capacity;
                 if (newUsedMemory > DIRECT_MEMORY_LIMIT) {
                     throw new OutOfDirectMemoryError("failed to allocate " + capacity
-                            + " byte(s) of direct memory (used: " + usedMemory + ", max: " + DIRECT_MEMORY_LIMIT + ')');
+                        + " byte(s) of direct memory (used: "
+                        + usedMemory + ", max: " + DIRECT_MEMORY_LIMIT + ')');
                 }
                 if (DIRECT_MEMORY_COUNTER.compareAndSet(usedMemory, newUsedMemory)) {
                     break;
@@ -637,6 +754,13 @@ public final class PlatformDependent {
     }
 
     private static void decrementMemoryCounter(int capacity) {
+        // Try to use the hook
+        if (_BITS != null) {
+            _BITS.unreserveMemory(capacity);
+            return;
+        }
+
+        // Otherwise, fallback on the old implementation
         if (DIRECT_MEMORY_COUNTER != null) {
             long usedMemory = DIRECT_MEMORY_COUNTER.addAndGet(-capacity);
             assert usedMemory >= 0;
@@ -1222,6 +1346,41 @@ public final class PlatformDependent {
         }
 
         return maxDirectMemory;
+    }
+
+    private static boolean isDirectMemoryPageAligned0() {
+        try {
+            // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
+            Class<?> vmClass = Class.forName("sun.misc.VM", true, getSystemClassLoader());
+            Method m = vmClass.getDeclaredMethod("isDirectMemoryPageAligned");
+            return (Boolean) m.invoke(null);
+        } catch (Throwable ignored) {
+            // Ignore
+        }
+
+        try {
+            // Now try to get the JVM option (-Dsun.nio.PageAlignDirectMemory) and parse it.
+            // Note that we are using reflection because Android doesn't have these classes.
+            Class<?> mgmtFactoryClass = Class.forName(
+                "java.lang.management.ManagementFactory", true, getSystemClassLoader());
+            Class<?> runtimeClass = Class.forName(
+                "java.lang.management.RuntimeMXBean", true, getSystemClassLoader());
+
+            Object runtime = mgmtFactoryClass.getDeclaredMethod("getRuntimeMXBean").invoke(null);
+            @SuppressWarnings("unchecked")
+            List<String> vmArgs = (List<String>) runtimeClass.getDeclaredMethod("getInputArguments").invoke(runtime);
+            for (int i = vmArgs.size() - 1; i >= 0; i--) {
+                Matcher m = PAGE_ALIGNED_DIRECT_MEMORY_ARG_PATTERN.matcher(vmArgs.get(i));
+                if (!m.matches()) {
+                    continue;
+                }
+
+                return Boolean.parseBoolean(m.group(1));
+            }
+       } catch (Throwable ignored) {
+            // Ignore
+       }
+       return false;
     }
 
     private static boolean hasJavassist0() {
