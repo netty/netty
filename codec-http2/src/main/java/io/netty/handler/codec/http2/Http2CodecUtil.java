@@ -30,7 +30,7 @@ import io.netty.util.internal.UnstableApi;
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.handler.codec.http2.Http2Exception.headerListSizeError;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -223,8 +223,10 @@ public final class Http2CodecUtil {
         return max(0, min(state.pendingBytes(), state.windowSize()));
     }
 
-    public static void headerListSizeExceeded(int streamId, long maxHeaderListSize) throws Http2Exception {
-        throw streamError(streamId, PROTOCOL_ERROR, "Header size exceeded max allowed size (%d)", maxHeaderListSize);
+    public static void headerListSizeExceeded(int streamId, long maxHeaderListSize,
+                                              boolean onDecode) throws Http2Exception {
+        throw headerListSizeError(streamId, PROTOCOL_ERROR, onDecode, "Header size exceeded max " +
+                                  "allowed size (%d)", maxHeaderListSize);
     }
 
     static void writeFrameHeaderInternal(ByteBuf out, int payloadLength, byte type,

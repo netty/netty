@@ -183,4 +183,14 @@ public interface Http2Stream {
      * @return The stream before iteration stopped or {@code null} if iteration went past the end.
      */
     Http2Stream forEachChild(Http2StreamVisitor visitor) throws Http2Exception;
+
+    /**
+     * Indicates that headers has been sent to the remote on this stream.
+     */
+    Http2Stream headersSent();
+
+    /**
+     * Indicates whether or not headers was sent to the remote endpoint.
+     */
+    boolean isHeadersSent();
 }
