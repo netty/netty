@@ -21,12 +21,13 @@ import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.SystemPropertyUtil;
 import org.junit.Test;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -339,11 +340,9 @@ public class PooledByteBufAllocatorTest {
             }
         }
 
-        private final CountDownLatch latch = new CountDownLatch(1);
-        private final Queue<ByteBuf> buffers = new ArrayDeque<ByteBuf>(10);
+        private final Queue<ByteBuf> buffers = new ConcurrentLinkedQueue<ByteBuf>();
         private final ByteBufAllocator allocator;
-        private volatile boolean finished;
-        private volatile Throwable error;
+        private final AtomicReference<Object> finish = new AtomicReference<Object>();
 
         public AllocationThread(ByteBufAllocator allocator) {
             this.allocator = allocator;
@@ -353,7 +352,7 @@ public class PooledByteBufAllocatorTest {
         public void run() {
             try {
                 int idx = 0;
-                while (!finished) {
+                while (finish.get() == null) {
                     for (int i = 0; i < 10; i++) {
                         buffers.add(allocator.directBuffer(
                                 ALLOCATION_SIZES[Math.abs(idx++ % ALLOCATION_SIZES.length)],
@@ -362,12 +361,10 @@ public class PooledByteBufAllocatorTest {
                     releaseBuffers();
                 }
             } catch (Throwable cause) {
-                error = cause;
-                finished = true;
+                finish.set(cause);
             } finally {
                 releaseBuffers();
             }
-            latch.countDown();
         }
 
         private void releaseBuffers() {
@@ -381,22 +378,24 @@ public class PooledByteBufAllocatorTest {
         }
 
         public boolean isFinished() {
-            return finished;
+            return finish.get() != null;
         }
 
         public void finish() throws Throwable {
             try {
-                finished = true;
-                latch.await();
-                checkForError();
+                // Mark as finish if not already done but ensure we not override the previous set error.
+                finish.compareAndSet(null, Boolean.TRUE);
+                join();
             } finally {
                 releaseBuffers();
             }
+            checkForError();
         }
 
         public void checkForError() throws Throwable {
-            if (error != null) {
-                throw error;
+            Object obj = finish.get();
+            if (obj instanceof Throwable) {
+                throw (Throwable) obj;
             }
         }
     }
