@@ -207,7 +207,7 @@ public final class Decoder {
                         state = READ_LITERAL_HEADER_NAME_LENGTH;
                     } else {
                         if (index > maxHeaderListSize - headersLength) {
-                            headerListSizeExceeded(streamId, maxHeaderListSize);
+                            headerListSizeExceeded(streamId, maxHeaderListSize, true);
                         }
                         nameLength = index;
                         state = READ_LITERAL_HEADER_NAME;
@@ -219,7 +219,7 @@ public final class Decoder {
                     nameLength = decodeULE128(in, index);
 
                     if (nameLength > maxHeaderListSize - headersLength) {
-                        headerListSizeExceeded(streamId, maxHeaderListSize);
+                        headerListSizeExceeded(streamId, maxHeaderListSize, true);
                     }
                     state = READ_LITERAL_HEADER_NAME;
                     break;
@@ -251,7 +251,7 @@ public final class Decoder {
                         default:
                             // Check new header size against max header size
                             if ((long) index + nameLength > maxHeaderListSize - headersLength) {
-                                headerListSizeExceeded(streamId, maxHeaderListSize);
+                                headerListSizeExceeded(streamId, maxHeaderListSize, true);
                             }
                             valueLength = index;
                             state = READ_LITERAL_HEADER_VALUE;
@@ -265,7 +265,7 @@ public final class Decoder {
 
                     // Check new header size against max header size
                     if ((long) valueLength + nameLength > maxHeaderListSize - headersLength) {
-                        headerListSizeExceeded(streamId, maxHeaderListSize);
+                        headerListSizeExceeded(streamId, maxHeaderListSize, true);
                     }
                     state = READ_LITERAL_HEADER_VALUE;
                     break;
@@ -403,7 +403,7 @@ public final class Decoder {
                            long headersLength) throws Http2Exception {
         headersLength += name.length() + value.length();
         if (headersLength > maxHeaderListSize) {
-            headerListSizeExceeded(streamId, maxHeaderListSize);
+            headerListSizeExceeded(streamId, maxHeaderListSize, true);
         }
         headers.add(name, value);
         return headersLength;

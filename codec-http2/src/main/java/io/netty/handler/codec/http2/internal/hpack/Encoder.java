@@ -124,7 +124,7 @@ public final class Encoder {
             // overflow.
             headerSize += currHeaderSize;
             if (headerSize > maxHeaderListSize) {
-                headerListSizeExceeded(streamId, maxHeaderListSize);
+                headerListSizeExceeded(streamId, maxHeaderListSize, false);
             }
             encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value), currHeaderSize);
         }

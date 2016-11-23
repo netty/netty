@@ -185,13 +185,19 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                     };
                     promise = promise.unvoid().addListener(closeStreamLocalListener);
                 }
-                return frameWriter.writeHeaders(ctx, streamId, headers, streamDependency, weight,
-                                                exclusive, padding, endOfStream, promise);
+                ChannelFuture future = frameWriter.writeHeaders(ctx, streamId, headers, streamDependency,
+                                                                weight, exclusive, padding, endOfStream, promise);
+                // Synchronously set the headersSent flag to ensure that we do not subsequently write
+                // other headers containing pseudo-header fields.
+                stream.headersSent();
+
+                return future;
             } else {
                 // Pass headers to the flow-controller so it can maintain their sequence relative to DATA frames.
                 flowController.addFlowControlled(stream,
                         new FlowControlledHeaders(stream, headers, streamDependency, weight, exclusive, padding,
                                                  endOfStream, promise));
+                stream.headersSent();
                 return promise;
             }
         } catch (Http2NoMoreStreamIdsException e) {

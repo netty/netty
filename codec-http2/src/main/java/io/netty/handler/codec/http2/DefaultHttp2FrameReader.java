@@ -673,7 +673,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          */
         private void headerSizeExceeded() throws Http2Exception {
             close();
-            headerListSizeExceeded(streamId, headersDecoder.configuration().headerTable().maxHeaderListSize());
+            headerListSizeExceeded(streamId, headersDecoder.configuration().headerTable().maxHeaderListSize(), true);
         }
 
         /**
