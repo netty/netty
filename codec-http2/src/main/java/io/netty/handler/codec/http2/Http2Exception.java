@@ -150,6 +150,28 @@ public class Http2Exception extends Exception {
     }
 
     /**
+     * A specific stream error resulting from failing to decode headers that exceeds the max header size list.
+     * If the {@code id} is not {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a
+     * {@link Http2Exception.StreamException} will be returned. Otherwise the error is considered a
+     * connection error and a {@link Http2Exception} is returned.
+     * @param id The stream id for which the error is isolated to.
+     * @param error The type of error as defined by the HTTP/2 specification.
+     * @param onDecode Whether this error was caught while decoding headers
+     * @param fmt String with the content and format for the additional debug data.
+     * @param args Objects which fit into the format defined by {@code fmt}.
+     * @return If the {@code id} is not
+     * {@link Http2CodecUtil#CONNECTION_STREAM_ID} then a {@link HeaderListSizeException}
+     * will be returned. Otherwise the error is considered a connection error and a {@link Http2Exception} is
+     * returned.
+     */
+    public static Http2Exception headerListSizeError(int id, Http2Error error, boolean onDecode,
+            String fmt, Object... args) {
+        return CONNECTION_STREAM_ID == id ?
+                Http2Exception.connectionError(error, fmt, args) :
+                    new HeaderListSizeException(id, error, String.format(fmt, args), onDecode);
+    }
+
+    /**
      * Check if an exception is isolated to a single stream or the entire connection.
      * @param e The exception to check.
      * @return {@code true} if {@code e} is an instance of {@link Http2Exception.StreamException}.
@@ -210,7 +232,7 @@ public class Http2Exception extends Exception {
     /**
      * Represents an exception that can be isolated to a single stream (as opposed to the entire connection).
      */
-    public static final class StreamException extends Http2Exception {
+    public static class StreamException extends Http2Exception {
         private static final long serialVersionUID = 602472544416984384L;
         private final int streamId;
 
@@ -226,6 +248,19 @@ public class Http2Exception extends Exception {
 
         public int streamId() {
             return streamId;
+        }
+    }
+
+    public static final class HeaderListSizeException extends StreamException {
+        private final boolean decode;
+
+        HeaderListSizeException(int streamId, Http2Error error, String message, boolean decode) {
+            super(streamId, error, message);
+            this.decode = decode;
+        }
+
+        public boolean duringDecode() {
+            return decode;
         }
     }
 
