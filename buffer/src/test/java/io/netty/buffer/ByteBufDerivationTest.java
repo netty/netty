@@ -22,6 +22,7 @@ import java.nio.ByteOrder;
 import java.util.Random;
 
 import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.*;
 
 /**
@@ -156,7 +157,7 @@ public class ByteBufDerivationTest {
         ByteBuf swapped = buf.order(ByteOrder.LITTLE_ENDIAN);
 
         assertThat(swapped, instanceOf(SwappedByteBuf.class));
-        assertThat(swapped.unwrap(), is((ByteBuf) null));
+        assertThat(swapped.unwrap(), sameInstance(buf));
         assertThat(swapped.order(ByteOrder.LITTLE_ENDIAN), sameInstance(swapped));
         assertThat(swapped.order(ByteOrder.BIG_ENDIAN), sameInstance(buf));
 
