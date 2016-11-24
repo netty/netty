@@ -175,6 +175,7 @@ public class RedisEncoderTest {
         ByteBuf read;
         while ((read = channel.readOutbound()) != null) {
             buf.writeBytes(read);
+            read.release();
         }
         return buf;
     }
