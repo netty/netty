@@ -372,7 +372,11 @@ public final class HttpUtil {
      * if charset is not presented or unparsable
      */
     public static Charset getCharset(CharSequence contentTypeValue) {
-        return getCharset(contentTypeValue, CharsetUtil.ISO_8859_1);
+        if (contentTypeValue != null) {
+            return getCharset(contentTypeValue, CharsetUtil.ISO_8859_1);
+        } else {
+            return CharsetUtil.ISO_8859_1;
+        }
     }
 
     /**
@@ -385,23 +389,31 @@ public final class HttpUtil {
      */
     public static Charset getCharset(HttpMessage message, Charset defaultCharset) {
         CharSequence contentTypeValue = message.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        return getCharset(contentTypeValue, defaultCharset);
+        if (contentTypeValue != null) {
+            return getCharset(contentTypeValue, defaultCharset);
+        } else {
+            return defaultCharset;
+        }
     }
 
     /**
      * Fetch charset from Content-Type header value.
      *
      * @param contentTypeValue Content-Type header value to parse
-     * @param defaultCharset result to use in case of empty, incorrect or doesn't conain required part header value
+     * @param defaultCharset result to use in case of empty, incorrect or doesn't contain required part header value
      * @return the charset from message's Content-Type header or {@code defaultCharset}
      * if charset is not presented or unparsable
      */
     public static Charset getCharset(CharSequence contentTypeValue, Charset defaultCharset) {
-        CharSequence charsetCharSequence = getCharsetAsSequence(contentTypeValue);
-        if (charsetCharSequence != null) {
-            try {
-                return Charset.forName(charsetCharSequence.toString());
-            } catch (UnsupportedCharsetException unsupportedException) {
+        if (contentTypeValue != null) {
+            CharSequence charsetCharSequence = getCharsetAsSequence(contentTypeValue);
+            if (charsetCharSequence != null) {
+                try {
+                    return Charset.forName(charsetCharSequence.toString());
+                } catch (UnsupportedCharsetException unsupportedException) {
+                    return defaultCharset;
+                }
+            } else {
                 return defaultCharset;
             }
         } else {
@@ -436,7 +448,11 @@ public final class HttpUtil {
      */
     public static CharSequence getCharsetAsSequence(HttpMessage message) {
         CharSequence contentTypeValue = message.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        return getCharsetAsSequence(contentTypeValue);
+        if (contentTypeValue != null) {
+            return getCharsetAsSequence(contentTypeValue);
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -448,15 +464,17 @@ public final class HttpUtil {
      * @param contentTypeValue Content-Type header value to parse
      * @return the {@code CharSequence} with charset from message's Content-Type header
      * or {@code null} if charset is not presented
+     * @throws NullPointerException in case if {@code contentTypeValue == null}
      */
     public static CharSequence getCharsetAsSequence(CharSequence contentTypeValue) {
-        if (contentTypeValue != null) {
-            int indexOfCharset = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, CHARSET_EQUALS, 0);
-            if (indexOfCharset != AsciiString.INDEX_NOT_FOUND) {
-                int indexOfEncoding = indexOfCharset + CHARSET_EQUALS.length();
-                if (indexOfEncoding < contentTypeValue.length()) {
-                    return contentTypeValue.subSequence(indexOfEncoding, contentTypeValue.length());
-                }
+        if (contentTypeValue == null) {
+            throw new NullPointerException("contentTypeValue");
+        }
+        int indexOfCharset = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, CHARSET_EQUALS, 0);
+        if (indexOfCharset != AsciiString.INDEX_NOT_FOUND) {
+            int indexOfEncoding = indexOfCharset + CHARSET_EQUALS.length();
+            if (indexOfEncoding < contentTypeValue.length()) {
+                return contentTypeValue.subSequence(indexOfEncoding, contentTypeValue.length());
             }
         }
         return null;
@@ -475,7 +493,11 @@ public final class HttpUtil {
      */
     public static CharSequence getMimeType(HttpMessage message) {
         CharSequence contentTypeValue = message.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        return getMimeType(contentTypeValue);
+        if (contentTypeValue != null) {
+            return getMimeType(contentTypeValue);
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -487,18 +509,20 @@ public final class HttpUtil {
      * <p/>
      * "content-type: text/html; charset=utf-8" - "text/html" will be returned <br/>
      * "content-type: text/html" - "text/html" will be returned <br/>
-     * "content-type: " or no header - {@code null} we be returned
+     * "content-type: empty header - {@code null} we be returned
+     * @throws NullPointerException in case if {@code contentTypeValue == null}
      */
     public static CharSequence getMimeType(CharSequence contentTypeValue) {
-        if (contentTypeValue != null) {
-            int indexOfSemicolon = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, SEMICOLON, 0);
-            if (indexOfSemicolon != AsciiString.INDEX_NOT_FOUND) {
-                return contentTypeValue.subSequence(0, indexOfSemicolon);
-            } else {
-                return contentTypeValue.length() > 0 ? contentTypeValue : null;
-            }
+        if (contentTypeValue == null) {
+            throw new NullPointerException("contentTypeValue");
         }
-        return null;
+
+        int indexOfSemicolon = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, SEMICOLON, 0);
+        if (indexOfSemicolon != AsciiString.INDEX_NOT_FOUND) {
+            return contentTypeValue.subSequence(0, indexOfSemicolon);
+        } else {
+            return contentTypeValue.length() > 0 ? contentTypeValue : null;
+        }
     }
 
     static void encodeAscii0(CharSequence seq, ByteBuf buf) {

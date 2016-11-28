@@ -117,7 +117,6 @@ public class HttpUtilTest {
 
         HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         assertNull(HttpUtil.getMimeType(message));
-        assertNull(HttpUtil.getMimeType((String) null));
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, "");
         assertNull(HttpUtil.getMimeType(message));
         assertNull(HttpUtil.getMimeType(""));
