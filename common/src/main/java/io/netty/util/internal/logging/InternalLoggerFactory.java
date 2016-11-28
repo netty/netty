@@ -31,8 +31,7 @@ package io.netty.util.internal.logging;
  * as possible and shouldn't be called more than once.
  */
 public abstract class InternalLoggerFactory {
-    private static volatile InternalLoggerFactory defaultFactory =
-            newDefaultFactory(InternalLoggerFactory.class.getName());
+    private static volatile InternalLoggerFactory defaultFactory;
 
     @SuppressWarnings("UnusedCatchParameter")
     private static InternalLoggerFactory newDefaultFactory(String name) {
@@ -57,6 +56,9 @@ public abstract class InternalLoggerFactory {
      * {@link JdkLoggerFactory}.
      */
     public static InternalLoggerFactory getDefaultFactory() {
+        if (defaultFactory == null) {
+            defaultFactory = newDefaultFactory(InternalLoggerFactory.class.getName());
+        }
         return defaultFactory;
     }
 
@@ -88,4 +90,5 @@ public abstract class InternalLoggerFactory {
      * Creates a new logger instance with the specified name.
      */
     protected abstract InternalLogger newInstance(String name);
+
 }
