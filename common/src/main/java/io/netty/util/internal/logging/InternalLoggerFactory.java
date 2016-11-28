@@ -13,9 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util.internal.logging;
 
-import io.netty.util.internal.ThreadLocalRandom;
+package io.netty.util.internal.logging;
 
 /**
  * Creates an {@link InternalLogger} or changes the default factory
@@ -34,18 +33,7 @@ import io.netty.util.internal.ThreadLocalRandom;
  */
 public abstract class InternalLoggerFactory {
 
-    private static volatile InternalLoggerFactory defaultFactory =
-            newDefaultFactory(InternalLoggerFactory.class.getName());
-
-    static {
-        // Initiate some time-consuming background jobs here,
-        // because this class is often initialized at the earliest time.
-        try {
-            Class.forName(ThreadLocalRandom.class.getName(), true, InternalLoggerFactory.class.getClassLoader());
-        } catch (Exception ignored) {
-            // Should not fail, but it does not harm to fail.
-        }
-    }
+    private static volatile InternalLoggerFactory defaultFactory;
 
     @SuppressWarnings("UnusedCatchParameter")
     private static InternalLoggerFactory newDefaultFactory(String name) {
@@ -70,6 +58,9 @@ public abstract class InternalLoggerFactory {
      * {@link JdkLoggerFactory}.
      */
     public static InternalLoggerFactory getDefaultFactory() {
+        if (defaultFactory == null) {
+            defaultFactory = newDefaultFactory(InternalLoggerFactory.class.getName());
+        }
         return defaultFactory;
     }
 
@@ -101,4 +92,5 @@ public abstract class InternalLoggerFactory {
      * Creates a new logger instance with the specified name.
      */
     protected abstract InternalLogger newInstance(String name);
+
 }
