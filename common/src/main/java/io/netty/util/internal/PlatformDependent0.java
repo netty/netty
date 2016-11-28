@@ -58,36 +58,43 @@ final class PlatformDependent0 {
     private static final boolean UNALIGNED;
 
     static {
-        final ByteBuffer direct = ByteBuffer.allocateDirect(1);
+        final ByteBuffer direct;
         final Field addressField;
-        // attempt to access field Buffer#address
-        final Object maybeAddressField = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            @Override
-            public Object run() {
-                try {
-                    final Field field = Buffer.class.getDeclaredField("address");
-                    field.setAccessible(true);
-                    // if direct really is a direct buffer, address will be non-zero
-                    if (field.getLong(direct) == 0) {
-                        return null;
-                    }
-                    return field;
-                } catch (IllegalAccessException e) {
-                    return e;
-                } catch (NoSuchFieldException e) {
-                    return e;
-                } catch (SecurityException e) {
-                    return e;
-                }
-            }
-        });
 
-        if (maybeAddressField instanceof Field) {
-            addressField = (Field) maybeAddressField;
-            logger.debug("java.nio.Buffer.address: available");
-        } else {
-            logger.debug("java.nio.Buffer.address: unavailable", (Exception) maybeAddressField);
+        if (PlatformDependent.isExplicitNoUnsafe()) {
+            direct = null;
             addressField = null;
+        } else {
+            direct = ByteBuffer.allocateDirect(1);
+            // attempt to access field Buffer#address
+            final Object maybeAddressField = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    try {
+                        final Field field = Buffer.class.getDeclaredField("address");
+                        field.setAccessible(true);
+                        // if direct really is a direct buffer, address will be non-zero
+                        if (field.getLong(direct) == 0) {
+                            return null;
+                        }
+                        return field;
+                    } catch (IllegalAccessException e) {
+                        return e;
+                    } catch (NoSuchFieldException e) {
+                        return e;
+                    } catch (SecurityException e) {
+                        return e;
+                    }
+                }
+            });
+
+            if (maybeAddressField instanceof Field) {
+                addressField = (Field) maybeAddressField;
+                logger.debug("java.nio.Buffer.address: available");
+            } else {
+                logger.debug("java.nio.Buffer.address: unavailable", (Exception) maybeAddressField);
+                addressField = null;
+            }
         }
 
         Unsafe unsafe;
@@ -247,7 +254,9 @@ final class PlatformDependent0 {
         logger.debug("java.nio.DirectByteBuffer.<init>(long, int): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
 
-        freeDirectBuffer(direct);
+        if (direct != null) {
+            freeDirectBuffer(direct);
+        }
     }
 
     static boolean isUnaligned() {
