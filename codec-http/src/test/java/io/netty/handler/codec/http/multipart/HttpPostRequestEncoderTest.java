@@ -75,6 +75,39 @@ public class HttpPostRequestEncoderTest {
     }
 
     @Test
+    public void testSingleFileUploadNoName() throws Exception {
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.POST, "http://localhost");
+
+        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(request, true);
+        File file1 = new File(getClass().getResource("/file-01.txt").toURI());
+        encoder.addBodyAttribute("foo", "bar");
+        encoder.addBodyFileUpload("quux", "", file1, "text/plain", false);
+
+        String multipartDataBoundary = encoder.multipartDataBoundary;
+        String content = getRequestBody(encoder);
+
+        String expected = "--" + multipartDataBoundary + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"foo\"" + "\r\n" +
+                CONTENT_LENGTH + ": 3" + "\r\n" +
+                CONTENT_TYPE + ": text/plain; charset=UTF-8" + "\r\n" +
+                "\r\n" +
+                "bar" +
+                "\r\n" +
+                "--" + multipartDataBoundary + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"quux\"\r\n" +
+                CONTENT_LENGTH + ": " + file1.length() + "\r\n" +
+                CONTENT_TYPE + ": text/plain" + "\r\n" +
+                CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
+                "\r\n" +
+                "File 01" + StringUtil.NEWLINE +
+                "\r\n" +
+                "--" + multipartDataBoundary + "--" + "\r\n";
+
+        assertEquals(expected, content);
+    }
+
+    @Test
     public void testMultiFileUploadInMixedMode() throws Exception {
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.POST, "http://localhost");
@@ -112,6 +145,56 @@ public class HttpPostRequestEncoderTest {
                 "\r\n" +
                 "--" + multipartMixedBoundary + "\r\n" +
                 CONTENT_DISPOSITION + ": attachment; filename=\"file-02.txt\"" + "\r\n" +
+                CONTENT_LENGTH + ": " + file2.length() + "\r\n" +
+                CONTENT_TYPE + ": text/plain" + "\r\n" +
+                CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
+                "\r\n" +
+                "File 02" + StringUtil.NEWLINE +
+                "\r\n" +
+                "--" + multipartMixedBoundary + "--" + "\r\n" +
+                "--" + multipartDataBoundary + "--" + "\r\n";
+
+        assertEquals(expected, content);
+    }
+
+    @Test
+    public void testMultiFileUploadInMixedModeNoName() throws Exception {
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.POST, "http://localhost");
+
+        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(request, true);
+        File file1 = new File(getClass().getResource("/file-01.txt").toURI());
+        File file2 = new File(getClass().getResource("/file-02.txt").toURI());
+        encoder.addBodyAttribute("foo", "bar");
+        encoder.addBodyFileUpload("quux", "", file1, "text/plain", false);
+        encoder.addBodyFileUpload("quux", "", file2, "text/plain", false);
+
+        // We have to query the value of these two fields before finalizing
+        // the request, which unsets one of them.
+        String multipartDataBoundary = encoder.multipartDataBoundary;
+        String multipartMixedBoundary = encoder.multipartMixedBoundary;
+        String content = getRequestBody(encoder);
+
+        String expected = "--" + multipartDataBoundary + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"foo\"" + "\r\n" +
+                CONTENT_LENGTH + ": 3" + "\r\n" +
+                CONTENT_TYPE + ": text/plain; charset=UTF-8" + "\r\n" +
+                "\r\n" +
+                "bar" + "\r\n" +
+                "--" + multipartDataBoundary + "\r\n" +
+                CONTENT_DISPOSITION + ": form-data; name=\"quux\"" + "\r\n" +
+                CONTENT_TYPE + ": multipart/mixed; boundary=" + multipartMixedBoundary + "\r\n" +
+                "\r\n" +
+                "--" + multipartMixedBoundary + "\r\n" +
+                CONTENT_DISPOSITION + ": attachment\r\n" +
+                CONTENT_LENGTH + ": " + file1.length() + "\r\n" +
+                CONTENT_TYPE + ": text/plain" + "\r\n" +
+                CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
+                "\r\n" +
+                "File 01" + StringUtil.NEWLINE +
+                "\r\n" +
+                "--" + multipartMixedBoundary + "\r\n" +
+                CONTENT_DISPOSITION + ": attachment\r\n" +
                 CONTENT_LENGTH + ": " + file2.length() + "\r\n" +
                 CONTENT_TYPE + ": text/plain" + "\r\n" +
                 CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +

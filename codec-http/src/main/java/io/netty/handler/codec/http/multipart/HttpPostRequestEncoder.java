@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.stream.ChunkedInput;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 
 import java.io.File;
@@ -362,11 +363,38 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      */
     public void addBodyFileUpload(String name, File file, String contentType, boolean isText)
             throws ErrorDataEncoderException {
+       addBodyFileUpload(name, file.getName(), file, contentType, isText);
+    }
+
+    /**
+     * Add a file as a FileUpload
+     *
+     * @param name
+     *            the name of the parameter
+     * @param file
+     *            the file to be uploaded (if not Multipart mode, only the filename will be included)
+     * @param filename
+     *            the filename to use for this File part, empty String will be ignored by
+     *            the encoder
+     * @param contentType
+     *            the associated contentType for the File
+     * @param isText
+     *            True if this file should be transmitted in Text format (else binary)
+     * @throws NullPointerException
+     *             for name and file
+     * @throws ErrorDataEncoderException
+     *             if the encoding is in error or if the finalize were already done
+     */
+    public void addBodyFileUpload(String name, String filename, File file, String contentType, boolean isText)
+            throws ErrorDataEncoderException {
         if (name == null) {
             throw new NullPointerException("name");
         }
         if (file == null) {
             throw new NullPointerException("file");
+        }
+        if (filename == null) {
+            filename = StringUtil.EMPTY_STRING;
         }
         String scontentType = contentType;
         String contentTransferEncoding = null;
@@ -380,7 +408,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (!isText) {
             contentTransferEncoding = HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value();
         }
-        FileUpload fileUpload = factory.createFileUpload(request, name, file.getName(), scontentType,
+        FileUpload fileUpload = factory.createFileUpload(request, name, filename, scontentType,
                 contentTransferEncoding, null, file.length());
         try {
             fileUpload.setContent(file);
@@ -615,12 +643,17 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
 
                         .append(HttpHeaderNames.CONTENT_DISPOSITION)
                         .append(": ")
-                        .append(HttpHeaderValues.ATTACHMENT)
-                        .append("; ")
-                        .append(HttpHeaderValues.FILENAME)
-                        .append("=\"")
-                        .append(fileUpload.getFilename())
-                        .append("\"\r\n");
+                        .append(HttpHeaderValues.ATTACHMENT);
+
+                    if (!fileUpload.getFilename().isEmpty()) {
+                        replacement.append("; ")
+                                   .append(HttpHeaderValues.FILENAME)
+                                   .append("=\"")
+                                   .append(fileUpload.getFilename())
+                                   .append('"');
+                    }
+
+                    replacement.append("\r\n");
 
                     pastAttribute.setValue(replacement.toString(), 1);
                     pastAttribute.setValue("", 2);
@@ -648,16 +681,31 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                 // add mixedmultipart delimiter, mixedmultipart body header and
                 // Data to multipart list
                 internal.addValue("--" + multipartMixedBoundary + "\r\n");
-                // Content-Disposition: attachment; filename="file1.txt"
-                internal.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.ATTACHMENT + "; "
-                        + HttpHeaderValues.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
+
+                if (fileUpload.getFilename().isEmpty()) {
+                    // Content-Disposition: attachment
+                    internal.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": "
+                            + HttpHeaderValues.ATTACHMENT + "\r\n");
+                } else {
+                    // Content-Disposition: attachment; filename="file1.txt"
+                    internal.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": "
+                            + HttpHeaderValues.ATTACHMENT + "; "
+                            + HttpHeaderValues.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
+                }
             } else {
                 internal.addValue("--" + multipartDataBoundary + "\r\n");
-                // Content-Disposition: form-data; name="files";
-                // filename="file1.txt"
-                internal.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; "
-                        + HttpHeaderValues.NAME + "=\"" + fileUpload.getName() + "\"; "
-                        + HttpHeaderValues.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
+
+                if (fileUpload.getFilename().isEmpty()) {
+                    // Content-Disposition: form-data; name="files";
+                    internal.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; "
+                            + HttpHeaderValues.NAME + "=\"" + fileUpload.getName() + "\"\r\n");
+                } else {
+                    // Content-Disposition: form-data; name="files";
+                    // filename="file1.txt"
+                    internal.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; "
+                            + HttpHeaderValues.NAME + "=\"" + fileUpload.getName() + "\"; "
+                            + HttpHeaderValues.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
+                }
             }
             // Add Content-Length: xxx
             internal.addValue(HttpHeaderNames.CONTENT_LENGTH + ": " +
