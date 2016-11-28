@@ -73,6 +73,9 @@ public final class PlatformDependent {
     private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
             "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
 
+    // this must be initialized before any code below triggers initialization of PlatformDependent0
+    private static final boolean IS_EXPLICIT_NO_UNSAFE = explicitNoUnsafe0();
+
     private static final boolean IS_ANDROID = isAndroid0();
     private static final boolean IS_WINDOWS = isWindows0();
     private static volatile Boolean IS_ROOT;
@@ -81,7 +84,6 @@ public final class PlatformDependent {
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
-    private static final boolean IS_EXPLICIT_NO_UNSAFE = explicitNoUnsafe0();
     private static final boolean HAS_UNSAFE = hasUnsafe0();
     private static final boolean CAN_USE_CHM_V8 = HAS_UNSAFE && JAVA_VERSION < 8;
     private static final boolean DIRECT_BUFFER_PREFERRED =
@@ -864,6 +866,10 @@ public final class PlatformDependent {
         } else {
             return version[0];
         }
+    }
+
+    static boolean isExplicitNoUnsafe() {
+        return IS_EXPLICIT_NO_UNSAFE;
     }
 
     private static boolean explicitNoUnsafe0() {
