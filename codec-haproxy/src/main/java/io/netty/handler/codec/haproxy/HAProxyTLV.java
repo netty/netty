@@ -104,7 +104,6 @@ public class HAProxyTLV extends DefaultByteBufHolder {
         return typeByteValue;
     }
 
-
     @Override
     public HAProxyTLV copy() {
         return (HAProxyTLV) super.copy();
@@ -119,7 +118,6 @@ public class HAProxyTLV extends DefaultByteBufHolder {
     public HAProxyTLV retainedDuplicate() {
         return (HAProxyTLV) super.retainedDuplicate();
     }
-
 
     @Override
     public HAProxyTLV retain() {
