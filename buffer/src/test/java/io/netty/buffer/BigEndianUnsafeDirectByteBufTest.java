@@ -23,8 +23,10 @@ import org.junit.Before;
 public class BigEndianUnsafeDirectByteBufTest extends BigEndianDirectByteBufTest {
 
     @Before
-    public void checkHasUnsafe() {
+    @Override
+    public void init() {
         Assume.assumeTrue("sun.misc.Unsafe not found, skip tests", PlatformDependent.hasUnsafe());
+        super.init();
     }
 
     @Override
