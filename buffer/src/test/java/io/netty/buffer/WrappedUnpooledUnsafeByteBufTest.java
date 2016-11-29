@@ -16,11 +16,20 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 
 public class WrappedUnpooledUnsafeByteBufTest extends BigEndianUnsafeDirectByteBufTest {
+
+    @Before
+    @Override
+    public void init() {
+        Assume.assumeTrue("sun.misc.Unsafe not found, skip tests", PlatformDependent.hasUnsafe());
+        super.init();
+    }
 
     @Override
     protected ByteBuf newBuffer(int length) {
