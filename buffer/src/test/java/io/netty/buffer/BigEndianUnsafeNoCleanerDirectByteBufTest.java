@@ -23,9 +23,11 @@ import org.junit.Before;
 public class BigEndianUnsafeNoCleanerDirectByteBufTest extends BigEndianDirectByteBufTest {
 
     @Before
-    public void checkHasUnsafe() {
+    @Override
+    public void init() {
         Assume.assumeTrue("java.nio.DirectByteBuffer.<init>(long, int) not found, skip tests",
                 PlatformDependent.useDirectBufferNoCleaner());
+        super.init();
     }
 
     @Override

@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 
 import java.nio.ByteBuffer;
@@ -29,7 +30,7 @@ public class ReadOnlyUnsafeDirectByteBufferBufTest extends ReadOnlyDirectByteBuf
      */
     @BeforeClass
     public static void assumeConditions() {
-        assumeTrue(PlatformDependent.hasUnsafe());
+        assumeTrue("sun.misc.Unsafe not found, skip tests", PlatformDependent.hasUnsafe());
     }
 
     @Override
