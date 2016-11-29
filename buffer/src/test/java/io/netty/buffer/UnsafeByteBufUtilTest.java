@@ -15,6 +15,9 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -25,6 +28,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
 public class UnsafeByteBufUtilTest {
+    @Before
+    public void checkHasUnsafe() {
+        Assume.assumeTrue("sun.misc.Unsafe not found, skip tests", PlatformDependent.hasUnsafe());
+    }
 
     @Test
     public void testSetBytesOnReadOnlyByteBuffer() throws Exception {
