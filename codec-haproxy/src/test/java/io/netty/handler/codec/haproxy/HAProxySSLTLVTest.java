@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec.haproxy;
 
+import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -30,7 +31,7 @@ public class HAProxySSLTLVTest {
         // 0b0000_0111
         final byte allClientsEnabled = 0x7;
         final HAProxySSLTLV allClientsEnabledTLV =
-                new HAProxySSLTLV(0, allClientsEnabled, Collections.<HAProxyTLV>emptyList(), new byte[0]);
+                new HAProxySSLTLV(0, allClientsEnabled, Collections.<HAProxyTLV>emptyList(), Unpooled.buffer());
 
         assertEquals(true, allClientsEnabledTLV.isPP2ClientCertConn());
         assertEquals(true, allClientsEnabledTLV.isPP2ClientSSL());
@@ -41,7 +42,7 @@ public class HAProxySSLTLVTest {
 
         final HAProxySSLTLV clientSSLandClientCertSessTLV =
                 new HAProxySSLTLV(0, clientSSLandClientCertSessEnabled, Collections.<HAProxyTLV>emptyList(),
-                                  new byte[0]);
+                                  Unpooled.buffer());
 
         assertEquals(false, clientSSLandClientCertSessTLV.isPP2ClientCertConn());
         assertEquals(true, clientSSLandClientCertSessTLV.isPP2ClientSSL());
@@ -52,7 +53,7 @@ public class HAProxySSLTLVTest {
 
         final HAProxySSLTLV noClientTlv =
                 new HAProxySSLTLV(0, noClientEnabled, Collections.<HAProxyTLV>emptyList(),
-                                  new byte[0]);
+                                  Unpooled.buffer());
 
         assertEquals(false, noClientTlv.isPP2ClientCertConn());
         assertEquals(false, noClientTlv.isPP2ClientSSL());

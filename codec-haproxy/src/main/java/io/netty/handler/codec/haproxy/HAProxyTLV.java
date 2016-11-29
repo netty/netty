@@ -16,6 +16,9 @@
 
 package io.netty.handler.codec.haproxy;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.DefaultByteBufHolder;
+
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
@@ -24,11 +27,10 @@ import static io.netty.util.internal.ObjectUtil.*;
  *
  * @see HAProxySSLTLV
  */
-public class HAProxyTLV {
+public class HAProxyTLV extends DefaultByteBufHolder {
 
     private final Type type;
     private final byte typeByteValue;
-    private final byte[] content;
 
     /**
      * The registered types a TLV can have regarding the PROXY protocol 1.5 spec
@@ -78,15 +80,14 @@ public class HAProxyTLV {
      *
      * @param type the {@link Type} of the TLV
      * @param typeByteValue the byteValue of the TLV. This is especially important if non-standard TLVs are used
-     * @param content the raw content of the TLV as byte array
+     * @param content the raw content of the TLV
      */
-    HAProxyTLV(final Type type, final byte typeByteValue, final byte[] content) {
+    HAProxyTLV(final Type type, final byte typeByteValue, final ByteBuf content) {
+        super(content);
         checkNotNull(type, "type");
-        checkNotNull(content, "content");
 
         this.type = type;
         this.typeByteValue = typeByteValue;
-        this.content = content;
     }
 
     /**
@@ -97,17 +98,50 @@ public class HAProxyTLV {
     }
 
     /**
-     * Returns the raw content of the TLV as byte array
-     */
-    public byte[] content() {
-        return content.clone();
-    }
-
-    /**
      * Returns the type of the TLV as byte
      */
     public byte typeByteValue() {
         return typeByteValue;
     }
 
+
+    @Override
+    public HAProxyTLV copy() {
+        return (HAProxyTLV) super.copy();
+    }
+
+    @Override
+    public HAProxyTLV duplicate() {
+        return (HAProxyTLV) super.duplicate();
+    }
+
+    @Override
+    public HAProxyTLV retainedDuplicate() {
+        return (HAProxyTLV) super.retainedDuplicate();
+    }
+
+
+    @Override
+    public HAProxyTLV retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public HAProxyTLV retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public HAProxyTLV touch() {
+        super.touch();
+        return this;
+    }
+
+    @Override
+    public HAProxyTLV touch(Object hint) {
+        super.touch(hint);
+        return this;
+    }
 }

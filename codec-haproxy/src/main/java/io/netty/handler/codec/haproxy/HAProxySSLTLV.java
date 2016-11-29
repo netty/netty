@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.haproxy;
 
+import io.netty.buffer.ByteBuf;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -38,7 +40,7 @@ public final class HAProxySSLTLV extends HAProxyTLV {
      * @param tlvs the encapsulated {@link HAProxyTLV}s
      * @param rawContent the raw TLV content
      */
-    HAProxySSLTLV(final int verify, final byte clientBitField, final List<HAProxyTLV> tlvs, final byte[] rawContent) {
+    HAProxySSLTLV(final int verify, final byte clientBitField, final List<HAProxyTLV> tlvs, final ByteBuf rawContent) {
         super(Type.PP2_TYPE_SSL, (byte) 0x20, rawContent);
 
         this.verify = verify;

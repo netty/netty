@@ -625,11 +625,17 @@ public class HAProxyMessageDecoderTest {
         final HAProxyTLV secondTlv = tlvs.get(1);
 
         assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_VERSION, secondTlv.type());
-        assertArrayEquals("TLSv1".getBytes(CharsetUtil.US_ASCII), secondTlv.content());
+        ByteBuf secondContentBuf = secondTlv.content();
+        byte[] secondContent = new byte[secondContentBuf.readableBytes()];
+        secondContentBuf.readBytes(secondContent);
+        assertArrayEquals("TLSv1".getBytes(CharsetUtil.US_ASCII), secondContent);
 
         final HAProxyTLV thirdTLV = tlvs.get(2);
         assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_CN, thirdTLV.type());
-        assertArrayEquals("LEAF".getBytes(CharsetUtil.US_ASCII), thirdTLV.content());
+        ByteBuf thirdContentBuf = thirdTLV.content();
+        byte[] thirdContent = new byte[thirdContentBuf.readableBytes()];
+        thirdContentBuf.readBytes(thirdContent);
+        assertArrayEquals("LEAF".getBytes(CharsetUtil.US_ASCII), thirdContent);
 
         assertEquals(true, sslTlv.encapsulatedTLVs().contains(secondTlv));
         assertEquals(true, sslTlv.encapsulatedTLVs().contains(thirdTLV));

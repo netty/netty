@@ -246,7 +246,7 @@ public final class HAProxyMessage {
         List<HAProxyTLV> haProxyTLVs = new ArrayList<HAProxyTLV>(4);
 
         do {
-            haProxyTLVs.add(haProxyTLV);
+            haProxyTLVs.add(haProxyTLV.retain());
             if (haProxyTLV instanceof HAProxySSLTLV) {
                 haProxyTLVs.addAll(((HAProxySSLTLV) haProxyTLV).encapsulatedTLVs());
             }
@@ -267,7 +267,7 @@ public final class HAProxyMessage {
         final int length = header.readUnsignedShort();
         switch (type) {
         case PP2_TYPE_SSL:
-            final byte[] rawContent = copyByteBufToByteArray(header, length);
+            final ByteBuf rawContent = header.slice(header.readerIndex(), length);
             final ByteBuf byteBuf = header.readSlice(length);
             final byte client = byteBuf.readByte();
             final int verify = byteBuf.readInt();
@@ -293,29 +293,10 @@ public final class HAProxyMessage {
         case PP2_TYPE_SSL_CN:
         case PP2_TYPE_NETNS:
         case OTHER:
-            final byte[] content = copyByteBufToByteArray(header, length);
-            // Manually skip the bytes since the copy method did not increase the index
-            header.skipBytes(content.length);
-            return new HAProxyTLV(type, typeAsByte, content);
+            return new HAProxyTLV(type, typeAsByte, header.readSlice(length));
         default:
             return null;
         }
-    }
-
-    /**
-     *  Copies the contents of the ByteBuf (beginning at the reader index) to a byte array of a
-     *  specified length.
-     *
-     *  This method does not modify the readerIndex or writerIndex.
-     *
-     * @param header the byte buffer
-     * @param length the length of the byte array
-     * @return a byte array with the contents of the given ByteBuf up to the specified length
-     */
-    private static byte[] copyByteBufToByteArray(final ByteBuf header, final int length) {
-        final byte[] content = new byte[length];
-        header.getBytes(header.readerIndex(), content);
-        return content;
     }
 
     /**
