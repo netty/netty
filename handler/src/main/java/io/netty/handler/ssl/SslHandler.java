@@ -877,7 +877,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             throw new IllegalArgumentException(
                     "buffer must have at least " + SslUtils.SSL_RECORD_HEADER_LENGTH + " readable bytes");
         }
-        return getEncryptedPacketLength(buffer, buffer.readerIndex()) != -1;
+        return getEncryptedPacketLength(buffer, buffer.readerIndex()) != SslUtils.NOT_ENCRYPTED;
     }
 
     @Override
@@ -907,7 +907,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             final int packetLength = getEncryptedPacketLength(in, offset);
-            if (packetLength == -1) {
+            if (packetLength == SslUtils.NOT_ENCRYPTED) {
                 nonSslRecord = true;
                 break;
             }
