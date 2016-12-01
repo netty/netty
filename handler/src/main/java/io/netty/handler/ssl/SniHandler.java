@@ -104,7 +104,7 @@ public class SniHandler extends ByteToMessageDecoder {
                             final int len = SslUtils.getEncryptedPacketLength(in, readerIndex);
 
                             // Not an SSL/TLS packet
-                            if (len == -1) {
+                            if (len == SslUtils.NOT_ENCRYPTED) {
                                 handshakeFailed = true;
                                 NotSslRecordException e = new NotSslRecordException(
                                         "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
@@ -114,7 +114,8 @@ public class SniHandler extends ByteToMessageDecoder {
                                 SslUtils.notifyHandshakeFailure(ctx, e);
                                 return;
                             }
-                            if (writerIndex - readerIndex - SslUtils.SSL_RECORD_HEADER_LENGTH < len) {
+                            if (len == SslUtils.NOT_ENOUGH_DATA ||
+                                    writerIndex - readerIndex - SslUtils.SSL_RECORD_HEADER_LENGTH < len) {
                                 // Not enough data
                                 return;
                             }

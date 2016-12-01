@@ -74,6 +74,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.verify;
 
 public abstract class SSLEngineTest {
@@ -1080,6 +1081,34 @@ public abstract class SSLEngineTest {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
             cert.delete();
+        }
+    }
+
+    @Test
+    public void testSSLEngineUnwrapNoSslRecord() throws Exception {
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            ByteBuffer src = ByteBuffer.allocate(client.getSession().getApplicationBufferSize());
+            ByteBuffer dst = ByteBuffer.allocate(client.getSession().getPacketBufferSize());
+            ByteBuffer empty = ByteBuffer.allocateDirect(0);
+
+            SSLEngineResult clientResult = client.wrap(empty, dst);
+            assertEquals(SSLEngineResult.Status.OK, clientResult.getStatus());
+            assertEquals(SSLEngineResult.HandshakeStatus.NEED_UNWRAP, clientResult.getHandshakeStatus());
+
+            try {
+                client.unwrap(src, dst);
+                fail();
+            } catch (SSLException expected) {
+                // expected
+            }
+        } finally {
+            cleanupClientSslEngine(client);
         }
     }
 }
