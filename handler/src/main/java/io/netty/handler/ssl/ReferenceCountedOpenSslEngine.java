@@ -796,6 +796,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
 
             int packetLength = SslUtils.getEncryptedPacketLength(srcs, srcsOffset);
+
+            if (packetLength == SslUtils.NOT_ENCRYPTED) {
+                throw new NotSslRecordException("not an SSL/TLS record");
+            }
+
             if (packetLength - SslUtils.SSL_RECORD_HEADER_LENGTH > capacity) {
                 // No enough space in the destination buffer so signal the caller
                 // that the buffer needs to be increased.
