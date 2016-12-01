@@ -74,6 +74,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.verify;
 
 public abstract class SSLEngineTest {
@@ -1080,6 +1081,109 @@ public abstract class SSLEngineTest {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
             cert.delete();
+        }
+    }
+
+    @Test
+    public void testBeginHandshakeAfterEngineClosed() throws SSLException {
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            client.closeInbound();
+            client.closeOutbound();
+            try {
+                client.beginHandshake();
+                fail();
+            } catch (SSLException expected) {
+                // expected
+            }
+        } finally {
+            cleanupClientSslEngine(client);
+        }
+    }
+
+    @Test
+    public void testBeginHandshakeCloseOutbound() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            testBeginHandshakeCloseOutbound(client);
+            testBeginHandshakeCloseOutbound(server);
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    private static void testBeginHandshakeCloseOutbound(SSLEngine engine) throws SSLException {
+        ByteBuffer dst = ByteBuffer.allocateDirect(engine.getSession().getPacketBufferSize());
+        ByteBuffer empty = ByteBuffer.allocateDirect(0);
+        engine.beginHandshake();
+        engine.closeOutbound();
+
+        SSLEngineResult result;
+        for (;;) {
+            result = engine.wrap(empty, dst);
+            dst.flip();
+
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(dst.remaining(), result.bytesProduced());
+            if (result.getHandshakeStatus() != SSLEngineResult.HandshakeStatus.NEED_WRAP) {
+                break;
+            }
+            dst.clear();
+        }
+        assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
+    }
+
+    @Test
+    public void testCloseInboundAfterBeginHandshake() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            testCloseInboundAfterBeginHandshake(client);
+            testCloseInboundAfterBeginHandshake(server);
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    private static void testCloseInboundAfterBeginHandshake(SSLEngine engine) throws SSLException {
+        engine.beginHandshake();
+        try {
+            engine.closeInbound();
+            fail();
+        } catch (SSLException expected) {
+            // expected
         }
     }
 }
