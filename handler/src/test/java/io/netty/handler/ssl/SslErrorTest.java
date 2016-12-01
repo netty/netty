@@ -37,7 +37,6 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import sun.security.validator.ValidatorException;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SSLException;
@@ -103,7 +102,7 @@ public class SslErrorTest {
     }
 
     private static CertificateException newCertificateException(CertPathValidatorException.Reason reason) {
-        return new ValidatorException("Test exception",
+        return new TestCertificateException(
                 new CertPathValidatorException("x", null, null, -1, reason));
     }
 
@@ -197,7 +196,7 @@ public class SslErrorTest {
                                     // Unwrap as its wrapped by a DecoderException
                                     Throwable unwrappedCause = cause.getCause();
                                     if (unwrappedCause instanceof SSLException) {
-                                        if (exception instanceof ValidatorException) {
+                                        if (exception instanceof TestCertificateException) {
                                             CertPathValidatorException.Reason reason =
                                                     ((CertPathValidatorException) exception.getCause()).getReason();
                                             if (reason == CertPathValidatorException.BasicReason.EXPIRED) {
@@ -243,6 +242,13 @@ public class SslErrorTest {
             promise.setSuccess(null);
         } else {
             promise.setFailure(new AssertionError("message not contains '" + messagePart + "': " + message));
+        }
+    }
+
+    private static final class TestCertificateException extends CertificateException {
+
+        public TestCertificateException(Throwable cause) {
+            super(cause);
         }
     }
 }

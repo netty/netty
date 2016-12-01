@@ -26,6 +26,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 
+import io.netty.util.internal.PlatformDependent;
 import org.eclipse.jetty.alpn.ALPN;
 import org.eclipse.jetty.alpn.ALPN.ClientProvider;
 import org.eclipse.jetty.alpn.ALPN.ServerProvider;
@@ -39,7 +40,8 @@ final class JdkAlpnSslEngine extends JdkSslEngine {
     }
 
     private static void updateAvailability() {
-        if (available) {
+        // TODO: Add support for ALPN when using Java9 and still be able to configure it the Netty way.
+        if (available || PlatformDependent.javaVersion() > 8) {
             return;
         }
 
