@@ -19,9 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.ResourceLeak;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
+import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -108,13 +108,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private final int mode;
 
     // Reference Counting
-    private final ResourceLeak leak;
+    private final ResourceLeakTracker<ReferenceCountedOpenSslContext> leak;
     private final AbstractReferenceCounted refCnt = new AbstractReferenceCounted() {
         @Override
         protected void deallocate() {
             destroy();
             if (leak != null) {
-                leak.close();
+                boolean closed = leak.close(ReferenceCountedOpenSslContext.this);
+                assert closed;
             }
         }
     };
@@ -208,7 +209,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         if (mode != SSL.SSL_MODE_SERVER && mode != SSL.SSL_MODE_CLIENT) {
             throw new IllegalArgumentException("mode most be either SSL.SSL_MODE_SERVER or SSL.SSL_MODE_CLIENT");
         }
-        leak = leakDetection ? leakDetector.open(this) : null;
+        leak = leakDetection ? leakDetector.track(this) : null;
         this.mode = mode;
         this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
 
