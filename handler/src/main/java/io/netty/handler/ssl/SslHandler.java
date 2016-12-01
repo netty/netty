@@ -1292,7 +1292,16 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         try {
             flush(ctx, closeNotifyPromise);
         } finally {
-            safeClose(ctx, closeNotifyPromise, promise);
+            // It's important that we do not pass the original ChannelPromise to safeClose(...) as when flush(....)
+            // throws an Exception it will be propagated to the AbstractChannelHandlerContext which will try
+            // to fail the promise because of this. This will then fail as it was already completed by safeClose(...).
+            // We create a new ChannelPromise and try to notify the original ChannelPromise
+            // once it is complete. If we fail to do so we just ignore it as in this case it was failed already
+            // because of a propagated Exception.
+            //
+            // See https://github.com/netty/netty/issues/5931
+            safeClose(ctx, closeNotifyPromise, ctx.newPromise().addListener(
+                    new ChannelPromiseNotifier(false, promise)));
         }
     }
 
