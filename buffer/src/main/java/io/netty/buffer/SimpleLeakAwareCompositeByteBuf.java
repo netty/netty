@@ -16,89 +16,111 @@
 package io.netty.buffer;
 
 
-import io.netty.util.ResourceLeak;
+import io.netty.util.ResourceLeakTracker;
+import io.netty.util.internal.ObjectUtil;
 
 import java.nio.ByteOrder;
 
-final class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
+class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
 
-    private final ResourceLeak leak;
+    final ResourceLeakTracker<ByteBuf> leak;
 
-    SimpleLeakAwareCompositeByteBuf(CompositeByteBuf wrapped, ResourceLeak leak) {
+    SimpleLeakAwareCompositeByteBuf(CompositeByteBuf wrapped, ResourceLeakTracker<ByteBuf> leak) {
         super(wrapped);
-        this.leak = leak;
+        this.leak = ObjectUtil.checkNotNull(leak, "leak");
     }
 
     @Override
-    public boolean release() {
-        boolean deallocated = super.release();
-        if (deallocated) {
-            leak.close();
+    public final boolean release() {
+        // Call unwrap() before just in case that super.release() will change the ByteBuf instance that is returned
+        // by unwrap().
+        ByteBuf unwrapped = unwrap();
+        if (super.release()) {
+            closeLeak(unwrapped);
+            return true;
         }
-        return deallocated;
+        return false;
     }
 
     @Override
-    public boolean release(int decrement) {
-        boolean deallocated = super.release(decrement);
-        if (deallocated) {
-            leak.close();
+    public final boolean release(int decrement) {
+        // Call unwrap() before just in case that super.release() will change the ByteBuf instance that is returned
+        // by unwrap().
+        ByteBuf unwrapped = unwrap();
+        if (super.release(decrement)) {
+            closeLeak(unwrapped);
+            return true;
         }
-        return deallocated;
+        return false;
+    }
+
+    private void closeLeak(ByteBuf trackedByteBuf) {
+        // Close the ResourceLeakTracker with the tracked ByteBuf as argument. This must be the same that was used when
+        // calling DefaultResourceLeak.track(...).
+        boolean closed = leak.close(trackedByteBuf);
+        assert closed;
     }
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        leak.record();
         if (order() == endianness) {
             return this;
         } else {
-            return new SimpleLeakAwareByteBuf(super.order(endianness), leak);
+            return newLeakAwareByteBuf(super.order(endianness));
         }
     }
 
     @Override
     public ByteBuf slice() {
-        return new SimpleLeakAwareByteBuf(super.slice(), leak);
+        return newLeakAwareByteBuf(super.slice());
     }
 
     @Override
     public ByteBuf retainedSlice() {
-        return new SimpleLeakAwareByteBuf(super.retainedSlice(), leak);
+        return newLeakAwareByteBuf(super.retainedSlice());
     }
 
     @Override
     public ByteBuf slice(int index, int length) {
-        return new SimpleLeakAwareByteBuf(super.slice(index, length), leak);
+        return newLeakAwareByteBuf(super.slice(index, length));
     }
 
     @Override
     public ByteBuf retainedSlice(int index, int length) {
-        return new SimpleLeakAwareByteBuf(super.retainedSlice(index, length), leak);
+        return newLeakAwareByteBuf(super.retainedSlice(index, length));
     }
 
     @Override
     public ByteBuf duplicate() {
-        return new SimpleLeakAwareByteBuf(super.duplicate(), leak);
+        return newLeakAwareByteBuf(super.duplicate());
     }
 
     @Override
     public ByteBuf retainedDuplicate() {
-        return new SimpleLeakAwareByteBuf(super.retainedDuplicate(), leak);
+        return newLeakAwareByteBuf(super.retainedDuplicate());
     }
 
     @Override
     public ByteBuf readSlice(int length) {
-        return new SimpleLeakAwareByteBuf(super.readSlice(length), leak);
+        return newLeakAwareByteBuf(super.readSlice(length));
     }
 
     @Override
     public ByteBuf readRetainedSlice(int length) {
-        return new SimpleLeakAwareByteBuf(super.readRetainedSlice(length), leak);
+        return newLeakAwareByteBuf(super.readRetainedSlice(length));
     }
 
     @Override
     public ByteBuf asReadOnly() {
-        return new SimpleLeakAwareByteBuf(super.asReadOnly(), leak);
+        return newLeakAwareByteBuf(super.asReadOnly());
+    }
+
+    private SimpleLeakAwareByteBuf newLeakAwareByteBuf(ByteBuf wrapped) {
+        return newLeakAwareByteBuf(wrapped, unwrap(), leak);
+    }
+
+    protected SimpleLeakAwareByteBuf newLeakAwareByteBuf(
+            ByteBuf wrapped, ByteBuf trackedByteBuf, ResourceLeakTracker<ByteBuf> leakTracker) {
+        return new SimpleLeakAwareByteBuf(wrapped, trackedByteBuf, leakTracker);
     }
 }

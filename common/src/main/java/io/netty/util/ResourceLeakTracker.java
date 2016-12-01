@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,14 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.util;
 
-/**
- * @deprecated please use {@link ResourceLeakTracker} as it may lead to false-positives.
- */
-@Deprecated
-public interface ResourceLeak {
+public interface ResourceLeakTracker<T>  {
+
     /**
      * Records the caller's current stack trace so that the {@link ResourceLeakDetector} can tell where the leaked
      * resource was accessed lastly. This method is a shortcut to {@link #record(Object) record(null)}.
@@ -34,9 +30,10 @@ public interface ResourceLeak {
     void record(Object hint);
 
     /**
-     * Close the leak so that {@link ResourceLeakDetector} does not warn about leaked resources.
+     * Close the leak so that {@link ResourceLeakTracker} does not warn about leaked resources.
+     * After this method is called a leak associated with this ResourceLeakTracker should not be reported.
      *
      * @return {@code true} if called first time, {@code false} if called already
      */
-    boolean close();
+    boolean close(T trackedObject);
 }

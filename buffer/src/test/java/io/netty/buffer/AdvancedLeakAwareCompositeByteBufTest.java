@@ -19,7 +19,7 @@ public class AdvancedLeakAwareCompositeByteBufTest extends SimpleLeakAwareCompos
 
     @Override
     protected WrappedCompositeByteBuf wrap(CompositeByteBuf buffer) {
-        return new AdvancedLeakAwareCompositeByteBuf(buffer, NoopResourceLeak.INSTANCE);
+        return new AdvancedLeakAwareCompositeByteBuf(buffer, new NoopResourceLeakTracker<ByteBuf>());
     }
 
     @Override

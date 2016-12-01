@@ -20,9 +20,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.ResourceLeak;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
+import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -208,7 +208,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private volatile int destroyed;
 
     // Reference Counting
-    private final ResourceLeak leak;
+    private final ResourceLeakTracker<ReferenceCountedOpenSslEngine> leak;
     private final AbstractReferenceCounted refCnt = new AbstractReferenceCounted() {
         @Override
         public ReferenceCounted touch(Object hint) {
@@ -223,7 +223,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         protected void deallocate() {
             shutdown();
             if (leak != null) {
-                leak.close();
+                boolean closed = leak.close(ReferenceCountedOpenSslEngine.this);
+                assert closed;
             }
         }
     };
@@ -269,7 +270,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                   int peerPort, boolean leakDetection) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
-        leak = leakDetection ? leakDetector.open(this) : null;
+        leak = leakDetection ? leakDetector.track(this) : null;
         this.alloc = checkNotNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
         ssl = SSL.newSSL(context.ctx, !context.isClient());

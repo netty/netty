@@ -202,8 +202,24 @@ public class ResourceLeakDetector<T> {
      * related resource is deallocated.
      *
      * @return the {@link ResourceLeak} or {@code null}
+     * @deprecated use {@link #track(Object)}
      */
+    @Deprecated
     public final ResourceLeak open(T obj) {
+        return track0(obj);
+    }
+
+    /**
+     * Creates a new {@link ResourceLeakTracker} which is expected to be closed via
+     * {@link ResourceLeakTracker#close(Object)} when the related resource is deallocated.
+     *
+     * @return the {@link ResourceLeakTracker} or {@code null}
+     */
+    public final ResourceLeakTracker<T> track(T obj) {
+        return track0(obj);
+    }
+
+    private DefaultResourceLeak track0(T obj) {
         Level level = ResourceLeakDetector.level;
         if (level == Level.DISABLED) {
             return null;
@@ -300,9 +316,13 @@ public class ResourceLeakDetector<T> {
                 "so that only a few instances are created.");
     }
 
-    private final class DefaultResourceLeak extends PhantomReference<Object> implements ResourceLeak {
+    @SuppressWarnings("deprecation")
+    private final class DefaultResourceLeak extends PhantomReference<Object> implements ResourceLeakTracker<T>,
+            ResourceLeak {
         private final String creationRecord;
         private final Deque<String> lastRecords = new ArrayDeque<String>();
+        private final int trackedHash;
+
         private int removedRecords;
 
         DefaultResourceLeak(Object referent) {
@@ -310,13 +330,17 @@ public class ResourceLeakDetector<T> {
 
             assert referent != null;
 
+            // Store the hash of the tracked object to later assert it in the close(...) method.
+            // It's important that we not store a reference to the referent as this would disallow it from
+            // be collected via the PhantomReference.
+            trackedHash = System.identityHashCode(referent);
+
             Level level = getLevel();
             if (level.ordinal() >= Level.ADVANCED.ordinal()) {
                 creationRecord = newRecord(null, 3);
             } else {
                 creationRecord = null;
             }
-
             allLeaks.put(this, LeakEntry.INSTANCE);
         }
 
@@ -351,6 +375,18 @@ public class ResourceLeakDetector<T> {
         public boolean close() {
             // Use the ConcurrentMap remove method, which avoids allocating an iterator.
             return allLeaks.remove(this, LeakEntry.INSTANCE);
+        }
+
+        @Override
+        public boolean close(T trackedObject) {
+            // Ensure that the object that was tracked is the same as the one that was passed to close(...).
+            assert trackedHash == System.identityHashCode(trackedObject);
+
+            // We need to actually do the null check of the trackedObject after we close the leak because otherwise
+            // we may get false-positives reported by the ResourceLeakDetector. This can happen as the JIT / GC may
+            // be able to figure out that we do not need the trackedObject anymore and so already enqueue it for
+            // collection before we actually get a chance to close the enclosing ResourceLeak.
+            return close() && trackedObject != null;
         }
 
         @Override
@@ -454,7 +490,8 @@ public class ResourceLeakDetector<T> {
         static final LeakEntry INSTANCE = new LeakEntry();
         private static final int HASH = System.identityHashCode(INSTANCE);
 
-        private LeakEntry() { }
+        private LeakEntry() {
+        }
 
         @Override
         public int hashCode() {

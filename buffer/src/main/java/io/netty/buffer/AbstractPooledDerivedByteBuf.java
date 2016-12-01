@@ -43,6 +43,12 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
         this.recyclerHandle = (Handle<AbstractPooledDerivedByteBuf>) recyclerHandle;
     }
 
+    // Called from within SimpleLeakAwareByteBuf and AdvancedLeakAwareByteBuf.
+    final void parent(ByteBuf newParent) {
+        assert newParent instanceof SimpleLeakAwareByteBuf;
+        parent = newParent;
+    }
+
     @Override
     public final AbstractByteBuf unwrap() {
         return rootParent;
