@@ -1525,9 +1525,9 @@ public abstract class AbstractByteBufTest {
         random.nextBytes(value);
         // Prevent overflow / underflow
         if (value[0] == 0) {
-            value[0] ++;
+            value[0]++;
         } else if (value[0] == -1) {
-            value[0] --;
+            value[0]--;
         }
 
         buffer.setIndex(0, value.length);
@@ -1536,13 +1536,13 @@ public abstract class AbstractByteBufTest {
         assertEquals(0, buffer.compareTo(wrappedBuffer(value)));
         assertEquals(0, buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)));
 
-        value[0] ++;
+        value[0]++;
         assertTrue(buffer.compareTo(wrappedBuffer(value)) < 0);
         assertTrue(buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
         value[0] -= 2;
         assertTrue(buffer.compareTo(wrappedBuffer(value)) > 0);
         assertTrue(buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) > 0);
-        value[0] ++;
+        value[0]++;
 
         assertTrue(buffer.compareTo(wrappedBuffer(value, 0, 31)) > 0);
         assertTrue(buffer.compareTo(wrappedBuffer(value, 0, 31).order(LITTLE_ENDIAN)) > 0);

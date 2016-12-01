@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,20 +17,11 @@
 package io.netty.util;
 
 /**
- * @deprecated please use {@link ResourceLeakTracker} as it may lead to false-positives.
+ * A hint object that provides human-readable message for easier resource leak tracking.
  */
-@Deprecated
-public interface ResourceLeak {
+public interface ResourceLeakHint {
     /**
-     * Records the caller's current stack trace so that the {@link ResourceLeakDetector} can tell where the leaked
-     * resource was accessed lastly.
+     * Returns a human-readable message that potentially enables easier resource leak tracking.
      */
-    void record();
-
-    /**
-     * Close the leak so that {@link ResourceLeakDetector} does not warn about leaked resources.
-     *
-     * @return {@code true} if called first time, {@code false} if called already
-     */
-    boolean close();
+    String toHintString();
 }
