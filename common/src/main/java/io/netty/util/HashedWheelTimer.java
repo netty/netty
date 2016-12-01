@@ -91,7 +91,7 @@ public class HashedWheelTimer implements Timer {
         WORKER_STATE_UPDATER = workerStateUpdater;
     }
 
-    private final ResourceLeak leak;
+    private final ResourceLeakTracker<HashedWheelTimer> leak;
     private final Worker worker = new Worker();
     private final Thread workerThread;
 
@@ -270,7 +270,7 @@ public class HashedWheelTimer implements Timer {
         }
         workerThread = threadFactory.newThread(worker);
 
-        leak = leakDetection || !workerThread.isDaemon() ? leakDetector.open(this) : null;
+        leak = leakDetection || !workerThread.isDaemon() ? leakDetector.track(this) : null;
 
         this.maxPendingTimeouts = maxPendingTimeouts;
     }
@@ -347,7 +347,8 @@ public class HashedWheelTimer implements Timer {
             WORKER_STATE_UPDATER.set(this, WORKER_STATE_SHUTDOWN);
 
             if (leak != null) {
-                leak.close();
+                boolean closed = leak.close(this);
+                assert closed;
             }
 
             return Collections.emptySet();
@@ -368,7 +369,8 @@ public class HashedWheelTimer implements Timer {
         }
 
         if (leak != null) {
-            leak.close();
+            boolean closed = leak.close(this);
+            assert closed;
         }
         return worker.unprocessedTimeouts();
     }

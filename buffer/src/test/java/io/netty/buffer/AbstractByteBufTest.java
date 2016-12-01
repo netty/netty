@@ -1762,18 +1762,37 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testRetainedSliceIndex() throws Exception {
-        assertEqualsAndRelease(buffer, 0, buffer.retainedSlice(0, buffer.capacity()).readerIndex());
-        assertEqualsAndRelease(buffer, 0, buffer.retainedSlice(0, buffer.capacity() - 1).readerIndex());
-        assertEqualsAndRelease(buffer, 0, buffer.retainedSlice(1, buffer.capacity() - 1).readerIndex());
-        assertEqualsAndRelease(buffer, 0, buffer.retainedSlice(1, buffer.capacity() - 2).readerIndex());
+        ByteBuf retainedSlice = buffer.retainedSlice(0, buffer.capacity());
+        assertEquals(0, retainedSlice.readerIndex());
+        retainedSlice.release();
 
-        assertEqualsAndRelease(buffer, buffer.capacity(), buffer.retainedSlice(0, buffer.capacity()).writerIndex());
-        assertEqualsAndRelease(buffer,
-                buffer.capacity() - 1, buffer.retainedSlice(0, buffer.capacity() - 1).writerIndex());
-        assertEqualsAndRelease(buffer,
-                buffer.capacity() - 1, buffer.retainedSlice(1, buffer.capacity() - 1).writerIndex());
-        assertEqualsAndRelease(buffer,
-                buffer.capacity() - 2, buffer.retainedSlice(1, buffer.capacity() - 2).writerIndex());
+        retainedSlice = buffer.retainedSlice(0, buffer.capacity() - 1);
+        assertEquals(0, retainedSlice.readerIndex());
+        retainedSlice.release();
+
+        retainedSlice = buffer.retainedSlice(1, buffer.capacity() - 1);
+        assertEquals(0, retainedSlice.readerIndex());
+        retainedSlice.release();
+
+        retainedSlice = buffer.retainedSlice(1, buffer.capacity() - 2);
+        assertEquals(0, retainedSlice.readerIndex());
+        retainedSlice.release();
+
+        retainedSlice = buffer.retainedSlice(0, buffer.capacity());
+        assertEquals(buffer.capacity(), retainedSlice.writerIndex());
+        retainedSlice.release();
+
+        retainedSlice = buffer.retainedSlice(0, buffer.capacity() - 1);
+        assertEquals(buffer.capacity() - 1, retainedSlice.writerIndex());
+        retainedSlice.release();
+
+        retainedSlice = buffer.retainedSlice(1, buffer.capacity() - 1);
+        assertEquals(buffer.capacity() - 1, retainedSlice.writerIndex());
+        retainedSlice.release();
+
+        retainedSlice = buffer.retainedSlice(1, buffer.capacity() - 2);
+        assertEquals(buffer.capacity() - 2, retainedSlice.writerIndex());
+        retainedSlice.release();
     }
 
     @Test
@@ -1832,9 +1851,14 @@ public abstract class AbstractByteBufTest {
         assertTrue(buffer.compareTo(wrappedBuffer(value, 0, 31).order(LITTLE_ENDIAN)) > 0);
         assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(value)) < 0);
         assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
-        assertTrueAndRelease(buffer, buffer.retainedSlice(0, 31).compareTo(wrappedBuffer(value)) < 0);
-        assertTrueAndRelease(buffer,
-                buffer.retainedSlice(0, 31).compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
+
+        ByteBuf retainedSlice = buffer.retainedSlice(0, 31);
+        assertTrue(retainedSlice.compareTo(wrappedBuffer(value)) < 0);
+        retainedSlice.release();
+
+        retainedSlice = buffer.retainedSlice(0, 31);
+        assertTrue(retainedSlice.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
+        retainedSlice.release();
     }
 
     @Test
@@ -3817,22 +3841,6 @@ public abstract class AbstractByteBufTest {
             buffer.getBytes(buffer.readerIndex(), nioBuffer);
         } finally {
             buffer.release();
-        }
-    }
-
-    private static void assertTrueAndRelease(ByteBuf buf, boolean actual) {
-        try {
-            assertTrue(actual);
-        } finally {
-            buf.release();
-        }
-    }
-
-    private static void assertEqualsAndRelease(ByteBuf buf, int expected, int actual) {
-        try {
-            assertEquals(expected, actual);
-        } finally {
-            buf.release();
         }
     }
 

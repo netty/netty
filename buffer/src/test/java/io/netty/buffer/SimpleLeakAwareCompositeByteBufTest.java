@@ -24,7 +24,7 @@ public class SimpleLeakAwareCompositeByteBufTest extends WrappedCompositeByteBuf
 
     @Override
     protected WrappedCompositeByteBuf wrap(CompositeByteBuf buffer) {
-        return new SimpleLeakAwareCompositeByteBuf(buffer, NoopResourceLeak.INSTANCE);
+        return new SimpleLeakAwareCompositeByteBuf(buffer, new NoopResourceLeakTracker<ByteBuf>());
     }
 
     protected Class<? extends ByteBuf> leakClass() {

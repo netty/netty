@@ -24,6 +24,6 @@ public class AdvancedLeakAwareByteBufTest extends SimpleLeakAwareByteBufTest {
 
     @Override
     protected ByteBuf wrap(ByteBuf buffer) {
-        return new AdvancedLeakAwareByteBuf(buffer, NoopResourceLeak.INSTANCE);
+        return new AdvancedLeakAwareByteBuf(buffer, new NoopResourceLeakTracker<ByteBuf>());
     }
 }
