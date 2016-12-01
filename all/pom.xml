@@ -29,7 +29,6 @@
   <name>Netty/All-in-One</name>
 
   <properties>
-    <quickbuild>true</quickbuild>
     <generatedSourceDir>${project.build.directory}/src</generatedSourceDir>
     <dependencyVersionsDir>${project.build.directory}/versions</dependencyVersionsDir>
   </properties>
@@ -37,9 +36,91 @@
   <profiles>
     <profile>
       <id>full</id>
-      <properties>
-        <quickbuild>false</quickbuild>
-      </properties>
+
+      <!-- Only include in full profile as this will not work on Java9 yet -->
+      <!-- https://issues.apache.org/jira/browse/JXR-133 -->
+      <build>
+        <plugins>
+          <!-- Generate Xref -->
+          <plugin>
+            <artifactId>maven-jxr-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>generate-xref</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jxr</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <linkJavadoc>true</linkJavadoc>
+              <destDir>${project.build.directory}/xref</destDir>
+              <javadocDir>${project.build.directory}/api</javadocDir>
+              <docTitle>Netty Source Xref (${project.version})</docTitle>
+              <windowTitle>Netty Source Xref (${project.version})</windowTitle>
+            </configuration>
+            <dependencies>
+              <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>netty-build</artifactId>
+                <version>19</version>
+                <exclusions>
+                  <!-- Use version 7.3 until a new netty-build release is out -->
+                  <!-- See https://issues.apache.org/jira/browse/JXR-133 -->
+                  <exclusion>
+                    <groupId>com.puppycrawl.tools</groupId>
+                    <artifactId>checkstyle</artifactId>
+                  </exclusion>
+                </exclusions> 
+              </dependency>
+              <dependency>
+                <groupId>com.puppycrawl.tools</groupId>
+                <artifactId>checkstyle</artifactId>
+                <version>7.3</version>
+              </dependency>
+            </dependencies>
+          </plugin>
+
+          <!-- Generate Javadoc -->
+          <plugin>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <skip>${quickbuild}</skip>
+              <excludePackageNames>*.internal,*.example</excludePackageNames>
+              <docfilessubdirs>true</docfilessubdirs>
+              <outputDirectory>${project.build.directory}/api</outputDirectory>
+              <overview>${project.basedir}/src/javadoc/overview.html</overview>
+              <doctitle>Netty API Reference (${project.version})</doctitle>
+              <windowtitle>Netty API Reference (${project.version})</windowtitle>
+              <detectJavaApiLink>false</detectJavaApiLink>
+              <additionalparam>
+                -link http://docs.oracle.com/javase/7/docs/api/
+                -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
+                -link http://docs.oracle.com/javaee/6/api/
+                -link http://www.slf4j.org/apidocs/
+                -link https://commons.apache.org/proper/commons-logging/apidocs/
+                -link http://logging.apache.org/log4j/1.2/apidocs/
+
+                -group "Low-level data representation" io.netty.buffer*
+                -group "Central interface for all I/O operations" io.netty.channel*
+                -group "Client &amp; Server bootstrapping utilities" io.netty.bootstrap*
+                -group "Reusable I/O event interceptors" io.netty.handler*
+                -group "Miscellaneous" io.netty.util*
+              </additionalparam>
+              <locale>en_US</locale>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <id>coverage</id>
@@ -512,73 +593,6 @@
             <phase>none</phase>
           </execution>
         </executions>
-      </plugin>
-
-      <!-- Generate Xref -->
-      <plugin>
-        <artifactId>maven-jxr-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>generate-xref</id>
-            <phase>package</phase>
-            <goals>
-              <goal>jxr</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <skip>${quickbuild}</skip>
-          <linkJavadoc>true</linkJavadoc>
-          <destDir>${project.build.directory}/xref</destDir>
-          <javadocDir>${project.build.directory}/api</javadocDir>
-          <docTitle>Netty Source Xref (${project.version})</docTitle>
-          <windowTitle>Netty Source Xref (${project.version})</windowTitle>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>netty-build</artifactId>
-            <version>19</version>
-          </dependency>
-        </dependencies>
-      </plugin>
-
-      <!-- Generate Javadoc -->
-      <plugin>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>attach-javadocs</id>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <skip>${quickbuild}</skip>
-          <excludePackageNames>*.internal,*.example</excludePackageNames>
-          <docfilessubdirs>true</docfilessubdirs>
-          <outputDirectory>${project.build.directory}/api</outputDirectory>
-          <overview>${project.basedir}/src/javadoc/overview.html</overview>
-          <doctitle>Netty API Reference (${project.version})</doctitle>
-          <windowtitle>Netty API Reference (${project.version})</windowtitle>
-          <detectJavaApiLink>false</detectJavaApiLink>
-          <additionalparam>
-            -link http://docs.oracle.com/javase/7/docs/api/
-            -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
-            -link http://docs.oracle.com/javaee/6/api/
-            -link http://www.slf4j.org/apidocs/
-            -link https://commons.apache.org/proper/commons-logging/apidocs/
-            -link http://logging.apache.org/log4j/1.2/apidocs/
-
-            -group "Low-level data representation" io.netty.buffer*
-            -group "Central interface for all I/O operations" io.netty.channel*
-            -group "Client &amp; Server bootstrapping utilities" io.netty.bootstrap*
-            -group "Reusable I/O event interceptors" io.netty.handler*
-            -group "Miscellaneous" io.netty.util*
-          </additionalparam>
-          <locale>en_US</locale>
-        </configuration>
       </plugin>
     </plugins>
   </build>

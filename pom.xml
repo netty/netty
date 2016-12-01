@@ -68,6 +68,24 @@
   </developers>
 
   <profiles>
+    <!-- JDK9 -->
+    <profile>
+      <id>java9</id>
+      <properties>
+        <!-- Export some stuff which is used during our tests -->
+        <argLine.java9>--add-modules java.xml.bind --add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9>
+        <!-- Not use alpn agent as Java9 supports alpn out of the box -->
+        <argLine.alpnAgent></argLine.alpnAgent>
+        <!-- This is needed as earlier ASM versions not support java9 -->
+        <!-- https://issues.apache.org/jira/browse/MSHADE-242 -->
+        <!-- https://github.com/netty/netty/issues/6100 -->
+        <asm.version>6.0_ALPHA</asm.version>
+      </properties>
+      <activation>
+        <jdk>9</jdk>
+      </activation>
+    </profile>
+
     <profile>
       <id>leak</id>
       <properties>
@@ -220,6 +238,7 @@
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
+    <argLine.java9></argLine.java9> <!-- Overridden when 'java9' profile is active -->
     <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
@@ -230,6 +249,7 @@
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
+    <asm.version>5.1</asm.version>
   </properties>
 
   <modules>
@@ -680,7 +700,7 @@
           <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-all</artifactId>
-            <version>5.1</version>
+            <version>${asm.version}</version>
           </dependency>
         </dependencies>
         <configuration>
@@ -732,6 +752,10 @@
             <!-- Compression -->
             <ignore>java.util.zip.CRC32</ignore>
             <ignore>java.util.zip.Adler32</ignore>
+
+            <!-- JDK 9 -->
+            <ignore>java.nio.ByteBuffer</ignore>
+            <ignore>java.nio.CharBuffer</ignore>
           </ignores>
         </configuration>
         <executions>
@@ -830,7 +854,7 @@
             <logback.configurationFile>${logging.config}</logback.configurationFile>
             <logLevel>${logging.logLevel}</logLevel>
           </systemPropertyVariables>
-          <argLine>${argLine.common} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe}</argLine>
+          <argLine>${argLine.common} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9}</argLine>
           <properties>
             <property>
               <name>listener</name>
