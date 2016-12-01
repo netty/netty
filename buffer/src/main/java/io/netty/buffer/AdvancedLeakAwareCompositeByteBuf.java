@@ -17,7 +17,7 @@ package io.netty.buffer;
 
 
 import io.netty.util.ByteProcessor;
-import io.netty.util.ResourceLeak;
+import io.netty.util.ResourceLeakTracker;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,77 +33,70 @@ import java.util.List;
 
 import static io.netty.buffer.AdvancedLeakAwareByteBuf.recordLeakNonRefCountingOperation;
 
-final class AdvancedLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
+final class AdvancedLeakAwareCompositeByteBuf extends SimpleLeakAwareCompositeByteBuf {
 
-    private final ResourceLeak leak;
-
-    AdvancedLeakAwareCompositeByteBuf(CompositeByteBuf wrapped, ResourceLeak leak) {
-        super(wrapped);
-        this.leak = leak;
+    AdvancedLeakAwareCompositeByteBuf(CompositeByteBuf wrapped, ResourceLeakTracker<ByteBuf> leak) {
+        super(wrapped, leak);
     }
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
         recordLeakNonRefCountingOperation(leak);
-        if (order() == endianness) {
-            return this;
-        } else {
-            return new AdvancedLeakAwareByteBuf(super.order(endianness), leak);
-        }
+        return super.order(endianness);
     }
 
     @Override
     public ByteBuf slice() {
         recordLeakNonRefCountingOperation(leak);
-        return new AdvancedLeakAwareByteBuf(super.slice(), leak);
+        return super.slice();
     }
 
     @Override
     public ByteBuf retainedSlice() {
         recordLeakNonRefCountingOperation(leak);
-        return new AdvancedLeakAwareByteBuf(super.retainedSlice(), leak);
+        return super.retainedSlice();
     }
 
     @Override
     public ByteBuf slice(int index, int length) {
         recordLeakNonRefCountingOperation(leak);
-        return new AdvancedLeakAwareByteBuf(super.slice(index, length), leak);
+        return super.slice(index, length);
     }
 
     @Override
     public ByteBuf retainedSlice(int index, int length) {
         recordLeakNonRefCountingOperation(leak);
-        return new AdvancedLeakAwareByteBuf(super.retainedSlice(index, length), leak);
+        return super.retainedSlice(index, length);
     }
 
     @Override
     public ByteBuf duplicate() {
         recordLeakNonRefCountingOperation(leak);
-        return new AdvancedLeakAwareByteBuf(super.duplicate(), leak);
+        return super.duplicate();
     }
 
     @Override
     public ByteBuf retainedDuplicate() {
         recordLeakNonRefCountingOperation(leak);
-        return new AdvancedLeakAwareByteBuf(super.retainedDuplicate(), leak);
+        return super.retainedDuplicate();
     }
 
     @Override
     public ByteBuf readSlice(int length) {
         recordLeakNonRefCountingOperation(leak);
-        return new AdvancedLeakAwareByteBuf(super.readSlice(length), leak);
+        return super.readSlice(length);
     }
 
     @Override
     public ByteBuf readRetainedSlice(int length) {
         recordLeakNonRefCountingOperation(leak);
-        return new AdvancedLeakAwareByteBuf(super.readRetainedSlice(length), leak);
+        return super.readRetainedSlice(length);
     }
 
     @Override
     public ByteBuf asReadOnly() {
         recordLeakNonRefCountingOperation(leak);
-        return new AdvancedLeakAwareByteBuf(super.asReadOnly(), leak);
+        return super.asReadOnly();
     }
 
     @Override
@@ -1037,24 +1030,8 @@ final class AdvancedLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     }
 
     @Override
-    public boolean release() {
-        boolean deallocated = super.release();
-        if (deallocated) {
-            leak.close();
-        } else {
-            leak.record();
-        }
-        return deallocated;
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        boolean deallocated = super.release(decrement);
-        if (deallocated) {
-            leak.close();
-        } else {
-            leak.record();
-        }
-        return deallocated;
+    protected AdvancedLeakAwareByteBuf newLeakAwareByteBuf(
+            ByteBuf wrapped, ByteBuf trackedByteBuf, ResourceLeakTracker<ByteBuf> leakTracker) {
+        return new AdvancedLeakAwareByteBuf(wrapped, trackedByteBuf, leakTracker);
     }
 }

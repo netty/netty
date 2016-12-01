@@ -15,22 +15,27 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.ResourceLeak;
+import io.netty.util.ResourceLeakTracker;
 
-final class NoopResourceLeak implements ResourceLeak {
+import java.util.concurrent.atomic.AtomicBoolean;
 
-    static final NoopResourceLeak INSTANCE = new NoopResourceLeak();
 
-    private NoopResourceLeak() { }
+final class NoopResourceLeakTracker<T> extends AtomicBoolean implements ResourceLeakTracker<T> {
 
-    @Override
-    public void record() { }
+    private static final long serialVersionUID = 7874092436796083851L;
 
     @Override
-    public void record(Object hint) { }
+    public void record() {
+        // NOOP
+    }
 
     @Override
-    public boolean close() {
-        return false;
+    public void record(Object hint) {
+        // NOOP
+    }
+
+    @Override
+    public boolean close(T trackedObject) {
+        return compareAndSet(false, true);
     }
 }

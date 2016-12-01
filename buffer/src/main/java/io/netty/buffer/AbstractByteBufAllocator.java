@@ -16,8 +16,8 @@
 
 package io.netty.buffer;
 
-import io.netty.util.ResourceLeak;
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -29,17 +29,17 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     static final int DEFAULT_MAX_COMPONENTS = 16;
 
     protected static ByteBuf toLeakAwareBuffer(ByteBuf buf) {
-        ResourceLeak leak;
+        ResourceLeakTracker<ByteBuf> leak;
         switch (ResourceLeakDetector.getLevel()) {
             case SIMPLE:
-                leak = AbstractByteBuf.leakDetector.open(buf);
+                leak = AbstractByteBuf.leakDetector.track(buf);
                 if (leak != null) {
                     buf = new SimpleLeakAwareByteBuf(buf, leak);
                 }
                 break;
             case ADVANCED:
             case PARANOID:
-                leak = AbstractByteBuf.leakDetector.open(buf);
+                leak = AbstractByteBuf.leakDetector.track(buf);
                 if (leak != null) {
                     buf = new AdvancedLeakAwareByteBuf(buf, leak);
                 }
@@ -51,17 +51,17 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     }
 
     protected static CompositeByteBuf toLeakAwareBuffer(CompositeByteBuf buf) {
-        ResourceLeak leak;
+        ResourceLeakTracker<ByteBuf> leak;
         switch (ResourceLeakDetector.getLevel()) {
             case SIMPLE:
-                leak = AbstractByteBuf.leakDetector.open(buf);
+                leak = AbstractByteBuf.leakDetector.track(buf);
                 if (leak != null) {
                     buf = new SimpleLeakAwareCompositeByteBuf(buf, leak);
                 }
                 break;
             case ADVANCED:
             case PARANOID:
-                leak = AbstractByteBuf.leakDetector.open(buf);
+                leak = AbstractByteBuf.leakDetector.track(buf);
                 if (leak != null) {
                     buf = new AdvancedLeakAwareCompositeByteBuf(buf, leak);
                 }
