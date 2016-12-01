@@ -144,7 +144,7 @@ public class ResourceLeakDetector<T> {
     }
 
     /** the collection of active resources */
-    private final ConcurrentMap<DefaultResourceLeak, Boolean> allLeaks = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<DefaultResourceLeak, LeakEntry> allLeaks = PlatformDependent.newConcurrentHashMap();
 
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<Object>();
     private final ConcurrentMap<String, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
@@ -306,20 +306,18 @@ public class ResourceLeakDetector<T> {
         private int removedRecords;
 
         DefaultResourceLeak(Object referent) {
-            super(referent, referent != null? refQueue : null);
+            super(referent, refQueue);
 
-            if (referent != null) {
-                Level level = getLevel();
-                if (level.ordinal() >= Level.ADVANCED.ordinal()) {
-                    creationRecord = newRecord(null, 3);
-                } else {
-                    creationRecord = null;
-                }
+            assert referent != null;
 
-                allLeaks.put(this, Boolean.TRUE);
+            Level level = getLevel();
+            if (level.ordinal() >= Level.ADVANCED.ordinal()) {
+                creationRecord = newRecord(null, 3);
             } else {
                 creationRecord = null;
             }
+
+            allLeaks.put(this, LeakEntry.INSTANCE);
         }
 
         @Override
@@ -352,7 +350,7 @@ public class ResourceLeakDetector<T> {
         @Override
         public boolean close() {
             // Use the ConcurrentMap remove method, which avoids allocating an iterator.
-            return allLeaks.remove(this, Boolean.TRUE);
+            return allLeaks.remove(this, LeakEntry.INSTANCE);
         }
 
         @Override
@@ -450,5 +448,22 @@ public class ResourceLeakDetector<T> {
         }
 
         return buf.toString();
+    }
+
+    private static final class LeakEntry {
+        static final LeakEntry INSTANCE = new LeakEntry();
+        private static final int HASH = System.identityHashCode(INSTANCE);
+
+        private LeakEntry() { }
+
+        @Override
+        public int hashCode() {
+            return HASH;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj == this;
+        }
     }
 }
