@@ -51,12 +51,16 @@ public class StompSubframeEncoderTest {
         ByteBuf byteBuf = channel.readOutbound();
         assertNotNull(byteBuf);
         aggregatedBuffer.writeBytes(byteBuf);
+        byteBuf.release();
 
         byteBuf = channel.readOutbound();
         assertNotNull(byteBuf);
         aggregatedBuffer.writeBytes(byteBuf);
+        byteBuf.release();
+
         aggregatedBuffer.resetReaderIndex();
         String content = aggregatedBuffer.toString(CharsetUtil.UTF_8);
         assertEquals(StompTestConstants.CONNECT_FRAME, content);
+        aggregatedBuffer.release();
     }
 }

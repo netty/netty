@@ -76,7 +76,7 @@ public class BinaryMemcacheDecoderTest {
 
     @After
     public void teardown() throws Exception {
-        channel.finish();
+        channel.finishAndReleaseAll();
     }
 
     /**
@@ -150,6 +150,7 @@ public class BinaryMemcacheDecoderTest {
         while (incoming.isReadable()) {
             channel.writeInbound(incoming.readBytes(5));
         }
+        incoming.release();
 
         BinaryMemcacheRequest request = channel.readInbound();
 
@@ -261,8 +262,13 @@ public class BinaryMemcacheDecoderTest {
         BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest(key, extras);
 
         assertTrue(channel.writeOutbound(request));
-        assertTrue(channel.writeInbound(channel.outboundMessages().toArray()));
-
+        for (;;) {
+            ByteBuf buffer = channel.readOutbound();
+            if (buffer == null) {
+                break;
+            }
+            channel.writeInbound(buffer);
+        }
         BinaryMemcacheRequest read = channel.readInbound();
         read.release();
         // tearDown will call "channel.finish()"
