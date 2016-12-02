@@ -46,7 +46,7 @@ public class BinaryMemcacheEncoderTest {
 
     @After
     public void teardown() throws Exception {
-        channel.finish();
+        channel.finishAndReleaseAll();
     }
 
     @Test
@@ -92,8 +92,8 @@ public class BinaryMemcacheEncoderTest {
 
         ByteBuf written = channel.readOutbound();
         assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE + extrasLength));
-        written.readBytes(DEFAULT_HEADER_SIZE);
-        assertThat(written.readBytes(extrasLength).toString(CharsetUtil.UTF_8), equalTo(extrasContent));
+        written.skipBytes(DEFAULT_HEADER_SIZE);
+        assertThat(written.readSlice(extrasLength).toString(CharsetUtil.UTF_8), equalTo(extrasContent));
         written.release();
     }
 
@@ -109,8 +109,8 @@ public class BinaryMemcacheEncoderTest {
 
         ByteBuf written = channel.readOutbound();
         assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE + keyLength));
-        written.readBytes(DEFAULT_HEADER_SIZE);
-        assertThat(written.readBytes(keyLength).toString(CharsetUtil.UTF_8), equalTo("netty"));
+        written.skipBytes(DEFAULT_HEADER_SIZE);
+        assertThat(written.readSlice(keyLength).toString(CharsetUtil.UTF_8), equalTo("netty"));
         written.release();
     }
 
@@ -139,7 +139,7 @@ public class BinaryMemcacheEncoderTest {
         written = channel.readOutbound();
         assertThat(written.readableBytes(), is(content1.content().readableBytes()));
         assertThat(
-                written.readBytes(content1.content().readableBytes()).toString(CharsetUtil.UTF_8),
+                written.readSlice(content1.content().readableBytes()).toString(CharsetUtil.UTF_8),
                 is("Netty")
         );
         written.release();
@@ -147,7 +147,7 @@ public class BinaryMemcacheEncoderTest {
         written = channel.readOutbound();
         assertThat(written.readableBytes(), is(content2.content().readableBytes()));
         assertThat(
-                written.readBytes(content2.content().readableBytes()).toString(CharsetUtil.UTF_8),
+                written.readSlice(content2.content().readableBytes()).toString(CharsetUtil.UTF_8),
                 is(" Rocks!")
         );
         written.release();
