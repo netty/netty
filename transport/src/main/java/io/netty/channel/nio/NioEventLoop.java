@@ -314,12 +314,15 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             execute(new Runnable() {
                 @Override
                 public void run() {
-                    rebuildSelector();
+                    rebuildSelector0();
                 }
             });
             return;
         }
+        rebuildSelector0();
+    }
 
+    private void rebuildSelector0() {
         final Selector oldSelector = selector;
         final Selector newSelector;
 
@@ -337,39 +340,33 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         // Register all channels to the new Selector.
         int nChannels = 0;
         for (;;) {
-            try {
-                for (SelectionKey key: oldSelector.keys()) {
-                    Object a = key.attachment();
-                    try {
-                        if (!key.isValid() || key.channel().keyFor(newSelector) != null) {
-                            continue;
-                        }
+            for (SelectionKey key: oldSelector.keys()) {
+                Object a = key.attachment();
+                try {
+                    if (!key.isValid() || key.channel().keyFor(newSelector) != null) {
+                        continue;
+                    }
 
-                        int interestOps = key.interestOps();
-                        key.cancel();
-                        SelectionKey newKey = key.channel().register(newSelector, interestOps, a);
-                        if (a instanceof AbstractNioChannel) {
-                            // Update SelectionKey
-                            ((AbstractNioChannel) a).selectionKey = newKey;
-                        }
-                        nChannels ++;
-                    } catch (Exception e) {
-                        logger.warn("Failed to re-register a Channel to the new Selector.", e);
-                        if (a instanceof AbstractNioChannel) {
-                            AbstractNioChannel ch = (AbstractNioChannel) a;
-                            ch.unsafe().close(ch.unsafe().voidPromise());
-                        } else {
-                            @SuppressWarnings("unchecked")
-                            NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
-                            invokeChannelUnregistered(task, key, e);
-                        }
+                    int interestOps = key.interestOps();
+                    key.cancel();
+                    SelectionKey newKey = key.channel().register(newSelector, interestOps, a);
+                    if (a instanceof AbstractNioChannel) {
+                        // Update SelectionKey
+                        ((AbstractNioChannel) a).selectionKey = newKey;
+                    }
+                    nChannels ++;
+                } catch (Exception e) {
+                    logger.warn("Failed to re-register a Channel to the new Selector.", e);
+                    if (a instanceof AbstractNioChannel) {
+                        AbstractNioChannel ch = (AbstractNioChannel) a;
+                        ch.unsafe().close(ch.unsafe().voidPromise());
+                    } else {
+                        @SuppressWarnings("unchecked")
+                        NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
+                        invokeChannelUnregistered(task, key, e);
                     }
                 }
-            } catch (ConcurrentModificationException e) {
-                // Probably due to concurrent modification of the key set.
-                continue;
             }
-
             break;
         }
 
