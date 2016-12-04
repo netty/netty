@@ -15,6 +15,8 @@
  */
 package io.netty.util.internal.logging;
 
+import io.netty.util.internal.ObjectUtil;
+
 /**
  * Creates an {@link InternalLogger} or changes the default factory
  * implementation.  This factory allows you to choose what logging framework
@@ -57,7 +59,11 @@ public abstract class InternalLoggerFactory {
      */
     public static InternalLoggerFactory getDefaultFactory() {
         if (defaultFactory == null) {
-            defaultFactory = newDefaultFactory(InternalLoggerFactory.class.getName());
+            synchronized (InternalLoggerFactory.class) {
+                if (defaultFactory == null) {
+                    defaultFactory = newDefaultFactory(InternalLoggerFactory.class.getName());
+                }
+            }
         }
         return defaultFactory;
     }
@@ -65,11 +71,8 @@ public abstract class InternalLoggerFactory {
     /**
      * Changes the default factory.
      */
-    public static void setDefaultFactory(InternalLoggerFactory defaultFactory) {
-        if (defaultFactory == null) {
-            throw new NullPointerException("defaultFactory");
-        }
-        InternalLoggerFactory.defaultFactory = defaultFactory;
+    public static synchronized void setDefaultFactory(InternalLoggerFactory defaultFactory) {
+        InternalLoggerFactory.defaultFactory = ObjectUtil.checkNotNull(defaultFactory, "defaultFactory");
     }
 
     /**
