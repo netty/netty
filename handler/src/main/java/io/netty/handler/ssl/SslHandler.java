@@ -1042,8 +1042,20 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     if (readableBytes > 0) {
                         decoded = true;
                         ctx.fireChannelRead(decodeOut);
+
+                        // This buffer was handled, null it out.
+                        decodeOut = null;
+                        if (bufferSize <= 0) {
+                            // It may happen that readableBytes >= engine.getSession().getApplicationBufferSize()
+                            // while there is still more to unwrap, in this case we will just allocate a new buffer
+                            // with the capacity of engine.getSession().getApplicationBufferSize() and call unwrap
+                            // again.
+                            bufferSize = engine.getSession().getApplicationBufferSize();
+                        }
                     } else {
+                        // This buffer was handled, null it out.
                         decodeOut.release();
+                        decodeOut = null;
                     }
                     // Allocate a new buffer which can hold all the rest data and loop again.
                     // TODO: We may want to reconsider how we calculate the length here as we may
@@ -1120,12 +1132,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 sslCloseFuture.trySuccess(ctx.channel());
             }
         } finally {
-            if (decodeOut.isReadable()) {
-                decoded = true;
+            if (decodeOut != null) {
+                if (decodeOut.isReadable()) {
+                    decoded = true;
 
-                ctx.fireChannelRead(decodeOut);
-            } else {
-                decodeOut.release();
+                    ctx.fireChannelRead(decodeOut);
+                } else {
+                    decodeOut.release();
+                }
             }
         }
         return decoded;
