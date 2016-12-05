@@ -15,16 +15,54 @@
  */
 package io.netty.buffer;
 
-import org.junit.Assert;
+import io.netty.util.ResourceLeakTracker;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+
+import java.util.ArrayDeque;
+import java.util.Queue;
+
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 public class SimpleLeakAwareCompositeByteBufTest extends WrappedCompositeByteBufTest {
 
     private final Class<? extends ByteBuf> clazz = leakClass();
+    private final Queue<NoopResourceLeakTracker<ByteBuf>> trackers = new ArrayDeque<NoopResourceLeakTracker<ByteBuf>>();
 
     @Override
-    protected WrappedCompositeByteBuf wrap(CompositeByteBuf buffer) {
-        return new SimpleLeakAwareCompositeByteBuf(buffer, new NoopResourceLeakTracker<ByteBuf>());
+    protected final WrappedCompositeByteBuf wrap(CompositeByteBuf buffer) {
+        NoopResourceLeakTracker<ByteBuf> tracker = new NoopResourceLeakTracker<ByteBuf>();
+        WrappedCompositeByteBuf leakAwareBuf = wrap(buffer, tracker);
+        trackers.add(tracker);
+        return leakAwareBuf;
+    }
+
+    protected SimpleLeakAwareCompositeByteBuf wrap(CompositeByteBuf buffer, ResourceLeakTracker<ByteBuf> tracker) {
+        return new SimpleLeakAwareCompositeByteBuf(buffer, tracker);
+    }
+
+    @Before
+    @Override
+    public void init() {
+        super.init();
+        trackers.clear();
+    }
+
+    @After
+    @Override
+    public void dispose() {
+        super.dispose();
+
+        for (;;) {
+            NoopResourceLeakTracker<ByteBuf> tracker = trackers.poll();
+
+            if (tracker == null) {
+                break;
+            }
+            assertTrue(tracker.get());
+        }
     }
 
     protected Class<? extends ByteBuf> leakClass() {
@@ -53,7 +91,7 @@ public class SimpleLeakAwareCompositeByteBufTest extends WrappedCompositeByteBuf
 
     protected final void assertWrapped(ByteBuf buf) {
         try {
-            Assert.assertSame(clazz, buf.getClass());
+            assertSame(clazz, buf.getClass());
         } finally {
             buf.release();
         }
