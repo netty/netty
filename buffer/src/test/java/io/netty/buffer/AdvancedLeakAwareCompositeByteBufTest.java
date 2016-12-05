@@ -15,11 +15,13 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ResourceLeakTracker;
+
 public class AdvancedLeakAwareCompositeByteBufTest extends SimpleLeakAwareCompositeByteBufTest {
 
     @Override
-    protected WrappedCompositeByteBuf wrap(CompositeByteBuf buffer) {
-        return new AdvancedLeakAwareCompositeByteBuf(buffer, new NoopResourceLeakTracker<ByteBuf>());
+    protected SimpleLeakAwareCompositeByteBuf wrap(CompositeByteBuf buffer, ResourceLeakTracker<ByteBuf> tracker) {
+        return new AdvancedLeakAwareCompositeByteBuf(buffer, tracker);
     }
 
     @Override
