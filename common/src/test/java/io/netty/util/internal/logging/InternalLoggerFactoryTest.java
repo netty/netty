@@ -49,16 +49,15 @@ public class InternalLoggerFactoryTest {
     @Test
     public void shouldNotAllowNullDefaultFactory() {
         assertThrows(NullPointerException.class, () -> InternalLoggerFactory.setDefaultFactory(null));
+        holder.setFactory(null);
     }
 
     @Test
     public void shouldGetInstance() {
-        InternalLoggerFactory.setDefaultFactory(oldLoggerFactory);
+        final String helloWorld = "Hello, world!";
 
-        String helloWorld = "Hello, world!";
-
-        InternalLogger one = InternalLoggerFactory.getInstance("helloWorld");
-        InternalLogger two = InternalLoggerFactory.getInstance(helloWorld.getClass());
+        final InternalLogger one = InternalLoggerFactory.getInstance("helloWorld");
+        final InternalLogger two = InternalLoggerFactory.getInstance(helloWorld.getClass());
 
         assertNotNull(one);
         assertNotNull(two);
@@ -179,4 +178,163 @@ public class InternalLoggerFactoryTest {
         logger.error("a", e);
         verify(mockLogger).error("a", e);
     }
+
+    @Test
+    public void shouldNotAllowToSetFactoryTwice() {
+        try {
+            holder.setFactory(createMock(InternalLoggerFactory.class));
+            fail("should have thrown IllegalStateException");
+        } catch (final IllegalStateException e) {
+            assertThat(e.getMessage(), containsString("factory is already set"));
+        }
+
+        try {
+            final InternalLoggerFactory.InternalLoggerFactoryHolder implicit =
+                    new InternalLoggerFactory.InternalLoggerFactoryHolder();
+            implicit.getFactory(); // force initialization
+            implicit.setFactory(createMock(InternalLoggerFactory.class));
+            fail("should have thrown IllegalStateException");
+        } catch (final IllegalStateException e) {
+            assertThat(e.getMessage(), containsString("factory is already set"));
+        }
+    }
+
+    @Test
+    public void raceGetAndGet() throws BrokenBarrierException, InterruptedException {
+        final CyclicBarrier barrier = new CyclicBarrier(3);
+        final InternalLoggerFactory.InternalLoggerFactoryHolder holder =
+                new InternalLoggerFactory.InternalLoggerFactoryHolder();
+        final AtomicReference<InternalLoggerFactory> firstReference = new AtomicReference<InternalLoggerFactory>();
+        final AtomicReference<InternalLoggerFactory> secondReference = new AtomicReference<InternalLoggerFactory>();
+
+        final Thread firstGet = getThread(firstReference, holder, barrier);
+        final Thread secondGet = getThread(secondReference, holder, barrier);
+
+        firstGet.start();
+        secondGet.start();
+        // start the two get threads
+        barrier.await();
+
+        // wait for the two get threads to complete
+        barrier.await();
+
+        if (holder.getFactory() == firstReference.get()) {
+            assertSame(holder.getFactory(), secondReference.get());
+        } else if (holder.getFactory() == secondReference.get()) {
+            assertSame(holder.getFactory(), firstReference.get());
+        } else {
+            fail("holder should have been set by one of the get threads");
+        }
+    }
+
+    @Test
+    public void raceGetAndSet() throws BrokenBarrierException, InterruptedException {
+        final CyclicBarrier barrier = new CyclicBarrier(3);
+        final InternalLoggerFactory.InternalLoggerFactoryHolder holder =
+                new InternalLoggerFactory.InternalLoggerFactoryHolder();
+        final InternalLoggerFactory internalLoggerFactory = createMock(InternalLoggerFactory.class);
+        final AtomicReference<InternalLoggerFactory> reference = new AtomicReference<InternalLoggerFactory>();
+
+        final Thread get = getThread(reference, holder, barrier);
+
+        final AtomicBoolean setSuccess = new AtomicBoolean();
+        final Thread set = setThread(internalLoggerFactory, holder, setSuccess, barrier);
+
+        get.start();
+        set.start();
+        // start the get and set threads
+        barrier.await();
+
+        // wait for the get and set threads to complete
+        barrier.await();
+
+        if (setSuccess.get()) {
+            assertSame(internalLoggerFactory, reference.get());
+            assertSame(internalLoggerFactory, holder.getFactory());
+        } else {
+            assertNotSame(internalLoggerFactory, reference.get());
+            assertNotSame(internalLoggerFactory, holder.getFactory());
+            assertSame(holder.getFactory(), reference.get());
+        }
+    }
+
+    @Test
+    public void raceSetAndSet() throws BrokenBarrierException, InterruptedException {
+        final CyclicBarrier barrier = new CyclicBarrier(3);
+        final InternalLoggerFactory.InternalLoggerFactoryHolder holder =
+                new InternalLoggerFactory.InternalLoggerFactoryHolder();
+        final InternalLoggerFactory first = createMock(InternalLoggerFactory.class);
+        final InternalLoggerFactory second = createMock(InternalLoggerFactory.class);
+
+        final AtomicBoolean firstSetSuccess = new AtomicBoolean();
+        final Thread firstSet = setThread(first, holder, firstSetSuccess, barrier);
+
+        final AtomicBoolean secondSetSuccess = new AtomicBoolean();
+        final Thread secondSet = setThread(second, holder, secondSetSuccess, barrier);
+
+        firstSet.start();
+        secondSet.start();
+        // start the two set threads
+        barrier.await();
+
+        // wait for the two set threads to complete
+        barrier.await();
+
+        assertTrue(firstSetSuccess.get() || secondSetSuccess.get());
+        if (firstSetSuccess.get()) {
+            assertFalse(secondSetSuccess.get());
+            assertSame(first, holder.getFactory());
+        } else {
+            assertFalse(firstSetSuccess.get());
+            assertSame(second, holder.getFactory());
+        }
+    }
+
+    private static Thread getThread(
+            final AtomicReference<InternalLoggerFactory> reference,
+            final InternalLoggerFactory.InternalLoggerFactoryHolder holder,
+            final CyclicBarrier barrier) {
+        return new Thread(new Runnable() {
+            @Override
+            public void run() {
+                awaitUnchecked(barrier);
+                reference.set(holder.getFactory());
+                awaitUnchecked(barrier);
+            }
+        });
+    }
+
+    private static Thread setThread(
+            final InternalLoggerFactory internalLoggerFactory,
+            final InternalLoggerFactory.InternalLoggerFactoryHolder holder,
+            final AtomicBoolean setSuccess,
+            final CyclicBarrier barrier) {
+        return new Thread(new Runnable() {
+            @Override
+            public void run() {
+                awaitUnchecked(barrier);
+                boolean success = true;
+                try {
+                    holder.setFactory(internalLoggerFactory);
+                } catch (final IllegalStateException e) {
+                    success = false;
+                    assertThat(e.getMessage(), containsString("factory is already set"));
+                } finally {
+                    setSuccess.set(success);
+                    awaitUnchecked(barrier);
+                }
+            }
+        });
+    }
+
+    private static void awaitUnchecked(final CyclicBarrier barrier) {
+        try {
+            barrier.await();
+        } catch (final InterruptedException exception) {
+            throw new IllegalStateException(exception);
+        } catch (final BrokenBarrierException exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
 }

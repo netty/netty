@@ -16,26 +16,66 @@
 
 package io.netty.util.internal.logging;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import static java.util.Objects.requireNonNull;
 
 /**
- * Creates an {@link InternalLogger} or changes the default factory
- * implementation.  This factory allows you to choose what logging framework
- * Netty should use.  The default factory is {@link Slf4JLoggerFactory}.  If SLF4J
- * is not available, {@link Log4JLoggerFactory} is used.  If Log4J is not available,
- * {@link JdkLoggerFactory} is used.  You can change it to your preferred
- * logging framework before other Netty classes are loaded:
- * <pre>
- * {@link InternalLoggerFactory}.setDefaultFactory({@link Log4JLoggerFactory}.INSTANCE);
- * </pre>
- * Please note that the new default factory is effective only for the classes
- * which were loaded after the default factory is changed.  Therefore,
- * {@link #setDefaultFactory(InternalLoggerFactory)} should be called as early
- * as possible and shouldn't be called more than once.
+ * Creates {@link InternalLogger}s. This factory allows you to choose what logging framework Netty should use. The
+ * default factory is {@link Slf4JLoggerFactory}. If SLF4J is not available, {@link Log4JLoggerFactory} is used. If
+ * Log4J is not available, {@link JdkLoggerFactory} is used. You can change it to your preferred logging framework
+ * before other Netty classes are loaded via {@link #setDefaultFactory(InternalLoggerFactory)}. If you want to change
+ * the logger factory, {@link #setDefaultFactory(InternalLoggerFactory)} must be invoked before any other Netty classes
+ * are loaded. Note that {@link #setDefaultFactory(InternalLoggerFactory)}} can not be invoked more than once.
  */
 public abstract class InternalLoggerFactory {
 
-    private static volatile InternalLoggerFactory defaultFactory;
+    private static final InternalLoggerFactoryHolder HOLDER = new InternalLoggerFactoryHolder();
+
+    /**
+     * This class holds a reference to the {@link InternalLoggerFactory}. The raison d'être for this class is primarily
+     * to aid in testing.
+     */
+    static final class InternalLoggerFactoryHolder {
+        private final AtomicReference<InternalLoggerFactory> reference;
+
+        InternalLoggerFactoryHolder() {
+            this(null);
+        }
+
+        InternalLoggerFactoryHolder(final InternalLoggerFactory holder) {
+            this.reference = new AtomicReference<InternalLoggerFactory>(holder);
+        }
+
+        InternalLoggerFactory getFactory() {
+            if (reference.get() == null) {
+                reference.compareAndSet(null, newDefaultFactory(InternalLoggerFactory.class.getName()));
+            }
+            return reference.get();
+        }
+
+        void setFactory(final InternalLoggerFactory factory) {
+            if (factory == null) {
+                throw new NullPointerException("factory");
+            }
+            if (!reference.compareAndSet(null, factory)) {
+                throw new IllegalStateException(
+                        "factory is already set to [" + reference.get() + "], rejecting [" + factory + "]");
+            }
+        }
+
+        InternalLogger getInstance(final Class<?> clazz) {
+            return getInstance(clazz.getName());
+        }
+
+        InternalLogger getInstance(final String name) {
+            return newInstance(name);
+        }
+
+        InternalLogger newInstance(String name) {
+            return getFactory().newInstance(name);
+        }
+    }
 
     @SuppressWarnings("UnusedCatchParameter")
     private static InternalLoggerFactory newDefaultFactory(String name) {
@@ -85,36 +125,36 @@ public abstract class InternalLoggerFactory {
     }
 
     /**
-     * Returns the default factory.  The initial default factory is
-     * {@link JdkLoggerFactory}.
+     * Get the default factory that was either initialized automatically based on logging implementations on the
+     * classpath, or set explicitly via {@link #setDefaultFactory(InternalLoggerFactory)}.
      */
     public static InternalLoggerFactory getDefaultFactory() {
-        if (defaultFactory == null) {
-            defaultFactory = newDefaultFactory(InternalLoggerFactory.class.getName());
-        }
-        return defaultFactory;
+        return HOLDER.getFactory();
     }
 
     /**
-     * Changes the default factory.
+     * Set the default factory. This method must be invoked before the default factory is initialized via
+     * {@link #getDefaultFactory()}, and can not be invoked multiple times.
+     *
+     * @param defaultFactory a non-null implementation of {@link InternalLoggerFactory}
      */
     public static void setDefaultFactory(InternalLoggerFactory defaultFactory) {
         requireNonNull(defaultFactory, "defaultFactory");
-        InternalLoggerFactory.defaultFactory = defaultFactory;
+        HOLDER.setFactory(defaultFactory);
     }
 
     /**
      * Creates a new logger instance with the name of the specified class.
      */
     public static InternalLogger getInstance(Class<?> clazz) {
-        return getInstance(clazz.getName());
+        return HOLDER.getInstance(clazz);
     }
 
     /**
      * Creates a new logger instance with the specified name.
      */
     public static InternalLogger getInstance(String name) {
-        return getDefaultFactory().newInstance(name);
+        return HOLDER.getInstance(name);
     }
 
     /**
