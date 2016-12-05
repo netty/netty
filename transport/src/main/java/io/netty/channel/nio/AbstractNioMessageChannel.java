@@ -176,7 +176,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         // accepting incoming connections. (e.g. too many open files)
         return cause instanceof IOException &&
                 !(cause instanceof PortUnreachableException) &&
-                this instanceof ServerChannel;
+                !(this instanceof ServerChannel);
     }
 
     /**
