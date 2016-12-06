@@ -43,6 +43,7 @@ public final class NativeLibraryLoader {
     private static final String NATIVE_RESOURCE_HOME = "META-INF/native/";
     private static final String OSNAME;
     private static final File WORKDIR;
+    private static final boolean DELETE_NATIVE_LIB_AFTER_LOADING;
 
     static {
         OSNAME = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "");
@@ -64,6 +65,9 @@ public final class NativeLibraryLoader {
             WORKDIR = tmpdir();
             logger.debug("-Dio.netty.native.workdir: " + WORKDIR + " (io.netty.tmpdir)");
         }
+
+        DELETE_NATIVE_LIB_AFTER_LOADING = SystemPropertyUtil.getBoolean(
+                "io.netty.native.deleteLibAfterLoading", true);
     }
 
     private static File tmpdir() {
@@ -229,7 +233,7 @@ public final class NativeLibraryLoader {
             // After we load the library it is safe to delete the file.
             // We delete the file immediately to free up resources as soon as possible,
             // and if this fails fallback to deleting on JVM exit.
-            if (tmpFile != null && !tmpFile.delete()) {
+            if (tmpFile != null && (!DELETE_NATIVE_LIB_AFTER_LOADING || !tmpFile.delete())) {
                 tmpFile.deleteOnExit();
             }
         }
