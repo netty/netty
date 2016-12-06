@@ -544,7 +544,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         ChannelFuture ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
-        assertTrue(serverChannelLatch.await(2, TimeUnit.SECONDS));
+        assertTrue(serverChannelLatch.await(WAIT_TIME_SECONDS, TimeUnit.SECONDS));
     }
 
     private void verifyHeadersOnly(Http2Headers expected, ChannelPromise writePromise, ChannelFuture writeFuture)
