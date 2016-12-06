@@ -22,6 +22,7 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -85,6 +86,19 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     return SystemPropertyUtil.getBoolean("jdk.tls.rejectClientInitiatedRenegotiation", false);
                 }
             });
+
+    private static final int MAX_BIO_BYTES =
+            AccessController.doPrivileged(new PrivilegedAction<Integer>() {
+                @Override
+                public Integer run() {
+                    int bytes = SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.maxBioBytes", 0);
+                    if (bytes <= 0) {
+                        return bytes;
+                    }
+                    return Math.max(bytes, SslUtils.MIN_HANDSHAKE_BUFFER_SIZE);
+                }
+            });
+
     private static final List<String> DEFAULT_CIPHERS;
     private static final Integer DH_KEY_LENGTH;
     private static final ResourceLeakDetector<ReferenceCountedOpenSslContext> leakDetector =
@@ -130,7 +144,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final Certificate[] keyCertChain;
     final ClientAuth clientAuth;
     final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
-    volatile boolean rejectRemoteInitiatedRenegotiation;
+    private volatile boolean rejectRemoteInitiatedRenegotiation;
+    private volatile int maxBioBytes = MAX_BIO_BYTES;
 
     static final OpenSslApplicationProtocolNegotiator NONE_PROTOCOL_NEGOTIATOR =
             new OpenSslApplicationProtocolNegotiator() {
@@ -266,7 +281,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_DH_USE);
                 SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
 
-                // We do not support compression as the moment so we should explicitly disable it.
+                // We do not support compression at the moment so we should explicitly disable it.
                 SSLContext.setOptions(ctx, SSL.SSL_OP_NO_COMPRESSION);
 
                 // Disable ticket support by default to be more inline with SSLEngineImpl of the JDK.
@@ -428,6 +443,33 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      */
     public void setRejectRemoteInitiatedRenegotiation(boolean rejectRemoteInitiatedRenegotiation) {
         this.rejectRemoteInitiatedRenegotiation = rejectRemoteInitiatedRenegotiation;
+    }
+
+    /**
+     * Returns if remote initiated renegotiation is supported or not.
+     */
+    public boolean getRejectRemoteInitiatedRenegotiation() {
+         return rejectRemoteInitiatedRenegotiation;
+    }
+
+    /**
+     * Set the maximum number of bytes that are used for each BIO instance used in the pair. As two BIO instances are
+     * needed each {@link ReferenceCountedOpenSslEngine} will consume 2 * maxBioSize of native memory. Using {@code 0}
+     * will use the default value of 16 kb. Using a lower number will trade memory usage with higher cpu-usage.
+     */
+    public void setMaxBioBytes(int maxBioBytes) {
+        if (maxBioBytes < 0 || maxBioBytes < SslUtils.MIN_HANDSHAKE_BUFFER_SIZE) {
+            throw new IllegalArgumentException(
+                    "maxBioBytes: " + maxBioBytes + " (expected: >= " + SslUtils.MIN_HANDSHAKE_BUFFER_SIZE + " | 0)");
+        }
+        this.maxBioBytes = ObjectUtil.checkPositiveOrZero(maxBioBytes, "maxBioBytes");
+    }
+
+    /**
+     * Returns the maximum number of bytes that are used for each BIO instance.
+     */
+    public int getMaxBioBytes() {
+        return maxBioBytes;
     }
 
     /**
