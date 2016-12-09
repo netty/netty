@@ -559,21 +559,6 @@ final class PlatformDependent0 {
         return value & 0x1f;
     }
 
-    static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
-            Class<? super U> tclass, String fieldName) throws Exception {
-        return new UnsafeAtomicReferenceFieldUpdater<U, W>(UNSAFE, tclass, fieldName);
-    }
-
-    static <T> AtomicIntegerFieldUpdater<T> newAtomicIntegerFieldUpdater(
-            Class<? super T> tclass, String fieldName) throws Exception {
-        return new UnsafeAtomicIntegerFieldUpdater<T>(UNSAFE, tclass, fieldName);
-    }
-
-    static <T> AtomicLongFieldUpdater<T> newAtomicLongFieldUpdater(
-            Class<? super T> tclass, String fieldName) throws Exception {
-        return new UnsafeAtomicLongFieldUpdater<T>(UNSAFE, tclass, fieldName);
-    }
-
     static ClassLoader getClassLoader(final Class<?> clazz) {
         if (System.getSecurityManager() == null) {
             return clazz.getClassLoader();
