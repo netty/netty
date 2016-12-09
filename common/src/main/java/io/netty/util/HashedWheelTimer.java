@@ -81,15 +81,8 @@ public class HashedWheelTimer implements Timer {
     private static final ResourceLeakDetector<HashedWheelTimer> leakDetector = ResourceLeakDetectorFactory.instance()
             .newResourceLeakDetector(HashedWheelTimer.class, 1, Runtime.getRuntime().availableProcessors() * 4L);
 
-    private static final AtomicIntegerFieldUpdater<HashedWheelTimer> WORKER_STATE_UPDATER;
-    static {
-        AtomicIntegerFieldUpdater<HashedWheelTimer> workerStateUpdater =
-                PlatformDependent.newAtomicIntegerFieldUpdater(HashedWheelTimer.class, "workerState");
-        if (workerStateUpdater == null) {
-            workerStateUpdater = AtomicIntegerFieldUpdater.newUpdater(HashedWheelTimer.class, "workerState");
-        }
-        WORKER_STATE_UPDATER = workerStateUpdater;
-    }
+    private static final AtomicIntegerFieldUpdater<HashedWheelTimer> WORKER_STATE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(HashedWheelTimer.class, "workerState");
 
     private final ResourceLeakTracker<HashedWheelTimer> leak;
     private final Worker worker = new Worker();
@@ -545,16 +538,8 @@ public class HashedWheelTimer implements Timer {
         private static final int ST_INIT = 0;
         private static final int ST_CANCELLED = 1;
         private static final int ST_EXPIRED = 2;
-        private static final AtomicIntegerFieldUpdater<HashedWheelTimeout> STATE_UPDATER;
-
-        static {
-            AtomicIntegerFieldUpdater<HashedWheelTimeout> updater =
-                    PlatformDependent.newAtomicIntegerFieldUpdater(HashedWheelTimeout.class, "state");
-            if (updater == null) {
-                updater = AtomicIntegerFieldUpdater.newUpdater(HashedWheelTimeout.class, "state");
-            }
-            STATE_UPDATER = updater;
-        }
+        private static final AtomicIntegerFieldUpdater<HashedWheelTimeout> STATE_UPDATER =
+                AtomicIntegerFieldUpdater.newUpdater(HashedWheelTimeout.class, "state");
 
         private final HashedWheelTimer timer;
         private final TimerTask task;

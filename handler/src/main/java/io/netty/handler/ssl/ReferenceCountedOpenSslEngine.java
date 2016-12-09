@@ -102,13 +102,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ReferenceCountedOpenSslEngine.class);
 
     static {
-        AtomicIntegerFieldUpdater<ReferenceCountedOpenSslEngine> destroyedUpdater =
-                PlatformDependent.newAtomicIntegerFieldUpdater(ReferenceCountedOpenSslEngine.class, "destroyed");
-        if (destroyedUpdater == null) {
-            destroyedUpdater = AtomicIntegerFieldUpdater.newUpdater(ReferenceCountedOpenSslEngine.class, "destroyed");
-        }
-        DESTROYED_UPDATER = destroyedUpdater;
-
         Method getUseCipherSuitesOrderMethod = null;
         Method setUseCipherSuitesOrderMethod = null;
         Class<?> sniHostNameClass = null;
@@ -166,7 +159,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     static final int MAX_ENCRYPTION_OVERHEAD_LENGTH = MAX_ENCRYPTED_PACKET_LENGTH - MAX_PLAINTEXT_LENGTH;
 
-    private static final AtomicIntegerFieldUpdater<ReferenceCountedOpenSslEngine> DESTROYED_UPDATER;
+    private static final AtomicIntegerFieldUpdater<ReferenceCountedOpenSslEngine> DESTROYED_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(ReferenceCountedOpenSslEngine.class, "destroyed");
 
     private static final String INVALID_CIPHER = "SSL_NULL_WITH_NULL_NULL";
 

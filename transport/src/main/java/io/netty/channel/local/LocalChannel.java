@@ -49,7 +49,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 public class LocalChannel extends AbstractChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannel.class);
     @SuppressWarnings({ "rawtypes" })
-    private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER;
+    private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private static final int MAX_READER_STACK_DEPTH = 8;
     private static final ClosedChannelException DO_WRITE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
@@ -92,17 +93,6 @@ public class LocalChannel extends AbstractChannel {
     private volatile boolean registerInProgress;
     private volatile boolean writeInProgress;
     private volatile Future<?> finishReadFuture;
-
-    static {
-        @SuppressWarnings({ "rawtypes" })
-        AtomicReferenceFieldUpdater<LocalChannel, Future> finishReadFutureUpdater =
-                PlatformDependent.newAtomicReferenceFieldUpdater(LocalChannel.class, "finishReadFuture");
-        if (finishReadFutureUpdater == null) {
-            finishReadFutureUpdater =
-                AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");
-        }
-        FINISH_READ_FUTURE_UPDATER = finishReadFutureUpdater;
-    }
 
     public LocalChannel() {
         super(null);

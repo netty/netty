@@ -15,8 +15,6 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.PlatformDependent;
-
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
@@ -26,16 +24,8 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
  */
 public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
-    private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> refCntUpdater;
-
-    static {
-        AtomicIntegerFieldUpdater<AbstractReferenceCounted> updater =
-                PlatformDependent.newAtomicIntegerFieldUpdater(AbstractReferenceCounted.class, "refCnt");
-        if (updater == null) {
-            updater = AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCounted.class, "refCnt");
-        }
-        refCntUpdater = updater;
-    }
+    private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> refCntUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCounted.class, "refCnt");
 
     private volatile int refCnt = 1;
 

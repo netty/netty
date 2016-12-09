@@ -27,9 +27,6 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -424,21 +421,6 @@ final class PlatformDependent0 {
 
     static void setMemory(Object o, long offset, long bytes, byte value) {
         UNSAFE.setMemory(o, offset, bytes, value);
-    }
-
-    static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
-            Class<? super U> tclass, String fieldName) throws Exception {
-        return new UnsafeAtomicReferenceFieldUpdater<U, W>(UNSAFE, tclass, fieldName);
-    }
-
-    static <T> AtomicIntegerFieldUpdater<T> newAtomicIntegerFieldUpdater(
-            Class<? super T> tclass, String fieldName) throws Exception {
-        return new UnsafeAtomicIntegerFieldUpdater<T>(UNSAFE, tclass, fieldName);
-    }
-
-    static <T> AtomicLongFieldUpdater<T> newAtomicLongFieldUpdater(
-            Class<? super T> tclass, String fieldName) throws Exception {
-        return new UnsafeAtomicLongFieldUpdater<T>(UNSAFE, tclass, fieldName);
     }
 
     static ClassLoader getClassLoader(final Class<?> clazz) {

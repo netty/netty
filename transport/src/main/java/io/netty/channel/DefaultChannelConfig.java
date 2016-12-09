@@ -18,7 +18,6 @@ package io.netty.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.util.internal.PlatformDependent;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.IdentityHashMap;
@@ -47,16 +46,8 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
-    private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOREAD_UPDATER;
-
-    static {
-        AtomicIntegerFieldUpdater<DefaultChannelConfig> autoReadUpdater =
-            PlatformDependent.newAtomicIntegerFieldUpdater(DefaultChannelConfig.class, "autoRead");
-        if (autoReadUpdater == null) {
-            autoReadUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultChannelConfig.class, "autoRead");
-        }
-        AUTOREAD_UPDATER = autoReadUpdater;
-    }
+    private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOREAD_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(DefaultChannelConfig.class, "autoRead");
 
     protected final Channel channel;
 
