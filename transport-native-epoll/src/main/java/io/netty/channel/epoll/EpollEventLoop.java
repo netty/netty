@@ -43,16 +43,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  */
 final class EpollEventLoop extends SingleThreadEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
-    private static final AtomicIntegerFieldUpdater<EpollEventLoop> WAKEN_UP_UPDATER;
-
-    static {
-        AtomicIntegerFieldUpdater<EpollEventLoop> updater =
-                PlatformDependent.newAtomicIntegerFieldUpdater(EpollEventLoop.class, "wakenUp");
-        if (updater == null) {
-            updater = AtomicIntegerFieldUpdater.newUpdater(EpollEventLoop.class, "wakenUp");
-        }
-        WAKEN_UP_UPDATER = updater;
-    }
+    private static final AtomicIntegerFieldUpdater<EpollEventLoop> WAKEN_UP_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(EpollEventLoop.class, "wakenUp");
 
     private final FileDescriptor epollFd;
     private final FileDescriptor eventFd;

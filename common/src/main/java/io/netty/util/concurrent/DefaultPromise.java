@@ -38,19 +38,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final int MAX_LISTENER_STACK_DEPTH = Math.min(8,
             SystemPropertyUtil.getInt("io.netty.defaultPromise.maxListenerStackDepth", 8));
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER;
+    private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
     private static final Signal SUCCESS = Signal.valueOf(DefaultPromise.class, "SUCCESS");
     private static final Signal UNCANCELLABLE = Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE");
     private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(ThrowableUtil.unknownStackTrace(
             new CancellationException(), DefaultPromise.class, "cancel(...)"));
-
-    static {
-        @SuppressWarnings("rawtypes")
-        AtomicReferenceFieldUpdater<DefaultPromise, Object> updater =
-                PlatformDependent.newAtomicReferenceFieldUpdater(DefaultPromise.class, "result");
-        RESULT_UPDATER = updater == null ? AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class,
-                                                                                  Object.class, "result") : updater;
-    }
 
     private volatile Object result;
     private final EventExecutor executor;

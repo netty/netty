@@ -86,33 +86,19 @@ public final class ChannelOutboundBuffer {
 
     private boolean inFail;
 
-    private static final AtomicLongFieldUpdater<ChannelOutboundBuffer> TOTAL_PENDING_SIZE_UPDATER;
+    private static final AtomicLongFieldUpdater<ChannelOutboundBuffer> TOTAL_PENDING_SIZE_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "totalPendingSize");
 
     @SuppressWarnings("UnusedDeclaration")
     private volatile long totalPendingSize;
 
-    private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> UNWRITABLE_UPDATER;
+    private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> UNWRITABLE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "unwritable");
 
     @SuppressWarnings("UnusedDeclaration")
     private volatile int unwritable;
 
     private volatile Runnable fireChannelWritabilityChangedTask;
-
-    static {
-        AtomicIntegerFieldUpdater<ChannelOutboundBuffer> unwritableUpdater =
-                PlatformDependent.newAtomicIntegerFieldUpdater(ChannelOutboundBuffer.class, "unwritable");
-        if (unwritableUpdater == null) {
-            unwritableUpdater = AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "unwritable");
-        }
-        UNWRITABLE_UPDATER = unwritableUpdater;
-
-        AtomicLongFieldUpdater<ChannelOutboundBuffer> pendingSizeUpdater =
-                PlatformDependent.newAtomicLongFieldUpdater(ChannelOutboundBuffer.class, "totalPendingSize");
-        if (pendingSizeUpdater == null) {
-            pendingSizeUpdater = AtomicLongFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "totalPendingSize");
-        }
-        TOTAL_PENDING_SIZE_UPDATER = pendingSizeUpdater;
-    }
 
     ChannelOutboundBuffer(AbstractChannel channel) {
         this.channel = channel;

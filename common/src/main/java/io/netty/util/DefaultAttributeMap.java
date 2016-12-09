@@ -15,8 +15,6 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.PlatformDependent;
-
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -28,18 +26,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 public class DefaultAttributeMap implements AttributeMap {
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultAttributeMap, AtomicReferenceArray> updater;
-
-    static {
-        @SuppressWarnings("rawtypes")
-        AtomicReferenceFieldUpdater<DefaultAttributeMap, AtomicReferenceArray> referenceFieldUpdater =
-                PlatformDependent.newAtomicReferenceFieldUpdater(DefaultAttributeMap.class, "attributes");
-        if (referenceFieldUpdater == null) {
-            referenceFieldUpdater = AtomicReferenceFieldUpdater
-                            .newUpdater(DefaultAttributeMap.class, AtomicReferenceArray.class, "attributes");
-        }
-        updater = referenceFieldUpdater;
-    }
+    private static final AtomicReferenceFieldUpdater<DefaultAttributeMap, AtomicReferenceArray> updater =
+            AtomicReferenceFieldUpdater.newUpdater(DefaultAttributeMap.class, AtomicReferenceArray.class, "attributes");
 
     private static final int BUCKET_SIZE = 4;
     private static final int MASK = BUCKET_SIZE  - 1;

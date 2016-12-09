@@ -16,7 +16,6 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -73,25 +72,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     };
 
-    private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> STATE_UPDATER;
-    private static final AtomicReferenceFieldUpdater<SingleThreadEventExecutor, ThreadProperties> PROPERTIES_UPDATER;
-
-    static {
-        AtomicIntegerFieldUpdater<SingleThreadEventExecutor> updater =
-                PlatformDependent.newAtomicIntegerFieldUpdater(SingleThreadEventExecutor.class, "state");
-        if (updater == null) {
-            updater = AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "state");
-        }
-        STATE_UPDATER = updater;
-
-        AtomicReferenceFieldUpdater<SingleThreadEventExecutor, ThreadProperties> propertiesUpdater =
-                PlatformDependent.newAtomicReferenceFieldUpdater(SingleThreadEventExecutor.class, "threadProperties");
-        if (propertiesUpdater == null) {
-            propertiesUpdater = AtomicReferenceFieldUpdater.newUpdater(SingleThreadEventExecutor.class,
-                                                                   ThreadProperties.class, "threadProperties");
-        }
-        PROPERTIES_UPDATER = propertiesUpdater;
-    }
+    private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> STATE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "state");
+    private static final AtomicReferenceFieldUpdater<SingleThreadEventExecutor, ThreadProperties> PROPERTIES_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    SingleThreadEventExecutor.class, ThreadProperties.class, "threadProperties");
 
     private final Queue<Runnable> taskQueue;
 
