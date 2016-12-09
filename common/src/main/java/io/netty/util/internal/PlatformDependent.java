@@ -798,57 +798,6 @@ public final class PlatformDependent {
         }
     }
 
-    /**
-     * Create a new optimized {@link AtomicReferenceFieldUpdater} or {@code null} if it
-     * could not be created. Because of this the caller need to check for {@code null} and if {@code null} is returned
-     * use {@link AtomicReferenceFieldUpdater#newUpdater(Class, Class, String)} as fallback.
-     */
-    public static <U, W> AtomicReferenceFieldUpdater<U, W> newAtomicReferenceFieldUpdater(
-            Class<? super U> tclass, String fieldName) {
-        if (hasUnsafe()) {
-            try {
-                return PlatformDependent0.newAtomicReferenceFieldUpdater(tclass, fieldName);
-            } catch (Throwable ignore) {
-                // ignore
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Create a new optimized {@link AtomicIntegerFieldUpdater} or {@code null} if it
-     * could not be created. Because of this the caller need to check for {@code null} and if {@code null} is returned
-     * use {@link AtomicIntegerFieldUpdater#newUpdater(Class, String)} as fallback.
-     */
-    public static <T> AtomicIntegerFieldUpdater<T> newAtomicIntegerFieldUpdater(
-            Class<? super T> tclass, String fieldName) {
-        if (hasUnsafe()) {
-            try {
-                return PlatformDependent0.newAtomicIntegerFieldUpdater(tclass, fieldName);
-            } catch (Throwable ignore) {
-                // ignore
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Create a new optimized {@link AtomicLongFieldUpdater} or {@code null} if it
-     * could not be created. Because of this the caller need to check for {@code null} and if {@code null} is returned
-     * use {@link AtomicLongFieldUpdater#newUpdater(Class, String)} as fallback.
-     */
-    public static <T> AtomicLongFieldUpdater<T> newAtomicLongFieldUpdater(
-            Class<? super T> tclass, String fieldName) {
-        if (hasUnsafe()) {
-            try {
-                return PlatformDependent0.newAtomicLongFieldUpdater(tclass, fieldName);
-            } catch (Throwable ignore) {
-                // ignore
-            }
-        }
-        return null;
-    }
-
     private static final class Mpsc {
         private static final boolean USE_MPSC_CHUNKED_ARRAY_QUEUE;
 

@@ -24,7 +24,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.OrderedEventExecutor;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.ObjectUtil;
@@ -43,17 +42,8 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     volatile AbstractChannelHandlerContext next;
     volatile AbstractChannelHandlerContext prev;
 
-    private static final AtomicIntegerFieldUpdater<AbstractChannelHandlerContext> HANDLER_STATE_UPDATER;
-
-    static {
-        AtomicIntegerFieldUpdater<AbstractChannelHandlerContext> handlerStateUpdater = PlatformDependent
-                .newAtomicIntegerFieldUpdater(AbstractChannelHandlerContext.class, "handlerState");
-        if (handlerStateUpdater == null) {
-            handlerStateUpdater = AtomicIntegerFieldUpdater
-                    .newUpdater(AbstractChannelHandlerContext.class, "handlerState");
-        }
-        HANDLER_STATE_UPDATER = handlerStateUpdater;
-    }
+    private static final AtomicIntegerFieldUpdater<AbstractChannelHandlerContext> HANDLER_STATE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractChannelHandlerContext.class, "handlerState");
 
     /**
      * {@link ChannelHandler#handlerAdded(ChannelHandlerContext)} is about to be called.

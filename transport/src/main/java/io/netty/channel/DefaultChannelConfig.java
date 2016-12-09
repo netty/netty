@@ -16,7 +16,6 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.internal.PlatformDependent;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -46,25 +45,11 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
-    private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOREAD_UPDATER;
-    private static final AtomicReferenceFieldUpdater<DefaultChannelConfig, WriteBufferWaterMark> WATERMARK_UPDATER;
-
-    static {
-        AtomicIntegerFieldUpdater<DefaultChannelConfig> autoReadUpdater =
-            PlatformDependent.newAtomicIntegerFieldUpdater(DefaultChannelConfig.class, "autoRead");
-        if (autoReadUpdater == null) {
-            autoReadUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultChannelConfig.class, "autoRead");
-        }
-        AUTOREAD_UPDATER = autoReadUpdater;
-
-        AtomicReferenceFieldUpdater<DefaultChannelConfig, WriteBufferWaterMark> watermarkUpdater =
-                PlatformDependent.newAtomicReferenceFieldUpdater(DefaultChannelConfig.class, "writeBufferWaterMark");
-        if (watermarkUpdater == null) {
-            watermarkUpdater = AtomicReferenceFieldUpdater.newUpdater(
+    private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOREAD_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(DefaultChannelConfig.class, "autoRead");
+    private static final AtomicReferenceFieldUpdater<DefaultChannelConfig, WriteBufferWaterMark> WATERMARK_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(
                     DefaultChannelConfig.class, WriteBufferWaterMark.class, "writeBufferWaterMark");
-        }
-        WATERMARK_UPDATER = watermarkUpdater;
-    }
 
     protected final Channel channel;
 

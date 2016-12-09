@@ -15,7 +15,6 @@
  */
 package io.netty.channel.unix;
 
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
 
 import java.io.File;
@@ -64,15 +63,8 @@ public class FileDescriptor {
             ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:read(...)",
                     Errors.ERRNO_ECONNRESET_NEGATIVE), FileDescriptor.class, "readAddress(...)");
 
-    private static final AtomicIntegerFieldUpdater<FileDescriptor> stateUpdater;
-    static {
-        AtomicIntegerFieldUpdater<FileDescriptor> updater
-                = PlatformDependent.newAtomicIntegerFieldUpdater(FileDescriptor.class, "state");
-        if (updater == null) {
-            updater = AtomicIntegerFieldUpdater.newUpdater(FileDescriptor.class, "state");
-        }
-        stateUpdater = updater;
-    }
+    private static final AtomicIntegerFieldUpdater<FileDescriptor> stateUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(FileDescriptor.class, "state");
 
     private static final int STATE_CLOSED_MASK = 1;
     private static final int STATE_INPUT_SHUTDOWN_MASK = 1 << 1;
