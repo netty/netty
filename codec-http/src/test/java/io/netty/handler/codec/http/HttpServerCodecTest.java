@@ -114,6 +114,37 @@ public class HttpServerCodecTest {
         ch.finish();
     }
 
+    @Test
+    public void testChunkedHeadResponse() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
+
+        // Send the request headers.
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(
+                "HEAD / HTTP/1.1\r\n\r\n", CharsetUtil.UTF_8)));
+
+        HttpRequest request = (HttpRequest) ch.readInbound();
+        assertEquals(HttpMethod.HEAD, request.getMethod());
+        LastHttpContent content = (LastHttpContent) ch.readInbound();
+        assertFalse(content.content().isReadable());
+        content.release();
+
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        HttpHeaders.setTransferEncodingChunked(response);
+        assertTrue(ch.writeOutbound(response));
+        assertTrue(ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertTrue(ch.finish());
+
+        ByteBuf buf = (ByteBuf) ch.readOutbound();
+        assertEquals("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", buf.toString(CharsetUtil.US_ASCII));
+        buf.release();
+
+        buf = (ByteBuf) ch.readOutbound();
+        assertFalse(buf.isReadable());
+        buf.release();
+
+        assertFalse(ch.finishAndReleaseAll());
+    }
+
     private static ByteBuf prepareDataChunk(int size) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < size; ++i) {

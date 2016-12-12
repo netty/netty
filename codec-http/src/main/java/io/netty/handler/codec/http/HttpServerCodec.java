@@ -15,8 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.CombinedChannelDuplexHandler;
 
+import java.util.ArrayDeque;
+import java.util.List;
+import java.util.Queue;
 
 /**
  * A combination of {@link HttpRequestDecoder} and {@link HttpResponseEncoder}
@@ -26,6 +31,9 @@ import io.netty.channel.CombinedChannelDuplexHandler;
  */
 public final class HttpServerCodec
         extends CombinedChannelDuplexHandler<HttpRequestDecoder, HttpResponseEncoder> {
+
+    /** A queue that is used for correlating a request and a response. */
+    private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
 
     /**
      * Creates a new instance with the default decoder options
@@ -40,15 +48,16 @@ public final class HttpServerCodec
      * Creates a new instance with the specified decoder options.
      */
     public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize), new HttpResponseEncoder());
+        init(new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize),
+                new HttpServerResponseEncoder());
     }
 
     /**
      * Creates a new instance with the specified decoder options.
      */
     public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
-        super(new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders),
-                new HttpResponseEncoder());
+        init(new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders),
+                new HttpServerResponseEncoder());
     }
 
     /**
@@ -56,8 +65,46 @@ public final class HttpServerCodec
      */
     public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
                            int initialBufferSize) {
-        super(
-          new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize),
-          new HttpResponseEncoder());
+        init(
+          new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize,
+                  validateHeaders, initialBufferSize),
+          new HttpServerResponseEncoder());
+    }
+
+    private final class HttpServerRequestDecoder extends HttpRequestDecoder {
+        HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
+            super(maxInitialLineLength, maxHeaderSize, maxChunkSize);
+        }
+
+        HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+                                        boolean validateHeaders) {
+            super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders);
+        }
+
+        HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+                                        boolean validateHeaders, int initialBufferSize) {
+            super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize);
+        }
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+            int oldSize = out.size();
+            super.decode(ctx, buffer, out);
+            int size = out.size();
+            for (int i = oldSize; i < size; i++) {
+                Object obj = out.get(i);
+                if (obj instanceof HttpRequest) {
+                    queue.add(((HttpRequest) obj).getMethod());
+                }
+            }
+        }
+    }
+
+    private final class HttpServerResponseEncoder extends HttpResponseEncoder {
+
+        @Override
+        boolean isContentAlwaysEmpty(@SuppressWarnings("unused") HttpResponse msg) {
+            return HttpMethod.HEAD.equals(queue.poll());
+        }
     }
 }
