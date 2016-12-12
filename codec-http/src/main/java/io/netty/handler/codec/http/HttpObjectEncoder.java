@@ -57,6 +57,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private static final int ST_INIT = 0;
     private static final int ST_CONTENT_NON_CHUNK = 1;
     private static final int ST_CONTENT_CHUNK = 2;
+    private static final int ST_CONTENT_ALWAYS_EMPTY = 3;
 
     @SuppressWarnings("RedundantFieldInitialization")
     private int state = ST_INIT;
@@ -77,7 +78,8 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             encodeInitialLine(buf, m);
             encodeHeaders(m.headers(), buf);
             buf.writeBytes(CRLF);
-            state = HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
+            state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
+                    HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
 
         // Bypass the encoder in case of an empty buffer, so that the following idiom works:
@@ -92,44 +94,50 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
 
         if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
-
-            if (state == ST_INIT) {
-                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
-            }
-
-            final long contentLength = contentLength(msg);
-            if (state == ST_CONTENT_NON_CHUNK) {
-                if (contentLength > 0) {
-                    if (buf != null && buf.writableBytes() >= contentLength && msg instanceof HttpContent) {
-                        // merge into other buffer for performance reasons
-                        buf.writeBytes(((HttpContent) msg).content());
-                        out.add(buf);
+            switch (state) {
+                case ST_INIT:
+                    throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
+                case ST_CONTENT_ALWAYS_EMPTY:
+                    out.add(EMPTY_BUFFER);
+                    if (msg instanceof LastHttpContent) {
+                        state = ST_INIT;
+                    }
+                    return;
+                case ST_CONTENT_NON_CHUNK:
+                    final long contentLength = contentLength(msg);
+                    if (contentLength > 0) {
+                        if (buf != null && buf.writableBytes() >= contentLength && msg instanceof HttpContent) {
+                            // merge into other buffer for performance reasons
+                            buf.writeBytes(((HttpContent) msg).content());
+                            out.add(buf);
+                        } else {
+                            if (buf != null) {
+                                out.add(buf);
+                            }
+                            out.add(encodeAndRetain(msg));
+                        }
                     } else {
                         if (buf != null) {
                             out.add(buf);
+                        } else {
+                            // Need to produce some output otherwise an
+                            // IllegalStateException will be thrown
+                            out.add(EMPTY_BUFFER);
                         }
-                        out.add(encodeAndRetain(msg));
                     }
-                } else {
+
+                    if (msg instanceof LastHttpContent) {
+                        state = ST_INIT;
+                    }
+                    return;
+                case ST_CONTENT_CHUNK:
                     if (buf != null) {
                         out.add(buf);
-                    } else {
-                        // Need to produce some output otherwise an
-                        // IllegalStateException will be thrown
-                        out.add(EMPTY_BUFFER);
                     }
-                }
-
-                if (msg instanceof LastHttpContent) {
-                    state = ST_INIT;
-                }
-            } else if (state == ST_CONTENT_CHUNK) {
-                if (buf != null) {
-                    out.add(buf);
-                }
-                encodeChunkedContent(ctx, msg, contentLength, out);
-            } else {
-                throw new Error();
+                    encodeChunkedContent(ctx, msg, contentLength(msg), out);
+                    return;
+                default:
+                    throw new Error();
             }
         } else {
             if (buf != null) {
@@ -185,6 +193,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 out.add(EMPTY_BUFFER);
             }
         }
+    }
+
+    boolean isContentAlwaysEmpty(@SuppressWarnings("unused") H msg) {
+        return false;
     }
 
     @Override
