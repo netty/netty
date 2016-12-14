@@ -28,7 +28,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
+
+import static io.netty.util.internal.MacAddressUtil.defaultMachineId;
+import static io.netty.util.internal.MacAddressUtil.parseMAC;
 
 /**
  * The default {@link ChannelId} implementation.
@@ -38,9 +40,6 @@ public final class DefaultChannelId implements ChannelId {
     private static final long serialVersionUID = 3884076183504074063L;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelId.class);
-
-    private static final Pattern MACHINE_ID_PATTERN = Pattern.compile("^(?:[0-9a-fA-F][:-]?){6,8}$");
-    private static final int MACHINE_ID_LEN = MacAddressUtil.MAC_ADDRESS_LENGTH;
     private static final byte[] MACHINE_ID;
     private static final int PROCESS_ID_LEN = 4;
     private static final int PROCESS_ID;
@@ -54,9 +53,7 @@ public final class DefaultChannelId implements ChannelId {
      * Returns a new {@link DefaultChannelId} instance.
      */
     public static DefaultChannelId newInstance() {
-        DefaultChannelId id = new DefaultChannelId();
-        id.init();
-        return id;
+        return new DefaultChannelId();
     }
 
     static {
@@ -89,11 +86,13 @@ public final class DefaultChannelId implements ChannelId {
         byte[] machineId = null;
         String customMachineId = SystemPropertyUtil.get("io.netty.machineId");
         if (customMachineId != null) {
-            if (MACHINE_ID_PATTERN.matcher(customMachineId).matches()) {
-                machineId = parseMachineId(customMachineId);
+            try {
+                machineId = parseMAC(customMachineId);
+            } catch (Exception e) {
+                logger.warn("-Dio.netty.machineId: {} (malformed)", customMachineId, e);
+            }
+            if (machineId != null) {
                 logger.debug("-Dio.netty.machineId: {} (user-set)", customMachineId);
-            } else {
-                logger.warn("-Dio.netty.machineId: {} (malformed)", customMachineId);
             }
         }
 
@@ -105,31 +104,6 @@ public final class DefaultChannelId implements ChannelId {
         }
 
         MACHINE_ID = machineId;
-    }
-
-    @SuppressWarnings("DynamicRegexReplaceableByCompiledPattern")
-    private static byte[] parseMachineId(String value) {
-        // Strip separators.
-        value = value.replaceAll("[:-]", "");
-
-        byte[] machineId = new byte[MACHINE_ID_LEN];
-        for (int i = 0; i < value.length(); i += 2) {
-            machineId[i] = (byte) Integer.parseInt(value.substring(i, i + 2), 16);
-        }
-
-        return machineId;
-    }
-
-    private static byte[] defaultMachineId() {
-        byte[] bestMacAddr = MacAddressUtil.bestAvailableMac();
-        if (bestMacAddr == null) {
-            bestMacAddr = new byte[MacAddressUtil.MAC_ADDRESS_LENGTH];
-            ThreadLocalRandom.current().nextBytes(bestMacAddr);
-            logger.warn(
-                    "Failed to find a usable hardware address from the network interfaces; using random bytes: {}",
-                    MacAddressUtil.formatAddress(bestMacAddr));
-        }
-        return bestMacAddr;
     }
 
     private static int defaultProcessId() {
@@ -178,20 +152,19 @@ public final class DefaultChannelId implements ChannelId {
         return pid;
     }
 
-    private final byte[] data = new byte[MACHINE_ID_LEN + PROCESS_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + RANDOM_LEN];
+    private final byte[] data;
     private int hashCode;
 
     private transient String shortValue;
     private transient String longValue;
 
-    private DefaultChannelId() { }
-
-    private void init() {
+    private DefaultChannelId() {
+        data = new byte[MACHINE_ID.length + PROCESS_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + RANDOM_LEN];
         int i = 0;
 
         // machineId
-        System.arraycopy(MACHINE_ID, 0, data, i, MACHINE_ID_LEN);
-        i += MACHINE_ID_LEN;
+        System.arraycopy(MACHINE_ID, 0, data, i, MACHINE_ID.length);
+        i += MACHINE_ID.length;
 
         // processId
         i = writeInt(i, PROCESS_ID);
@@ -234,8 +207,7 @@ public final class DefaultChannelId implements ChannelId {
     public String asShortText() {
         String shortValue = this.shortValue;
         if (shortValue == null) {
-            this.shortValue = shortValue = ByteBufUtil.hexDump(
-                    data, MACHINE_ID_LEN + PROCESS_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN, RANDOM_LEN);
+            this.shortValue = shortValue = ByteBufUtil.hexDump(data, data.length - RANDOM_LEN, RANDOM_LEN);
         }
         return shortValue;
     }
@@ -252,7 +224,7 @@ public final class DefaultChannelId implements ChannelId {
     private String newLongValue() {
         StringBuilder buf = new StringBuilder(2 * data.length + 5);
         int i = 0;
-        i = appendHexDumpField(buf, i, MACHINE_ID_LEN);
+        i = appendHexDumpField(buf, i, MACHINE_ID.length);
         i = appendHexDumpField(buf, i, PROCESS_ID_LEN);
         i = appendHexDumpField(buf, i, SEQUENCE_LEN);
         i = appendHexDumpField(buf, i, TIMESTAMP_LEN);
