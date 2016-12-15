@@ -43,9 +43,6 @@ public final class DefaultChannelId implements ChannelId {
     private static final int MACHINE_ID_LEN = MacAddressUtil.MAC_ADDRESS_LENGTH;
     private static final byte[] MACHINE_ID;
     private static final int PROCESS_ID_LEN = 4;
-    // Maximal value for 64bit systems is 2^22.  See man 5 proc.
-    // See https://github.com/netty/netty/issues/2706
-    private static final int MAX_PROCESS_ID = 4194304;
     private static final int PROCESS_ID;
     private static final int SEQUENCE_LEN = 4;
     private static final int TIMESTAMP_LEN = 8;
@@ -72,7 +69,7 @@ public final class DefaultChannelId implements ChannelId {
                 // Malformed input.
             }
 
-            if (processId < 0 || processId > MAX_PROCESS_ID) {
+            if (processId < 0) {
                 processId = -1;
                 logger.warn("-Dio.netty.processId: {} (malformed)", customProcessId);
             } else if (logger.isDebugEnabled()) {
@@ -173,8 +170,8 @@ public final class DefaultChannelId implements ChannelId {
             pid = -1;
         }
 
-        if (pid < 0 || pid > MAX_PROCESS_ID) {
-            pid = ThreadLocalRandom.current().nextInt(MAX_PROCESS_ID + 1);
+        if (pid < 0) {
+            pid = ThreadLocalRandom.current().nextInt();
             logger.warn("Failed to find the current process ID from '{}'; using a random value: {}",  value, pid);
         }
 
