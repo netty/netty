@@ -16,7 +16,10 @@
 
 package io.netty.util.internal.logging;
 
+import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicReference;
+
+import io.netty.util.internal.SystemPropertyUtil;
 
 /**
  * Creates {@link InternalLogger}s. This factory allows you to choose what logging framework Netty should use. The
@@ -77,7 +80,22 @@ public abstract class InternalLoggerFactory {
 
     @SuppressWarnings("UnusedCatchParameter")
     private static InternalLoggerFactory newDefaultFactory(String name) {
-        InternalLoggerFactory f;
+        InternalLoggerFactory f = null;
+
+        String loggerType = SystemPropertyUtil.get("io.netty.logger.type");
+        if (loggerType != null) {
+            try {
+                Class<?> clazz = Class.forName(loggerType);
+                Field field = clazz.getField("INSTANCE");
+                f = (InternalLoggerFactory) field.get(null);
+                f.newInstance(name).debug("Using {} as the default logging framework", loggerType);
+            } catch (Throwable t) {
+                throw new RuntimeException("loggerType=" + loggerType, t);
+            }
+
+            return f;
+        }
+
         try {
             f = new Slf4JLoggerFactory(true);
             f.newInstance(name).debug("Using SLF4J as the default logging framework");
@@ -90,6 +108,7 @@ public abstract class InternalLoggerFactory {
                 f.newInstance(name).debug("Using java.util.logging as the default logging framework");
             }
         }
+
         return f;
     }
 
