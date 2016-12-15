@@ -270,6 +270,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_ECDH_USE);
                 SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_DH_USE);
                 SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
+
+                // We do not support compression as the moment so we should explicitly disable it.
+                SSLContext.setOptions(ctx, SSL.SSL_OP_NO_COMPRESSION);
+
                 // Disable ticket support by default to be more inline with SSLEngineImpl of the JDK.
                 // This also let SSLSession.getId() work the same way for the JDK implementation and the OpenSSLEngine.
                 // If tickets are supported SSLSession.getId() will only return an ID on the server-side if it could
