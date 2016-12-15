@@ -102,9 +102,14 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     private final boolean allowExtensions;
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
+    private final boolean checkStartsWith;
 
     public WebSocketServerProtocolHandler(String websocketPath) {
         this(websocketPath, null, false);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, boolean checkStartsWith) {
+        this(websocketPath, null, false, 65536, false, checkStartsWith);
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols) {
@@ -122,11 +127,17 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, false);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
+            boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch, boolean checkStartsWith) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
         maxFramePayloadLength = maxFrameSize;
         this.allowMaskMismatch = allowMaskMismatch;
+        this.checkStartsWith = checkStartsWith;
     }
 
     @Override
@@ -136,7 +147,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             // Add the WebSocketHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
                     new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
-                            allowExtensions, maxFramePayloadLength, allowMaskMismatch));
+                            allowExtensions, maxFramePayloadLength, allowMaskMismatch, checkStartsWith));
         }
         if (cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
