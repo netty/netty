@@ -23,7 +23,12 @@ import org.junit.Test;
 
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static io.netty.handler.codec.http.HttpHeaders.Names.HOST;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class HttpRequestDecoderTest {
     private static final byte[] CONTENT_CRLF_DELIMITERS = createContent("\r\n");
@@ -174,5 +179,37 @@ public class HttpRequestDecoderTest {
         channel.writeInbound(Unpooled.wrappedBuffer(request.getBytes(CharsetUtil.US_ASCII)));
         HttpRequest req = (HttpRequest) channel.readInbound();
         assertEquals("", req.headers().get("EmptyHeader"));
+    }
+
+    @Test
+    public void testMessagesSplitBetweenMultipleBuffers() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String crlf = "\r\n";
+        String str1 = "GET /some/path HTTP/1.1" + crlf +
+                "Host: localhost1" + crlf + crlf +
+                "GET /some/other/path HTTP/1.0" + crlf +
+                "Hos";
+        String str2 = "t: localhost2" + crlf +
+                "content-length: 0" + crlf + crlf;
+        channel.writeInbound(Unpooled.copiedBuffer(str1, CharsetUtil.US_ASCII));
+        HttpRequest req = (HttpRequest) channel.readInbound();
+        assertEquals(HttpVersion.HTTP_1_1, req.getProtocolVersion());
+        assertEquals("/some/path", req.getUri());
+        assertFalse(req.headers().isEmpty());
+        assertTrue("localhost1".equalsIgnoreCase(req.headers().get(HOST)));
+        LastHttpContent cnt = (LastHttpContent) channel.readInbound();
+        cnt.release();
+
+        channel.writeInbound(Unpooled.copiedBuffer(str2, CharsetUtil.US_ASCII));
+        req = (HttpRequest) channel.readInbound();
+        assertEquals(HttpVersion.HTTP_1_0, req.getProtocolVersion());
+        assertEquals("/some/other/path", req.getUri());
+        assertFalse(req.headers().isEmpty());
+
+        assertTrue("localhost2".equalsIgnoreCase(req.headers().get(HOST)));
+        assertTrue("0".equalsIgnoreCase(req.headers().get(HttpHeaders.Names.CONTENT_LENGTH)));
+        cnt = (LastHttpContent) channel.readInbound();
+        cnt.release();
+        assertFalse(channel.finishAndReleaseAll());
     }
 }
