@@ -82,8 +82,8 @@ public class SimpleChannelPool implements ChannelPool {
      * @param handler            the {@link ChannelPoolHandler} that will be notified for the different pool actions
      * @param healthCheck        the {@link ChannelHealthChecker} that will be used to check if a {@link Channel} is
      *                           still healthy when obtain from the {@link ChannelPool}
-     * @param releaseHealthCheck will offercheck channel health before offering back if this parameter set to
-     *                           {@code true}.
+     * @param releaseHealthCheck will check channel health before offering back if this parameter set to {@code true};
+     *                           otherwise, channel health is only checked at acquisition time
      */
     public SimpleChannelPool(Bootstrap bootstrap, final ChannelPoolHandler handler, ChannelHealthChecker healthCheck,
                              boolean releaseHealthCheck) {
@@ -99,6 +99,43 @@ public class SimpleChannelPool implements ChannelPool {
                 handler.channelCreated(ch);
             }
         });
+    }
+
+    /**
+     * Returns the {@link Bootstrap} this pool will use to open new connections.
+     *
+     * @return the {@link Bootstrap} this pool will use to open new connections
+     */
+    protected Bootstrap bootstrap() {
+        return bootstrap;
+    }
+
+    /**
+     * Returns the {@link ChannelPoolHandler} that will be notified for the different pool actions.
+     *
+     * @return the {@link ChannelPoolHandler} that will be notified for the different pool actions
+     */
+    protected ChannelPoolHandler handler() {
+        return handler;
+    }
+
+    /**
+     * Returns the {@link ChannelHealthChecker} that will be used to check if a {@link Channel} is healthy.
+     *
+     * @return the {@link ChannelHealthChecker} that will be used to check if a {@link Channel} is healthy
+     */
+    protected ChannelHealthChecker healthChecker() {
+        return healthCheck;
+    }
+
+    /**
+     * Indicates whether this pool will check the health of channels before offering them back into the pool.
+     *
+     * @return {@code true} if this pool will check the health of channels before offering them back into the pool, or
+     * {@code false} if channel health is only checked at acquisition time
+     */
+    protected boolean releaseHealthCheck() {
+        return releaseHealthCheck;
     }
 
     @Override
