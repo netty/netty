@@ -34,12 +34,7 @@ import org.junit.rules.ExpectedException;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class SimpleChannelPoolTest {
     private static final String LOCAL_ADDR_ID = "test.id";
@@ -241,5 +236,72 @@ public class SimpleChannelPoolTest {
         sc.close().syncUninterruptibly();
         channel2.close().syncUninterruptibly();
         group.shutdownGracefully();
+    }
+
+    @Test
+    public void testBootstrap() {
+        final SimpleChannelPool pool = new SimpleChannelPool(new Bootstrap(), new CountingChannelPoolHandler());
+
+        try {
+            // Checking for the actual bootstrap object doesn't make sense here, since the pool uses a copy with a
+            // modified channel handler.
+            assertNotNull(pool.bootstrap());
+        } finally {
+            pool.close();
+        }
+    }
+
+    @Test
+    public void testHandler() {
+        final ChannelPoolHandler handler = new CountingChannelPoolHandler();
+        final SimpleChannelPool pool = new SimpleChannelPool(new Bootstrap(), handler);
+
+        try {
+            assertSame(handler, pool.handler());
+        } finally {
+            pool.close();
+        }
+    }
+
+    @Test
+    public void testHealthChecker() {
+        final ChannelHealthChecker healthChecker = ChannelHealthChecker.ACTIVE;
+        final SimpleChannelPool pool = new SimpleChannelPool(
+                new Bootstrap(),
+                new CountingChannelPoolHandler(),
+                healthChecker);
+
+        try {
+            assertSame(healthChecker, pool.healthChecker());
+        } finally {
+            pool.close();
+        }
+    }
+
+    @Test
+    public void testReleaseHealthCheck() {
+        final SimpleChannelPool healthCheckOnReleasePool = new SimpleChannelPool(
+                new Bootstrap(),
+                new CountingChannelPoolHandler(),
+                ChannelHealthChecker.ACTIVE,
+                true);
+
+        try {
+            assertTrue(healthCheckOnReleasePool.releaseHealthCheck());
+        } finally {
+            healthCheckOnReleasePool.close();
+        }
+
+        final SimpleChannelPool noHealthCheckOnReleasePool = new SimpleChannelPool(
+                new Bootstrap(),
+                new CountingChannelPoolHandler(),
+                ChannelHealthChecker.ACTIVE,
+                false);
+
+        try {
+            assertFalse(noHealthCheckOnReleasePool.releaseHealthCheck());
+        } finally {
+            noHealthCheckOnReleasePool.close();
+        }
     }
 }
