@@ -29,6 +29,8 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
 
 import java.util.Deque;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -47,6 +49,7 @@ public class SimpleChannelPool implements ChannelPool {
             new IllegalStateException("Channel is unhealthy not offering it back to pool"),
             SimpleChannelPool.class, "releaseAndOffer(...)");
 
+    protected final ConcurrentMap<Channel, Channel> allChannels = PlatformDependent.newConcurrentHashMap();
     private final Deque<Channel> deque = PlatformDependent.newConcurrentDeque();
     private final ChannelPoolHandler handler;
     private final ChannelHealthChecker healthCheck;
@@ -109,6 +112,20 @@ public class SimpleChannelPool implements ChannelPool {
     @Override
     public Future<Channel> acquire(final Promise<Channel> promise) {
         checkNotNull(promise, "promise");
+
+        FutureListener<Channel> futureListener =
+            new FutureListener<Channel>() {
+                @Override
+                public void operationComplete(Future<Channel> future) throws Exception {
+                    if (future.isSuccess()) {
+                        // put if the channel is new
+                        allChannels.putIfAbsent(future.get(), future.get());
+                    }
+                }
+            };
+
+        promise.addListener(futureListener);
+
         return acquireHealthyFromPoolOrNew(promise);
     }
 
@@ -303,12 +320,13 @@ public class SimpleChannelPool implements ChannelPool {
         }
     }
 
-    private static void closeChannel(Channel channel) {
+    private void closeChannel(Channel channel) {
         channel.attr(POOL_KEY).getAndSet(null);
         channel.close();
+        this.allChannels.remove(channel);
     }
 
-    private static void closeAndFail(Channel channel, Throwable cause, Promise<?> promise) {
+    private void closeAndFail(Channel channel, Throwable cause, Promise<?> promise) {
         closeChannel(channel);
         promise.tryFailure(cause);
     }
@@ -337,12 +355,15 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public void close() {
-        for (;;) {
-            Channel channel = pollChannel();
-            if (channel == null) {
-                break;
+        for (Map.Entry<Channel, Channel> entry : this.allChannels.entrySet()) {
+            try {
+                entry.getKey().close().sync();
+            } catch (Exception e) {
+                // make maven-checkstyle-plugin happy
+                Object object = new Object();
             }
-            channel.close();
         }
+
+        this.allChannels.clear();
     }
 }

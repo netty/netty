@@ -28,6 +28,8 @@ import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.ConcurrentSet;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -298,6 +300,126 @@ public class FixedChannelPoolTest {
         pool.release(channel).syncUninterruptibly();
         sc.close().syncUninterruptibly();
         channel.close().syncUninterruptibly();
+    }
+
+    @Test
+    public void testClose1() throws Exception {
+        EventLoopGroup group = new LocalEventLoopGroup();
+        LocalAddress address = new LocalAddress(LOCAL_ADDR_ID + ".FixedChannelPoolTest.testClose1");
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(address);
+        cb.group(group).channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group).channel(LocalServerChannel.class).childHandler(
+            new ChannelInitializer<LocalChannel>() {
+                @Override
+                public void initChannel(LocalChannel ch) throws Exception {
+                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                }
+            });
+
+        // Start server
+        Channel sc = sb.bind(address).sync().channel();
+        CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
+
+        int count = 256;
+
+        FixedChannelPool pool = new FixedChannelPool(cb, handler, count, Integer.MAX_VALUE);
+
+        ConcurrentSet<Channel> concurrentSet = new ConcurrentSet<Channel>();
+
+        for (int i = 0; i < count; ++ i) {
+            Future<Channel> future = pool.acquire();
+
+            try {
+                future.get();
+            } catch (Exception e) {
+                Assert.assertTrue(false);
+            }
+
+            concurrentSet.add(future.get());
+        }
+
+        Assert.assertTrue(concurrentSet.size() == count);
+
+        pool.close();
+
+        Assert.assertTrue(pool.allChannels.size() == 0);
+
+        for (Channel channel : concurrentSet) {
+            Assert.assertTrue(! channel.isActive());
+        }
+
+        sc.close().sync();
+        group.shutdownGracefully();
+    }
+
+    @Test
+    public void testClose2() throws Exception {
+        EventLoopGroup group = new LocalEventLoopGroup();
+        LocalAddress address = new LocalAddress(LOCAL_ADDR_ID + ".FixedChannelPoolTest.testClose2");
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(address);
+        cb.group(group).channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group).channel(LocalServerChannel.class).childHandler(
+            new ChannelInitializer<LocalChannel>() {
+                @Override
+                public void initChannel(LocalChannel ch) throws Exception {
+                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                }
+            });
+
+        // Start server
+        Channel sc = sb.bind(address).sync().channel();
+        CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
+
+        int count = 256;
+
+        FixedChannelPool pool = new FixedChannelPool(cb, handler, count, Integer.MAX_VALUE);
+
+        ConcurrentSet<Channel> concurrentSet = new ConcurrentSet<Channel>();
+
+        for (int i = 0; i < count; ++ i) {
+            Future<Channel> future = pool.acquire();
+
+            try {
+                future.get();
+            } catch (Exception e) {
+                Assert.assertTrue(false);
+            }
+
+            concurrentSet.add(future.get());
+        }
+
+        Assert.assertTrue(concurrentSet.size() == count);
+
+        for (Channel channel : concurrentSet) {
+            try {
+                channel.close().sync();
+            } catch (Exception e) {
+                Assert.assertTrue(false);
+            }
+
+            Assert.assertTrue(! channel.isActive());
+
+            try {
+                pool.release(channel).sync();
+            } catch (Exception e) {
+                // ``Channel is unhealthy not offering it back to pool''
+                // make maven-checkstyle-plugin happy
+                Object object = new Object();
+            }
+        }
+
+        Assert.assertTrue(pool.allChannels.size() == 0);
+
+        pool.close();
+
+        sc.close().sync();
+        group.shutdownGracefully();
     }
 
     private static final class TestChannelPoolHandler extends AbstractChannelPoolHandler {

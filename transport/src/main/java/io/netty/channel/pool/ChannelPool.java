@@ -56,6 +56,9 @@ public interface ChannelPool extends Closeable {
      */
     Future<Void> release(Channel channel, Promise<Void> promise);
 
+    /**
+     * All channels acquired from this {@link ChannelPool} will be closed.
+     */
     @Override
     void close();
 }
