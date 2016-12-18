@@ -17,6 +17,18 @@ package io.netty.util.concurrent;
 
 import io.netty.util.internal.ObjectUtil;
 
+/**
+ * <p>A promise combiner monitors the outcome of a number of discrete futures, then notifies a final, aggregate promise
+ * when all of the combined futures are finished. The aggregate promise will succeed if and only if all of the combined
+ * futures succeed. If any of the combined futures fail, the aggregate promise will fail. The cause failure for the
+ * aggregate promise will be the failure for one of the failed combined futures; if more than one of the combined
+ * futures fails, exactly which cause of failure will be assigned to the aggregate promise is undefined.</p>
+ *
+ * <p>Callers may populate a promise combiner with any number of futures to be combined via the
+ * {@link PromiseCombiner#add(Future)} and {@link PromiseCombiner#addAll(Future[])} methods. When all futures to be
+ * combined have been added, callers must provide an aggregate promise to be notified when all combined promises have
+ * finished via the {@link PromiseCombiner#finish(Promise)} method.</p>
+ */
 public final class PromiseCombiner {
     private int expectedCount;
     private int doneCount;
@@ -36,22 +48,43 @@ public final class PromiseCombiner {
         }
     };
 
+    /**
+     * Adds a new future to be combined. New futures may be added until an aggregate promise is added via the
+     * {@link PromiseCombiner#finish(Promise)} method has been called.
+     *
+     * @param future the future to add to this promise combiner
+     */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public void add(Promise promise) {
+    public void add(Future future) {
         checkAddAllowed();
         ++expectedCount;
-        promise.addListener(listener);
+        future.addListener(listener);
     }
 
+    /**
+     * Adds new futures to be combined. New futures may be added until an aggregate promise is added via the
+     * {@link PromiseCombiner#finish(Promise)} method has been called.
+     *
+     * @param futures the futures to add to this promise combiner
+     */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public void addAll(Promise... promises) {
-        checkAddAllowed();
-        expectedCount += promises.length;
-        for (Promise promise : promises) {
-            promise.addListener(listener);
+    public void addAll(Future... futures) {
+        for (Future future : futures) {
+            this.add(future);
         }
     }
 
+    /**
+     * <p>Sets the promise to be notified when all combined futures have finished. If all combined futures succeed,
+     * then the aggregate promise will succeed. If one or more combined futures fails, then the aggregate promise will
+     * fail with the cause of one of the failed futures. If more than one combined future fails, then exactly which
+     * failure will be assigned to the aggregate promise is undefined.</p>
+     *
+     * <p>After this method is called, no more futures may be added via the {@link PromiseCombiner#add(Future)} or
+     * {@link PromiseCombiner#addAll(Future[])} methods.</p>
+     *
+     * @param aggregatePromise the promise to notify when all combined futures have finished
+     */
     public void finish(Promise<Void> aggregatePromise) {
         if (doneAdding) {
             throw new IllegalStateException("Already finished");
