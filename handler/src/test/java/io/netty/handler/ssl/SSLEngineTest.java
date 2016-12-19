@@ -538,7 +538,7 @@ public abstract class SSLEngineTest {
         }
     }
 
-    @Test(timeout = 3000)
+    @Test(timeout = 30000)
     public void clientInitiatedRenegotiationWithFatalAlertDoesNotInfiniteLoopServer()
             throws CertificateException, SSLException, InterruptedException, ExecutionException {
         final SelfSignedCertificate ssc = new SelfSignedCertificate();
@@ -891,7 +891,7 @@ public abstract class SSLEngineTest {
         clientChannel = ccf.channel();
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testMutualAuthSameCertChain() throws Exception {
         serverSslCtx = SslContextBuilder.forServer(
                 new ByteArrayInputStream(X509_CERT_PEM.getBytes(CharsetUtil.UTF_8)),
