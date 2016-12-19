@@ -24,6 +24,7 @@ import io.netty.channel.sctp.SctpChannel;
 import io.netty.channel.sctp.SctpChannelOption;
 import io.netty.channel.sctp.nio.NioSctpChannel;
 import io.netty.example.sctp.SctpEchoClientHandler;
+import io.netty.util.internal.SocketUtils;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -58,10 +59,10 @@ public final class SctpMultiHomingEchoClient {
                  }
              });
 
-            InetSocketAddress localAddress = new InetSocketAddress(CLIENT_PRIMARY_HOST, CLIENT_PORT);
-            InetAddress localSecondaryAddress = InetAddress.getByName(CLIENT_SECONDARY_HOST);
+            InetSocketAddress localAddress = SocketUtils.socketAddress(CLIENT_PRIMARY_HOST, CLIENT_PORT);
+            InetAddress localSecondaryAddress = SocketUtils.addressByName(CLIENT_SECONDARY_HOST);
 
-            InetSocketAddress remoteAddress = new InetSocketAddress(SERVER_REMOTE_HOST, SERVER_REMOTE_PORT);
+            InetSocketAddress remoteAddress = SocketUtils.socketAddress(SERVER_REMOTE_HOST, SERVER_REMOTE_PORT);
 
             // Bind the client channel.
             ChannelFuture bindFuture = b.bind(localAddress).sync();

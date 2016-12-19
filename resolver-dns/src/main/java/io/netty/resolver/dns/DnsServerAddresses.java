@@ -16,12 +16,12 @@
 
 package io.netty.resolver.dns;
 
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.reflect.Method;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -54,7 +54,7 @@ public abstract class DnsServerAddresses {
             final List<String> list = (List<String>) nameservers.invoke(instance);
             for (String a: list) {
                 if (a != null) {
-                    defaultNameServers.add(new InetSocketAddress(InetAddress.getByName(a), DNS_PORT));
+                    defaultNameServers.add(new InetSocketAddress(SocketUtils.addressByName(a), DNS_PORT));
                 }
             }
         } catch (Exception ignore) {
@@ -70,8 +70,8 @@ public abstract class DnsServerAddresses {
         } else {
             Collections.addAll(
                     defaultNameServers,
-                    new InetSocketAddress("8.8.8.8", DNS_PORT),
-                    new InetSocketAddress("8.8.4.4", DNS_PORT));
+                    SocketUtils.socketAddress("8.8.8.8", DNS_PORT),
+                    SocketUtils.socketAddress("8.8.4.4", DNS_PORT));
 
             if (logger.isWarnEnabled()) {
                 logger.warn(
