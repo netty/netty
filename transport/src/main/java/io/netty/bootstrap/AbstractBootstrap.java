@@ -26,6 +26,7 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ReflectiveChannelFactory;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -150,7 +151,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * @see {@link #localAddress(SocketAddress)}
      */
     public B localAddress(String inetHost, int inetPort) {
-        return localAddress(new InetSocketAddress(inetHost, inetPort));
+        return localAddress(SocketUtils.socketAddress(inetHost, inetPort));
     }
 
     /**
@@ -257,7 +258,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Create a new {@link Channel} and bind it.
      */
     public ChannelFuture bind(String inetHost, int inetPort) {
-        return bind(new InetSocketAddress(inetHost, inetPort));
+        return bind(SocketUtils.socketAddress(inetHost, inetPort));
     }
 
     /**

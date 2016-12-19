@@ -39,6 +39,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.EmptyArrays;
@@ -74,7 +75,7 @@ public class ProxyHandlerTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ProxyHandlerTest.class);
 
     private static final InetSocketAddress DESTINATION = InetSocketAddress.createUnresolved("destination.com", 42);
-    private static final InetSocketAddress BAD_DESTINATION = new InetSocketAddress("1.2.3.4", 5);
+    private static final InetSocketAddress BAD_DESTINATION = SocketUtils.socketAddress("1.2.3.4", 5);
     private static final String USERNAME = "testUser";
     private static final String PASSWORD = "testPassword";
     private static final String BAD_USERNAME = "badUser";

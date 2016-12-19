@@ -18,6 +18,7 @@ package io.netty.test.udt.util;
 
 import com.barchart.udt.SocketUDT;
 import com.barchart.udt.StatusUDT;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -106,7 +107,7 @@ public final class UnitHelp {
             final String host) {
         ServerSocket socket = null;
         try {
-            final InetAddress address = InetAddress.getByName(host);
+            final InetAddress address = SocketUtils.addressByName(host);
             socket = new ServerSocket(0, 3, address);
             return (InetSocketAddress) socket.getLocalSocketAddress();
         } catch (final Exception e) {

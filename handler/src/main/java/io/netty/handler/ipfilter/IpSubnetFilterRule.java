@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ipfilter;
 
+import io.netty.util.internal.SocketUtils;
+
 import java.math.BigInteger;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -32,7 +34,7 @@ public final class IpSubnetFilterRule implements IpFilterRule {
 
     public IpSubnetFilterRule(String ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
         try {
-            filterRule = selectFilterRule(InetAddress.getByName(ipAddress), cidrPrefix, ruleType);
+            filterRule = selectFilterRule(SocketUtils.addressByName(ipAddress), cidrPrefix, ruleType);
         } catch (UnknownHostException e) {
             throw new IllegalArgumentException("ipAddress", e);
         }

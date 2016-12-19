@@ -21,6 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.SocketUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,8 +50,8 @@ public class DatagramPacketDecoderTest {
 
     @Test
     public void testDecode() {
-        InetSocketAddress recipient = new InetSocketAddress("127.0.0.1", 10000);
-        InetSocketAddress sender = new InetSocketAddress("127.0.0.1", 20000);
+        InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
+        InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
         ByteBuf content = Unpooled.wrappedBuffer("netty".getBytes(CharsetUtil.UTF_8));
         assertTrue(channel.writeInbound(new DatagramPacket(content, recipient, sender)));
         assertEquals("netty", channel.readInbound());

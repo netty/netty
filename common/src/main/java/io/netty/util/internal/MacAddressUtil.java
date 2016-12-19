@@ -55,7 +55,7 @@ public final class MacAddressUtil {
             for (Enumeration<NetworkInterface> i = NetworkInterface.getNetworkInterfaces(); i.hasMoreElements();) {
                 NetworkInterface iface = i.nextElement();
                 // Use the interface with proper INET addresses only.
-                Enumeration<InetAddress> addrs = iface.getInetAddresses();
+                Enumeration<InetAddress> addrs = SocketUtils.addressesFromNetworkInterface(iface);
                 if (addrs.hasMoreElements()) {
                     InetAddress a = addrs.nextElement();
                     if (!a.isLoopbackAddress()) {
@@ -76,7 +76,7 @@ public final class MacAddressUtil {
 
             byte[] macAddr;
             try {
-                macAddr = iface.getHardwareAddress();
+                macAddr = SocketUtils.hardwareAddressFromNetworkInterface(iface);
             } catch (SocketException e) {
                 logger.debug("Failed to get the hardware address of a network interface: {}", iface, e);
                 continue;
