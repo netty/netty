@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class RenegotiateTest {
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testRenegotiateServer() throws Throwable {
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
         final CountDownLatch latch = new CountDownLatch(2);
