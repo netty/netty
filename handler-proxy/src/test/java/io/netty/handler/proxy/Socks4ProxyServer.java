@@ -29,6 +29,7 @@ import io.netty.handler.codec.socksx.v4.Socks4CommandType;
 import io.netty.handler.codec.socksx.v4.Socks4ServerDecoder;
 import io.netty.handler.codec.socksx.v4.Socks4ServerEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.SocketUtils;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -95,7 +96,7 @@ final class Socks4ProxyServer extends ProxyServer {
                 res = new DefaultSocks4CommandResponse(Socks4CommandStatus.IDENTD_AUTH_FAILURE);
             } else {
                 res = new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS);
-                intermediaryDestination = new InetSocketAddress(req.dstAddr(), req.dstPort());
+                intermediaryDestination = SocketUtils.socketAddress(req.dstAddr(), req.dstPort());
             }
 
             ctx.write(res);

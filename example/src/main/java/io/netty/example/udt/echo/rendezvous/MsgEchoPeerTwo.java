@@ -15,6 +15,8 @@
  */
 package io.netty.example.udt.echo.rendezvous;
 
+import io.netty.util.internal.SocketUtils;
+
 import java.net.InetSocketAddress;
 
 /**
@@ -31,8 +33,8 @@ public class MsgEchoPeerTwo extends MsgEchoPeerBase {
 
     public static void main(final String[] args) throws Exception {
         final int messageSize = 64 * 1024;
-        final InetSocketAddress self = new InetSocketAddress(Config.hostTwo, Config.portTwo);
-        final InetSocketAddress peer = new InetSocketAddress(Config.hostOne, Config.portOne);
+        final InetSocketAddress self = SocketUtils.socketAddress(Config.hostTwo, Config.portTwo);
+        final InetSocketAddress peer = SocketUtils.socketAddress(Config.hostOne, Config.portOne);
         new MsgEchoPeerTwo(self, peer, messageSize).run();
     }
 }

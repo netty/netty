@@ -20,6 +20,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.SocketUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,8 +47,8 @@ public class DatagramPacketEncoderTest {
 
     @Test
     public void testEncode() {
-        InetSocketAddress recipient = new InetSocketAddress("127.0.0.1", 10000);
-        InetSocketAddress sender = new InetSocketAddress("127.0.0.1", 20000);
+        InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
+        InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
         assertTrue(channel.writeOutbound(
                 new DefaultAddressedEnvelope<String, InetSocketAddress>("netty", recipient, sender)));
         DatagramPacket packet = channel.readOutbound();
@@ -62,8 +63,8 @@ public class DatagramPacketEncoderTest {
 
     @Test
     public void testUnmatchedMessageType() {
-        InetSocketAddress recipient = new InetSocketAddress("127.0.0.1", 10000);
-        InetSocketAddress sender = new InetSocketAddress("127.0.0.1", 20000);
+        InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
+        InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
         DefaultAddressedEnvelope<Long, InetSocketAddress> envelope =
                 new DefaultAddressedEnvelope<Long, InetSocketAddress>(1L, recipient, sender);
         assertTrue(channel.writeOutbound(envelope));

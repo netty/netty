@@ -16,6 +16,7 @@
 package io.netty.util;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -165,7 +166,7 @@ public final class NetUtil {
             for (Enumeration<NetworkInterface> i = NetworkInterface.getNetworkInterfaces(); i.hasMoreElements();) {
                 NetworkInterface iface = i.nextElement();
                 // Use the interface with proper INET addresses only.
-                if (iface.getInetAddresses().hasMoreElements()) {
+                if (SocketUtils.addressesFromNetworkInterface(iface).hasMoreElements()) {
                     ifaces.add(iface);
                 }
             }
@@ -179,7 +180,7 @@ public final class NetUtil {
         NetworkInterface loopbackIface = null;
         InetAddress loopbackAddr = null;
         loop: for (NetworkInterface iface: ifaces) {
-            for (Enumeration<InetAddress> i = iface.getInetAddresses(); i.hasMoreElements();) {
+            for (Enumeration<InetAddress> i = SocketUtils.addressesFromNetworkInterface(iface); i.hasMoreElements();) {
                 InetAddress addr = i.nextElement();
                 if (addr.isLoopbackAddress()) {
                     // Found
@@ -195,7 +196,7 @@ public final class NetUtil {
             try {
                 for (NetworkInterface iface: ifaces) {
                     if (iface.isLoopback()) {
-                        Enumeration<InetAddress> i = iface.getInetAddresses();
+                        Enumeration<InetAddress> i = SocketUtils.addressesFromNetworkInterface(iface);
                         if (i.hasMoreElements()) {
                             // Found the one with INET address.
                             loopbackIface = iface;

@@ -25,6 +25,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.SocketUtils;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -69,7 +70,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         DatagramChannel cc = (DatagramChannel) cb.bind().sync().channel();
 
         String group = "230.0.0.1";
-        InetSocketAddress groupAddress = new InetSocketAddress(group, addr.getPort());
+        InetSocketAddress groupAddress = SocketUtils.socketAddress(group, addr.getPort());
 
         cc.joinGroup(groupAddress, NetUtil.LOOPBACK_IF).sync();
 
