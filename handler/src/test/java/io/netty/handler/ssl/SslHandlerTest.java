@@ -49,7 +49,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
-import org.junit.Assume;
 import org.junit.Test;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -189,7 +188,7 @@ public class SslHandlerTest {
         new TlsReadTest().test(true);
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testRemoval() throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup();
         Channel sc = null;
@@ -267,12 +266,12 @@ public class SslHandlerTest {
         };
     }
 
-    @Test(timeout = 10000)
+    @Test(timeout = 30000)
     public void testAlertProducedAndSendJdk() throws Exception {
         testAlertProducedAndSend(SslProvider.JDK);
     }
 
-    @Test(timeout = 10000)
+    @Test(timeout = 30000)
     public void testAlertProducedAndSendOpenSsl() throws Exception {
         assumeTrue(OpenSsl.isAvailable());
         testAlertProducedAndSend(SslProvider.OPENSSL);
