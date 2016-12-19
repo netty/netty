@@ -313,7 +313,7 @@ public class SniHandlerTest {
         }
     }
 
-    @Test(timeout = 10L * 1000L)
+    @Test(timeout = 30000)
     public void testReplaceHandler() throws Exception {
         switch (provider) {
             case OPENSSL:

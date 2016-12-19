@@ -35,24 +35,24 @@ import org.junit.Test;
 
 public class SniClientTest {
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testSniClientJdkSslServerJdkSsl() throws Exception {
         testSniClient(SslProvider.JDK, SslProvider.JDK);
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testSniClientOpenSslServerOpenSsl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
         testSniClient(SslProvider.OPENSSL, SslProvider.OPENSSL);
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testSniClientJdkSslServerOpenSsl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
         testSniClient(SslProvider.JDK, SslProvider.OPENSSL);
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testSniClientOpenSslServerJdkSsl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
         testSniClient(SslProvider.OPENSSL, SslProvider.JDK);
