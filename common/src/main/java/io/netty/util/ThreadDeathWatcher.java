@@ -17,7 +17,6 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -26,6 +25,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,7 +44,9 @@ public final class ThreadDeathWatcher {
     // visible for testing
     static final ThreadFactory threadFactory;
 
-    private static final Queue<Entry> pendingEntries = PlatformDependent.newMpscQueue();
+    // Use a MPMC queue as we may end up checking isEmpty() from multiple threads which may not be allowed to do
+    // concurrently depending on the implemenation of it in a MPSC queue.
+    private static final Queue<Entry> pendingEntries = new ConcurrentLinkedQueue<Entry>();
     private static final Watcher watcher = new Watcher();
     private static final AtomicBoolean started = new AtomicBoolean();
     private static volatile Thread watcherThread;
