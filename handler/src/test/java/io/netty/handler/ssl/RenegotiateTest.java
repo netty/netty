@@ -47,6 +47,7 @@ public abstract class RenegotiateTest {
         try {
             final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
                     .sslProvider(serverSslProvider()).build();
+            initSslServerContext(context);
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new ChannelInitializer<Channel>() {
@@ -134,4 +135,7 @@ public abstract class RenegotiateTest {
     }
 
     protected abstract SslProvider serverSslProvider();
+
+    protected void initSslServerContext(SslContext context) {
+    }
 }
