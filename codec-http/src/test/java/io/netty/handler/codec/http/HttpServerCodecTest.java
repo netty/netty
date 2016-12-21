@@ -153,19 +153,19 @@ public class HttpServerCodecTest {
         assertTrue(ch.writeInbound(Unpooled.copiedBuffer(
                 "HEAD / HTTP/1.1\r\n\r\n", CharsetUtil.UTF_8)));
 
-        HttpRequest request = ch.readInbound();
-        assertEquals(HttpMethod.HEAD, request.method());
-        LastHttpContent content = ch.readInbound();
+        HttpRequest request = (HttpRequest) ch.readInbound();
+        assertEquals(HttpMethod.HEAD, request.getMethod());
+        LastHttpContent content = (LastHttpContent) ch.readInbound();
         assertFalse(content.content().isReadable());
         content.release();
 
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        HttpUtil.setTransferEncodingChunked(response, true);
+        HttpHeaders.setTransferEncodingChunked(response);
         assertTrue(ch.writeOutbound(response));
         assertTrue(ch.finish());
 
-        ByteBuf buf = ch.readOutbound();
-        assertEquals("HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n", buf.toString(CharsetUtil.US_ASCII));
+        ByteBuf buf = (ByteBuf) ch.readOutbound();
+        assertEquals("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", buf.toString(CharsetUtil.US_ASCII));
         buf.release();
 
         assertFalse(ch.finishAndReleaseAll());
