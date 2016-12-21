@@ -17,6 +17,9 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.tcnative.jni.CertificateVerifier;
+import io.netty.tcnative.jni.SSL;
+import io.netty.tcnative.jni.SSLContext;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
@@ -27,9 +30,6 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.tcnative.jni.CertificateVerifier;
-import io.netty.tcnative.jni.SSL;
-import io.netty.tcnative.jni.SSLContext;
 
 import java.security.AccessController;
 import java.security.PrivateKey;
@@ -45,7 +45,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -57,6 +56,7 @@ import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * An implementation of {@link SslContext} which works with libraries that support the
@@ -85,6 +85,17 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     return SystemPropertyUtil.getBoolean("jdk.tls.rejectClientInitiatedRenegotiation", false);
                 }
             });
+
+    private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE =
+            AccessController.doPrivileged(new PrivilegedAction<Integer>() {
+                @Override
+                public Integer run() {
+                    return Math.max(1,
+                            SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
+                                                      2048));
+                }
+            });
+
     private static final List<String> DEFAULT_CIPHERS;
     private static final Integer DH_KEY_LENGTH;
     private static final ResourceLeakDetector<ReferenceCountedOpenSslContext> leakDetector =
@@ -130,7 +141,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final Certificate[] keyCertChain;
     final ClientAuth clientAuth;
     final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
-    volatile boolean rejectRemoteInitiatedRenegotiation;
+    private volatile boolean rejectRemoteInitiatedRenegotiation;
+    private volatile int bioNonApplicationBufferSize = DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE;
 
     static final OpenSslApplicationProtocolNegotiator NONE_PROTOCOL_NEGOTIATOR =
             new OpenSslApplicationProtocolNegotiator() {
@@ -266,7 +278,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_DH_USE);
                 SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
 
-                // We do not support compression as the moment so we should explicitly disable it.
+                // We do not support compression at the moment so we should explicitly disable it.
                 SSLContext.setOptions(ctx, SSL.SSL_OP_NO_COMPRESSION);
 
                 // Disable ticket support by default to be more inline with SSLEngineImpl of the JDK.
@@ -428,6 +440,29 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      */
     public void setRejectRemoteInitiatedRenegotiation(boolean rejectRemoteInitiatedRenegotiation) {
         this.rejectRemoteInitiatedRenegotiation = rejectRemoteInitiatedRenegotiation;
+    }
+
+    /**
+     * Returns if remote initiated renegotiation is supported or not.
+     */
+    public boolean getRejectRemoteInitiatedRenegotiation() {
+        return rejectRemoteInitiatedRenegotiation;
+    }
+
+    /**
+     * Set the size of the buffer used by the BIO for non-application based writes
+     * (e.g. handshake, renegotiation, etc...).
+     */
+    public void setBioNonApplicationBufferSize(int bioNonApplicationSize) {
+        this.bioNonApplicationBufferSize =
+                checkPositiveOrZero(bioNonApplicationSize, "bioNonApplicationBufferSize");
+    }
+
+    /**
+     * Returns the size of the buffer used by the BIO for non-application based writes
+     */
+    public int getBioNonApplicationBufferSize() {
+        return bioNonApplicationBufferSize;
     }
 
     /**
@@ -783,7 +818,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         try {
             long bio = SSL.newMemBIO();
             int readable = buffer.readableBytes();
-            if (SSL.writeToBIO(bio, OpenSsl.memoryAddress(buffer) + buffer.readerIndex(), readable) != readable) {
+            if (SSL.bioWrite(bio, OpenSsl.memoryAddress(buffer) + buffer.readerIndex(), readable) != readable) {
                 SSL.freeBIO(bio);
                 throw new IllegalStateException("Could not write data to memory BIO");
             }

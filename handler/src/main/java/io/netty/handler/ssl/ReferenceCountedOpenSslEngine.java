@@ -18,6 +18,8 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.tcnative.jni.Buffer;
+import io.netty.tcnative.jni.SSL;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
@@ -29,8 +31,6 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.tcnative.jni.Buffer;
-import io.netty.tcnative.jni.SSL;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -45,7 +45,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -211,6 +210,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     private HandshakeState handshakeState = HandshakeState.NOT_STARTED;
+    private boolean renegotiationPending;
     private boolean receivedShutdown;
     private volatile int destroyed;
 
@@ -280,24 +280,29 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         leak = leakDetection ? leakDetector.track(this) : null;
         this.alloc = checkNotNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
-        ssl = SSL.newSSL(context.ctx, !context.isClient());
         session = new OpenSslSession(context.sessionContext());
-        networkBIO = SSL.makeNetworkBIO(ssl);
         clientMode = context.isClient();
         engineMap = context.engineMap;
-        rejectRemoteInitiatedRenegation = context.rejectRemoteInitiatedRenegotiation;
+        rejectRemoteInitiatedRenegation = context.getRejectRemoteInitiatedRenegotiation();
         localCerts = context.keyCertChain;
-
-        // Set the client auth mode, this needs to be done via setClientAuth(...) method so we actually call the
-        // needed JNI methods.
-        setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
-
-        // Use SNI if peerHost was specified
-        // See https://github.com/netty/netty/issues/4746
-        if (clientMode && peerHost != null) {
-            SSL.setTlsExtHostName(ssl, peerHost);
-        }
         keyMaterialManager = context.keyMaterialManager();
+        ssl = SSL.newSSL(context.ctx, !context.isClient());
+        try {
+            networkBIO = SSL.bioNewByteBuffer(ssl, context.getBioNonApplicationBufferSize());
+
+            // Set the client auth mode, this needs to be done via setClientAuth(...) method so we actually call the
+            // needed JNI methods.
+            setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
+
+            // Use SNI if peerHost was specified
+            // See https://github.com/netty/netty/issues/4746
+            if (clientMode && peerHost != null) {
+                SSL.setTlsExtHostName(ssl, peerHost);
+            }
+        } catch (Throwable cause) {
+            SSL.freeSSL(ssl);
+            PlatformDependent.throwException(cause);
+        }
     }
 
     @Override
@@ -370,7 +375,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (DESTROYED_UPDATER.compareAndSet(this, 0, 1)) {
             engineMap.remove(ssl);
             SSL.freeSSL(ssl);
-            SSL.freeBIO(networkBIO);
             ssl = networkBIO = 0;
 
             isInboundDone = outboundClosed = true;
@@ -391,22 +395,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         final int sslWrote;
 
         if (src.isDirect()) {
-            final long addr = Buffer.address(src) + pos;
-            sslWrote = SSL.writeToSSL(ssl, addr, len);
+            sslWrote = SSL.writeToSSL(ssl, Buffer.address(src) + pos, len);
             if (sslWrote > 0) {
                 src.position(pos + sslWrote);
             }
         } else {
             ByteBuf buf = alloc.directBuffer(len);
             try {
-                final long addr = memoryAddress(buf);
-
                 src.limit(pos + len);
 
                 buf.setBytes(0, src);
                 src.limit(limit);
 
-                sslWrote = SSL.writeToSSL(ssl, addr, len);
+                sslWrote = SSL.writeToSSL(ssl, memoryAddress(buf), len);
                 if (sslWrote > 0) {
                     src.position(pos + sslWrote);
                 } else {
@@ -422,40 +423,28 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     /**
      * Write encrypted data to the OpenSSL network BIO.
      */
-    private int writeEncryptedData(final ByteBuffer src, int len) {
+    private ByteBuf writeEncryptedData(final ByteBuffer src, int len) {
         final int pos = src.position();
-        final int netWrote;
         if (src.isDirect()) {
-            final long addr = Buffer.address(src) + pos;
-            netWrote = SSL.writeToBIO(networkBIO, addr, len);
-            if (netWrote >= 0) {
-                src.position(pos + netWrote);
-            }
+            SSL.bioSetByteBuffer(networkBIO, Buffer.address(src) + pos, len, false);
         } else {
             final ByteBuf buf = alloc.directBuffer(len);
             try {
-                final long addr = memoryAddress(buf);
-
-                // Set the limit depending on the length of the allocated buffer and restore the original
-                // after we copied bytes.
-                int limit = src.limit();
-                int newLimit = pos + len;
-                src.limit(newLimit);
-                buf.setBytes(0, src);
+                final int limit = src.limit();
+                src.limit(pos + len);
+                buf.writeBytes(src);
+                // Restore the original position and limit because we don't want to consume from `src`.
+                src.position(pos);
                 src.limit(limit);
 
-                netWrote = SSL.writeToBIO(networkBIO, addr, len);
-                if (netWrote >= 0) {
-                    src.position(pos + netWrote);
-                } else {
-                    src.position(pos);
-                }
-            } finally {
+                SSL.bioSetByteBuffer(networkBIO, memoryAddress(buf), len, false);
+                return buf;
+            } catch (Throwable cause) {
                 buf.release();
+                PlatformDependent.throwException(cause);
             }
         }
-
-        return netWrote;
+        return null;
     }
 
     /**
@@ -493,101 +482,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return sslRead;
     }
 
-    /**
-     * Read encrypted data from the OpenSSL network BIO
-     */
-    private int readEncryptedData(final ByteBuffer dst, final int pending) {
-        final int bioRead;
-
-        if (dst.isDirect() && dst.remaining() >= pending) {
-            final int pos = dst.position();
-            final long addr = Buffer.address(dst) + pos;
-            bioRead = SSL.readFromBIO(networkBIO, addr, pending);
-            if (bioRead > 0) {
-                dst.position(pos + bioRead);
-                return bioRead;
-            }
-        } else {
-            final ByteBuf buf = alloc.directBuffer(pending);
-            try {
-                final long addr = memoryAddress(buf);
-
-                bioRead = SSL.readFromBIO(networkBIO, addr, pending);
-                if (bioRead > 0) {
-                    int oldLimit = dst.limit();
-                    dst.limit(dst.position() + bioRead);
-                    buf.getBytes(0, dst);
-                    dst.limit(oldLimit);
-                    return bioRead;
-                }
-            } finally {
-                buf.release();
-            }
-        }
-
-        return bioRead;
-    }
-
-    private SSLEngineResult readPendingBytesFromBIO(ByteBuffer dst, int bytesConsumed, int bytesProduced,
-                                                    SSLEngineResult.HandshakeStatus status) throws SSLException {
-        // Check to see if the engine wrote data into the network BIO
-        int pendingNet = SSL.pendingWrittenBytesInBIO(networkBIO);
-        if (pendingNet > 0) {
-
-            // Do we have enough room in dst to write encrypted data?
-            int capacity = dst.remaining();
-            if (capacity < pendingNet) {
-                return new SSLEngineResult(BUFFER_OVERFLOW,
-                        mayFinishHandshake(status != FINISHED ? getHandshakeStatus(pendingNet) : status),
-                        bytesConsumed, bytesProduced);
-            }
-
-            // Write the pending data from the network BIO into the dst buffer
-            int produced = readEncryptedData(dst, pendingNet);
-
-            if (produced <= 0) {
-                // We ignore BIO_* errors here as we use in memory BIO anyway and will do another SSL_* call later
-                // on in which we will produce an exception in case of an error
-                SSL.clearError();
-            } else {
-                bytesProduced += produced;
-                pendingNet -= produced;
-            }
-
-            SSLEngineResult.HandshakeStatus hs = mayFinishHandshake(
-                    status != FINISHED ? getHandshakeStatus(pendingNet) : status);
-            final SSLEngineResult.Status rs;
-
-            // If isOutboundDone, then the data from the network BIO
-            // was the close_notify message, see if we also received the response yet.
-            if (isOutboundDone()) {
-                rs = CLOSED;
-                if (isInboundDone()) {
-                    // If the inbound was done as well, we need to ensure we return NOT_HANDSHAKING to signal we are
-                    // done.
-                    hs = NOT_HANDSHAKING;
-
-                    // As the inbound and the outbound is done we can shutdown the engine now.
-                    shutdown();
-                }
-            } else {
-                rs = OK;
-            }
-
-            return new SSLEngineResult(rs, hs, bytesConsumed, bytesProduced);
-        }
-        return null;
-    }
-
-    private SSLEngineResult drainOutboundBuffer(ByteBuffer dst, SSLEngineResult.HandshakeStatus handshakeStatus)
-            throws SSLException {
-        SSLEngineResult pendingNetResult = readPendingBytesFromBIO(dst, 0, 0, handshakeStatus);
-        return pendingNetResult != null ? pendingNetResult : NEED_UNWRAP_CLOSED;
-    }
-
     @Override
     public final SSLEngineResult wrap(
-            final ByteBuffer[] srcs, final int offset, final int length, final ByteBuffer dst) throws SSLException {
+            final ByteBuffer[] srcs, int offset, final int length, final ByteBuffer dst) throws SSLException {
         // Throw required runtime exceptions
         if (srcs == null) {
             throw new IllegalArgumentException("srcs is null");
@@ -612,108 +509,162 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 return isInboundDone() || isDestroyed() ? CLOSED_NOT_HANDSHAKING : NEED_UNWRAP_CLOSED;
             }
 
-            SSLEngineResult.HandshakeStatus status = NOT_HANDSHAKING;
-
-            // Explicit use outboundClosed as we want to drain any bytes that are still present.
-            if (outboundClosed) {
-                // There is something left to drain.
-                // See https://github.com/netty/netty/issues/6260
-                return drainOutboundBuffer(dst, status);
-            }
-
-            // Prepare OpenSSL to work in server mode and receive handshake
-            if (handshakeState != HandshakeState.FINISHED) {
-                if (handshakeState != HandshakeState.STARTED_EXPLICITLY) {
-                    // Update accepted so we know we triggered the handshake via wrap
-                    handshakeState = HandshakeState.STARTED_IMPLICITLY;
-                }
-
-                status = handshake();
-                if (status == NEED_UNWRAP) {
-                    // Signal if the outbound is done or not.
-                    return isOutboundDone() ? NEED_UNWRAP_CLOSED : NEED_UNWRAP_OK;
-                }
-
-                // Explicit use outboundClosed and not outboundClosed() as we want to drain any bytes that are still
-                // present.
-                if (outboundClosed) {
-                    return drainOutboundBuffer(dst, status);
-                }
-            }
-
-            int endOffset = offset + length;
-            int srcsLen = 0;
-
-            for (int i = offset; i < endOffset; ++i) {
-                final ByteBuffer src = srcs[i];
-                if (src == null) {
-                    throw new IllegalArgumentException("srcs[" + i + "] is null");
-                }
-                if (srcsLen == MAX_PLAINTEXT_LENGTH) {
-                    continue;
-                }
-
-                srcsLen += src.remaining();
-                if (srcsLen > MAX_PLAINTEXT_LENGTH || srcsLen < 0) {
-                    // If srcLen > MAX_PLAINTEXT_LENGTH or secLen < 0 just set it to MAX_PLAINTEXT_LENGTH.
-                    // This also help us to guard against overflow.
-                    // We not break out here as we still need to check for null entries in srcs[].
-                    srcsLen = MAX_PLAINTEXT_LENGTH;
-                }
-            }
-
-            int maxEncryptedLen = calculateOutNetBufSize(srcsLen);
-
-            if (dst.remaining() < maxEncryptedLen) {
-                // Can not hold the maximum packet so we need to tell the caller to use a bigger destination
-                // buffer.
-                return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), 0, 0);
-            }
-            // There was no pending data in the network BIO -- encrypt any application data
             int bytesProduced = 0;
-            int bytesConsumed = 0;
+            ByteBuf bioReadCopyBuf = null;
+            try {
+                // Setup the BIO buffer so that we directly write the encryption results into dst.
+                if (dst.isDirect()) {
+                    SSL.bioSetByteBuffer(networkBIO, Buffer.address(dst) + dst.position(), dst.remaining(),
+                            true);
+                } else {
+                    bioReadCopyBuf = alloc.directBuffer(dst.remaining());
+                    SSL.bioSetByteBuffer(networkBIO, memoryAddress(bioReadCopyBuf), bioReadCopyBuf.writableBytes(),
+                            true);
+                }
 
-            loop: for (int i = offset; i < endOffset; ++i) {
-                final ByteBuffer src = srcs[i];
-                while (src.hasRemaining()) {
-                    final SSLEngineResult pendingNetResult;
-                    // Write plaintext application data to the SSL engine
-                    int result = writePlaintextData(
-                            src, min(src.remaining(), MAX_PLAINTEXT_LENGTH - bytesConsumed));
+                int bioLengthBefore = SSL.bioLengthByteBuffer(networkBIO);
 
-                    if (result > 0) {
-                        bytesConsumed += result;
+                // Explicit use outboundClosed as we want to drain any bytes that are still present.
+                if (outboundClosed) {
+                    // There is something left to drain.
+                    // See https://github.com/netty/netty/issues/6260
+                    bytesProduced = SSL.bioFlushByteBuffer(networkBIO);
+                    return newResultMayFinishHandshake(NOT_HANDSHAKING, 0, bytesProduced);
+                }
 
-                        pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced, status);
-                        if (pendingNetResult != null) {
-                            if (pendingNetResult.getStatus() != OK) {
-                                return pendingNetResult;
+                // Flush any data that may be implicitly generated by OpenSSL (handshake, close, etc..).
+                SSLEngineResult.HandshakeStatus status = NOT_HANDSHAKING;
+                // Prepare OpenSSL to work in server mode and receive handshake
+                if (handshakeState != HandshakeState.FINISHED) {
+                    if (handshakeState != HandshakeState.STARTED_EXPLICITLY) {
+                        // Update accepted so we know we triggered the handshake via wrap
+                        handshakeState = HandshakeState.STARTED_IMPLICITLY;
+                    }
+
+                    // Flush any data that may have been written implicitly during the handshake by OpenSSL.
+                    bytesProduced = SSL.bioFlushByteBuffer(networkBIO);
+
+                    // Check to see if the engine wrote data into the network BIO.
+                    if (bytesProduced > 0) {
+                        // We produced / consumed some data during the handshake, signal back to the caller.
+                        // If there is a handshake exception and we have produced data, we should send the data before
+                        // we allow handshake() to throw the handshake exception.
+                        if (handshakeException == null) {
+                            status = handshake();
+
+                            if (renegotiationPending && status == FINISHED) {
+                                // If renegotiationPending is true that means when we attempted to start renegotiation
+                                // the BIO buffer didn't have enough space to hold the HelloRequest which prompts the
+                                // client to initiate a renegotiation. At this point the HelloRequest has been written
+                                // so we can actually start the handshake process.
+                                renegotiationPending = false;
+                                SSL.setState(ssl, SSL.SSL_ST_ACCEPT);
+                                handshakeState = HandshakeState.STARTED_EXPLICITLY;
+                                status = handshake();
                             }
-                            bytesProduced = pendingNetResult.bytesProduced();
+
+                            // Handshake may have generated more data, for example if the internal SSL buffer is small
+                            // we may have freed up space by flushing above.
+                            bytesProduced = bioLengthBefore - SSL.bioLengthByteBuffer(networkBIO);
+
+                            // It's important we call this before wrapStatus() as wrapStatus() may shutdown the engine.
+                            return newResult(mayFinishHandshake(status != FINISHED ?
+                                    getHandshakeStatus(SSL.bioLengthNonApplication(networkBIO)) : FINISHED),
+                                    0, bytesProduced);
                         }
-                        if (bytesConsumed == MAX_PLAINTEXT_LENGTH) {
-                            // If we consumed the maximum amount of bytes for the plaintext length break out of the
-                            // loop and start to fill the dst buffer.
-                            break loop;
+                        return newResult(NEED_WRAP, 0, bytesProduced);
+                    } else {
+                        status = handshake();
+                    }
+
+                    if (status == NEED_UNWRAP) {
+                        // Signal if the outbound is done or not.
+                        return isOutboundDone() ? NEED_UNWRAP_CLOSED : NEED_UNWRAP_OK;
+                    }
+
+                    // Explicit use outboundClosed and not outboundClosed() as we want to drain any bytes that are
+                    // still present.
+                    if (outboundClosed) {
+                        bytesProduced = SSL.bioFlushByteBuffer(networkBIO);
+                        return newResultMayFinishHandshake(status, 0, bytesProduced);
+                    }
+                }
+
+                int srcsLen = 0;
+                final int endOffset = offset + length;
+                for (int i = offset; i < endOffset; ++i) {
+                    final ByteBuffer src = srcs[i];
+                    if (src == null) {
+                        throw new IllegalArgumentException("srcs[" + i + "] is null");
+                    }
+                    if (srcsLen == MAX_PLAINTEXT_LENGTH) {
+                        continue;
+                    }
+
+                    srcsLen += src.remaining();
+                    if (srcsLen > MAX_PLAINTEXT_LENGTH || srcsLen < 0) {
+                        // If srcLen > MAX_PLAINTEXT_LENGTH or secLen < 0 just set it to MAX_PLAINTEXT_LENGTH.
+                        // This also help us to guard against overflow.
+                        // We not break out here as we still need to check for null entries in srcs[].
+                        srcsLen = MAX_PLAINTEXT_LENGTH;
+                    }
+                }
+
+                if (dst.remaining() < calculateOutNetBufSize(srcsLen)) {
+                    // Can not hold the maximum packet so we need to tell the caller to use a bigger destination
+                    // buffer.
+                    return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), 0, 0);
+                }
+
+                // There was no pending data in the network BIO -- encrypt any application data
+                int bytesConsumed = 0;
+                // Flush any data that may have been written implicitly by OpenSSL in case a shutdown/alert occurs.
+                bytesProduced = SSL.bioFlushByteBuffer(networkBIO);
+                for (; offset < endOffset; ++offset) {
+                    final ByteBuffer src = srcs[offset];
+                    final int remaining = src.remaining();
+                    if (remaining == 0) {
+                        continue;
+                    }
+
+                    // Write plaintext application data to the SSL engine
+                    int bytesWritten = writePlaintextData(src, min(remaining, MAX_PLAINTEXT_LENGTH - bytesConsumed));
+
+                    if (bytesWritten > 0) {
+                        bytesConsumed += bytesWritten;
+
+                        // Determine how much encrypted data was generated:
+                        final int pendingNow = SSL.bioLengthByteBuffer(networkBIO);
+                        bytesProduced += bioLengthBefore - pendingNow;
+                        bioLengthBefore = pendingNow;
+
+                        if (bytesConsumed == MAX_PLAINTEXT_LENGTH || bytesProduced == dst.remaining()) {
+                            return newResultMayFinishHandshake(status, bytesConsumed, bytesProduced);
                         }
                     } else {
-                        int sslError = SSL.getError(ssl, result);
+                        int sslError = SSL.getError(ssl, bytesWritten);
                         switch (sslError) {
                             case SSL.SSL_ERROR_ZERO_RETURN:
                                 // This means the connection was shutdown correctly, close inbound and outbound
                                 if (!receivedShutdown) {
                                     closeAll();
+
+                                    bytesProduced += bioLengthBefore - SSL.bioLengthByteBuffer(networkBIO);
+
+                                    SSLEngineResult.HandshakeStatus hs = mayFinishHandshake(
+                                        status != FINISHED ? getHandshakeStatus(SSL.bioLengthNonApplication(networkBIO))
+                                                           : FINISHED);
+                                    return newResult(hs, bytesConsumed, bytesProduced);
                                 }
-                                pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced, status);
-                                return pendingNetResult != null ? pendingNetResult : CLOSED_NOT_HANDSHAKING;
+
+                                return newResult(NOT_HANDSHAKING, bytesConsumed, bytesProduced);
+
                             case SSL.SSL_ERROR_WANT_READ:
                                 // If there is no pending data to read from BIO we should go back to event loop and try
-                                // to read more data [1]. It is also possible that event loop will detect the socket
-                                // has been closed. [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
-                                pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced, status);
-                                return pendingNetResult != null ? pendingNetResult :
-                                        new SSLEngineResult(isOutboundDone() ? CLOSED : OK,
-                                                NEED_UNWRAP, bytesConsumed, bytesProduced);
+                                // to read more data [1]. It is also possible that event loop will detect the socket has
+                                // been closed. [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
+                                return newResult(NEED_UNWRAP, bytesConsumed, bytesProduced);
+
                             case SSL.SSL_ERROR_WANT_WRITE:
                                 // SSL_ERROR_WANT_WRITE typically means that the underlying transport is not writable
                                 // and we should set the "want write" flag on the selector and try again when the
@@ -727,26 +678,63 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 // So we attempt to drain the BIO buffer below, but if there is no data this condition
                                 // is undefined and we assume their is a fatal error with the openssl engine and close.
                                 // [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
-                                pendingNetResult = readPendingBytesFromBIO(dst, bytesConsumed, bytesProduced, status);
-                                return pendingNetResult != null ? pendingNetResult : NEED_WRAP_CLOSED;
+                                return newResult(NEED_WRAP, bytesConsumed, bytesProduced);
+
                             default:
                                 // Everything else is considered as error
                                 throw shutdownWithError("SSL_write");
                         }
                     }
                 }
-            }
-            // We need to check if pendingWrittenBytesInBIO was checked yet, as we may not checked if the srcs was
-            // empty, or only contained empty buffers.
-            if (bytesConsumed == 0) {
-                SSLEngineResult pendingNetResult = readPendingBytesFromBIO(dst, 0, bytesProduced, status);
-                if (pendingNetResult != null) {
-                    return pendingNetResult;
+                return newResultMayFinishHandshake(status, bytesConsumed, bytesProduced);
+            } finally {
+                SSL.bioClearByteBuffer(networkBIO);
+                if (bioReadCopyBuf == null) {
+                    dst.position(dst.position() + bytesProduced);
+                } else {
+                    assert bioReadCopyBuf.readableBytes() <= dst.remaining() : "The destination buffer " + dst +
+                            " didn't have enough remaining space to hold the encrypted content in " + bioReadCopyBuf;
+                    dst.put(bioReadCopyBuf.internalNioBuffer(bioReadCopyBuf.readerIndex(),
+                                                      bioReadCopyBuf.readerIndex() + bytesProduced));
+                    bioReadCopyBuf.release();
                 }
             }
-
-            return newResult(isOutboundDone() ? CLOSED : OK, bytesConsumed, bytesProduced, status);
         }
+    }
+
+    private SSLEngineResult newResult(SSLEngineResult.HandshakeStatus hs, int bytesConsumed, int bytesProduced) {
+        return newResult(OK, hs, bytesConsumed, bytesProduced);
+    }
+
+    private SSLEngineResult newResult(SSLEngineResult.Status status, SSLEngineResult.HandshakeStatus hs,
+                                      int bytesConsumed, int bytesProduced) {
+        // If isOutboundDone, then the data from the network BIO
+        // was the close_notify message and all was consumed we are not required to wait
+        // for the receipt the peer's close_notify message -- shutdown.
+        if (isOutboundDone()) {
+            if (isInboundDone()) {
+                // If the inbound was done as well, we need to ensure we return NOT_HANDSHAKING to signal we are done.
+                hs = NOT_HANDSHAKING;
+
+                // As the inbound and the outbound is done we can shutdown the engine now.
+                shutdown();
+            }
+            return new SSLEngineResult(CLOSED, hs, bytesConsumed, bytesProduced);
+        }
+        return new SSLEngineResult(status, hs, bytesConsumed, bytesProduced);
+    }
+
+    private SSLEngineResult newResultMayFinishHandshake(SSLEngineResult.HandshakeStatus hs,
+                                                        int bytesConsumed, int bytesProduced) throws SSLException {
+        return newResult(mayFinishHandshake(hs != FINISHED ? getHandshakeStatus() : FINISHED),
+                         bytesConsumed, bytesProduced);
+    }
+
+    private SSLEngineResult newResultMayFinishHandshake(SSLEngineResult.Status status,
+                                                        SSLEngineResult.HandshakeStatus hs,
+                                                        int bytesConsumed, int bytesProduced) throws SSLException {
+        return newResult(status, mayFinishHandshake(hs != FINISHED ? getHandshakeStatus() : FINISHED),
+                         bytesConsumed, bytesProduced);
     }
 
     /**
@@ -772,7 +760,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     public final SSLEngineResult unwrap(
             final ByteBuffer[] srcs, int srcsOffset, final int srcsLength,
-            final ByteBuffer[] dsts, final int dstsOffset, final int dstsLength) throws SSLException {
+            final ByteBuffer[] dsts, int dstsOffset, final int dstsLength) throws SSLException {
 
         // Throw required runtime exceptions
         if (srcs == null) {
@@ -793,8 +781,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             " (expected: offset <= offset + length <= dsts.length (" + dsts.length + "))");
         }
         long capacity = 0;
-        final int endOffset = dstsOffset + dstsLength;
-        for (int i = dstsOffset; i < endOffset; i ++) {
+        final int dstsEndOffset = dstsOffset + dstsLength;
+        for (int i = dstsOffset; i < dstsEndOffset; i ++) {
             ByteBuffer dst = dsts[i];
             if (dst == null) {
                 throw new IllegalArgumentException("dsts[" + i + "] is null");
@@ -845,7 +833,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
 
             if (len < SslUtils.SSL_RECORD_HEADER_LENGTH) {
-                return new SSLEngineResult(BUFFER_UNDERFLOW, getHandshakeStatus(), 0, 0);
+                return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
             }
 
             int packetLength = SslUtils.getEncryptedPacketLength(srcs, srcsOffset);
@@ -857,122 +845,107 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (packetLength - SslUtils.SSL_RECORD_HEADER_LENGTH > capacity) {
                 // No enough space in the destination buffer so signal the caller
                 // that the buffer needs to be increased.
-                return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), 0, 0);
+                return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
             }
 
             if (len < packetLength) {
                 // We either have no enough data to read the packet length at all or not enough for reading
                 // the whole packet.
-                return new SSLEngineResult(BUFFER_UNDERFLOW, getHandshakeStatus(), 0, 0);
+                return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
             }
 
+            // This must always be the case when we reached here as if not we returned BUFFER_UNDERFLOW.
+            assert srcsOffset < srcsEndOffset;
+
+            // This must always be the case if we reached here.
+            assert capacity > 0;
+
+            // Number of produced bytes
+            int bytesProduced = 0;
             int bytesConsumed = 0;
-            if (srcsOffset < srcsEndOffset) {
-
-                // Write encrypted data to network BIO
-                int packetLengthRemaining = packetLength;
-
-                do {
+            try {
+                for (; srcsOffset < srcsEndOffset; ++srcsOffset) {
                     ByteBuffer src = srcs[srcsOffset];
                     int remaining = src.remaining();
                     if (remaining == 0) {
                         // We must skip empty buffers as BIO_write will return 0 if asked to write something
                         // with length 0.
-                        srcsOffset++;
                         continue;
                     }
                     // Write more encrypted data into the BIO. Ensure we only read one packet at a time as
                     // stated in the SSLEngine javadocs.
-                    int written = writeEncryptedData(src, min(packetLengthRemaining, src.remaining()));
-                    if (written > 0) {
-                        packetLengthRemaining -= written;
-                        if (packetLengthRemaining == 0) {
-                            // A whole packet has been consumed.
-                            break;
-                        }
+                    int pendingEncryptedBytes = min(packetLength, remaining);
+                    ByteBuf bioWriteCopyBuf = writeEncryptedData(src, pendingEncryptedBytes);
+                    try {
+                        readLoop:
+                        for (; dstsOffset < dstsEndOffset; ++dstsOffset) {
+                            ByteBuffer dst = dsts[dstsOffset];
+                            if (!dst.hasRemaining()) {
+                                // No space left in the destination buffer, skip it.
+                                continue;
+                            }
 
-                        if (written == remaining) {
-                            srcsOffset++;
-                        } else {
-                            // We were not able to write everything into the BIO so break the write loop as otherwise
-                            // we will produce an error on the next write attempt, which will trigger a SSL.clearError()
-                            // later.
-                            break;
-                        }
-                    } else {
-                        // BIO_write returned a negative or zero number, this means we could not complete the write
-                        // operation and should retry later.
-                        // We ignore BIO_* errors here as we use in memory BIO anyway and will do another SSL_* call
-                        // later on in which we will produce an exception in case of an error
-                        SSL.clearError();
-                        break;
-                    }
-                } while (srcsOffset < srcsEndOffset);
-                bytesConsumed = packetLength - packetLengthRemaining;
-            }
+                            int bytesRead = readPlaintextData(dst);
+                            // We are directly using the ByteBuffer memory for the write, and so we only know what
+                            // has been consumed after we let SSL decrypt the data. At this point we should update
+                            // the number of bytes consumed, update the ByteBuffer position, and release temp
+                            // ByteBuf.
+                            int localBytesConsumed = pendingEncryptedBytes - SSL.bioLengthByteBuffer(networkBIO);
+                            bytesConsumed += localBytesConsumed;
+                            packetLength -= localBytesConsumed;
+                            pendingEncryptedBytes -= localBytesConsumed;
+                            src.position(src.position() + localBytesConsumed);
 
-            // Number of produced bytes
-            int bytesProduced = 0;
+                            if (bytesRead > 0) {
+                                bytesProduced += bytesRead;
 
-            if (capacity > 0) {
-                // Write decrypted data to dsts buffers
-                int idx = dstsOffset;
-                while (idx < endOffset) {
-                    ByteBuffer dst = dsts[idx];
-                    if (!dst.hasRemaining()) {
-                        idx++;
-                        continue;
-                    }
-
-                    int bytesRead = readPlaintextData(dst);
-
-                    // TODO: We may want to consider if we move this check and only do it in a less often called place
-                    // at the price of not being 100% accurate, like for example when calling SSL.getError(...).
-                    rejectRemoteInitiatedRenegation();
-
-                    if (bytesRead > 0) {
-                        bytesProduced += bytesRead;
-
-                        if (!dst.hasRemaining()) {
-                            idx++;
-                        } else {
-                            // We read everything return now.
-                            return newResult(isInboundDone() ? CLOSED : OK, bytesConsumed, bytesProduced, status);
-                        }
-                    } else {
-                        int sslError = SSL.getError(ssl, bytesRead);
-                        switch (sslError) {
-                            case SSL.SSL_ERROR_ZERO_RETURN:
-                                // This means the connection was shutdown correctly, close inbound and outbound
-                                if (!receivedShutdown) {
-                                    closeAll();
+                                if (!dst.hasRemaining()) {
+                                    // Move to the next dst buffer as this one is full.
+                                    continue;
+                                } else if (packetLength == 0) {
+                                    // We read everything return now.
+                                    return newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status,
+                                                                       bytesConsumed, bytesProduced);
                                 }
-                                // fall-trough!
-                            case SSL.SSL_ERROR_WANT_READ:
-                            case SSL.SSL_ERROR_WANT_WRITE:
-                                // break to the outer loop
-                                return newResult(isInboundDone() ? CLOSED : OK, bytesConsumed, bytesProduced, status);
-                            default:
-                                return sslReadErrorResult(SSL.getLastErrorNumber(), bytesConsumed, bytesProduced);
+                                // try to write again to the BIO. stop reading from it by break out of the readLoop.
+                                break;
+                            } else {
+                                int sslError = SSL.getError(ssl, bytesRead);
+                                switch (sslError) {
+                                    case SSL.SSL_ERROR_WANT_WRITE:
+                                    case SSL.SSL_ERROR_WANT_READ:
+                                        // break to the outer loop as we want to read more data which means we need to
+                                        // write more to the BIO.
+                                        break readLoop;
+
+                                    case SSL.SSL_ERROR_ZERO_RETURN:
+                                        // This means the connection was shutdown correctly, close inbound and outbound
+                                        if (!receivedShutdown) {
+                                            closeAll();
+                                        }
+                                        return newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status,
+                                                bytesConsumed, bytesProduced);
+
+                                    default:
+                                        return sslReadErrorResult(SSL.getLastErrorNumber(), bytesConsumed,
+                                                                  bytesProduced);
+                                }
+                            }
+                        }
+
+                        // Either we have no more dst buffers to put the data, or no more data to generate; we are done.
+                        if (dstsOffset >= dstsEndOffset || packetLength == 0) {
+                            break;
+                        }
+                    } finally {
+                        if (bioWriteCopyBuf != null) {
+                            bioWriteCopyBuf.release();
                         }
                     }
                 }
-            } else {
-                // If the capacity of all destination buffers is 0 we need to trigger a SSL_read anyway to ensure
-                // everything is flushed in the BIO pair and so we can detect it in the pendingAppData() call.
-                if (SSL.readFromSSL(ssl, EMPTY_ADDR, 0) <= 0) {
-                    // We do not check SSL_get_error as we are not interested in any error that is not fatal.
-                    int err = SSL.getLastErrorNumber();
-                    if (OpenSsl.isError(err)) {
-                        return sslReadErrorResult(err, bytesConsumed, bytesProduced);
-                    }
-                }
-            }
-            if (pendingAppData() > 0) {
-                // We filled all buffers but there is still some data pending in the BIO buffer, return BUFFER_OVERFLOW.
-                return new SSLEngineResult(
-                        BUFFER_OVERFLOW, mayFinishHandshake(status != FINISHED ? getHandshakeStatus() : status),
-                        bytesConsumed, bytesProduced);
+            } finally {
+                SSL.bioClearByteBuffer(networkBIO);
+                rejectRemoteInitiatedRenegation();
             }
 
             // Check to see if we received a close_notify message from the peer.
@@ -980,7 +953,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 closeAll();
             }
 
-            return newResult(isInboundDone() ? CLOSED : OK, bytesConsumed, bytesProduced, status);
+            return newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status, bytesConsumed, bytesProduced);
         }
     }
 
@@ -991,7 +964,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // BIO first or can just shutdown and throw it now.
         // This is needed so we ensure close_notify etc is correctly send to the remote peer.
         // See https://github.com/netty/netty/issues/3900
-        if (SSL.pendingWrittenBytesInBIO(networkBIO) > 0) {
+        if (SSL.bioLengthNonApplication(networkBIO) > 0) {
             if (handshakeException == null && handshakeState != HandshakeState.FINISHED) {
                 // we seems to have data left that needs to be transfered and so the user needs
                 // call wrap(...). Store the error so we can pick it up later.
@@ -1000,18 +973,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return new SSLEngineResult(OK, NEED_WRAP, bytesConsumed, bytesProduced);
         }
         throw shutdownWithError("SSL_read", errStr);
-    }
-
-    private int pendingAppData() {
-        // There won't be any application data until we're done handshaking.
-        // We first check handshakeFinished to eliminate the overhead of extra JNI call if possible.
-        return handshakeState == HandshakeState.FINISHED ? SSL.pendingReadableBytesInSSL(ssl) : 0;
-    }
-
-    private SSLEngineResult newResult(SSLEngineResult.Status resultStatus,
-            int bytesConsumed, int bytesProduced, SSLEngineResult.HandshakeStatus status) throws SSLException {
-        return new SSLEngineResult(resultStatus, mayFinishHandshake(status != FINISHED ? getHandshakeStatus() : status),
-            bytesConsumed, bytesProduced);
     }
 
     private void closeAll() throws SSLException {
@@ -1178,7 +1139,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final synchronized boolean isOutboundDone() {
         // Check if there is anything left in the outbound buffer.
         // We need to ensure we only call SSL.pendingWrittenBytesInBIO(...) if the engine was not destroyed yet.
-        return outboundClosed && (networkBIO == 0 || SSL.pendingWrittenBytesInBIO(networkBIO) == 0);
+        return outboundClosed && (networkBIO == 0 || SSL.bioLengthNonApplication(networkBIO) == 0);
     }
 
     @Override
@@ -1387,14 +1348,27 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // ssl->state = SSL_ST_ACCEPT
                 // SSL_do_handshake(ssl)
                 //
-                // Bcause of this we fall-through to call handshake() after setting the state, as this will also take
+                // Because of this we fall-through to call handshake() after setting the state, as this will also take
                 // care of updating the internal OpenSslSession object.
                 //
                 // See also:
                 // https://github.com/apache/httpd/blob/2.4.16/modules/ssl/ssl_engine_kernel.c#L812
                 // http://h71000.www7.hp.com/doc/83final/ba554_90007/ch04s03.html
-                if (SSL.renegotiate(ssl) != 1 || SSL.doHandshake(ssl) != 1) {
-                    throw shutdownWithError("renegotiation failed");
+                int status;
+                if ((status = SSL.renegotiate(ssl)) != 1 || (status = SSL.doHandshake(ssl)) != 1) {
+                    int err = SSL.getError(ssl, status);
+                    switch (err) {
+                        case SSL.SSL_ERROR_WANT_READ:
+                        case SSL.SSL_ERROR_WANT_WRITE:
+                            // If the internal SSL buffer is small it is possible that doHandshake may "fail" because
+                            // there is not enough room to write, so we should wait until the renegotiation has been.
+                            renegotiationPending = true;
+                            handshakeState = HandshakeState.STARTED_EXPLICITLY;
+                            lastAccessed = System.currentTimeMillis();
+                            return;
+                        default:
+                            throw shutdownWithError("renegotiation failed");
+                    }
                 }
 
                 SSL.setState(ssl, SSL.SSL_ST_ACCEPT);
@@ -1442,8 +1416,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // See https://github.com/netty/netty/issues/3900
         SSLHandshakeException exception = handshakeException;
         if (exception != null) {
-            if (SSL.pendingWrittenBytesInBIO(networkBIO) > 0) {
-                // There is something pending, we need to consume it first via a WRAP so we not loose anything.
+            if (SSL.bioLengthNonApplication(networkBIO) > 0) {
+                // There is something pending, we need to consume it first via a WRAP so we don't loose anything.
                 return NEED_WRAP;
             }
             // No more data left to send to the remote peer, so null out the exception field, shutdown and throw
@@ -1476,11 +1450,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
 
             int sslError = SSL.getError(ssl, code);
-
             switch (sslError) {
                 case SSL.SSL_ERROR_WANT_READ:
                 case SSL.SSL_ERROR_WANT_WRITE:
-                    return pendingStatus(SSL.pendingWrittenBytesInBIO(networkBIO));
+                    return pendingStatus(SSL.bioLengthNonApplication(networkBIO));
                 default:
                     // Everything else is considered as error
                     throw shutdownWithError("SSL_do_handshake");
@@ -1505,7 +1478,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     @Override
     public final synchronized SSLEngineResult.HandshakeStatus getHandshakeStatus() {
         // Check if we are in the initial handshake phase or shutdown phase
-        return needPendingStatus() ? pendingStatus(SSL.pendingWrittenBytesInBIO(networkBIO)) : NOT_HANDSHAKING;
+        return needPendingStatus() ? pendingStatus(SSL.bioLengthNonApplication(networkBIO)) : NOT_HANDSHAKING;
     }
 
     private SSLEngineResult.HandshakeStatus getHandshakeStatus(int pending) {
