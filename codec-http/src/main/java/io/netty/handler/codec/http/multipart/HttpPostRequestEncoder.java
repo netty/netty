@@ -47,6 +47,15 @@ import static io.netty.buffer.Unpooled.*;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
+ *
+ * <P>According to RFC 7231, POST, PUT and OPTIONS allow to have a body.
+ * This encoder will support widely all methods except TRACE since the RFC notes
+ * for GET, DELETE, HEAD and CONNECT: (replaces XXX by one of these methods)</P>
+ * <P>"A payload within a XXX request message has no defined semantics;
+ * sending a payload body on a XXX request might cause some existing
+ * implementations to reject the request."</P>
+ * <P>On the contrary, for TRACE method, RFC says:</P>
+ * <P>"A client MUST NOT send a message body in a TRACE request."</P>
  */
 public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     /**
@@ -132,7 +141,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * @throws NullPointerException
      *             for request
      * @throws ErrorDataEncoderException
-     *             if the request is not a POST
+     *             if the request is a TRACE
      */
     public HttpPostRequestEncoder(HttpRequest request, boolean multipart) throws ErrorDataEncoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, multipart,
@@ -150,7 +159,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * @throws NullPointerException
      *             for request and factory
      * @throws ErrorDataEncoderException
-     *             if the request is not a POST
+     *             if the request is a TRACE
      */
     public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequest request, boolean multipart)
             throws ErrorDataEncoderException {
@@ -172,7 +181,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * @throws NullPointerException
      *             for request or charset or factory
      * @throws ErrorDataEncoderException
-     *             if the request is not a POST
+     *             if the request is a TRACE
      */
     public HttpPostRequestEncoder(
             HttpDataFactory factory, HttpRequest request, boolean multipart, Charset charset,
@@ -187,8 +196,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (charset == null) {
             throw new NullPointerException("charset");
         }
-        if (request.getMethod() != HttpMethod.POST) {
-            throw new ErrorDataEncoderException("Cannot create a Encoder if not a POST");
+        HttpMethod method = request.getMethod();
+        if (method.equals(HttpMethod.TRACE)) {
+            throw new ErrorDataEncoderException("Cannot create a Encoder if request is a TRACE");
         }
         this.request = request;
         this.charset = charset;
