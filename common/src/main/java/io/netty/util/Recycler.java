@@ -234,15 +234,24 @@ public abstract class Recycler<T> {
         private WeakOrderQueue(Stack<?> stack, Thread thread) {
             head = tail = new Link();
             owner = new WeakReference<Thread>(thread);
-            synchronized (stack) {
-                next = stack.head;
-                stack.head = this;
-            }
 
             // Its important that we not store the Stack itself in the WeakOrderQueue as the Stack also is used in
             // the WeakHashMap as key. So just store the enclosed AtomicInteger which should allow to have the
             // Stack itself GCed.
             availableSharedCapacity = stack.availableSharedCapacity;
+        }
+
+        static WeakOrderQueue newQueue(Stack<?> stack, Thread thread) {
+            WeakOrderQueue queue = new WeakOrderQueue(stack, thread);
+            // Done outside of the constructor to ensure WeakOrderQueue.this does not escape the constructor and so
+            // may be accessed while its still constructed.
+            stack.setHead(queue);
+            return queue;
+        }
+
+        private void setNext(WeakOrderQueue next) {
+            assert next != this;
+            this.next = next;
         }
 
         /**
@@ -251,7 +260,7 @@ public abstract class Recycler<T> {
         static WeakOrderQueue allocate(Stack<?> stack, Thread thread) {
             // We allocated a Link so reserve the space
             return reserveSpace(stack.availableSharedCapacity, LINK_CAPACITY)
-                    ? new WeakOrderQueue(stack, thread) : null;
+                    ? WeakOrderQueue.newQueue(stack, thread) : null;
         }
 
         private static boolean reserveSpace(AtomicInteger availableSharedCapacity, int space) {
@@ -414,6 +423,12 @@ public abstract class Recycler<T> {
             this.maxDelayedQueues = maxDelayedQueues;
         }
 
+        // Marked as synchronized to ensure this is serialized.
+        synchronized void setHead(WeakOrderQueue queue) {
+            queue.setNext(head);
+            head = queue;
+        }
+
         int increaseCapacity(int expectedCapacity) {
             int newCapacity = elements.length;
             int maxCapacity = this.maxCapacity;
@@ -480,7 +495,6 @@ public abstract class Recycler<T> {
                     success = true;
                     break;
                 }
-
                 WeakOrderQueue next = cursor.next;
                 if (cursor.owner.get() == null) {
                     // If the thread associated with the queue is gone, unlink it, after
@@ -495,8 +509,9 @@ public abstract class Recycler<T> {
                             }
                         }
                     }
+
                     if (prev != null) {
-                        prev.next = next;
+                        prev.setNext(next);
                     }
                 } else {
                     prev = cursor;
