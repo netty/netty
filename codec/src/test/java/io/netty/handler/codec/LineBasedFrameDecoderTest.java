@@ -128,4 +128,21 @@ public class LineBasedFrameDecoderTest {
         buf.release();
         buf2.release();
     }
+
+    @Test
+    public void testDecodeSplitsCorrectly() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, false, false));
+
+        assertTrue(ch.writeInbound(copiedBuffer("line\r\n.\r\n", CharsetUtil.US_ASCII)));
+
+        ByteBuf buf = ch.readInbound();
+        assertEquals("line\r\n", buf.toString(CharsetUtil.US_ASCII));
+
+        ByteBuf buf2 = ch.readInbound();
+        assertEquals(".\r\n", buf2.toString(CharsetUtil.US_ASCII));
+        assertFalse(ch.finishAndReleaseAll());
+
+        buf.release();
+        buf2.release();
+    }
 }
