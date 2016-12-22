@@ -32,6 +32,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -112,14 +113,7 @@ public final class HttpProxyHandler extends ProxyHandler {
     @Override
     protected Object newInitialMessage(ChannelHandlerContext ctx) throws Exception {
         InetSocketAddress raddr = destinationAddress();
-        String rhost;
-        if (raddr.isUnresolved()) {
-            rhost = raddr.getHostString();
-        } else {
-            rhost = raddr.getAddress().getHostAddress();
-        }
-
-        final String host = rhost + ':' + raddr.getPort();
+        final String host = NetUtil.toSocketAddressString(raddr);
         FullHttpRequest req = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.CONNECT,
                 host,
