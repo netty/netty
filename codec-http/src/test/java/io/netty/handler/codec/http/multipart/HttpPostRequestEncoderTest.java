@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.EncoderMode;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 import org.junit.Test;
@@ -37,14 +38,32 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TRANSFER_ENCOD
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /** {@link HttpPostRequestEncoder} test case. */
 public class HttpPostRequestEncoderTest {
 
     @Test
-    public void testSingleFileUpload() throws Exception {
+    public void testAllowedMethods() throws Exception {
+        shouldThrowExceptionIfNotAllowed(HttpMethod.CONNECT);
+        shouldThrowExceptionIfNotAllowed(HttpMethod.PUT);
+        shouldThrowExceptionIfNotAllowed(HttpMethod.POST);
+        shouldThrowExceptionIfNotAllowed(HttpMethod.PATCH);
+        shouldThrowExceptionIfNotAllowed(HttpMethod.DELETE);
+        shouldThrowExceptionIfNotAllowed(HttpMethod.GET);
+        shouldThrowExceptionIfNotAllowed(HttpMethod.HEAD);
+        shouldThrowExceptionIfNotAllowed(HttpMethod.OPTIONS);
+        try {
+            shouldThrowExceptionIfNotAllowed(HttpMethod.TRACE);
+            fail("Should raised an exception with TRACE method");
+        } catch (ErrorDataEncoderException e) {
+            // Exception is willing
+        }
+    }
+
+    private void shouldThrowExceptionIfNotAllowed(HttpMethod method) throws Exception {
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.POST, "http://localhost");
+                method, "http://localhost");
 
         HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(request, true);
         File file1 = new File(getClass().getResource("/file-01.txt").toURI());
