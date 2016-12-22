@@ -25,6 +25,7 @@ import java.io.FileReader;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -931,6 +932,38 @@ public final class NetUtil {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e); // Should never happen
         }
+    }
+
+    /**
+     * Returns the {@link String} representation of an {@link InetSocketAddress}.
+     * <p>
+     * The output does not include Scope ID.
+     * @param addr {@link InetSocketAddress} to be converted to an address string
+     * @return {@code String} containing the text-formatted IP address
+     */
+    public static String toSocketAddressString(InetSocketAddress addr) {
+        String port = String.valueOf(addr.getPort());
+        final StringBuilder sb;
+
+        if (addr.isUnresolved()) {
+            String hostString = PlatformDependent.javaVersion() >= 7 ? addr.getHostString() : addr.getHostName();
+            sb = newSocketAddressStringBuilder(hostString, port, !isValidIpV6Address(hostString));
+        } else {
+            InetAddress address = addr.getAddress();
+            String hostString = toAddressString(address);
+            sb = newSocketAddressStringBuilder(hostString, port, address instanceof Inet4Address);
+        }
+        return sb.append(':').append(port).toString();
+    }
+
+    private static StringBuilder newSocketAddressStringBuilder(String hostString, String port, boolean ipv4) {
+        if (ipv4) {
+            // Need to include enough space for hostString:port.
+            return new StringBuilder(hostString.length() + 1 + port.length()).append(hostString);
+        }
+        // Need to include enough space for [hostString]:port.
+        return new StringBuilder(
+                hostString.length() + 3 + port.length()).append('[').append(hostString).append(']');
     }
 
     /**
