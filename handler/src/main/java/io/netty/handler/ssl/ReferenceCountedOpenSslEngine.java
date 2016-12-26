@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -203,6 +204,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private final ByteBuffer[] singleSrcBuffer = new ByteBuffer[1];
     private final ByteBuffer[] singleDstBuffer = new ByteBuffer[1];
     private final OpenSslKeyMaterialManager keyMaterialManager;
+    private final boolean enableOcsp;
 
     // This is package-private as we set it from OpenSslContext if an exception is thrown during
     // the verification step.
@@ -229,6 +231,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         rejectRemoteInitiatedRenegation = context.getRejectRemoteInitiatedRenegotiation();
         localCerts = context.keyCertChain;
         keyMaterialManager = context.keyMaterialManager();
+        enableOcsp = context.enableOcsp;
         ssl = SSL.newSSL(context.ctx, !context.isClient());
         try {
             networkBIO = SSL.bioNewByteBuffer(ssl, context.getBioNonApplicationBufferSize());
@@ -246,9 +249,49 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (clientMode && peerHost != null) {
                 SSL.setTlsExtHostName(ssl, peerHost);
             }
+
+            if (enableOcsp) {
+                SSL.enableOcsp(ssl);
+            }
         } catch (Throwable cause) {
             SSL.freeSSL(ssl);
             PlatformDependent.throwException(cause);
+        }
+    }
+
+    /**
+     * Sets the OCSP response.
+     */
+    @UnstableApi
+    public void setOcspResponse(byte[] response) {
+        if (!enableOcsp) {
+            throw new IllegalStateException("OCSP stapling is not enabled");
+        }
+
+        if (clientMode) {
+            throw new IllegalStateException("Not a server SSLEngine");
+        }
+
+        synchronized (this) {
+            SSL.setOcspResponse(ssl, response);
+        }
+    }
+
+    /**
+     * Returns the OCSP response or {@code null} if the server didn't provide a stapled OCSP response.
+     */
+    @UnstableApi
+    public byte[] getOcspResponse() {
+        if (!enableOcsp) {
+            throw new IllegalStateException("OCSP stapling is not enabled");
+        }
+
+        if (!clientMode) {
+            throw new IllegalStateException("Not a client SSLEngine");
+        }
+
+        synchronized (this) {
+            return SSL.getOcspResponse(ssl);
         }
     }
 

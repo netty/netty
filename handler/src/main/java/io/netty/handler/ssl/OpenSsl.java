@@ -260,6 +260,13 @@ public final class OpenSsl {
     }
 
     /**
+     * Returns {@code true} if the used version of OpenSSL supports OCSP stapling.
+     */
+    public static boolean isOcspSupported() {
+      return version() >= 0x10002000L;
+    }
+
+    /**
      * Returns the version of the used available OpenSSL library or {@code -1} if {@link #isAvailable()}
      * returns {@code false}.
      */
