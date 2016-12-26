@@ -385,7 +385,7 @@ public abstract class SslContext {
                                             trustManagerFactory, toX509Certificates(keyCertChainFile),
                                             toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
-                                            sessionCacheSize, sessionTimeout, ClientAuth.NONE, null, false);
+                                            sessionCacheSize, sessionTimeout, ClientAuth.NONE, null, false, false);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -400,8 +400,8 @@ public abstract class SslContext {
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls)
-            throws SSLException {
+            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
+            boolean enableOcsp) throws SSLException {
 
         if (provider == null) {
             provider = defaultServerProvider();
@@ -409,6 +409,9 @@ public abstract class SslContext {
 
         switch (provider) {
         case JDK:
+            if (enableOcsp) {
+                throw new IllegalArgumentException("OCSP is not supported with this SslProvider: " + provider);
+            }
             return new JdkSslServerContext(sslContextProvider,
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
@@ -418,13 +421,13 @@ public abstract class SslContext {
             return new OpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls);
+                    clientAuth, protocols, startTls, enableOcsp);
         case OPENSSL_REFCNT:
             verifyNullSslContextProvider(provider, sslContextProvider);
             return new ReferenceCountedOpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls);
+                    clientAuth, protocols, startTls, enableOcsp);
         default:
             throw new Error(provider.toString());
         }
@@ -740,7 +743,7 @@ public abstract class SslContext {
                                             toX509Certificates(trustCertCollectionFile), trustManagerFactory,
                                             toX509Certificates(keyCertChainFile), toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter,
-                                            apn, null, sessionCacheSize, sessionTimeout);
+                                            apn, null, sessionCacheSize, sessionTimeout, false);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -755,12 +758,15 @@ public abstract class SslContext {
             X509Certificate[] trustCert, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
-            long sessionCacheSize, long sessionTimeout) throws SSLException {
+            long sessionCacheSize, long sessionTimeout, boolean enableOcsp) throws SSLException {
         if (provider == null) {
             provider = defaultClientProvider();
         }
         switch (provider) {
             case JDK:
+                if (enableOcsp) {
+                    throw new IllegalArgumentException("OCSP is not supported with this SslProvider: " + provider);
+                }
                 return new JdkSslClientContext(sslContextProvider,
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout);
@@ -768,12 +774,14 @@ public abstract class SslContext {
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 return new OpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
-                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout);
+                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
+                        enableOcsp);
             case OPENSSL_REFCNT:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 return new ReferenceCountedOpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
-                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout);
+                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
+                        enableOcsp);
             default:
                 throw new Error(provider.toString());
         }

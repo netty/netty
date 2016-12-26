@@ -370,6 +370,18 @@
         <optional>true</optional>
       </dependency>
 
+      <!-- 
+        Completely optional and only needed for OCSP stapling to construct and
+        parse OCSP requests and responses.
+      -->
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk15on</artifactId>
+        <version>1.54</version>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
       <dependency>
         <groupId>com.fasterxml</groupId>
         <artifactId>aalto-xml</artifactId>
