@@ -18,10 +18,13 @@ package io.netty.handler.ssl;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+import io.netty.util.internal.UnstableApi;
+
 import java.security.Provider;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
+
 import java.io.File;
 import java.io.InputStream;
 import java.security.PrivateKey;
@@ -142,6 +145,7 @@ public final class SslContextBuilder {
     private ClientAuth clientAuth = ClientAuth.NONE;
     private String[] protocols;
     private boolean startTls;
+    private boolean enableOcsp;
 
     private SslContextBuilder(boolean forServer) {
         this.forServer = forServer;
@@ -416,6 +420,18 @@ public final class SslContextBuilder {
     }
 
     /**
+     * Enables OCSP stapling. Please note that not all {@link SslProvider} implementations support OCSP
+     * stapling and an exception will be thrown upon {@link #build()}.
+     *
+     * @see OpenSsl#isOcspSupported()
+     */
+    @UnstableApi
+    public SslContextBuilder enableOcsp(boolean enableOcsp) {
+        this.enableOcsp = enableOcsp;
+        return this;
+    }
+
+    /**
      * Create new {@code SslContext} instance with configured settings.
      * <p>If {@link #sslProvider(SslProvider)} is set to {@link SslProvider#OPENSSL_REFCNT} then the caller is
      * responsible for releasing this object, or else native memory may leak.
@@ -424,11 +440,12 @@ public final class SslContextBuilder {
         if (forServer) {
             return SslContext.newServerContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls);
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
+                enableOcsp);
         } else {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout);
+                ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp);
         }
     }
 }
