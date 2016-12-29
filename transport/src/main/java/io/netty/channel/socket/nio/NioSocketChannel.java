@@ -355,6 +355,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     protected void doClose() throws Exception {
+        this.attr(NioServerSocketChannel.LIMIT_LATCH_KEY).get().countDown();
         super.doClose();
         javaChannel().close();
     }

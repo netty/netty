@@ -115,6 +115,7 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     public static final ChannelOption<Integer> SO_LINGER = valueOf("SO_LINGER");
     public static final ChannelOption<Integer> SO_BACKLOG = valueOf("SO_BACKLOG");
     public static final ChannelOption<Integer> SO_TIMEOUT = valueOf("SO_TIMEOUT");
+    public static final ChannelOption<Integer> SO_MAXCONNECTIONS = valueOf("SO_MAXCONNECTIONS");
 
     public static final ChannelOption<Integer> IP_TOS = valueOf("IP_TOS");
     public static final ChannelOption<InetAddress> IP_MULTICAST_ADDR = valueOf("IP_MULTICAST_ADDR");

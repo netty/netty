@@ -17,10 +17,13 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.LimitLatch;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -35,12 +38,14 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.List;
 
+import static io.netty.channel.ChannelOption.SO_MAXCONNECTIONS;
+
 /**
  * A {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses
  * NIO selector based implementation to accept new connections.
  */
 public class NioServerSocketChannel extends AbstractNioMessageChannel
-                             implements io.netty.channel.socket.ServerSocketChannel {
+        implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
@@ -62,7 +67,10 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         }
     }
 
-    private final ServerSocketChannelConfig config;
+    private final NioServerSocketChannelConfig config;
+
+    public static final AttributeKey<LimitLatch> LIMIT_LATCH_KEY = AttributeKey.newInstance("limitLach");
+    private LimitLatch limitLatch;
 
     /**
      * Create a new instance
@@ -128,6 +136,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         } else {
             javaChannel().socket().bind(localAddress, config.getBacklog());
         }
+        limitLatch = new LimitLatch(config.getMaxConnections());
     }
 
     @Override
@@ -137,18 +146,28 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
-        SocketChannel ch = javaChannel().accept();
+        //countUpOrAwait may save us from busy loop
+        if(!limitLatch.tryCountUp()){
+            return 0;
+        }
 
+        SocketChannel ch = null;
         try {
+            ch = javaChannel().accept();
             if (ch != null) {
-                buf.add(new NioSocketChannel(this, ch));
+                NioSocketChannel nioSocketChannel = new NioSocketChannel(this, ch);
+                nioSocketChannel.attr(LIMIT_LATCH_KEY).set(limitLatch);
+                buf.add(nioSocketChannel);
                 return 1;
             }
         } catch (Throwable t) {
-            logger.warn("Failed to create a new channel from an accepted socket.", t);
+            limitLatch.countDown();
+            logger.warn("Failed to accept or create a new channel from an accepted socket.", t);
 
             try {
-                ch.close();
+                if(ch != null) {
+                    ch.close();
+                }
             } catch (Throwable t2) {
                 logger.warn("Failed to close a socket.", t2);
             }
@@ -189,7 +208,10 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         throw new UnsupportedOperationException();
     }
 
-    private final class NioServerSocketChannelConfig  extends DefaultServerSocketChannelConfig {
+    private final class NioServerSocketChannelConfig extends DefaultServerSocketChannelConfig {
+
+        private volatile int maxConnections = Integer.MAX_VALUE;
+
         private NioServerSocketChannelConfig(NioServerSocketChannel channel, ServerSocket javaSocket) {
             super(channel, javaSocket);
         }
@@ -197,6 +219,38 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         @Override
         protected void autoReadCleared() {
             clearReadPending();
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> T getOption(ChannelOption<T> option) {
+            if (option == SO_MAXCONNECTIONS) {
+                return (T) Integer.valueOf(getMaxConnections());
+            }
+            return super.getOption(option);
+        }
+
+        @Override
+        public <T> boolean setOption(ChannelOption<T> option, T value) {
+            validate(option, value);
+            if (option == SO_MAXCONNECTIONS) {
+                setMaxConnections((Integer) value);
+            } else {
+                return super.setOption(option, value);
+            }
+            return true;
+        }
+
+        public int getMaxConnections() {
+            return maxConnections;
+        }
+
+        public ServerSocketChannelConfig setMaxConnections(int maxConnections) {
+            if (maxConnections <= 0) {
+                throw new IllegalArgumentException("maxConnections: " + maxConnections);
+            }
+            this.maxConnections = maxConnections;
+            return this;
         }
     }
 }
