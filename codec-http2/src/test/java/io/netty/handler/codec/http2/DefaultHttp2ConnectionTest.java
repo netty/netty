@@ -42,6 +42,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.handler.codec.http2.DefaultHttp2Connection.INITIAL_CHILDREN_MAP_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static java.lang.Integer.MAX_VALUE;
@@ -180,6 +181,22 @@ public class DefaultHttp2ConnectionTest {
         } finally {
             client.removeListener(clientListener2);
         }
+    }
+
+    @Test
+    public void closingStreamWithChildrenDoesNotCauseConcurrentModification() throws Http2Exception {
+        // We create enough streams to wrap around the child array. We carefully craft the stream ids so that they hash
+        // codes overlap with respect to the child collection. If the implementation is not careful this may lead to a
+        // concurrent modification excpetion while promoting all children to the connection stream.
+        final Http2Stream streamA = client.local().createStream(1, false);
+        final int numStreams = INITIAL_CHILDREN_MAP_SIZE - 1;
+        for (int i = 0, streamId = 3; i < numStreams; ++i, streamId += INITIAL_CHILDREN_MAP_SIZE) {
+            final Http2Stream stream = client.local().createStream(streamId, false);
+            stream.setPriority(streamA.id(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT, false);
+        }
+        assertEquals(INITIAL_CHILDREN_MAP_SIZE, client.numActiveStreams());
+        streamA.close();
+        assertEquals(numStreams, client.numActiveStreams());
     }
 
     @Test
