@@ -79,8 +79,10 @@ public class DefaultHttp2Connection implements Http2Connection {
      * the assumption that most streams will have a small number of children. This choice may be
      * sub-optimal if when children are present there are many children (i.e. a web page which has many
      * dependencies to load).
+     *
+     * Visible only for testing!
      */
-    private static final int INITIAL_CHILDREN_MAP_SIZE =
+    static final int INITIAL_CHILDREN_MAP_SIZE =
             max(1, SystemPropertyUtil.getInt("io.netty.http2.childrenMapSize", 4));
 
     /**
@@ -609,7 +611,7 @@ public class DefaultHttp2Connection implements Http2Connection {
          * This method is intended to be used to support an exclusive priority dependency operation.
          * @return The map of children prior to this operation, excluding {@code streamToRetain} if present.
          */
-        private IntObjectMap<DefaultStream> retain(DefaultStream streamToRetain) {
+        private IntObjectMap<DefaultStream> removeAllChildrenExcept(DefaultStream streamToRetain) {
             streamToRetain = children.remove(streamToRetain.id());
             IntObjectMap<DefaultStream> prevChildren = children;
             // This map should be re-initialized in anticipation for the 1 exclusive child which will be added.
@@ -625,17 +627,20 @@ public class DefaultHttp2Connection implements Http2Connection {
          * Adds a child to this priority. If exclusive is set, any children of this node are moved to being dependent on
          * the child.
          */
-        final void takeChild(DefaultStream child, boolean exclusive, List<ParentChangedEvent> events) {
+        final void takeChild(Iterator<PrimitiveEntry<DefaultStream>> childItr, DefaultStream child, boolean exclusive,
+                             List<ParentChangedEvent> events) {
             DefaultStream oldParent = child.parent();
 
             if (oldParent != this) {
                 events.add(new ParentChangedEvent(child, oldParent));
                 notifyParentChanging(child, this);
                 child.parent = this;
-                // Note that the removal operation may not be successful and may return null. This is because when an
-                // exclusive dependency is processed the children are removed in a previous recursive call but the
-                // child's parent link is updated here.
-                if (oldParent != null) {
+                // If the childItr is not null we are iterating over the oldParent.children collection and should
+                // use the iterator to remove from the collection to avoid concurrent modification. Otherwise it is
+                // assumed we are not iterating over this collection and it is safe to call remove directly.
+                if (childItr != null) {
+                    childItr.remove();
+                } else if (oldParent != null) {
                     oldParent.children.remove(child.id());
                 }
 
@@ -649,10 +654,15 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (exclusive && !children.isEmpty()) {
                 // If it was requested that this child be the exclusive dependency of this node,
                 // move any previous children to the child node, becoming grand children of this node.
-                for (DefaultStream grandchild : retain(child).values()) {
-                    child.takeChild(grandchild, false, events);
+                Iterator<PrimitiveEntry<DefaultStream>> itr = removeAllChildrenExcept(child).entries().iterator();
+                while (itr.hasNext()) {
+                    child.takeChild(itr, itr.next().value(), false, events);
                 }
             }
+        }
+
+        final void takeChild(DefaultStream child, boolean exclusive, List<ParentChangedEvent> events) {
+            takeChild(null, child, exclusive, events);
         }
 
         /**
@@ -666,8 +676,9 @@ public class DefaultHttp2Connection implements Http2Connection {
                 child.parent = null;
 
                 // Move up any grand children to be directly dependent on this node.
-                for (DefaultStream grandchild : child.children.values()) {
-                    takeChild(grandchild, false, events);
+                Iterator<PrimitiveEntry<DefaultStream>> itr = child.children.entries().iterator();
+                while (itr.hasNext()) {
+                    takeChild(itr, itr.next().value(), false, events);
                 }
 
                 notifyParentChanged(events);
