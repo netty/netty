@@ -76,7 +76,7 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
         }
     }
 
-    private static DnsResponse newResponse(InetSocketAddress sender, ByteBuf buf) {
+    private static DnsResponse<?> newResponse(InetSocketAddress sender, ByteBuf buf) {
         final int id = buf.readUnsignedShort();
 
         final int flags = buf.readUnsignedShort();
@@ -96,14 +96,14 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
         return response;
     }
 
-    private void decodeQuestions(DnsResponse response, ByteBuf buf, int questionCount) throws Exception {
+    private void decodeQuestions(DnsResponse<?> response, ByteBuf buf, int questionCount) throws Exception {
         for (int i = questionCount; i > 0; i --) {
             response.addRecord(DnsSection.QUESTION, recordDecoder.decodeQuestion(buf));
         }
     }
 
     private void decodeRecords(
-            DnsResponse response, DnsSection section, ByteBuf buf, int count) throws Exception {
+            DnsResponse<?> response, DnsSection section, ByteBuf buf, int count) throws Exception {
         for (int i = count; i > 0; i --) {
             final DnsRecord r = recordDecoder.decodeRecord(buf);
             if (r == null) {

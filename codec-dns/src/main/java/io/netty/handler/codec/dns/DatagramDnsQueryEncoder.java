@@ -32,7 +32,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * {@link DatagramPacket}.
  */
 @ChannelHandler.Sharable
-public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEnvelope<DnsQuery, InetSocketAddress>> {
+public class DatagramDnsQueryEncoder
+        extends MessageToMessageEncoder<AddressedEnvelope<DnsQuery<?>, InetSocketAddress>> {
 
     private final DnsRecordEncoder recordEncoder;
 
@@ -53,7 +54,7 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
     @Override
     protected void encode(
             ChannelHandlerContext ctx,
-            AddressedEnvelope<DnsQuery, InetSocketAddress> in, List<Object> out) throws Exception {
+            AddressedEnvelope<DnsQuery<?>, InetSocketAddress> in, List<Object> out) throws Exception {
 
         final InetSocketAddress recipient = in.recipient();
         final DnsQuery query = in.content();
@@ -80,7 +81,7 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
      */
     protected ByteBuf allocateBuffer(
             ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") AddressedEnvelope<DnsQuery, InetSocketAddress> msg) throws Exception {
+            @SuppressWarnings("unused") AddressedEnvelope<DnsQuery<?>, InetSocketAddress> msg) throws Exception {
         return ctx.alloc().ioBuffer(1024);
     }
 
@@ -92,7 +93,7 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
      * @param buf
      *            the buffer the encoded data should be written to
      */
-    private static void encodeHeader(DnsQuery query, ByteBuf buf) {
+    private static void encodeHeader(DnsQuery<?> query, ByteBuf buf) {
         buf.writeShort(query.id());
         int flags = 0;
         flags |= (query.opCode().byteValue() & 0xFF) << 14;
@@ -104,14 +105,14 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
         buf.writeShort(query.count(DnsSection.ADDITIONAL));
     }
 
-    private void encodeQuestions(DnsQuery query, ByteBuf buf) throws Exception {
+    private void encodeQuestions(DnsQuery<?> query, ByteBuf buf) throws Exception {
         final int count = query.count(DnsSection.QUESTION);
         for (int i = 0; i < count; i ++) {
             recordEncoder.encodeQuestion((DnsQuestion) query.recordAt(DnsSection.QUESTION, i), buf);
         }
     }
 
-    private void encodeRecords(DnsQuery query, DnsSection section, ByteBuf buf) throws Exception {
+    private void encodeRecords(DnsQuery<?> query, DnsSection section, ByteBuf buf) throws Exception {
         final int count = query.count(section);
         for (int i = 0; i < count; i ++) {
             recordEncoder.encodeRecord(query.recordAt(section, i), buf);

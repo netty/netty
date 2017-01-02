@@ -15,12 +15,14 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.ReferenceCounted;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The default {@link DnsResponse} implementation.
  */
-public class DefaultDnsResponse extends AbstractDnsMessage implements DnsResponse {
+public class DefaultDnsResponse<M extends ReferenceCounted & DnsResponse<M>>
+        extends AbstractDnsMessage<M> implements DnsResponse<M> {
 
     private boolean authoritativeAnswer;
     private boolean truncated;
@@ -50,7 +52,7 @@ public class DefaultDnsResponse extends AbstractDnsMessage implements DnsRespons
     /**
      * Creates a new instance.
      *
-     * @param id the {@code ID} of the DNS response
+     * @param id the {@code ID} ofDefaultDnsResponse the DNS response
      * @param opCode the {@code opCode} of the DNS response
      * @param code the {@code RCODE} of the DNS response
      */
@@ -65,9 +67,9 @@ public class DefaultDnsResponse extends AbstractDnsMessage implements DnsRespons
     }
 
     @Override
-    public DnsResponse setAuthoritativeAnswer(boolean authoritativeAnswer) {
+    public M setAuthoritativeAnswer(boolean authoritativeAnswer) {
         this.authoritativeAnswer = authoritativeAnswer;
-        return this;
+        return cast(this);
     }
 
     @Override
@@ -76,9 +78,9 @@ public class DefaultDnsResponse extends AbstractDnsMessage implements DnsRespons
     }
 
     @Override
-    public DnsResponse setTruncated(boolean truncated) {
+    public M setTruncated(boolean truncated) {
         this.truncated = truncated;
-        return this;
+        return cast(this);
     }
 
     @Override
@@ -87,9 +89,9 @@ public class DefaultDnsResponse extends AbstractDnsMessage implements DnsRespons
     }
 
     @Override
-    public DnsResponse setRecursionAvailable(boolean recursionAvailable) {
+    public M setRecursionAvailable(boolean recursionAvailable) {
         this.recursionAvailable = recursionAvailable;
-        return this;
+        return cast(this);
     }
 
     @Override
@@ -98,74 +100,9 @@ public class DefaultDnsResponse extends AbstractDnsMessage implements DnsRespons
     }
 
     @Override
-    public DnsResponse setCode(DnsResponseCode code) {
+    public M setCode(DnsResponseCode code) {
         this.code = checkNotNull(code, "code");
-        return this;
-    }
-
-    @Override
-    public DnsResponse setId(int id) {
-        return (DnsResponse) super.setId(id);
-    }
-
-    @Override
-    public DnsResponse setOpCode(DnsOpCode opCode) {
-        return (DnsResponse) super.setOpCode(opCode);
-    }
-
-    @Override
-    public DnsResponse setRecursionDesired(boolean recursionDesired) {
-        return (DnsResponse) super.setRecursionDesired(recursionDesired);
-    }
-
-    @Override
-    public DnsResponse setZ(int z) {
-        return (DnsResponse) super.setZ(z);
-    }
-
-    @Override
-    public DnsResponse setRecord(DnsSection section, DnsRecord record) {
-        return (DnsResponse) super.setRecord(section, record);
-    }
-
-    @Override
-    public DnsResponse addRecord(DnsSection section, DnsRecord record) {
-        return (DnsResponse) super.addRecord(section, record);
-    }
-
-    @Override
-    public DnsResponse addRecord(DnsSection section, int index, DnsRecord record) {
-        return (DnsResponse) super.addRecord(section, index, record);
-    }
-
-    @Override
-    public DnsResponse clear(DnsSection section) {
-        return (DnsResponse) super.clear(section);
-    }
-
-    @Override
-    public DnsResponse clear() {
-        return (DnsResponse) super.clear();
-    }
-
-    @Override
-    public DnsResponse touch() {
-        return (DnsResponse) super.touch();
-    }
-
-    @Override
-    public DnsResponse touch(Object hint) {
-        return (DnsResponse) super.touch(hint);
-    }
-
-    @Override
-    public DnsResponse retain() {
-        return (DnsResponse) super.retain();
-    }
-
-    @Override
-    public DnsResponse retain(int increment) {
-        return (DnsResponse) super.retain(increment);
+        return cast(this);
     }
 
     @Override

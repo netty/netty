@@ -15,10 +15,12 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.ReferenceCounted;
+
 /**
  * A DNS response message.
  */
-public interface DnsResponse extends DnsMessage {
+public interface DnsResponse<M extends ReferenceCounted & DnsResponse> extends DnsMessage<M> {
 
     /**
      * Returns {@code true} if responding server is authoritative for the domain
@@ -32,7 +34,7 @@ public interface DnsResponse extends DnsMessage {
      *
      * @param authoritativeAnswer flag for authoritative answer
      */
-    DnsResponse setAuthoritativeAnswer(boolean authoritativeAnswer);
+    M setAuthoritativeAnswer(boolean authoritativeAnswer);
 
     /**
      * Returns {@code true} if response has been truncated, usually if it is
@@ -46,7 +48,7 @@ public interface DnsResponse extends DnsMessage {
      *
      * @param truncated flag for truncation
      */
-    DnsResponse setTruncated(boolean truncated);
+    M setTruncated(boolean truncated);
 
     /**
      * Returns {@code true} if DNS server can handle recursive queries.
@@ -58,7 +60,7 @@ public interface DnsResponse extends DnsMessage {
      *
      * @param recursionAvailable flag for recursion availability
      */
-    DnsResponse setRecursionAvailable(boolean recursionAvailable);
+    M setRecursionAvailable(boolean recursionAvailable);
 
     /**
      * Returns the 4 bit return code.
@@ -70,44 +72,5 @@ public interface DnsResponse extends DnsMessage {
      *
      * @param code the response code
      */
-    DnsResponse setCode(DnsResponseCode code);
-
-    @Override
-    DnsResponse setId(int id);
-
-    @Override
-    DnsResponse setOpCode(DnsOpCode opCode);
-
-    @Override
-    DnsResponse setRecursionDesired(boolean recursionDesired);
-
-    @Override
-    DnsResponse setZ(int z);
-
-    @Override
-    DnsResponse setRecord(DnsSection section, DnsRecord record);
-
-    @Override
-    DnsResponse addRecord(DnsSection section, DnsRecord record);
-
-    @Override
-    DnsResponse addRecord(DnsSection section, int index, DnsRecord record);
-
-    @Override
-    DnsResponse clear(DnsSection section);
-
-    @Override
-    DnsResponse clear();
-
-    @Override
-    DnsResponse touch();
-
-    @Override
-    DnsResponse touch(Object hint);
-
-    @Override
-    DnsResponse retain();
-
-    @Override
-    DnsResponse retain(int increment);
+    M setCode(DnsResponseCode code);
 }

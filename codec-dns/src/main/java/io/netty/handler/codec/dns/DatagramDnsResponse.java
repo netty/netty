@@ -23,7 +23,7 @@ import java.net.SocketAddress;
 /**
  * A {@link DnsResponse} implementation for UDP/IP.
  */
-public class DatagramDnsResponse extends DefaultDnsResponse
+public class DatagramDnsResponse extends DefaultDnsResponse<DatagramDnsResponse>
         implements AddressedEnvelope<DatagramDnsResponse, InetSocketAddress> {
 
     private final InetSocketAddress sender;
@@ -88,91 +88,6 @@ public class DatagramDnsResponse extends DefaultDnsResponse
     @Override
     public InetSocketAddress recipient() {
         return recipient;
-    }
-
-    @Override
-    public DatagramDnsResponse setAuthoritativeAnswer(boolean authoritativeAnswer) {
-        return (DatagramDnsResponse) super.setAuthoritativeAnswer(authoritativeAnswer);
-    }
-
-    @Override
-    public DatagramDnsResponse setTruncated(boolean truncated) {
-        return (DatagramDnsResponse) super.setTruncated(truncated);
-    }
-
-    @Override
-    public DatagramDnsResponse setRecursionAvailable(boolean recursionAvailable) {
-        return (DatagramDnsResponse) super.setRecursionAvailable(recursionAvailable);
-    }
-
-    @Override
-    public DatagramDnsResponse setCode(DnsResponseCode code) {
-        return (DatagramDnsResponse) super.setCode(code);
-    }
-
-    @Override
-    public DatagramDnsResponse setId(int id) {
-        return (DatagramDnsResponse) super.setId(id);
-    }
-
-    @Override
-    public DatagramDnsResponse setOpCode(DnsOpCode opCode) {
-        return (DatagramDnsResponse) super.setOpCode(opCode);
-    }
-
-    @Override
-    public DatagramDnsResponse setRecursionDesired(boolean recursionDesired) {
-        return (DatagramDnsResponse) super.setRecursionDesired(recursionDesired);
-    }
-
-    @Override
-    public DatagramDnsResponse setZ(int z) {
-        return (DatagramDnsResponse) super.setZ(z);
-    }
-
-    @Override
-    public DatagramDnsResponse setRecord(DnsSection section, DnsRecord record) {
-        return (DatagramDnsResponse) super.setRecord(section, record);
-    }
-
-    @Override
-    public DatagramDnsResponse addRecord(DnsSection section, DnsRecord record) {
-        return (DatagramDnsResponse) super.addRecord(section, record);
-    }
-
-    @Override
-    public DatagramDnsResponse addRecord(DnsSection section, int index, DnsRecord record) {
-        return (DatagramDnsResponse) super.addRecord(section, index, record);
-    }
-
-    @Override
-    public DatagramDnsResponse clear(DnsSection section) {
-        return (DatagramDnsResponse) super.clear(section);
-    }
-
-    @Override
-    public DatagramDnsResponse clear() {
-        return (DatagramDnsResponse) super.clear();
-    }
-
-    @Override
-    public DatagramDnsResponse touch() {
-        return (DatagramDnsResponse) super.touch();
-    }
-
-    @Override
-    public DatagramDnsResponse touch(Object hint) {
-        return (DatagramDnsResponse) super.touch(hint);
-    }
-
-    @Override
-    public DatagramDnsResponse retain() {
-        return (DatagramDnsResponse) super.retain();
-    }
-
-    @Override
-    public DatagramDnsResponse retain(int increment) {
-        return (DatagramDnsResponse) super.retain(increment);
     }
 
     @Override

@@ -20,7 +20,7 @@ import io.netty.util.ReferenceCounted;
 /**
  * The superclass which contains core information concerning a {@link DnsQuery} and a {@link DnsResponse}.
  */
-public interface DnsMessage extends ReferenceCounted {
+public interface DnsMessage<M extends ReferenceCounted & DnsMessage> extends ReferenceCounted {
 
     /**
      * Returns the {@code ID} of this DNS message.
@@ -30,7 +30,7 @@ public interface DnsMessage extends ReferenceCounted {
     /**
      * Sets the {@code ID} of this DNS message.
      */
-    DnsMessage setId(int id);
+    M setId(int id);
 
     /**
      * Returns the {@code opCode} of this DNS message.
@@ -40,7 +40,7 @@ public interface DnsMessage extends ReferenceCounted {
     /**
      * Sets the {@code opCode} of this DNS message.
      */
-    DnsMessage setOpCode(DnsOpCode opCode);
+    M setOpCode(DnsOpCode opCode);
 
     /**
      * Returns the {@code RD} (recursion desired} field of this DNS message.
@@ -50,7 +50,7 @@ public interface DnsMessage extends ReferenceCounted {
     /**
      * Sets the {@code RD} (recursion desired} field of this DNS message.
      */
-    DnsMessage setRecursionDesired(boolean recursionDesired);
+    M setRecursionDesired(boolean recursionDesired);
 
     /**
      * Returns the {@code Z} (reserved for future use) field of this DNS message.
@@ -60,7 +60,7 @@ public interface DnsMessage extends ReferenceCounted {
     /**
      * Sets the {@code Z} (reserved for future use) field of this DNS message.
      */
-    DnsMessage setZ(int z);
+    M setZ(int z);
 
     /**
      * Returns the number of records in the specified {@code section} of this DNS message.
@@ -95,7 +95,7 @@ public interface DnsMessage extends ReferenceCounted {
      * making it a single-record section. When the specified {@code section} is {@link DnsSection#QUESTION},
      * the specified {@code record} must be a {@link DnsQuestion}.
      */
-    DnsMessage setRecord(DnsSection section, DnsRecord record);
+    M setRecord(DnsSection section, DnsRecord record);
 
     /**
      * Sets the specified {@code record} at the specified {@code index} of the specified {@code section}
@@ -112,7 +112,7 @@ public interface DnsMessage extends ReferenceCounted {
      * When the specified {@code section} is {@link DnsSection#QUESTION}, the specified {@code record}
      * must be a {@link DnsQuestion}.
      */
-    DnsMessage addRecord(DnsSection section, DnsRecord record);
+    M addRecord(DnsSection section, DnsRecord record);
 
     /**
      * Adds the specified {@code record} at the specified {@code index} of the specified {@code section}
@@ -121,7 +121,7 @@ public interface DnsMessage extends ReferenceCounted {
      *
      * @throws IndexOutOfBoundsException if the specified {@code index} is out of bounds
      */
-    DnsMessage addRecord(DnsSection section, int index, DnsRecord record);
+    M addRecord(DnsSection section, int index, DnsRecord record);
 
     /**
      * Removes the record at the specified {@code index} of the specified {@code section} from this DNS message.
@@ -135,22 +135,22 @@ public interface DnsMessage extends ReferenceCounted {
     /**
      * Removes all the records in the specified {@code section} of this DNS message.
      */
-    DnsMessage clear(DnsSection section);
+    M clear(DnsSection section);
 
     /**
      * Removes all the records in this DNS message.
      */
-    DnsMessage clear();
+    M clear();
 
     @Override
-    DnsMessage touch();
+    M touch();
 
     @Override
-    DnsMessage touch(Object hint);
+    M touch(Object hint);
 
     @Override
-    DnsMessage retain();
+    M retain();
 
     @Override
-    DnsMessage retain(int increment);
+    M retain(int increment);
 }

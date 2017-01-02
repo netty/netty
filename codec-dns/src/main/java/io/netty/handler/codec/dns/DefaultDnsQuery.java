@@ -15,10 +15,13 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.ReferenceCounted;
+
 /**
  * The default {@link DnsQuery} implementation.
  */
-public class DefaultDnsQuery extends AbstractDnsMessage implements DnsQuery {
+public class DefaultDnsQuery<M extends ReferenceCounted & DnsQuery<M>>
+        extends AbstractDnsMessage<M> implements DnsQuery<M> {
 
     /**
      * Creates a new instance with the {@link DnsOpCode#QUERY} {@code opCode}.
@@ -37,71 +40,6 @@ public class DefaultDnsQuery extends AbstractDnsMessage implements DnsQuery {
      */
     public DefaultDnsQuery(int id, DnsOpCode opCode) {
         super(id, opCode);
-    }
-
-    @Override
-    public DnsQuery setId(int id) {
-        return (DnsQuery) super.setId(id);
-    }
-
-    @Override
-    public DnsQuery setOpCode(DnsOpCode opCode) {
-        return (DnsQuery) super.setOpCode(opCode);
-    }
-
-    @Override
-    public DnsQuery setRecursionDesired(boolean recursionDesired) {
-        return (DnsQuery) super.setRecursionDesired(recursionDesired);
-    }
-
-    @Override
-    public DnsQuery setZ(int z) {
-        return (DnsQuery) super.setZ(z);
-    }
-
-    @Override
-    public DnsQuery setRecord(DnsSection section, DnsRecord record) {
-        return (DnsQuery) super.setRecord(section, record);
-    }
-
-    @Override
-    public DnsQuery addRecord(DnsSection section, DnsRecord record) {
-        return (DnsQuery) super.addRecord(section, record);
-    }
-
-    @Override
-    public DnsQuery addRecord(DnsSection section, int index, DnsRecord record) {
-        return (DnsQuery) super.addRecord(section, index, record);
-    }
-
-    @Override
-    public DnsQuery clear(DnsSection section) {
-        return (DnsQuery) super.clear(section);
-    }
-
-    @Override
-    public DnsQuery clear() {
-        return (DnsQuery) super.clear();
-    }
-
-    @Override
-    public DnsQuery touch() {
-        return (DnsQuery) super.touch();
-    }
-
-    @Override
-    public DnsQuery touch(Object hint) {
-        return (DnsQuery) super.touch(hint);
-    }
-
-    @Override
-    public DnsQuery retain() {
-        return (DnsQuery) super.retain();
-    }
-
-    @Override
-    public DnsQuery retain(int increment) {
-        return (DnsQuery) super.retain(increment);
     }
 
     @Override

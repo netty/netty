@@ -30,7 +30,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * A skeletal implementation of {@link DnsMessage}.
  */
-public abstract class AbstractDnsMessage extends AbstractReferenceCounted implements DnsMessage {
+public abstract class AbstractDnsMessage<M extends ReferenceCounted & DnsMessage<M>>
+        extends AbstractReferenceCounted implements DnsMessage<M> {
 
     private static final ResourceLeakDetector<DnsMessage> leakDetector =
             new ResourceLeakDetector<DnsMessage>(DnsMessage.class);
@@ -66,15 +67,19 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
         setOpCode(opCode);
     }
 
+    protected final M cast(AbstractDnsMessage msg) {
+        return (M) msg;
+    }
+
     @Override
     public int id() {
         return id & 0xFFFF;
     }
 
     @Override
-    public DnsMessage setId(int id) {
+    public M setId(int id) {
         this.id = (short) id;
-        return this;
+        return (M) this;
     }
 
     @Override
@@ -83,9 +88,9 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     }
 
     @Override
-    public DnsMessage setOpCode(DnsOpCode opCode) {
+    public M setOpCode(DnsOpCode opCode) {
         this.opCode = checkNotNull(opCode, "opCode");
-        return this;
+        return cast(this);
     }
 
     @Override
@@ -94,9 +99,9 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     }
 
     @Override
-    public DnsMessage setRecursionDesired(boolean recursionDesired) {
+    public M setRecursionDesired(boolean recursionDesired) {
         this.recursionDesired = recursionDesired;
-        return this;
+        return cast(this);
     }
 
     @Override
@@ -105,9 +110,9 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     }
 
     @Override
-    public DnsMessage setZ(int z) {
+    public M setZ(int z) {
         this.z = (byte) (z & 7);
-        return this;
+        return cast(this);
     }
 
     @Override
@@ -187,9 +192,9 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     }
 
     @Override
-    public DnsMessage setRecord(DnsSection section, DnsRecord record) {
+    public M setRecord(DnsSection section, DnsRecord record) {
         setRecord(sectionOrdinal(section), record);
-        return this;
+        return (M) this;
     }
 
     private void setRecord(int section, DnsRecord record) {
@@ -225,9 +230,9 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     }
 
     @Override
-    public DnsMessage addRecord(DnsSection section, DnsRecord record) {
+    public M addRecord(DnsSection section, DnsRecord record) {
         addRecord(sectionOrdinal(section), record);
-        return this;
+        return cast(this);
     }
 
     private void addRecord(int section, DnsRecord record) {
@@ -253,9 +258,9 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     }
 
     @Override
-    public DnsMessage addRecord(DnsSection section, int index, DnsRecord record) {
+    public M addRecord(DnsSection section, int index, DnsRecord record) {
         addRecord(sectionOrdinal(section), index, record);
-        return this;
+        return cast(this);
     }
 
     private void addRecord(int section, int index, DnsRecord record) {
@@ -320,17 +325,17 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     }
 
     @Override
-    public DnsMessage clear(DnsSection section) {
+    public M clear(DnsSection section) {
         clear(sectionOrdinal(section));
-        return this;
+        return cast(this);
     }
 
     @Override
-    public DnsMessage clear() {
+    public M clear() {
         for (int i = 0; i < SECTION_COUNT; i ++) {
             clear(i);
         }
-        return this;
+        return cast(this);
     }
 
     private void clear(int section) {
@@ -350,26 +355,26 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     }
 
     @Override
-    public DnsMessage touch() {
-        return (DnsMessage) super.touch();
+    public M touch() {
+        return cast((AbstractDnsMessage) super.touch());
     }
 
     @Override
-    public DnsMessage touch(Object hint) {
+    public M touch(Object hint) {
         if (leak != null) {
             leak.record(hint);
         }
-        return this;
+        return cast(this);
     }
 
     @Override
-    public DnsMessage retain() {
-        return (DnsMessage) super.retain();
+    public M retain() {
+        return cast((AbstractDnsMessage) super.retain());
     }
 
     @Override
-    public DnsMessage retain(int increment) {
-        return (DnsMessage) super.retain(increment);
+    public M retain(int increment) {
+        return cast((AbstractDnsMessage) super.retain(increment));
     }
 
     @Override

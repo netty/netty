@@ -23,7 +23,7 @@ import java.net.SocketAddress;
 /**
  * A {@link DnsQuery} implementation for UDP/IP.
  */
-public class DatagramDnsQuery extends DefaultDnsQuery
+public class DatagramDnsQuery extends DefaultDnsQuery<DatagramDnsQuery>
         implements AddressedEnvelope<DatagramDnsQuery, InetSocketAddress> {
 
     private final InetSocketAddress sender;
@@ -74,71 +74,6 @@ public class DatagramDnsQuery extends DefaultDnsQuery
     @Override
     public InetSocketAddress recipient() {
         return recipient;
-    }
-
-    @Override
-    public DatagramDnsQuery setId(int id) {
-        return (DatagramDnsQuery) super.setId(id);
-    }
-
-    @Override
-    public DatagramDnsQuery setOpCode(DnsOpCode opCode) {
-        return (DatagramDnsQuery) super.setOpCode(opCode);
-    }
-
-    @Override
-    public DatagramDnsQuery setRecursionDesired(boolean recursionDesired) {
-        return (DatagramDnsQuery) super.setRecursionDesired(recursionDesired);
-    }
-
-    @Override
-    public DatagramDnsQuery setZ(int z) {
-        return (DatagramDnsQuery) super.setZ(z);
-    }
-
-    @Override
-    public DatagramDnsQuery setRecord(DnsSection section, DnsRecord record) {
-        return (DatagramDnsQuery) super.setRecord(section, record);
-    }
-
-    @Override
-    public DatagramDnsQuery addRecord(DnsSection section, DnsRecord record) {
-        return (DatagramDnsQuery) super.addRecord(section, record);
-    }
-
-    @Override
-    public DatagramDnsQuery addRecord(DnsSection section, int index, DnsRecord record) {
-        return (DatagramDnsQuery) super.addRecord(section, index, record);
-    }
-
-    @Override
-    public DatagramDnsQuery clear(DnsSection section) {
-        return (DatagramDnsQuery) super.clear(section);
-    }
-
-    @Override
-    public DatagramDnsQuery clear() {
-        return (DatagramDnsQuery) super.clear();
-    }
-
-    @Override
-    public DatagramDnsQuery touch() {
-        return (DatagramDnsQuery) super.touch();
-    }
-
-    @Override
-    public DatagramDnsQuery touch(Object hint) {
-        return (DatagramDnsQuery) super.touch(hint);
-    }
-
-    @Override
-    public DatagramDnsQuery retain() {
-        return (DatagramDnsQuery) super.retain();
-    }
-
-    @Override
-    public DatagramDnsQuery retain(int increment) {
-        return (DatagramDnsQuery) super.retain(increment);
     }
 
     @Override
