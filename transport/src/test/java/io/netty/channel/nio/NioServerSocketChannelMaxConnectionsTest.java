@@ -18,9 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 /**
  * Created by sixie.xyn on 2016/12/29.
@@ -46,7 +45,7 @@ public class NioServerSocketChannelMaxConnectionsTest {
 
             //no more than MAX_CONNECTIONS connections could be accepted
             List<Socket> clients = new ArrayList<Socket>();
-            for (int i = 0; i < MAX_CONNECTIONS+(BACKLOG/2); i++) {
+            for (int i = 0; i < MAX_CONNECTIONS + (BACKLOG / 2); i++) {
                 Socket s = new Socket(NetUtil.LOCALHOST, ((InetSocketAddress) address).getPort());
                 clients.add(s);
             }
@@ -55,16 +54,16 @@ public class NioServerSocketChannelMaxConnectionsTest {
 
 
             //fill the backlog queue and trigger ConnectException
-            try{
-                for(int i=0;i<BACKLOG*2;i++) {
+            try {
+                for (int i = 0; i < BACKLOG * 2; i++) {
                     Socket s = new Socket(NetUtil.LOCALHOST, ((InetSocketAddress) address).getPort());
                 }
-            }catch (Throwable t){
+            } catch (Throwable t) {
                 assertThat(t, is(instanceOf(ConnectException.class)));
             }
 
             //accept connections in backlog queue
-            for(int i=0;i<MAX_CONNECTIONS;i++) {
+            for (int i = 0; i < MAX_CONNECTIONS; i++) {
                 connections.remove(0).close();
             }
             Thread.sleep(500);

@@ -85,6 +85,16 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
      */
     ServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth);
 
+    /**
+     * Get the maximum number of connections that the server will accept and process at any given time
+     */
+    long getMaxConnections();
+
+    /**
+     * Set the maximum number of connections that the server will accept and process at any given time
+     */
+    ServerSocketChannelConfig setMaxConnections(long maxConnections);
+
     @Override
     ServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
