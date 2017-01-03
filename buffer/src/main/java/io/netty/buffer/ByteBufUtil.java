@@ -246,7 +246,7 @@ public final class ByteBufUtil {
             }
             if (res != 0) {
                 // Ensure we not overflow when cast
-                return (int) Math.min(Integer.MAX_VALUE, res);
+                return (int) Math.min(Integer.MAX_VALUE, Math.max(Integer.MIN_VALUE, res));
             }
             aIndex += uintCountIncrement;
             bIndex += uintCountIncrement;
