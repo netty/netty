@@ -479,16 +479,19 @@ public abstract class Recycler<T> {
         }
 
         boolean scavengeSome() {
+            WeakOrderQueue prev;
             WeakOrderQueue cursor = this.cursor;
             if (cursor == null) {
+                prev = null;
                 cursor = head;
                 if (cursor == null) {
                     return false;
                 }
+            } else {
+                prev = this.prev;
             }
 
             boolean success = false;
-            WeakOrderQueue prev = this.prev;
             do {
                 if (cursor.transfer(this)) {
                     success = true;
