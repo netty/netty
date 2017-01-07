@@ -32,8 +32,13 @@ class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle
         receivedRdHup = true;
     }
 
+    final boolean isReceivedRdHup() {
+        return receivedRdHup;
+    }
+
     boolean maybeMoreDataToRead() {
-        return isEdgeTriggered && lastBytesRead() > 0;
+        // If EPOLLRDHUP has been received we must read until we get a read error.
+        return isEdgeTriggered && (lastBytesRead() > 0 || receivedRdHup);
     }
 
     final void edgeTriggered(boolean edgeTriggered) {
@@ -53,9 +58,7 @@ class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle
          * continue to avoid a {@link StackOverflowError} between channelReadComplete and reading from the
          * channel. It is expected that the {@link #EpollSocketChannel} implementations will track if we are in
          * edgeTriggered mode and all data was not read, and will force a EPOLLIN ready event.
-         *
-         * If EPOLLRDHUP has been received we must read until we get a read error.
          */
-        return receivedRdHup || maybeMoreDataToRead() && config.isAutoRead() || super.continueReading();
+        return maybeMoreDataToRead() && config.isAutoRead() || super.continueReading();
     }
 }
