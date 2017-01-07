@@ -31,8 +31,8 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
  *
  * http://localhost:8080/websocket
  *
- * Open your browser at http://localhost:8080/, then the demo page will be loaded and a Web Socket connection will be
- * made automatically.
+ * Open your browser at <a href="http://localhost:8080/">http://localhost:8080/</a>, then the demo page will be loaded
+ * and a Web Socket connection will be made automatically.
  *
  * This server illustrates support for the different web socket specification versions and will work with:
  *
