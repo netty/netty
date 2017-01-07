@@ -544,11 +544,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             final SSLEngineResult.Status rs;
 
             // If isOutboundDone, then the data from the network BIO
-            // was the close_notify message and all was consumed we are not required to wait
-            // for the receipt the peer's close_notify message -- shutdown.
+            // was the close_notify message, see if we also received the response yet.
             if (isOutboundDone()) {
                 rs = CLOSED;
-                shutdown();
+                if (isInboundDone()) {
+                    // If the inbound was done as well, we need to ensure we return NOT_HANDSHAKING to signal we are
+                    // done.
+                    hs = NOT_HANDSHAKING;
+                }
             } else {
                 rs = OK;
             }
@@ -1054,7 +1057,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         isInboundDone = true;
 
-        shutdown();
+        if (isOutboundDone()) {
+            // Only call shutdown if there is no outbound data pending.
+            // See https://github.com/netty/netty/issues/6167
+            shutdown();
+        }
 
         if (handshakeState != HandshakeState.NOT_STARTED && !receivedShutdown) {
             throw new SSLException(
