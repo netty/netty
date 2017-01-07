@@ -1214,4 +1214,113 @@ public abstract class SSLEngineTest {
             // expected
         }
     }
+
+    @Test
+    public void testCloseNotifySequence() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .trustManager(cert.cert())
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            ByteBuffer plainClientOut = ByteBuffer.allocate(client.getSession().getApplicationBufferSize());
+            ByteBuffer plainServerOut = ByteBuffer.allocate(server.getSession().getApplicationBufferSize());
+
+            ByteBuffer encryptedClientToServer = ByteBuffer.allocate(client.getSession().getPacketBufferSize());
+            ByteBuffer encryptedServerToClient = ByteBuffer.allocate(server.getSession().getPacketBufferSize());
+            ByteBuffer empty = ByteBuffer.allocate(0);
+
+            handshake(client, server);
+
+            // This will produce a close_notify
+            client.closeOutbound();
+
+            // Something still pending in the outbound buffer.
+            assertFalse(client.isOutboundDone());
+            assertFalse(client.isInboundDone());
+
+            // Now wrap and so drain the outbound buffer.
+            SSLEngineResult result = client.wrap(empty, encryptedClientToServer);
+            encryptedClientToServer.flip();
+
+            assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
+            // Need an UNWRAP to read the response of the close_notify
+            assertEquals(SSLEngineResult.HandshakeStatus.NEED_UNWRAP, result.getHandshakeStatus());
+
+            int produced = result.bytesProduced();
+            int consumed = result.bytesConsumed();
+            int closeNotifyLen = produced;
+
+            assertTrue(produced > 0);
+            assertEquals(0, consumed);
+            assertEquals(produced, encryptedClientToServer.remaining());
+            // Outbound buffer should be drained now.
+            assertTrue(client.isOutboundDone());
+            assertFalse(client.isInboundDone());
+
+            assertFalse(server.isOutboundDone());
+            assertFalse(server.isInboundDone());
+            result = server.unwrap(encryptedClientToServer, plainServerOut);
+            plainServerOut.flip();
+
+            assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
+            // Need a WRAP to respond to the close_notify
+            assertEquals(SSLEngineResult.HandshakeStatus.NEED_WRAP, result.getHandshakeStatus());
+
+            produced = result.bytesProduced();
+            consumed = result.bytesConsumed();
+            assertEquals(closeNotifyLen, consumed);
+            assertEquals(0, produced);
+            // Should have consumed the complete close_notify
+            assertEquals(0, encryptedClientToServer.remaining());
+            assertEquals(0, plainServerOut.remaining());
+
+            assertFalse(server.isOutboundDone());
+            assertTrue(server.isInboundDone());
+
+            result = server.wrap(empty, encryptedServerToClient);
+            encryptedServerToClient.flip();
+            assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
+            // UNWRAP/WRAP are not expected after this point
+            assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, result.getHandshakeStatus());
+
+            produced = result.bytesProduced();
+            consumed = result.bytesConsumed();
+            assertEquals(closeNotifyLen, produced);
+            assertEquals(0, consumed);
+
+            assertEquals(produced, encryptedServerToClient.remaining());
+            assertTrue(server.isOutboundDone());
+            assertTrue(server.isInboundDone());
+
+            result = client.unwrap(encryptedServerToClient, plainClientOut);
+            plainClientOut.flip();
+            assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
+            // UNWRAP/WRAP are not expected after this point
+            assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, result.getHandshakeStatus());
+
+            produced = result.bytesProduced();
+            consumed = result.bytesConsumed();
+            assertEquals(closeNotifyLen, consumed);
+            assertEquals(0, produced);
+            assertEquals(0, encryptedServerToClient.remaining());
+
+            assertTrue(client.isOutboundDone());
+            assertTrue(client.isInboundDone());
+        } finally {
+            cert.delete();
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
 }
