@@ -1884,6 +1884,28 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testCompareTo2() {
+        byte[] bytes = {1, 2, 3, 4};
+        byte[] bytesReversed = {4, 3, 2, 1};
+
+        ByteBuf buf1 = newBuffer(4).clear().writeBytes(bytes).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuf buf2 = newBuffer(4).clear().writeBytes(bytesReversed).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuf buf3 = newBuffer(4).clear().writeBytes(bytes).order(ByteOrder.BIG_ENDIAN);
+        ByteBuf buf4 = newBuffer(4).clear().writeBytes(bytesReversed).order(ByteOrder.BIG_ENDIAN);
+        try {
+            assertEquals(buf1.compareTo(buf2), buf3.compareTo(buf4));
+            assertEquals(buf2.compareTo(buf1), buf4.compareTo(buf3));
+            assertEquals(buf1.compareTo(buf3), buf2.compareTo(buf4));
+            assertEquals(buf3.compareTo(buf1), buf4.compareTo(buf2));
+        } finally {
+            buf1.release();
+            buf2.release();
+            buf3.release();
+            buf4.release();
+        }
+    }
+
+    @Test
     public void testToString() {
         ByteBuf copied = copiedBuffer("Hello, World!", CharsetUtil.ISO_8859_1);
         buffer.clear();
