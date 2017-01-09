@@ -134,4 +134,9 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
             }
         }
     }
+
+    @Override
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        throw new UnsupportedOperationException();
+    }
 }

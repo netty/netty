@@ -23,7 +23,11 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -34,14 +38,28 @@ import io.netty.util.ReferenceCountUtil;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AlreadyConnectedException;
+import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
+import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    /**
+     * The future of the current connection attempt.  If not null, subsequent
+     * connection attempts will fail.
+     */
+    private ChannelPromise connectPromise;
+    private ScheduledFuture<?> connectTimeoutFuture;
+    private SocketAddress requestedRemoteAddress;
+
     final BsdSocket socket;
     private boolean readFilterEnabled = true;
     private boolean writeFilterEnabled;
@@ -57,6 +75,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     long jniSelfPtr;
 
     protected volatile boolean active;
+    private volatile SocketAddress local;
+    private volatile SocketAddress remote;
 
     AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active) {
         this(parent, fd, active, false);
@@ -67,6 +87,22 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         socket = checkNotNull(fd, "fd");
         this.active = active;
         this.writeFilterEnabled = writeFilterEnabled;
+        if (active) {
+            // Directly cache the remote and local addresses
+            // See https://github.com/netty/netty/issues/2359
+            local = fd.localAddress();
+            remote = fd.remoteAddress();
+        }
+    }
+
+    AbstractKQueueChannel(Channel parent, BsdSocket fd, SocketAddress remote) {
+        super(parent);
+        socket = checkNotNull(fd, "fd");
+        active = true;
+        // Directly cache the remote and local addresses
+        // See https://github.com/netty/netty/issues/2359
+        this.remote = remote;
+        local = fd.localAddress();
     }
 
     static boolean isSoErrorZero(BsdSocket fd) {
@@ -393,12 +429,14 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             }
         }
 
-        void writeReady() {
-            if (socket.isOutputShutdown()) {
-                return;
+        final void writeReady() {
+            if (connectPromise != null) {
+                // pending connect which is now complete so handle it.
+                finishConnect();
+            } else if (!socket.isOutputShutdown()) {
+                // directly call super.flush0() to force a flush now
+                super.flush0();
             }
-            // directly call super.flush0() to force a flush now
-            super.flush0();
         }
 
         /**
@@ -478,5 +516,209 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             pipeline().fireUserEventTriggered(evt);
             close(voidPromise());
         }
+
+        @Override
+        public void connect(
+                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+                return;
+            }
+
+            try {
+                if (connectPromise != null) {
+                    throw new ConnectionPendingException();
+                }
+
+                boolean wasActive = isActive();
+                if (doConnect(remoteAddress, localAddress)) {
+                    fulfillConnectPromise(promise, wasActive);
+                } else {
+                    connectPromise = promise;
+                    requestedRemoteAddress = remoteAddress;
+
+                    // Schedule connect timeout.
+                    int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                    if (connectTimeoutMillis > 0) {
+                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
+                                ConnectTimeoutException cause =
+                                        new ConnectTimeoutException("connection timed out: " + remoteAddress);
+                                if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                                    close(voidPromise());
+                                }
+                            }
+                        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
+                    }
+
+                    promise.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            if (future.isCancelled()) {
+                                if (connectTimeoutFuture != null) {
+                                    connectTimeoutFuture.cancel(false);
+                                }
+                                connectPromise = null;
+                                close(voidPromise());
+                            }
+                        }
+                    });
+                }
+            } catch (Throwable t) {
+                closeIfClosed();
+                promise.tryFailure(annotateConnectException(t, remoteAddress));
+            }
+        }
+
+        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+                return;
+            }
+            active = true;
+
+            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
+            // We still need to ensure we call fireChannelActive() in this case.
+            boolean active = isActive();
+
+            // trySuccess() will return false if a user cancelled the connection attempt.
+            boolean promiseSet = promise.trySuccess();
+
+            // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
+            // because what happened is what happened.
+            if (!wasActive && active) {
+                pipeline().fireChannelActive();
+            }
+
+            // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
+            if (!promiseSet) {
+                close(voidPromise());
+            }
+        }
+
+        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+                return;
+            }
+
+            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+            promise.tryFailure(cause);
+            closeIfClosed();
+        }
+
+        private void finishConnect() {
+            // Note this method is invoked by the event loop only if the connection attempt was
+            // neither cancelled nor timed out.
+
+            assert eventLoop().inEventLoop();
+
+            boolean connectStillInProgress = false;
+            try {
+                boolean wasActive = isActive();
+                if (!doFinishConnect()) {
+                    connectStillInProgress = true;
+                    return;
+                }
+                fulfillConnectPromise(connectPromise, wasActive);
+            } catch (Throwable t) {
+                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
+            } finally {
+                if (!connectStillInProgress) {
+                    // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
+                    // See https://github.com/netty/netty/issues/1770
+                    if (connectTimeoutFuture != null) {
+                        connectTimeoutFuture.cancel(false);
+                    }
+                    connectPromise = null;
+                }
+            }
+        }
+
+        private boolean doFinishConnect() throws Exception {
+            if (socket.finishConnect()) {
+                writeFilter(false);
+                if (requestedRemoteAddress instanceof InetSocketAddress) {
+                    remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+                }
+                requestedRemoteAddress = null;
+                return true;
+            }
+            writeFilter(true);
+            return false;
+        }
+    }
+
+    @Override
+    protected void doBind(SocketAddress local) throws Exception {
+        if (local instanceof InetSocketAddress) {
+            checkResolvable((InetSocketAddress) local);
+        }
+        socket.bind(local);
+        this.local = socket.localAddress();
+    }
+
+    /**
+     * Connect to the remote peer
+     */
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        if (localAddress instanceof InetSocketAddress) {
+            checkResolvable((InetSocketAddress) localAddress);
+        }
+
+        InetSocketAddress remoteSocketAddr = remoteAddress instanceof InetSocketAddress
+                ? (InetSocketAddress) remoteAddress : null;
+        if (remoteSocketAddr != null) {
+            checkResolvable(remoteSocketAddr);
+        }
+
+        if (remote != null) {
+            // Check if already connected before trying to connect. This is needed as connect(...) will not return -1
+            // and set errno to EISCONN if a previous connect(...) attempt was setting errno to EINPROGRESS and finished
+            // later.
+            throw new AlreadyConnectedException();
+        }
+
+        if (localAddress != null) {
+            socket.bind(localAddress);
+        }
+
+        boolean connected = doConnect0(remoteAddress);
+        if (connected) {
+            remote = remoteSocketAddr == null ?
+                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+        }
+        // We always need to set the localAddress even if not connected yet as the bind already took place.
+        //
+        // See https://github.com/netty/netty/issues/3463
+        local = socket.localAddress();
+        return connected;
+    }
+
+    private boolean doConnect0(SocketAddress remote) throws Exception {
+        boolean success = false;
+        try {
+            boolean connected = socket.connect(remote);
+            if (!connected) {
+                writeFilter(true);
+            }
+            success = true;
+            return connected;
+        } finally {
+            if (!success) {
+                doClose();
+            }
+        }
+    }
+
+    @Override
+    protected SocketAddress localAddress0() {
+        return local;
+    }
+
+    @Override
+    protected SocketAddress remoteAddress0() {
+        return remote;
     }
 }
