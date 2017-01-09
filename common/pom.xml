@@ -77,6 +77,10 @@
       <artifactId>log4j-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

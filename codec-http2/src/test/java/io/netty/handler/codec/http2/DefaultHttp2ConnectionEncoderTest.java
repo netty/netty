@@ -288,7 +288,7 @@ public class DefaultHttp2ConnectionEncoderTest {
                 .then(new Answer<ChannelFuture>() {
                     @Override
                     public ChannelFuture answer(InvocationOnMock invocationOnMock) throws Throwable {
-                        ChannelPromise promise = invocationOnMock.getArgumentAt(8, ChannelPromise.class);
+                        ChannelPromise promise = invocationOnMock.getArgument(8);
                         assertFalse(promise.isVoid());
                         return promise.setFailure(cause);
                     }
@@ -422,7 +422,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         stream(STREAM_ID);
         ChannelPromise promise = newPromise();
         encoder.writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
-        verify(lifecycleManager).resetStream(eq(ctx), eq(STREAM_ID), anyInt(), eq(promise));
+        verify(lifecycleManager).resetStream(eq(ctx), eq(STREAM_ID), anyLong(), eq(promise));
     }
 
     @Test

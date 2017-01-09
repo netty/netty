@@ -18,207 +18,208 @@ package io.netty.util.internal.logging;
 import org.junit.Test;
 import org.apache.logging.log4j.Logger;
 
-import static org.easymock.EasyMock.createStrictMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.*;
 
 public class Log4J2LoggerTest {
     private static final Exception e = new Exception();
 
     @Test
     public void testIsTraceEnabled() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        expect(mock.isTraceEnabled()).andReturn(true);
-        replay(mock);
-
+        when(mock.getName()).thenReturn("foo");
+        when(mock.isTraceEnabled()).thenReturn(true);
         InternalLogger logger = new Log4J2Logger(mock);
         assertTrue(logger.isTraceEnabled());
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).isTraceEnabled();
     }
 
     @Test
     public void testIsDebugEnabled() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        expect(mock.isDebugEnabled()).andReturn(true);
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
+        when(mock.isDebugEnabled()).thenReturn(true);
 
         InternalLogger logger = new Log4J2Logger(mock);
         assertTrue(logger.isDebugEnabled());
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).isDebugEnabled();
     }
 
     @Test
     public void testIsInfoEnabled() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        expect(mock.isInfoEnabled()).andReturn(true);
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
+        when(mock.isInfoEnabled()).thenReturn(true);
 
         InternalLogger logger = new Log4J2Logger(mock);
         assertTrue(logger.isInfoEnabled());
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).isInfoEnabled();
     }
 
     @Test
     public void testIsWarnEnabled() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        expect(mock.isWarnEnabled()).andReturn(true);
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
+        when(mock.isWarnEnabled()).thenReturn(true);
 
         InternalLogger logger = new Log4J2Logger(mock);
         assertTrue(logger.isWarnEnabled());
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).isWarnEnabled();
     }
 
     @Test
     public void testIsErrorEnabled() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        expect(mock.isErrorEnabled()).andReturn(true);
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
+        when(mock.isErrorEnabled()).thenReturn(true);
 
         InternalLogger logger = new Log4J2Logger(mock);
         assertTrue(logger.isErrorEnabled());
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).isErrorEnabled();
     }
 
     @Test
     public void testTrace() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        mock.trace("a");
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
 
         InternalLogger logger = new Log4J2Logger(mock);
         logger.trace("a");
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).trace("a");
     }
 
     @Test
     public void testTraceWithException() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        mock.trace("a", e);
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
 
         InternalLogger logger = new Log4J2Logger(mock);
         logger.trace("a", e);
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).trace("a", e);
     }
 
     @Test
     public void testDebug() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        mock.debug("a");
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
 
         InternalLogger logger = new Log4J2Logger(mock);
         logger.debug("a");
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).debug("a");
     }
 
     @Test
     public void testDebugWithException() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        mock.debug("a", e);
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
 
         InternalLogger logger = new Log4J2Logger(mock);
         logger.debug("a", e);
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).debug("a", e);
     }
 
     @Test
     public void testInfo() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        mock.info("a");
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
 
         InternalLogger logger = new Log4J2Logger(mock);
         logger.info("a");
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).info("a");
     }
 
     @Test
     public void testInfoWithException() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        mock.info("a", e);
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
 
         InternalLogger logger = new Log4J2Logger(mock);
         logger.info("a", e);
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).info("a", e);
     }
 
     @Test
     public void testWarn() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        mock.warn("a");
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
 
         InternalLogger logger = new Log4J2Logger(mock);
         logger.warn("a");
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).warn("a");
     }
 
     @Test
     public void testWarnWithException() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        mock.warn("a", e);
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
 
         InternalLogger logger = new Log4J2Logger(mock);
         logger.warn("a", e);
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).warn("a", e);
     }
 
     @Test
     public void testError() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        mock.error("a");
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
 
         InternalLogger logger = new Log4J2Logger(mock);
         logger.error("a");
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).error("a");
     }
 
     @Test
     public void testErrorWithException() {
-        Logger mock = createStrictMock(Logger.class);
+        Logger mock = mock(Logger.class);
 
-        expect(mock.getName()).andReturn("foo");
-        mock.error("a", e);
-        replay(mock);
+        when(mock.getName()).thenReturn("foo");
 
         InternalLogger logger = new Log4J2Logger(mock);
         logger.error("a", e);
-        verify(mock);
+
+        verify(mock).getName();
+        verify(mock).error("a", e);
     }
 }
