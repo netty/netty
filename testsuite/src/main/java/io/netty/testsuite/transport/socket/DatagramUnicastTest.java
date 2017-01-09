@@ -194,10 +194,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
             ChannelFuture future = cc.writeAndFlush(
                     buf.retain().duplicate()).awaitUninterruptibly();
-            if (!(cc instanceof OioDatagramChannel)) {
-                // TODO: Also handle OIO
-                assertTrue(future.cause() instanceof NotYetConnectedException);
-            }
+            assertTrue(future.cause() instanceof NotYetConnectedException);
         } finally {
             // release as we used buf.retain() before
             buf.release();
