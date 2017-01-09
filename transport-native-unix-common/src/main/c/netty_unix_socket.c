@@ -305,6 +305,10 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
             netty_unix_errors_throwClosedChannelException(env);
             return NULL;
         }
+        if (err == ECONNREFUSED) {
+            netty_unix_errors_throwPortUnreachableException(env, "recvfrom() failed");
+            return NULL;
+        }
         netty_unix_errors_throwIOExceptionErrorNo(env, "recvfrom() failed: ", err);
         return NULL;
     }
@@ -410,6 +414,38 @@ static jint netty_unix_socket_finishConnect(JNIEnv* env, jclass clazz, jint fd) 
         return 0;
     }
     return -optval;
+}
+
+static jint netty_unix_socket_disconnect(JNIEnv* env, jclass clazz, jint fd) {
+    struct sockaddr_storage addr;
+    int len;
+
+    memset(&addr, 0, sizeof(addr));
+
+    // You can disconnect connection-less sockets by using AF_UNSPEC.
+    // See man 2 connect.
+    if (socketType == AF_INET6) {
+        struct sockaddr_in6* ip6addr = (struct sockaddr_in6*) &addr;
+        ip6addr->sin6_family = AF_UNSPEC;
+        len = sizeof(struct sockaddr_in6);
+    } else {
+        struct sockaddr_in* ipaddr = (struct sockaddr_in*) &addr;
+        ipaddr->sin_family = AF_UNSPEC;
+        len = sizeof(struct sockaddr_in);
+    }
+
+    int res;
+    int err;
+    do {
+        res = connect(fd, (struct sockaddr*) &addr, len);
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    // EAFNOSUPPORT is harmless in this case.
+    // See http://www.unix.com/man-page/osx/2/connect/
+    if (res < 0 && err != EAFNOSUPPORT) {
+        return -err;
+    }
+    return 0;
 }
 
 static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteArray acceptedAddress) {
@@ -822,6 +858,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "listen", "(II)I", (void *) netty_unix_socket_listen },
   { "connect", "(I[BII)I", (void *) netty_unix_socket_connect },
   { "finishConnect", "(I)I", (void *) netty_unix_socket_finishConnect },
+  { "disconnect", "(I)I", (void *) netty_unix_socket_disconnect},
   { "accept", "(I[B)I", (void *) netty_unix_socket_accept },
   { "remoteAddress", "(I)[B", (void *) netty_unix_socket_remoteAddress },
   { "localAddress", "(I)[B", (void *) netty_unix_socket_localAddress },
