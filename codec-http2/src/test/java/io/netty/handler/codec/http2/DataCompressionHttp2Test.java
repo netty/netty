@@ -93,8 +93,8 @@ public class DataCompressionHttp2Test {
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
-                if (invocation.getArgumentAt(4, Boolean.class)) {
-                    serverConnection.stream(invocation.getArgumentAt(1, Integer.class)).close();
+                if (invocation.getArgument(4)) {
+                    serverConnection.stream((Integer) invocation.getArgument(1)).close();
                 }
                 return null;
             }
@@ -103,8 +103,8 @@ public class DataCompressionHttp2Test {
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
-                if (invocation.getArgumentAt(7, Boolean.class)) {
-                    serverConnection.stream(invocation.getArgumentAt(1, Integer.class)).close();
+                if (invocation.getArgument(7)) {
+                    serverConnection.stream((Integer) invocation.getArgument(1)).close();
                 }
                 return null;
             }
@@ -283,8 +283,8 @@ public class DataCompressionHttp2Test {
 
                 buf.readBytes(serverOut, buf.readableBytes());
 
-                if (in.getArgumentAt(4, Boolean.class)) {
-                    serverConnection.stream(in.getArgumentAt(1, Integer.class)).close();
+                if (in.getArgument(4)) {
+                    serverConnection.stream((Integer) in.getArgument(1)).close();
                 }
                 return processedBytes;
             }

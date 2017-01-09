@@ -70,6 +70,11 @@
       <optional>true</optional>
     </dependency>
 
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+    </dependency>
+
     <!-- Test dependencies for jboss marshalling encoder/decoder -->
     <dependency>
       <groupId>org.jboss.marshalling</groupId>

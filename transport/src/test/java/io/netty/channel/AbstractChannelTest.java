@@ -17,66 +17,49 @@ package io.netty.channel;
 
 import java.net.SocketAddress;
 
-import org.easymock.Capture;
-import org.easymock.IAnswer;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
-import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
-import static org.hamcrest.CoreMatchers.*;
+import static org.mockito.Mockito.*;
 
 public class AbstractChannelTest {
 
     @Test
     public void ensureInitialRegistrationFiresActive() throws Throwable {
-        EventLoop eventLoop = createNiceMock(EventLoop.class);
+        EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
-        expect(eventLoop.inEventLoop()).andReturn(true).anyTimes();
+        when(eventLoop.inEventLoop()).thenReturn(true);
 
         TestChannel channel = new TestChannel();
-        ChannelInboundHandler handler = createMock(ChannelInboundHandler.class);
-        handler.handlerAdded(anyObject(ChannelHandlerContext.class)); expectLastCall();
-        Capture<Throwable> throwable = catchHandlerExceptions(handler);
-        handler.channelRegistered(anyObject(ChannelHandlerContext.class));
-        expectLastCall().once();
-        handler.channelActive(anyObject(ChannelHandlerContext.class));
-        expectLastCall().once();
-        replay(handler, eventLoop);
+        ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
         channel.pipeline().addLast(handler);
 
         registerChannel(eventLoop, channel);
 
-        checkForHandlerException(throwable);
-        verify(handler);
+        verify(handler).handlerAdded(any(ChannelHandlerContext.class));
+        verify(handler).channelRegistered(any(ChannelHandlerContext.class));
+        verify(handler).channelActive(any(ChannelHandlerContext.class));
     }
 
     @Test
     public void ensureSubsequentRegistrationDoesNotFireActive() throws Throwable {
-        final EventLoop eventLoop = createNiceMock(EventLoop.class);
+        final EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
-        expect(eventLoop.inEventLoop()).andReturn(true).anyTimes();
-        eventLoop.execute(anyObject(Runnable.class));
-        expectLastCall().andAnswer(new IAnswer<Object>() {
+        when(eventLoop.inEventLoop()).thenReturn(true);
+
+        doAnswer(new Answer() {
             @Override
-            public Object answer() throws Throwable {
-                ((Runnable) getCurrentArguments()[0]).run();
+            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                ((Runnable) invocationOnMock.getArgument(0)).run();
                 return null;
             }
-        }).once();
+        }).when(eventLoop).execute(any(Runnable.class));
 
         final TestChannel channel = new TestChannel();
-        ChannelInboundHandler handler = createMock(ChannelInboundHandler.class);
-        handler.handlerAdded(anyObject(ChannelHandlerContext.class)); expectLastCall();
-        Capture<Throwable> throwable = catchHandlerExceptions(handler);
-        handler.channelRegistered(anyObject(ChannelHandlerContext.class));
-        expectLastCall().times(2); // Should register twice
-        handler.channelActive(anyObject(ChannelHandlerContext.class));
-        expectLastCall().once(); // Should only fire active once
+        ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
 
-        handler.channelUnregistered(anyObject(ChannelHandlerContext.class));
-        expectLastCall().once(); // Should register twice
-
-        replay(handler, eventLoop);
         channel.pipeline().addLast(handler);
 
         registerChannel(eventLoop, channel);
@@ -84,34 +67,25 @@ public class AbstractChannelTest {
 
         registerChannel(eventLoop, channel);
 
-        checkForHandlerException(throwable);
-        verify(handler);
+        verify(handler).handlerAdded(any(ChannelHandlerContext.class));
+
+        // Should register twice
+        verify(handler,  times(2)) .channelRegistered(any(ChannelHandlerContext.class));
+        verify(handler).channelActive(any(ChannelHandlerContext.class));
+        verify(handler).channelUnregistered(any(ChannelHandlerContext.class));
     }
 
     @Test
     public void ensureDefaultChannelId() {
         TestChannel channel = new TestChannel();
         final ChannelId channelId = channel.id();
-        assertThat(channelId, instanceOf(DefaultChannelId.class));
+        assertTrue(channelId instanceof DefaultChannelId);
     }
 
     private static void registerChannel(EventLoop eventLoop, Channel channel) throws Exception {
         DefaultChannelPromise future = new DefaultChannelPromise(channel);
         channel.unsafe().register(eventLoop, future);
         future.sync(); // Cause any exceptions to be thrown
-    }
-
-    private static Capture<Throwable> catchHandlerExceptions(ChannelInboundHandler handler) throws Exception {
-        Capture<Throwable> throwable = new Capture<Throwable>();
-        handler.exceptionCaught(anyObject(ChannelHandlerContext.class), capture(throwable));
-        expectLastCall().anyTimes();
-        return throwable;
-    }
-
-    private static void checkForHandlerException(Capture<Throwable> throwable) throws Throwable {
-        if (throwable.hasCaptured()) {
-            throw throwable.getValue();
-        }
     }
 
     private static class TestChannel extends AbstractChannel {

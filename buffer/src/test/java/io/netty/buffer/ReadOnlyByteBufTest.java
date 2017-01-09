@@ -16,6 +16,8 @@
 package io.netty.buffer;
 
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,8 +27,8 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
 import static io.netty.buffer.Unpooled.*;
-import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Tests read-only channel buffers
@@ -74,30 +76,28 @@ public class ReadOnlyByteBufTest {
 
     @Test
     public void shouldForwardReadCallsBlindly() throws Exception {
-        ByteBuf buf = createStrictMock(ByteBuf.class);
-        expect(buf.order()).andReturn(BIG_ENDIAN).anyTimes();
-        expect(buf.maxCapacity()).andReturn(65536).anyTimes();
-        expect(buf.readerIndex()).andReturn(0).anyTimes();
-        expect(buf.writerIndex()).andReturn(0).anyTimes();
-        expect(buf.capacity()).andReturn(0).anyTimes();
+        ByteBuf buf = mock(ByteBuf.class);
+        when(buf.order()).thenReturn(BIG_ENDIAN);
+        when(buf.maxCapacity()).thenReturn(65536);
+        when(buf.readerIndex()).thenReturn(0);
+        when(buf.writerIndex()).thenReturn(0);
+        when(buf.capacity()).thenReturn(0);
 
-        expect(buf.getBytes(1, (GatheringByteChannel) null, 2)).andReturn(3);
-        expect(buf.getBytes(4, (OutputStream) null, 5)).andReturn(buf);
-        expect(buf.getBytes(6, (byte[]) null, 7, 8)).andReturn(buf);
-        expect(buf.getBytes(9, (ByteBuf) null, 10, 11)).andReturn(buf);
-        expect(buf.getBytes(12, (ByteBuffer) null)).andReturn(buf);
-        expect(buf.getByte(13)).andReturn(Byte.valueOf((byte) 14));
-        expect(buf.getShort(15)).andReturn(Short.valueOf((short) 16));
-        expect(buf.getUnsignedMedium(17)).andReturn(18);
-        expect(buf.getInt(19)).andReturn(20);
-        expect(buf.getLong(21)).andReturn(22L);
+        when(buf.getBytes(1, (GatheringByteChannel) null, 2)).thenReturn(3);
+        when(buf.getBytes(4, (OutputStream) null, 5)).thenReturn(buf);
+        when(buf.getBytes(6, (byte[]) null, 7, 8)).thenReturn(buf);
+        when(buf.getBytes(9, (ByteBuf) null, 10, 11)).thenReturn(buf);
+        when(buf.getBytes(12, (ByteBuffer) null)).thenReturn(buf);
+        when(buf.getByte(13)).thenReturn(Byte.valueOf((byte) 14));
+        when(buf.getShort(15)).thenReturn(Short.valueOf((short) 16));
+        when(buf.getUnsignedMedium(17)).thenReturn(18);
+        when(buf.getInt(19)).thenReturn(20);
+        when(buf.getLong(21)).thenReturn(22L);
 
         ByteBuffer bb = ByteBuffer.allocate(100);
 
-        expect(buf.nioBuffer(23, 24)).andReturn(bb);
-        expect(buf.capacity()).andReturn(27);
-
-        replay(buf);
+        when(buf.nioBuffer(23, 24)).thenReturn(bb);
+        when(buf.capacity()).thenReturn(27);
 
         ByteBuf roBuf = unmodifiableBuffer(buf);
         assertEquals(3, roBuf.getBytes(1, (GatheringByteChannel) null, 2));
@@ -116,8 +116,6 @@ public class ReadOnlyByteBufTest {
         assertTrue(roBB.isReadOnly());
 
         assertEquals(27, roBuf.capacity());
-
-        verify(buf);
     }
 
     @Test(expected = UnsupportedOperationException.class)

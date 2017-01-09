@@ -61,7 +61,7 @@ public class PromiseCombinerTest {
     @Test
     public void testNullAggregatePromise() {
         combiner.finish(p1);
-        verify(p1).trySuccess(any(Void.class));
+        verify(p1).trySuccess(null);
     }
 
     @Test(expected = NullPointerException.class)
@@ -153,7 +153,7 @@ public class PromiseCombinerTest {
     }
 
     private void verifySuccess(Promise<Void> p) {
-        verify(p).trySuccess(any(Void.class));
+        verify(p).trySuccess(null);
     }
 
     private void verifyNotCompleted(Promise<Void> p) {
@@ -179,10 +179,10 @@ public class PromiseCombinerTest {
     @SuppressWarnings("unchecked")
     private void mockListener(final Promise<Void> p, final GenericFutureListenerConsumer consumer) {
         doAnswer(new Answer<Promise<Void>>() {
-            @SuppressWarnings("unchecked")
+            @SuppressWarnings({ "unchecked", "raw-types" })
             @Override
             public Promise<Void> answer(InvocationOnMock invocation) throws Throwable {
-                consumer.accept(invocation.getArgumentAt(0, GenericFutureListener.class));
+                consumer.accept((GenericFutureListener) invocation.getArgument(0));
                 return p;
             }
         }).when(p).addListener(any(GenericFutureListener.class));
