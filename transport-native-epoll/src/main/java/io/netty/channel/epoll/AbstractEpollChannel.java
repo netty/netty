@@ -22,26 +22,51 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AlreadyConnectedException;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.channel.epoll.UnixChannelUtil.computeRemoteAddr;
 
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
-    private static final ChannelMetadata DATA = new ChannelMetadata(false);
+    private static final ClosedChannelException DO_CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new ClosedChannelException(), AbstractEpollChannel.class, "doClose()");
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final int readFlag;
-    private final Socket fileDescriptor;
+    private final Socket socket;
+    /**
+     * The future of the current connection attempt.  If not null, subsequent
+     * connection attempts will fail.
+     */
+    private ChannelPromise connectPromise;
+    private ScheduledFuture<?> connectTimeoutFuture;
+    private SocketAddress requestedRemoteAddress;
+
+    private volatile SocketAddress local;
+    private volatile SocketAddress remote;
+
     protected int flags = Native.EPOLLET;
 
     protected volatile boolean active;
@@ -52,10 +77,28 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     AbstractEpollChannel(Channel parent, Socket fd, int flag, boolean active) {
         super(parent);
-        fileDescriptor = checkNotNull(fd, "fd");
+        socket = checkNotNull(fd, "fd");
         readFlag = flag;
         flags |= flag;
         this.active = active;
+        if (active) {
+            // Directly cache the remote and local addresses
+            // See https://github.com/netty/netty/issues/2359
+            local = fd.localAddress();
+            remote = fd.remoteAddress();
+        }
+    }
+
+    AbstractEpollChannel(Channel parent, Socket fd, int flag, SocketAddress remote) {
+        super(parent);
+        socket = checkNotNull(fd, "fd");
+        readFlag = flag;
+        flags |= flag;
+        active = true;
+        // Directly cache the remote and local addresses
+        // See https://github.com/netty/netty/issues/2359
+        this.remote = remote;
+        local = fd.localAddress();
     }
 
     static boolean isSoErrorZero(Socket fd) {
@@ -86,7 +129,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     public final Socket fd() {
-        return fileDescriptor;
+        return socket;
     }
 
     @Override
@@ -99,18 +142,31 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     public ChannelMetadata metadata() {
-        return DATA;
+        return METADATA;
     }
 
     @Override
     protected void doClose() throws Exception {
         active = false;
         try {
+            ChannelPromise promise = connectPromise;
+            if (promise != null) {
+                // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+                promise.tryFailure(DO_CLOSE_CLOSED_CHANNEL_EXCEPTION);
+                connectPromise = null;
+            }
+
+            ScheduledFuture<?> future = connectTimeoutFuture;
+            if (future != null) {
+                future.cancel(false);
+                connectTimeoutFuture = null;
+            }
+
             if (isRegistered()) {
                 doDeregister();
             }
         } finally {
-            fileDescriptor.close();
+            socket.close();
         }
     }
 
@@ -126,7 +182,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     public boolean isOpen() {
-        return fileDescriptor.isOpen();
+        return socket.isOpen();
     }
 
     @Override
@@ -237,10 +293,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         int writerIndex = byteBuf.writerIndex();
         int localReadAmount;
         if (byteBuf.hasMemoryAddress()) {
-            localReadAmount = fileDescriptor.readAddress(byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
+            localReadAmount = socket.readAddress(byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
         } else {
             ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
-            localReadAmount = fileDescriptor.read(buf, buf.position(), buf.limit());
+            localReadAmount = socket.read(buf, buf.position(), buf.limit());
         }
         if (localReadAmount > 0) {
             byteBuf.writerIndex(writerIndex + localReadAmount);
@@ -256,7 +312,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             int readerIndex = buf.readerIndex();
             int writerIndex = buf.writerIndex();
             for (int i = writeSpinCount - 1; i >= 0; i--) {
-                int localFlushedAmount = fileDescriptor.writeAddress(memoryAddress, readerIndex, writerIndex);
+                int localFlushedAmount = socket.writeAddress(memoryAddress, readerIndex, writerIndex);
                 if (localFlushedAmount > 0) {
                     writtenBytes += localFlushedAmount;
                     if (writtenBytes == readableBytes) {
@@ -277,7 +333,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             for (int i = writeSpinCount - 1; i >= 0; i--) {
                 int pos = nioBuf.position();
                 int limit = nioBuf.limit();
-                int localFlushedAmount = fileDescriptor.write(nioBuf, pos, limit);
+                int localFlushedAmount = socket.write(nioBuf, pos, limit);
                 if (localFlushedAmount > 0) {
                     nioBuf.position(pos + localFlushedAmount);
                     writtenBytes += localFlushedAmount;
@@ -388,12 +444,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         /**
          * Called once a EPOLLOUT event is ready to be processed
          */
-        void epollOutReady() {
-            if (fd().isOutputShutdown()) {
-                return;
+        final void epollOutReady() {
+            if (connectPromise != null) {
+                // pending connect which is now complete so handle it.
+                finishConnect();
+            } else if (!fd().isOutputShutdown()) {
+                // directly call super.flush0() to force a flush now
+                super.flush0();
             }
-            // directly call super.flush0() to force a flush now
-            super.flush0();
         }
 
         protected final void clearEpollIn0() {
@@ -407,5 +465,214 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 unsafe().close(unsafe().voidPromise());
             }
         }
+
+        @Override
+        public void connect(
+                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+                return;
+            }
+
+            try {
+                if (connectPromise != null) {
+                    throw new ConnectionPendingException();
+                }
+
+                boolean wasActive = isActive();
+                if (doConnect(remoteAddress, localAddress)) {
+                    fulfillConnectPromise(promise, wasActive);
+                } else {
+                    connectPromise = promise;
+                    requestedRemoteAddress = remoteAddress;
+
+                    // Schedule connect timeout.
+                    int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                    if (connectTimeoutMillis > 0) {
+                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                ChannelPromise connectPromise = AbstractEpollChannel.this.connectPromise;
+                                ConnectTimeoutException cause =
+                                        new ConnectTimeoutException("connection timed out: " + remoteAddress);
+                                if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                                    close(voidPromise());
+                                }
+                            }
+                        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
+                    }
+
+                    promise.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            if (future.isCancelled()) {
+                                if (connectTimeoutFuture != null) {
+                                    connectTimeoutFuture.cancel(false);
+                                }
+                                connectPromise = null;
+                                close(voidPromise());
+                            }
+                        }
+                    });
+                }
+            } catch (Throwable t) {
+                closeIfClosed();
+                promise.tryFailure(annotateConnectException(t, remoteAddress));
+            }
+        }
+
+        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+                return;
+            }
+            active = true;
+
+            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
+            // We still need to ensure we call fireChannelActive() in this case.
+            boolean active = isActive();
+
+            // trySuccess() will return false if a user cancelled the connection attempt.
+            boolean promiseSet = promise.trySuccess();
+
+            // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
+            // because what happened is what happened.
+            if (!wasActive && active) {
+                pipeline().fireChannelActive();
+            }
+
+            // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
+            if (!promiseSet) {
+                close(voidPromise());
+            }
+        }
+
+        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+                return;
+            }
+
+            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+            promise.tryFailure(cause);
+            closeIfClosed();
+        }
+
+        private void finishConnect() {
+            // Note this method is invoked by the event loop only if the connection attempt was
+            // neither cancelled nor timed out.
+
+            assert eventLoop().inEventLoop();
+
+            boolean connectStillInProgress = false;
+            try {
+                boolean wasActive = isActive();
+                if (!doFinishConnect()) {
+                    connectStillInProgress = true;
+                    return;
+                }
+                fulfillConnectPromise(connectPromise, wasActive);
+            } catch (Throwable t) {
+                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
+            } finally {
+                if (!connectStillInProgress) {
+                    // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
+                    // See https://github.com/netty/netty/issues/1770
+                    if (connectTimeoutFuture != null) {
+                        connectTimeoutFuture.cancel(false);
+                    }
+                    connectPromise = null;
+                }
+            }
+        }
+
+        /**
+         * Finish the connect
+         */
+        private boolean doFinishConnect() throws Exception {
+            if (socket.finishConnect()) {
+                clearFlag(Native.EPOLLOUT);
+                if (requestedRemoteAddress instanceof InetSocketAddress) {
+                    remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress,
+                            socket.remoteAddress());
+                }
+                requestedRemoteAddress = null;
+
+                return true;
+            }
+            setFlag(Native.EPOLLOUT);
+            return false;
+        }
+    }
+
+    @Override
+    protected void doBind(SocketAddress local) throws Exception {
+        if (local instanceof InetSocketAddress) {
+            checkResolvable((InetSocketAddress) local);
+        }
+        socket.bind(local);
+        this.local = socket.localAddress();
+    }
+
+    /**
+     * Connect to the remote peer
+     */
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        if (localAddress instanceof InetSocketAddress) {
+            checkResolvable((InetSocketAddress) localAddress);
+        }
+
+        InetSocketAddress remoteSocketAddr = remoteAddress instanceof InetSocketAddress
+                ? (InetSocketAddress) remoteAddress : null;
+        if (remoteSocketAddr != null) {
+            checkResolvable(remoteSocketAddr);
+        }
+
+        if (remote != null) {
+            // Check if already connected before trying to connect. This is needed as connect(...) will not return -1
+            // and set errno to EISCONN if a previous connect(...) attempt was setting errno to EINPROGRESS and finished
+            // later.
+            throw new AlreadyConnectedException();
+        }
+
+        if (localAddress != null) {
+            socket.bind(localAddress);
+        }
+
+        boolean connected = doConnect0(remoteAddress);
+        if (connected) {
+            remote = remoteSocketAddr == null ?
+                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+        }
+        // We always need to set the localAddress even if not connected yet as the bind already took place.
+        //
+        // See https://github.com/netty/netty/issues/3463
+        local = socket.localAddress();
+        return connected;
+    }
+
+    private boolean doConnect0(SocketAddress remote) throws Exception {
+        boolean success = false;
+        try {
+            boolean connected = socket.connect(remote);
+            if (!connected) {
+                setFlag(Native.EPOLLOUT);
+            }
+            success = true;
+            return connected;
+        } finally {
+            if (!success) {
+                doClose();
+            }
+        }
+    }
+
+    @Override
+    protected SocketAddress localAddress0() {
+        return local;
+    }
+
+    @Override
+    protected SocketAddress remoteAddress0() {
+        return remote;
     }
 }
