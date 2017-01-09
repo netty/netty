@@ -24,8 +24,8 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
-import org.easymock.EasyMock;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.List;
@@ -221,9 +221,9 @@ public class HttpObjectAggregatorTest {
     @Test(expected = IllegalStateException.class)
     public void testSetMaxCumulationBufferComponentsAfterInit() throws Exception {
         HttpObjectAggregator aggr = new HttpObjectAggregator(Integer.MAX_VALUE);
-        ChannelHandlerContext ctx = EasyMock.createMock(ChannelHandlerContext.class);
-        EasyMock.replay(ctx);
+        ChannelHandlerContext ctx = Mockito.mock(ChannelHandlerContext.class);
         aggr.handlerAdded(ctx);
+        Mockito.verifyNoMoreInteractions(ctx);
         aggr.setMaxCumulationBufferComponents(10);
     }
 

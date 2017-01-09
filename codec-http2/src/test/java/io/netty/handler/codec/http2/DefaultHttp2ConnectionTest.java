@@ -89,14 +89,14 @@ public class DefaultHttp2ConnectionTest {
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
-                assertNotNull(client.stream(invocation.getArgumentAt(0, Http2Stream.class).id()));
+                assertNotNull(client.stream(((Http2Stream) invocation.getArgument(0)).id()));
                 return null;
             }
         }).when(clientListener).onStreamClosed(any(Http2Stream.class));
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
-                assertNull(client.stream(invocation.getArgumentAt(0, Http2Stream.class).id()));
+                assertNull(client.stream(((Http2Stream) invocation.getArgument(0)).id()));
                 return null;
             }
         }).when(clientListener).onStreamRemoved(any(Http2Stream.class));
