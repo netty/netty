@@ -81,8 +81,8 @@ public class UniformStreamByteDistributorTest {
         return new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
-                Http2Stream stream = in.getArgumentAt(0, Http2Stream.class);
-                int numBytes = in.getArgumentAt(1, Integer.class);
+                Http2Stream stream = in.getArgument(0);
+                int numBytes = in.getArgument(1);
                 int streamableBytes = distributor.streamableBytes0(stream) - numBytes;
                 updateStream(stream.id(), streamableBytes, streamableBytes > 0);
                 return null;

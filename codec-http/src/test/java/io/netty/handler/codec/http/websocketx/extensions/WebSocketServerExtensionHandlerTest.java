@@ -26,44 +26,40 @@ import java.util.List;
 import org.junit.Test;
 
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.*;
-import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 public class WebSocketServerExtensionHandlerTest {
 
     WebSocketServerExtensionHandshaker mainHandshakerMock =
-            createMock("mainHandshaker", WebSocketServerExtensionHandshaker.class);
+            mock(WebSocketServerExtensionHandshaker.class, "mainHandshaker");
     WebSocketServerExtensionHandshaker fallbackHandshakerMock =
-            createMock("fallbackHandshaker", WebSocketServerExtensionHandshaker.class);
+            mock(WebSocketServerExtensionHandshaker.class, "fallbackHandshaker");
     WebSocketServerExtension mainExtensionMock =
-            createMock("mainExtension", WebSocketServerExtension.class);
+            mock(WebSocketServerExtension.class, "mainExtension");
     WebSocketServerExtension fallbackExtensionMock =
-            createMock("fallbackExtension", WebSocketServerExtension.class);
+            mock(WebSocketServerExtension.class, "fallbackExtension");
 
     @Test
     public void testMainSuccess() {
         // initialize
-        expect(mainHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("main"))).
-                andReturn(mainExtensionMock).anyTimes();
-        expect(mainHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("fallback"))).
-                andReturn(null).anyTimes();
-        replay(mainHandshakerMock);
+        when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main"))).
+                thenReturn(mainExtensionMock);
+        when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("fallback"))).
+                thenReturn(null);
 
-        expect(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("fallback"))).
-                andReturn(fallbackExtensionMock).anyTimes();
-        expect(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("main"))).
-                andReturn(null).anyTimes();
-        replay(fallbackHandshakerMock);
+        when(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("fallback"))).
+                thenReturn(fallbackExtensionMock);
+        when(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main"))).
+                thenReturn(null);
 
-        expect(mainExtensionMock.rsv()).andReturn(WebSocketExtension.RSV1).anyTimes();
-        expect(mainExtensionMock.newReponseData()).andReturn(
-                new WebSocketExtensionData("main", Collections.<String, String>emptyMap())).once();
-        expect(mainExtensionMock.newExtensionEncoder()).andReturn(new DummyEncoder()).once();
-        expect(mainExtensionMock.newExtensionDecoder()).andReturn(new DummyDecoder()).once();
-        replay(mainExtensionMock);
+        when(mainExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
+        when(mainExtensionMock.newReponseData()).thenReturn(
+                new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
+        when(mainExtensionMock.newExtensionEncoder()).thenReturn(new DummyEncoder());
+        when(mainExtensionMock.newExtensionDecoder()).thenReturn(new DummyDecoder());
 
-        expect(fallbackExtensionMock.rsv()).andReturn(WebSocketExtension.RSV1).anyTimes();
-        replay(fallbackExtensionMock);
+        when(fallbackExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
 
         // execute
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
@@ -83,38 +79,44 @@ public class WebSocketServerExtensionHandlerTest {
         assertEquals(1, resExts.size());
         assertEquals("main", resExts.get(0).name());
         assertTrue(resExts.get(0).parameters().isEmpty());
-        assertTrue(ch.pipeline().get(DummyDecoder.class) != null);
-        assertTrue(ch.pipeline().get(DummyEncoder.class) != null);
+        assertNotNull(ch.pipeline().get(DummyDecoder.class));
+        assertNotNull(ch.pipeline().get(DummyEncoder.class));
+
+        verify(mainHandshakerMock, atLeastOnce()).handshakeExtension(webSocketExtensionDataMatcher("main"));
+        verify(mainHandshakerMock, atLeastOnce()).handshakeExtension(webSocketExtensionDataMatcher("fallback"));
+        verify(fallbackHandshakerMock, atLeastOnce()).handshakeExtension(webSocketExtensionDataMatcher("fallback"));
+
+        verify(mainExtensionMock, atLeastOnce()).rsv();
+        verify(mainExtensionMock).newReponseData();
+        verify(mainExtensionMock).newExtensionEncoder();
+        verify(mainExtensionMock).newExtensionDecoder();
+        verify(fallbackExtensionMock, atLeastOnce()).rsv();
     }
 
     @Test
     public void testCompatibleExtensionTogetherSuccess() {
         // initialize
-        expect(mainHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("main"))).
-                andReturn(mainExtensionMock).anyTimes();
-        expect(mainHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("fallback"))).
-                andReturn(null).anyTimes();
-        replay(mainHandshakerMock);
+        when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main"))).
+                thenReturn(mainExtensionMock);
+        when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("fallback"))).
+                thenReturn(null);
 
-        expect(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("fallback"))).
-                andReturn(fallbackExtensionMock).anyTimes();
-        expect(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("main"))).
-                andReturn(null).anyTimes();
-        replay(fallbackHandshakerMock);
+        when(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("fallback"))).
+                thenReturn(fallbackExtensionMock);
+        when(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main"))).
+                thenReturn(null);
 
-        expect(mainExtensionMock.rsv()).andReturn(WebSocketExtension.RSV1).anyTimes();
-        expect(mainExtensionMock.newReponseData()).andReturn(
-                new WebSocketExtensionData("main", Collections.<String, String>emptyMap())).once();
-        expect(mainExtensionMock.newExtensionEncoder()).andReturn(new DummyEncoder()).once();
-        expect(mainExtensionMock.newExtensionDecoder()).andReturn(new DummyDecoder()).once();
-        replay(mainExtensionMock);
+        when(mainExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
+        when(mainExtensionMock.newReponseData()).thenReturn(
+                new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
+        when(mainExtensionMock.newExtensionEncoder()).thenReturn(new DummyEncoder());
+        when(mainExtensionMock.newExtensionDecoder()).thenReturn(new DummyDecoder());
 
-        expect(fallbackExtensionMock.rsv()).andReturn(WebSocketExtension.RSV2).anyTimes();
-        expect(fallbackExtensionMock.newReponseData()).andReturn(
-                new WebSocketExtensionData("fallback", Collections.<String, String>emptyMap())).once();
-        expect(fallbackExtensionMock.newExtensionEncoder()).andReturn(new Dummy2Encoder()).once();
-        expect(fallbackExtensionMock.newExtensionDecoder()).andReturn(new Dummy2Decoder()).once();
-        replay(fallbackExtensionMock);
+        when(fallbackExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV2);
+        when(fallbackExtensionMock.newReponseData()).thenReturn(
+                new WebSocketExtensionData("fallback", Collections.<String, String>emptyMap()));
+        when(fallbackExtensionMock.newExtensionEncoder()).thenReturn(new Dummy2Encoder());
+        when(fallbackExtensionMock.newExtensionDecoder()).thenReturn(new Dummy2Decoder());
 
         // execute
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
@@ -134,26 +136,38 @@ public class WebSocketServerExtensionHandlerTest {
         assertEquals(2, resExts.size());
         assertEquals("main", resExts.get(0).name());
         assertEquals("fallback", resExts.get(1).name());
-        assertTrue(ch.pipeline().get(DummyDecoder.class) != null);
-        assertTrue(ch.pipeline().get(DummyEncoder.class) != null);
-        assertTrue(ch.pipeline().get(Dummy2Decoder.class) != null);
-        assertTrue(ch.pipeline().get(Dummy2Encoder.class) != null);
+        assertNotNull(ch.pipeline().get(DummyDecoder.class));
+        assertNotNull(ch.pipeline().get(DummyEncoder.class));
+        assertNotNull(ch.pipeline().get(Dummy2Decoder.class));
+        assertNotNull(ch.pipeline().get(Dummy2Encoder.class));
+
+        verify(mainHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("main"));
+        verify(mainHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("fallback"));
+        verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("fallback"));
+        verify(mainExtensionMock, times(2)).rsv();
+        verify(mainExtensionMock).newReponseData();
+        verify(mainExtensionMock).newExtensionEncoder();
+        verify(mainExtensionMock).newExtensionDecoder();
+
+        verify(fallbackExtensionMock, times(2)).rsv();
+
+        verify(fallbackExtensionMock).newReponseData();
+        verify(fallbackExtensionMock).newExtensionEncoder();
+        verify(fallbackExtensionMock).newExtensionDecoder();
     }
 
     @Test
     public void testNoneExtensionMatchingSuccess() {
         // initialize
-        expect(mainHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("unknown"))).
-                andReturn(null).anyTimes();
-        expect(mainHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("unknown2"))).
-                andReturn(null).anyTimes();
-        replay(mainHandshakerMock);
+        when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("unknown"))).
+                thenReturn(null);
+        when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("unknown2"))).
+                thenReturn(null);
 
-        expect(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("unknown"))).
-                andReturn(null).anyTimes();
-        expect(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataEqual("unknown2"))).
-                andReturn(null).anyTimes();
-        replay(fallbackHandshakerMock);
+        when(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("unknown"))).
+                thenReturn(null);
+        when(fallbackHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("unknown2"))).
+                thenReturn(null);
 
         // execute
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
@@ -169,6 +183,11 @@ public class WebSocketServerExtensionHandlerTest {
 
         // test
         assertFalse(res2.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
-    }
 
+        verify(mainHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown"));
+        verify(mainHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown2"));
+
+        verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown"));
+        verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown2"));
+    }
 }

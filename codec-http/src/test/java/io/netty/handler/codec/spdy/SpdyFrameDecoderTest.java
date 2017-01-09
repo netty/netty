@@ -17,110 +17,123 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.Random;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_SIZE;
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.createStrictMock;
-import static org.easymock.EasyMock.expectLastCall;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
 
 public class SpdyFrameDecoderTest {
 
     private static final Random RANDOM = new Random();
 
-    private final SpdyFrameDecoderDelegate delegate = createStrictMock(SpdyFrameDecoderDelegate.class);
+    private final SpdyFrameDecoderDelegate delegate = mock(SpdyFrameDecoderDelegate.class);
+    private final TestSpdyFrameDecoderDelegate testDelegate = new TestSpdyFrameDecoderDelegate();
     private SpdyFrameDecoder decoder;
 
     @Before
     public void createDecoder() {
-        decoder = new SpdyFrameDecoder(SpdyVersion.SPDY_3_1, new SpdyFrameDecoderDelegate() {
-            @Override
-            public void readDataFrame(int streamId, boolean last, ByteBuf data) {
-                try {
-                    delegate.readDataFrame(streamId, last, data);
-                } finally {
-                    // release the data after we delegate it and so checked it.
-                    data.release();
+        decoder = new SpdyFrameDecoder(SpdyVersion.SPDY_3_1, testDelegate);
+    }
+
+    @After
+    public void releaseBuffers() {
+        testDelegate.releaseAll();
+    }
+
+    private final class TestSpdyFrameDecoderDelegate implements SpdyFrameDecoderDelegate {
+        private final Queue<ByteBuf> buffers = new ArrayDeque<ByteBuf>();
+
+        @Override
+        public void readDataFrame(int streamId, boolean last, ByteBuf data) {
+            delegate.readDataFrame(streamId, last, data);
+            buffers.add(data);
+        }
+
+        @Override
+        public void readSynStreamFrame(int streamId, int associatedToStreamId,
+        byte priority, boolean last, boolean unidirectional) {
+            delegate.readSynStreamFrame(streamId, associatedToStreamId, priority, last, unidirectional);
+        }
+
+        @Override
+        public void readSynReplyFrame(int streamId, boolean last) {
+            delegate.readSynReplyFrame(streamId, last);
+        }
+
+        @Override
+        public void readRstStreamFrame(int streamId, int statusCode) {
+            delegate.readRstStreamFrame(streamId, statusCode);
+        }
+
+        @Override
+        public void readSettingsFrame(boolean clearPersisted) {
+            delegate.readSettingsFrame(clearPersisted);
+        }
+
+        @Override
+        public void readSetting(int id, int value, boolean persistValue, boolean persisted) {
+            delegate.readSetting(id, value, persistValue, persisted);
+        }
+
+        @Override
+        public void readSettingsEnd() {
+            delegate.readSettingsEnd();
+        }
+
+        @Override
+        public void readPingFrame(int id) {
+            delegate.readPingFrame(id);
+        }
+
+        @Override
+        public void readGoAwayFrame(int lastGoodStreamId, int statusCode) {
+            delegate.readGoAwayFrame(lastGoodStreamId, statusCode);
+        }
+
+        @Override
+        public void readHeadersFrame(int streamId, boolean last) {
+            delegate.readHeadersFrame(streamId, last);
+        }
+
+        @Override
+        public void readWindowUpdateFrame(int streamId, int deltaWindowSize) {
+            delegate.readWindowUpdateFrame(streamId, deltaWindowSize);
+        }
+
+        @Override
+        public void readHeaderBlock(ByteBuf headerBlock) {
+            delegate.readHeaderBlock(headerBlock);
+            buffers.add(headerBlock);
+        }
+
+        @Override
+        public void readHeaderBlockEnd() {
+            delegate.readHeaderBlockEnd();
+        }
+
+        @Override
+        public void readFrameError(String message) {
+            delegate.readFrameError(message);
+        }
+
+        void releaseAll() {
+            for (;;) {
+                ByteBuf buf = buffers.poll();
+                if (buf == null) {
+                    return;
                 }
+                buf.release();
             }
-
-            @Override
-            public void readSynStreamFrame(int streamId, int associatedToStreamId,
-                                           byte priority, boolean last, boolean unidirectional) {
-                delegate.readSynStreamFrame(streamId, associatedToStreamId, priority, last, unidirectional);
-            }
-
-            @Override
-            public void readSynReplyFrame(int streamId, boolean last) {
-                delegate.readSynReplyFrame(streamId, last);
-            }
-
-            @Override
-            public void readRstStreamFrame(int streamId, int statusCode) {
-                delegate.readRstStreamFrame(streamId, statusCode);
-            }
-
-            @Override
-            public void readSettingsFrame(boolean clearPersisted) {
-                delegate.readSettingsFrame(clearPersisted);
-            }
-
-            @Override
-            public void readSetting(int id, int value, boolean persistValue, boolean persisted) {
-                delegate.readSetting(id, value, persistValue, persisted);
-            }
-
-            @Override
-            public void readSettingsEnd() {
-                delegate.readSettingsEnd();
-            }
-
-            @Override
-            public void readPingFrame(int id) {
-                delegate.readPingFrame(id);
-            }
-
-            @Override
-            public void readGoAwayFrame(int lastGoodStreamId, int statusCode) {
-                delegate.readGoAwayFrame(lastGoodStreamId, statusCode);
-            }
-
-            @Override
-            public void readHeadersFrame(int streamId, boolean last) {
-                delegate.readHeadersFrame(streamId, last);
-            }
-
-            @Override
-            public void readWindowUpdateFrame(int streamId, int deltaWindowSize) {
-                delegate.readWindowUpdateFrame(streamId, deltaWindowSize);
-            }
-
-            @Override
-            public void readHeaderBlock(ByteBuf headerBlock) {
-                try {
-                    delegate.readHeaderBlock(headerBlock);
-                } finally {
-                    // release the data after we delegate it and so checked it.
-                    headerBlock.release();
-                }
-            }
-
-            @Override
-            public void readHeaderBlockEnd() {
-                delegate.readHeaderBlockEnd();
-            }
-
-            @Override
-            public void readFrameError(String message) {
-                delegate.readFrameError(message);
-            }
-        });
+        }
     }
 
     private static void encodeDataFrameHeader(ByteBuf buffer, int streamId, byte flags, int length) {
@@ -147,10 +160,8 @@ public class SpdyFrameDecoderTest {
         for (int i = 0; i < 256; i ++) {
             buf.writeInt(RANDOM.nextInt());
         }
-        delegate.readDataFrame(streamId, false, buf.slice(SPDY_HEADER_SIZE, length));
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readDataFrame(streamId, false, buf.slice(SPDY_HEADER_SIZE, length));
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -164,10 +175,8 @@ public class SpdyFrameDecoderTest {
         ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
         encodeDataFrameHeader(buf, streamId, flags, length);
 
-        delegate.readDataFrame(streamId, false, Unpooled.EMPTY_BUFFER);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readDataFrame(streamId, false, Unpooled.EMPTY_BUFFER);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -181,10 +190,8 @@ public class SpdyFrameDecoderTest {
         ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
         encodeDataFrameHeader(buf, streamId, flags, length);
 
-        delegate.readDataFrame(streamId, true, Unpooled.EMPTY_BUFFER);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readDataFrame(streamId, true, Unpooled.EMPTY_BUFFER);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -198,10 +205,8 @@ public class SpdyFrameDecoderTest {
         ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
         encodeDataFrameHeader(buf, streamId, flags, length);
 
-        delegate.readDataFrame(streamId, false, Unpooled.EMPTY_BUFFER);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readDataFrame(streamId, false, Unpooled.EMPTY_BUFFER);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -215,10 +220,8 @@ public class SpdyFrameDecoderTest {
         ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
         encodeDataFrameHeader(buf, streamId, flags, length);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError((String) any());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -234,11 +237,9 @@ public class SpdyFrameDecoderTest {
         encodeDataFrameHeader(buf, streamId1, flags, length);
         encodeDataFrameHeader(buf, streamId2, flags, length);
 
-        delegate.readDataFrame(streamId1, false, Unpooled.EMPTY_BUFFER);
-        delegate.readDataFrame(streamId2, false, Unpooled.EMPTY_BUFFER);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readDataFrame(streamId1, false, Unpooled.EMPTY_BUFFER);
+        verify(delegate).readDataFrame(streamId2, false, Unpooled.EMPTY_BUFFER);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -259,11 +260,9 @@ public class SpdyFrameDecoderTest {
         buf.writeByte(priority << 5);
         buf.writeByte(0);
 
-        delegate.readSynStreamFrame(streamId, associatedToStreamId, priority, false, false);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSynStreamFrame(streamId, associatedToStreamId, priority, false, false);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -284,11 +283,9 @@ public class SpdyFrameDecoderTest {
         buf.writeByte(priority << 5);
         buf.writeByte(0);
 
-        delegate.readSynStreamFrame(streamId, associatedToStreamId, priority, true, false);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSynStreamFrame(streamId, associatedToStreamId, priority, true, false);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -309,11 +306,9 @@ public class SpdyFrameDecoderTest {
         buf.writeByte(priority << 5);
         buf.writeByte(0);
 
-        delegate.readSynStreamFrame(streamId, associatedToStreamId, priority, false, true);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSynStreamFrame(streamId, associatedToStreamId, priority, false, true);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -334,11 +329,9 @@ public class SpdyFrameDecoderTest {
         buf.writeByte(priority << 5);
         buf.writeByte(0);
 
-        delegate.readSynStreamFrame(streamId, associatedToStreamId, priority, false, false);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSynStreamFrame(streamId, associatedToStreamId, priority, false, false);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -359,11 +352,9 @@ public class SpdyFrameDecoderTest {
         buf.writeByte(priority << 5);
         buf.writeByte(0);
 
-        delegate.readSynStreamFrame(streamId, associatedToStreamId, priority, false, false);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSynStreamFrame(streamId, associatedToStreamId, priority, false, false);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -384,11 +375,9 @@ public class SpdyFrameDecoderTest {
         buf.writeByte(priority << 5 | 0x1F); // should ignore reserved bits
         buf.writeByte(0xFF); // should ignore reserved bits
 
-        delegate.readSynStreamFrame(streamId, associatedToStreamId, priority, false, false);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSynStreamFrame(streamId, associatedToStreamId, priority, false, false);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -406,10 +395,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId);
         buf.writeInt(associatedToStreamId);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -430,10 +417,8 @@ public class SpdyFrameDecoderTest {
         buf.writeByte(priority << 5);
         buf.writeByte(0);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -460,13 +445,11 @@ public class SpdyFrameDecoderTest {
             headerBlock.writeInt(RANDOM.nextInt());
         }
 
-        delegate.readSynStreamFrame(streamId, associatedToStreamId, priority, false, false);
-        delegate.readHeaderBlock(headerBlock.duplicate());
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
         decoder.decode(headerBlock);
-        verify(delegate);
+        verify(delegate).readSynStreamFrame(streamId, associatedToStreamId, priority, false, false);
+        verify(delegate).readHeaderBlock(headerBlock.slice(0, headerBlock.writerIndex()));
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         assertFalse(headerBlock.isReadable());
         buf.release();
@@ -484,11 +467,9 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
-        delegate.readSynReplyFrame(streamId, false);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSynReplyFrame(streamId, false);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -504,11 +485,9 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
-        delegate.readSynReplyFrame(streamId, true);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSynReplyFrame(streamId, true);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -524,11 +503,9 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
-        delegate.readSynReplyFrame(streamId, false);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSynReplyFrame(streamId, false);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -544,11 +521,10 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId | 0x80000000); // should ignore reserved bit
 
-        delegate.readSynReplyFrame(streamId, false);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSynReplyFrame(streamId, false);
+        verify(delegate).readHeaderBlockEnd();
+
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -562,10 +538,8 @@ public class SpdyFrameDecoderTest {
         ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
         encodeControlFrameHeader(buf, type, flags, length);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -581,10 +555,8 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -606,13 +578,11 @@ public class SpdyFrameDecoderTest {
             headerBlock.writeInt(RANDOM.nextInt());
         }
 
-        delegate.readSynReplyFrame(streamId, false);
-        delegate.readHeaderBlock(headerBlock.duplicate());
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
         decoder.decode(headerBlock);
-        verify(delegate);
+        verify(delegate).readSynReplyFrame(streamId, false);
+        verify(delegate).readHeaderBlock(headerBlock.slice(0, headerBlock.writerIndex()));
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         assertFalse(headerBlock.isReadable());
         buf.release();
@@ -632,10 +602,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId);
         buf.writeInt(statusCode);
 
-        delegate.readRstStreamFrame(streamId, statusCode);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readRstStreamFrame(streamId, statusCode);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -653,10 +621,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId | 0x80000000); // should ignore reserved bit
         buf.writeInt(statusCode);
 
-        delegate.readRstStreamFrame(streamId, statusCode);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readRstStreamFrame(streamId, statusCode);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -674,10 +640,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId);
         buf.writeInt(statusCode);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -695,10 +659,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId);
         buf.writeInt(statusCode);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -716,10 +678,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId);
         buf.writeInt(statusCode);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -737,10 +697,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId);
         buf.writeInt(statusCode);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -764,13 +722,10 @@ public class SpdyFrameDecoderTest {
             buf.writeInt(value);
         }
 
-        delegate.readSettingsFrame(false);
-        delegate.readSetting(id, value, false, false);
-        expectLastCall().times(numSettings);
         delegate.readSettingsEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSettingsFrame(false);
+        verify(delegate, times(numSettings)).readSetting(id, value, false, false);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -786,11 +741,9 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(numSettings);
 
-        delegate.readSettingsFrame(false);
-        delegate.readSettingsEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSettingsFrame(false);
+        verify(delegate).readSettingsEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -806,11 +759,9 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(numSettings);
 
-        delegate.readSettingsFrame(true);
-        delegate.readSettingsEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSettingsFrame(true);
+        verify(delegate).readSettingsEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -834,13 +785,10 @@ public class SpdyFrameDecoderTest {
             buf.writeInt(value);
         }
 
-        delegate.readSettingsFrame(false);
-        delegate.readSetting(id, value, true, false);
-        expectLastCall().times(numSettings);
         delegate.readSettingsEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSettingsFrame(false);
+        verify(delegate, times(numSettings)).readSetting(id, value, true, false);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -864,13 +812,10 @@ public class SpdyFrameDecoderTest {
             buf.writeInt(value);
         }
 
-        delegate.readSettingsFrame(false);
-        delegate.readSetting(id, value, false, true);
-        expectLastCall().times(numSettings);
         delegate.readSettingsEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSettingsFrame(false);
+        verify(delegate, times(numSettings)).readSetting(id, value, false, true);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -886,11 +831,9 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(numSettings);
 
-        delegate.readSettingsFrame(false);
-        delegate.readSettingsEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSettingsFrame(false);
+        verify(delegate).readSettingsEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -914,13 +857,10 @@ public class SpdyFrameDecoderTest {
             buf.writeInt(value);
         }
 
-        delegate.readSettingsFrame(false);
-        delegate.readSetting(id, value, false, false);
-        expectLastCall().times(numSettings);
         delegate.readSettingsEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readSettingsFrame(false);
+        verify(delegate, times(numSettings)).readSetting(id, value, false, false);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -944,10 +884,8 @@ public class SpdyFrameDecoderTest {
             buf.writeInt(value);
         }
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -971,10 +909,8 @@ public class SpdyFrameDecoderTest {
             buf.writeInt(value);
         }
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -989,9 +925,8 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeLong(RANDOM.nextLong());
 
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verifyZeroInteractions(delegate);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1005,9 +940,8 @@ public class SpdyFrameDecoderTest {
         ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
         encodeControlFrameHeader(buf, type, flags, length);
 
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verifyZeroInteractions(delegate);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1026,11 +960,10 @@ public class SpdyFrameDecoderTest {
         segment1.writeInt(RANDOM.nextInt());
         segment2.writeInt(RANDOM.nextInt());
 
-        replay(delegate);
         decoder.decode(header);
         decoder.decode(segment1);
         decoder.decode(segment2);
-        verify(delegate);
+        verifyZeroInteractions(delegate);
         assertFalse(header.isReadable());
         assertFalse(segment1.isReadable());
         assertFalse(segment2.isReadable());
@@ -1050,10 +983,8 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(id);
 
-        delegate.readPingFrame(id);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readPingFrame(id);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1069,10 +1000,8 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(id);
 
-        delegate.readPingFrame(id);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readPingFrame(id);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1088,10 +1017,8 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(id);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1109,10 +1036,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(lastGoodStreamId);
         buf.writeInt(statusCode);
 
-        delegate.readGoAwayFrame(lastGoodStreamId, statusCode);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readGoAwayFrame(lastGoodStreamId, statusCode);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1130,10 +1055,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(lastGoodStreamId);
         buf.writeInt(statusCode);
 
-        delegate.readGoAwayFrame(lastGoodStreamId, statusCode);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readGoAwayFrame(lastGoodStreamId, statusCode);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1151,10 +1074,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(lastGoodStreamId | 0x80000000); // should ignore reserved bit
         buf.writeInt(statusCode);
 
-        delegate.readGoAwayFrame(lastGoodStreamId, statusCode);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readGoAwayFrame(lastGoodStreamId, statusCode);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1172,10 +1093,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(lastGoodStreamId);
         buf.writeInt(statusCode);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1191,11 +1110,9 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
-        delegate.readHeadersFrame(streamId, false);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readHeadersFrame(streamId, false);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1211,11 +1128,9 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
-        delegate.readHeadersFrame(streamId, true);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readHeadersFrame(streamId, true);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1231,11 +1146,9 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
-        delegate.readHeadersFrame(streamId, false);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readHeadersFrame(streamId, false);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1251,11 +1164,9 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId | 0x80000000); // should ignore reserved bit
 
-        delegate.readHeadersFrame(streamId, false);
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readHeadersFrame(streamId, false);
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1269,10 +1180,8 @@ public class SpdyFrameDecoderTest {
         ByteBuf buf = Unpooled.buffer(SPDY_HEADER_SIZE + length);
         encodeControlFrameHeader(buf, type, flags, length);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1288,10 +1197,8 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
         buf.writeInt(streamId);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1312,14 +1219,11 @@ public class SpdyFrameDecoderTest {
         for (int i = 0; i < 256; i ++) {
             headerBlock.writeInt(RANDOM.nextInt());
         }
-
-        delegate.readHeadersFrame(streamId, false);
-        delegate.readHeaderBlock(headerBlock.duplicate());
-        delegate.readHeaderBlockEnd();
-        replay(delegate);
         decoder.decode(buf);
         decoder.decode(headerBlock);
-        verify(delegate);
+        verify(delegate).readHeadersFrame(streamId, false);
+        verify(delegate).readHeaderBlock(headerBlock.slice(0, headerBlock.writerIndex()));
+        verify(delegate).readHeaderBlockEnd();
         assertFalse(buf.isReadable());
         assertFalse(headerBlock.isReadable());
         buf.release();
@@ -1339,10 +1243,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId);
         buf.writeInt(deltaWindowSize);
 
-        delegate.readWindowUpdateFrame(streamId, deltaWindowSize);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readWindowUpdateFrame(streamId, deltaWindowSize);
         assertFalse(buf.isReadable());
     }
 
@@ -1359,10 +1261,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId);
         buf.writeInt(deltaWindowSize);
 
-        delegate.readWindowUpdateFrame(streamId, deltaWindowSize);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readWindowUpdateFrame(streamId, deltaWindowSize);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1380,10 +1280,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId | 0x80000000); // should ignore reserved bit
         buf.writeInt(deltaWindowSize | 0x80000000); // should ignore reserved bit
 
-        delegate.readWindowUpdateFrame(streamId, deltaWindowSize);
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readWindowUpdateFrame(streamId, deltaWindowSize);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1401,10 +1299,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId);
         buf.writeInt(deltaWindowSize);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -1422,10 +1318,8 @@ public class SpdyFrameDecoderTest {
         buf.writeInt(streamId);
         buf.writeInt(deltaWindowSize);
 
-        delegate.readFrameError((String) anyObject());
-        replay(delegate);
         decoder.decode(buf);
-        verify(delegate);
+        verify(delegate).readFrameError(anyString());
         assertFalse(buf.isReadable());
         buf.release();
     }

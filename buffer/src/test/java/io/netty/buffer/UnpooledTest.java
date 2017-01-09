@@ -15,9 +15,9 @@
  */
 package io.netty.buffer;
 
-import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -450,19 +450,23 @@ public class UnpooledTest {
             // Expected
         }
 
+        InputStream inputStream = Mockito.mock(InputStream.class);
         try {
-            buf.setBytes(0, EasyMock.createMock(InputStream.class), 0);
+            buf.setBytes(0, inputStream, 0);
             fail();
         } catch (UnsupportedOperationException e) {
             // Expected
         }
+        Mockito.verifyZeroInteractions(inputStream);
 
+        ScatteringByteChannel scatteringByteChannel = Mockito.mock(ScatteringByteChannel.class);
         try {
-            buf.setBytes(0, EasyMock.createMock(ScatteringByteChannel.class), 0);
+            buf.setBytes(0, scatteringByteChannel, 0);
             fail();
         } catch (UnsupportedOperationException e) {
             // Expected
         }
+        Mockito.verifyZeroInteractions(scatteringByteChannel);
     }
 
     @Test

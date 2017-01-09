@@ -108,6 +108,9 @@ public class DefaultHttp2ConnectionDecoderTest {
     private Http2FrameReader reader;
 
     @Mock
+    private Http2FrameWriter writer;
+
+    @Mock
     private Http2ConnectionEncoder encoder;
 
     @Mock
@@ -127,7 +130,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         doAnswer(new Answer<Http2Stream>() {
             @Override
             public Http2Stream answer(InvocationOnMock in) throws Throwable {
-                Http2StreamVisitor visitor = in.getArgumentAt(0, Http2StreamVisitor.class);
+                Http2StreamVisitor visitor = in.getArgument(0);
                 if (!visitor.visit(stream)) {
                     return stream;
                 }
@@ -139,6 +142,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(connection.local()).thenReturn(local);
         when(local.flowController()).thenReturn(localFlow);
         when(encoder.flowController()).thenReturn(remoteFlow);
+        when(encoder.frameWriter()).thenReturn(writer);
         when(connection.remote()).thenReturn(remote);
         when(local.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
         when(remote.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
