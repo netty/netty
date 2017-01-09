@@ -72,17 +72,16 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
 
     abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
 
+    @Override
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
     final class KQueueServerSocketUnsafe extends AbstractKQueueUnsafe {
         // Will hold the remote address after accept(...) was successful.
         // We need 24 bytes for the address as maximum + 1 byte for storing the capacity.
         // So use 26 bytes as it's a power of two.
         private final byte[] acceptedAddress = new byte[26];
-
-        @Override
-        public void connect(SocketAddress socketAddress, SocketAddress socketAddress2, ChannelPromise channelPromise) {
-            // Connect not supported by ServerChannel implementations
-            channelPromise.setFailure(new UnsupportedOperationException());
-        }
 
         @Override
         void readReady(KQueueRecvByteAllocatorHandle allocHandle) {

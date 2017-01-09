@@ -37,7 +37,6 @@ import static io.netty.channel.unix.NativeInetAddress.address;
 public final class EpollServerSocketChannel extends AbstractEpollServerChannel implements ServerSocketChannel {
 
     private final EpollServerSocketChannelConfig config;
-    private volatile InetSocketAddress local;
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public EpollServerSocketChannel() {
@@ -53,17 +52,11 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
 
     EpollServerSocketChannel(LinuxSocket fd) {
         super(fd);
-        // As we create an EpollServerSocketChannel from a FileDescriptor we should try to obtain the remote and local
-        // address from it. This is needed as the FileDescriptor may be bound already.
-        local = fd.localAddress();
         config = new EpollServerSocketChannelConfig(this);
     }
 
     EpollServerSocketChannel(LinuxSocket fd, boolean active) {
         super(fd, active);
-        // As we create an EpollServerSocketChannel from a FileDescriptor we should try to obtain the remote and local
-        // address from it. This is needed as the FileDescriptor may be bound already.
-        local = fd.localAddress();
         config = new EpollServerSocketChannelConfig(this);
     }
 
@@ -74,10 +67,7 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        InetSocketAddress addr = (InetSocketAddress) localAddress;
-        checkResolvable(addr);
-        socket.bind(addr);
-        local = socket.localAddress();
+        super.doBind(localAddress);
         if (Native.IS_SUPPORTING_TCP_FASTOPEN && config.getTcpFastopen() > 0) {
             socket.setTcpFastOpen(config.getTcpFastopen());
         }
@@ -98,11 +88,6 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     @Override
     public EpollServerSocketChannelConfig config() {
         return config;
-    }
-
-    @Override
-    protected InetSocketAddress localAddress0() {
-        return local;
     }
 
     @Override

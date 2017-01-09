@@ -29,7 +29,6 @@ import static io.netty.channel.unix.NativeInetAddress.address;
 @UnstableApi
 public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel implements ServerSocketChannel {
     private final KQueueServerSocketChannelConfig config;
-    private volatile InetSocketAddress local;
 
     public KQueueServerSocketChannel() {
         super(newSocketStream(), false);
@@ -45,18 +44,11 @@ public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel
     KQueueServerSocketChannel(BsdSocket fd) {
         super(fd);
         config = new KQueueServerSocketChannelConfig(this);
-
-        // As we create an KQueueServerSocketChannel from a FileDescriptor we should try to obtain the remote and local
-        // address from it. This is needed as the FileDescriptor may be bound already.
-        local = fd.localAddress();
     }
 
     KQueueServerSocketChannel(BsdSocket fd, boolean active) {
         super(fd, active);
         config = new KQueueServerSocketChannelConfig(this);
-        // As we create an KQueueServerSocketChannel from a FileDescriptor we should try to obtain the remote and local
-        // address from it. This is needed as the FileDescriptor may be bound already.
-        local = fd.localAddress();
     }
 
     @Override
@@ -66,10 +58,8 @@ public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        InetSocketAddress addr = (InetSocketAddress) localAddress;
-        checkResolvable(addr);
-        socket.bind(addr);
-        local = socket.localAddress();
+        super.doBind(localAddress);
+
         // TODO(scott): tcp fast open here!
         socket.listen(config.getBacklog());
         active = true;
@@ -88,11 +78,6 @@ public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel
     @Override
     public KQueueServerSocketChannelConfig config() {
         return config;
-    }
-
-    @Override
-    protected InetSocketAddress localAddress0() {
-        return local;
     }
 
     @Override
