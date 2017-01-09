@@ -16,7 +16,7 @@
 
 package io.netty.util.concurrent;
 
-import static org.easymock.EasyMock.*;
+import static org.mockito.Mockito.*;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,49 +43,49 @@ public class PromiseNotifierTest {
     @Test
     public void testListenerSuccess() throws Exception {
         @SuppressWarnings("unchecked")
-        Promise<Void> p1 = createStrictMock(Promise.class);
+        Promise<Void> p1 = mock(Promise.class);
         @SuppressWarnings("unchecked")
-        Promise<Void> p2 = createStrictMock(Promise.class);
+        Promise<Void> p2 = mock(Promise.class);
 
         @SuppressWarnings("unchecked")
         PromiseNotifier<Void, Future<Void>> notifier =
                 new PromiseNotifier<Void, Future<Void>>(p1, p2);
 
         @SuppressWarnings("unchecked")
-        Future<Void> future = createStrictMock(Future.class);
-        expect(future.isSuccess()).andReturn(true);
-        expect(future.get()).andReturn(null);
-        expect(p1.trySuccess(null)).andReturn(true);
-        expect(p2.trySuccess(null)).andReturn(true);
-        replay(p1, p2, future);
+        Future<Void> future = mock(Future.class);
+        when(future.isSuccess()).thenReturn(true);
+        when(future.get()).thenReturn(null);
+        when(p1.trySuccess(null)).thenReturn(true);
+        when(p2.trySuccess(null)).thenReturn(true);
 
         notifier.operationComplete(future);
-        verify(p1, p2);
+        verify(p1).trySuccess(null);
+        verify(p2).trySuccess(null);
     }
 
     @Test
     public void testListenerFailure() throws Exception {
         @SuppressWarnings("unchecked")
-        Promise<Void> p1 = createStrictMock(Promise.class);
+        Promise<Void> p1 = mock(Promise.class);
         @SuppressWarnings("unchecked")
-        Promise<Void> p2 = createStrictMock(Promise.class);
+        Promise<Void> p2 = mock(Promise.class);
 
         @SuppressWarnings("unchecked")
         PromiseNotifier<Void, Future<Void>> notifier =
                 new PromiseNotifier<Void, Future<Void>>(p1, p2);
 
         @SuppressWarnings("unchecked")
-        Future<Void> future = createStrictMock(Future.class);
-        Throwable t = createStrictMock(Throwable.class);
-        expect(future.isSuccess()).andReturn(false);
-        expect(future.isCancelled()).andReturn(false);
-        expect(future.cause()).andReturn(t);
-        expect(p1.tryFailure(t)).andReturn(true);
-        expect(p2.tryFailure(t)).andReturn(true);
-        replay(p1, p2, future);
+        Future<Void> future = mock(Future.class);
+        Throwable t = mock(Throwable.class);
+        when(future.isSuccess()).thenReturn(false);
+        when(future.isCancelled()).thenReturn(false);
+        when(future.cause()).thenReturn(t);
+        when(p1.tryFailure(t)).thenReturn(true);
+        when(p2.tryFailure(t)).thenReturn(true);
 
         notifier.operationComplete(future);
-        verify(p1, p2);
+        verify(p1).tryFailure(t);
+        verify(p2).tryFailure(t);
     }
 
 }
