@@ -23,6 +23,7 @@ void netty_unix_errors_throwRuntimeExceptionErrorNo(JNIEnv* env, char* message, 
 void netty_unix_errors_throwChannelExceptionErrorNo(JNIEnv* env, char* message, int errorNumber);
 void netty_unix_errors_throwIOException(JNIEnv* env, char* message);
 void netty_unix_errors_throwIOExceptionErrorNo(JNIEnv* env, char* message, int errorNumber);
+void netty_unix_errors_throwPortUnreachableException(JNIEnv* env, char* message);
 void netty_unix_errors_throwClosedChannelException(JNIEnv* env);
 void netty_unix_errors_throwOutOfMemoryError(JNIEnv* env);
 

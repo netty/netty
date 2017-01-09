@@ -20,14 +20,18 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.oio.OioDatagramChannel;
 import org.junit.Test;
 
 import java.net.BindException;
+import java.nio.channels.NotYetConnectedException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -117,29 +121,20 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         testSimpleSend0(sb, cb, Unpooled.directBuffer().writeBytes(BYTES), false, BYTES, 4);
     }
 
+    @Test
+    public void testSimpleSendWithConnect() throws Throwable {
+        run();
+    }
+
+    public void testSimpleSendWithConnect(Bootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleSendWithConnect0(sb, cb, Unpooled.directBuffer().writeBytes(BYTES), BYTES, 1);
+        testSimpleSendWithConnect0(sb, cb, Unpooled.directBuffer().writeBytes(BYTES), BYTES, 4);
+    }
+
     @SuppressWarnings("deprecation")
     private void testSimpleSend0(Bootstrap sb, Bootstrap cb, ByteBuf buf, boolean bindClient,
                                  final byte[] bytes, int count)
             throws Throwable {
-        final CountDownLatch latch = new CountDownLatch(count);
-
-        sb.handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
-                    @Override
-                    public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
-                        ByteBuf buf = msg.content();
-                        assertEquals(bytes.length, buf.readableBytes());
-                        for (byte b: bytes) {
-                            assertEquals(b, buf.readByte());
-                        }
-                        latch.countDown();
-                    }
-                });
-            }
-        });
-
         cb.handler(new SimpleChannelInboundHandler<Object>() {
             @Override
             public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
@@ -147,26 +142,8 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             }
         });
 
-        Channel sc = null;
-        BindException bindFailureCause = null;
-        for (int i = 0; i < 3; i ++) {
-            try {
-                sc = sb.bind().sync().channel();
-                break;
-            } catch (Exception e) {
-                if (e instanceof BindException) {
-                    logger.warn("Failed to bind to a free port; trying again", e);
-                    bindFailureCause = (BindException) e;
-                    refreshLocalAddress(sb);
-                } else {
-                    throw e;
-                }
-            }
-        }
-
-        if (sc == null) {
-            throw bindFailureCause;
-        }
+        final CountDownLatch latch = new CountDownLatch(count);
+        Channel sc = setupServerChannel(sb, bytes, latch);
 
         Channel cc;
         if (bindClient) {
@@ -186,5 +163,99 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
         sc.close().sync();
         cc.close().sync();
+    }
+
+    private void testSimpleSendWithConnect0(Bootstrap sb, Bootstrap cb, ByteBuf buf, final byte[] bytes, int count)
+            throws Throwable {
+        cb.handler(new SimpleChannelInboundHandler<Object>() {
+            @Override
+            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+                // Nothing will be sent.
+            }
+        });
+
+        final CountDownLatch latch = new CountDownLatch(count);
+        Channel sc = setupServerChannel(sb, bytes, latch);
+        DatagramChannel cc = null;
+        try {
+            cc = (DatagramChannel) cb.connect(sc.localAddress()).sync().channel();
+
+            for (int i = 0; i < count; i++) {
+                cc.write(buf.retain().duplicate());
+            }
+            cc.flush();
+            assertTrue(latch.await(10, TimeUnit.SECONDS));
+
+            assertTrue(cc.isConnected());
+
+            // Test what happens when we call disconnect()
+            cc.disconnect().syncUninterruptibly();
+            assertFalse(cc.isConnected());
+
+            ChannelFuture future = cc.writeAndFlush(
+                    buf.retain().duplicate()).awaitUninterruptibly();
+            if (!(cc instanceof OioDatagramChannel)) {
+                // TODO: Also handle OIO
+                assertTrue(future.cause() instanceof NotYetConnectedException);
+            }
+        } finally {
+            // release as we used buf.retain() before
+            buf.release();
+
+            sc.close().sync();
+            if (cc != null) {
+                cc.close().sync();
+            }
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private Channel setupServerChannel(Bootstrap sb, final byte[] bytes, final CountDownLatch latch)
+            throws Throwable {
+        sb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
+                    @Override
+                    public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+                        ByteBuf buf = msg.content();
+                        assertEquals(bytes.length, buf.readableBytes());
+                        for (byte b : bytes) {
+                            assertEquals(b, buf.readByte());
+                        }
+                        latch.countDown();
+                    }
+                });
+            }
+        });
+
+        cb.handler(new SimpleChannelInboundHandler<Object>() {
+            @Override
+            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+                // Nothing will be sent.
+            }
+        });
+
+        Channel sc = null;
+        BindException bindFailureCause = null;
+        for (int i = 0; i < 3; i++) {
+            try {
+                sc = sb.bind().sync().channel();
+                break;
+            } catch (Exception e) {
+                if (e instanceof BindException) {
+                    logger.warn("Failed to bind to a free port; trying again", e);
+                    bindFailureCause = (BindException) e;
+                    refreshLocalAddress(sb);
+                } else {
+                    throw e;
+                }
+            }
+        }
+
+        if (sc == null) {
+            throw bindFailureCause;
+        }
+        return sc;
     }
 }

@@ -178,6 +178,18 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         );
     }
 
+    @Override
+    public List<BootstrapFactory<Bootstrap>> datagramSocket() {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDatagramChannel.class);
+                    }
+                }
+        );
+    }
+
     public boolean isServerFastOpen() {
         return AccessController.doPrivileged(new PrivilegedAction<Integer>() {
             @Override

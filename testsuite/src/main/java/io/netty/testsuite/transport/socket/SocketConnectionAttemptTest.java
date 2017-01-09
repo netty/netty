@@ -26,8 +26,6 @@ import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
 
@@ -42,15 +40,6 @@ import static org.junit.Assume.*;
 
 public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
-    private static final String BAD_HOST = SystemPropertyUtil.get("io.netty.testsuite.badHost", "netty.io");
-    private static final int BAD_PORT = SystemPropertyUtil.getInt("io.netty.testsuite.badPort", 65535);
-
-    static {
-        InternalLogger logger = InternalLoggerFactory.getInstance(SocketConnectionAttemptTest.class);
-        logger.debug("-Dio.netty.testsuite.badHost: {}", BAD_HOST);
-        logger.debug("-Dio.netty.testsuite.badPort: {}", BAD_PORT);
-    }
-
     @Test(timeout = 30000)
     public void testConnectTimeout() throws Throwable {
         run();
@@ -58,7 +47,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
     public void testConnectTimeout(Bootstrap cb) throws Throwable {
         cb.handler(new TestHandler()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000);
-        ChannelFuture future = cb.connect(BAD_HOST, BAD_PORT);
+        ChannelFuture future = cb.connect(SocketTestPermutation.BAD_HOST, SocketTestPermutation.BAD_PORT);
         try {
             assertThat(future.await(3000), is(true));
         } finally {
@@ -108,7 +97,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         boolean badHostTimedOut = true;
         Socket socket = new Socket();
         try {
-            socket.connect(new InetSocketAddress(BAD_HOST, BAD_PORT), 10);
+            socket.connect(new InetSocketAddress(SocketTestPermutation.BAD_HOST, SocketTestPermutation.BAD_PORT), 10);
         } catch (ConnectException e) {
             badHostTimedOut = false;
             // is thrown for no route to host when using Socket connect
@@ -122,18 +111,19 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
             }
         }
 
-        assumeThat("The connection attempt to " + BAD_HOST + " does not time out.", badHostTimedOut, is(true));
+        assumeThat("The connection attempt to " + SocketTestPermutation.BAD_HOST + " does not time out.",
+                badHostTimedOut, is(true));
 
         run();
     }
 
     public void testConnectCancellation(Bootstrap cb) throws Throwable {
         cb.handler(new TestHandler()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4000);
-        ChannelFuture future = cb.connect(BAD_HOST, BAD_PORT);
+        ChannelFuture future = cb.connect(SocketTestPermutation.BAD_HOST, SocketTestPermutation.BAD_PORT);
         try {
             if (future.await(1000)) {
                 if (future.isSuccess()) {
-                    fail("A connection attempt to " + BAD_HOST + " must not succeed.");
+                    fail("A connection attempt to " + SocketTestPermutation.BAD_HOST + " must not succeed.");
                 } else {
                     throw future.cause();
                 }
