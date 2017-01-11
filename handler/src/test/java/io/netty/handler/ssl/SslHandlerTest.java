@@ -46,7 +46,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
-import org.junit.Assume;
 import org.junit.Test;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -63,6 +62,7 @@ import io.netty.util.ReferenceCounted;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -371,5 +371,17 @@ public class SslHandlerTest {
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
         }
+    }
+
+    @Test
+    public void testCloseFutureNotified() throws Exception {
+        SslHandler handler = new SslHandler(SSLContext.getDefault().createSSLEngine());
+        EmbeddedChannel ch = new EmbeddedChannel(handler);
+
+        // Closing the Channel will also produce a close_notify so it is expected to return true.
+        assertTrue(ch.finishAndReleaseAll());
+
+        assertTrue(handler.handshakeFuture().cause() instanceof ClosedChannelException);
+        assertTrue(handler.sslCloseFuture().cause() instanceof ClosedChannelException);
     }
 }

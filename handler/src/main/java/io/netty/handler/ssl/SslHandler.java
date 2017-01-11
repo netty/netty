@@ -277,7 +277,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private PendingWriteQueue pendingUnencryptedWrites;
 
     private Promise<Channel> handshakePromise = new LazyChannelPromise();
-    private final LazyChannelPromise sslCloseFuture = new LazyChannelPromise();
+    private final LazyChannelPromise sslClosePromise = new LazyChannelPromise();
 
     /**
      * Set by wrap*() methods when something is produced.
@@ -456,7 +456,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * @see SSLEngine
      */
     public Future<Channel> sslCloseFuture() {
-        return sslCloseFuture;
+        return sslClosePromise;
     }
 
     @Override
@@ -770,6 +770,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Make sure to release SSLEngine,
         // and notify the handshake future if the connection has been closed during handshake.
         setHandshakeFailure(ctx, CHANNEL_CLOSED, !outboundClosed);
+
+        // Ensure we always notify the sslClosePromise as well
+        sslClosePromise.tryFailure(CHANNEL_CLOSED);
         super.channelInactive(ctx);
     }
 
@@ -804,7 +807,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *
      */
     private boolean ignoreException(Throwable t) {
-        if (!(t instanceof SSLException) && t instanceof IOException && sslCloseFuture.isDone()) {
+        if (!(t instanceof SSLException) && t instanceof IOException && sslClosePromise.isDone()) {
             String message = String.valueOf(t.getMessage()).toLowerCase();
 
             // first try to match connection reset / broke peer based on the regex. This is the fastest way
@@ -1129,7 +1132,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             if (notifyClosure) {
-                sslCloseFuture.trySuccess(ctx.channel());
+                sslClosePromise.trySuccess(ctx.channel());
             }
         } finally {
             if (decodeOut != null) {
