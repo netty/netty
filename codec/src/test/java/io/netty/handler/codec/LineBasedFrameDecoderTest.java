@@ -135,10 +135,10 @@ public class LineBasedFrameDecoderTest {
 
         assertTrue(ch.writeInbound(copiedBuffer("line\r\n.\r\n", CharsetUtil.US_ASCII)));
 
-        ByteBuf buf = ch.readInbound();
+        ByteBuf buf = (ByteBuf) ch.readInbound();
         assertEquals("line\r\n", buf.toString(CharsetUtil.US_ASCII));
 
-        ByteBuf buf2 = ch.readInbound();
+        ByteBuf buf2 = (ByteBuf) ch.readInbound();
         assertEquals(".\r\n", buf2.toString(CharsetUtil.US_ASCII));
         assertFalse(ch.finishAndReleaseAll());
 
