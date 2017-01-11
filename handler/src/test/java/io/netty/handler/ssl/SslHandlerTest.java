@@ -35,6 +35,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -45,6 +46,7 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.Test;
 
@@ -68,6 +70,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SslHandlerTest {
 
@@ -410,5 +413,151 @@ public class SslHandlerTest {
         assertTrue(evt instanceof SslCloseCompletionEvent);
         assertTrue(evt.cause() instanceof ClosedChannelException);
         assertTrue(events.isEmpty());
+    }
+
+    @Test(timeout = 30000)
+    public void testCloseNotifyReceivedJdk() throws Exception {
+        testCloseNotify(SslProvider.JDK, 5000, false);
+    }
+
+    @Test(timeout = 30000)
+    public void testCloseNotifyReceivedOpenSsl() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        testCloseNotify(SslProvider.OPENSSL, 5000, false);
+        testCloseNotify(SslProvider.OPENSSL_REFCNT, 5000, false);
+    }
+
+    @Test(timeout = 30000)
+    public void testCloseNotifyReceivedJdkTimeout() throws Exception {
+        testCloseNotify(SslProvider.JDK, 100, true);
+    }
+
+    @Test(timeout = 30000)
+    public void testCloseNotifyReceivedOpenSslTimeout() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        testCloseNotify(SslProvider.OPENSSL, 100, true);
+        testCloseNotify(SslProvider.OPENSSL_REFCNT, 100, true);
+    }
+
+    @Test(timeout = 30000)
+    public void testCloseNotifyNotWaitForResponseJdk() throws Exception {
+        testCloseNotify(SslProvider.JDK, 0, false);
+    }
+
+    @Test(timeout = 30000)
+    public void testCloseNotifyNotWaitForResponseOpenSsl() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+        testCloseNotify(SslProvider.OPENSSL, 0, false);
+        testCloseNotify(SslProvider.OPENSSL_REFCNT, 0, false);
+    }
+
+    private static void testCloseNotify(SslProvider provider, final long closeNotifyReadTimeout, final boolean timeout)
+            throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+
+        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(provider)
+                .build();
+
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(provider).build();
+
+        EventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            final Promise<Channel> clientPromise = group.next().newPromise();
+            final Promise<Channel> serverPromise = group.next().newPromise();
+
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            SslHandler handler = sslServerCtx.newHandler(ch.alloc());
+                            handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
+                            handler.sslCloseFuture().addListener(
+                                    new PromiseNotifier<Channel, Future<Channel>>(serverPromise));
+                            handler.handshakeFuture().addListener(new FutureListener<Channel>() {
+                                @Override
+                                public void operationComplete(Future<Channel> future) {
+                                    if (!future.isSuccess()) {
+                                        // Something bad happened during handshake fail the promise!
+                                        serverPromise.tryFailure(future.cause());
+                                    }
+                                }
+                            });
+                            ch.pipeline().addLast(handler);
+                        }
+                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            cc = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            final AtomicBoolean closeSent = new AtomicBoolean();
+                            if (timeout) {
+                                ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+                                    @Override
+                                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                        if (closeSent.get()) {
+                                            // Drop data on the floor so we will get a timeout while waiting for the
+                                            // close_notify.
+                                            ReferenceCountUtil.release(msg);
+                                        } else {
+                                            super.channelRead(ctx, msg);
+                                        }
+                                    }
+                                });
+                            }
+
+                            SslHandler handler = sslClientCtx.newHandler(ch.alloc());
+                            handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
+                            handler.sslCloseFuture().addListener(
+                                    new PromiseNotifier<Channel, Future<Channel>>(clientPromise));
+                            handler.handshakeFuture().addListener(new FutureListener<Channel>() {
+                                @Override
+                                public void operationComplete(Future<Channel> future) {
+                                    if (future.isSuccess()) {
+                                        closeSent.compareAndSet(false, true);
+                                        future.getNow().close();
+                                    } else {
+                                        // Something bad happened during handshake fail the promise!
+                                        clientPromise.tryFailure(future.cause());
+                                    }
+                                }
+                            });
+                            ch.pipeline().addLast(handler);
+                        }
+                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+
+            serverPromise.awaitUninterruptibly();
+            clientPromise.awaitUninterruptibly();
+
+            // Server always received the close_notify as the client triggers the close sequence.
+            assertTrue(serverPromise.isSuccess());
+
+            // Depending on if we wait for the response or not the promise will be failed or not.
+            if (closeNotifyReadTimeout > 0 && !timeout) {
+                assertTrue(clientPromise.isSuccess());
+            } else {
+                assertFalse(clientPromise.isSuccess());
+            }
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
+
+            ReferenceCountUtil.release(sslServerCtx);
+            ReferenceCountUtil.release(sslClientCtx);
+        }
     }
 }
