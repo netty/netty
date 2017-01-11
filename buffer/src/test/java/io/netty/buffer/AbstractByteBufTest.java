@@ -104,13 +104,11 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void comparableInterfaceNotViolated() {
-        assumeFalse(buffer.isReadOnly());
         buffer.writerIndex(buffer.readerIndex());
         assumeTrue(buffer.writableBytes() >= 4);
 
         buffer.writeLong(0);
         ByteBuf buffer2 = newBuffer(CAPACITY);
-        assumeFalse(buffer2.isReadOnly());
         buffer2.writerIndex(buffer2.readerIndex());
         // Write an unsigned integer that will cause buffer.getUnsignedInt() - buffer2.getUnsignedInt() to underflow the
         // int type and wrap around on the negative side.
