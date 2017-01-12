@@ -422,12 +422,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             final ByteBuf buf = alloc.directBuffer(len);
             try {
                 final long addr = memoryAddress(buf);
+
+                // Set the limit depending on the length of the allocated buffer and restore the original
+                // after we copied bytes.
+                int limit = src.limit();
                 int newLimit = pos + len;
-                if (newLimit != src.remaining()) {
-                    buf.setBytes(0, (ByteBuffer) src.duplicate().position(pos).limit(newLimit));
-                } else {
-                    buf.setBytes(0, src);
-                }
+                src.limit(newLimit);
+                buf.setBytes(0, src);
+                src.limit(limit);
 
                 netWrote = SSL.writeToBIO(networkBIO, addr, len);
                 if (netWrote >= 0) {
