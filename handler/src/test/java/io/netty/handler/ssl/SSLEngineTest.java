@@ -1323,4 +1323,79 @@ public abstract class SSLEngineTest {
             cleanupServerSslEngine(server);
         }
     }
+
+    @Test
+    public void testMultipleRecordsInOneBufferWithNonZeroPosition() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .trustManager(cert.cert())
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            // Choose buffer size small enough that we can put multiple buffers into one buffer and pass it into the
+            // unwrap call without exceed MAX_ENCRYPTED_PACKET_LENGTH.
+            ByteBuffer plainClientOut = ByteBuffer.allocate(1024);
+            ByteBuffer plainServerOut = ByteBuffer.allocate(server.getSession().getApplicationBufferSize());
+
+            ByteBuffer encClientToServer = ByteBuffer.allocate(client.getSession().getPacketBufferSize());
+
+            int positionOffset = 1;
+            // We need to be able to hold 2 records + positionOffset
+            ByteBuffer combinedEncClientToServer = ByteBuffer.allocate(
+                    encClientToServer.capacity() * 2 + positionOffset);
+            combinedEncClientToServer.position(positionOffset);
+
+            handshake(client, server);
+
+            plainClientOut.limit(plainClientOut.capacity());
+            SSLEngineResult result = client.wrap(plainClientOut, encClientToServer);
+            assertEquals(plainClientOut.capacity(), result.bytesConsumed());
+            assertTrue(result.bytesProduced() > 0);
+
+            encClientToServer.flip();
+
+            // Copy the first record into the combined buffer
+            combinedEncClientToServer.put(encClientToServer);
+
+            plainClientOut.clear();
+            encClientToServer.clear();
+
+            result = client.wrap(plainClientOut, encClientToServer);
+            assertEquals(plainClientOut.capacity(), result.bytesConsumed());
+            assertTrue(result.bytesProduced() > 0);
+
+            encClientToServer.flip();
+
+            int encClientToServerLen = encClientToServer.remaining();
+
+            // Copy the first record into the combined buffer
+            combinedEncClientToServer.put(encClientToServer);
+
+            encClientToServer.clear();
+
+            combinedEncClientToServer.flip();
+            combinedEncClientToServer.position(positionOffset);
+
+            // Ensure we have the first record and a tiny amount of the second record in the buffer
+            combinedEncClientToServer.limit(
+                    combinedEncClientToServer.limit() - (encClientToServerLen - positionOffset));
+            result = server.unwrap(combinedEncClientToServer, plainServerOut);
+            assertEquals(encClientToServerLen, result.bytesConsumed());
+            assertTrue(result.bytesProduced() > 0);
+        } finally {
+            cert.delete();
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
 }
