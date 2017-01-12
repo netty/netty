@@ -432,14 +432,20 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     /**
      * Sends an SSL {@code close_notify} message to the specified channel and
      * destroys the underlying {@link SSLEngine}.
+     *
+     * @deprecated use {@link Channel#close()} or {@link ChannelHandlerContext#close()}
      */
+    @Deprecated
     public ChannelFuture close() {
         return close(ctx.newPromise());
     }
 
     /**
      * See {@link #close()}
+     *
+     * @deprecated use {@link Channel#close()} or {@link ChannelHandlerContext#close()}
      */
+    @Deprecated
     public ChannelFuture close(final ChannelPromise promise) {
         final ChannelHandlerContext ctx = this.ctx;
         ctx.executor().execute(new Runnable() {
