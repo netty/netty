@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.7.Final-SNAPSHOT</version>
+  <version>4.1.7.Final</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -53,7 +53,7 @@
     <url>https://github.com/netty/netty</url>
     <connection>scm:git:git://github.com/netty/netty.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>netty-4.1.7.Final</tag>
   </scm>
 
   <developers>
@@ -75,7 +75,7 @@
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--add-modules java.xml.bind --add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9>
         <!-- Not use alpn agent as Java9 supports alpn out of the box -->
-        <argLine.alpnAgent></argLine.alpnAgent>
+        <argLine.alpnAgent />
         <!-- This is needed as earlier ASM versions not support java9 -->
         <!-- https://issues.apache.org/jira/browse/MSHADE-242 -->
         <!-- https://github.com/netty/netty/issues/6100 -->
@@ -238,7 +238,7 @@
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
-    <argLine.java9></argLine.java9> <!-- Overridden when 'java9' profile is active -->
+    <argLine.java9 /> <!-- Overridden when 'java9' profile is active -->
     <argLine.javaProperties>-D_</argLine.javaProperties>
     <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
