@@ -1317,11 +1317,43 @@ public abstract class SSLEngineTest {
 
             assertTrue(client.isOutboundDone());
             assertTrue(client.isInboundDone());
+
+            // Ensure that calling wrap or unwrap again will not produce a SSLException
+            encryptedServerToClient.clear();
+            plainServerOut.clear();
+
+            result = server.wrap(plainServerOut, encryptedServerToClient);
+            assertEngineRemainsClosed(result);
+
+            encryptedClientToServer.clear();
+            plainServerOut.clear();
+
+            result = server.unwrap(encryptedClientToServer, plainServerOut);
+            assertEngineRemainsClosed(result);
+
+            encryptedClientToServer.clear();
+            plainClientOut.clear();
+
+            result = client.wrap(plainClientOut, encryptedClientToServer);
+            assertEngineRemainsClosed(result);
+
+            encryptedServerToClient.clear();
+            plainClientOut.clear();
+
+            result = client.unwrap(encryptedServerToClient, plainClientOut);
+            assertEngineRemainsClosed(result);
         } finally {
             cert.delete();
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
         }
+    }
+
+    private static void assertEngineRemainsClosed(SSLEngineResult result) {
+        assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
+        assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, result.getHandshakeStatus());
+        assertEquals(0, result.bytesConsumed());
+        assertEquals(0, result.bytesProduced());
     }
 
     @Test
