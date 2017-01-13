@@ -20,6 +20,11 @@ import org.junit.BeforeClass;
 import static org.junit.Assume.assumeTrue;
 
 public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
+
+    public JdkOpenSslEngineInteroptTest(BufferType type) {
+        super(type);
+    }
+
     @BeforeClass
     public static void checkOpenSsl() {
         assumeTrue(OpenSsl.isAvailable());
