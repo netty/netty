@@ -38,6 +38,10 @@ public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
 
+    public OpenSslEngineTest(BufferType type) {
+        super(type);
+    }
+
     @BeforeClass
     public static void checkOpenSsl() {
         assumeTrue(OpenSsl.isAvailable());
@@ -78,7 +82,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
             new String[]{PROTOCOL_SSL_V2_HELLO, PROTOCOL_TLS_V1_2});
     }
     @Test
-    public void testWrapHeapBuffersNoWritePendingError() throws Exception {
+    public void testWrapBuffersNoWritePendingError() throws Exception {
         clientSslCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
@@ -94,9 +98,11 @@ public class OpenSslEngineTest extends SSLEngineTest {
             serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
             handshake(clientEngine, serverEngine);
 
-            ByteBuffer src = ByteBuffer.allocate(1024 * 10);
-            ThreadLocalRandom.current().nextBytes(src.array());
-            ByteBuffer dst = ByteBuffer.allocate(1);
+            ByteBuffer src = allocateBuffer(1024 * 10);
+            byte[] data = new byte[src.capacity()];
+            ThreadLocalRandom.current().nextBytes(data);
+            src.put(data).flip();
+            ByteBuffer dst = allocateBuffer(1);
             // Try to wrap multiple times so we are more likely to hit the issue.
             for (int i = 0; i < 100; i++) {
                 src.position(0);
