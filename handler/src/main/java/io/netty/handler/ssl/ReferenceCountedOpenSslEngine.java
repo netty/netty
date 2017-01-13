@@ -553,6 +553,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     // If the inbound was done as well, we need to ensure we return NOT_HANDSHAKING to signal we are
                     // done.
                     hs = NOT_HANDSHAKING;
+
+                    // As the inbound and the outbound is done we can shutdown the engine now.
+                    shutdown();
                 }
             } else {
                 rs = OK;
@@ -585,10 +588,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         synchronized (this) {
-            // Check to make sure the engine has not been closed and the outbound is not considered as done while the
-            // handshake was not started at all.
-            if (isDestroyed() || (handshakeState == HandshakeState.NOT_STARTED && isOutboundDone())) {
-                return CLOSED_NOT_HANDSHAKING;
+            if (isOutboundDone()) {
+                return isInboundDone() || isDestroyed() ? CLOSED_NOT_HANDSHAKING : NEED_UNWRAP_CLOSED;
             }
 
             SSLEngineResult.HandshakeStatus status = NOT_HANDSHAKING;
@@ -769,9 +770,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         synchronized (this) {
-            // Check to make sure the engine has not been closed and the inbound was not marked as done.
-            if (isDestroyed() || (handshakeState == HandshakeState.NOT_STARTED && isInboundDone())) {
-                return CLOSED_NOT_HANDSHAKING;
+            if (isInboundDone()) {
+                return isOutboundDone() || isDestroyed() ? CLOSED_NOT_HANDSHAKING : NEED_WRAP_CLOSED;
             }
 
             // protect against protocol overflow attack vector
