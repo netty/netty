@@ -51,10 +51,12 @@ import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
 public final class Decoder {
-    private static final Http2Exception DECODE_DECOMPRESSION_EXCEPTION = unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - decompression failure"), Decoder.class, "decode(...)");
     private static final Http2Exception DECODE_ULE_128_DECOMPRESSION_EXCEPTION = unknownStackTrace(
             connectionError(COMPRESSION_ERROR, "HPACK - decompression failure"), Decoder.class, "decodeULE128(...)");
+    private static final Http2Exception DECODE_ULE_128_TO_LONG_DECOMPRESSION_EXCEPTION = unknownStackTrace(
+            connectionError(COMPRESSION_ERROR, "HPACK - long overflow"), Decoder.class, "decodeULE128(...)");
+    private static final Http2Exception DECODE_ULE_128_TO_INT_DECOMPRESSION_EXCEPTION = unknownStackTrace(
+            connectionError(COMPRESSION_ERROR, "HPACK - int overflow"), Decoder.class, "decodeULE128ToInt(...)");
     private static final Http2Exception DECODE_ILLEGAL_INDEX_VALUE = unknownStackTrace(
             connectionError(COMPRESSION_ERROR, "HPACK - illegal index value"), Decoder.class, "decode(...)");
     private static final Http2Exception INDEX_HEADER_ILLEGAL_INDEX_VALUE = unknownStackTrace(
@@ -184,7 +186,7 @@ public final class Decoder {
                     break;
 
                 case READ_MAX_DYNAMIC_TABLE_SIZE:
-                    setDynamicTableSize(decodeULE128(in, index));
+                    setDynamicTableSize(decodeULE128(in, (long) index));
                     state = READ_HEADER_REPRESENTATION;
                     break;
 
@@ -346,7 +348,7 @@ public final class Decoder {
         return dynamicTable.getEntry(index + 1);
     }
 
-    private void setDynamicTableSize(int dynamicTableSize) throws Http2Exception {
+    private void setDynamicTableSize(long dynamicTableSize) throws Http2Exception {
         if (dynamicTableSize > maxDynamicTableSize) {
             throw INVALID_MAX_DYNAMIC_TABLE_SIZE;
         }
@@ -422,26 +424,53 @@ public final class Decoder {
         return new IllegalArgumentException("decode only works with an entire header block! " + in);
     }
 
-    // Unsigned Little Endian Base 128 Variable-Length Integer Encoding
-    private static int decodeULE128(ByteBuf in, int result) throws Http2Exception {
+    /**
+     * Unsigned Little Endian Base 128 Variable-Length Integer Encoding
+     * <p>
+     * Visible for testing only!
+     */
+    static int decodeULE128(ByteBuf in, int result) throws Http2Exception {
+        final int readerIndex = in.readerIndex();
+        final long v = decodeULE128(in, (long) result);
+        if (v > Integer.MAX_VALUE) {
+            // the maximum value that can be represented by a signed 32 bit number is:
+            // [0x1,0x7f] + 0x7f + (0x7f << 7) + (0x7f << 14) + (0x7f << 21) + (0x6 << 28)
+            // OR
+            // 0x0 + 0x7f + (0x7f << 7) + (0x7f << 14) + (0x7f << 21) + (0x7 << 28)
+            // we should reset the readerIndex if we overflowed the int type.
+            in.readerIndex(readerIndex);
+            throw DECODE_ULE_128_TO_INT_DECOMPRESSION_EXCEPTION;
+        }
+        return (int) v;
+    }
+
+    /**
+     * Unsigned Little Endian Base 128 Variable-Length Integer Encoding
+     * <p>
+     * Visible for testing only!
+     */
+    static long decodeULE128(ByteBuf in, long result) throws Http2Exception {
         assert result <= 0x7f && result >= 0;
+        final boolean resultStartedAtZero = result == 0;
         final int writerIndex = in.writerIndex();
-        for (int readerIndex = in.readerIndex(), shift = 0;
-             readerIndex < writerIndex; ++readerIndex, shift += 7) {
+        for (int readerIndex = in.readerIndex(), shift = 0; readerIndex < writerIndex; ++readerIndex, shift += 7) {
             byte b = in.getByte(readerIndex);
-            if (shift == 28 && ((b & 0x80) != 0 || b > 6)) {
-                // the maximum value that can be represented by a signed 32 bit number is:
-                // 0x7f + 0x7f + (0x7f << 7) + (0x7f << 14) + (0x7f << 21) + (0x6 << 28)
+            if (shift == 56 && ((b & 0x80) != 0 || b == 0x7F && !resultStartedAtZero)) {
+                // the maximum value that can be represented by a signed 64 bit number is:
+                // [0x01L, 0x7fL] + 0x7fL + (0x7fL << 7) + (0x7fL << 14) + (0x7fL << 21) + (0x7fL << 28) + (0x7fL << 35)
+                // + (0x7fL << 42) + (0x7fL << 49) + (0x7eL << 56)
+                // OR
+                // 0x0L + 0x7fL + (0x7fL << 7) + (0x7fL << 14) + (0x7fL << 21) + (0x7fL << 28) + (0x7fL << 35) +
+                // (0x7fL << 42) + (0x7fL << 49) + (0x7fL << 56)
                 // this means any more shifts will result in overflow so we should break out and throw an error.
-                in.readerIndex(readerIndex + 1);
-                break;
+                throw DECODE_ULE_128_TO_LONG_DECOMPRESSION_EXCEPTION;
             }
 
             if ((b & 0x80) == 0) {
                 in.readerIndex(readerIndex + 1);
-                return result + ((b & 0x7F) << shift);
+                return result + ((b & 0x7FL) << shift);
             }
-            result += (b & 0x7F) << shift;
+            result += (b & 0x7FL) << shift;
         }
 
         throw DECODE_ULE_128_DECOMPRESSION_EXCEPTION;

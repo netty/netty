@@ -118,7 +118,7 @@ final class HuffmanEncoder {
      * @param data the string literal to be Huffman encoded
      * @return the number of bytes required to Huffman encode <code>data</code>
      */
-    public int getEncodedLength(CharSequence data) {
+    int getEncodedLength(CharSequence data) {
         if (data instanceof AsciiString) {
             AsciiString string = (AsciiString) data;
             try {
