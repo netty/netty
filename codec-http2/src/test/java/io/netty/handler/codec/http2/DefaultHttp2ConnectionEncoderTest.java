@@ -565,7 +565,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void canWriteHeaderFrameAfterGoAwayReceived() {
+    public void canWriteHeaderFrameAfterGoAwayReceived() throws Http2Exception {
         writeAllFlowControlledFrames();
         goAwayReceived(STREAM_ID);
         ChannelPromise promise = newPromise();

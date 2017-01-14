@@ -37,7 +37,6 @@ import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType;
 import io.netty.util.AsciiString;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
@@ -45,9 +44,11 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.headerListSizeExceeded;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.AsciiString.EMPTY_STRING;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
 public final class Decoder {
@@ -82,25 +83,30 @@ public final class Decoder {
 
     private final DynamicTable dynamicTable;
     private final HuffmanDecoder huffmanDecoder;
+    private long maxHeaderListSizeGoAway;
     private long maxHeaderListSize;
     private long maxDynamicTableSize;
     private long encoderMaxDynamicTableSize;
     private boolean maxDynamicTableSizeChangeRequired;
 
-    public Decoder() {
-        this(32);
-    }
-
-    public Decoder(int initialHuffmanDecodeCapacity) {
-        this(initialHuffmanDecodeCapacity, DEFAULT_HEADER_TABLE_SIZE);
+    /**
+     * Create a new instance.
+     * @param maxHeaderListSize This is the only setting that can be configured before notifying the peer.
+     *  This is because <a href="https://tools.ietf.org/html/rfc7540#section-6.5.1">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     *  allows a lower than advertised limit from being enforced, and the default limit is unlimited
+     *  (which is dangerous).
+     * @param initialHuffmanDecodeCapacity Size of an intermediate buffer used during huffman decode.
+     */
+    public Decoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity) {
+        this(maxHeaderListSize, initialHuffmanDecodeCapacity, DEFAULT_HEADER_TABLE_SIZE);
     }
 
     /**
      * Exposed Used for testing only! Default values used in the initial settings frame are overriden intentionally
      * for testing but violate the RFC if used outside the scope of testing.
      */
-    Decoder(int initialHuffmanDecodeCapacity, int maxHeaderTableSize) {
-        maxHeaderListSize = DEFAULT_HEADER_LIST_SIZE;
+    Decoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity, int maxHeaderTableSize) {
+        this.maxHeaderListSize = maxHeaderListSizeGoAway = checkPositive(maxHeaderListSize, "maxHeaderListSize");
         maxDynamicTableSize = encoderMaxDynamicTableSize = maxHeaderTableSize;
         maxDynamicTableSizeChangeRequired = false;
         dynamicTable = new DynamicTable(maxHeaderTableSize);
@@ -208,8 +214,8 @@ public final class Decoder {
                     if (index == 0x7f) {
                         state = READ_LITERAL_HEADER_NAME_LENGTH;
                     } else {
-                        if (index > maxHeaderListSize - headersLength) {
-                            headerListSizeExceeded(streamId, maxHeaderListSize, true);
+                        if (index > maxHeaderListSizeGoAway - headersLength) {
+                            headerListSizeExceeded(maxHeaderListSizeGoAway);
                         }
                         nameLength = index;
                         state = READ_LITERAL_HEADER_NAME;
@@ -220,8 +226,8 @@ public final class Decoder {
                     // Header Name is a Literal String
                     nameLength = decodeULE128(in, index);
 
-                    if (nameLength > maxHeaderListSize - headersLength) {
-                        headerListSizeExceeded(streamId, maxHeaderListSize, true);
+                    if (nameLength > maxHeaderListSizeGoAway - headersLength) {
+                        headerListSizeExceeded(maxHeaderListSizeGoAway);
                     }
                     state = READ_LITERAL_HEADER_NAME;
                     break;
@@ -252,8 +258,8 @@ public final class Decoder {
                             break;
                         default:
                             // Check new header size against max header size
-                            if ((long) index + nameLength > maxHeaderListSize - headersLength) {
-                                headerListSizeExceeded(streamId, maxHeaderListSize, true);
+                            if ((long) index + nameLength > maxHeaderListSizeGoAway - headersLength) {
+                                headerListSizeExceeded(maxHeaderListSizeGoAway);
                             }
                             valueLength = index;
                             state = READ_LITERAL_HEADER_VALUE;
@@ -266,8 +272,8 @@ public final class Decoder {
                     valueLength = decodeULE128(in, index);
 
                     // Check new header size against max header size
-                    if ((long) valueLength + nameLength > maxHeaderListSize - headersLength) {
-                        headerListSizeExceeded(streamId, maxHeaderListSize, true);
+                    if ((long) valueLength + nameLength > maxHeaderListSizeGoAway - headersLength) {
+                        headerListSizeExceeded(maxHeaderListSizeGoAway);
                     }
                     state = READ_LITERAL_HEADER_VALUE;
                     break;
@@ -285,6 +291,10 @@ public final class Decoder {
 
                 default:
                     throw new Error("should not reach here state: " + state);
+            }
+
+            if (headersLength > maxHeaderListSize) {
+                headerListSizeExceeded(streamId, maxHeaderListSize, true);
             }
         }
     }
@@ -307,16 +317,25 @@ public final class Decoder {
         }
     }
 
-    public void setMaxHeaderListSize(long maxHeaderListSize) throws Http2Exception {
+    public void setMaxHeaderListSize(long maxHeaderListSize, long maxHeaderListSizeGoAway) throws Http2Exception {
+        if (maxHeaderListSizeGoAway < maxHeaderListSize || maxHeaderListSizeGoAway < 0) {
+            throw connectionError(INTERNAL_ERROR, "Header List Size GO_AWAY %d must be positive and >= %d",
+                    maxHeaderListSizeGoAway, maxHeaderListSize);
+        }
         if (maxHeaderListSize < MIN_HEADER_LIST_SIZE || maxHeaderListSize > MAX_HEADER_LIST_SIZE) {
             throw connectionError(PROTOCOL_ERROR, "Header List Size must be >= %d and <= %d but was %d",
                     MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, maxHeaderListSize);
         }
         this.maxHeaderListSize = maxHeaderListSize;
+        this.maxHeaderListSizeGoAway = maxHeaderListSizeGoAway;
     }
 
     public long getMaxHeaderListSize() {
         return maxHeaderListSize;
+    }
+
+    public long getMaxHeaderListSizeGoAway() {
+        return maxHeaderListSizeGoAway;
     }
 
     /**
@@ -404,8 +423,8 @@ public final class Decoder {
     private long addHeader(int streamId, Http2Headers headers, CharSequence name, CharSequence value,
                            long headersLength) throws Http2Exception {
         headersLength += name.length() + value.length();
-        if (headersLength > maxHeaderListSize) {
-            headerListSizeExceeded(streamId, maxHeaderListSize, true);
+        if (headersLength > maxHeaderListSizeGoAway) {
+            headerListSizeExceeded(maxHeaderListSizeGoAway);
         }
         headers.add(name, value);
         return headersLength;

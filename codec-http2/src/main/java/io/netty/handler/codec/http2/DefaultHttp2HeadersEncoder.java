@@ -28,7 +28,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2HeadersEncoder.Configuration {
     private final Encoder encoder;
     private final SensitivityDetector sensitivityDetector;
-    private final Http2HeaderTable headerTable;
     private final ByteBuf tableSizeChangeOutput = Unpooled.buffer();
 
     public DefaultHttp2HeadersEncoder() {
@@ -55,7 +54,6 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
     DefaultHttp2HeadersEncoder(SensitivityDetector sensitivityDetector, Encoder encoder) {
         this.sensitivityDetector = checkNotNull(sensitivityDetector, "sensitiveDetector");
         this.encoder = checkNotNull(encoder, "encoder");
-        headerTable = new Http2HeaderTableEncoder();
     }
 
     @Override
@@ -77,37 +75,27 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
     }
 
     @Override
-    public Http2HeaderTable headerTable() {
-        return headerTable;
+    public void maxHeaderTableSize(long max) throws Http2Exception {
+        encoder.setMaxHeaderTableSize(tableSizeChangeOutput, max);
+    }
+
+    @Override
+    public long maxHeaderTableSize() {
+        return encoder.getMaxHeaderTableSize();
+    }
+
+    @Override
+    public void maxHeaderListSize(long max) throws Http2Exception {
+        encoder.setMaxHeaderListSize(max);
+    }
+
+    @Override
+    public long maxHeaderListSize() {
+        return encoder.getMaxHeaderListSize();
     }
 
     @Override
     public Configuration configuration() {
         return this;
-    }
-
-    /**
-     * {@link Http2HeaderTable} implementation to support {@link Http2HeadersEncoder}
-     */
-    private final class Http2HeaderTableEncoder implements Http2HeaderTable {
-        @Override
-        public void maxHeaderTableSize(long max) throws Http2Exception {
-            encoder.setMaxHeaderTableSize(tableSizeChangeOutput, max);
-        }
-
-        @Override
-        public long maxHeaderTableSize() {
-            return encoder.getMaxHeaderTableSize();
-        }
-
-        @Override
-        public void maxHeaderListSize(long max) throws Http2Exception {
-            encoder.setMaxHeaderListSize(max);
-        }
-
-        @Override
-        public long maxHeaderListSize() {
-            return encoder.getMaxHeaderListSize();
-        }
     }
 }

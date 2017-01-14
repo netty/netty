@@ -14,13 +14,13 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.UnstableApi;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Decorator around another {@link Http2FrameWriter} instance.
@@ -41,14 +41,14 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-                                      boolean endStream, ChannelPromise promise) {
+                                      boolean endStream, ChannelPromise promise) throws Http2Exception {
         return delegate.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
     }
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                       int streamDependency, short weight, boolean exclusive, int padding,
-                                      boolean endStream, ChannelPromise promise) {
+                                      boolean endStream, ChannelPromise promise) throws Http2Exception {
         return delegate
                 .writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endStream, promise);
     }
@@ -82,7 +82,8 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
-                                          Http2Headers headers, int padding, ChannelPromise promise) {
+                                          Http2Headers headers, int padding, ChannelPromise promise)
+            throws Http2Exception {
         return delegate.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
     }
 

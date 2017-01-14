@@ -95,8 +95,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     }
 
     @Override
-    public Http2HeaderTable headerTable() {
-        return headersDecoder.configuration().headerTable();
+    public Http2HeadersDecoder.Configuration headersConfiguration() {
+        return headersDecoder.configuration();
     }
 
     @Override
@@ -673,7 +673,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          */
         private void headerSizeExceeded() throws Http2Exception {
             close();
-            headerListSizeExceeded(streamId, headersDecoder.configuration().headerTable().maxHeaderListSize(), true);
+            headerListSizeExceeded(headersDecoder.configuration().maxHeaderListSizeGoAway());
         }
 
         /**
@@ -687,7 +687,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          */
         final void addFragment(ByteBuf fragment, ByteBufAllocator alloc, boolean endOfHeaders) throws Http2Exception {
             if (headerBlock == null) {
-                if (fragment.readableBytes() > headersDecoder.configuration().headerTable().maxHeaderListSize()) {
+                if (fragment.readableBytes() > headersDecoder.configuration().maxHeaderListSizeGoAway()) {
                     headerSizeExceeded();
                 }
                 if (endOfHeaders) {
@@ -700,7 +700,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 }
                 return;
             }
-            if (headersDecoder.configuration().headerTable().maxHeaderListSize() - fragment.readableBytes() <
+            if (headersDecoder.configuration().maxHeaderListSizeGoAway() - fragment.readableBytes() <
                     headerBlock.readableBytes()) {
                 headerSizeExceeded();
             }

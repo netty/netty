@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2RemoteFlowController;
 import io.netty.handler.codec.http2.Http2Stream;
+import io.netty.util.internal.PlatformDependent;
 
 public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowController {
     public static final NoopHttp2RemoteFlowController INSTANCE = new NoopHttp2RemoteFlowController();
@@ -62,7 +63,11 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
     public void addFlowControlled(Http2Stream stream, FlowControlled payload) {
         // Don't check size beforehand because Headers payload returns 0 all the time.
         do {
-            payload.write(ctx, MAX_INITIAL_WINDOW_SIZE);
+            try {
+                payload.write(ctx, MAX_INITIAL_WINDOW_SIZE);
+            } catch (Http2Exception e) {
+                PlatformDependent.throwException(e);
+            }
         } while (payload.size() > 0);
     }
 
