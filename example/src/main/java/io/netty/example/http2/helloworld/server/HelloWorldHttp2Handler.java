@@ -23,6 +23,7 @@ import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Flags;
 import io.netty.handler.codec.http2.Http2FrameListener;
 import io.netty.handler.codec.http2.Http2Headers;
@@ -73,7 +74,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     /**
      * Sends a "Hello World" DATA frame to the client.
      */
-    private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
+    private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) throws Http2Exception {
         // Send a frame for the response status
         Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
         encoder().writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
@@ -86,7 +87,8 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     }
 
     @Override
-    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream) {
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+            throws Http2Exception {
         int processed = data.readableBytes() + padding;
         if (endOfStream) {
             sendResponse(ctx, streamId, data.retain());
@@ -96,7 +98,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
-                              Http2Headers headers, int padding, boolean endOfStream) {
+                              Http2Headers headers, int padding, boolean endOfStream) throws Http2Exception {
         if (endOfStream) {
             ByteBuf content = ctx.alloc().buffer();
             content.writeBytes(RESPONSE_BYTES.duplicate());
@@ -107,7 +109,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
-                              short weight, boolean exclusive, int padding, boolean endOfStream) {
+                              short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 

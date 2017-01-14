@@ -20,6 +20,7 @@ import io.netty.handler.codec.http2.internal.hpack.Decoder;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
@@ -29,7 +30,6 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     private static final float HEADERS_COUNT_WEIGHT_HISTORICAL = 1 - HEADERS_COUNT_WEIGHT_NEW;
 
     private final Decoder decoder;
-    private final Http2HeaderTable headerTable;
     private final boolean validateHeaders;
     /**
      * Used to calculate an exponential moving average of header sizes to get an estimate of how large the data
@@ -42,11 +42,33 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     }
 
     public DefaultHttp2HeadersDecoder(boolean validateHeaders) {
-        this(validateHeaders, new Decoder());
+        this(validateHeaders, DEFAULT_HEADER_LIST_SIZE);
     }
 
-    public DefaultHttp2HeadersDecoder(boolean validateHeaders, int initialHuffmanDecodeCapacity) {
-        this(validateHeaders, new Decoder(initialHuffmanDecodeCapacity));
+    /**
+     * Create a new instance.
+     * @param validateHeaders {@code true} to validate headers are valid according to the RFC.
+     * @param maxHeaderListSize This is the only setting that can be configured before notifying the peer.
+     *  This is because <a href="https://tools.ietf.org/html/rfc7540#section-6.5.1">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     *  allows a lower than advertised limit from being enforced, and the default limit is unlimited
+     *  (which is dangerous).
+     */
+    public DefaultHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize) {
+        this(validateHeaders, maxHeaderListSize, 32);
+    }
+
+    /**
+     * Create a new instance.
+     * @param validateHeaders {@code true} to validate headers are valid according to the RFC.
+     * @param maxHeaderListSize This is the only setting that can be configured before notifying the peer.
+     *  This is because <a href="https://tools.ietf.org/html/rfc7540#section-6.5.1">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     *  allows a lower than advertised limit from being enforced, and the default limit is unlimited
+     *  (which is dangerous).
+     * @param initialHuffmanDecodeCapacity Size of an intermediate buffer used during huffman decode.
+     */
+    public DefaultHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize,
+                                      int initialHuffmanDecodeCapacity) {
+        this(validateHeaders, new Decoder(maxHeaderListSize, initialHuffmanDecodeCapacity));
     }
 
     /**
@@ -55,13 +77,32 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      */
     DefaultHttp2HeadersDecoder(boolean validateHeaders, Decoder decoder) {
         this.decoder = ObjectUtil.checkNotNull(decoder, "decoder");
-        headerTable = new Http2HeaderTableDecoder();
         this.validateHeaders = validateHeaders;
     }
 
     @Override
-    public Http2HeaderTable headerTable() {
-        return headerTable;
+    public void maxHeaderTableSize(long max) throws Http2Exception {
+        decoder.setMaxHeaderTableSize(max);
+    }
+
+    @Override
+    public long maxHeaderTableSize() {
+        return decoder.getMaxHeaderTableSize();
+    }
+
+    @Override
+    public void maxHeaderListSize(long max, long goAwayMax) throws Http2Exception {
+        decoder.setMaxHeaderListSize(max, goAwayMax);
+    }
+
+    @Override
+    public long maxHeaderListSize() {
+        return decoder.getMaxHeaderListSize();
+    }
+
+    @Override
+    public long maxHeaderListSizeGoAway() {
+        return decoder.getMaxHeaderListSizeGoAway();
     }
 
     @Override
@@ -84,31 +125,6 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
             // the the Header builder throws IllegalArgumentException if the key or value was invalid
             // for any reason (e.g. the key was an invalid pseudo-header).
             throw connectionError(COMPRESSION_ERROR, e, e.getMessage());
-        }
-    }
-
-    /**
-     * {@link Http2HeaderTable} implementation to support {@link Http2HeadersDecoder}
-     */
-    private final class Http2HeaderTableDecoder implements Http2HeaderTable {
-        @Override
-        public void maxHeaderTableSize(long max) throws Http2Exception {
-            decoder.setMaxHeaderTableSize(max);
-        }
-
-        @Override
-        public long maxHeaderTableSize() {
-            return decoder.getMaxHeaderTableSize();
-        }
-
-        @Override
-        public void maxHeaderListSize(long max) throws Http2Exception {
-            decoder.setMaxHeaderListSize(max);
-        }
-
-        @Override
-        public long maxHeaderListSize() {
-            return decoder.getMaxHeaderListSize();
         }
     }
 }

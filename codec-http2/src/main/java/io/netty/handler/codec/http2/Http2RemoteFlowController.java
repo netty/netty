@@ -130,8 +130,9 @@ public interface Http2RemoteFlowController extends Http2FlowController {
          *
          * @param ctx The context to use for writing.
          * @param allowedBytes an upper bound on the number of bytes the payload can write at this time.
+         * @throws Http2Exception if an error occurs during the encode or write.
          */
-        void write(ChannelHandlerContext ctx, int allowedBytes);
+        void write(ChannelHandlerContext ctx, int allowedBytes) throws Http2Exception;
 
         /**
          * Merge the contents of the {@code next} message into this message so they can be written out as one unit.

@@ -122,13 +122,13 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     public Http2Settings localSettings() {
         Http2Settings settings = new Http2Settings();
         Http2FrameReader.Configuration config = frameReader.configuration();
-        Http2HeaderTable headerTable = config.headerTable();
+        Http2HeadersDecoder.Configuration headersConfig = config.headersConfiguration();
         Http2FrameSizePolicy frameSizePolicy = config.frameSizePolicy();
         settings.initialWindowSize(flowController().initialWindowSize());
         settings.maxConcurrentStreams(connection.remote().maxActiveStreams());
-        settings.headerTableSize(headerTable.maxHeaderTableSize());
+        settings.headerTableSize(headersConfig.maxHeaderTableSize());
         settings.maxFrameSize(frameSizePolicy.maxFrameSize());
-        settings.maxHeaderListSize(headerTable.maxHeaderListSize());
+        settings.maxHeaderListSize(headersConfig.maxHeaderListSize());
         if (!connection.isServer()) {
             // Only set the pushEnabled flag if this is a client endpoint.
             settings.pushEnabled(connection.local().allowPushTo());
@@ -139,6 +139,18 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     @Override
     public void close() {
         frameReader.close();
+    }
+
+    /**
+     * Calculate the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
+     * @param maxHeaderListSize
+     *      <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a> for the local
+     *      endpoint.
+     * @return the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
+     */
+    protected long calculateMaxHeaderListSizeGoAway(long maxHeaderListSize) {
+        // This is equivalent to `maxHeaderListSize * 1.25` but we avoid floating point multiplication.
+        return maxHeaderListSize + (maxHeaderListSize >>> 2);
     }
 
     private int unconsumedBytes(Http2Stream stream) {
@@ -383,11 +395,13 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
         /**
          * Applies settings sent from the local endpoint.
+         * <p>
+         * This method is only called after the local settings have been acknowledged from the remote endpoint.
          */
         private void applyLocalSettings(Http2Settings settings) throws Http2Exception {
             Boolean pushEnabled = settings.pushEnabled();
             final Http2FrameReader.Configuration config = frameReader.configuration();
-            final Http2HeaderTable headerTable = config.headerTable();
+            final Http2HeadersDecoder.Configuration headerConfig = config.headersConfiguration();
             final Http2FrameSizePolicy frameSizePolicy = config.frameSizePolicy();
             if (pushEnabled != null) {
                 if (connection.isServer()) {
@@ -404,12 +418,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Long headerTableSize = settings.headerTableSize();
             if (headerTableSize != null) {
-                headerTable.maxHeaderTableSize(headerTableSize);
+                headerConfig.maxHeaderTableSize(headerTableSize);
             }
 
             Long maxHeaderListSize = settings.maxHeaderListSize();
             if (maxHeaderListSize != null) {
-                headerTable.maxHeaderListSize(maxHeaderListSize);
+                headerConfig.maxHeaderListSize(maxHeaderListSize, calculateMaxHeaderListSizeGoAway(maxHeaderListSize));
             }
 
             Integer maxFrameSize = settings.maxFrameSize();

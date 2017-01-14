@@ -369,14 +369,16 @@ public class DefaultHttp2Connection implements Http2Connection {
      * Simple stream implementation. Streams can be compared to each other by priority.
      */
     private class DefaultStream implements Http2Stream {
+        private static final byte SENT_STATE_RST = 0x1;
+        private static final byte SENT_STATE_HEADERS = 0x2;
+        private static final byte SENT_STATE_PUSHPROMISE = 0x4;
         private final int id;
         private final PropertyMap properties = new PropertyMap();
         private State state;
         private short weight = DEFAULT_PRIORITY_WEIGHT;
         private DefaultStream parent;
         private IntObjectMap<DefaultStream> children = IntCollections.emptyMap();
-        private boolean resetSent;
-        private boolean headersSent;
+        private byte sentState;
 
         DefaultStream(int id, State state) {
             this.id = id;
@@ -395,24 +397,35 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public boolean isResetSent() {
-            return resetSent;
+            return (sentState & SENT_STATE_RST) != 0;
         }
 
         @Override
         public Http2Stream resetSent() {
-            resetSent = true;
+            sentState |= SENT_STATE_RST;
             return this;
         }
 
         @Override
         public Http2Stream headersSent() {
-            headersSent = true;
+            sentState |= SENT_STATE_HEADERS;
             return this;
         }
 
         @Override
         public boolean isHeadersSent() {
-            return headersSent;
+            return (sentState & SENT_STATE_HEADERS) != 0;
+        }
+
+        @Override
+        public Http2Stream pushPromiseSent() {
+            sentState |= SENT_STATE_PUSHPROMISE;
+            return this;
+        }
+
+        @Override
+        public boolean isPushPromiseSent() {
+            return (sentState & SENT_STATE_PUSHPROMISE) != 0;
         }
 
         @Override
@@ -835,6 +848,16 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public boolean isHeadersSent() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Http2Stream pushPromiseSent() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isPushPromiseSent() {
             throw new UnsupportedOperationException();
         }
     }

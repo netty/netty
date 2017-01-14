@@ -487,9 +487,9 @@ public class StreamBufferingEncoderTest {
     }
 
     private ChannelFuture encoderWriteHeaders(int streamId, ChannelPromise promise) {
-        encoder.writeHeaders(ctx, streamId, new DefaultHttp2Headers(), 0, DEFAULT_PRIORITY_WEIGHT,
-                false, 0, false, promise);
         try {
+            encoder.writeHeaders(ctx, streamId, new DefaultHttp2Headers(), 0, DEFAULT_PRIORITY_WEIGHT,
+                    false, 0, false, promise);
             encoder.flowController().writePendingBytes();
             return promise;
         } catch (Http2Exception e) {
@@ -498,9 +498,13 @@ public class StreamBufferingEncoderTest {
     }
 
     private void writeVerifyWriteHeaders(VerificationMode mode, int streamId) {
-        verify(writer, mode).writeHeaders(eq(ctx), eq(streamId), any(Http2Headers.class), eq(0),
-                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0),
-                eq(false), any(ChannelPromise.class));
+        try {
+            verify(writer, mode).writeHeaders(eq(ctx), eq(streamId), any(Http2Headers.class), eq(0),
+                    eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0),
+                    eq(false), any(ChannelPromise.class));
+        } catch (Http2Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private Answer<ChannelFuture> successAnswer() {

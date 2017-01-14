@@ -59,6 +59,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -209,6 +211,137 @@ public class Http2ConnectionRoundtripTest {
 
         // The server will not respond, and so don't wait for graceful shutdown
         http2Client.gracefulShutdownTimeoutMillis(0);
+    }
+
+    @Test
+    public void encodeViolatesMaxHeaderListSizeCanStillUseConnection() throws Exception {
+        bootstrapEnv(1, 2, 1, 0, 0);
+
+        final CountDownLatch serverSettingsAckLatch1 = new CountDownLatch(2);
+        final CountDownLatch serverSettingsAckLatch2 = new CountDownLatch(3);
+        final CountDownLatch clientSettingsLatch1 = new CountDownLatch(3);
+        final CountDownLatch serverRevHeadersLatch = new CountDownLatch(1);
+        final CountDownLatch clientHeadersLatch = new CountDownLatch(1);
+        final CountDownLatch clientDataWrite = new CountDownLatch(1);
+        final AtomicReference<Throwable> clientHeadersWriteException = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> clientHeadersWriteException2 = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> clientDataWriteException = new AtomicReference<Throwable>();
+
+        final Http2Headers headers = dummyHeaders();
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                serverSettingsAckLatch1.countDown();
+                serverSettingsAckLatch2.countDown();
+                return null;
+            }
+        }).when(serverListener).onSettingsAckRead(any(ChannelHandlerContext.class));
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                clientSettingsLatch1.countDown();
+                return null;
+            }
+        }).when(clientListener).onSettingsRead(any(ChannelHandlerContext.class), any(Http2Settings.class));
+
+        // Manually add a listener for when we receive the expected headers on the server.
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                serverRevHeadersLatch.countDown();
+                return null;
+            }
+        }).when(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(headers),
+                anyInt(), anyShort(), anyBoolean(), eq(0), eq(true));
+
+        // Set the maxHeaderListSize to 100 so we may be able to write some headers, but not all. We want to verify
+        // that we don't corrupt state if some can be written but not all.
+        runInChannel(serverConnectedChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writeSettings(serverCtx(),
+                        new Http2Settings().copyFrom(http2Server.decoder().localSettings())
+                                .maxHeaderListSize(100),
+                        serverNewPromise());
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        assertTrue(serverSettingsAckLatch1.await(5, SECONDS));
+
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, false, newPromise())
+                        .addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        clientHeadersWriteException.set(future.cause());
+                    }
+                });
+                // It is expected that this write should fail locally and the remote peer will never see this.
+                http2Client.encoder().writeData(ctx(), 3, Unpooled.buffer(), 0, true, newPromise())
+                    .addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            clientDataWriteException.set(future.cause());
+                            clientDataWrite.countDown();
+                        }
+                });
+                http2Client.flush(ctx());
+            }
+        });
+
+        assertTrue(clientDataWrite.await(5, SECONDS));
+        assertNotNull("Header encode should have exceeded maxHeaderListSize!", clientHeadersWriteException.get());
+        assertNotNull("Data on closed stream should fail!", clientDataWriteException.get());
+
+        // Set the maxHeaderListSize to the max value so we can send the headers.
+        runInChannel(serverConnectedChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writeSettings(serverCtx(),
+                        new Http2Settings().copyFrom(http2Server.decoder().localSettings())
+                                .maxHeaderListSize(Http2CodecUtil.MAX_HEADER_LIST_SIZE),
+                        serverNewPromise());
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        assertTrue(clientSettingsLatch1.await(5, SECONDS));
+        assertTrue(serverSettingsAckLatch2.await(5, SECONDS));
+
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, true,
+                        newPromise()).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        clientHeadersWriteException2.set(future.cause());
+                        clientHeadersLatch.countDown();
+                    }
+                });
+                http2Client.flush(ctx());
+            }
+        });
+
+        assertTrue(clientHeadersLatch.await(5, SECONDS));
+        assertNull("Client write of headers should succeed with increased header list size!",
+                   clientHeadersWriteException2.get());
+        assertTrue(serverRevHeadersLatch.await(5, SECONDS));
+
+        verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class), anyInt(), any(ByteBuf.class),
+                anyInt(), anyBoolean());
+
+        // Verify that no errors have been received.
+        verify(serverListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+        verify(serverListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
+        verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+        verify(clientListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
     }
 
     @Test
@@ -586,8 +719,16 @@ public class Http2ConnectionRoundtripTest {
         return clientChannel.pipeline().firstContext();
     }
 
+    private ChannelHandlerContext serverCtx() {
+        return serverConnectedChannel.pipeline().firstContext();
+    }
+
     private ChannelPromise newPromise() {
         return ctx().newPromise();
+    }
+
+    private ChannelPromise serverNewPromise() {
+        return serverCtx().newPromise();
     }
 
     private static Http2Headers dummyHeaders() {

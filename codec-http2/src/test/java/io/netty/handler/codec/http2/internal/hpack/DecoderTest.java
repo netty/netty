@@ -69,7 +69,7 @@ public class DecoderTest {
 
     @Before
     public void setUp() throws Http2Exception {
-        decoder = new Decoder();
+        decoder = new Decoder(8192, 32);
         mockHeaders = mock(Http2Headers.class);
     }
 

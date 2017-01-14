@@ -66,8 +66,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ConnectionHandler.class);
 
-    private static final Http2Headers headersTooLarge = new DefaultHttp2Headers().status(
-        HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.codeAsText());
+    private static final Http2Headers HEADERS_TOO_LARGE_HEADERS = ReadOnlyHttp2Headers.serverHeaders(false,
+            HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.codeAsText());
 
     private final Http2ConnectionDecoder decoder;
     private final Http2ConnectionEncoder encoder;
@@ -161,12 +161,14 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void flush(ChannelHandlerContext ctx) throws Http2Exception {
-        // Trigger pending writes in the remote flow controller.
-        encoder.flowController().writePendingBytes();
         try {
+            // Trigger pending writes in the remote flow controller.
+            encoder.flowController().writePendingBytes();
             ctx.flush();
-        } catch (Throwable t) {
-            throw new Http2Exception(INTERNAL_ERROR, "Error flushing" , t);
+        } catch (Http2Exception e) {
+            onError(ctx, e);
+        } catch (Throwable cause) {
+            onError(ctx, connectionError(INTERNAL_ERROR, cause, "Error flushing"));
         }
     }
 
@@ -629,7 +631,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
             // ensure that we have not already sent headers on this stream
             if (stream != null && !stream.isHeadersSent()) {
-                handleServerHeaderDecodeSizeError(ctx, stream);
+                try {
+                    handleServerHeaderDecodeSizeError(ctx, stream);
+                } catch (Http2Exception e) {
+                    onError(ctx, e);
+                } catch (Throwable cause2) {
+                    onError(ctx, connectionError(INTERNAL_ERROR, cause2, "Error DecodeSizeError"));
+                }
             }
         }
 
@@ -646,9 +654,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      *
      * @param ctx the channel context
      * @param stream the Http2Stream on which the header was received
+     * @throws Http2Exception if an exception occurs while processing the decode error.
      */
-    protected void handleServerHeaderDecodeSizeError(ChannelHandlerContext ctx, Http2Stream stream) {
-        encoder().writeHeaders(ctx, stream.id(), headersTooLarge, 0, true, ctx.newPromise());
+    protected void handleServerHeaderDecodeSizeError(ChannelHandlerContext ctx, Http2Stream stream)
+            throws Http2Exception {
+        encoder().writeHeaders(ctx, stream.id(), HEADERS_TOO_LARGE_HEADERS, 0, true, ctx.newPromise());
     }
 
     protected Http2FrameWriter frameWriter() {
@@ -695,8 +705,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             return promise.setSuccess();
         }
         final ChannelFuture future;
-        if (stream.state() == IDLE) {
-            // We cannot write RST_STREAM frames on IDLE streams https://tools.ietf.org/html/rfc7540#section-6.4.
+        // If the remote peer is not aware of the steam, then we are not allowed to send a RST_STREAM
+        // https://tools.ietf.org/html/rfc7540#section-6.4.
+        if (stream.state() == IDLE ||
+            connection().local().created(stream) && !stream.isHeadersSent() && !stream.isPushPromiseSent()) {
             future = promise.setSuccess();
         } else {
             future = frameWriter().writeRstStream(ctx, stream.id(), errorCode, promise);

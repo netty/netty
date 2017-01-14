@@ -19,6 +19,7 @@ package io.netty.handler.codec.http2;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.internal.UnstableApi;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -76,7 +77,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private static final SensitivityDetector DEFAULT_HEADER_SENSITIVITY_DETECTOR = Http2HeadersEncoder.NEVER_SENSITIVE;
 
     // The properties that can always be set.
-    private Http2Settings initialSettings = new Http2Settings();
+    private Http2Settings initialSettings = new Http2Settings().maxHeaderListSize(DEFAULT_HEADER_LIST_SIZE);
     private Http2FrameListener frameListener;
     private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
 
@@ -334,7 +335,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     private T buildFromConnection(Http2Connection connection) {
-        Http2FrameReader reader = new DefaultHttp2FrameReader(isValidateHeaders());
+        Long maxHeaderListSize = initialSettings.maxHeaderListSize();
+        Http2FrameReader reader = new DefaultHttp2FrameReader(maxHeaderListSize == null ?
+                new DefaultHttp2HeadersDecoder(isValidateHeaders()) :
+                new DefaultHttp2HeadersDecoder(isValidateHeaders(), maxHeaderListSize));
         Http2FrameWriter writer = encoderIgnoreMaxHeaderListSize == null ?
                 new DefaultHttp2FrameWriter(headerSensitivityDetector()) :
                 new DefaultHttp2FrameWriter(headerSensitivityDetector(), encoderIgnoreMaxHeaderListSize);

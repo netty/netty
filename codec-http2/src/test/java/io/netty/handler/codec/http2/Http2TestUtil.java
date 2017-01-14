@@ -122,9 +122,8 @@ public final class Http2TestUtil {
     }
 
     public static Decoder newTestDecoder(long maxHeaderListSize, long maxHeaderTableSize) throws Http2Exception {
-        Decoder decoder = new Decoder();
+        Decoder decoder = new Decoder(maxHeaderListSize, 32);
         decoder.setMaxHeaderTableSize(maxHeaderTableSize);
-        decoder.setMaxHeaderListSize(maxHeaderListSize);
         return decoder;
     }
 

@@ -50,6 +50,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.headerListSizeExceeded;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.internal.hpack.HeaderField.sizeOf;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.INCREMENTAL;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NEVER;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NONE;
@@ -116,18 +117,18 @@ public final class Encoder {
                                                        SensitivityDetector sensitivityDetector)
             throws Http2Exception {
         long headerSize = 0;
+        // To ensure we stay consistent with our peer check the size is valid before we potentially modify HPACK state.
         for (Map.Entry<CharSequence, CharSequence> header : headers) {
             CharSequence name = header.getKey();
             CharSequence value = header.getValue();
-            long currHeaderSize = HeaderField.sizeOf(name, value);
             // OK to increment now and check for bounds after because this value is limited to unsigned int and will not
             // overflow.
-            headerSize += currHeaderSize;
+            headerSize += sizeOf(name, value);
             if (headerSize > maxHeaderListSize) {
                 headerListSizeExceeded(streamId, maxHeaderListSize, false);
             }
-            encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value), currHeaderSize);
         }
+        encodeHeadersIgnoreMaxHeaderListSize(out, headers, sensitivityDetector);
     }
 
     private void encodeHeadersIgnoreMaxHeaderListSize(ByteBuf out, Http2Headers headers,
@@ -135,8 +136,7 @@ public final class Encoder {
         for (Map.Entry<CharSequence, CharSequence> header : headers) {
             CharSequence name = header.getKey();
             CharSequence value = header.getValue();
-            encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value),
-                         HeaderField.sizeOf(name, value));
+            encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value), sizeOf(name, value));
         }
     }
 
