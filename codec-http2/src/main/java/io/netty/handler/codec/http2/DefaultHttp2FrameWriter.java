@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.buffer.Unpooled.directBuffer;
@@ -106,8 +107,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     @Override
-    public Http2HeaderTable headerTable() {
-        return headersEncoder.configuration().headerTable();
+    public Http2HeadersEncoder.Configuration headersConfiguration() {
+        return headersEncoder.configuration();
     }
 
     @Override
@@ -187,7 +188,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
-            Http2Headers headers, int padding, boolean endStream, ChannelPromise promise) {
+            Http2Headers headers, int padding, boolean endStream, ChannelPromise promise) throws Http2Exception {
         return writeHeadersInternal(ctx, streamId, headers, padding, endStream,
                 false, 0, (short) 0, false, promise);
     }
@@ -195,7 +196,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
             Http2Headers headers, int streamDependency, short weight, boolean exclusive,
-            int padding, boolean endStream, ChannelPromise promise) {
+            int padding, boolean endStream, ChannelPromise promise) throws Http2Exception {
         return writeHeadersInternal(ctx, streamId, headers, padding, endStream,
                 true, streamDependency, weight, exclusive, promise);
     }
@@ -292,7 +293,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
     @Override
     public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId,
-            int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) {
+            int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) throws Http2Exception {
         ByteBuf headerBlock = null;
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
@@ -334,8 +335,14 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             if (!flags.endOfHeaders()) {
                 writeContinuationFrames(ctx, streamId, headerBlock, padding, promiseAggregator);
             }
+        } catch (Http2Exception e) {
+            promiseAggregator.setFailure(e);
+            promiseAggregator.doneAllocatingPromises();
+            throw e;
         } catch (Throwable t) {
             promiseAggregator.setFailure(t);
+            promiseAggregator.doneAllocatingPromises();
+            PlatformDependent.throwException(t);
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();
@@ -413,7 +420,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
     private ChannelFuture writeHeadersInternal(ChannelHandlerContext ctx,
             int streamId, Http2Headers headers, int padding, boolean endStream,
-            boolean hasPriority, int streamDependency, short weight, boolean exclusive, ChannelPromise promise) {
+            boolean hasPriority, int streamDependency, short weight, boolean exclusive, ChannelPromise promise)
+                throws Http2Exception {
         ByteBuf headerBlock = null;
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
@@ -465,8 +473,14 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             if (!flags.endOfHeaders()) {
                 writeContinuationFrames(ctx, streamId, headerBlock, padding, promiseAggregator);
             }
+        } catch (Http2Exception e) {
+            promiseAggregator.setFailure(e);
+            promiseAggregator.doneAllocatingPromises();
+            throw e;
         } catch (Throwable t) {
             promiseAggregator.setFailure(t);
+            promiseAggregator.doneAllocatingPromises();
+            PlatformDependent.throwException(t);
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();

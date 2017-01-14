@@ -137,7 +137,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                      int padding, boolean endStream, ChannelPromise promise) {
+                                      int padding, boolean endStream, ChannelPromise promise) throws Http2Exception {
         return writeHeaders(ctx, streamId, headers, 0, Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT,
                 false, padding, endStream, promise);
     }
@@ -145,7 +145,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                       int streamDependency, short weight, boolean exclusive,
-                                      int padding, boolean endOfStream, ChannelPromise promise) {
+                                      int padding, boolean endOfStream, ChannelPromise promise) throws Http2Exception {
         if (closed) {
             return promise.setFailure(new Http2ChannelClosedException());
         }
@@ -240,7 +240,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         while (!pendingStreams.isEmpty() && canCreateStream()) {
             Map.Entry<Integer, PendingStream> entry = pendingStreams.pollFirstEntry();
             PendingStream pendingStream = entry.getValue();
-            pendingStream.sendFrames();
+            try {
+                pendingStream.sendFrames();
+            } catch (Throwable t) {
+                pendingStream.close(t);
+            }
         }
     }
 
@@ -277,7 +281,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             this.streamId = streamId;
         }
 
-        void sendFrames() {
+        void sendFrames() throws Http2Exception {
             for (Frame frame : frames) {
                 frame.send(ctx, streamId);
             }
@@ -308,7 +312,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             }
         }
 
-        abstract void send(ChannelHandlerContext ctx, int streamId);
+        abstract void send(ChannelHandlerContext ctx, int streamId) throws Http2Exception;
     }
 
     private final class HeadersFrame extends Frame {
@@ -331,7 +335,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         }
 
         @Override
-        void send(ChannelHandlerContext ctx, int streamId) {
+        void send(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
             writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding,
                     endOfStream, promise);
         }

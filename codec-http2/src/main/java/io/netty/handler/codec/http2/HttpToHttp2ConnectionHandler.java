@@ -112,6 +112,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                 }
             }
         } catch (Throwable t) {
+            onError(ctx, t);
             promiseAggregator.setFailure(t);
         } finally {
             if (release) {
@@ -123,7 +124,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
     private static void writeHeaders(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder, int streamId,
                                      HttpHeaders headers, Http2Headers http2Headers, boolean endStream,
-                                     SimpleChannelPromiseAggregator promiseAggregator) {
+                                     SimpleChannelPromiseAggregator promiseAggregator) throws Http2Exception {
         int dependencyId = headers.getInt(
                 HttpConversionUtil.ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(), 0);
         short weight = headers.getShort(

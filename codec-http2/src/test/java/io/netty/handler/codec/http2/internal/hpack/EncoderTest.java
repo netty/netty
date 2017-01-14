@@ -22,6 +22,7 @@ import io.netty.handler.codec.http2.Http2Headers;
 import org.junit.Before;
 import org.junit.Test;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -34,7 +35,7 @@ public class EncoderTest {
     @Before
     public void setUp() throws Http2Exception {
         encoder = new Encoder();
-        decoder = new Decoder();
+        decoder = new Decoder(DEFAULT_HEADER_LIST_SIZE, 32);
         mockHeaders = mock(Http2Headers.class);
     }
 

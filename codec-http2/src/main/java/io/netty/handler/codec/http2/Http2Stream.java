@@ -193,4 +193,14 @@ public interface Http2Stream {
      * Indicates whether or not headers was sent to the remote endpoint.
      */
     boolean isHeadersSent();
+
+    /**
+     * Indicates that a push promise was sent to the remote endpoint.
+     */
+    Http2Stream pushPromiseSent();
+
+    /**
+     * Indicates whether or not a push promise was sent to the remote endpoint.
+     */
+    boolean isPushPromiseSent();
 }

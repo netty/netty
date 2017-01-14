@@ -56,6 +56,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2TestUtil.newTestEncoder;
 
@@ -177,7 +178,7 @@ final class TestCase {
             maxHeaderTableSize = Integer.MAX_VALUE;
         }
 
-        return new Decoder(32, maxHeaderTableSize);
+        return new Decoder(DEFAULT_HEADER_LIST_SIZE, 32, maxHeaderTableSize);
     }
 
     private static byte[] encode(Encoder encoder, List<HeaderField> headers, int maxHeaderTableSize,

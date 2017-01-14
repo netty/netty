@@ -77,7 +77,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     public void remoteSettings(Http2Settings settings) throws Http2Exception {
         Boolean pushEnabled = settings.pushEnabled();
         Http2FrameWriter.Configuration config = configuration();
-        Http2HeaderTable outboundHeaderTable = config.headerTable();
+        Http2HeadersEncoder.Configuration outboundHeaderConfig = config.headersConfiguration();
         Http2FrameSizePolicy outboundFrameSizePolicy = config.frameSizePolicy();
         if (pushEnabled != null) {
             if (!connection.isServer() && pushEnabled) {
@@ -95,12 +95,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         Long headerTableSize = settings.headerTableSize();
         if (headerTableSize != null) {
-            outboundHeaderTable.maxHeaderTableSize((int) min(headerTableSize, MAX_VALUE));
+            outboundHeaderConfig.maxHeaderTableSize((int) min(headerTableSize, MAX_VALUE));
         }
 
         Long maxHeaderListSize = settings.maxHeaderListSize();
         if (maxHeaderListSize != null) {
-            outboundHeaderTable.maxHeaderListSize(maxHeaderListSize);
+            outboundHeaderConfig.maxHeaderListSize(maxHeaderListSize);
         }
 
         Integer maxFrameSize = settings.maxFrameSize();
@@ -197,14 +197,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 flowController.addFlowControlled(stream,
                         new FlowControlledHeaders(stream, headers, streamDependency, weight, exclusive, padding,
                                                  endOfStream, promise));
-                stream.headersSent();
                 return promise;
             }
-        } catch (Http2NoMoreStreamIdsException e) {
-            lifecycleManager.onError(ctx, e);
-            return promise.setFailure(e);
-        } catch (Throwable e) {
-            return promise.setFailure(e);
+        } catch (Throwable t) {
+            lifecycleManager.onError(ctx, t);
+            promise.tryFailure(t);
+            return promise;
         }
     }
 
@@ -275,11 +273,16 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             Http2Stream stream = requireStream(streamId);
             // Reserve the promised stream.
             connection.local().reservePushStream(promisedStreamId, stream);
-        } catch (Throwable e) {
-            return promise.setFailure(e);
-        }
 
-        return frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
+            ChannelFuture future = frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding,
+                                                                promise);
+            stream.pushPromiseSent();
+            return future;
+        } catch (Throwable t) {
+            lifecycleManager.onError(ctx, t);
+            promise.tryFailure(t);
+            return promise;
+        }
     }
 
     @Override
@@ -447,7 +450,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, int allowedBytes) {
+        public void write(ChannelHandlerContext ctx, int allowedBytes) throws Http2Exception {
             if (promise.isVoid()) {
                 promise = ctx.newPromise();
             }
@@ -455,6 +458,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
             frameWriter.writeHeaders(ctx, stream.id(), headers, streamDependency, weight, exclusive,
                     padding, endOfStream, promise);
+            stream.headersSent();
         }
 
         @Override

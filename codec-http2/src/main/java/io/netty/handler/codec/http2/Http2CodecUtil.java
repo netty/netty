@@ -30,6 +30,7 @@ import io.netty.util.internal.UnstableApi;
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.headerListSizeError;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.lang.Math.max;
@@ -53,7 +54,6 @@ public final class Http2CodecUtil {
      * pad length field.
      */
     public static final int MAX_PADDING = 256;
-    public static final int MAX_UNSIGNED_SHORT = 0xFFFF;
     public static final long MAX_UNSIGNED_INT = 0xFFFFFFFFL;
     public static final int FRAME_HEADER_LENGTH = 9;
     public static final int SETTING_ENTRY_LENGTH = 6;
@@ -102,10 +102,14 @@ public final class Http2CodecUtil {
     public static final long MIN_HEADER_LIST_SIZE = 0;
 
     public static final int DEFAULT_WINDOW_SIZE = 65535;
-    public static final boolean DEFAULT_ENABLE_PUSH = true;
     public static final short DEFAULT_PRIORITY_WEIGHT = 16;
     public static final int DEFAULT_HEADER_TABLE_SIZE = 4096;
-    public static final int DEFAULT_HEADER_LIST_SIZE = 8192;
+    /**
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">The initial value of this setting is unlimited</a>.
+     * However in practice we don't want to allow our peers to use unlimited memory by default. So we take advantage
+     * of the <q>For any given request, a lower limit than what is advertised MAY be enforced.</q> loophole.
+     */
+    public static final long DEFAULT_HEADER_LIST_SIZE = 8192;
     public static final int DEFAULT_MAX_FRAME_SIZE = MAX_FRAME_SIZE_LOWER_BOUND;
 
     /**
@@ -223,10 +227,30 @@ public final class Http2CodecUtil {
         return max(0, min(state.pendingBytes(), state.windowSize()));
     }
 
+    /**
+     * Results in a RST_STREAM being sent for {@code streamId} due to violating
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>.
+     * @param streamId The stream ID that was being processed when the exceptional condition occurred.
+     * @param maxHeaderListSize The max allowed size for a list of headers in bytes which was exceeded.
+     * @param onDecode {@code true} if the exception was encountered during decoder. {@code false} for encode.
+     * @throws Http2Exception a stream error.
+     */
     public static void headerListSizeExceeded(int streamId, long maxHeaderListSize,
                                               boolean onDecode) throws Http2Exception {
         throw headerListSizeError(streamId, PROTOCOL_ERROR, onDecode, "Header size exceeded max " +
                                   "allowed size (%d)", maxHeaderListSize);
+    }
+
+    /**
+     * Results in a GO_AWAY being sent due to violating
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a> in an unrecoverable
+     * manner.
+     * @param maxHeaderListSize The max allowed size for a list of headers in bytes which was exceeded.
+     * @throws Http2Exception a connection error.
+     */
+    public static void headerListSizeExceeded(long maxHeaderListSize) throws Http2Exception {
+        throw connectionError(PROTOCOL_ERROR, "Header size exceeded max " +
+                "allowed size (%d)", maxHeaderListSize);
     }
 
     static void writeFrameHeaderInternal(ByteBuf out, int payloadLength, byte type,
