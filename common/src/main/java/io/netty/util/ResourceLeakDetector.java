@@ -26,7 +26,6 @@ import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.EnumSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -66,7 +65,23 @@ public class ResourceLeakDetector<T> {
          * Enables paranoid resource leak detection which reports where the leaked object was accessed recently,
          * at the cost of the highest possible overhead (for testing purposes only).
          */
-        PARANOID
+        PARANOID;
+
+        /**
+         * Returns level based on string value. Accepts also string that represents ordinal number of enum.
+         *
+         * @param levelStr - level string : DISABLED, SIMPLE, ADVANCED, PARANOID. Ignores case.
+         * @return corresponding level or SIMPLE level in case of no match.
+         */
+        static Level parseLevel(String levelStr) {
+            String trimmedLevelStr = levelStr.trim();
+            for (Level l : values()) {
+                if (trimmedLevelStr.equalsIgnoreCase(l.name()) || trimmedLevelStr.equals(String.valueOf(l.ordinal()))) {
+                    return l;
+                }
+            }
+            return DEFAULT_LEVEL;
+        }
     }
 
     private static Level level;
@@ -88,16 +103,11 @@ public class ResourceLeakDetector<T> {
         Level defaultLevel = disabled? Level.DISABLED : DEFAULT_LEVEL;
 
         // First read old property name
-        String levelStr = SystemPropertyUtil.get(PROP_LEVEL_OLD, defaultLevel.name()).trim().toUpperCase();
+        String levelStr = SystemPropertyUtil.get(PROP_LEVEL_OLD, defaultLevel.name());
 
         // If new property name is present, use it
-        levelStr = SystemPropertyUtil.get(PROP_LEVEL, levelStr).trim().toUpperCase();
-        Level level = DEFAULT_LEVEL;
-        for (Level l: EnumSet.allOf(Level.class)) {
-            if (levelStr.equals(l.name()) || levelStr.equals(String.valueOf(l.ordinal()))) {
-                level = l;
-            }
-        }
+        levelStr = SystemPropertyUtil.get(PROP_LEVEL, levelStr);
+        Level level = Level.parseLevel(levelStr);
 
         MAX_RECORDS = SystemPropertyUtil.getInt(PROP_MAX_RECORDS, DEFAULT_MAX_RECORDS);
 
