@@ -76,7 +76,7 @@ public abstract class Recycler<T> {
         MAX_DELAYED_QUEUES_PER_THREAD = max(0,
                 SystemPropertyUtil.getInt("io.netty.recycler.maxDelayedQueuesPerThread",
                         // We use the same value as default EventLoop number
-                        Runtime.getRuntime().availableProcessors() * 2));
+                        NettyRuntime.availableProcessors() * 2));
 
         LINK_CAPACITY = safeFindNextPositivePowerOfTwo(
                 max(SystemPropertyUtil.getInt("io.netty.recycler.linkCapacity", 16), 16));
