@@ -196,7 +196,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.maxPayloadSize = checkPositive(maxPayloadSize, "maxPayloadSize");
         this.optResourceEnabled = optResourceEnabled;
         this.hostsFileEntriesResolver = checkNotNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
-        this.resolveCache = resolveCache;
+        this.resolveCache = checkNotNull(resolveCache, "resolveCache");
         this.searchDomains = checkNotNull(searchDomains, "searchDomains").clone();
         this.ndots = checkPositiveOrZero(ndots, "ndots");
 
