@@ -276,4 +276,18 @@ public class JsonObjectDecoderTest {
 
         assertFalse(ch.finish());
     }
+
+    @Test
+    public void testCorruptedFrameException() {
+        final String part1 = "{\"a\":{\"b\":{\"c\":{ \"d\":\"27301\", \"med\":\"d\", \"path\":\"27310\"} }, \"status\":\"OK\" } }{\"";
+        final String part2 = "a\":{\"b\":{\"c\":{\"ory\":[{\"competi\":[{\"event\":[{" + "\"externalI\":{\"external\":[{\"id\":\"O\"} ]";
+
+        EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
+
+        ch.writeInbound(Unpooled.copiedBuffer(part1, CharsetUtil.UTF_8));
+        ch.readInbound();
+
+        ch.writeInbound(Unpooled.copiedBuffer(part2, CharsetUtil.UTF_8));
+        ch.readInbound();
+    }
 }
