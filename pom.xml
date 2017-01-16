@@ -215,6 +215,9 @@
   </profiles>
 
   <properties>
+    <maven.compiler.source>1.6</maven.compiler.source>
+    <maven.compiler.target>1.6</maven.compiler.target>
+    <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>22</netty.build.version>
@@ -259,6 +262,7 @@
   </properties>
 
   <modules>
+    <module>dev-tools</module>
     <module>common</module>
     <module>buffer</module>
     <module>codec</module>
@@ -293,6 +297,12 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>netty-dev-tools</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
       <!-- Byte code generator - completely optional -->
       <dependency>
         <groupId>org.javassist</groupId>
@@ -653,8 +663,8 @@
         <configuration>
           <compilerVersion>1.8</compilerVersion>
           <fork>true</fork>
-          <source>1.6</source>
-          <target>1.6</target>
+          <source>${maven.compiler.source}</source>
+          <target>${maven.compiler.target}</target>
           <debug>true</debug>
           <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
@@ -1085,6 +1095,16 @@
           </dependency>
         </dependencies>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+        <version>1.5</version>
+      </plugin>
+      <plugin>
+        <groupId>de.thetaphi</groupId>
+        <artifactId>forbiddenapis</artifactId>
+        <version>2.2</version>
+      </plugin>
     </plugins>
 
     <pluginManagement>
@@ -1299,6 +1319,83 @@
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-remote-resources-plugin</artifactId>
+          <version>1.5</version>
+          <configuration>
+            <resourceBundles>
+              <resourceBundle>io.netty:netty-dev-tools:${project.version}</resourceBundle>
+            </resourceBundles>
+            <outputDirectory>${netty.dev.tools.directory}</outputDirectory>
+            <!-- don't include netty-dev-tools in artifacts -->
+            <attachToMain>false</attachToMain>
+            <attachToTest>false</attachToTest>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>process</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>de.thetaphi</groupId>
+          <artifactId>forbiddenapis</artifactId>
+          <version>2.2</version>
+          <executions>
+            <execution>
+              <id>check-forbidden-apis</id>
+              <configuration>
+                <targetVersion>${maven.compiler.target}</targetVersion>
+                <!-- allow undocumented classes like sun.misc.Unsafe: -->
+                <internalRuntimeForbidden>false</internalRuntimeForbidden>
+                <!-- if the used Java version is too new, don't fail, just do nothing: -->
+                <failOnUnsupportedJava>false</failOnUnsupportedJava>
+                <bundledSignatures>
+                  <!-- This will automatically choose the right signatures based on 'targetVersion': -->
+                  <!-- enabling these should be done in the future -->
+                  <!-- bundledSignature>jdk-unsafe</bundledSignature -->
+                  <!-- bundledSignature>jdk-deprecated</bundledSignature -->
+                  <!-- bundledSignature>jdk-system-out</bundledSignature -->
+                </bundledSignatures>
+                <signaturesFiles>
+                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
+                </signaturesFiles>
+                <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
+              </configuration>
+              <phase>compile</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>check-forbidden-test-apis</id>
+              <configuration>
+                <targetVersion>${maven.compiler.target}</targetVersion>
+                <!-- allow undocumented classes like sun.misc.Unsafe: -->
+                <internalRuntimeForbidden>true</internalRuntimeForbidden>
+                <!-- if the used Java version is too new, don't fail, just do nothing: -->
+                <failOnUnsupportedJava>false</failOnUnsupportedJava>
+                <bundledSignatures>
+                  <!-- This will automatically choose the right signatures based on 'targetVersion': -->
+                  <!-- enabling these should be done in the future -->
+                  <!-- bundledSignature>jdk-unsafe</bundledSignature -->
+                  <!-- bundledSignature>jdk-deprecated</bundledSignature -->
+                </bundledSignatures>
+                <signaturesFiles>
+                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
+                </signaturesFiles>
+                <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
+              </configuration>
+              <phase>test-compile</phase>
+              <goals>
+                <goal>testCheck</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
