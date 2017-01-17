@@ -195,7 +195,7 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        assertTrue(requestLatch.await(2, SECONDS));
+        assertTrue(requestLatch.await(5, SECONDS));
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(headers),
                 eq(0), eq(weight), eq(false), eq(0), eq(true));
         // Wait for some time to see if a go_away or reset frame will be received.
@@ -578,7 +578,7 @@ public class Http2ConnectionRoundtripTest {
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
         http2Client = clientChannel.pipeline().get(Http2ConnectionHandler.class);
-        assertTrue(serverInitLatch.await(2, TimeUnit.SECONDS));
+        assertTrue(serverInitLatch.await(5, TimeUnit.SECONDS));
         http2Server = serverHandlerRef.get();
     }
 

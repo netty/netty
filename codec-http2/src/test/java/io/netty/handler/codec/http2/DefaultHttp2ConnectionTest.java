@@ -222,7 +222,7 @@ public class DefaultHttp2ConnectionTest {
                 return true;
             }
         });
-        assertTrue(latch.await(2, TimeUnit.SECONDS));
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 
     @Test
@@ -256,7 +256,7 @@ public class DefaultHttp2ConnectionTest {
                 }
             });
         }
-        assertTrue(latch.await(2, TimeUnit.SECONDS));
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 
     @Test
@@ -1183,7 +1183,7 @@ public class DefaultHttp2ConnectionTest {
                 latch.countDown();
             }
         });
-        assertTrue(latch.await(2, TimeUnit.SECONDS));
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 
     private void incrementAndGetStreamShouldRespectOverflow(Endpoint<?> endpoint, int streamId) throws Http2Exception {

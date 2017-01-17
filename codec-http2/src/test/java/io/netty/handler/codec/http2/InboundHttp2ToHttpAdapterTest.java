@@ -732,7 +732,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 clientChannel.flush();
             }
         });
-        assertTrue(settingsLatch.await(3, SECONDS));
+        assertTrue(settingsLatch.await(5, SECONDS));
         ArgumentCaptor<Http2Settings> settingsCaptor = ArgumentCaptor.forClass(Http2Settings.class);
         verify(settingsListener, times(2)).messageReceived(settingsCaptor.capture());
         assertEquals(settings, settingsCaptor.getValue());
@@ -826,7 +826,7 @@ public class InboundHttp2ToHttpAdapterTest {
         ChannelFuture ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
-        assertTrue(serverChannelLatch.await(2, SECONDS));
+        assertTrue(serverChannelLatch.await(5, SECONDS));
     }
 
     private void cleanupCapturedRequests() {
@@ -848,19 +848,19 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     private void awaitRequests() throws Exception {
-        assertTrue(serverLatch.await(3, SECONDS));
+        assertTrue(serverLatch.await(5, SECONDS));
     }
 
     private void awaitResponses() throws Exception {
-        assertTrue(clientLatch.await(3, SECONDS));
+        assertTrue(clientLatch.await(5, SECONDS));
     }
 
     private void awaitRequests2() throws Exception {
-        assertTrue(serverLatch2.await(3, SECONDS));
+        assertTrue(serverLatch2.await(5, SECONDS));
     }
 
     private void awaitResponses2() throws Exception {
-        assertTrue(clientLatch2.await(3, SECONDS));
+        assertTrue(clientLatch2.await(5, SECONDS));
     }
 
     private ChannelHandlerContext ctxClient() {
