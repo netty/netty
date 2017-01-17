@@ -91,12 +91,14 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce,
                                SelectStrategyFactory selectStrategyFactory) {
         super(nThreads, threadFactory, maxEventsAtOnce, selectStrategyFactory, RejectedExecutionHandlers.reject());
+        Epoll.ensureAvailability();
     }
 
     public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce,
                                SelectStrategyFactory selectStrategyFactory,
                                RejectedExecutionHandler rejectedExecutionHandler) {
         super(nThreads, threadFactory, maxEventsAtOnce, selectStrategyFactory, rejectedExecutionHandler);
+        Epoll.ensureAvailability();
     }
 
     /**
