@@ -30,6 +30,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.logging.InternalLogger;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -434,6 +435,33 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     final Map<AttributeKey<?>, Object> attrs() {
         return copiedMap(attrs);
+    }
+
+    static void setChannelOptions(
+            Channel channel, Map<ChannelOption<?>, Object> options, InternalLogger logger) {
+        for (Map.Entry<ChannelOption<?>, Object> e: options.entrySet()) {
+            setChannelOption(channel, e.getKey(), e.getValue(), logger);
+        }
+    }
+
+    static void setChannelOptions(
+            Channel channel, Map.Entry<ChannelOption<?>, Object>[] options, InternalLogger logger) {
+        for (Map.Entry<ChannelOption<?>, Object> e: options) {
+            setChannelOption(channel, e.getKey(), e.getValue(), logger);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void setChannelOption(
+            Channel channel, ChannelOption<?> option, Object value, InternalLogger logger) {
+        try {
+            if (!channel.config().setOption((ChannelOption<Object>) option, value)) {
+                logger.warn("Unknown channel option '{}' for channel '{}'", option, channel);
+            }
+        } catch (Throwable t) {
+            logger.warn(
+                    "Failed to set channel option '{}' with value '{}' for channel '{}'", option, channel, channel, t);
+        }
     }
 
     @Override
