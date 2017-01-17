@@ -27,9 +27,6 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -92,7 +89,7 @@ final class PlatformDependent0 {
                 addressField = (Field) maybeAddressField;
                 logger.debug("java.nio.Buffer.address: available");
             } else {
-                logger.debug("java.nio.Buffer.address: unavailable", (Exception) maybeAddressField);
+                logger.debug("java.nio.Buffer.address: unavailable", (Throwable) maybeAddressField);
                 addressField = null;
             }
         }
@@ -155,7 +152,7 @@ final class PlatformDependent0 {
                 } else {
                     // Unsafe.copyMemory(Object, long, Object, long, long) unavailable.
                     unsafe = null;
-                    logger.debug("sun.misc.Unsafe.copyMemory: unavailable", (Exception) maybeException);
+                    logger.debug("sun.misc.Unsafe.copyMemory: unavailable", (Throwable) maybeException);
                 }
             }
         } else {
@@ -180,7 +177,7 @@ final class PlatformDependent0 {
                             @Override
                             public Object run() {
                                 try {
-                                    final Constructor constructor =
+                                    final Constructor<?> constructor =
                                             direct.getClass().getDeclaredConstructor(long.class, int.class);
                                     constructor.setAccessible(true);
                                     return constructor;
@@ -196,7 +193,7 @@ final class PlatformDependent0 {
                     address = UNSAFE.allocateMemory(1);
                     // try to use the constructor now
                     try {
-                        ((Constructor) maybeDirectBufferConstructor).newInstance(address, 1);
+                        ((Constructor<?>) maybeDirectBufferConstructor).newInstance(address, 1);
                         directBufferConstructor = (Constructor<?>) maybeDirectBufferConstructor;
                         logger.debug("direct buffer constructor: available");
                     } catch (InstantiationException e) {
@@ -209,7 +206,7 @@ final class PlatformDependent0 {
                 } else {
                     logger.debug(
                             "direct buffer constructor: unavailable",
-                            (Exception) maybeDirectBufferConstructor);
+                            (Throwable) maybeDirectBufferConstructor);
                     directBufferConstructor = null;
                 }
             } finally {
@@ -367,10 +364,6 @@ final class PlatformDependent0 {
 
     static long getLong(byte[] data, int index) {
         return UNSAFE.getLong(data, BYTE_ARRAY_BASE_OFFSET + index);
-    }
-
-    static void putOrderedObject(Object object, long address, Object value) {
-        UNSAFE.putOrderedObject(object, address, value);
     }
 
     static void putByte(long address, byte value) {

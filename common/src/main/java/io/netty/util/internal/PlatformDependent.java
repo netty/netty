@@ -519,10 +519,6 @@ public final class PlatformDependent {
         return value & 0x1f;
     }
 
-    public static void putOrderedObject(Object object, long address, Object value) {
-        PlatformDependent0.putOrderedObject(object, address, value);
-    }
-
     public static void putByte(long address, byte value) {
         PlatformDependent0.putByte(address, value);
     }
