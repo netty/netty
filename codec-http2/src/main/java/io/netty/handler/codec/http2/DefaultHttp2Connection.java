@@ -514,7 +514,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public Http2Stream open(boolean halfClosed) throws Http2Exception {
             state = activeState(id, state, isLocal(), halfClosed);
-            if (!createdBy().canOpenStream()) {
+            if (createdBy().isMaxConcurrentStreamsExhausted()) {
                 throw connectionError(PROTOCOL_ERROR, "Maximum active streams violated for this endpoint.");
             }
             activate();
@@ -910,9 +910,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             return isValidStreamId(streamId) && streamId <= lastStreamCreated();
         }
 
-        @Override
-        public boolean canOpenStream() {
-            return numActiveStreams < maxActiveStreams;
+        boolean isMaxConcurrentStreamsExhausted() {
+            return numActiveStreams >= maxActiveStreams;
         }
 
         private DefaultStream createStream(int streamId, State state) throws Http2Exception {
@@ -960,16 +959,22 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (!opposite().allowPushTo()) {
                 throw connectionError(PROTOCOL_ERROR, "Server push not allowed to opposite endpoint.");
             }
-            State state = isLocal() ? RESERVED_LOCAL : RESERVED_REMOTE;
-            checkNewStreamAllowed(streamId, state);
 
-            // Create and initialize the stream.
-            DefaultStream stream = new DefaultStream(streamId, state);
+            DefaultStream stream = createStream(streamId, isLocal() ? RESERVED_LOCAL : RESERVED_REMOTE);
 
-            incrementExpectedStreamId(streamId);
+            // Section 5.1.2 states "reserved" streams don't count toward
+            // SETTINGS_MAX_CONCURRENT_STREAMS [1], and Section 8.2.2 states that clients can use
+            // SETTINGS_MAX_CONCURRENT_STREAMS to limit stream concurrency [2].
+            // If we don't use SETTINGS_MAX_CONCURRENT_STREAMS to limit stream concurrency on the client then we must
+            // resort to implementation dependent heuristics that cannot be communicated to the remote peer to limit the
+            // number of reserved streams so we choose to respect section 8.2.2.
+            // [1] https://tools.ietf.org/html/rfc7540#section-5.1.2
+            // Streams in either of the "reserved" states do not count toward the stream limit.
+            // [2] https://tools.ietf.org/html/rfc7540#section-8.2.2
+            // A client can use the SETTINGS_MAX_CONCURRENT_STREAMS setting to limit
+            // the number of responses that can be concurrently pushed by a server.
+            stream.activate();
 
-            // Register the stream.
-            addStream(stream);
             return stream;
         }
 
@@ -1081,8 +1086,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (nextStreamIdToCreate <= 0) {
                 throw connectionError(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.");
             }
-            if (state.localSideOpen() || state.remoteSideOpen()) {
-                if (!canOpenStream()) {
+            if (state != IDLE) {
+                if (isMaxConcurrentStreamsExhausted()) {
                     throw streamError(streamId, REFUSED_STREAM, "Maximum active streams violated for this endpoint.");
                 }
             } else if (numStreams == maxStreams) {
