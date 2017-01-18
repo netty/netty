@@ -36,6 +36,7 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 
+import java.net.IDN;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -272,7 +273,8 @@ abstract class DnsNameResolverContext<T> {
 
             final InetAddress resolved;
             try {
-                resolved = InetAddress.getByAddress(hostname, addrBytes);
+                resolved = InetAddress.getByAddress(
+                        parent.isDecodeIdn() ? IDN.toUnicode(hostname) : hostname, addrBytes);
             } catch (UnknownHostException e) {
                 // Should never reach here.
                 throw new Error(e);
