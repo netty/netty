@@ -29,8 +29,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static io.netty.util.internal.StringUtil.simpleClassName;
 
 /**
  * A {@link Timer} optimized for approximated I/O timeout scheduling.
@@ -78,8 +82,11 @@ public class HashedWheelTimer implements Timer {
     static final InternalLogger logger =
             InternalLoggerFactory.getInstance(HashedWheelTimer.class);
 
+    private static final AtomicInteger INSTANCE_COUNTER = new AtomicInteger();
+    private static final AtomicBoolean WARNED_TOO_MANY_INSTANCES = new AtomicBoolean();
+    private static final int INSTANCE_COUNT_LIMIT = 64;
     private static final ResourceLeakDetector<HashedWheelTimer> leakDetector = ResourceLeakDetectorFactory.instance()
-            .newResourceLeakDetector(HashedWheelTimer.class, 1, Runtime.getRuntime().availableProcessors() * 4L);
+            .newResourceLeakDetector(HashedWheelTimer.class, 1);
 
     private static final AtomicIntegerFieldUpdater<HashedWheelTimer> WORKER_STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(HashedWheelTimer.class, "workerState");
@@ -266,6 +273,24 @@ public class HashedWheelTimer implements Timer {
         leak = leakDetection || !workerThread.isDaemon() ? leakDetector.track(this) : null;
 
         this.maxPendingTimeouts = maxPendingTimeouts;
+
+        if (INSTANCE_COUNTER.incrementAndGet() > INSTANCE_COUNT_LIMIT &&
+            WARNED_TOO_MANY_INSTANCES.compareAndSet(false, true)) {
+            reportTooManyInstances();
+        }
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            super.finalize();
+        } finally {
+            // This object is going to be GCed and it is assumed the ship has sailed to do a proper shutdown. If
+            // we have not yet shutdown then we want to make sure we decrement the active instance count.
+            if (WORKER_STATE_UPDATER.getAndSet(this, WORKER_STATE_SHUTDOWN) != WORKER_STATE_SHUTDOWN) {
+                INSTANCE_COUNTER.decrementAndGet();
+            }
+        }
     }
 
     private static HashedWheelBucket[] createWheel(int ticksPerWheel) {
@@ -337,33 +362,37 @@ public class HashedWheelTimer implements Timer {
 
         if (!WORKER_STATE_UPDATER.compareAndSet(this, WORKER_STATE_STARTED, WORKER_STATE_SHUTDOWN)) {
             // workerState can be 0 or 2 at this moment - let it always be 2.
-            WORKER_STATE_UPDATER.set(this, WORKER_STATE_SHUTDOWN);
-
-            if (leak != null) {
-                boolean closed = leak.close(this);
-                assert closed;
+            if (WORKER_STATE_UPDATER.getAndSet(this, WORKER_STATE_SHUTDOWN) != WORKER_STATE_SHUTDOWN) {
+                INSTANCE_COUNTER.decrementAndGet();
+                if (leak != null) {
+                    boolean closed = leak.close(this);
+                    assert closed;
+                }
             }
 
             return Collections.emptySet();
         }
 
-        boolean interrupted = false;
-        while (workerThread.isAlive()) {
-            workerThread.interrupt();
-            try {
-                workerThread.join(100);
-            } catch (InterruptedException ignored) {
-                interrupted = true;
+        try {
+            boolean interrupted = false;
+            while (workerThread.isAlive()) {
+                workerThread.interrupt();
+                try {
+                    workerThread.join(100);
+                } catch (InterruptedException ignored) {
+                    interrupted = true;
+                }
             }
-        }
 
-        if (interrupted) {
-            Thread.currentThread().interrupt();
-        }
-
-        if (leak != null) {
-            boolean closed = leak.close(this);
-            assert closed;
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        } finally {
+            INSTANCE_COUNTER.decrementAndGet();
+            if (leak != null) {
+                boolean closed = leak.close(this);
+                assert closed;
+            }
         }
         return worker.unprocessedTimeouts();
     }
@@ -398,6 +427,13 @@ public class HashedWheelTimer implements Timer {
 
     private boolean shouldLimitTimeouts() {
         return maxPendingTimeouts > 0;
+    }
+
+    private static void reportTooManyInstances() {
+        String resourceType = simpleClassName(HashedWheelTimer.class);
+        logger.error("You are creating too many " + resourceType + " instances. " +
+                resourceType + " is a shared resource that must be reused across the JVM," +
+                "so that only a few instances are created.");
     }
 
     private final class Worker implements Runnable {
@@ -636,7 +672,7 @@ public class HashedWheelTimer implements Timer {
             long remaining = deadline - currentTime + timer.startTime;
 
             StringBuilder buf = new StringBuilder(192)
-               .append(StringUtil.simpleClassName(this))
+               .append(simpleClassName(this))
                .append('(')
                .append("deadline: ");
             if (remaining > 0) {
