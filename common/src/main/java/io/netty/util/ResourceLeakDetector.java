@@ -161,8 +161,6 @@ public class ResourceLeakDetector<T> {
 
     private final String resourceType;
     private final int samplingInterval;
-    private final long maxActive;
-    private final AtomicBoolean loggedTooManyActive = new AtomicBoolean();
 
     /**
      * @deprecated use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}.
@@ -181,30 +179,42 @@ public class ResourceLeakDetector<T> {
     }
 
     /**
+     * @deprecated Use {@link ResourceLeakDetector#ResourceLeakDetector(Class, int)}.
+     * <p>
+     * This should not be used directly by users of {@link ResourceLeakDetector}.
+     * Please use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class)}
+     * or {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}
+     *
+     * @param maxActive This is deprecated and will be ignored.
+     */
+    @Deprecated
+    public ResourceLeakDetector(Class<?> resourceType, int samplingInterval, long maxActive) {
+        this(resourceType, samplingInterval);
+    }
+
+    /**
      * This should not be used directly by users of {@link ResourceLeakDetector}.
      * Please use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class)}
      * or {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}
      */
     @SuppressWarnings("deprecation")
-    public ResourceLeakDetector(Class<?> resourceType, int samplingInterval, long maxActive) {
-        this(simpleClassName(resourceType), samplingInterval, maxActive);
+    public ResourceLeakDetector(Class<?> resourceType, int samplingInterval) {
+        this(simpleClassName(resourceType), samplingInterval, Long.MAX_VALUE);
     }
 
     /**
      * @deprecated use {@link ResourceLeakDetectorFactory#newResourceLeakDetector(Class, int, long)}.
+     * <p>
+     * @param maxActive This is deprecated and will be ignored.
      */
     @Deprecated
     public ResourceLeakDetector(String resourceType, int samplingInterval, long maxActive) {
         if (resourceType == null) {
             throw new NullPointerException("resourceType");
         }
-        if (maxActive <= 0) {
-            throw new IllegalArgumentException("maxActive: " + maxActive + " (expected: 1+)");
-        }
 
         this.resourceType = resourceType;
         this.samplingInterval = samplingInterval;
-        this.maxActive = maxActive;
     }
 
     /**
@@ -261,12 +271,6 @@ public class ResourceLeakDetector<T> {
             return;
         }
 
-        // Report too many instances.
-        int samplingInterval = level == Level.PARANOID? 1 : this.samplingInterval;
-        if (allLeaks.size() * samplingInterval > maxActive && loggedTooManyActive.compareAndSet(false, true)) {
-            reportInstancesLeak(resourceType);
-        }
-
         // Detect and report previous leaks.
         for (;;) {
             @SuppressWarnings("unchecked")
@@ -317,13 +321,10 @@ public class ResourceLeakDetector<T> {
     }
 
     /**
-     * This method is called when instance leaks are detected. It can be overridden for tracking how many times leaks
-     * have been detected.
+     * @deprecated This method will no longer be invoked by {@link ResourceLeakDetector}.
      */
+    @Deprecated
     protected void reportInstancesLeak(String resourceType) {
-        logger.error("LEAK: You are creating too many " + resourceType + " instances.  " +
-                resourceType + " is a shared resource that must be reused across the JVM," +
-                "so that only a few instances are created.");
     }
 
     @SuppressWarnings("deprecation")
