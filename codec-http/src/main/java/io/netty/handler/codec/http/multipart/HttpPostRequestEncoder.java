@@ -37,13 +37,13 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static io.netty.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static java.util.AbstractMap.SimpleImmutableEntry;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
@@ -74,12 +74,14 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         RFC3986
     }
 
-    private static final Map<Pattern, String> percentEncodings = new HashMap<Pattern, String>();
+    private static final Map.Entry[] percentEncodings;
 
     static {
-        percentEncodings.put(Pattern.compile("\\*"), "%2A");
-        percentEncodings.put(Pattern.compile("\\+"), "%20");
-        percentEncodings.put(Pattern.compile("%7E"), "~");
+        percentEncodings = new Map.Entry[] {
+                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("\\*"), "%2A"),
+                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("\\+"), "%20"),
+                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("~"), "%7E")
+        };
     }
 
     /**
@@ -780,6 +782,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * @throws ErrorDataEncoderException
      *             if the encoding is in error
      */
+    @SuppressWarnings("unchecked")
     private String encodeAttribute(String s, Charset charset) throws ErrorDataEncoderException {
         if (s == null) {
             return "";
@@ -787,7 +790,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         try {
             String encoded = URLEncoder.encode(s, charset.name());
             if (encoderMode == EncoderMode.RFC3986) {
-                for (Map.Entry<Pattern, String> entry : percentEncodings.entrySet()) {
+                for (Map.Entry<Pattern, String> entry : percentEncodings) {
                     String replacement = entry.getValue();
                     encoded = entry.getKey().matcher(encoded).replaceAll(replacement);
                 }
