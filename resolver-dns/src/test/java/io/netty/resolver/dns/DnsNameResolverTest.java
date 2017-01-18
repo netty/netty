@@ -170,6 +170,20 @@ public class DnsNameResolverTest {
             "blogspot.in",
             "localhost")));
 
+    private static final Map<String, String> DOMAINS_PUNYCODE = new HashMap<String, String>();
+    static {
+        DOMAINS_PUNYCODE.put("büchner.de", "xn--bchner-3ya.de");
+        DOMAINS_PUNYCODE.put("müller.de", "xn--mller-kva.de");
+    }
+
+    private static final Set<String> DOMAINS_ALL;
+    static {
+        Set<String> all = new HashSet<String>(DOMAINS.size() + DOMAINS_PUNYCODE.size());
+        all.addAll(DOMAINS);
+        all.addAll(DOMAINS_PUNYCODE.values());
+        DOMAINS_ALL = Collections.unmodifiableSet(all);
+    }
+
     /**
      * The list of the domain names to exclude from {@link #testResolveAorAAAA()}.
      */
@@ -238,15 +252,20 @@ public class DnsNameResolverTest {
                 StringUtil.EMPTY_STRING);
     }
 
-    private static final TestDnsServer dnsServer = new TestDnsServer(DOMAINS);
+    private static final TestDnsServer dnsServer = new TestDnsServer(DOMAINS_ALL);
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
 
-    private static DnsNameResolverBuilder newResolver() {
+    private static DnsNameResolverBuilder newResolver(boolean decodeToUnicode) {
         return new DnsNameResolverBuilder(group.next())
                 .channelType(NioDatagramChannel.class)
                 .nameServerAddresses(DnsServerAddresses.singleton(dnsServer.localAddress()))
                 .maxQueriesPerResolve(1)
+                .decodeIdn(decodeToUnicode)
                 .optResourceEnabled(false);
+    }
+
+    private static DnsNameResolverBuilder newResolver() {
+        return newResolver(true);
     }
 
     private static DnsNameResolverBuilder newResolver(InternetProtocolFamily... resolvedAddressTypes) {
@@ -558,6 +577,28 @@ public class DnsNameResolverTest {
         }
     }
 
+    @Test
+    public void testResolveDecodeUnicode() {
+        testResolveUnicode(true);
+    }
+
+    @Test
+    public void testResolveNotDecodeUnicode() {
+        testResolveUnicode(false);
+    }
+
+    private static void testResolveUnicode(boolean decode) {
+        DnsNameResolver resolver = newResolver(decode).build();
+        try {
+            for (Entry<String, String> entries : DOMAINS_PUNYCODE.entrySet()) {
+                InetAddress address = resolver.resolve(entries.getKey()).syncUninterruptibly().getNow();
+                assertEquals(decode ? entries.getKey() : entries.getValue(), address.getHostName());
+            }
+        } finally {
+            resolver.close();
+        }
+    }
+
     private static void resolve(DnsNameResolver resolver, Map<String, Future<InetAddress>> futures, String hostname) {
         futures.put(hostname, resolver.resolve(hostname));
     }
@@ -568,5 +609,4 @@ public class DnsNameResolverTest {
             String hostname) throws Exception {
         futures.put(hostname, resolver.query(new DefaultDnsQuestion(hostname, DnsRecordType.MX)));
     }
-
 }
