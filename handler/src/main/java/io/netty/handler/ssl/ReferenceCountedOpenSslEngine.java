@@ -135,7 +135,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 @SuppressWarnings({ "rawtypes", "unused" })
                 List serverNames = (List) getServerNamesMethod.invoke(parameters);
                 setServerNamesMethod.invoke(parameters, Collections.emptyList());
-            } catch (Throwable ingore) {
+            } catch (Throwable ignore) {
                 sniHostNameClass = null;
                 getAsciiNameMethod = null;
                 getServerNamesMethod = null;

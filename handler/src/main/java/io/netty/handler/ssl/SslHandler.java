@@ -854,8 +854,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             && "com.sun.nio.sctp.SctpChannel".equals(clazz.getSuperclass().getName())) {
                         return true;
                     }
-                } catch (ClassNotFoundException e) {
-                    // This should not happen just ignore
+                } catch (Throwable cause) {
+                    logger.debug("Unexpected exception while loading class {} classname {}",
+                                 getClass(), classname, cause);
                 }
             }
         }
