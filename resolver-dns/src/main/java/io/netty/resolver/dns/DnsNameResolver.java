@@ -155,6 +155,7 @@ public class DnsNameResolver extends InetNameResolver {
     private final boolean cnameFollowAAAARecords;
     private final InternetProtocolFamily preferredAddressType;
     private final DnsRecordType[] resolveRecordTypes;
+    private final boolean decodeIdn;
 
     /**
      * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
@@ -175,7 +176,11 @@ public class DnsNameResolver extends InetNameResolver {
      * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to check for local aliases
      * @param searchDomains the list of search domain
      * @param ndots the ndots value
+     * @deprecated use {@link #DnsNameResolver(EventLoop, ChannelFactory, DnsServerAddresses, DnsCache, long,
+     *             InternetProtocolFamily[], boolean, int, boolean, int,
+     *             boolean, HostsFileEntriesResolver, String[], int, boolean)}
      */
+    @Deprecated
     public DnsNameResolver(
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
@@ -191,6 +196,49 @@ public class DnsNameResolver extends InetNameResolver {
             HostsFileEntriesResolver hostsFileEntriesResolver,
             String[] searchDomains,
             int ndots) {
+        this(eventLoop, channelFactory, nameServerAddresses, resolveCache, queryTimeoutMillis, resolvedAddressTypes,
+                recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled,
+                hostsFileEntriesResolver, searchDomains, ndots, true);
+    }
+
+    /**
+     * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
+     *
+     * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
+     * @param channelFactory the {@link ChannelFactory} that will create a {@link DatagramChannel}
+     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
+     *                            this to determine which DNS server should be contacted for the next retry in case
+     *                            of failure.
+     * @param resolveCache the DNS resolved entries cache
+     * @param queryTimeoutMillis timeout of each DNS query in millis
+     * @param resolvedAddressTypes list of the protocol families
+     * @param recursionDesired if recursion desired flag must be set
+     * @param maxQueriesPerResolve the maximum allowed number of DNS queries for a given name resolution
+     * @param traceEnabled if trace is enabled
+     * @param maxPayloadSize the capacity of the datagram packet buffer
+     * @param optResourceEnabled if automatic inclusion of a optional records is enabled
+     * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to check for local aliases
+     * @param searchDomains the list of search domain
+     * @param ndots the ndots value
+     * @param decodeIdn {@code true} if domain / host names should be decoded to unicode when received.
+     *                        See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
+     */
+    public DnsNameResolver(
+            EventLoop eventLoop,
+            ChannelFactory<? extends DatagramChannel> channelFactory,
+            DnsServerAddresses nameServerAddresses,
+            final DnsCache resolveCache,
+            long queryTimeoutMillis,
+            InternetProtocolFamily[] resolvedAddressTypes,
+            boolean recursionDesired,
+            int maxQueriesPerResolve,
+            boolean traceEnabled,
+            int maxPayloadSize,
+            boolean optResourceEnabled,
+            HostsFileEntriesResolver hostsFileEntriesResolver,
+            String[] searchDomains,
+            int ndots,
+            boolean decodeIdn) {
 
         super(eventLoop);
         checkNotNull(channelFactory, "channelFactory");
@@ -206,6 +254,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.resolveCache = checkNotNull(resolveCache, "resolveCache");
         this.searchDomains = checkNotNull(searchDomains, "searchDomains").clone();
         this.ndots = checkPositiveOrZero(ndots, "ndots");
+        this.decodeIdn = decodeIdn;
 
         boolean cnameFollowARecords = false;
         boolean cnameFollowAAAARecords = false;
@@ -307,6 +356,10 @@ public class DnsNameResolver extends InetNameResolver {
 
     final DnsRecordType[] resolveRecordTypes() {
         return resolveRecordTypes;
+    }
+
+    final boolean isDecodeIdn() {
+        return decodeIdn;
     }
 
     /**
