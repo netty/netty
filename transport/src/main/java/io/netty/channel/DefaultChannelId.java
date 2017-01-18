@@ -107,9 +107,10 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     private static int defaultProcessId() {
-        final ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
+        ClassLoader loader = null;
         String value;
         try {
+            loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
             // Invoke java.lang.management.ManagementFactory.getRuntimeMXBean().getName()
             Class<?> mgmtFactoryType = Class.forName("java.lang.management.ManagementFactory", true, loader);
             Class<?> runtimeMxBeanType = Class.forName("java.lang.management.RuntimeMXBean", true, loader);
@@ -118,15 +119,15 @@ public final class DefaultChannelId implements ChannelId {
             Object bean = getRuntimeMXBean.invoke(null, EmptyArrays.EMPTY_OBJECTS);
             Method getName = runtimeMxBeanType.getMethod("getName", EmptyArrays.EMPTY_CLASSES);
             value = (String) getName.invoke(bean, EmptyArrays.EMPTY_OBJECTS);
-        } catch (Exception e) {
-            logger.debug("Could not invoke ManagementFactory.getRuntimeMXBean().getName(); Android?", e);
+        } catch (Throwable t) {
+            logger.debug("Could not invoke ManagementFactory.getRuntimeMXBean().getName(); Android?", t);
             try {
                 // Invoke android.os.Process.myPid()
                 Class<?> processType = Class.forName("android.os.Process", true, loader);
                 Method myPid = processType.getMethod("myPid", EmptyArrays.EMPTY_CLASSES);
                 value = myPid.invoke(null, EmptyArrays.EMPTY_OBJECTS).toString();
-            } catch (Exception e2) {
-                logger.debug("Could not invoke Process.myPid(); not Android?", e2);
+            } catch (Throwable t2) {
+                logger.debug("Could not invoke Process.myPid(); not Android?", t2);
                 value = "";
             }
         }
