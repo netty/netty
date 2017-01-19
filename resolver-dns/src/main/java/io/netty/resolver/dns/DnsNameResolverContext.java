@@ -145,19 +145,7 @@ abstract class DnsNameResolverContext<T> {
 
     private void internalResolve(Promise<T> promise) {
         InetSocketAddress nameServerAddrToTry = nameServerAddrs.next();
-        for (InternetProtocolFamily f: resolveAddressTypes) {
-            final DnsRecordType type;
-            switch (f) {
-            case IPv4:
-                type = DnsRecordType.A;
-                break;
-            case IPv6:
-                type = DnsRecordType.AAAA;
-                break;
-            default:
-                throw new Error();
-            }
-
+        for (DnsRecordType type: parent.resolveRecordTypes()) {
             query(nameServerAddrToTry, new DefaultDnsQuestion(hostname, type), promise);
         }
     }
@@ -409,7 +397,7 @@ abstract class DnsNameResolverContext<T> {
         }
 
         final int size = resolvedEntries.size();
-        switch (resolveAddressTypes[0]) {
+        switch (parent.preferredAddressType()) {
         case IPv4:
             for (int i = 0; i < size; i ++) {
                 if (resolvedEntries.get(i).address() instanceof Inet4Address) {
@@ -424,6 +412,8 @@ abstract class DnsNameResolverContext<T> {
                 }
             }
             break;
+        default:
+            throw new Error();
         }
 
         return false;
@@ -519,8 +509,12 @@ abstract class DnsNameResolverContext<T> {
         }
 
         final InetSocketAddress nextAddr = nameServerAddrs.next();
-        query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.A), promise);
-        query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.AAAA), promise);
+        if (parent.isCnameFollowARecords()) {
+            query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.A), promise);
+        }
+        if (parent.isCnameFollowAAAARecords()) {
+            query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.AAAA), promise);
+        }
     }
 
     private void addTrace(InetSocketAddress nameServerAddr, String msg) {

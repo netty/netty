@@ -35,6 +35,7 @@ import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DatagramDnsResponseDecoder;
 import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
@@ -59,7 +60,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -148,6 +151,10 @@ public class DnsNameResolver extends InetNameResolver {
     private final HostsFileEntriesResolver hostsFileEntriesResolver;
     private final String[] searchDomains;
     private final int ndots;
+    private final boolean cnameFollowARecords;
+    private final boolean cnameFollowAAAARecords;
+    private final InternetProtocolFamily preferredAddressType;
+    private final DnsRecordType[] resolveRecordTypes;
 
     /**
      * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
@@ -199,6 +206,32 @@ public class DnsNameResolver extends InetNameResolver {
         this.resolveCache = checkNotNull(resolveCache, "resolveCache");
         this.searchDomains = checkNotNull(searchDomains, "searchDomains").clone();
         this.ndots = checkPositiveOrZero(ndots, "ndots");
+
+        boolean cnameFollowARecords = false;
+        boolean cnameFollowAAAARecords = false;
+        // Use LinkedHashSet to maintain correct ordering.
+        Set<DnsRecordType> recordTypes = new LinkedHashSet<DnsRecordType>(resolvedAddressTypes.length);
+        for (InternetProtocolFamily family: resolvedAddressTypes) {
+            switch (family) {
+                case IPv4:
+                    cnameFollowARecords = true;
+                    recordTypes.add(DnsRecordType.A);
+                    break;
+                case IPv6:
+                    cnameFollowAAAARecords = true;
+                    recordTypes.add(DnsRecordType.AAAA);
+                    break;
+                default:
+                    throw new Error();
+            }
+        }
+
+        // One of both must be always true.
+        assert cnameFollowARecords || cnameFollowAAAARecords;
+        this.cnameFollowAAAARecords = cnameFollowAAAARecords;
+        this.cnameFollowARecords = cnameFollowARecords;
+        resolveRecordTypes = recordTypes.toArray(new DnsRecordType[recordTypes.size()]);
+        preferredAddressType = resolvedAddressTypes[0];
 
         Bootstrap b = new Bootstrap();
         b.group(executor());
@@ -258,6 +291,22 @@ public class DnsNameResolver extends InetNameResolver {
 
     final int ndots() {
         return ndots;
+    }
+
+    final boolean isCnameFollowAAAARecords() {
+        return cnameFollowAAAARecords;
+    }
+
+    final boolean isCnameFollowARecords() {
+        return cnameFollowARecords;
+    }
+
+    final InternetProtocolFamily preferredAddressType() {
+        return preferredAddressType;
+    }
+
+    final DnsRecordType[] resolveRecordTypes() {
+        return resolveRecordTypes;
     }
 
     /**
