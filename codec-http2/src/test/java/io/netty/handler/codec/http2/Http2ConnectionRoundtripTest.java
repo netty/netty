@@ -59,6 +59,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -287,6 +288,146 @@ public class Http2ConnectionRoundtripTest {
         // Wait for the close to occur.
         assertTrue(closeLatch.await(5, SECONDS));
         assertFalse(clientChannel.isOpen());
+    }
+
+    @Test
+    public void pushPromiseViolatingMaxConcurrentStreamsResetsStream() throws Exception {
+        bootstrapEnv(1, 2, 1, 0, 0);
+
+        final CountDownLatch clientSettingsAckLatch1 = new CountDownLatch(1);
+        final CountDownLatch serverRecvHeadersLatch1 = new CountDownLatch(1);
+        final CountDownLatch serverPushPromiseFailLatch1 = new CountDownLatch(1);
+        final CountDownLatch serverResetLatch1 = new CountDownLatch(1);
+        final CountDownLatch clientPushLatch1 = new CountDownLatch(1);
+        final AtomicReference<Throwable> serverPushPromiseCause1 = new AtomicReference<Throwable>();
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                clientSettingsAckLatch1.countDown();
+                return null;
+            }
+        }).when(clientListener).onSettingsAckRead(any(ChannelHandlerContext.class));
+
+        // Set the maxConcurrentStreams to 1 so we will accept 1 pushed stream, but reject others.
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeSettings(ctx(),
+                        new Http2Settings().copyFrom(http2Client.decoder().localSettings())
+                                .maxConcurrentStreams(1),
+                        newPromise());
+                http2Client.flush(ctx());
+            }
+        });
+
+        assertTrue(clientSettingsAckLatch1.await(5, SECONDS));
+
+        final Http2Headers clientHeaders = dummyHeaders();
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 3, clientHeaders, 0, false,
+                        newPromise());
+                http2Client.flush(ctx());
+            }
+        });
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                serverRecvHeadersLatch1.countDown();
+                return null;
+            }
+        }).when(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(clientHeaders), anyInt(),
+                anyShort(), anyBoolean(), eq(0), eq(false));
+
+        assertTrue(serverRecvHeadersLatch1.await(5, SECONDS));
+
+        final Http2Headers serverHeaders = dummyHeaders();
+        runInChannel(serverConnectedChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writePushPromise(serverCtx(), 3, 2, serverHeaders, 0,
+                        serverNewPromise());
+                http2Server.encoder().writePushPromise(serverCtx(), 3, 4, serverHeaders, 0,
+                        serverNewPromise()).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        serverPushPromiseCause1.set(future.cause());
+                        serverPushPromiseFailLatch1.countDown();
+                    }
+                });
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        assertTrue(serverPushPromiseFailLatch1.await(5, SECONDS));
+        assertNotNull("Server should have failed to write second push promise!", serverPushPromiseCause1.get());
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                serverResetLatch1.countDown();
+                return null;
+            }
+        }).when(serverListener).onRstStreamRead(any(ChannelHandlerContext.class), eq(6), anyLong());
+
+        // Open stream 2 and verify the client still rejects a new push stream.
+        runInChannel(serverConnectedChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writeHeaders(serverCtx(), 2, serverHeaders, 0, false,
+                        serverNewPromise());
+                // To test the decoder catches the error and generates a RST_STREAM we "lie" to the server and increase
+                // the SETTINGS_MAX_CONCURRENT_STREAMS so the server thinks it can push more streams.
+                http2Server.encoder().remoteSettings(new Http2Settings().maxConcurrentStreams(2));
+                // This is still expected to fail. stream 2 is still counted against SETTINGS_MAX_CONCURRENT_STREAMS.
+                http2Server.encoder().writePushPromise(serverCtx(), 3, 6, serverHeaders, 0,
+                        serverNewPromise());
+                http2Server.encoder().remoteSettings(new Http2Settings().maxConcurrentStreams(1));
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        assertTrue(serverResetLatch1.await(5, SECONDS));
+
+        final Http2Headers serverHeaders2 = dummyHeaders();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                clientPushLatch1.countDown();
+                return null;
+            }
+        }).when(clientListener).onPushPromiseRead(any(ChannelHandlerContext.class), eq(3), eq(8), eq(serverHeaders2),
+                anyInt());
+
+        // Close stream 2 and verify the client accepts a new push stream.
+        runInChannel(serverConnectedChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writeData(serverCtx(), 2, Unpooled.buffer(), 0, true,
+                        serverNewPromise()).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        // The writeData with EOS won't be processed until the flush operation, so we delay this push.
+                        http2Server.encoder().writePushPromise(serverCtx(), 3, 8, serverHeaders2, 0,
+                                serverNewPromise());
+                        http2Server.flush(serverCtx());
+                    }
+                });
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        assertTrue(clientPushLatch1.await(5, SECONDS));
+
+        // Verify that no errors have been received.
+        verify(serverListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+        verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+        verify(clientListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
     }
 
     @Test
@@ -588,6 +729,14 @@ public class Http2ConnectionRoundtripTest {
 
     private ChannelPromise newPromise() {
         return ctx().newPromise();
+    }
+
+    private ChannelHandlerContext serverCtx() {
+        return serverConnectedChannel.pipeline().firstContext();
+    }
+
+    private ChannelPromise serverNewPromise() {
+        return serverCtx().newPromise();
     }
 
     private static Http2Headers dummyHeaders() {

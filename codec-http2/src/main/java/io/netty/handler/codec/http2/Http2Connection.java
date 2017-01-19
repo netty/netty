@@ -166,12 +166,6 @@ public interface Http2Connection {
         boolean created(Http2Stream stream);
 
         /**
-         * Indicates whether or a stream created by this endpoint can be opened without violating
-         * {@link #maxActiveStreams()}.
-         */
-        boolean canOpenStream();
-
-        /**
          * Creates a stream initiated by this endpoint. This could fail for the following reasons:
          * <ul>
          * <li>The requested stream ID is not the next sequential ID for this endpoint.</li>

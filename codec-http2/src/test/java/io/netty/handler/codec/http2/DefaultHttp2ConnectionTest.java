@@ -374,7 +374,9 @@ public class DefaultHttp2ConnectionTest {
         Http2Stream pushStream = server.local().reservePushStream(2, stream);
         assertEquals(2, pushStream.id());
         assertEquals(State.RESERVED_LOCAL, pushStream.state());
-        assertEquals(1, server.numActiveStreams());
+        assertEquals(2, server.numActiveStreams());
+        assertEquals(1, server.local().numActiveStreams());
+        assertEquals(server.local().numActiveStreams(), server.remote().numActiveStreams());
         assertEquals(2, server.local().lastStreamCreated());
     }
 
@@ -384,7 +386,9 @@ public class DefaultHttp2ConnectionTest {
         Http2Stream pushStream = server.local().reservePushStream(4, stream);
         assertEquals(4, pushStream.id());
         assertEquals(State.RESERVED_LOCAL, pushStream.state());
-        assertEquals(1, server.numActiveStreams());
+        assertEquals(2, server.numActiveStreams());
+        assertEquals(1, server.local().numActiveStreams());
+        assertEquals(server.local().numActiveStreams(), server.remote().numActiveStreams());
         assertEquals(4, server.local().lastStreamCreated());
     }
 
