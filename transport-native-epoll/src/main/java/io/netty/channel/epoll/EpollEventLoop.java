@@ -21,6 +21,7 @@ import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.epoll.AbstractEpollChannel.AbstractEpollUnsafe;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
@@ -45,6 +46,12 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
     private static final AtomicIntegerFieldUpdater<EpollEventLoop> WAKEN_UP_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(EpollEventLoop.class, "wakenUp");
+
+    static {
+        // Ensure JNI is initialized by the time this class is loaded by this time!
+        // We use unix-common methods in this class which are backed by JNI methods.
+        Epoll.ensureAvailability();
+    }
 
     private final FileDescriptor epollFd;
     private final FileDescriptor eventFd;
@@ -132,7 +139,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
      */
     void add(AbstractEpollChannel ch) throws IOException {
         assert inEventLoop();
-        int fd = ch.fd().intValue();
+        int fd = ch.socket.intValue();
         Native.epollCtlAdd(epollFd.intValue(), fd, ch.flags);
         channels.put(fd, ch);
     }
@@ -142,7 +149,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
      */
     void modify(AbstractEpollChannel ch) throws IOException {
         assert inEventLoop();
-        Native.epollCtlMod(epollFd.intValue(), ch.fd().intValue(), ch.flags);
+        Native.epollCtlMod(epollFd.intValue(), ch.socket.intValue(), ch.flags);
     }
 
     /**
@@ -152,7 +159,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         assert inEventLoop();
 
         if (ch.isOpen()) {
-            int fd = ch.fd().intValue();
+            int fd = ch.socket.intValue();
             if (channels.remove(fd) != null) {
                 // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
                 // removed once the file-descriptor is closed.

@@ -28,6 +28,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -43,20 +44,20 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final int readFlag;
-    private final Socket fileDescriptor;
+    final LinuxSocket socket;
     protected int flags = Native.EPOLLET;
     boolean inputClosedSeenErrorOnRead;
     boolean epollInReadyRunnablePending;
 
     protected volatile boolean active;
 
-    AbstractEpollChannel(Socket fd, int flag) {
+    AbstractEpollChannel(LinuxSocket fd, int flag) {
         this(null, fd, flag, false);
     }
 
-    AbstractEpollChannel(Channel parent, Socket fd, int flag, boolean active) {
+    AbstractEpollChannel(Channel parent, LinuxSocket fd, int flag, boolean active) {
         super(parent);
-        fileDescriptor = checkNotNull(fd, "fd");
+        socket = checkNotNull(fd, "fd");
         readFlag = flag;
         flags |= flag;
         this.active = active;
@@ -89,8 +90,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    public final Socket fd() {
-        return fileDescriptor;
+    public final FileDescriptor fd() {
+        return socket;
     }
 
     @Override
@@ -115,7 +116,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         try {
             doDeregister();
         } finally {
-            fileDescriptor.close();
+            socket.close();
         }
     }
 
@@ -131,7 +132,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     public boolean isOpen() {
-        return fileDescriptor.isOpen();
+        return socket.isOpen();
     }
 
     @Override
@@ -158,7 +159,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     final boolean shouldBreakEpollInReady(ChannelConfig config) {
-        return fileDescriptor.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
+        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
     }
 
     final boolean isAllowHalfClosure(ChannelConfig config) {
@@ -265,10 +266,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         int localReadAmount;
         unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
         if (byteBuf.hasMemoryAddress()) {
-            localReadAmount = fileDescriptor.readAddress(byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
+            localReadAmount = socket.readAddress(byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
         } else {
             ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, byteBuf.writableBytes());
-            localReadAmount = fileDescriptor.read(buf, buf.position(), buf.limit());
+            localReadAmount = socket.read(buf, buf.position(), buf.limit());
         }
         if (localReadAmount > 0) {
             byteBuf.writerIndex(writerIndex + localReadAmount);
@@ -283,8 +284,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             long memoryAddress = buf.memoryAddress();
             int readerIndex = buf.readerIndex();
             int writerIndex = buf.writerIndex();
-            for (int i = writeSpinCount - 1; i >= 0; i--) {
-                int localFlushedAmount = fileDescriptor.writeAddress(memoryAddress, readerIndex, writerIndex);
+            for (int i = writeSpinCount; i > 0; --i) {
+                int localFlushedAmount = socket.writeAddress(memoryAddress, readerIndex, writerIndex);
                 if (localFlushedAmount > 0) {
                     writtenBytes += localFlushedAmount;
                     if (writtenBytes == readableBytes) {
@@ -302,10 +303,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             } else {
                 nioBuf = buf.nioBuffer();
             }
-            for (int i = writeSpinCount - 1; i >= 0; i--) {
+            for (int i = writeSpinCount; i > 0; --i) {
                 int pos = nioBuf.position();
                 int limit = nioBuf.limit();
-                int localFlushedAmount = fileDescriptor.write(nioBuf, pos, limit);
+                int localFlushedAmount = socket.write(nioBuf, pos, limit);
                 if (localFlushedAmount > 0) {
                     nioBuf.position(pos + localFlushedAmount);
                     writtenBytes += localFlushedAmount;
@@ -410,10 +411,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
          * Shutdown the input side of the channel.
          */
         void shutdownInput(boolean rdHup) {
-            if (!fd().isInputShutdown()) {
+            if (!socket.isInputShutdown()) {
                 if (isAllowHalfClosure(config())) {
                     try {
-                        fd().shutdown(true, false);
+                        socket.shutdown(true, false);
                     } catch (IOException ignored) {
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
@@ -422,9 +423,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     } catch (NotYetConnectedException ignore) {
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
-                        fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
-                        return;
                     }
+                    clearEpollIn();
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());
@@ -471,7 +471,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
          * Called once a EPOLLOUT event is ready to be processed
          */
         void epollOutReady() {
-            if (fd().isOutputShutdown()) {
+            if (socket.isOutputShutdown()) {
                 return;
             }
             // directly call super.flush0() to force a flush now

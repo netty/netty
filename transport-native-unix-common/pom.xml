@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2016 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.netty</groupId>
+    <artifactId>netty-parent</artifactId>
+    <version>4.1.11.Final-SNAPSHOT</version>
+  </parent>
+  <artifactId>netty-transport-native-unix-common</artifactId>
+
+  <name>Netty/Transport/Native/Unix/Common</name>
+  <packaging>jar</packaging>
+  <description>
+    Static library which contains common unix utilities.
+  </description>
+
+  <properties>
+    <exe.make>make</exe.make>
+    <exe.compiler>gcc</exe.compiler>
+    <exe.archiver>ar</exe.archiver>
+    <nativeLibName>libnetty-unix-common</nativeLibName>
+    <nativeIncludeDir>${project.basedir}/src/main/c</nativeIncludeDir>
+    <nativeJarWorkdir>${project.build.directory}/native-jar-work</nativeJarWorkdir>
+    <nativeObjsOnlyDir>${project.build.directory}/native-objs-only</nativeObjsOnlyDir>
+    <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
+    <defaultJarFile>${project.build.directory}/${project.build.finalName}.jar</defaultJarFile>
+    <nativeJarFile>${project.build.directory}/${project.build.finalName}-${jni.classifier}.jar</nativeJarFile>
+  </properties>
+
+  <profiles>
+    <profile>
+      <id>mac</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <properties>
+        <exe.compiler>clang</exe.compiler>
+        <jni.platform>darwin</jni.platform>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
+      <properties>
+        <jni.platform>linux</jni.platform>
+      </properties>
+    </profile>
+    <profile>
+      <id>freebsd</id>
+      <activation>
+        <os>
+          <family>unix</family>
+          <name>freebsd</name>
+        </os>
+      </activation>
+      <properties>
+        <exe.compiler>clang</exe.compiler>
+        <exe.make>gmake</exe.make>
+        <jni.platform>freebsd</jni.platform>
+      </properties>
+    </profile>
+    <profile>
+      <id>openbsd</id>
+      <activation>
+        <os>
+          <family>unix</family>
+          <name>openbsd</name>
+        </os>
+      </activation>
+      <properties>
+        <exe.compiler>clang</exe.compiler>
+        <exe.make>gmake</exe.make>
+        <jni.platform>openbsd</jni.platform>
+      </properties>
+    </profile>
+  </profiles>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- Build the additional JAR that contains the native library. -->
+          <execution>
+            <id>native-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <copy todir="${nativeJarWorkdir}">
+                  <zipfileset src="${defaultJarFile}" />
+                </copy>
+                <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                  <zipfileset dir="${nativeLibOnlyDir}" />
+                  <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                </copy>
+                <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                  <zipfileset dir="${nativeIncludeDir}" />
+                  <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                </copy>
+                <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
+                <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+              </target>
+            </configuration>
+          </execution>
+          <!-- invoke the make file to build a static library -->
+          <execution>
+            <id>build-native-lib</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
+                  <env key="CC" value="${exe.compiler}"/>
+                  <env key="AR" value="${exe.archiver}"/>
+                  <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
+                  <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
+                  <env key="JNI_PLATFORM" value="${jni.platform}"/>
+                  <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable"/>
+                  <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
+                  <env key="LIB_NAME" value="${nativeLibName}"/>
+                </exec>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

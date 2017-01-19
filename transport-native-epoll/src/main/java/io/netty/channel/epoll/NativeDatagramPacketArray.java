@@ -15,15 +15,17 @@
  */
 package io.netty.channel.epoll;
 
-import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.unix.IovArray;
 import io.netty.util.concurrent.FastThreadLocal;
-
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+
+import static io.netty.channel.unix.Limits.UIO_MAX_IOV;
+import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
 
 /**
  * Support <a href="http://linux.die.net/man/2/sendmmsg">sendmmsg(...)</a> on linux with GLIBC 2.14+
@@ -48,7 +50,7 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
             };
 
     // Use UIO_MAX_IOV as this is the maximum number we can write with one sendmmsg(...) call.
-    private final NativeDatagramPacket[] packets = new NativeDatagramPacket[Native.UIO_MAX_IOV];
+    private final NativeDatagramPacket[] packets = new NativeDatagramPacket[UIO_MAX_IOV];
     private int count;
 
     private NativeDatagramPacketArray() {

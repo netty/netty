@@ -23,6 +23,6 @@ public class EpollAbstractDomainSocketEchoTest extends EpollDomainSocketEchoTest
     @Override
     protected SocketAddress newSocketAddress() {
         // these don't actually show up in the file system so creating a temp file isn't reliable
-        return new DomainSocketAddress("\0/tmp/" + UUID.randomUUID());
+        return new DomainSocketAddress("\0" + System.getProperty("java.io.tmpdir") + UUID.randomUUID());
     }
 }

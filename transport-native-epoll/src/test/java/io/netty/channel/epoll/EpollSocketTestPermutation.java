@@ -25,6 +25,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.channel.unix.tests.UnixTestUtils;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation;
@@ -214,12 +215,6 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     }
 
     public static DomainSocketAddress newSocketAddress() {
-        try {
-            File file = File.createTempFile("netty", "dsocket");
-            file.delete();
-            return new DomainSocketAddress(file);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        return UnixTestUtils.newSocketAddress();
     }
 }

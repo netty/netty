@@ -23,12 +23,12 @@ import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.PeerCredentials;
-import io.netty.channel.unix.Socket;
+import io.netty.util.internal.UnstableApi;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 
-import static io.netty.channel.unix.Socket.newSocketDomain;
-import java.io.IOException;
+import static io.netty.channel.epoll.LinuxSocket.newSocketDomain;
 
 public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel implements DomainSocketChannel {
     private final EpollDomainSocketChannelConfig config = new EpollDomainSocketChannelConfig(this);
@@ -40,33 +40,20 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
         super(newSocketDomain(), false);
     }
 
-    /**
-     * @deprecated Use {@link #EpollDomainSocketChannel(Channel, Socket)}.
-     */
-    @Deprecated
-    public EpollDomainSocketChannel(Channel parent, FileDescriptor fd) {
-        super(parent, new Socket(fd.intValue()));
+    EpollDomainSocketChannel(Channel parent, FileDescriptor fd) {
+        super(parent, new LinuxSocket(fd.intValue()));
     }
 
-    /**
-     * @deprecated Use {@link #EpollDomainSocketChannel(Socket, boolean)}.
-     * <p>
-     * Creates a new {@link EpollDomainSocketChannel} from an existing {@link FileDescriptor}
-     */
-    @Deprecated
-    public EpollDomainSocketChannel(FileDescriptor fd) {
+    public EpollDomainSocketChannel(int fd) {
         super(fd);
     }
 
-    public EpollDomainSocketChannel(Channel parent, Socket fd) {
+    public EpollDomainSocketChannel(Channel parent, LinuxSocket fd) {
         super(parent, fd);
     }
 
-    /**
-     * Creates a new {@link EpollDomainSocketChannel} from an existing {@link FileDescriptor}
-     */
-    public EpollDomainSocketChannel(Socket fd, boolean active) {
-        super(fd, active);
+    public EpollDomainSocketChannel(int fd, boolean active) {
+        super(new LinuxSocket(fd), active);
     }
 
     @Override
@@ -86,7 +73,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        fd().bind(localAddress);
+        socket.bind(localAddress);
         local = (DomainSocketAddress) localAddress;
     }
 
@@ -118,7 +105,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
     @Override
     protected boolean doWriteSingle(ChannelOutboundBuffer in, int writeSpinCount) throws Exception {
         Object msg = in.current();
-        if (msg instanceof FileDescriptor && Native.sendFd(fd().intValue(), ((FileDescriptor) msg).intValue()) > 0) {
+        if (msg instanceof FileDescriptor && socket.sendFd(((FileDescriptor) msg).intValue()) > 0) {
             // File descriptor was written, so remove it.
             in.remove();
             return true;
@@ -138,8 +125,9 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
      * Returns the unix credentials (uid, gid, pid) of the peer
      * <a href=http://man7.org/linux/man-pages/man7/socket.7.html>SO_PEERCRED</a>
      */
+    @UnstableApi
     public PeerCredentials peerCredentials() throws IOException {
-        return fd().getPeerCredentials();
+        return socket.getPeerCredentials();
     }
 
     private final class EpollDomainUnsafe extends EpollStreamUnsafe {
@@ -158,7 +146,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
         }
 
         private void epollInReadFd() {
-            if (fd().isInputShutdown()) {
+            if (socket.isInputShutdown()) {
                 clearEpollIn0();
                 return;
             }
@@ -175,7 +163,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                     // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
                     // EpollRecvByteAllocatorHandle knows if it should try to read again or not when autoRead is
                     // enabled.
-                    allocHandle.lastBytesRead(Native.recvFd(fd().intValue()));
+                    allocHandle.lastBytesRead(socket.recvFd());
                     switch(allocHandle.lastBytesRead()) {
                     case 0:
                         break readLoop;

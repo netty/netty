@@ -752,6 +752,10 @@ final class PlatformDependent0 {
         UNSAFE.freeMemory(address);
     }
 
+    static long reallocateMemory(long address, long newSize) {
+        return UNSAFE.reallocateMemory(address, newSize);
+    }
+
     private PlatformDependent0() {
     }
 }
