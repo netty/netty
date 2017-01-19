@@ -772,7 +772,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         setHandshakeFailure(ctx, CHANNEL_CLOSED, !outboundClosed);
 
         // Ensure we always notify the sslClosePromise as well
-        sslClosePromise.tryFailure(CHANNEL_CLOSED);
+        notifyClosePromise(CHANNEL_CLOSED);
         super.channelInactive(ctx);
     }
 
@@ -1133,7 +1133,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             if (notifyClosure) {
-                sslClosePromise.trySuccess(ctx.channel());
+                notifyClosePromise(null);
             }
         } finally {
             if (decodeOut != null) {
@@ -1289,6 +1289,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private void notifyHandshakeFailure(Throwable cause) {
         if (handshakePromise.tryFailure(cause)) {
             SslUtils.notifyHandshakeFailure(ctx, cause);
+        }
+    }
+
+    private void notifyClosePromise(Throwable cause) {
+        if (cause == null) {
+            if (sslClosePromise.trySuccess(ctx.channel())) {
+                ctx.fireUserEventTriggered(SslCloseCompletionEvent.SUCCESS);
+            }
+        } else {
+            if (sslClosePromise.tryFailure(cause)) {
+                ctx.fireUserEventTriggered(new SslCloseCompletionEvent(cause));
+            }
         }
     }
 
