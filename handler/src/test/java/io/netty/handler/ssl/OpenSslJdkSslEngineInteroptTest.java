@@ -21,6 +21,10 @@ import static org.junit.Assume.assumeTrue;
 
 public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
 
+    public OpenSslJdkSslEngineInteroptTest(BufferType type) {
+        super(type);
+    }
+
     @BeforeClass
     public static void checkOpenSsl() {
         assumeTrue(OpenSsl.isAvailable());

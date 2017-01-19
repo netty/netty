@@ -39,6 +39,10 @@ public class JdkSslEngineTest extends SSLEngineTest {
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
     private static final String APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE = "my-protocol-FOO";
 
+    public JdkSslEngineTest(BufferType type) {
+        super(type);
+    }
+
     @Test
     public void testNpn() throws Exception {
         try {
