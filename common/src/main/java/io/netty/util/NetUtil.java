@@ -24,6 +24,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -271,12 +274,27 @@ public final class NetUtil {
                             logger.debug("{}: {}", file, somaxconn);
                         }
                     } else {
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("{}: {} (non-existent)", file, somaxconn);
+                        // Try to get from sysctl
+                        Integer tmp = null;
+                        if (SystemPropertyUtil.getBoolean("io.netty.net.somaxconn.trySysctl", false)) {
+                            tmp = sysctlGetInt("kern.ipc.somaxconn");
+                            if (tmp == null) {
+                                tmp = sysctlGetInt("kern.ipc.soacceptqueue");
+                                if (tmp != null) {
+                                    somaxconn = tmp;
+                                }
+                            } else {
+                                somaxconn = tmp;
+                            }
+                        }
+
+                        if (tmp == null) {
+                            logger.debug("Failed to get SOMAXCONN from sysctl and file {}. Default: {}", file,
+                                         somaxconn);
                         }
                     }
                 } catch (Exception e) {
-                    logger.debug("Failed to get SOMAXCONN from: {}", file, e);
+                    logger.debug("Failed to get SOMAXCONN from sysctl and file {}. Default: {}", file, somaxconn, e);
                 } finally {
                     if (in != null) {
                         try {
@@ -289,6 +307,38 @@ public final class NetUtil {
                 return somaxconn;
             }
         });
+    }
+
+    /**
+     * This will execute <a href ="https://www.freebsd.org/cgi/man.cgi?sysctl(8)">sysctl</a> with the {@code sysctlKey}
+     * which is expected to return the numeric value for for {@code sysctlKey}.
+     * @param sysctlKey The key which the return value corresponds to.
+     * @return The <a href ="https://www.freebsd.org/cgi/man.cgi?sysctl(8)">sysctl</a> value for {@code sysctlKey}.
+     */
+    private static Integer sysctlGetInt(String sysctlKey) throws IOException {
+        Process process = new ProcessBuilder("sysctl", sysctlKey).start();
+        try {
+            InputStream is = process.getInputStream();
+            InputStreamReader isr = new InputStreamReader(is);
+            BufferedReader br = new BufferedReader(isr);
+            try {
+                String line = br.readLine();
+                if (line.startsWith(sysctlKey)) {
+                    for (int i = line.length() - 1; i > sysctlKey.length(); --i) {
+                        if (!Character.isDigit(line.charAt(i))) {
+                            return Integer.valueOf(line.substring(i + 1, line.length()));
+                        }
+                    }
+                }
+                return null;
+            } finally {
+                br.close();
+            }
+        } finally {
+            if (process != null) {
+                process.destroy();
+            }
+        }
     }
 
     /**

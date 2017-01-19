@@ -17,7 +17,6 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
 import io.netty.channel.unix.DomainSocketAddress;
-import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.channel.unix.Socket;
 import io.netty.util.internal.logging.InternalLogger;
@@ -26,8 +25,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.File;
 import java.net.SocketAddress;
 
-import static io.netty.channel.unix.Socket.newSocketDomain;
-
+import static io.netty.channel.epoll.LinuxSocket.newSocketDomain;
 
 public final class EpollServerDomainSocketChannel extends AbstractEpollServerChannel
         implements ServerDomainSocketChannel {
@@ -41,22 +39,15 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
         super(newSocketDomain(), false);
     }
 
-    /**
-     * @deprecated Use {@link #EpollServerDomainSocketChannel(Socket, boolean)}.
-     * Creates a new {@link EpollServerDomainSocketChannel} from an existing {@link FileDescriptor}.
-     */
-    public EpollServerDomainSocketChannel(FileDescriptor fd) {
+    public EpollServerDomainSocketChannel(int fd) {
         super(fd);
     }
 
-    /**
-     * @deprecated Use {@link #EpollServerDomainSocketChannel(Socket, boolean)}.
-     */
-    public EpollServerDomainSocketChannel(Socket fd) {
+    EpollServerDomainSocketChannel(LinuxSocket fd) {
         super(fd);
     }
 
-    public EpollServerDomainSocketChannel(Socket fd, boolean active) {
+    EpollServerDomainSocketChannel(LinuxSocket fd, boolean active) {
         super(fd, active);
     }
 
@@ -72,8 +63,8 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        fd().bind(localAddress);
-        fd().listen(config.getBacklog());
+        socket.bind(localAddress);
+        socket.listen(config.getBacklog());
         local = (DomainSocketAddress) localAddress;
         active = true;
     }

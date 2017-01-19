@@ -146,55 +146,72 @@
         </os>
       </activation>
       <modules>
+        <module>transport-native-unix-common-tests</module>
+        <module>transport-native-unix-common</module>
         <module>transport-native-epoll</module>
       </modules>
     </profile>
-    <!--
-      Netty must be released from RHEL 6.8 x86_64 or compatible so that:
-
-        1) we ship x86_64 version of epoll transport officially, and
-        2) we ensure the ABI compatibility with older GLIBC versions.
-
-           The shared library built on a distribution with newer GLIBC
-           will not run on older distributions.
-    -->
     <profile>
-      <id>restricted-release</id>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-enforcer-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>enforce-release-environment</id>
-                <goals>
-                  <goal>enforce</goal>
-                </goals>
-                <configuration>
-                  <rules>
-                    <requireProperty>
-                      <regexMessage>
-                        Release process must be performed on linux-x86_64.
-                      </regexMessage>
-                      <property>os.detected.classifier</property>
-                      <regex>^linux-x86_64$</regex>
-                    </requireProperty>
-                    <requireFilesContent>
-                      <message>
-                        Release process must be performed on RHEL 6.8 or its derivatives.
-                      </message>
-                      <files>
-                        <file>/etc/redhat-release</file>
-                      </files>
-                      <content>release 6.8</content>
-                    </requireFilesContent>
-                  </rules>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
+      <id>mac</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <modules>
+        <module>transport-native-unix-common-tests</module>
+        <module>transport-native-unix-common</module>
+        <module>transport-native-kqueue</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>freebsd</id>
+      <activation>
+        <os>
+          <family>unix</family>
+          <name>freebsd</name>
+        </os>
+      </activation>
+      <modules>
+        <module>transport-native-unix-common-tests</module>
+        <module>transport-native-unix-common</module>
+        <module>transport-native-kqueue</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>openbsd</id>
+      <activation>
+        <os>
+          <family>unix</family>
+          <name>openbsd</name>
+        </os>
+      </activation>
+      <modules>
+        <module>transport-native-unix-common-tests</module>
+        <module>transport-native-unix-common</module>
+        <module>transport-native-kqueue</module>
+      </modules>
+    </profile>
+    <!-- The uber artifacts depend on artifacts built from different platforms and will fail if these artifacts are not
+         available. Typically we only build the uber jars as part of the release process so the build sequencing
+         is controlled and can be sequenced correctly. For example we may do the following:
+
+         <from a linux machine>
+         $ mvn release
+         <after this completes log onto a MacOS machine, note fail-at-end, and -D to activate multiple profiles>
+         $ mvn release -fae -Duber
+      -->
+    <profile>
+      <id>uber</id>
+      <activation>
+        <property>
+          <name>uber</name>
+        </property>
+      </activation>
+      <modules>
+        <module>all</module>
+        <module>tarball</module>
+      </modules>
     </profile>
     <profile>
       <!--
@@ -252,7 +269,7 @@
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
     <conscrypt.version>1.0.0.RC7</conscrypt.version>
     <conscrypt.classifier />
-    <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
+    <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
@@ -291,9 +308,7 @@
     <module>testsuite-autobahn</module>
     <module>testsuite-osgi</module>
     <module>microbench</module>
-    <module>all</module>
     <module>bom</module>
-    <module>tarball</module>
   </modules>
 
   <dependencyManagement>
@@ -979,7 +994,7 @@
         <version>2.5.3</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
+          <arguments>-P restricted-release,sonatype-oss-release</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
@@ -1110,18 +1125,6 @@
 
     <pluginManagement>
       <plugins>
-        <plugin>
-          <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.4.1</version>
-          <dependencies>
-            <!-- Provides the 'requireFilesContent' enforcer rule. -->
-            <dependency>
-              <groupId>com.ceilfors.maven.plugin</groupId>
-              <artifactId>enforcer-rules</artifactId>
-              <version>1.2.0</version>
-            </dependency>
-          </dependencies>
-        </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>

@@ -34,13 +34,10 @@ import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epolle
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollin;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollout;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollrdhup;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.iovMax;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingSendmmsg;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingTcpFastopen;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.kernelVersion;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.ssizeMax;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.tcpMd5SigMaxKeyLen;
-import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.uioMaxIov;
 import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EPIPE_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EWOULDBLOCK_NEGATIVE;
@@ -72,11 +69,8 @@ public final class Native {
     public static final int EPOLLET = epollet();
     public static final int EPOLLERR = epollerr();
 
-    public static final int IOV_MAX = iovMax();
-    public static final int UIO_MAX_IOV = uioMaxIov();
     public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
     public static final boolean IS_SUPPORTING_TCP_FASTOPEN = isSupportingTcpFastopen();
-    public static final long SSIZE_MAX = ssizeMax();
     public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
     public static final String KERNEL_VERSION = kernelVersion();
 
@@ -185,81 +179,9 @@ public final class Native {
     private static native int sendmmsg0(
             int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len);
 
-    public static int recvFd(int fd) throws IOException {
-        int res = recvFd0(fd);
-        if (res > 0) {
-            return res;
-        }
-        if (res == 0) {
-            return -1;
-        }
-
-        if (res == ERRNO_EAGAIN_NEGATIVE || res == ERRNO_EWOULDBLOCK_NEGATIVE) {
-            // Everything consumed so just return -1 here.
-            return 0;
-        }
-        throw newIOException("recvFd", res);
-    }
-
-    private static native int recvFd0(int fd);
-
-    public static int sendFd(int socketFd, int fd) throws IOException {
-        int res = sendFd0(socketFd, fd);
-        if (res >= 0) {
-            return res;
-        }
-        if (res == ERRNO_EAGAIN_NEGATIVE || res == ERRNO_EWOULDBLOCK_NEGATIVE) {
-            // Everything consumed so just return -1 here.
-            return -1;
-        }
-        throw newIOException("sendFd", res);
-    }
-
-    private static native int sendFd0(int socketFd, int fd);
-
-    // Socket option operations
-    public static native int isReuseAddress(int fd) throws IOException;
-    public static native int isReusePort(int fd) throws IOException;
-    public static native int getTcpNotSentLowAt(int fd) throws IOException;
-    public static native int getTrafficClass(int fd) throws IOException;
-    public static native int isBroadcast(int fd) throws IOException;
-    public static native int getTcpKeepIdle(int fd) throws IOException;
-    public static native int getTcpKeepIntvl(int fd) throws IOException;
-    public static native int getTcpKeepCnt(int fd) throws IOException;
-    public static native int getTcpUserTimeout(int milliseconds) throws IOException;
-    public static native int isIpFreeBind(int fd)throws IOException;
-
-    public static native void setReuseAddress(int fd, int reuseAddress) throws IOException;
-    public static native void setReusePort(int fd, int reuseAddress) throws IOException;
-    public static native void setTcpFastopen(int fd, int tcpFastopenBacklog) throws IOException;
-    public static native void setTcpNotSentLowAt(int fd, int tcpNotSentLowAt) throws IOException;
-    public static native void setTrafficClass(int fd, int tcpNoDelay) throws IOException;
-    public static native void setBroadcast(int fd, int broadcast) throws IOException;
-    public static native void setTcpKeepIdle(int fd, int seconds) throws IOException;
-    public static native void setTcpKeepIntvl(int fd, int seconds) throws IOException;
-    public static native void setTcpKeepCnt(int fd, int probes) throws IOException;
-    public static native void setTcpUserTimeout(int fd, int milliseconds)throws IOException;
-    public static native void setIpFreeBind(int fd, int freeBind) throws IOException;
-    public static void tcpInfo(int fd, EpollTcpInfo info) throws IOException {
-        tcpInfo0(fd, info.info);
-    }
-
-    private static native void tcpInfo0(int fd, int[] array) throws IOException;
-
-    public static void setTcpMd5Sig(int fd, InetAddress address, byte[] key) throws IOException {
-        final NativeInetAddress a = NativeInetAddress.newInstance(address);
-        setTcpMd5Sig0(fd, a.address(), a.scopeId(), key);
-    }
-
-    private static native void setTcpMd5Sig0(int fd, byte[] address, int scopeId, byte[] key) throws IOException;
-
     // epoll_event related
     public static native int sizeofEpollEvent();
     public static native int offsetofEpollData();
-
-    private Native() {
-        // utility
-    }
 
     private static void loadNativeLibrary() {
         String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
@@ -268,5 +190,9 @@ public final class Native {
         }
         NativeLibraryLoader.load(SystemPropertyUtil.get("io.netty.packagePrefix", "").replace('.', '-') +
             "netty-transport-native-epoll", PlatformDependent.getClassLoader(Native.class));
+    }
+
+    private Native() {
+        // utility
     }
 }

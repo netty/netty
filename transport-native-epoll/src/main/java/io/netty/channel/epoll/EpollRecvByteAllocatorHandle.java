@@ -24,14 +24,14 @@ import io.netty.util.internal.ObjectUtil;
 
 class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandle {
     private final RecvByteBufAllocator.ExtendedHandle delegate;
-    private boolean isEdgeTriggered;
-    private boolean receivedRdHup;
     private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = new UncheckedBooleanSupplier() {
         @Override
         public boolean get() {
             return maybeMoreDataToRead();
         }
     };
+    private boolean isEdgeTriggered;
+    private boolean receivedRdHup;
 
     EpollRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
         this.delegate = ObjectUtil.checkNotNull(handle, "handle");
