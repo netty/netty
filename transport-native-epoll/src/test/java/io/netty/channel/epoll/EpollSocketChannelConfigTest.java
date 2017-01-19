@@ -26,7 +26,9 @@ import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Random;
 
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -37,9 +39,18 @@ public class EpollSocketChannelConfigTest {
     private static Random rand;
 
     @BeforeClass
-    public static void before() {
+    public static void beforeClass() {
         rand = new Random();
         group = new EpollEventLoopGroup(1);
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        group.shutdownGracefully();
+    }
+
+    @Before
+    public void setup() {
         Bootstrap bootstrap = new Bootstrap();
         ch = (EpollSocketChannel) bootstrap.group(group)
                 .channel(EpollSocketChannel.class)
@@ -47,13 +58,9 @@ public class EpollSocketChannelConfigTest {
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
     }
 
-    @AfterClass
-    public static void after() {
-        try {
-            ch.close().syncUninterruptibly();
-        } finally {
-            group.shutdownGracefully();
-        }
+    @After
+    public void teardown() {
+        ch.close().syncUninterruptibly();
     }
 
     private long randLong(long min, long max) {

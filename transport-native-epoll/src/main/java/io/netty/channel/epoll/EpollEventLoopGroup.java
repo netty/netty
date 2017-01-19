@@ -33,6 +33,10 @@ import java.util.concurrent.ThreadFactory;
  * it only works on linux.
  */
 public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
+    static {
+        // Ensure JNI is initialized by the time this class is loaded by this time!
+        Epoll.ensureAvailability();
+    }
 
     /**
      * Create a new instance using the default number of threads and the default {@link ThreadFactory}.

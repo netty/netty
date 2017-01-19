@@ -51,7 +51,7 @@
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <version>${project.version}</version>
-          <classifier>${epoll.classifier}</classifier>
+          <classifier>${jni.classifier}</classifier>
         </dependency>
       </dependencies>
       <build>

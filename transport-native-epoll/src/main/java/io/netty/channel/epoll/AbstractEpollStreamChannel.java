@@ -17,9 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
@@ -35,7 +33,8 @@ import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.Socket;
+import io.netty.channel.unix.IovArray;
+import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThrowableUtil;
@@ -54,6 +53,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.unix.FileDescriptor.pipe;
+import static io.netty.channel.unix.Limits.IOV_MAX;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel implements DuplexChannel {
@@ -89,45 +89,25 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     private WritableByteChannel byteChannel;
 
-    /**
-     * @deprecated Use {@link #AbstractEpollStreamChannel(Channel, Socket)}.
-     */
-    @Deprecated
     protected AbstractEpollStreamChannel(Channel parent, int fd) {
-        this(parent, new Socket(fd));
+        this(parent, new LinuxSocket(fd));
     }
 
-    /**
-     * @deprecated Use {@link #AbstractEpollStreamChannel(Socket, boolean)}.
-     */
-    @Deprecated
     protected AbstractEpollStreamChannel(int fd) {
-        this(new Socket(fd));
+        this(new LinuxSocket(fd));
     }
 
-    /**
-     * @deprecated Use {@link #AbstractEpollStreamChannel(Socket, boolean)}.
-     */
-    @Deprecated
-    protected AbstractEpollStreamChannel(FileDescriptor fd) {
-        this(new Socket(fd.intValue()));
-    }
-
-    /**
-     * @deprecated Use {@link #AbstractEpollStreamChannel(Socket, boolean)}.
-     */
-    @Deprecated
-    protected AbstractEpollStreamChannel(Socket fd) {
+    AbstractEpollStreamChannel(LinuxSocket fd) {
         this(fd, isSoErrorZero(fd));
     }
 
-    protected AbstractEpollStreamChannel(Channel parent, Socket fd) {
+    AbstractEpollStreamChannel(Channel parent, LinuxSocket fd) {
         super(parent, fd, Native.EPOLLIN, true);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
 
-    protected AbstractEpollStreamChannel(Socket fd, boolean active) {
+    protected AbstractEpollStreamChannel(LinuxSocket fd, boolean active) {
         super(null, fd, Native.EPOLLIN, active);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
@@ -301,8 +281,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         boolean done = false;
         int offset = 0;
         int end = offset + cnt;
-        for (int i = writeSpinCount - 1; i >= 0; i--) {
-            long localWrittenBytes = fd().writevAddresses(array.memoryAddress(offset), cnt);
+        for (int i = writeSpinCount; i > 0; --i) {
+            long localWrittenBytes = socket.writevAddresses(array.memoryAddress(offset), cnt);
             if (localWrittenBytes == 0) {
                 break;
             }
@@ -340,8 +320,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         boolean done = false;
         int offset = 0;
         int end = offset + nioBufferCnt;
-        for (int i = writeSpinCount - 1; i >= 0; i--) {
-            long localWrittenBytes = fd().writev(nioBuffers, offset, nioBufferCnt);
+        for (int i = writeSpinCount; i > 0; --i) {
+            long localWrittenBytes = socket.writev(nioBuffers, offset, nioBufferCnt);
             if (localWrittenBytes == 0) {
                 break;
             }
@@ -390,10 +370,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         boolean done = false;
         long flushedAmount = 0;
 
-        for (int i = writeSpinCount - 1; i >= 0; i--) {
+        for (int i = writeSpinCount; i > 0; --i) {
             final long offset = region.transferred();
             final long localFlushedAmount =
-                    Native.sendfile(fd().intValue(), region, baseOffset, offset, regionCount - offset);
+                    Native.sendfile(socket.intValue(), region, baseOffset, offset, regionCount - offset);
             if (localFlushedAmount == 0) {
                 break;
             }
@@ -426,9 +406,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         long flushedAmount = 0;
 
         if (byteChannel == null) {
-            byteChannel = new SocketWritableByteChannel();
+            byteChannel = new EpollSocketWritableByteChannel();
         }
-        for (int i = writeSpinCount - 1; i >= 0; i--) {
+        for (int i = writeSpinCount; i > 0; --i) {
             final long localFlushedAmount = region.transferTo(byteChannel, region.transferred());
             if (localFlushedAmount == 0) {
                 break;
@@ -564,7 +544,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     // Special handling of CompositeByteBuf to reduce memory copies if some of the Components
                     // in the CompositeByteBuf are backed by a memoryAddress.
                     CompositeByteBuf comp = (CompositeByteBuf) buf;
-                    if (!comp.isDirect() || comp.nioBufferCount() > Native.IOV_MAX) {
+                    if (!comp.isDirect() || comp.nioBufferCount() > IOV_MAX) {
                         // more then 1024 buffers for gathering writes so just do a memory copy.
                         buf = newDirectBuffer(buf);
                         assert buf.hasMemoryAddress();
@@ -589,7 +569,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     private void shutdownOutput0(final ChannelPromise promise) {
         try {
-            fd().shutdown(false, true);
+            socket.shutdown(false, true);
             promise.setSuccess();
         } catch (Throwable cause) {
             promise.setFailure(cause);
@@ -598,7 +578,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     private void shutdownInput0(final ChannelPromise promise) {
         try {
-            fd().shutdown(true, false);
+            socket.shutdown(true, false);
             promise.setSuccess();
         } catch (Throwable cause) {
             promise.setFailure(cause);
@@ -607,7 +587,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     private void shutdown0(final ChannelPromise promise) {
         try {
-            fd().shutdown(true, true);
+            socket.shutdown(true, true);
             promise.setSuccess();
         } catch (Throwable cause) {
             promise.setFailure(cause);
@@ -616,17 +596,17 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     public boolean isOutputShutdown() {
-        return fd().isOutputShutdown();
+        return socket.isOutputShutdown();
     }
 
     @Override
     public boolean isInputShutdown() {
-        return fd().isInputShutdown();
+        return socket.isInputShutdown();
     }
 
     @Override
     public boolean isShutdown() {
-        return fd().isShutdown();
+        return socket.isShutdown();
     }
 
     @Override
@@ -764,12 +744,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      */
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
-            fd().bind(localAddress);
+            socket.bind(localAddress);
         }
 
         boolean success = false;
         try {
-            boolean connected = fd().connect(remoteAddress);
+            boolean connected = socket.connect(remoteAddress);
             if (!connected) {
                 setFlag(Native.EPOLLOUT);
             }
@@ -952,7 +932,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
          * Finish the connect
          */
         boolean doFinishConnect() throws Exception {
-            if (fd().finishConnect()) {
+            if (socket.finishConnect()) {
                 clearFlag(Native.EPOLLOUT);
                 return true;
             } else {
@@ -1085,7 +1065,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             int splicedIn = 0;
             for (;;) {
                 // Splicing until there is nothing left to splice.
-                int localSplicedIn = Native.splice(fd().intValue(), -1, pipeOut.intValue(), -1, length);
+                int localSplicedIn = Native.splice(socket.intValue(), -1, pipeOut.intValue(), -1, length);
                 if (localSplicedIn == 0) {
                     break;
                 }
@@ -1185,7 +1165,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         public boolean spliceOut() throws Exception {
             assert ch.eventLoop().inEventLoop();
             try {
-                int splicedOut = Native.splice(ch.pipeIn.intValue(), -1, ch.fd().intValue(), -1, len);
+                int splicedOut = Native.splice(ch.pipeIn.intValue(), -1, ch.socket.intValue(), -1, len);
                 len -= splicedOut;
                 if (len == 0) {
                     if (autoRead) {
@@ -1257,55 +1237,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
     }
 
-    private final class SocketWritableByteChannel implements WritableByteChannel {
-
-        @Override
-        public int write(ByteBuffer src) throws IOException {
-            final int written;
-            int position = src.position();
-            int limit = src.limit();
-            if (src.isDirect()) {
-                written = fd().write(src, position, src.limit());
-            } else {
-                final int readableBytes = limit - position;
-                ByteBuf buffer = null;
-                try {
-                    if (readableBytes == 0) {
-                        buffer = Unpooled.EMPTY_BUFFER;
-                    } else {
-                        final ByteBufAllocator alloc = alloc();
-                        if (alloc.isDirectBufferPooled()) {
-                            buffer = alloc.directBuffer(readableBytes);
-                        } else {
-                            buffer = ByteBufUtil.threadLocalDirectBuffer();
-                            if (buffer == null) {
-                                buffer = Unpooled.directBuffer(readableBytes);
-                            }
-                        }
-                    }
-                    buffer.writeBytes(src.duplicate());
-                    ByteBuffer nioBuffer = buffer.internalNioBuffer(buffer.readerIndex(), readableBytes);
-                    written = fd().write(nioBuffer, nioBuffer.position(), nioBuffer.limit());
-                } finally {
-                    if (buffer != null) {
-                        buffer.release();
-                    }
-                }
-            }
-            if (written > 0) {
-                src.position(position + written);
-            }
-            return written;
+    private final class EpollSocketWritableByteChannel extends SocketWritableByteChannel {
+        EpollSocketWritableByteChannel() {
+            super(socket);
         }
 
         @Override
-        public boolean isOpen() {
-            return fd().isOpen();
-        }
-
-        @Override
-        public void close() throws IOException {
-            fd().close();
+        protected ByteBufAllocator alloc() {
+            return AbstractEpollStreamChannel.this.alloc();
         }
     }
 }

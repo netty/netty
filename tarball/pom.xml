@@ -96,6 +96,11 @@
   <profiles>
     <profile>
       <id>full</id>
+      <activation>
+        <property>
+          <name>uber</name>
+        </property>
+      </activation>
       <build>
         <plugins>
           <plugin>

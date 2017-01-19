@@ -287,6 +287,10 @@ public final class PlatformDependent {
         PlatformDependent0.freeMemory(address);
     }
 
+    public static long reallocateMemory(long address, long newSize) {
+        return PlatformDependent0.reallocateMemory(address, newSize);
+    }
+
     /**
      * Raises an exception bypassing compiler checks for checked exceptions.
      */
