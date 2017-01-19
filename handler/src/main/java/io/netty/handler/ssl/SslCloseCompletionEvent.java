@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,25 +15,23 @@
  */
 package io.netty.handler.ssl;
 
-
 /**
- * Event that is fired once the SSL handshake is complete, which may be because it was successful or there
- * was an error.
+ * Event that is fired once the close_notify was received or if an failure happens before it was received.
  */
-public final class SslHandshakeCompletionEvent extends SslCompletionEvent {
+public final class SslCloseCompletionEvent extends SslCompletionEvent {
 
-    public static final SslHandshakeCompletionEvent SUCCESS = new SslHandshakeCompletionEvent();
-
-    /**
-     * Creates a new event that indicates a successful handshake.
-     */
-    private SslHandshakeCompletionEvent() { }
+    public static final SslCloseCompletionEvent SUCCESS = new SslCloseCompletionEvent();
 
     /**
-     * Creates a new event that indicates an unsuccessful handshake.
-     * Use {@link #SUCCESS} to indicate a successful handshake.
+     * Creates a new event that indicates a successful receiving of close_notify.
      */
-    public SslHandshakeCompletionEvent(Throwable cause) {
+    private SslCloseCompletionEvent() { }
+
+    /**
+     * Creates a new event that indicates an close_notify was not received because of an previous error.
+     * Use {@link #SUCCESS} to indicate a success.
+     */
+    public SslCloseCompletionEvent(Throwable cause) {
         super(cause);
     }
 }
