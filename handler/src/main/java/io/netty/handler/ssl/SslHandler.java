@@ -209,6 +209,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 out.writerIndex(writerIndex + result.bytesProduced());
                 return result;
             }
+
+            @Override
+            int calculateOutNetBufSize(SslHandler handler, int pendingBytes) {
+                return ReferenceCountedOpenSslEngine.calculateOutNetBufSize(pendingBytes);
+            }
         },
         JDK(false, MERGE_CUMULATOR) {
             @Override
@@ -219,6 +224,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     toByteBuffer(out, writerIndex, out.writableBytes()));
                 out.writerIndex(writerIndex + result.bytesProduced());
                 return result;
+            }
+
+            @Override
+            int calculateOutNetBufSize(SslHandler handler, int pendingBytes) {
+                return handler.maxPacketBufferSize;
             }
         };
 
@@ -236,6 +246,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         abstract SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
                 throws SSLException;
+
+        abstract int calculateOutNetBufSize(SslHandler handler, int pendingBytes);
 
         // BEGIN Platform-dependent flags
 
@@ -339,7 +351,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             throw new NullPointerException("delegatedTaskExecutor");
         }
         this.engine = engine;
-        this.engineType = SslEngineType.forEngine(engine);
+        engineType = SslEngineType.forEngine(engine);
         this.delegatedTaskExecutor = delegatedTaskExecutor;
         this.startTls = startTls;
         maxPacketBufferSize = engine.getSession().getPacketBufferSize();
@@ -572,7 +584,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                 ByteBuf buf = (ByteBuf) msg;
                 if (out == null) {
-                    out = allocateOutNetBuf(ctx);
+                    out = allocateOutNetBuf(ctx, buf.readableBytes());
                 }
 
                 SSLEngineResult result = wrap(alloc, engine, buf, out);
@@ -653,7 +665,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // See https://github.com/netty/netty/issues/5860
             while (!ctx.isRemoved()) {
                 if (out == null) {
-                    out = allocateOutNetBuf(ctx);
+                    out = allocateOutNetBuf(ctx, 0);
                 }
                 SSLEngineResult result = wrap(alloc, engine, Unpooled.EMPTY_BUFFER, out);
 
@@ -1556,8 +1568,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Allocates an outbound network buffer for {@link SSLEngine#wrap(ByteBuffer, ByteBuffer)} which can encrypt
      * the specified amount of pending bytes.
      */
-    private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx) {
-        return allocate(ctx, maxPacketBufferSize);
+    private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx, int pendingBytes) {
+        return allocate(ctx, engineType.calculateOutNetBufSize(this, pendingBytes));
     }
 
     private final class LazyChannelPromise extends DefaultPromise<Channel> {

@@ -62,6 +62,8 @@ import static io.netty.handler.ssl.OpenSsl.memoryAddress;
 import static io.netty.util.internal.EmptyArrays.EMPTY_CERTIFICATES;
 import static io.netty.util.internal.EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_UNWRAP;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_WRAP;
@@ -158,6 +160,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     static final int MAX_ENCRYPTED_PACKET_LENGTH = MAX_CIPHERTEXT_LENGTH + 5 + 20 + 256;
 
     static final int MAX_ENCRYPTION_OVERHEAD_LENGTH = MAX_ENCRYPTED_PACKET_LENGTH - MAX_PLAINTEXT_LENGTH;
+
+    private static final int MAX_ENCRYPTION_OVERHEAD_DIFF = Integer.MAX_VALUE - MAX_ENCRYPTION_OVERHEAD_LENGTH;
 
     private static final AtomicIntegerFieldUpdater<ReferenceCountedOpenSslEngine> DESTROYED_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(ReferenceCountedOpenSslEngine.class, "destroyed");
@@ -461,7 +465,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         } else {
             final int pos = dst.position();
             final int limit = dst.limit();
-            final int len = Math.min(MAX_ENCRYPTED_PACKET_LENGTH, limit - pos);
+            final int len = min(MAX_ENCRYPTED_PACKET_LENGTH, limit - pos);
             final ByteBuf buf = alloc.directBuffer(len);
             try {
                 final long addr = memoryAddress(buf);
@@ -614,7 +618,30 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
             }
 
-            if (dst.remaining() < MAX_ENCRYPTED_PACKET_LENGTH) {
+            int endOffset = offset + length;
+            int srcsLen = 0;
+
+            for (int i = offset; i < endOffset; ++i) {
+                final ByteBuffer src = srcs[i];
+                if (src == null) {
+                    throw new IllegalArgumentException("srcs[" + i + "] is null");
+                }
+                if (srcsLen == MAX_PLAINTEXT_LENGTH) {
+                    continue;
+                }
+
+                srcsLen += src.remaining();
+                if (srcsLen > MAX_PLAINTEXT_LENGTH || srcsLen < 0) {
+                    // If srcLen > MAX_PLAINTEXT_LENGTH or secLen < 0 just set it to MAX_PLAINTEXT_LENGTH.
+                    // This also help us to guard against overflow.
+                    // We not break out here as we still need to check for null entries in srcs[].
+                    srcsLen = MAX_PLAINTEXT_LENGTH;
+                }
+            }
+
+            int maxEncryptedLen = calculateOutNetBufSize(srcsLen);
+
+            if (dst.remaining() < maxEncryptedLen) {
                 // Can not hold the maximum packet so we need to tell the caller to use a bigger destination
                 // buffer.
                 return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), 0, 0);
@@ -622,18 +649,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             // There was no pending data in the network BIO -- encrypt any application data
             int bytesProduced = 0;
             int bytesConsumed = 0;
-            int endOffset = offset + length;
 
             loop: for (int i = offset; i < endOffset; ++i) {
                 final ByteBuffer src = srcs[i];
-                if (src == null) {
-                    throw new IllegalArgumentException("srcs[" + i + "] is null");
-                }
                 while (src.hasRemaining()) {
                     final SSLEngineResult pendingNetResult;
                     // Write plaintext application data to the SSL engine
                     int result = writePlaintextData(
-                            src, Math.min(src.remaining(), MAX_PLAINTEXT_LENGTH - bytesConsumed));
+                            src, min(src.remaining(), MAX_PLAINTEXT_LENGTH - bytesConsumed));
 
                     if (result > 0) {
                         bytesConsumed += result;
@@ -837,7 +860,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                     // Write more encrypted data into the BIO. Ensure we only read one packet at a time as
                     // stated in the SSLEngine javadocs.
-                    int written = writeEncryptedData(src, Math.min(packetLengthRemaining, src.remaining()));
+                    int written = writeEncryptedData(src, min(packetLengthRemaining, src.remaining()));
                     if (written > 0) {
                         packetLengthRemaining -= written;
                         if (packetLengthRemaining == 0) {
@@ -1659,6 +1682,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private boolean isDestroyed() {
         return destroyed != 0;
+    }
+
+    static int calculateOutNetBufSize(int pendingBytes) {
+        return min(MAX_ENCRYPTED_PACKET_LENGTH, MAX_ENCRYPTION_OVERHEAD_LENGTH
+                + min(MAX_ENCRYPTION_OVERHEAD_DIFF, pendingBytes));
     }
 
     private final class OpenSslSession implements SSLSession, ApplicationProtocolAccessor {
