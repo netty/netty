@@ -1694,4 +1694,76 @@ public abstract class SSLEngineTest {
             cleanupServerSslEngine(server);
         }
     }
+
+    @Test
+    public void testBufferUnderFlow() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .trustManager(cert.cert())
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            ByteBuffer plainClient = allocateBuffer(1024);
+            plainClient.limit(plainClient.capacity());
+
+            ByteBuffer encClientToServer = allocateBuffer(client.getSession().getPacketBufferSize());
+            ByteBuffer plainServer = allocateBuffer(server.getSession().getApplicationBufferSize());
+
+            handshake(client, server);
+
+            SSLEngineResult result = client.wrap(plainClient, encClientToServer);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(result.bytesConsumed(), plainClient.capacity());
+
+            // Flip so we can read it.
+            encClientToServer.flip();
+            int remaining = encClientToServer.remaining();
+
+            // We limit the buffer so we have less then the header to read, this should result in an BUFFER_UNDERFLOW.
+            encClientToServer.limit(SslUtils.SSL_RECORD_HEADER_LENGTH - 1);
+            result = server.unwrap(encClientToServer, plainServer);
+            assertResultIsBufferUnderflow(result);
+
+            // We limit the buffer so we can read the header but not the rest, this should result in an
+            // BUFFER_UNDERFLOW.
+            encClientToServer.limit(SslUtils.SSL_RECORD_HEADER_LENGTH);
+            result = server.unwrap(encClientToServer, plainServer);
+            assertResultIsBufferUnderflow(result);
+
+            // We limit the buffer so we can read the header and partly the rest, this should result in an
+            // BUFFER_UNDERFLOW.
+            encClientToServer.limit(
+                    SslUtils.SSL_RECORD_HEADER_LENGTH  + remaining - 1 - SslUtils.SSL_RECORD_HEADER_LENGTH);
+            result = server.unwrap(encClientToServer, plainServer);
+            assertResultIsBufferUnderflow(result);
+
+            // Reset limit so we can read the full record.
+            encClientToServer.limit(remaining);
+
+            result = server.unwrap(encClientToServer, plainServer);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(result.bytesConsumed(), remaining);
+            assertTrue(result.bytesProduced() > 0);
+        } finally {
+            cert.delete();
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    private static void assertResultIsBufferUnderflow(SSLEngineResult result) {
+        assertEquals(SSLEngineResult.Status.BUFFER_UNDERFLOW, result.getStatus());
+        assertEquals(0, result.bytesConsumed());
+        assertEquals(0, result.bytesProduced());
+    }
 }
