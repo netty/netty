@@ -16,6 +16,8 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.nio.AbstractNioMessageChannel;
@@ -34,13 +36,14 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * A {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses
- * NIO selector based implementation to accept new connections.
+ * A {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses NIO selector based implementation to
+ * accept new connections.
  */
 public class NioServerSocketChannel extends AbstractNioMessageChannel
-                             implements io.netty.channel.socket.ServerSocketChannel {
+        implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
@@ -63,6 +66,9 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     private final ServerSocketChannelConfig config;
+    private long maxConnections;
+    private final AtomicLong connectionCounter;
+    private final ChannelFutureListener closeListener;
 
     /**
      * Create a new instance
@@ -84,6 +90,14 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     public NioServerSocketChannel(ServerSocketChannel channel) {
         super(null, channel, SelectionKey.OP_ACCEPT);
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
+        maxConnections = config.getMaxConnections();
+        connectionCounter = new AtomicLong(0);
+        closeListener = new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                connectionCounter.decrementAndGet();
+            }
+        };
     }
 
     @Override
@@ -128,6 +142,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         } else {
             javaChannel().socket().bind(localAddress, config.getBacklog());
         }
+        maxConnections = config.getMaxConnections();
     }
 
     @Override
@@ -137,18 +152,34 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
-        SocketChannel ch = javaChannel().accept();
+        if (connectionCounter.incrementAndGet() > maxConnections) {
+            connectionCounter.decrementAndGet();
+            try {
+                //sleep a while so that we won't loop busily
+                Thread.sleep(10);
+            }catch (InterruptedException exception){
+                //ignore this
+            }
+            return 0;
+        }
 
+        SocketChannel ch = null;
         try {
+            ch = javaChannel().accept();
             if (ch != null) {
-                buf.add(new NioSocketChannel(this, ch));
+                NioSocketChannel nioSocketChannel = new NioSocketChannel(this, ch);
+                nioSocketChannel.closeFuture().addListener(closeListener);
+                buf.add(nioSocketChannel);
                 return 1;
             }
         } catch (Throwable t) {
-            logger.warn("Failed to create a new channel from an accepted socket.", t);
+            connectionCounter.decrementAndGet();
+            logger.warn("Failed to accept or create a new channel from an accepted socket.", t);
 
             try {
-                ch.close();
+                if (ch != null) {
+                    ch.close();
+                }
             } catch (Throwable t2) {
                 logger.warn("Failed to close a socket.", t2);
             }

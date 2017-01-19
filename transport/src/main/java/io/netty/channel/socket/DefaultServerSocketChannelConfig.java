@@ -28,9 +28,7 @@ import java.net.ServerSocket;
 import java.net.SocketException;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.SO_BACKLOG;
-import static io.netty.channel.ChannelOption.SO_RCVBUF;
-import static io.netty.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * The default {@link ServerSocketChannelConfig} implementation.
@@ -40,6 +38,7 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
 
     protected final ServerSocket javaSocket;
     private volatile int backlog = NetUtil.SOMAXCONN;
+    private volatile long maxConnections = Long.MAX_VALUE;
 
     /**
      * Creates a new instance.
@@ -69,6 +68,9 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
         if (option == SO_BACKLOG) {
             return (T) Integer.valueOf(getBacklog());
         }
+        if (option == SO_MAXCONNECTIONS) {
+            return (T) Long.valueOf(getMaxConnections());
+        }
 
         return super.getOption(option);
     }
@@ -83,6 +85,8 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
             setReuseAddress((Boolean) value);
         } else if (option == SO_BACKLOG) {
             setBacklog((Integer) value);
+        } else if (option == SO_MAXCONNECTIONS) {
+            setMaxConnections((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -206,6 +210,20 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public ServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
+        return this;
+    }
+
+    @Override
+    public long getMaxConnections() {
+        return maxConnections;
+    }
+
+    @Override
+    public ServerSocketChannelConfig setMaxConnections(long maxConnections) {
+        if (maxConnections <= 0) {
+            throw new IllegalArgumentException("maxConnections: " + maxConnections);
+        }
+        this.maxConnections = maxConnections;
         return this;
     }
 }

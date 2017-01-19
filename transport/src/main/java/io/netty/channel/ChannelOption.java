@@ -23,12 +23,11 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 
 /**
- * A {@link ChannelOption} allows to configure a {@link ChannelConfig} in a type-safe
- * way. Which {@link ChannelOption} is supported depends on the actual implementation
- * of {@link ChannelConfig} and may depend on the nature of the transport it belongs
- * to.
+ * A {@link ChannelOption} allows to configure a {@link ChannelConfig} in a type-safe way. Which {@link ChannelOption}
+ * is supported depends on the actual implementation of {@link ChannelConfig} and may depend on the nature of the
+ * transport it belongs to.
  *
- * @param <T>   the type of the value which is valid for the {@link ChannelOption}
+ * @param <T> the type of the value which is valid for the {@link ChannelOption}
  */
 public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
 
@@ -63,8 +62,8 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     }
 
     /**
-     * Creates a new {@link ChannelOption} for the given {@code name} or fail with an
-     * {@link IllegalArgumentException} if a {@link ChannelOption} for the given {@code name} exists.
+     * Creates a new {@link ChannelOption} for the given {@code name} or fail with an {@link IllegalArgumentException}
+     * if a {@link ChannelOption} for the given {@code name} exists.
      */
     @SuppressWarnings("unchecked")
     public static <T> ChannelOption<T> newInstance(String name) {
@@ -99,10 +98,10 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     public static final ChannelOption<Boolean> AUTO_READ = valueOf("AUTO_READ");
 
     /**
-     * @deprecated  Auto close will be removed in a future release.
-     *
-     * If {@code true} then the {@link Channel} is closed automatically and immediately on write failure.
-     * The default value is {@code true}.
+     * @deprecated Auto close will be removed in a future release.
+     * <p/>
+     * If {@code true} then the {@link Channel} is closed automatically and immediately on write failure. The default
+     * value is {@code true}.
      */
     @Deprecated
     public static final ChannelOption<Boolean> AUTO_CLOSE = valueOf("AUTO_CLOSE");
@@ -115,6 +114,7 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     public static final ChannelOption<Integer> SO_LINGER = valueOf("SO_LINGER");
     public static final ChannelOption<Integer> SO_BACKLOG = valueOf("SO_BACKLOG");
     public static final ChannelOption<Integer> SO_TIMEOUT = valueOf("SO_TIMEOUT");
+    public static final ChannelOption<Integer> SO_MAXCONNECTIONS = valueOf("SO_MAXCONNECTIONS");
 
     public static final ChannelOption<Integer> IP_TOS = valueOf("IP_TOS");
     public static final ChannelOption<InetAddress> IP_MULTICAST_ADDR = valueOf("IP_MULTICAST_ADDR");
@@ -144,8 +144,7 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     }
 
     /**
-     * Validate the value which is set for the {@link ChannelOption}. Sub-classes
-     * may override this for special checks.
+     * Validate the value which is set for the {@link ChannelOption}. Sub-classes may override this for special checks.
      */
     public void validate(T value) {
         if (value == null) {

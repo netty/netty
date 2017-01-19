@@ -257,7 +257,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         }
 
         private static void forceClose(Channel child, Throwable t) {
-            child.unsafe().closeForcibly();
+            child.unsafe().close(child.unsafe().voidPromise());
             logger.warn("Failed to register an accepted channel: " + child, t);
         }
 
