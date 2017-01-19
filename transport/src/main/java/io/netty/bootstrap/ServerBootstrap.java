@@ -236,9 +236,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
             child.pipeline().addLast(childHandler);
 
-            for (Entry<ChannelOption<?>, Object> e: childOptions) {
-                setChannelOptions(child, childOptions, logger);
-            }
+            setChannelOptions(child, childOptions, logger);
 
             for (Entry<AttributeKey<?>, Object> e: childAttrs) {
                 child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
