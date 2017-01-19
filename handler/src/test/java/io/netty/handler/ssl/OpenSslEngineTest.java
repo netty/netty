@@ -26,12 +26,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 public class OpenSslEngineTest extends SSLEngineTest {
@@ -113,6 +117,146 @@ public class OpenSslEngineTest extends SSLEngineTest {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
         }
+    }
+
+    @Test
+    public void testOnlySmallBufferNeededForWrap() throws Exception {
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .build();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            handshake(clientEngine, serverEngine);
+
+            // Allocate a buffer which is small enough and set the limit to the capacity to mark its whole content
+            // as readable.
+            int srcLen = 1024;
+            ByteBuffer src = allocateBuffer(srcLen);
+
+            ByteBuffer dstTooSmall = allocateBuffer(
+                    src.capacity() + ReferenceCountedOpenSslEngine.MAX_ENCRYPTION_OVERHEAD_LENGTH - 1);
+            ByteBuffer dst = allocateBuffer(
+                    src.capacity() + ReferenceCountedOpenSslEngine.MAX_ENCRYPTION_OVERHEAD_LENGTH);
+
+            // Check that we fail to wrap if the dst buffers capacity is not at least
+            // src.capacity() + ReferenceCountedOpenSslEngine.MAX_ENCRYPTION_OVERHEAD_LENGTH
+            SSLEngineResult result = clientEngine.wrap(src, dstTooSmall);
+            assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(0, result.bytesProduced());
+            assertEquals(src.remaining(), src.capacity());
+            assertEquals(dst.remaining(), dst.capacity());
+
+            // Check that we can wrap with a dst buffer that has the capacity of
+            // src.capacity() + ReferenceCountedOpenSslEngine.MAX_ENCRYPTION_OVERHEAD_LENGTH
+            result = clientEngine.wrap(src, dst);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertEquals(srcLen, result.bytesConsumed());
+            assertEquals(0, src.remaining());
+            assertTrue(result.bytesProduced() > srcLen);
+            assertEquals(src.capacity() - result.bytesConsumed(), src.remaining());
+            assertEquals(dst.capacity() - result.bytesProduced(), dst.remaining());
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+        }
+    }
+
+    @Test
+    public void testNeededDstCapacityIsCorrectlyCalculated() throws Exception {
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .build();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            handshake(clientEngine, serverEngine);
+
+            ByteBuffer src = allocateBuffer(1024);
+            ByteBuffer src2 = src.duplicate();
+
+            ByteBuffer dst = allocateBuffer(src.capacity()
+                    + ReferenceCountedOpenSslEngine.MAX_ENCRYPTION_OVERHEAD_LENGTH);
+
+            SSLEngineResult result = clientEngine.wrap(new ByteBuffer[] { src, src2 }, dst);
+            assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
+            assertEquals(0, src.position());
+            assertEquals(0, src2.position());
+            assertEquals(0, dst.position());
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(0, result.bytesProduced());
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+        }
+    }
+
+    @Test
+    public void testSrcsLenOverFlowCorrectlyHandled() throws Exception {
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .build();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            handshake(clientEngine, serverEngine);
+
+            ByteBuffer src = allocateBuffer(1024);
+            List<ByteBuffer> srcList = new ArrayList<ByteBuffer>();
+            long srcsLen = 0;
+            long maxLen = ((long) Integer.MAX_VALUE) * 2;
+
+            while (srcsLen < maxLen) {
+                ByteBuffer dup = src.duplicate();
+                srcList.add(dup);
+                srcsLen += dup.capacity();
+            }
+
+            ByteBuffer[] srcs = srcList.toArray(new ByteBuffer[srcList.size()]);
+
+            ByteBuffer dst = allocateBuffer(ReferenceCountedOpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH - 1);
+
+            SSLEngineResult result = clientEngine.wrap(srcs, dst);
+            assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
+
+            for (ByteBuffer buffer : srcs) {
+                assertEquals(0, buffer.position());
+            }
+            assertEquals(0, dst.position());
+            assertEquals(0, result.bytesConsumed());
+            assertEquals(0, result.bytesProduced());
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+        }
+    }
+
+    @Test
+    public void testCalculateOutNetBufSizeOverflow() {
+        assertEquals(ReferenceCountedOpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH,
+                ReferenceCountedOpenSslEngine.calculateOutNetBufSize(Integer.MAX_VALUE));
     }
 
     @Override
