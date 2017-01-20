@@ -62,7 +62,6 @@ import static io.netty.handler.ssl.OpenSsl.memoryAddress;
 import static io.netty.util.internal.EmptyArrays.EMPTY_CERTIFICATES;
 import static io.netty.util.internal.EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_UNWRAP;
@@ -570,6 +569,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return null;
     }
 
+    private SSLEngineResult drainOutboundBuffer(ByteBuffer dst, SSLEngineResult.HandshakeStatus handshakeStatus)
+            throws SSLException {
+        SSLEngineResult pendingNetResult = readPendingBytesFromBIO(dst, 0, 0, handshakeStatus);
+        return pendingNetResult != null ? pendingNetResult : NEED_UNWRAP_CLOSED;
+    }
+
     @Override
     public final SSLEngineResult wrap(
             final ByteBuffer[] srcs, final int offset, final int length, final ByteBuffer dst) throws SSLException {
@@ -593,10 +598,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         synchronized (this) {
             if (isOutboundDone()) {
+                // All drained in the outbound buffer
                 return isInboundDone() || isDestroyed() ? CLOSED_NOT_HANDSHAKING : NEED_UNWRAP_CLOSED;
             }
 
             SSLEngineResult.HandshakeStatus status = NOT_HANDSHAKING;
+
+            // Explicit use outboundClosed as we want to drain any bytes that are still present.
+            if (outboundClosed) {
+                // There is something left to drain.
+                // See https://github.com/netty/netty/issues/6260
+                return drainOutboundBuffer(dst, status);
+            }
+
             // Prepare OpenSSL to work in server mode and receive handshake
             if (handshakeState != HandshakeState.FINISHED) {
                 if (handshakeState != HandshakeState.STARTED_EXPLICITLY) {
@@ -613,8 +627,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // Explicit use outboundClosed and not outboundClosed() as we want to drain any bytes that are still
                 // present.
                 if (outboundClosed) {
-                    SSLEngineResult pendingNetResult = readPendingBytesFromBIO(dst, 0, 0, status);
-                    return pendingNetResult != null ? pendingNetResult : NEED_UNWRAP_CLOSED;
+                    return drainOutboundBuffer(dst, status);
                 }
             }
 
