@@ -85,6 +85,21 @@ public class DefaultHttp2HeadersDecoderTest {
     }
 
     @Test
+    public void decodeLargerThanHeaderListSizeButLessThanGoAwayWithInitialDecoderSettings() throws Exception {
+        ByteBuf buf = encode(b(":method"), b("GET"), b("test_header"),
+            b(String.format("%09000d", 0).replace('0', 'A')));
+        final int streamId = 1;
+        try {
+            decoder.decodeHeaders(streamId, buf);
+            fail();
+        } catch (Http2Exception.HeaderListSizeException e) {
+            assertEquals(streamId, e.streamId());
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
     public void decodeLargerThanHeaderListSizeGoAway() throws Exception {
         decoder.maxHeaderListSize(MIN_HEADER_LIST_SIZE, MIN_HEADER_LIST_SIZE);
         ByteBuf buf = encode(b(":method"), b("GET"));

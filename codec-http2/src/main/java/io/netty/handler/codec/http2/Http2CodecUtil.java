@@ -113,6 +113,18 @@ public final class Http2CodecUtil {
     public static final int DEFAULT_MAX_FRAME_SIZE = MAX_FRAME_SIZE_LOWER_BOUND;
 
     /**
+     * Calculate the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
+     * @param maxHeaderListSize
+     *      <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a> for the local
+     *      endpoint.
+     * @return the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
+     */
+    public static long calculateMaxHeaderListSizeGoAway(long maxHeaderListSize) {
+        // This is equivalent to `maxHeaderListSize * 1.25` but we avoid floating point multiplication.
+        return maxHeaderListSize + (maxHeaderListSize >>> 2);
+    }
+
+    /**
      * Returns {@code true} if the stream is an outbound stream.
      *
      * @param server    {@code true} if the endpoint is a server, {@code false} otherwise.
