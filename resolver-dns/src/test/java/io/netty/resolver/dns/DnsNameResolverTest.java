@@ -28,6 +28,7 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -491,6 +492,67 @@ public class DnsNameResolverTest {
             InetAddress address = resolver.resolve("10.0.0.1").syncUninterruptibly().getNow();
 
             assertEquals("10.0.0.1", address.getHostAddress());
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test
+    public void testResolveEmptyIpv4() {
+        testResolve0(InternetProtocolFamily.IPv4, NetUtil.LOCALHOST4, StringUtil.EMPTY_STRING);
+    }
+
+    @Test
+    public void testResolveEmptyIpv6() {
+        testResolve0(InternetProtocolFamily.IPv6, NetUtil.LOCALHOST6, StringUtil.EMPTY_STRING);
+    }
+
+    @Test
+    public void testResolveNullIpv4() {
+        testResolve0(InternetProtocolFamily.IPv4, NetUtil.LOCALHOST4, null);
+    }
+
+    @Test
+    public void testResolveNullIpv6() {
+        testResolve0(InternetProtocolFamily.IPv6, NetUtil.LOCALHOST6, null);
+    }
+
+    private static void testResolve0(InternetProtocolFamily family, InetAddress expectedAddr, String name) {
+        DnsNameResolver resolver = newResolver(family).build();
+        try {
+            InetAddress address = resolver.resolve(name).syncUninterruptibly().getNow();
+            assertEquals(expectedAddr, address);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test
+    public void testResolveAllEmptyIpv4() {
+        testResolveAll0(InternetProtocolFamily.IPv4, NetUtil.LOCALHOST4, StringUtil.EMPTY_STRING);
+    }
+
+    @Test
+    public void testResolveAllEmptyIpv6() {
+        testResolveAll0(InternetProtocolFamily.IPv6, NetUtil.LOCALHOST6, StringUtil.EMPTY_STRING);
+    }
+
+    @Test
+    public void testResolveAllNullIpv4() {
+        testResolveAll0(InternetProtocolFamily.IPv4, NetUtil.LOCALHOST4, null);
+    }
+
+    @Test
+    public void testResolveAllNullIpv6() {
+        testResolveAll0(InternetProtocolFamily.IPv6, NetUtil.LOCALHOST6, null);
+    }
+
+    private static void testResolveAll0(InternetProtocolFamily family, InetAddress expectedAddr, String name) {
+        DnsNameResolver resolver = newResolver(family).build();
+        try {
+            List<InetAddress> addresses = resolver.resolveAll(name).syncUninterruptibly().getNow();
+            assertEquals(1, addresses.size());
+            assertEquals(expectedAddr, addresses.get(0));
         } finally {
             resolver.close();
         }
