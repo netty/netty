@@ -411,8 +411,11 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public final Future<InetAddress> resolve(String inetHost, Iterable<DnsRecord> additionals,
                                              Promise<InetAddress> promise) {
-        checkNotNull(inetHost, "inetHost");
         checkNotNull(promise, "promise");
+        if (inetHost == null || inetHost.isEmpty()) {
+            // If an empty hostname is used we should use "localhost", just like InetAddress.getByName(...) does.
+            return promise.setSuccess(loopbackAddress());
+        }
         DnsRecord[] additionalsArray = toArray(additionals, true);
         try {
             doResolve(inetHost, additionalsArray, promise, resolveCache);
@@ -445,8 +448,13 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public final Future<List<InetAddress>> resolveAll(String inetHost, Iterable<DnsRecord> additionals,
                                                 Promise<List<InetAddress>> promise) {
-        checkNotNull(inetHost, "inetHost");
         checkNotNull(promise, "promise");
+
+        if (inetHost == null || inetHost.isEmpty()) {
+            // If an empty hostname is used we should use "localhost", just like InetAddress.getAllByName(...) does.
+            return promise.setSuccess(Collections.singletonList(loopbackAddress()));
+        }
+
         DnsRecord[] additionalsArray = toArray(additionals, true);
         try {
             doResolveAll(inetHost, additionalsArray, promise, resolveCache);
@@ -490,6 +498,12 @@ public class DnsNameResolver extends InetNameResolver {
         if (validateType && record instanceof DnsRawRecord) {
             throw new IllegalArgumentException("DnsRawRecord implementations not allowed: " + record);
         }
+    }
+
+    @Override
+    protected final InetAddress loopbackAddress() {
+        return preferredAddressType() == InternetProtocolFamily.IPv4 ?
+                    NetUtil.LOCALHOST4 : NetUtil.LOCALHOST6;
     }
 
     /**

@@ -146,7 +146,9 @@ abstract class DnsNameResolverContext<T> {
     private void internalResolve(Promise<T> promise) {
         InetSocketAddress nameServerAddrToTry = nameServerAddrs.next();
         for (DnsRecordType type: parent.resolveRecordTypes()) {
-            query(nameServerAddrToTry, new DefaultDnsQuestion(hostname, type), promise);
+            if (!query(hostname, type, nameServerAddrToTry, promise)) {
+                return;
+            }
         }
     }
 
@@ -382,7 +384,7 @@ abstract class DnsNameResolverContext<T> {
             if (!triedCNAME) {
                 // As the last resort, try to query CNAME, just in case the name server has it.
                 triedCNAME = true;
-                query(nameServerAddrs.next(), new DefaultDnsQuestion(hostname, DnsRecordType.CNAME), promise);
+                query(hostname, DnsRecordType.CNAME, nameServerAddrs.next(), promise);
                 return;
             }
         }
@@ -509,12 +511,25 @@ abstract class DnsNameResolverContext<T> {
         }
 
         final InetSocketAddress nextAddr = nameServerAddrs.next();
-        if (parent.isCnameFollowARecords()) {
-            query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.A), promise);
+        if (parent.isCnameFollowARecords() && !query(hostname, DnsRecordType.A, nextAddr, promise)) {
+            return;
         }
         if (parent.isCnameFollowAAAARecords()) {
-            query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.AAAA), promise);
+            query(hostname, DnsRecordType.AAAA, nextAddr, promise);
         }
+    }
+
+    private boolean query(String hostname, DnsRecordType type, final InetSocketAddress nextAddr, Promise<T> promise) {
+        final DnsQuestion question;
+        try {
+            question = new DefaultDnsQuestion(hostname, type);
+        } catch (IllegalArgumentException e) {
+            // java.net.IDN.toASCII(...) may throw an IllegalArgumentException if it fails to parse the hostname
+            promise.tryFailure(e);
+            return false;
+        }
+        query(nextAddr, question, promise);
+        return true;
     }
 
     private void addTrace(InetSocketAddress nameServerAddr, String msg) {
