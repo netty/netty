@@ -149,8 +149,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
      * @return the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
      */
     protected long calculateMaxHeaderListSizeGoAway(long maxHeaderListSize) {
-        // This is equivalent to `maxHeaderListSize * 1.25` but we avoid floating point multiplication.
-        return maxHeaderListSize + (maxHeaderListSize >>> 2);
+        return Http2CodecUtil.calculateMaxHeaderListSizeGoAway(maxHeaderListSize);
     }
 
     private int unconsumedBytes(Http2Stream stream) {
