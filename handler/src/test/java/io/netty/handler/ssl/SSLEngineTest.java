@@ -1582,6 +1582,45 @@ public abstract class SSLEngineTest {
     }
 
     @Test
+    public void testWrapAfterCloseOutbound() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .trustManager(cert.cert())
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            ByteBuffer dst = allocateBuffer(server.getSession().getPacketBufferSize());
+            ByteBuffer src = allocateBuffer(1024);
+
+            handshake(client, server);
+
+            // This will produce a close_notify
+            client.closeOutbound();
+            SSLEngineResult result = client.wrap(src, dst);
+            assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
+            assertEquals(0, result.bytesConsumed());
+            assertTrue(result.bytesProduced() > 0);
+
+            assertTrue(client.isOutboundDone());
+            assertFalse(client.isInboundDone());
+        } finally {
+            cert.delete();
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    @Test
     public void testMultipleRecordsInOneBufferWithNonZeroPosition() throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
 
