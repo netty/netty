@@ -32,6 +32,7 @@
 package io.netty.handler.codec.http2.internal.hpack;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType;
@@ -106,7 +107,9 @@ public final class Decoder {
      * for testing but violate the RFC if used outside the scope of testing.
      */
     Decoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity, int maxHeaderTableSize) {
-        this.maxHeaderListSize = maxHeaderListSizeGoAway = checkPositive(maxHeaderListSize, "maxHeaderListSize");
+        this.maxHeaderListSize = checkPositive(maxHeaderListSize, "maxHeaderListSize");
+        this.maxHeaderListSizeGoAway = Http2CodecUtil.calculateMaxHeaderListSizeGoAway(maxHeaderListSize);
+
         maxDynamicTableSize = encoderMaxDynamicTableSize = maxHeaderTableSize;
         maxDynamicTableSizeChangeRequired = false;
         dynamicTable = new DynamicTable(maxHeaderTableSize);
