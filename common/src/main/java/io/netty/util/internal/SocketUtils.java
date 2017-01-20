@@ -182,6 +182,22 @@ public final class SocketUtils {
         });
     }
 
+    public static InetAddress loopbackAddress() {
+        return AccessController.doPrivileged(new PrivilegedAction<InetAddress>() {
+            @Override
+            public InetAddress run() {
+                if (PlatformDependent.javaVersion() >= 7) {
+                    return InetAddress.getLoopbackAddress();
+                }
+                try {
+                    return InetAddress.getByName(null);
+                } catch (UnknownHostException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+        });
+    }
+
     public static byte[] hardwareAddressFromNetworkInterface(final NetworkInterface intf) throws SocketException {
         try {
             return AccessController.doPrivileged(new PrivilegedExceptionAction<byte[]>() {
