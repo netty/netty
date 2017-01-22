@@ -284,10 +284,22 @@ public class JsonObjectDecoderTest {
 
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
 
+        ByteBuf res;
+
         ch.writeInbound(Unpooled.copiedBuffer(part1, CharsetUtil.UTF_8));
-        ch.readInbound();
+        res = ch.readInbound();
+        assertEquals("{\"a\":{\"b\":{\"c\":{ \"d\":\"27301\", \"med\":\"d\", \"path\":\"27310\"} }, \"status\":\"OK\" } }", res.toString(CharsetUtil.UTF_8));
 
         ch.writeInbound(Unpooled.copiedBuffer(part2, CharsetUtil.UTF_8));
-        ch.readInbound();
+        res = ch.readInbound();
+
+        assertNull(res);
+
+        ch.writeInbound(Unpooled.copiedBuffer("}}]}]}]}}}}", CharsetUtil.UTF_8));
+        res = ch.readInbound();
+
+        assertEquals("{\"a\":{\"b\":{\"c\":{\"ory\":[{\"competi\":[{\"event\":[{" + "\"externalI\":{\"external\":[{\"id\":\"O\"} ]}}]}]}]}}}}", res.toString(CharsetUtil.UTF_8));
+
+        assertFalse(ch.finish());
     }
 }
