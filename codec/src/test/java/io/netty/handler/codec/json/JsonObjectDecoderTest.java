@@ -279,8 +279,10 @@ public class JsonObjectDecoderTest {
 
     @Test
     public void testCorruptedFrameException() {
-        final String part1 = "{\"a\":{\"b\":{\"c\":{ \"d\":\"27301\", \"med\":\"d\", \"path\":\"27310\"} }, \"status\":\"OK\" } }{\"";
-        final String part2 = "a\":{\"b\":{\"c\":{\"ory\":[{\"competi\":[{\"event\":[{" + "\"externalI\":{\"external\":[{\"id\":\"O\"} ]";
+        final String part1 = "{\"a\":{\"b\":{\"c\":{ \"d\":\"27301\", \"med\":\"d\", \"path\":\"27310\"} }," +
+                " \"status\":\"OK\" } }{\"";
+        final String part2 = "a\":{\"b\":{\"c\":{\"ory\":[{\"competi\":[{\"event\":[{" + "\"externalI\":{\"external\"" +
+                ":[{\"id\":\"O\"} ]";
 
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
 
@@ -288,7 +290,8 @@ public class JsonObjectDecoderTest {
 
         ch.writeInbound(Unpooled.copiedBuffer(part1, CharsetUtil.UTF_8));
         res = ch.readInbound();
-        assertEquals("{\"a\":{\"b\":{\"c\":{ \"d\":\"27301\", \"med\":\"d\", \"path\":\"27310\"} }, \"status\":\"OK\" } }", res.toString(CharsetUtil.UTF_8));
+        assertEquals("{\"a\":{\"b\":{\"c\":{ \"d\":\"27301\", \"med\":\"d\", \"path\":\"27310\"} }, " +
+                "\"status\":\"OK\" } }", res.toString(CharsetUtil.UTF_8));
 
         ch.writeInbound(Unpooled.copiedBuffer(part2, CharsetUtil.UTF_8));
         res = ch.readInbound();
@@ -298,7 +301,8 @@ public class JsonObjectDecoderTest {
         ch.writeInbound(Unpooled.copiedBuffer("}}]}]}]}}}}", CharsetUtil.UTF_8));
         res = ch.readInbound();
 
-        assertEquals("{\"a\":{\"b\":{\"c\":{\"ory\":[{\"competi\":[{\"event\":[{" + "\"externalI\":{\"external\":[{\"id\":\"O\"} ]}}]}]}]}}}}", res.toString(CharsetUtil.UTF_8));
+        assertEquals("{\"a\":{\"b\":{\"c\":{\"ory\":[{\"competi\":[{\"event\":[{" + "\"externalI\":{" +
+                "\"external\":[{\"id\":\"O\"} ]}}]}]}]}}}}", res.toString(CharsetUtil.UTF_8));
 
         assertFalse(ch.finish());
     }
