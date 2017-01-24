@@ -151,14 +151,24 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         SET_SERVER_NAMES_METHOD = setServerNamesMethod;
     }
 
-    private static final int MAX_PLAINTEXT_LENGTH = 16 * 1024; // 2^14
-    private static final int MAX_COMPRESSED_LENGTH = MAX_PLAINTEXT_LENGTH + 1024;
-    private static final int MAX_CIPHERTEXT_LENGTH = MAX_COMPRESSED_LENGTH + 1024;
+    static final int MAX_PLAINTEXT_LENGTH = 16 * 1024; // 2^14
 
-    // Header (5) + Data (2^14) + Compression (1024) + Encryption (1024) + MAC (20) + Padding (256)
-    static final int MAX_ENCRYPTED_PACKET_LENGTH = MAX_CIPHERTEXT_LENGTH + 5 + 20 + 256;
+    /**
+     * This is the maximum overhead when encrypting plaintext as defined by
+     * <a href="https://www.ietf.org/rfc/rfc5246.txt">rfc5264</a>,
+     * <a href="https://www.ietf.org/rfc/rfc5289.txt">rfc5289</a> and openssl implementation itself.
+     *
+     * Please note that we use a padding of 16 here as openssl uses PKC#5 which uses 16 bytes while the spec itself
+     * allow up to 255 bytes. 16 bytes is the max for PKC#5 (which handles it the same way as PKC#7) as we use a block
+     * size of 16. See <a href="https://tools.ietf.org/html/rfc5652#section-6.3">rfc5652#section-6.3</a>.
+     *
+     * 16 (IV) + 48 (MAC) + 1 (Padding_length field) + 15 (Padding) + 1 (ContentType) + 2 (ProtocolVersion) + 2 (Length)
+     *
+     * TODO: We may need to review this calculation once TLS 1.3 becomes available.
+     */
+    static final int MAX_ENCRYPTION_OVERHEAD_LENGTH = 15 + 48 + 1 + 16 + 1 + 2 + 2;
 
-    static final int MAX_ENCRYPTION_OVERHEAD_LENGTH = MAX_ENCRYPTED_PACKET_LENGTH - MAX_PLAINTEXT_LENGTH;
+    static final int MAX_ENCRYPTED_PACKET_LENGTH = MAX_PLAINTEXT_LENGTH + MAX_ENCRYPTION_OVERHEAD_LENGTH;
 
     private static final int MAX_ENCRYPTION_OVERHEAD_DIFF = Integer.MAX_VALUE - MAX_ENCRYPTION_OVERHEAD_LENGTH;
 
