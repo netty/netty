@@ -1293,7 +1293,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     public static void setTransferEncodingChunked(HttpMessage m) {
-        addHeader(m, TRANSFER_ENCODING_ENTITY, CHUNKED_ENTITY);
+        setHeader(m, TRANSFER_ENCODING_ENTITY, CHUNKED_ENTITY);
         removeHeader(m, CONTENT_LENGTH_ENTITY);
     }
 

@@ -18,9 +18,11 @@ package io.netty.handler.codec.http;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public class HttpHeadersTest {
@@ -40,12 +42,12 @@ public class HttpHeadersTest {
         headers.add("Foo", "1");
         headers.add("Foo", "2");
 
-        Assert.assertEquals("1", headers.get("Foo"));
+        assertEquals("1", headers.get("Foo"));
 
         List<String> values = headers.getAll("Foo");
-        Assert.assertEquals(2, values.size());
-        Assert.assertEquals("1", values.get(0));
-        Assert.assertEquals("2", values.get(1));
+        assertEquals(2, values.size());
+        assertEquals("1", values.get(0));
+        assertEquals("2", values.get(1));
     }
 
     @Test
@@ -79,7 +81,16 @@ public class HttpHeadersTest {
         HttpHeaders headers = new DefaultHttpHeaders(false);
         headers.add("some", "thing");
         headers.set(headers);
-        Assert.assertEquals(1, headers.entries().size());
-        Assert.assertEquals("thing", headers.get("some"));
+        assertEquals(1, headers.entries().size());
+        assertEquals("thing", headers.get("some"));
+    }
+
+    @Test
+    public void testDoubleChunkedHeader() {
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().add(HttpHeaders.Names.TRANSFER_ENCODING, "chunked");
+        HttpHeaders.setTransferEncodingChunked(message);
+        List<String> expected = Collections.singletonList("chunked");
+        assertEquals(expected, message.headers().getAll(HttpHeaders.Names.TRANSFER_ENCODING));
     }
 }
