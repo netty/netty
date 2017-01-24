@@ -295,10 +295,13 @@ public final class Decoder {
                 default:
                     throw new Error("should not reach here state: " + state);
             }
+        }
 
-            if (headersLength > maxHeaderListSize) {
-                headerListSizeExceeded(streamId, maxHeaderListSize, true);
-            }
+        // we have read all of our headers, and not exceeded maxHeaderListSizeGoAway see if we have
+        // exceeded our actual maxHeaderListSize. This must be done here to prevent dynamic table
+        // corruption
+        if (headersLength > maxHeaderListSize) {
+            headerListSizeExceeded(streamId, maxHeaderListSize, true);
         }
     }
 
