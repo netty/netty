@@ -734,7 +734,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // See https://github.com/netty/netty/issues/5860
             while (!ctx.isRemoved()) {
                 if (out == null) {
-                    out = allocateOutNetBuf(ctx, 0);
+                    // As this is called for the handshake we have no real idea how big the buffer needs to be.
+                    // That said 2048 should give us enough room to include everything like ALPN / NPN data.
+                    // If this is not enough we will increase the buffer in wrap(...).
+                    out = allocateOutNetBuf(ctx, 2048);
                 }
                 SSLEngineResult result = wrap(alloc, engine, Unpooled.EMPTY_BUFFER, out);
 
