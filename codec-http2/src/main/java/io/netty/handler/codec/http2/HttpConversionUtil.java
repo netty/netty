@@ -340,7 +340,6 @@ public final class HttpConversionUtil {
      * The following headers are only used if they can not be found in from the {@code HOST} header or the
      * {@code Request-Line} as defined by <a href="https://tools.ietf.org/html/rfc7230">rfc7230</a>
      * <ul>
-     * <li>{@link ExtensionHeaderNames#AUTHORITY}</li>
      * <li>{@link ExtensionHeaderNames#SCHEME}</li>
      * </ul>
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.

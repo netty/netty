@@ -65,7 +65,7 @@ public final class MathUtil {
     }
 
     /**
-     * Compare to {@code long} values.
+     * Compare two {@code long} values.
      * @param x the first {@code long} to compare.
      * @param y the second {@code long} to compare.
      * @return
