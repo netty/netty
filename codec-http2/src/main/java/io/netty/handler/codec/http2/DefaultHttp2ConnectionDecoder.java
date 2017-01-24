@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
-import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -25,7 +24,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.List;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
@@ -307,14 +305,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                             stream.state());
             }
 
-            try {
-                // This call will create a stream for streamDependency if necessary.
-                // For this reason it must be done before notifying the listener.
-                stream.setPriority(streamDependency, weight, exclusive);
-            } catch (ClosedStreamCreationException ignored) {
-                // It is possible that either the stream for this frame or the parent stream is closed.
-                // In this case we should ignore the exception and allow the frame to be sent.
-            }
+            encoder.flowController().updateDependencyTree(streamId, streamDependency, weight, exclusive);
 
             listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endOfStream);
 
@@ -327,33 +318,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
                 boolean exclusive) throws Http2Exception {
-            Http2Stream stream = connection.stream(streamId);
-
-            try {
-                if (stream == null) {
-                    if (connection.streamMayHaveExisted(streamId)) {
-                        logger.info("{} ignoring PRIORITY frame for stream {}. Stream doesn't exist but may " +
-                                     " have existed", ctx.channel(), streamId);
-                        return;
-                    }
-
-                    // PRIORITY frames always identify a stream. This means that if a PRIORITY frame is the
-                    // first frame to be received for a stream that we must create the stream.
-                    stream = connection.remote().createIdleStream(streamId);
-                } else if (streamCreatedAfterGoAwaySent(streamId)) {
-                    logger.info("{} ignoring PRIORITY frame for stream {}. Stream created after GOAWAY sent. " +
-                                    "Last known stream by peer {}",
-                            ctx.channel(), streamId, connection.remote().lastStreamKnownByPeer());
-                    return;
-                }
-
-                // This call will create a stream for streamDependency if necessary.
-                // For this reason it must be done before notifying the listener.
-                stream.setPriority(streamDependency, weight, exclusive);
-            } catch (ClosedStreamCreationException ignored) {
-                // It is possible that either the stream for this frame or the parent stream is closed.
-                // In this case we should ignore the exception and allow the frame to be sent.
-            }
+            encoder.flowController().updateDependencyTree(streamId, streamDependency, weight, exclusive);
 
             listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
         }
@@ -411,8 +376,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Long maxConcurrentStreams = settings.maxConcurrentStreams();
             if (maxConcurrentStreams != null) {
-                int value = (int) min(maxConcurrentStreams, MAX_VALUE);
-                connection.remote().maxStreams(value, calculateMaxStreams(value));
+                connection.remote().maxActiveStreams((int) min(maxConcurrentStreams, MAX_VALUE));
             }
 
             Long headerTableSize = settings.headerTableSize();
@@ -434,17 +398,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             if (initialWindowSize != null) {
                 flowController().initialWindowSize(initialWindowSize);
             }
-        }
-
-        /**
-         * Calculate the {@code maxStreams} parameter for the {@link Endpoint#maxStreams(int, int)} method based upon
-         * {@code SETTINGS_MAX_CONCURRENT_STREAMS}.
-         * @param maxConcurrentStreams {@code SETTINGS_MAX_CONCURRENT_STREAMS}.
-         * @return the {@code maxStreams} parameter for the {@link Endpoint#maxStreams(int, int)} method.
-         */
-        private int calculateMaxStreams(int maxConcurrentStreams) {
-            int maxStreams = maxConcurrentStreams + SMALLEST_MAX_CONCURRENT_STREAMS;
-            return maxStreams < 0 ? MAX_VALUE : maxStreams;
         }
 
         @Override

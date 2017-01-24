@@ -21,7 +21,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
-import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
@@ -89,8 +88,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         Long maxConcurrentStreams = settings.maxConcurrentStreams();
         if (maxConcurrentStreams != null) {
-            // TODO(scott): define an extension setting so we can communicate/enforce the maxStreams limit locally.
-            connection.local().maxStreams((int) min(maxConcurrentStreams, MAX_VALUE), MAX_VALUE);
+            connection.local().maxActiveStreams((int) min(maxConcurrentStreams, MAX_VALUE));
         }
 
         Long headerTableSize = settings.headerTableSize();
@@ -202,7 +200,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 // Pass headers to the flow-controller so it can maintain their sequence relative to DATA frames.
                 flowController.addFlowControlled(stream,
                         new FlowControlledHeaders(stream, headers, streamDependency, weight, exclusive, padding,
-                                                  endOfStream, promise));
+                                                  true, promise));
                 return promise;
             }
         } catch (Throwable t) {
@@ -215,23 +213,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     @Override
     public ChannelFuture writePriority(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
             boolean exclusive, ChannelPromise promise) {
-        try {
-            // Update the priority on this stream.
-            Http2Stream stream = connection.stream(streamId);
-            if (stream == null) {
-                stream = connection.local().createIdleStream(streamId);
-            }
-
-            // The set priority operation must be done before sending the frame. The parent may not yet exist
-            // and the priority tree may also be modified before sending.
-            stream.setPriority(streamDependency, weight, exclusive);
-        } catch (ClosedStreamCreationException ignored) {
-            // It is possible that either the stream for this frame or the parent stream is closed.
-            // In this case we should ignore the exception and allow the frame to be sent.
-        } catch (Throwable t) {
-            return promise.setFailure(t);
-        }
-
         return frameWriter.writePriority(ctx, streamId, streamDependency, weight, exclusive, promise);
     }
 
@@ -495,7 +476,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         protected boolean endOfStream;
         protected int padding;
 
-        protected FlowControlledBase(final Http2Stream stream, int padding, boolean endOfStream,
+        FlowControlledBase(final Http2Stream stream, int padding, boolean endOfStream,
                 final ChannelPromise promise) {
             if (padding < 0) {
                 throw new IllegalArgumentException("padding must be >= 0");

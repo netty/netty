@@ -84,4 +84,8 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
     @Override
     public void channelWritabilityChanged() throws Http2Exception {
     }
+
+    @Override
+    public void updateDependencyTree(int childStreamId, int parentStreamId, short weight, boolean exclusive) {
+    }
 }
