@@ -347,6 +347,72 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @Test
+    public void priorityUsingHigherValuedStreamIdDoesNotPreventUsingLowerStreamId() throws Exception {
+        bootstrapEnv(1, 1, 2, 0);
+
+        final Http2Headers headers = dummyHeaders();
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writePriority(ctx(), 5, 3, (short) 14, false, newPromise());
+                http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
+                        newPromise());
+                http2Client.flush(ctx());
+            }
+        });
+
+        assertTrue(serverSettingsAckLatch.await(5, SECONDS));
+        assertTrue(requestLatch.await(5, SECONDS));
+
+        verify(serverListener).onPriorityRead(any(ChannelHandlerContext.class), eq(5), eq(3), eq((short) 14),
+                eq(false));
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(headers), eq(0),
+                eq((short) 16), eq(false), eq(0), eq(false));
+
+        // Verify that no errors have been received.
+        verify(serverListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+        verify(serverListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
+        verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+        verify(clientListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
+    }
+
+    @Test
+    public void headersUsingHigherValuedStreamIdPreventsUsingLowerStreamId() throws Exception {
+        bootstrapEnv(1, 1, 1, 0);
+
+        final Http2Headers headers = dummyHeaders();
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0, false,
+                        newPromise());
+                http2Client.encoder().frameWriter().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
+                        newPromise());
+                http2Client.flush(ctx());
+            }
+        });
+
+        assertTrue(serverSettingsAckLatch.await(5, SECONDS));
+        assertTrue(requestLatch.await(5, SECONDS));
+
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(headers), eq(0),
+                eq((short) 16), eq(false), eq(0), eq(false));
+        verify(serverListener, never()).onHeadersRead(any(ChannelHandlerContext.class), eq(3), any(Http2Headers.class),
+                anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+
+        // Client should receive a RST_STREAM for stream 3, but there is not Http2Stream object so the listener is never
+        // notified.
+        verify(serverListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+        verify(serverListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
+        verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+        verify(clientListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
+    }
+
+    @Test
     public void http2ExceptionInPipelineShouldCloseConnection() throws Exception {
         bootstrapEnv(1, 1, 2, 1);
 

@@ -14,17 +14,32 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.collection.IntCollections;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
+import io.netty.util.internal.DefaultPriorityQueue;
+import io.netty.util.internal.EmptyPriorityQueue;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PriorityQueue;
 import io.netty.util.internal.PriorityQueueNode;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
-import java.util.Queue;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MIN_ALLOCATION_CHUNK;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static java.lang.Integer.MAX_VALUE;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 /**
@@ -43,32 +58,97 @@ import static java.lang.Math.min;
  */
 @UnstableApi
 public final class WeightedFairQueueByteDistributor implements StreamByteDistributor {
+    /**
+     * The initial size of the children map is chosen to be conservative on initial memory allocations under
+     * the assumption that most streams will have a small number of children. This choice may be
+     * sub-optimal if when children are present there are many children (i.e. a web page which has many
+     * dependencies to load).
+     *
+     * Visible only for testing!
+     */
+    static final int INITIAL_CHILDREN_MAP_SIZE =
+            max(1, SystemPropertyUtil.getInt("io.netty.http2.childrenMapSize", 2));
+    /**
+     * FireFox currently uses 5 streams to establish QoS classes.
+     */
+    private static final int DEFAULT_MAX_STATE_ONLY_SIZE = 5;
+
     private final Http2Connection.PropertyKey stateKey;
+    /**
+     * If there is no Http2Stream object, but we still persist priority information then this is where the state will
+     * reside.
+     */
+    private final IntObjectMap<State> stateOnlyMap;
+    /**
+     * This queue will hold streams that are not active and provides the capability to retain priority for streams which
+     * have no {@link Http2Stream} object. See {@link StateOnlyComparator} for the priority comparator.
+     */
+    private final PriorityQueue<State> stateOnlyRemovalQueue;
+    private final Http2Connection connection;
     private final State connectionState;
     /**
      * The minimum number of bytes that we will attempt to allocate to a stream. This is to
      * help improve goodput on a per-stream basis.
      */
-    private int allocationQuantum = 1024;
+    private int allocationQuantum = DEFAULT_MIN_ALLOCATION_CHUNK;
+    private final int maxStateOnlySize;
 
     public WeightedFairQueueByteDistributor(Http2Connection connection) {
+        this(connection, DEFAULT_MAX_STATE_ONLY_SIZE);
+    }
+
+    public WeightedFairQueueByteDistributor(Http2Connection connection, int maxStateOnlySize) {
+        if (maxStateOnlySize < 0) {
+            throw new IllegalArgumentException("maxStateOnlySize: " + maxStateOnlySize + " (expected: >0)");
+        } else if (maxStateOnlySize == 0) {
+            stateOnlyMap = IntCollections.emptyMap();
+            stateOnlyRemovalQueue = EmptyPriorityQueue.instance();
+        } else {
+            stateOnlyMap = new IntObjectHashMap<State>(maxStateOnlySize);
+            // +2 because we may exceed the limit by 2 if a new dependency has no associated Http2Stream object. We need
+            // to create the State objects to put them into the dependency tree, which then impacts priority.
+            stateOnlyRemovalQueue = new DefaultPriorityQueue<State>(StateOnlyComparator.INSTANCE, maxStateOnlySize + 2);
+        }
+        this.maxStateOnlySize = maxStateOnlySize;
+
+        this.connection = connection;
         stateKey = connection.newKey();
-        Http2Stream connectionStream = connection.connectionStream();
+        final Http2Stream connectionStream = connection.connectionStream();
         connectionStream.setProperty(stateKey, connectionState = new State(connectionStream, 16));
 
         // Register for notification of new streams.
         connection.addListener(new Http2ConnectionAdapter() {
             @Override
             public void onStreamAdded(Http2Stream stream) {
-                stream.setProperty(stateKey, new State(stream));
+                State state = stateOnlyMap.remove(stream.id());
+                if (state == null) {
+                    state = new State(stream);
+                    // Only the stream which was just added will change parents. So we only need an array of size 1.
+                    List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1);
+                    connectionState.takeChild(state, false, events);
+                    notifyParentChanged(events);
+                } else {
+                    stateOnlyRemovalQueue.removeTyped(state);
+                    state.stream = stream;
+                }
+                switch (stream.state()) {
+                    case RESERVED_REMOTE:
+                    case RESERVED_LOCAL:
+                        state.setStreamReservedOrActivated();
+                        // wasStreamReservedOrActivated is part of the comparator for stateOnlyRemovalQueue there is no
+                        // need to reprioritize here because it will not be in stateOnlyRemovalQueue.
+                        break;
+                    default:
+                        break;
+                }
+                stream.setProperty(stateKey, state);
             }
 
             @Override
-            public void onWeightChanged(Http2Stream stream, short oldWeight) {
-                Http2Stream parent;
-                if (state(stream).activeCountForTree != 0 && (parent = stream.parent()) != null) {
-                    state(parent).totalQueuedWeights += stream.weight() - oldWeight;
-                }
+            public void onStreamActive(Http2Stream stream) {
+                state(stream).setStreamReservedOrActivated();
+                // wasStreamReservedOrActivated is part of the comparator for stateOnlyRemovalQueue there is no need to
+                // reprioritize here because it will not be in stateOnlyRemovalQueue.
             }
 
             @Override
@@ -77,29 +157,35 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
             }
 
             @Override
-            public void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {
-                Http2Stream parent = stream.parent();
-                if (parent != null) {
-                    State state = state(stream);
-                    if (state.activeCountForTree != 0) {
-                        State pState = state(parent);
-                        pState.offerAndInitializePseudoTime(state);
-                        pState.activeCountChangeForTree(state.activeCountForTree);
-                    }
-                }
-            }
+            public void onStreamRemoved(Http2Stream stream) {
+                // The stream has been removed from the connection. We can no longer rely on the stream's property
+                // storage to track the State. If we have room, and the precedence of the stream is sufficient, we
+                // should retain the State in the stateOnlyMap.
+                State state = state(stream);
 
-            @Override
-            public void onPriorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {
-                Http2Stream parent = stream.parent();
-                if (parent != null) {
-                    State state = state(stream);
-                    if (state.activeCountForTree != 0) {
-                        State pState = state(parent);
-                        pState.remove(state);
-                        pState.activeCountChangeForTree(-state.activeCountForTree);
-                    }
+                // Typically the stream is set to null when the stream is closed because it is no longer needed to write
+                // data. However if the stream was not activated it may not be closed (reserved streams) so we ensure
+                // the stream reference is set to null to avoid retaining a reference longer than necessary.
+                state.stream = null;
+
+                if (WeightedFairQueueByteDistributor.this.maxStateOnlySize == 0) {
+                    state.parent.removeChild(state);
+                    return;
                 }
+                if (stateOnlyRemovalQueue.size() == WeightedFairQueueByteDistributor.this.maxStateOnlySize) {
+                    State stateToRemove = stateOnlyRemovalQueue.peek();
+                    if (StateOnlyComparator.INSTANCE.compare(stateToRemove, state) >= 0) {
+                        // The "lowest priority" stream is a "higher priority" than the stream being removed, so we
+                        // just discard the state.
+                        state.parent.removeChild(state);
+                        return;
+                    }
+                    stateOnlyRemovalQueue.poll();
+                    stateToRemove.parent.removeChild(stateToRemove);
+                    stateOnlyMap.remove(stateToRemove.streamId);
+                }
+                stateOnlyRemovalQueue.add(state);
+                stateOnlyMap.put(state.streamId, state);
             }
         });
     }
@@ -108,6 +194,71 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
     public void updateStreamableBytes(StreamState state) {
         state(state.stream()).updateStreamableBytes(streamableBytes(state),
                                                     state.hasFrame() && state.windowSize() >= 0);
+    }
+
+    @Override
+    public void updateDependencyTree(int childStreamId, int parentStreamId, short weight, boolean exclusive) {
+        if (weight < MIN_WEIGHT || weight > MAX_WEIGHT) {
+            throw new IllegalArgumentException(String.format(
+                    "Invalid weight: %d. Must be between %d and %d (inclusive).", weight, MIN_WEIGHT, MAX_WEIGHT));
+        }
+        if (childStreamId == parentStreamId) {
+            throw new IllegalArgumentException("A stream cannot depend on itself");
+        }
+
+        State state = state(childStreamId);
+        if (state == null) {
+            // If there is no State object that means there is no Http2Stream object and we would have to keep the
+            // State object in the stateOnlyMap and stateOnlyRemovalQueue. However if maxStateOnlySize is 0 this means
+            // stateOnlyMap and stateOnlyRemovalQueue are empty collections and cannot be modified so we drop the State.
+            if (maxStateOnlySize == 0) {
+                return;
+            }
+            state = new State(childStreamId);
+            stateOnlyRemovalQueue.add(state);
+            stateOnlyMap.put(childStreamId, state);
+        }
+
+        State newParent = state(parentStreamId);
+        if (newParent == null) {
+            // If there is no State object that means there is no Http2Stream object and we would have to keep the
+            // State object in the stateOnlyMap and stateOnlyRemovalQueue. However if maxStateOnlySize is 0 this means
+            // stateOnlyMap and stateOnlyRemovalQueue are empty collections and cannot be modified so we drop the State.
+            if (maxStateOnlySize == 0) {
+                return;
+            }
+            newParent = new State(parentStreamId);
+            stateOnlyRemovalQueue.add(newParent);
+            stateOnlyMap.put(parentStreamId, newParent);
+        }
+
+        // if activeCountForTree == 0 then it will not be in its parent's pseudoTimeQueue and thus should not be counted
+        // toward parent.totalQueuedWeights.
+        if (state.activeCountForTree != 0 && state.parent != null) {
+            state.parent.totalQueuedWeights += weight - state.weight;
+        }
+        state.weight = weight;
+
+        if (newParent != state.parent || (exclusive && newParent.children.size() != 1)) {
+            final List<ParentChangedEvent> events;
+            if (newParent.isDescendantOf(state)) {
+                events = new ArrayList<ParentChangedEvent>(2 + (exclusive ? newParent.children.size() : 0));
+                state.parent.takeChild(newParent, false, events);
+            } else {
+                events = new ArrayList<ParentChangedEvent>(1 + (exclusive ? newParent.children.size() : 0));
+            }
+            newParent.takeChild(state, exclusive, events);
+            notifyParentChanged(events);
+        }
+
+        // The location in the dependency tree impacts the priority in the stateOnlyRemovalQueue map. If we created new
+        // State objects we must check if we exceeded the limit after we insert into the dependency tree to ensure the
+        // stateOnlyRemovalQueue has been updated.
+        while (stateOnlyRemovalQueue.size() > maxStateOnlySize) {
+            State stateToRemove = stateOnlyRemovalQueue.poll();
+            stateToRemove.parent.removeChild(stateToRemove);
+            stateOnlyMap.remove(stateToRemove.streamId);
+        }
     }
 
     @Override
@@ -171,17 +322,16 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
      */
     private int distributeToChildren(int maxBytes, Writer writer, State state) throws Http2Exception {
         long oldTotalQueuedWeights = state.totalQueuedWeights;
-        State childState = state.poll();
-        State nextChildState = state.peek();
+        State childState = state.pollPseudoTimeQueue();
+        State nextChildState = state.peekPseudoTimeQueue();
         childState.setDistributing();
         try {
             assert nextChildState == null || nextChildState.pseudoTimeToWrite >= childState.pseudoTimeToWrite :
-                "nextChildState[" + nextChildState.stream.id() + "].pseudoTime(" + nextChildState.pseudoTimeToWrite +
-                ") < " + " childState[" + childState.stream.id() + "].pseudoTime(" + childState.pseudoTimeToWrite + ")";
+                "nextChildState[" + nextChildState.streamId + "].pseudoTime(" + nextChildState.pseudoTimeToWrite +
+                ") < " + " childState[" + childState.streamId + "].pseudoTime(" + childState.pseudoTimeToWrite + ")";
             int nsent = distribute(nextChildState == null ? maxBytes :
                             min(maxBytes, (int) min((nextChildState.pseudoTimeToWrite - childState.pseudoTimeToWrite) *
-                                                childState.stream.weight() / oldTotalQueuedWeights + allocationQuantum,
-                                                Integer.MAX_VALUE)
+                                               childState.weight / oldTotalQueuedWeights + allocationQuantum, MAX_VALUE)
                                ),
                                writer,
                                childState);
@@ -192,15 +342,20 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
             childState.unsetDistributing();
             // Do in finally to ensure the internal flags is not corrupted if an exception is thrown.
             // The offer operation is delayed until we unroll up the recursive stack, so we don't have to remove from
-            // the priority queue due to a write operation.
+            // the priority pseudoTimeQueue due to a write operation.
             if (childState.activeCountForTree != 0) {
-                state.offer(childState);
+                state.offerPseudoTimeQueue(childState);
             }
         }
     }
 
     private State state(Http2Stream stream) {
         return stream.getProperty(stateKey);
+    }
+
+    private State state(int streamId) {
+        Http2Stream stream = connection.stream(streamId);
+        return stream != null ? state(stream) : stateOnlyMap.get(streamId);
     }
 
     /**
@@ -211,19 +366,109 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
     }
 
     /**
+     * For testing only!
+     */
+    boolean isChild(int childId, int parentId, short weight) {
+        State parent = state(parentId);
+        State child;
+        return parent.children.containsKey(childId) &&
+                (child = state(childId)).parent == parent && child.weight == weight;
+    }
+
+    /**
+     * For testing only!
+     */
+    int numChildren(int streamId) {
+        State state = state(streamId);
+        return state == null ? 0 : state.children.size();
+    }
+
+    /**
+     * Notify all listeners of the priority tree change events (in ascending order)
+     * @param events The events (top down order) which have changed
+     */
+    void notifyParentChanged(List<ParentChangedEvent> events) {
+        for (int i = 0; i < events.size(); ++i) {
+            ParentChangedEvent event = events.get(i);
+            stateOnlyRemovalQueue.priorityChanged(event.state);
+            if (event.state.parent != null && event.state.activeCountForTree != 0) {
+                event.state.parent.offerAndInitializePseudoTime(event.state);
+                event.state.parent.activeCountChangeForTree(event.state.activeCountForTree);
+            }
+        }
+    }
+
+    /**
+     * A comparator for {@link State} which has no associated {@link Http2Stream} object. The general precedence is:
+     * <ul>
+     *     <li>Was a stream activated or reserved (streams only used for priority are higher priority)</li>
+     *     <li>Depth in the priority tree (closer to root is higher priority></li>
+     *     <li>Stream ID (higher stream ID is higher priority - used for tie breaker)</li>
+     * </ul>
+     */
+    private static final class StateOnlyComparator implements Comparator<State> {
+        static final StateOnlyComparator INSTANCE = new StateOnlyComparator();
+
+        private StateOnlyComparator() {
+        }
+
+        @Override
+        public int compare(State o1, State o2) {
+            // "priority only streams" (which have not been activated) are higher priority than streams used for data.
+            boolean o1Actived = o1.wasStreamReservedOrActivated();
+            if (o1Actived != o2.wasStreamReservedOrActivated()) {
+                return o1Actived ? -1 : 1;
+            }
+            // Numerically greater depth is higher priority.
+            int x = o2.dependencyTreeDepth - o1.dependencyTreeDepth;
+
+            // I also considered tracking the number of streams which are "activated" (eligible transfer data) at each
+            // subtree. This would require a traversal from each node to the root on dependency tree structural changes,
+            // and then it would require a re-prioritization at each of these nodes (instead of just the nodes where the
+            // direct parent changed). The costs of this are judged to be relatively high compared to the nominal
+            // benefit it provides to the heuristic. Instead folks should just increase maxStateOnlySize.
+
+            // Last resort is to give larger stream ids more priority.
+            return x != 0 ? x : o1.streamId - o2.streamId;
+        }
+    }
+
+    private static final class StatePseudoTimeComparator implements Comparator<State> {
+        static final StatePseudoTimeComparator INSTANCE = new StatePseudoTimeComparator();
+
+        private StatePseudoTimeComparator() {
+        }
+
+        @Override
+        public int compare(State o1, State o2) {
+            return MathUtil.compare(o1.pseudoTimeToWrite, o2.pseudoTimeToWrite);
+        }
+    }
+
+    /**
      * The remote flow control state for a single stream.
      */
-    private final class State implements PriorityQueueNode<State> {
-        private static final int STATE_IS_ACTIVE = 0x1;
-        private static final int STATE_IS_DISTRIBUTING = 0x2;
-        final Http2Stream stream;
-        private final Queue<State> queue;
+    private final class State implements PriorityQueueNode {
+        private static final byte STATE_IS_ACTIVE = 0x1;
+        private static final byte STATE_IS_DISTRIBUTING = 0x2;
+        private static final byte STATE_STREAM_ACTIVATED = 0x4;
+
+        /**
+         * Maybe {@code null} if the stream if the stream is not active.
+         */
+        Http2Stream stream;
+        State parent;
+        IntObjectMap<State> children = IntCollections.emptyMap();
+        private final PriorityQueue<State> pseudoTimeQueue;
+        final int streamId;
         int streamableBytes;
+        int dependencyTreeDepth;
         /**
          * Count of nodes rooted at this sub tree with {@link #isActive()} equal to {@code true}.
          */
         int activeCountForTree;
-        private int priorityQueueIndex = INDEX_NOT_IN_QUEUE;
+        private int pseudoTimeQueueIndex = INDEX_NOT_IN_QUEUE;
+        private int stateOnlyQueueIndex = INDEX_NOT_IN_QUEUE;
         /**
          * An estimate of when this node should be given the opportunity to write data.
          */
@@ -234,17 +479,137 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         long pseudoTime;
         long totalQueuedWeights;
         private byte flags;
+        short weight = DEFAULT_PRIORITY_WEIGHT;
+
+        State(int streamId) {
+            this(streamId, null, 0);
+        }
 
         State(Http2Stream stream) {
             this(stream, 0);
         }
 
         State(Http2Stream stream, int initialSize) {
+            this(stream.id(), stream, initialSize);
+        }
+
+        State(int streamId, Http2Stream stream, int initialSize) {
             this.stream = stream;
-            queue = new PriorityQueue<State>(initialSize);
+            this.streamId = streamId;
+            pseudoTimeQueue = new DefaultPriorityQueue<State>(StatePseudoTimeComparator.INSTANCE, initialSize);
+        }
+
+        boolean isDescendantOf(State state) {
+            State next = parent;
+            while (next != null) {
+                if (next == state) {
+                    return true;
+                }
+                next = next.parent;
+            }
+            return false;
+        }
+
+        void takeChild(State child, boolean exclusive, List<ParentChangedEvent> events) {
+            takeChild(null, child, exclusive, events);
+        }
+
+        /**
+         * Adds a child to this priority. If exclusive is set, any children of this node are moved to being dependent on
+         * the child.
+         */
+        void takeChild(Iterator<IntObjectMap.PrimitiveEntry<State>> childItr, State child, boolean exclusive,
+                       List<ParentChangedEvent> events) {
+            State oldParent = child.parent;
+
+            if (oldParent != this) {
+                events.add(new ParentChangedEvent(child, oldParent));
+                child.setParent(this);
+                // If the childItr is not null we are iterating over the oldParent.children collection and should
+                // use the iterator to remove from the collection to avoid concurrent modification. Otherwise it is
+                // assumed we are not iterating over this collection and it is safe to call remove directly.
+                if (childItr != null) {
+                    childItr.remove();
+                } else if (oldParent != null) {
+                    oldParent.children.remove(child.streamId);
+                }
+
+                // Lazily initialize the children to save object allocations.
+                initChildrenIfEmpty();
+
+                final State oldChild = children.put(child.streamId, child);
+                assert oldChild == null : "A stream with the same stream ID was already in the child map.";
+            }
+
+            if (exclusive && !children.isEmpty()) {
+                // If it was requested that this child be the exclusive dependency of this node,
+                // move any previous children to the child node, becoming grand children of this node.
+                Iterator<IntObjectMap.PrimitiveEntry<State>> itr = removeAllChildrenExcept(child).entries().iterator();
+                while (itr.hasNext()) {
+                    child.takeChild(itr, itr.next().value(), false, events);
+                }
+            }
+        }
+
+        /**
+         * Removes the child priority and moves any of its dependencies to being direct dependencies on this node.
+         */
+        void removeChild(State child) {
+            if (children.remove(child.streamId) != null) {
+                List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1 + child.children.size());
+                events.add(new ParentChangedEvent(child, child.parent));
+                child.setParent(null);
+
+                // Move up any grand children to be directly dependent on this node.
+                Iterator<IntObjectMap.PrimitiveEntry<State>> itr = child.children.entries().iterator();
+                while (itr.hasNext()) {
+                    takeChild(itr, itr.next().value(), false, events);
+                }
+
+                notifyParentChanged(events);
+            }
+        }
+
+        /**
+         * Remove all children with the exception of {@code streamToRetain}.
+         * This method is intended to be used to support an exclusive priority dependency operation.
+         * @return The map of children prior to this operation, excluding {@code streamToRetain} if present.
+         */
+        private IntObjectMap<State> removeAllChildrenExcept(State stateToRetain) {
+            stateToRetain = children.remove(stateToRetain.streamId);
+            IntObjectMap<State> prevChildren = children;
+            // This map should be re-initialized in anticipation for the 1 exclusive child which will be added.
+            // It will either be added directly in this method, or after this method is called...but it will be added.
+            initChildren();
+            if (stateToRetain != null) {
+                children.put(stateToRetain.streamId, stateToRetain);
+            }
+            return prevChildren;
+        }
+
+        private void setParent(State newParent) {
+            // if activeCountForTree == 0 then it will not be in its parent's pseudoTimeQueue.
+            if (activeCountForTree != 0 && parent != null) {
+                parent.removePseudoTimeQueue(this);
+                parent.activeCountChangeForTree(-activeCountForTree);
+            }
+            parent = newParent;
+            // Use MAX_VALUE if no parent because lower depth is considered higher priority by StateOnlyComparator.
+            dependencyTreeDepth = newParent == null ? MAX_VALUE : newParent.dependencyTreeDepth + 1;
+        }
+
+        private void initChildrenIfEmpty() {
+            if (children == IntCollections.<State>emptyMap()) {
+                initChildren();
+            }
+        }
+
+        private void initChildren() {
+            children = new IntObjectHashMap<State>(INITIAL_CHILDREN_MAP_SIZE);
         }
 
         void write(int numBytes, Writer writer) throws Http2Exception {
+            assert stream != null;
             try {
                 writer.write(stream, numBytes);
             } catch (Throwable t) {
@@ -255,26 +620,26 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         void activeCountChangeForTree(int increment) {
             assert activeCountForTree + increment >= 0;
             activeCountForTree += increment;
-            if (!stream.isRoot()) {
-                State pState = state(stream.parent());
+            if (parent != null) {
                 assert activeCountForTree != increment ||
-                       priorityQueueIndex == INDEX_NOT_IN_QUEUE ||
-                       pState.queue.contains(this) :
-                     "State[" + stream.id() + "].activeCountForTree changed from 0 to " + increment + " is in a queue" +
-                     ", but not in parent[ " + pState.stream.id() + "]'s queue";
+                       pseudoTimeQueueIndex == INDEX_NOT_IN_QUEUE ||
+                       parent.pseudoTimeQueue.containsTyped(this) :
+                     "State[" + streamId + "].activeCountForTree changed from 0 to " + increment + " is in a " +
+                     "pseudoTimeQueue, but not in parent[ " + parent.streamId + "]'s pseudoTimeQueue";
                 if (activeCountForTree == 0) {
-                    pState.remove(this);
+                    parent.removePseudoTimeQueue(this);
                 } else if (activeCountForTree == increment && !isDistributing()) {
-                    // If frame count was 0 but is now not, and this node is not already in a queue (assumed to be
-                    // pState's queue) then enqueue it. If this State object is being processed the pseudoTime for this
-                    // node should not be adjusted, and the node will be added back to the queue/tree structure after it
-                    // is done being processed. This may happen if the activeCountForTree == 0 (a node which can't
-                    // stream anything and is blocked) is at/near root of the tree, and is poped off the queue during
-                    // processing, and then put back on the queue because a child changes position in the priority tree
-                    // (or is closed because it is not blocked and finished writing all data).
-                    pState.offerAndInitializePseudoTime(this);
+                    // If frame count was 0 but is now not, and this node is not already in a pseudoTimeQueue (assumed
+                    // to be pState's pseudoTimeQueue) then enqueue it. If this State object is being processed the
+                    // pseudoTime for this node should not be adjusted, and the node will be added back to the
+                    // pseudoTimeQueue/tree structure after it is done being processed. This may happen if the
+                    // activeCountForTree == 0 (a node which can't stream anything and is blocked) is at/near root of
+                    // the tree, and is popped off the pseudoTimeQueue during processing, and then put back on the
+                    // pseudoTimeQueue because a child changes position in the priority tree (or is closed because it is
+                    // not blocked and finished writing all data).
+                    parent.offerAndInitializePseudoTime(this);
                 }
-                pState.activeCountChangeForTree(increment);
+                parent.activeCountChangeForTree(increment);
             }
         }
 
@@ -296,50 +661,58 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
          * Assumes the parents {@link #totalQueuedWeights} includes this node's weight.
          */
         void updatePseudoTime(State parentState, int nsent, long totalQueuedWeights) {
-            assert stream.id() != CONNECTION_STREAM_ID && nsent >= 0;
+            assert streamId != CONNECTION_STREAM_ID && nsent >= 0;
             // If the current pseudoTimeToSend is greater than parentState.pseudoTime then we previously over accounted
             // and should use parentState.pseudoTime.
-            pseudoTimeToWrite = min(pseudoTimeToWrite, parentState.pseudoTime) +
-                                nsent * totalQueuedWeights / stream.weight();
+            pseudoTimeToWrite = min(pseudoTimeToWrite, parentState.pseudoTime) + nsent * totalQueuedWeights / weight;
         }
 
         /**
          * The concept of pseudoTime can be influenced by priority tree manipulations or if a stream goes from "active"
          * to "non-active". This method accounts for that by initializing the {@link #pseudoTimeToWrite} for
-         * {@code state} to {@link #pseudoTime} of this node and then calls {@link #offer(State)}.
+         * {@code state} to {@link #pseudoTime} of this node and then calls {@link #offerPseudoTimeQueue(State)}.
          */
         void offerAndInitializePseudoTime(State state) {
             state.pseudoTimeToWrite = pseudoTime;
-            offer(state);
+            offerPseudoTimeQueue(state);
         }
 
-        void offer(State state) {
-            queue.offer(state);
-            totalQueuedWeights += state.stream.weight();
+        void offerPseudoTimeQueue(State state) {
+            pseudoTimeQueue.offer(state);
+            totalQueuedWeights += state.weight;
         }
 
         /**
-         * Must only be called if the queue is non-empty!
+         * Must only be called if the pseudoTimeQueue is non-empty!
          */
-        State poll() {
-            State state = queue.poll();
-            // This method is only ever called if the queue is non-empty.
-            totalQueuedWeights -= state.stream.weight();
+        State pollPseudoTimeQueue() {
+            State state = pseudoTimeQueue.poll();
+            // This method is only ever called if the pseudoTimeQueue is non-empty.
+            totalQueuedWeights -= state.weight;
             return state;
         }
 
-        void remove(State state) {
-            if (queue.remove(state)) {
-                totalQueuedWeights -= state.stream.weight();
+        void removePseudoTimeQueue(State state) {
+            if (pseudoTimeQueue.removeTyped(state)) {
+                totalQueuedWeights -= state.weight;
             }
         }
 
-        State peek() {
-            return queue.peek();
+        State peekPseudoTimeQueue() {
+            return pseudoTimeQueue.peek();
         }
 
         void close() {
             updateStreamableBytes(0, false);
+            stream = null;
+        }
+
+        boolean wasStreamReservedOrActivated() {
+            return (flags & STATE_STREAM_ACTIVATED) != 0;
+        }
+
+        void setStreamReservedOrActivated() {
+            flags |= STATE_STREAM_ACTIVATED;
         }
 
         boolean isActive() {
@@ -367,18 +740,17 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         }
 
         @Override
-        public int compareTo(State o) {
-            return MathUtil.compare(pseudoTimeToWrite, o.pseudoTimeToWrite);
+        public int priorityQueueIndex(DefaultPriorityQueue<?> queue) {
+            return queue == stateOnlyRemovalQueue ? stateOnlyQueueIndex : pseudoTimeQueueIndex;
         }
 
         @Override
-        public int priorityQueueIndex() {
-            return priorityQueueIndex;
-        }
-
-        @Override
-        public void priorityQueueIndex(int i) {
-            priorityQueueIndex = i;
+        public void priorityQueueIndex(DefaultPriorityQueue<?> queue, int i) {
+            if (queue == stateOnlyRemovalQueue) {
+                stateOnlyQueueIndex = i;
+            } else {
+                pseudoTimeQueueIndex = i;
+            }
         }
 
         @Override
@@ -390,17 +762,19 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         }
 
         private void toString(StringBuilder sb) {
-            sb.append("{stream ").append(stream.id())
+            sb.append("{streamId ").append(streamId)
                     .append(" streamableBytes ").append(streamableBytes)
                     .append(" activeCountForTree ").append(activeCountForTree)
-                    .append(" priorityQueueIndex ").append(priorityQueueIndex)
+                    .append(" pseudoTimeQueueIndex ").append(pseudoTimeQueueIndex)
                     .append(" pseudoTimeToWrite ").append(pseudoTimeToWrite)
                     .append(" pseudoTime ").append(pseudoTime)
                     .append(" flags ").append(flags)
-                    .append(" queue.size() ").append(queue.size()).append("} [");
+                    .append(" pseudoTimeQueue.size() ").append(pseudoTimeQueue.size())
+                    .append(" stateOnlyQueueIndex ").append(stateOnlyQueueIndex)
+                    .append(" parent ").append(parent).append("} [");
 
-            if (!queue.isEmpty()) {
-                for (State s : queue) {
+            if (!pseudoTimeQueue.isEmpty()) {
+                for (State s : pseudoTimeQueue) {
                     s.toString(sb);
                     sb.append(", ");
                 }
@@ -408,6 +782,24 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
                 sb.setLength(sb.length() - 2);
             }
             sb.append(']');
+        }
+    }
+
+    /**
+     * Allows a correlation to be made between a stream and its old parent before a parent change occurs.
+     */
+    private static final class ParentChangedEvent {
+        final State state;
+        final State oldParent;
+
+        /**
+         * Create a new instance.
+         * @param state The state who has had a parent change.
+         * @param oldParent The previous parent.
+         */
+        ParentChangedEvent(State state, State oldParent) {
+            this.state = state;
+            this.oldParent = oldParent;
         }
     }
 }

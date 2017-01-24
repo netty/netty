@@ -130,61 +130,6 @@ public interface Http2Stream {
     <V> V removeProperty(Http2Connection.PropertyKey key);
 
     /**
-     * Updates an priority for this stream. Calling this method may affect the structure of the
-     * priority tree.
-     *
-     * @param parentStreamId the parent stream that given stream should depend on. May be {@code 0},
-     *            if the stream has no dependencies and should be an immediate child of the
-     *            connection.
-     * @param weight the weight to be assigned to this stream relative to its parent. This value
-     *            must be between 1 and 256 (inclusive)
-     * @param exclusive indicates that the stream should be the exclusive dependent on its parent.
-     *            This only applies if the stream has a parent.
-     * @return this stream.
-     */
-    Http2Stream setPriority(int parentStreamId, short weight, boolean exclusive) throws Http2Exception;
-
-    /**
-     * Indicates whether or not this stream is the root node of the priority tree.
-     */
-    boolean isRoot();
-
-    /**
-     * Indicates whether or not this is a leaf node (i.e. {@link #numChildren} is 0) of the priority tree.
-     */
-    boolean isLeaf();
-
-    /**
-     * Returns weight assigned to the dependency with the parent. The weight will be a value
-     * between 1 and 256.
-     */
-    short weight();
-
-    /**
-     * The parent (i.e. the node in the priority tree on which this node depends), or {@code null}
-     * if this is the root node (i.e. the connection, itself).
-     */
-    Http2Stream parent();
-
-    /**
-     * Indicates whether or not this stream is a descendant in the priority tree from the given stream.
-     */
-    boolean isDescendantOf(Http2Stream stream);
-
-    /**
-     * Returns the number of child streams directly dependent on this stream.
-     */
-    int numChildren();
-
-    /**
-     * Provide a means of iterating over the children of this stream.
-     *
-     * @param visitor The visitor which will visit each child stream.
-     * @return The stream before iteration stopped or {@code null} if iteration went past the end.
-     */
-    Http2Stream forEachChild(Http2StreamVisitor visitor) throws Http2Exception;
-
-    /**
      * Indicates that headers has been sent to the remote on this stream.
      */
     Http2Stream headersSent();

@@ -176,6 +176,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         monitor.channelWritabilityChange();
     }
 
+    @Override
+    public void updateDependencyTree(int childStreamId, int parentStreamId, short weight, boolean exclusive) {
+        streamByteDistributor.updateDependencyTree(childStreamId, parentStreamId, weight, exclusive);
+    }
+
     private boolean isChannelWritable() {
         return ctx != null && isChannelWritable0();
     }
