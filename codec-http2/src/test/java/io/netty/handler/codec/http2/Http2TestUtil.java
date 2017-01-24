@@ -213,9 +213,6 @@ public final class Http2TestUtil {
                         int streamDependency, short weight, boolean exclusive, int padding, boolean endStream)
                         throws Http2Exception {
                     Http2Stream stream = getOrCreateStream(streamId, endStream);
-                    if (stream != null) {
-                        stream.setPriority(streamDependency, weight, exclusive);
-                    }
                     listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding,
                             endStream);
                     if (endStream) {
@@ -227,10 +224,6 @@ public final class Http2TestUtil {
                 @Override
                 public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
                         boolean exclusive) throws Http2Exception {
-                    Http2Stream stream = getOrCreateStream(streamId, false);
-                    if (stream != null) {
-                        stream.setPriority(streamDependency, weight, exclusive);
-                    }
                     listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
                     latch.countDown();
                 }

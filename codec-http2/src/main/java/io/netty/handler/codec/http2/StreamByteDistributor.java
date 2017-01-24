@@ -82,6 +82,17 @@ public interface StreamByteDistributor {
     void updateStreamableBytes(StreamState state);
 
     /**
+     * Explicitly update the dependency tree. This method is called independently of stream state changes.
+     * @param childStreamId The stream identifier associated with the child stream.
+     * @param parentStreamId The stream identifier associated with the parent stream. May be {@code 0},
+     *                       to make {@code childStreamId} and immediate child of the connection.
+     * @param weight The weight which is used relative to other child streams for {@code parentStreamId}. This value
+     *               must be between 1 and 256 (inclusive).
+     * @param exclusive If {@code childStreamId} should be the exclusive dependency of {@code parentStreamId}.
+     */
+    void updateDependencyTree(int childStreamId, int parentStreamId, short weight, boolean exclusive);
+
+    /**
      * Distributes up to {@code maxBytes} to those streams containing streamable bytes and
      * iterates across those streams to write the appropriate bytes. Criteria for
      * traversing streams is undefined and it is up to the implementation to determine when to stop
