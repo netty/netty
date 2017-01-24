@@ -312,7 +312,7 @@ public final class HttpUtil {
      */
     public static void setTransferEncodingChunked(HttpMessage m, boolean chunked) {
         if (chunked) {
-            m.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+            m.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
             m.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
         } else {
             List<String> encodings = m.headers().getAll(HttpHeaderNames.TRANSFER_ENCODING);

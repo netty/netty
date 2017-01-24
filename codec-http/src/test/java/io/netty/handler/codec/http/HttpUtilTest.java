@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
@@ -107,5 +108,14 @@ public class HttpUtilTest {
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
         assertEquals("bar", message.headers().get(HttpHeaderNames.CONTENT_LENGTH));
         assertEquals(1L, HttpUtil.getContentLength(message, 1L));
+    }
+
+    @Test
+    public void testDoubleChunkedHeader() {
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().add(HttpHeaderNames.TRANSFER_ENCODING, "chunked");
+        HttpUtil.setTransferEncodingChunked(message, true);
+        List<String> expected = Collections.singletonList("chunked");
+        assertEquals(expected, message.headers().getAll(HttpHeaderNames.TRANSFER_ENCODING));
     }
 }
