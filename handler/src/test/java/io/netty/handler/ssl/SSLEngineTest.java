@@ -1599,7 +1599,7 @@ public abstract class SSLEngineTest {
         SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
 
         try {
-            ByteBuffer dst = allocateBuffer(server.getSession().getPacketBufferSize());
+            ByteBuffer dst = allocateBuffer(client.getSession().getPacketBufferSize());
             ByteBuffer src = allocateBuffer(1024);
 
             handshake(client, server);
