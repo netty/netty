@@ -159,6 +159,22 @@ public final class ByteBufUtil {
     }
 
     /**
+     * Returns the reader index of needle in haystack, or -1 if needle is not in haystack.
+     */
+    public static int indexOf(ByteBuf needle, ByteBuf haystack) {
+        // TODO: maybe use Boyer Moore for efficiency.
+        int attempts = haystack.readableBytes() - needle.readableBytes() + 1;
+        for (int i = 0; i < attempts; i++) {
+            if (equals(needle, needle.readerIndex(),
+                       haystack, haystack.readerIndex() + i,
+                       needle.readableBytes())) {
+                return haystack.readerIndex() + i;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * Returns {@code true} if and only if the two specified buffers are
      * identical to each other for {@code length} bytes starting at {@code aStartIndex}
      * index for the {@code a} buffer and {@code bStartIndex} index for the {@code b} buffer.
