@@ -132,6 +132,7 @@ public class DnsNameResolver extends InetNameResolver {
      * Cache for {@link #doResolve(String, Promise)} and {@link #doResolveAll(String, Promise)}.
      */
     private final DnsCache resolveCache;
+    private final DnsCache authoritativeDnsServerCache;
 
     private final FastThreadLocal<DnsServerAddressStream> nameServerAddrStream =
             new FastThreadLocal<DnsServerAddressStream>() {
@@ -151,8 +152,8 @@ public class DnsNameResolver extends InetNameResolver {
     private final HostsFileEntriesResolver hostsFileEntriesResolver;
     private final String[] searchDomains;
     private final int ndots;
-    private final boolean cnameFollowARecords;
-    private final boolean cnameFollowAAAARecords;
+    private final boolean supportsAAAARecords;
+    private final boolean supportsARecords;
     private final InternetProtocolFamily preferredAddressType;
     private final DnsRecordType[] resolveRecordTypes;
     private final boolean decodeIdn;
@@ -176,9 +177,9 @@ public class DnsNameResolver extends InetNameResolver {
      * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to check for local aliases
      * @param searchDomains the list of search domain
      * @param ndots the ndots value
-     * @deprecated use {@link #DnsNameResolver(EventLoop, ChannelFactory, DnsServerAddresses, DnsCache, long,
-     *             InternetProtocolFamily[], boolean, int, boolean, int,
-     *             boolean, HostsFileEntriesResolver, String[], int, boolean)}
+     * @deprecated use {@link DnsNameResolver#DnsNameResolver(EventLoop, ChannelFactory, DnsServerAddresses, DnsCache,
+     *                  DnsCache, long, InternetProtocolFamily[], boolean, int, boolean, int, boolean,
+     *                  HostsFileEntriesResolver, String[], int, boolean)}
      */
     @Deprecated
     public DnsNameResolver(
@@ -196,11 +197,10 @@ public class DnsNameResolver extends InetNameResolver {
             HostsFileEntriesResolver hostsFileEntriesResolver,
             String[] searchDomains,
             int ndots) {
-        this(eventLoop, channelFactory, nameServerAddresses, resolveCache, queryTimeoutMillis, resolvedAddressTypes,
-                recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled,
-                hostsFileEntriesResolver, searchDomains, ndots, true);
+        this(eventLoop, channelFactory, nameServerAddresses, resolveCache, NoopDnsCache.INSTANCE, queryTimeoutMillis,
+                resolvedAddressTypes, recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize,
+                optResourceEnabled, hostsFileEntriesResolver, searchDomains, ndots, true);
     }
-
     /**
      * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
      *
@@ -210,6 +210,7 @@ public class DnsNameResolver extends InetNameResolver {
      *                            this to determine which DNS server should be contacted for the next retry in case
      *                            of failure.
      * @param resolveCache the DNS resolved entries cache
+     * @param authoritativeDnsServerCache the cache used to find the authoritative DNS server for a domain
      * @param queryTimeoutMillis timeout of each DNS query in millis
      * @param resolvedAddressTypes list of the protocol families
      * @param recursionDesired if recursion desired flag must be set
@@ -228,6 +229,7 @@ public class DnsNameResolver extends InetNameResolver {
             ChannelFactory<? extends DatagramChannel> channelFactory,
             DnsServerAddresses nameServerAddresses,
             final DnsCache resolveCache,
+            DnsCache authoritativeDnsServerCache,
             long queryTimeoutMillis,
             InternetProtocolFamily[] resolvedAddressTypes,
             boolean recursionDesired,
@@ -239,7 +241,6 @@ public class DnsNameResolver extends InetNameResolver {
             String[] searchDomains,
             int ndots,
             boolean decodeIdn) {
-
         super(eventLoop);
         checkNotNull(channelFactory, "channelFactory");
         this.nameServerAddresses = checkNotNull(nameServerAddresses, "nameServerAddresses");
@@ -252,22 +253,23 @@ public class DnsNameResolver extends InetNameResolver {
         this.optResourceEnabled = optResourceEnabled;
         this.hostsFileEntriesResolver = checkNotNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
         this.resolveCache = checkNotNull(resolveCache, "resolveCache");
+        this.authoritativeDnsServerCache = checkNotNull(authoritativeDnsServerCache, "authoritativeDnsServerCache");
         this.searchDomains = checkNotNull(searchDomains, "searchDomains").clone();
         this.ndots = checkPositiveOrZero(ndots, "ndots");
         this.decodeIdn = decodeIdn;
 
-        boolean cnameFollowARecords = false;
-        boolean cnameFollowAAAARecords = false;
+        boolean supportsARecords = false;
+        boolean supportsAAAARecords = false;
         // Use LinkedHashSet to maintain correct ordering.
         Set<DnsRecordType> recordTypes = new LinkedHashSet<DnsRecordType>(resolvedAddressTypes.length);
         for (InternetProtocolFamily family: resolvedAddressTypes) {
             switch (family) {
                 case IPv4:
-                    cnameFollowARecords = true;
+                    supportsARecords = true;
                     recordTypes.add(DnsRecordType.A);
                     break;
                 case IPv6:
-                    cnameFollowAAAARecords = true;
+                    supportsAAAARecords = true;
                     recordTypes.add(DnsRecordType.AAAA);
                     break;
                 default:
@@ -276,9 +278,9 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         // One of both must be always true.
-        assert cnameFollowARecords || cnameFollowAAAARecords;
-        this.cnameFollowAAAARecords = cnameFollowAAAARecords;
-        this.cnameFollowARecords = cnameFollowARecords;
+        assert supportsARecords || supportsAAAARecords;
+        this.supportsAAAARecords = supportsAAAARecords;
+        this.supportsARecords = supportsARecords;
         resolveRecordTypes = recordTypes.toArray(new DnsRecordType[recordTypes.size()]);
         preferredAddressType = resolvedAddressTypes[0];
 
@@ -306,11 +308,23 @@ public class DnsNameResolver extends InetNameResolver {
         });
     }
 
+    // Only here to override in unit tests.
+    int dnsRedirectPort(@SuppressWarnings("unused") InetAddress server) {
+        return DnsServerAddresses.DNS_PORT;
+    }
+
     /**
      * Returns the resolution cache.
      */
     public DnsCache resolveCache() {
         return resolveCache;
+    }
+
+    /**
+     * Returns the cache used for authoritative DNS servers for a domain.
+     */
+    public DnsCache authoritativeDnsServerCache() {
+        return authoritativeDnsServerCache;
     }
 
     /**
@@ -342,12 +356,12 @@ public class DnsNameResolver extends InetNameResolver {
         return ndots;
     }
 
-    final boolean isCnameFollowAAAARecords() {
-        return cnameFollowAAAARecords;
+    final boolean supportsAAAARecords() {
+        return supportsAAAARecords;
     }
 
-    final boolean isCnameFollowARecords() {
-        return cnameFollowARecords;
+    final boolean supportsARecords() {
+        return supportsARecords;
     }
 
     final InternetProtocolFamily preferredAddressType() {
