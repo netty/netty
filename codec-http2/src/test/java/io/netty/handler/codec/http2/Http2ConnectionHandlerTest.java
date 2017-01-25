@@ -27,6 +27,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -52,6 +53,7 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
+import static io.netty.util.CharsetUtil.US_ASCII;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -127,6 +129,8 @@ public class Http2ConnectionHandlerTest {
     @Mock
     private Http2FrameWriter frameWriter;
 
+    private String goAwayDebugCap;
+
     @SuppressWarnings("unchecked")
     @Before
     public void setup() throws Exception {
@@ -144,6 +148,7 @@ public class Http2ConnectionHandlerTest {
             @Override
             public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
                 ByteBuf buf = invocation.getArgumentAt(3, ByteBuf.class);
+                goAwayDebugCap = buf.toString(UTF_8);
                 buf.release();
                 return future;
             }
@@ -240,6 +245,18 @@ public class Http2ConnectionHandlerTest {
         verify(frameWriter).writeGoAway(eq(ctx), eq(0), eq(PROTOCOL_ERROR.code()),
                 captor.capture(), eq(promise));
         assertEquals(0, captor.getValue().refCnt());
+    }
+
+    @Test
+    public void serverReceivingHttp1ClientPrefaceStringShouldIncludePreface() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        handler = newHandler();
+        handler.channelRead(ctx, copiedBuffer("GET /path HTTP/1.1", US_ASCII));
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        verify(frameWriter).writeGoAway(eq(ctx), eq(0), eq(PROTOCOL_ERROR.code()),
+            captor.capture(), eq(promise));
+        assertEquals(0, captor.getValue().refCnt());
+        assertTrue(goAwayDebugCap.contains("/path"));
     }
 
     @Test
