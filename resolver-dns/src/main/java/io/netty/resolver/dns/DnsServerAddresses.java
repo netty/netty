@@ -40,9 +40,9 @@ public abstract class DnsServerAddresses {
     private static final List<InetSocketAddress> DEFAULT_NAME_SERVER_LIST;
     private static final InetSocketAddress[] DEFAULT_NAME_SERVER_ARRAY;
     private static final DnsServerAddresses DEFAULT_NAME_SERVERS;
+    static final int DNS_PORT = 53;
 
     static {
-        final int DNS_PORT = 53;
         final List<InetSocketAddress> defaultNameServers = new ArrayList<InetSocketAddress>(2);
         try {
             Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
