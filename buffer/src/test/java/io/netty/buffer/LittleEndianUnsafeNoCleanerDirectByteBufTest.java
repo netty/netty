@@ -30,7 +30,7 @@ public class LittleEndianUnsafeNoCleanerDirectByteBufTest extends LittleEndianDi
     }
 
     @Override
-    protected ByteBuf newBuffer(int length) {
-        return new UnpooledUnsafeNoCleanerDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, length, Integer.MAX_VALUE);
+    protected ByteBuf newBuffer(int length, int maxCapacity) {
+        return new UnpooledUnsafeNoCleanerDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, length, maxCapacity);
     }
 }
