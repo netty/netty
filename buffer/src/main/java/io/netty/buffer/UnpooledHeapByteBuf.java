@@ -104,10 +104,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf capacity(int newCapacity) {
-        ensureAccessible();
-        if (newCapacity < 0 || newCapacity > maxCapacity()) {
-            throw new IllegalArgumentException("newCapacity: " + newCapacity);
-        }
+        checkNewCapacity(newCapacity);
 
         int oldCapacity = array.length;
         if (newCapacity > oldCapacity) {

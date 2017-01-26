@@ -139,10 +139,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf capacity(int newCapacity) {
-        ensureAccessible();
-        if (newCapacity < 0 || newCapacity > maxCapacity()) {
-            throw new IllegalArgumentException("newCapacity: " + newCapacity);
-        }
+        checkNewCapacity(newCapacity);
 
         int readerIndex = readerIndex();
         int writerIndex = writerIndex();

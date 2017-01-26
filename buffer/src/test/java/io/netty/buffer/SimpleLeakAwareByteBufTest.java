@@ -31,8 +31,8 @@ public class SimpleLeakAwareByteBufTest extends BigEndianHeapByteBufTest {
     private final Queue<NoopResourceLeakTracker<ByteBuf>> trackers = new ArrayDeque<NoopResourceLeakTracker<ByteBuf>>();
 
     @Override
-    protected final ByteBuf newBuffer(int capacity) {
-        return wrap(super.newBuffer(capacity));
+    protected final ByteBuf newBuffer(int capacity, int maxCapacity) {
+        return wrap(super.newBuffer(capacity, maxCapacity));
     }
 
     private ByteBuf wrap(ByteBuf buffer) {
