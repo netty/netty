@@ -32,7 +32,9 @@ public class WrappedUnpooledUnsafeByteBufTest extends BigEndianUnsafeDirectByteB
     }
 
     @Override
-    protected ByteBuf newBuffer(int length) {
+    protected ByteBuf newBuffer(int length, int maxCapacity) {
+        Assume.assumeTrue(maxCapacity == Integer.MAX_VALUE);
+
         return new WrappedUnpooledUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT,
                 PlatformDependent.allocateMemory(length), length, true);
     }

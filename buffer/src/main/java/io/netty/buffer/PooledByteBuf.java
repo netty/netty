@@ -86,7 +86,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     @Override
     public final ByteBuf capacity(int newCapacity) {
-        ensureAccessible();
+        checkNewCapacity(newCapacity);
 
         // If the request capacity does not require reallocation, just update the length of the memory.
         if (chunk.unpooled) {
