@@ -35,7 +35,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class PooledByteBufAllocatorTest {
+public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
+
+    @Override
+    protected AbstractByteBufAllocator newAllocator(boolean preferDirect) {
+        return new PooledByteBufAllocator(preferDirect);
+    }
 
     @Test
     public void testArenaMetricsNoCache() {

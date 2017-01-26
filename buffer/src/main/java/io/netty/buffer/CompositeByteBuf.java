@@ -53,7 +53,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     private boolean freed;
 
     public CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents) {
-        super(Integer.MAX_VALUE);
+        super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
         if (alloc == null) {
             throw new NullPointerException("alloc");
         }
@@ -69,7 +69,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     CompositeByteBuf(
             ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf[] buffers, int offset, int len) {
-        super(Integer.MAX_VALUE);
+        super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
         if (alloc == null) {
             throw new NullPointerException("alloc");
         }
@@ -90,7 +90,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     public CompositeByteBuf(
             ByteBufAllocator alloc, boolean direct, int maxNumComponents, Iterable<ByteBuf> buffers) {
-        super(Integer.MAX_VALUE);
+        super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
         if (alloc == null) {
             throw new NullPointerException("alloc");
         }
