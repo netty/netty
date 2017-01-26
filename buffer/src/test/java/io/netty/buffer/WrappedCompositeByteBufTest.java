@@ -18,8 +18,8 @@ package io.netty.buffer;
 public class WrappedCompositeByteBufTest extends BigEndianCompositeByteBufTest {
 
     @Override
-    protected final ByteBuf newBuffer(int length) {
-        return wrap((CompositeByteBuf) super.newBuffer(length));
+    protected final ByteBuf newBuffer(int length, int maxCapacity) {
+        return wrap((CompositeByteBuf) super.newBuffer(length, maxCapacity));
     }
 
     protected WrappedCompositeByteBuf wrap(CompositeByteBuf buffer) {

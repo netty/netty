@@ -25,8 +25,8 @@ import java.nio.ByteOrder;
 public class LittleEndianHeapByteBufTest extends AbstractByteBufTest {
 
     @Override
-    protected ByteBuf newBuffer(int length) {
-        ByteBuf buffer = Unpooled.buffer(length).order(ByteOrder.LITTLE_ENDIAN);
+    protected ByteBuf newBuffer(int length, int maxCapacity) {
+        ByteBuf buffer = Unpooled.buffer(length, maxCapacity).order(ByteOrder.LITTLE_ENDIAN);
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }

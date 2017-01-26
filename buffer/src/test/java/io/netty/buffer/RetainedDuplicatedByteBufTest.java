@@ -20,8 +20,8 @@ import static org.junit.Assert.assertEquals;
 
 public class RetainedDuplicatedByteBufTest extends DuplicatedByteBufTest {
     @Override
-    protected ByteBuf newBuffer(int length) {
-        ByteBuf wrapped = Unpooled.buffer(length);
+    protected ByteBuf newBuffer(int length, int maxCapacity) {
+        ByteBuf wrapped = Unpooled.buffer(length, maxCapacity);
         ByteBuf buffer = wrapped.retainedDuplicate();
         wrapped.release();
 
