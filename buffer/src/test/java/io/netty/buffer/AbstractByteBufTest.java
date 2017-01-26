@@ -78,7 +78,11 @@ public abstract class AbstractByteBufTest {
     private Random random;
     private ByteBuf buffer;
 
-    protected abstract ByteBuf newBuffer(int capacity);
+    protected final ByteBuf newBuffer(int capacity) {
+        return newBuffer(capacity, Integer.MAX_VALUE);
+    }
+
+    protected abstract ByteBuf newBuffer(int capacity, int maxCapacity);
 
     protected boolean discardReadBytesDoesNotMoveWritableBytes() {
         return true;
@@ -4020,6 +4024,58 @@ public abstract class AbstractByteBufTest {
         @Override
         public boolean process(byte value) throws Exception {
             return true;
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testCapacityEnforceMaxCapacity() {
+        ByteBuf buffer = newBuffer(3, 13);
+        assertEquals(13, buffer.maxCapacity());
+        assertEquals(3, buffer.capacity());
+        try {
+            buffer.capacity(14);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testCapacityNegative() {
+        ByteBuf buffer = newBuffer(3, 13);
+        assertEquals(13, buffer.maxCapacity());
+        assertEquals(3, buffer.capacity());
+        try {
+            buffer.capacity(-1);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testCapacityDecrease() {
+        ByteBuf buffer = newBuffer(3, 13);
+        assertEquals(13, buffer.maxCapacity());
+        assertEquals(3, buffer.capacity());
+        try {
+            buffer.capacity(2);
+            assertEquals(2, buffer.capacity());
+            assertEquals(13, buffer.maxCapacity());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testCapacityIncrease() {
+        ByteBuf buffer = newBuffer(3, 13);
+        assertEquals(13, buffer.maxCapacity());
+        assertEquals(3, buffer.capacity());
+        try {
+            buffer.capacity(4);
+            assertEquals(4, buffer.capacity());
+            assertEquals(13, buffer.maxCapacity());
+        } finally {
+            buffer.release();
         }
     }
 }
