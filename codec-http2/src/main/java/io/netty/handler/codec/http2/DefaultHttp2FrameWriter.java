@@ -188,7 +188,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
-            Http2Headers headers, int padding, boolean endStream, ChannelPromise promise) throws Http2Exception {
+            Http2Headers headers, int padding, boolean endStream, ChannelPromise promise) {
         return writeHeadersInternal(ctx, streamId, headers, padding, endStream,
                 false, 0, (short) 0, false, promise);
     }
@@ -196,7 +196,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
             Http2Headers headers, int streamDependency, short weight, boolean exclusive,
-            int padding, boolean endStream, ChannelPromise promise) throws Http2Exception {
+            int padding, boolean endStream, ChannelPromise promise) {
         return writeHeadersInternal(ctx, streamId, headers, padding, endStream,
                 true, streamDependency, weight, exclusive, promise);
     }
@@ -293,7 +293,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
     @Override
     public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId,
-            int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) throws Http2Exception {
+            int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) {
         ByteBuf headerBlock = null;
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
@@ -337,8 +337,6 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             }
         } catch (Http2Exception e) {
             promiseAggregator.setFailure(e);
-            promiseAggregator.doneAllocatingPromises();
-            throw e;
         } catch (Throwable t) {
             promiseAggregator.setFailure(t);
             promiseAggregator.doneAllocatingPromises();
@@ -420,8 +418,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
     private ChannelFuture writeHeadersInternal(ChannelHandlerContext ctx,
             int streamId, Http2Headers headers, int padding, boolean endStream,
-            boolean hasPriority, int streamDependency, short weight, boolean exclusive, ChannelPromise promise)
-                throws Http2Exception {
+            boolean hasPriority, int streamDependency, short weight, boolean exclusive, ChannelPromise promise) {
         ByteBuf headerBlock = null;
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
@@ -475,8 +472,6 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             }
         } catch (Http2Exception e) {
             promiseAggregator.setFailure(e);
-            promiseAggregator.doneAllocatingPromises();
-            throw e;
         } catch (Throwable t) {
             promiseAggregator.setFailure(t);
             promiseAggregator.doneAllocatingPromises();

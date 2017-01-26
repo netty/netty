@@ -209,7 +209,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
      * streams.
      */
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Http2Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         try {
             if (msg instanceof Http2WindowUpdateFrame) {
                 Http2WindowUpdateFrame frame = (Http2WindowUpdateFrame) msg;
@@ -252,7 +252,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
                 http2HandlerCtx, lastStreamId, frame.errorCode(), frame.content().retain(), promise);
     }
 
-    private void writeStreamFrame(Http2StreamFrame frame, ChannelPromise promise) throws Http2Exception {
+    private void writeStreamFrame(Http2StreamFrame frame, ChannelPromise promise) {
         if (frame instanceof Http2DataFrame) {
             Http2DataFrame dataFrame = (Http2DataFrame) frame;
             http2Handler.encoder().writeData(http2HandlerCtx, frame.streamId(), dataFrame.content().retain(),
@@ -267,7 +267,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
         }
     }
 
-    private void writeHeadersFrame(Http2HeadersFrame headersFrame, ChannelPromise promise) throws Http2Exception {
+    private void writeHeadersFrame(Http2HeadersFrame headersFrame, ChannelPromise promise) {
         int streamId = headersFrame.streamId();
         if (!isStreamIdValid(streamId)) {
             final Endpoint<Http2LocalFlowController> localEndpoint = http2Handler.connection().local();
