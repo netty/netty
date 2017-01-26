@@ -137,7 +137,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                      int padding, boolean endStream, ChannelPromise promise) throws Http2Exception {
+                                      int padding, boolean endStream, ChannelPromise promise) {
         return writeHeaders(ctx, streamId, headers, 0, Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT,
                 false, padding, endStream, promise);
     }
@@ -145,7 +145,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                       int streamDependency, short weight, boolean exclusive,
-                                      int padding, boolean endOfStream, ChannelPromise promise) throws Http2Exception {
+                                      int padding, boolean endOfStream, ChannelPromise promise) {
         if (closed) {
             return promise.setFailure(new Http2ChannelClosedException());
         }
@@ -281,7 +281,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             this.streamId = streamId;
         }
 
-        void sendFrames() throws Http2Exception {
+        void sendFrames() {
             for (Frame frame : frames) {
                 frame.send(ctx, streamId);
             }
@@ -312,7 +312,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             }
         }
 
-        abstract void send(ChannelHandlerContext ctx, int streamId) throws Http2Exception;
+        abstract void send(ChannelHandlerContext ctx, int streamId);
     }
 
     private final class HeadersFrame extends Frame {
@@ -335,9 +335,8 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         }
 
         @Override
-        void send(ChannelHandlerContext ctx, int streamId) throws Http2Exception {
-            writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding,
-                    endOfStream, promise);
+        void send(ChannelHandlerContext ctx, int streamId) {
+            writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endOfStream, promise);
         }
     }
 

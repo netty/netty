@@ -187,16 +187,22 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 }
                 ChannelFuture future = frameWriter.writeHeaders(ctx, streamId, headers, streamDependency,
                                                                 weight, exclusive, padding, endOfStream, promise);
-                // Synchronously set the headersSent flag to ensure that we do not subsequently write
-                // other headers containing pseudo-header fields.
-                stream.headersSent();
+                // Writing headers may fail during the encode state if they violate HPACK limits.
+                Throwable failureCause = future.cause();
+                if (failureCause == null) {
+                    // Synchronously set the headersSent flag to ensure that we do not subsequently write
+                    // other headers containing pseudo-header fields.
+                    stream.headersSent();
+                } else {
+                    lifecycleManager.onError(ctx, failureCause);
+                }
 
                 return future;
             } else {
                 // Pass headers to the flow-controller so it can maintain their sequence relative to DATA frames.
                 flowController.addFlowControlled(stream,
                         new FlowControlledHeaders(stream, headers, streamDependency, weight, exclusive, padding,
-                                                 endOfStream, promise));
+                                                  endOfStream, promise));
                 return promise;
             }
         } catch (Throwable t) {
@@ -276,7 +282,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
             ChannelFuture future = frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding,
                                                                 promise);
-            stream.pushPromiseSent();
+            // Writing headers may fail during the encode state if they violate HPACK limits.
+            Throwable failureCause = future.cause();
+            if (failureCause == null) {
+                stream.pushPromiseSent();
+            } else {
+                lifecycleManager.onError(ctx, failureCause);
+            }
             return future;
         } catch (Throwable t) {
             lifecycleManager.onError(ctx, t);
@@ -450,15 +462,21 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, int allowedBytes) throws Http2Exception {
+        public void write(ChannelHandlerContext ctx, int allowedBytes) {
             if (promise.isVoid()) {
                 promise = ctx.newPromise();
             }
             promise.addListener(this);
 
-            frameWriter.writeHeaders(ctx, stream.id(), headers, streamDependency, weight, exclusive,
-                    padding, endOfStream, promise);
-            stream.headersSent();
+            ChannelFuture f = frameWriter.writeHeaders(ctx, stream.id(), headers, streamDependency, weight, exclusive,
+                                                       padding, endOfStream, promise);
+            // Writing headers may fail during the encode state if they violate HPACK limits.
+            Throwable failureCause = f.cause();
+            if (failureCause == null) {
+                stream.headersSent();
+            } else {
+                lifecycleManager.onError(ctx, failureCause);
+            }
         }
 
         @Override

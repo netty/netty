@@ -633,8 +633,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             if (stream != null && !stream.isHeadersSent()) {
                 try {
                     handleServerHeaderDecodeSizeError(ctx, stream);
-                } catch (Http2Exception e) {
-                    onError(ctx, e);
                 } catch (Throwable cause2) {
                     onError(ctx, connectionError(INTERNAL_ERROR, cause2, "Error DecodeSizeError"));
                 }
@@ -656,8 +654,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * @param stream the Http2Stream on which the header was received
      * @throws Http2Exception if an exception occurs while processing the decode error.
      */
-    protected void handleServerHeaderDecodeSizeError(ChannelHandlerContext ctx, Http2Stream stream)
-            throws Http2Exception {
+    protected void handleServerHeaderDecodeSizeError(ChannelHandlerContext ctx, Http2Stream stream) {
         encoder().writeHeaders(ctx, stream.id(), HEADERS_TOO_LARGE_HEADERS, 0, true, ctx.newPromise());
     }
 

@@ -41,14 +41,14 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-                                      boolean endStream, ChannelPromise promise) throws Http2Exception {
+                                      boolean endStream, ChannelPromise promise) {
         return delegate.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
     }
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                       int streamDependency, short weight, boolean exclusive, int padding,
-                                      boolean endStream, ChannelPromise promise) throws Http2Exception {
+                                      boolean endStream, ChannelPromise promise) {
         return delegate
                 .writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endStream, promise);
     }
@@ -82,8 +82,7 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
-                                          Http2Headers headers, int padding, ChannelPromise promise)
-            throws Http2Exception {
+                                          Http2Headers headers, int padding, ChannelPromise promise) {
         return delegate.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
     }
 

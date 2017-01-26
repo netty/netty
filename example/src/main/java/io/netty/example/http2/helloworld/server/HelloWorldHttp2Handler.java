@@ -74,7 +74,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     /**
      * Sends a "Hello World" DATA frame to the client.
      */
-    private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) throws Http2Exception {
+    private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
         // Send a frame for the response status
         Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
         encoder().writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
@@ -87,8 +87,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     }
 
     @Override
-    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
-            throws Http2Exception {
+    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream) {
         int processed = data.readableBytes() + padding;
         if (endOfStream) {
             sendResponse(ctx, streamId, data.retain());
@@ -98,7 +97,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
-                              Http2Headers headers, int padding, boolean endOfStream) throws Http2Exception {
+                              Http2Headers headers, int padding, boolean endOfStream) {
         if (endOfStream) {
             ByteBuf content = ctx.alloc().buffer();
             content.writeBytes(RESPONSE_BYTES.duplicate());
@@ -109,7 +108,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
-                              short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
+                              short weight, boolean exclusive, int padding, boolean endOfStream) {
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 
