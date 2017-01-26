@@ -56,7 +56,6 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param endStream indicates if this is the last frame to be sent for the stream.
      * @param promise the promise for the write.
      * @return the future for the write.
-     * @throws Http2Exception if an exception occurs while encoding headers.
      * <a href="https://tools.ietf.org/html/rfc7540#section-10.5.1">Section 10.5.1</a> states the following:
      * <pre>
      * The header block MUST be processed to ensure a consistent connection state, unless the connection is closed.
@@ -66,7 +65,7 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * If this call has <strong>NOT</strong> modified the HPACK header state you are free to throw a stream error.
      */
     ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int padding, boolean endStream, ChannelPromise promise) throws Http2Exception;
+                               int padding, boolean endStream, ChannelPromise promise);
 
     /**
      * Writes a HEADERS frame with priority specified to the remote endpoint.
@@ -83,7 +82,6 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param endStream indicates if this is the last frame to be sent for the stream.
      * @param promise the promise for the write.
      * @return the future for the write.
-     * @throws Http2Exception if an exception occurs while encoding headers.
      * <a href="https://tools.ietf.org/html/rfc7540#section-10.5.1">Section 10.5.1</a> states the following:
      * <pre>
      * The header block MUST be processed to ensure a consistent connection state, unless the connection is closed.
@@ -93,8 +91,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * If this call has <strong>NOT</strong> modified the HPACK header state you are free to throw a stream error.
      */
     ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-            int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
-            ChannelPromise promise) throws Http2Exception;
+                               int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
+                               ChannelPromise promise);
 
     /**
      * Writes a PRIORITY frame to the remote endpoint.
@@ -167,7 +165,6 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      *                256 (inclusive).
      * @param promise the promise for the write.
      * @return the future for the write.
-     * @throws Http2Exception if an exception occurs while encoding headers.
      * <a href="https://tools.ietf.org/html/rfc7540#section-10.5.1">Section 10.5.1</a> states the following:
      * <pre>
      * The header block MUST be processed to ensure a consistent connection state, unless the connection is closed.
@@ -177,7 +174,7 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * If this call has <strong>NOT</strong> modified the HPACK header state you are free to throw a stream error.
      */
     ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
-            Http2Headers headers, int padding, ChannelPromise promise) throws Http2Exception;
+                                   Http2Headers headers, int padding, ChannelPromise promise);
 
     /**
      * Writes a GO_AWAY frame to the remote endpoint.

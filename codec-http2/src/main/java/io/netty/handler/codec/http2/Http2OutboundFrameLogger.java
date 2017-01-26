@@ -46,7 +46,7 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
-            Http2Headers headers, int padding, boolean endStream, ChannelPromise promise) throws Http2Exception {
+            Http2Headers headers, int padding, boolean endStream, ChannelPromise promise) {
         logger.logHeaders(OUTBOUND, ctx, streamId, headers, padding, endStream);
         return writer.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
     }
@@ -54,7 +54,7 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId,
             Http2Headers headers, int streamDependency, short weight, boolean exclusive,
-            int padding, boolean endStream, ChannelPromise promise) throws Http2Exception {
+            int padding, boolean endStream, ChannelPromise promise) {
         logger.logHeaders(OUTBOUND, ctx, streamId, headers, streamDependency, weight, exclusive,
                 padding, endStream);
         return writer.writeHeaders(ctx, streamId, headers, streamDependency, weight,
@@ -101,7 +101,7 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId,
-            int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) throws Http2Exception {
+            int promisedStreamId, Http2Headers headers, int padding, ChannelPromise promise) {
         logger.logPushPromise(OUTBOUND, ctx, streamId, promisedStreamId, headers, padding);
         return writer.writePushPromise(ctx, streamId, promisedStreamId, headers, padding, promise);
     }
