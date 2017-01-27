@@ -22,6 +22,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.internal.ThreadLocalRandom;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -416,7 +417,28 @@ public class OpenSslEngineTest extends SSLEngineTest {
     }
 
     @Test
-    public void testWrapWithDifferentSizes() throws Exception {
+    public void testWrapWithDifferentSizesTLSv1() throws Exception {
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, TLS_V1_CIPHERS);
+    }
+
+    @Test
+    public void testWrapWithDifferentSizesTLSv1_1() throws Exception {
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, TLS_V1_1_CIPHERS);
+    }
+
+    @Test
+    public void testWrapWithDifferentSizesTLSv1_2() throws Exception {
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, TLS_V1_2_CIPHERS);
+    }
+
+    @Test
+    public void testWrapWithDifferentSizesSSLv3() throws Exception {
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, SSL_V3_CIPHERS);
+    }
+
+    private void testWrapWithDifferentSizes(String protocol, Set<String> ciphers) throws Exception {
+        assumeTrue(OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocol));
+
         clientSslCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
@@ -425,14 +447,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .build();
-        // SSLv2 is not supported on most openssl installations so skip it.
-        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, TLS_V1_CIPHERS);
-        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, TLS_V1_1_CIPHERS);
-        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, TLS_V1_2_CIPHERS);
-        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, SSL_V3_CIPHERS);
-    }
 
-    private void testWrapWithDifferentSizes(String protocol, Set<String> ciphers) throws Exception {
         for (String cipher : ciphers) {
             if (!OpenSsl.isCipherSuiteAvailable(cipher)) {
                 continue;
