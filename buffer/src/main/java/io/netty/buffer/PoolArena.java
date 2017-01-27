@@ -201,16 +201,15 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     long handle = s.allocate();
                     assert handle >= 0;
                     s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
-
-                    if (tiny) {
-                        allocationsTiny.increment();
-                    } else {
-                        allocationsSmall.increment();
-                    }
+                    incTinySmallAllocation(tiny);
                     return;
                 }
             }
-            allocateNormal(buf, reqCapacity, normCapacity);
+            synchronized (this) {
+                allocateNormal(buf, reqCapacity, normCapacity);
+            }
+
+            incTinySmallAllocation(tiny);
             return;
         }
         if (normCapacity <= chunkSize) {
@@ -218,28 +217,38 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 // was able to allocate out of the cache so move on
                 return;
             }
-            allocateNormal(buf, reqCapacity, normCapacity);
+            synchronized (this) {
+                allocateNormal(buf, reqCapacity, normCapacity);
+                ++allocationsNormal;
+            }
         } else {
             // Huge allocations are never served via the cache so just call allocateHuge
             allocateHuge(buf, reqCapacity);
         }
     }
 
-    private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+    // Method must be called insided synchronized(this) { ... } block
+    private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
             q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
             q075.allocate(buf, reqCapacity, normCapacity)) {
-            ++allocationsNormal;
             return;
         }
 
         // Add a new chunk.
         PoolChunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
         long handle = c.allocate(normCapacity);
-        ++allocationsNormal;
         assert handle > 0;
         c.initBuf(buf, handle, reqCapacity);
         qInit.add(c);
+    }
+
+    private void incTinySmallAllocation(boolean tiny) {
+        if (tiny) {
+            allocationsTiny.increment();
+        } else {
+            allocationsSmall.increment();
+        }
     }
 
     private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
