@@ -68,16 +68,7 @@ public final class OpenSsl {
     static final String PROTOCOL_TLS_V1_1 = "TLSv1.1";
     static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
 
-    private static final String[] SUPPORTED_PROTOCOLS = {
-            PROTOCOL_SSL_V2_HELLO,
-            PROTOCOL_SSL_V2,
-            PROTOCOL_SSL_V3,
-            PROTOCOL_TLS_V1,
-            PROTOCOL_TLS_V1_1,
-            PROTOCOL_TLS_V1_2
-    };
-    static final Set<String> SUPPORTED_PROTOCOLS_SET = Collections.unmodifiableSet(
-            new HashSet<String>(Arrays.asList(SUPPORTED_PROTOCOLS)));
+    static final Set<String> SUPPORTED_PROTOCOLS_SET;
 
     static {
         Throwable cause = null;
@@ -207,12 +198,53 @@ public final class OpenSsl {
             AVAILABLE_CIPHER_SUITES = availableCipherSuites;
             SUPPORTS_KEYMANAGER_FACTORY = supportsKeyManagerFactory;
             USE_KEYMANAGER_FACTORY = useKeyManagerFactory;
+
+            final long pool = Pool.create(0);
+
+            Set<String> protocols = new LinkedHashSet<String>(6);
+            // Seems like there is no way to explicitly disable SSLv2Hello in openssl so it is always enabled
+            protocols.add(PROTOCOL_SSL_V2_HELLO);
+            try {
+                if (doesSupportProtocol(pool, SSL.SSL_PROTOCOL_SSLV2)) {
+                    protocols.add(PROTOCOL_SSL_V2);
+                }
+                if (doesSupportProtocol(pool, SSL.SSL_PROTOCOL_SSLV3)) {
+                    protocols.add(PROTOCOL_SSL_V3);
+                }
+                if (doesSupportProtocol(pool, SSL.SSL_PROTOCOL_TLSV1)) {
+                    protocols.add(PROTOCOL_TLS_V1);
+                }
+                if (doesSupportProtocol(pool, SSL.SSL_PROTOCOL_TLSV1_1)) {
+                    protocols.add(PROTOCOL_TLS_V1_1);
+                }
+                if (doesSupportProtocol(pool, SSL.SSL_PROTOCOL_TLSV1_2)) {
+                    protocols.add(PROTOCOL_TLS_V1_2);
+                }
+            } finally {
+                Pool.destroy(aprPool);
+            }
+            SUPPORTED_PROTOCOLS_SET = Collections.unmodifiableSet(protocols);
         } else {
             AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_JAVA_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_CIPHER_SUITES = Collections.emptySet();
             SUPPORTS_KEYMANAGER_FACTORY = false;
             USE_KEYMANAGER_FACTORY = false;
+            SUPPORTED_PROTOCOLS_SET = Collections.emptySet();
+        }
+    }
+
+    private static boolean doesSupportProtocol(long aprPool, int protocol) {
+        long sslCtx = -1;
+        try {
+            sslCtx = SSLContext.make(aprPool, protocol, SSL.SSL_MODE_COMBINED);
+            return true;
+        } catch (Exception ignore) {
+            return false;
+        } finally {
+            if (sslCtx != -1) {
+                SSLContext.free(sslCtx);
+            }
         }
     }
 
