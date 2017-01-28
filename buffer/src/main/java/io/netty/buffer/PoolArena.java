@@ -210,7 +210,6 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 incTinySmallNormalAllocation(normCapacity);
             }
             return;
-                
         }
         if (normCapacity <= chunkSize) {
             if (cache.allocateNormal(this, buf, reqCapacity, normCapacity)) {
