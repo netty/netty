@@ -190,41 +190,44 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
             final PoolSubpage<T> head = table[tableIdx];
 
-            try {
-                /**
-                 * Synchronize on the head. This is needed as {@link PoolChunk#allocateSubpage(int)} and
-                 * {@link PoolChunk#free(long)} may modify the doubly linked list as well.
-                 */
-                synchronized (head) {
-                    final PoolSubpage<T> s = head.next;
-                    if (s != head) {
-                        assert s.doNotDestroy && s.elemSize == normCapacity;
-                        long handle = s.allocate();
-                        assert handle >= 0;
-                        s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
-                        return;
-                    }
+            /**
+             * Synchronize on the head. This is needed as {@link PoolChunk#allocateSubpage(int)} and
+             * {@link PoolChunk#free(long)} may modify the doubly linked list as well.
+             */
+            synchronized (head) {
+                final PoolSubpage<T> s = head.next;
+                if (s != head) {
+                    assert s.doNotDestroy && s.elemSize == normCapacity;
+                    long handle = s.allocate();
+                    assert handle >= 0;
+                    s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
+                    incTinySmallNormalAllocation(normCapacity);
+                    return;
                 }
+            }
+            synchronized (this) {
                 allocateNormal(buf, reqCapacity, normCapacity);
-                return;
-            } finally {
                 incTinySmallNormalAllocation(normCapacity);
             }
+            return;
+                
         }
         if (normCapacity <= chunkSize) {
             if (cache.allocateNormal(this, buf, reqCapacity, normCapacity)) {
                 // was able to allocate out of the cache so move on
                 return;
             }
-            allocateNormal(buf, reqCapacity, normCapacity);
-            incTinySmallNormalAllocation(normCapacity);
+            synchronized (this) {
+                allocateNormal(buf, reqCapacity, normCapacity);
+                incTinySmallNormalAllocation(normCapacity);
+            }
         } else {
             // Huge allocations are never served via the cache so just call allocateHuge
             allocateHuge(buf, reqCapacity);
         }
     }
 
-    private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+    private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
             q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
             q075.allocate(buf, reqCapacity, normCapacity)) {
@@ -245,9 +248,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         } else if (isTinyOrSmall(normCapacity)) {
             allocationsSmall.increment();
         } else {
-            synchronized (this) {
-                ++allocationsNormal;
-            }
+            ++allocationsNormal;
         }
     }
 
