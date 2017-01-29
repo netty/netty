@@ -31,7 +31,7 @@ public final class MessageBuilder {
 
         public PublishBuilder topicName(String topic) {
             this.topic = topic;
-            return PublishBuilder.this;
+            return this;
         }
 
         public PublishBuilder retained(boolean retained) {
