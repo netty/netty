@@ -52,6 +52,16 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
         testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 1000, 1000, 1000), 100, 1, 1, 0);
     }
 
+    @Test
+    public void testArenaMetricsNoCacheAlign() {
+        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0, true, 64), 100, 0, 100, 100);
+    }
+
+    @Test
+    public void testArenaMetricsCacheAlign() {
+        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 1000, 1000, 1000, true, 64), 100, 1, 1, 0);
+    }
+
     private static void testArenaMetrics0(
             PooledByteBufAllocator allocator, int num, int expectedActive, int expectedAlloc, int expectedDealloc) {
         for (int i = 0; i < num; i++) {

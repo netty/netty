@@ -25,9 +25,19 @@ public class PoolArenaTest {
 
     @Test
     public void testNormalizeCapacity() throws Exception {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 0, 0, 9, 999999);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 0, 0, 9, 999999, 0);
         int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
         int[] expectedResult = {0, 16, 512, 1024, 1024, 2048};
+        for (int i = 0; i < reqCapacities.length; i ++) {
+            Assert.assertEquals(expectedResult[i], arena.normalizeCapacity(reqCapacities[i]));
+        }
+    }
+
+    @Test
+    public void testNormalizeAlignedCapacity() throws Exception {
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 0, 0, 9, 999999, 64);
+        int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
+        int[] expectedResult = {0, 64, 512, 1024, 1024, 2048};
         for (int i = 0; i < reqCapacities.length; i ++) {
             Assert.assertEquals(expectedResult[i], arena.normalizeCapacity(reqCapacities[i]));
         }
