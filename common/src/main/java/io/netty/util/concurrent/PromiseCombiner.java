@@ -49,8 +49,21 @@ public final class PromiseCombiner {
     };
 
     /**
+     * Adds a new promise to be combined. New promises may be added until an aggregate promise is added via the
+     * {@link PromiseCombiner#finish(Promise)} method.
+     *
+     * @param promise the promise to add to this promise combiner
+     *
+     * @deprecated Replaced by {@link PromiseCombiner#add(Future)}.
+     */
+    @Deprecated
+    public void add(Promise promise) {
+        add((Future) promise);
+    }
+
+    /**
      * Adds a new future to be combined. New futures may be added until an aggregate promise is added via the
-     * {@link PromiseCombiner#finish(Promise)} method has been called.
+     * {@link PromiseCombiner#finish(Promise)} method.
      *
      * @param future the future to add to this promise combiner
      */
@@ -62,8 +75,21 @@ public final class PromiseCombiner {
     }
 
     /**
+     * Adds new promises to be combined. New promises may be added until an aggregate promise is added via the
+     * {@link PromiseCombiner#finish(Promise)} method.
+     *
+     * @param promises the promises to add to this promise combiner
+     *
+     * @deprecated Replaced by {@link PromiseCombiner#addAll(Future[])}
+     */
+    @Deprecated
+    public void addAll(Promise... promises) {
+        addAll((Future[]) promises);
+    }
+
+    /**
      * Adds new futures to be combined. New futures may be added until an aggregate promise is added via the
-     * {@link PromiseCombiner#finish(Promise)} method has been called.
+     * {@link PromiseCombiner#finish(Promise)} method.
      *
      * @param futures the futures to add to this promise combiner
      */
