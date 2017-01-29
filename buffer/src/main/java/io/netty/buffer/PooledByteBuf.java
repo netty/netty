@@ -63,7 +63,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         this.chunk = chunk;
         handle = 0;
         memory = chunk.memory;
-        offset = 0;
+        offset = chunk.offset;
         this.length = maxLength = length;
         tmpNioBuf = null;
         cache = null;

@@ -43,6 +43,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     private static final int DEFAULT_MAX_CACHED_BUFFER_CAPACITY;
     private static final int DEFAULT_CACHE_TRIM_INTERVAL;
     private static final boolean DEFAULT_USE_CACHE_FOR_ALL_THREADS;
+    private static final int DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT;
 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
@@ -107,6 +108,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
         DEFAULT_USE_CACHE_FOR_ALL_THREADS = SystemPropertyUtil.getBoolean(
                 "io.netty.allocator.useCacheForAllThreads", true);
+
+        DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT = SystemPropertyUtil.getInt(
+                "io.netty.allocator.directMemoryCacheAlignment", 0);
 
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
@@ -175,12 +179,21 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
                                   int tinyCacheSize, int smallCacheSize, int normalCacheSize) {
         this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder, tinyCacheSize, smallCacheSize,
-                normalCacheSize, DEFAULT_USE_CACHE_FOR_ALL_THREADS);
+                normalCacheSize, DEFAULT_USE_CACHE_FOR_ALL_THREADS, DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
+    }
+
+    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena,
+            int nDirectArena, int pageSize, int maxOrder, int tinyCacheSize,
+            int smallCacheSize, int normalCacheSize,
+            boolean useCacheForAllThreads) {
+        this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder,
+                tinyCacheSize, smallCacheSize, normalCacheSize,
+                useCacheForAllThreads, DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
     }
 
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
                                   int tinyCacheSize, int smallCacheSize, int normalCacheSize,
-                                  boolean useCacheForAllThreads) {
+                                  boolean useCacheForAllThreads, int directMemoryCacheAlignment) {
         super(preferDirect);
         threadCache = new PoolThreadLocalCache(useCacheForAllThreads);
         this.tinyCacheSize = tinyCacheSize;
@@ -195,13 +208,25 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             throw new IllegalArgumentException("nDirectArea: " + nDirectArena + " (expected: >= 0)");
         }
 
+        if (directMemoryCacheAlignment < 0) {
+            throw new IllegalArgumentException("directMemoryCacheAlignment: "
+                    + directMemoryCacheAlignment + " (expected: >= 0)");
+        }
+
+        if ((directMemoryCacheAlignment & -directMemoryCacheAlignment) != directMemoryCacheAlignment) {
+            throw new IllegalArgumentException("directMemoryCacheAlignment: "
+                    + directMemoryCacheAlignment + " (expected: power of two)");
+        }
+
         int pageShifts = validateAndCalculatePageShifts(pageSize);
 
         if (nHeapArena > 0) {
             heapArenas = newArenaArray(nHeapArena);
             List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(heapArenas.length);
             for (int i = 0; i < heapArenas.length; i ++) {
-                PoolArena.HeapArena arena = new PoolArena.HeapArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+                PoolArena.HeapArena arena = new PoolArena.HeapArena(this,
+                        pageSize, maxOrder, pageShifts, chunkSize,
+                        directMemoryCacheAlignment);
                 heapArenas[i] = arena;
                 metrics.add(arena);
             }
@@ -216,7 +241,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(directArenas.length);
             for (int i = 0; i < directArenas.length; i ++) {
                 PoolArena.DirectArena arena = new PoolArena.DirectArena(
-                        this, pageSize, maxOrder, pageShifts, chunkSize);
+                        this, pageSize, maxOrder, pageShifts, chunkSize, directMemoryCacheAlignment);
                 directArenas[i] = arena;
                 metrics.add(arena);
             }
