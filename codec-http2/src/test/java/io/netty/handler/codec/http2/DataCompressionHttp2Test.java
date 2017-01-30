@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -256,6 +257,7 @@ public class DataCompressionHttp2Test {
     }
 
     private void bootstrapEnv(int serverOutSize) throws Exception {
+        final CountDownLatch prefaceWrittenLatch = new CountDownLatch(1);
         serverOut = new ByteArrayOutputStream(serverOutSize);
         serverLatch = new CountDownLatch(1);
         sb = new ServerBootstrap();
@@ -336,6 +338,14 @@ public class DataCompressionHttp2Test {
                         .gracefulShutdownTimeoutMillis(0)
                         .codec(decoder, clientEncoder).build();
                 p.addLast(clientHandler);
+                p.addLast(new ChannelInboundHandlerAdapter() {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt instanceof Http2ConnectionPrefaceWrittenEvent) {
+                            prefaceWrittenLatch.countDown();
+                            ctx.pipeline().remove(this);
+                        }
+                    }
+                });
             }
         });
 
@@ -345,6 +355,7 @@ public class DataCompressionHttp2Test {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
+        assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
 
