@@ -528,7 +528,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         public Http2Stream open(boolean halfClosed) throws Http2Exception {
             state = activeState(id, state, isLocal(), halfClosed);
             if (!createdBy().canOpenStream()) {
-                throw connectionError(PROTOCOL_ERROR, "Maximum active streams violated for this endpoint.");
+                throw connectionError(PROTOCOL_ERROR, String.format(
+                    "Maximum active streams %d violated for this endpoint.", createdBy().maxActiveStreams()));
             }
             activate();
             return this;
@@ -1106,10 +1107,12 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
             if (state.localSideOpen() || state.remoteSideOpen()) {
                 if (!canOpenStream()) {
-                    throw streamError(streamId, REFUSED_STREAM, "Maximum active streams violated for this endpoint.");
+                    throw streamError(streamId, REFUSED_STREAM, String.format(
+                        "Maximum active streams %d violated for this endpoint.", maxActiveStreams));
                 }
             } else if (numStreams == maxStreams) {
-                throw streamError(streamId, REFUSED_STREAM, "Maximum streams violated for this endpoint.");
+                throw streamError(streamId, REFUSED_STREAM, String.format(
+                    "Maximum streams %d violated for this endpoint.", activeStreams));
             }
             if (isClosed()) {
                 throw connectionError(INTERNAL_ERROR, "Attempted to create stream id %d after connection was closed",
