@@ -28,10 +28,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -47,151 +44,6 @@ import static org.junit.Assume.assumeTrue;
 public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
-
-    private static final Set<String> TLS_V1_1_CIPHERS = new HashSet<String>(Arrays.asList(
-            "ECDHE-RSA-AES256-SHA",
-            "DHE-RSA-AES256-SHA",
-            "DHE-RSA-CAMELLIA256-SHA",
-            "AECDH-AES256-SHA",
-            "ADH-AES256-SHA",
-            "ADH-CAMELLIA256-SHA",
-            "AES256-SHA",
-            "CAMELLIA256-SHA",
-            "ECDHE-RSA-AES128-SHA",
-            "DHE-RSA-AES128-SHA",
-            "DHE-RSA-SEED-SHA",
-            "DHE-RSA-CAMELLIA128-SHA",
-            "AECDH-AES128-SHA",
-            "ADH-AES128-SHA",
-            "ADH-SEED-SHA",
-            "ADH-CAMELLIA128-SHA",
-            "AES128-SHA",
-            "SEED-SHA",
-            "CAMELLIA128-SHA",
-            "IDEA-CBC-SHA",
-            "ECDHE-RSA-RC4-SHA",
-            "AECDH-RC4-SHA",
-            "ADH-RC4-MD5",
-            "RC4-SHA",
-            "RC4-MD5",
-            "ECDHE-RSA-DES-CBC3-SHA",
-            "EDH-RSA-DES-CBC3-SHA",
-            "AECDH-DES-CBC3-SHA",
-            "ADH-DES-CBC3-SHA",
-            "DES-CBC3-SHA"
-    ));
-
-    private static final Set<String> TLS_V1_2_CIPHERS = new HashSet<String>(Arrays.asList(
-            "ECDHE-RSA-AES256-GCM-SHA384",
-            "ECDHE-RSA-AES256-SHA384",
-            "ECDHE-RSA-AES256-SHA",
-            "DHE-RSA-AES256-GCM-SHA384",
-            "DHE-RSA-AES256-SHA256",
-            "DHE-RSA-AES256-SHA",
-            "DHE-RSA-CAMELLIA256-SHA",
-            "AECDH-AES256-SHA",
-            "ADH-AES256-GCM-SHA384",
-            "ADH-AES256-SHA256",
-            "ADH-AES256-SHA",
-            "ADH-CAMELLIA256-SHA",
-            "AES256-GCM-SHA384",
-            "AES256-SHA256",
-            "AES256-SHA",
-            "CAMELLIA256-SHA",
-            "ECDHE-RSA-AES128-GCM-SHA256",
-            "ECDHE-RSA-AES128-SHA256",
-            "ECDHE-RSA-AES128-SHA",
-            "DHE-RSA-AES128-GCM-SHA256",
-            "DHE-RSA-AES128-SHA256",
-            "DHE-RSA-AES128-SHA",
-            "DHE-RSA-SEED-SHA",
-            "DHE-RSA-CAMELLIA128-SHA",
-            "AECDH-AES128-SHA",
-            "ADH-AES128-GCM-SHA256",
-            "ADH-AES128-SHA256",
-            "ADH-AES128-SHA",
-            "ADH-SEED-SHA",
-            "ADH-CAMELLIA128-SHA",
-            "AES128-GCM-SHA256",
-            "AES128-SHA256",
-            "AES128-SHA",
-            "SEED-SHA",
-            "CAMELLIA128-SHA",
-            "IDEA-CBC-SHA",
-            "ECDHE-RSA-RC4-SHA",
-            "AECDH-RC4-SHA",
-            "ADH-RC4-MD5",
-            "RC4-SHA", "RC4-MD5",
-            "ECDHE-RSA-DES-CBC3-SHA",
-            "EDH-RSA-DES-CBC3-SHA",
-            "AECDH-DES-CBC3-SHA",
-            "ADH-DES-CBC3-SHA",
-            "DES-CBC3-SHA"
-    ));
-
-    private static final Set<String> TLS_V1_CIPHERS = new HashSet<String>(Arrays.asList(
-            "ECDHE-RSA-AES256-SHA",
-            "DHE-RSA-AES256-SHA",
-            "DHE-RSA-CAMELLIA256-SHA",
-            "AECDH-AES256-SHA",
-            "ADH-AES256-SHA",
-            "ADH-CAMELLIA256-SHA",
-            "AES256-SHA",
-            "CAMELLIA256-SHA",
-            "ECDHE-RSA-AES128-SHA",
-            "DHE-RSA-AES128-SHA",
-            "DHE-RSA-SEED-SHA",
-            "DHE-RSA-CAMELLIA128-SHA",
-            "AECDH-AES128-SHA",
-            "ADH-AES128-SHA",
-            "ADH-SEED-SHA",
-            "ADH-CAMELLIA128-SHA",
-            "AES128-SHA",
-            "SEED-SHA",
-            "CAMELLIA128-SHA",
-            "IDEA-CBC-SHA",
-            "ECDHE-RSA-RC4-SHA",
-            "AECDH-RC4-SHA",
-            "ADH-RC4-MD5",
-            "RC4-SHA",
-            "RC4-MD5",
-            "ECDHE-RSA-DES-CBC3-SHA",
-            "EDH-RSA-DES-CBC3-SHA",
-            "AECDH-DES-CBC3-SHA",
-            "ADH-DES-CBC3-SHA",
-            "DES-CBC3-SHA"
-    ));
-
-    private static final Set<String> SSL_V3_CIPHERS = new HashSet<String>(Arrays.asList(
-            "ADH-AES128-SHA",
-            "AES128-SHA",
-            "ADH-CAMELLIA128-SHA",
-            "DES-CBC3-SHA",
-            "AECDH-AES128-SHA",
-            "AECDH-DES-CBC3-SHA",
-            "CAMELLIA128-SHA",
-            "DHE-RSA-AES256-SHA",
-            "SEED-SHA",
-            "RC4-MD5",
-            "ADH-AES256-SHA",
-            "AES256-SHA",
-            "ADH-SEED-SHA",
-            "ADH-DES-CBC3-SHA",
-            "EDH-RSA-DES-CBC3-SHA",
-            "ADH-RC4-MD5",
-            "IDEA-CBC-SHA",
-            "DHE-RSA-AES128-SHA",
-            "RC4-SHA",
-            "CAMELLIA256-SHA",
-            "AECDH-RC4-SHA",
-            "DHE-RSA-SEED-SHA",
-            "AECDH-AES256-SHA",
-            "ECDHE-RSA-DES-CBC3-SHA",
-            "ADH-CAMELLIA256-SHA",
-            "DHE-RSA-CAMELLIA256-SHA",
-            "DHE-RSA-CAMELLIA128-SHA",
-            "ECDHE-RSA-RC4-SHA"
-    ));
 
     public OpenSslEngineTest(BufferType type) {
         super(type);
@@ -418,27 +270,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Test
     public void testWrapWithDifferentSizesTLSv1() throws Exception {
-        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, TLS_V1_CIPHERS);
-    }
-
-    @Test
-    public void testWrapWithDifferentSizesTLSv1_1() throws Exception {
-        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, TLS_V1_1_CIPHERS);
-    }
-
-    @Test
-    public void testWrapWithDifferentSizesTLSv1_2() throws Exception {
-        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, TLS_V1_2_CIPHERS);
-    }
-
-    @Test
-    public void testWrapWithDifferentSizesSSLv3() throws Exception {
-        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, SSL_V3_CIPHERS);
-    }
-
-    private void testWrapWithDifferentSizes(String protocol, Set<String> ciphers) throws Exception {
-        assumeTrue(OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocol));
-
         clientSslCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
@@ -448,33 +279,210 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .sslProvider(sslServerProvider())
                 .build();
 
-        for (String cipher : ciphers) {
-            if (!OpenSsl.isCipherSuiteAvailable(cipher)) {
-                continue;
-            }
-            SSLEngine clientEngine = null;
-            SSLEngine serverEngine = null;
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "ADH-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "ECDHE-RSA-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "ADH-CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "AECDH-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "AECDH-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "DHE-RSA-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "SEED-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "RC4-MD5");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "ADH-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "ADH-SEED-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "ADH-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "EDH-RSA-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "ADH-RC4-MD5");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "IDEA-CBC-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "DHE-RSA-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "RC4-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "AECDH-RC4-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "DHE-RSA-SEED-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "AECDH-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "ECDHE-RSA-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "ADH-CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "DHE-RSA-CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "ECDHE-RSA-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "DHE-RSA-CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1, "ECDHE-RSA-RC4-SHA");
+    }
+
+    @Test
+    public void testWrapWithDifferentSizesTLSv1_1() throws Exception {
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .build();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "ECDHE-RSA-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "DHE-RSA-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "DHE-RSA-CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "ADH-CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "ADH-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "AECDH-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "DHE-RSA-CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "ECDHE-RSA-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "ADH-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "ADH-SEED-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "ADH-CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "SEED-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "IDEA-CBC-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "AECDH-RC4-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "ADH-RC4-MD5");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "RC4-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "ECDHE-RSA-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "EDH-RSA-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "AECDH-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "ADH-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_1, "DES-CBC3-SHA");
+    }
+
+    @Test
+    public void testWrapWithDifferentSizesTLSv1_2() throws Exception {
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .build();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ADH-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ADH-CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "DHE-RSA-AES256-GCM-SHA384");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "AECDH-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "AES128-GCM-SHA256");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "DHE-RSA-AES128-GCM-SHA256");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES256-SHA384");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "AECDH-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "AES256-GCM-SHA384");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "AES256-SHA256");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES128-GCM-SHA256");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES128-SHA256");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "DHE-RSA-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "SEED-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "RC4-MD5");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ADH-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ADH-SEED-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "DHE-RSA-AES128-SHA256");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ADH-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "EDH-RSA-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ADH-RC4-MD5");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "IDEA-CBC-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "DHE-RSA-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "RC4-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ADH-AES128-GCM-SHA256");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "AES128-SHA256");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "AECDH-RC4-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ADH-AES256-GCM-SHA384");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "DHE-RSA-SEED-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "DHE-RSA-AES256-SHA256");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "AECDH-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ECDHE-RSA-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ADH-CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES256-GCM-SHA384");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "DHE-RSA-CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ADH-AES256-SHA256");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ADH-AES128-SHA256");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "DHE-RSA-CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_TLS_V1_2, "ECDHE-RSA-RC4-SHA");
+    }
+
+    @Test
+    public void testWrapWithDifferentSizesSSLv3() throws Exception {
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .build();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "ADH-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "ADH-CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "AECDH-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "AECDH-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "DHE-RSA-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "SEED-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "RC4-MD5");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "ADH-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "ADH-SEED-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "ADH-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "EDH-RSA-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "ADH-RC4-MD5");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "IDEA-CBC-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "DHE-RSA-AES128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "RC4-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "AECDH-RC4-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "DHE-RSA-SEED-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "AECDH-AES256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "ECDHE-RSA-DES-CBC3-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "ADH-CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "DHE-RSA-CAMELLIA256-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "DHE-RSA-CAMELLIA128-SHA");
+        testWrapWithDifferentSizes(OpenSsl.PROTOCOL_SSL_V3, "ECDHE-RSA-RC4-SHA");
+    }
+
+    private void testWrapWithDifferentSizes(String protocol, String cipher) throws Exception {
+        assumeTrue(OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocol));
+        if (!OpenSsl.isCipherSuiteAvailable(cipher)) {
+            return;
+        }
+
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            clientEngine.setEnabledCipherSuites(new String[] { cipher });
+            clientEngine.setEnabledProtocols(new String[] { protocol });
+            serverEngine.setEnabledCipherSuites(new String[] { cipher });
+            serverEngine.setEnabledProtocols(new String[] { protocol });
+
             try {
-                clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-                serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-                clientEngine.setEnabledCipherSuites(new String[] { cipher });
-                clientEngine.setEnabledProtocols(new String[] { protocol });
-                serverEngine.setEnabledCipherSuites(new String[] { cipher });
-                serverEngine.setEnabledProtocols(new String[] { protocol });
-
                 handshake(clientEngine, serverEngine);
-
-                int srcLen = 64;
-                do {
-                    testWrapDstBigEnough(clientEngine, srcLen);
-                    srcLen += 64;
-                } while (srcLen < ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH);
-
-                testWrapDstBigEnough(clientEngine, ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH);
-            } finally {
-                cleanupClientSslEngine(clientEngine);
-                cleanupServerSslEngine(serverEngine);
+            } catch (SSLException e) {
+                if (e.getMessage().contains("unsupported protocol")) {
+                    Assume.assumeNoException(protocol + " not supported with cipher " + cipher, e);
+                }
+                throw e;
             }
+
+            int srcLen = 64;
+            do {
+                testWrapDstBigEnough(clientEngine, srcLen);
+                srcLen += 64;
+            } while (srcLen < ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH);
+
+            testWrapDstBigEnough(clientEngine, ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH);
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
         }
     }
 
