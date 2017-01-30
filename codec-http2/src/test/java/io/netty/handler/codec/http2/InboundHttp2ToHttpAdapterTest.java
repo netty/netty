@@ -22,6 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -745,6 +746,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
     private void boostrapEnv(int clientLatchCount, int clientLatchCount2, int serverLatchCount, int serverLatchCount2,
             int settingsLatchCount) throws InterruptedException {
+        final CountDownLatch prefaceWrittenLatch = new CountDownLatch(1);
         clientDelegator = null;
         serverDelegator = null;
         serverConnectedChannel = null;
@@ -818,6 +820,14 @@ public class InboundHttp2ToHttpAdapterTest {
                         }
                     }
                 });
+                p.addLast(new ChannelInboundHandlerAdapter() {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt instanceof Http2ConnectionPrefaceWrittenEvent) {
+                            prefaceWrittenLatch.countDown();
+                            ctx.pipeline().remove(this);
+                        }
+                    }
+                });
             }
         });
 
@@ -826,6 +836,7 @@ public class InboundHttp2ToHttpAdapterTest {
         ChannelFuture ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
+        assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
 
