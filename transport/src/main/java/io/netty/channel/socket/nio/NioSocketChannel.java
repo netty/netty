@@ -183,6 +183,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
+    protected boolean isInputShutdown0() {
+        return isInputShutdown();
+    }
+
+    @Override
     public ChannelFuture shutdownInput(final ChannelPromise promise) {
         Executor closeExecutor = ((NioSocketChannelUnsafe) unsafe()).prepareToClose();
         if (closeExecutor != null) {
