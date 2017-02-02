@@ -44,7 +44,7 @@ final class DnsQueryContext {
 
     private final DnsNameResolver parent;
     private final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise;
-    private final int id;
+    private final short id;
     private final DnsQuestion question;
     private final DnsRecord[] additionals;
     private final DnsRecord optResource;

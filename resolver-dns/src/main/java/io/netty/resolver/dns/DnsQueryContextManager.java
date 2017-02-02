@@ -38,10 +38,10 @@ final class DnsQueryContextManager {
     final Map<InetSocketAddress, IntObjectMap<DnsQueryContext>> map =
             new HashMap<InetSocketAddress, IntObjectMap<DnsQueryContext>>();
 
-    int add(DnsQueryContext qCtx) {
+    short add(DnsQueryContext qCtx) {
         final IntObjectMap<DnsQueryContext> contexts = getOrCreateContextMap(qCtx.nameServerAddr());
 
-        int id = ThreadLocalRandom.current().nextInt(1, 65536);
+        short id = (short) ThreadLocalRandom.current().nextInt(Short.MIN_VALUE, Short.MAX_VALUE);
         final int maxTries = 65535 << 1;
         int tries = 0;
 
@@ -52,7 +52,7 @@ final class DnsQueryContextManager {
                     return id;
                 }
 
-                id = id + 1 & 0xFFFF;
+                id++;
 
                 if (++tries >= maxTries) {
                     throw new IllegalStateException("query ID space exhausted: " + qCtx.question());
@@ -61,7 +61,7 @@ final class DnsQueryContextManager {
         }
     }
 
-    DnsQueryContext get(InetSocketAddress nameServerAddr, int id) {
+    DnsQueryContext get(InetSocketAddress nameServerAddr, short id) {
         final IntObjectMap<DnsQueryContext> contexts = getContextMap(nameServerAddr);
         final DnsQueryContext qCtx;
         if (contexts != null) {
@@ -75,7 +75,7 @@ final class DnsQueryContextManager {
         return qCtx;
     }
 
-    DnsQueryContext remove(InetSocketAddress nameServerAddr, int id) {
+    DnsQueryContext remove(InetSocketAddress nameServerAddr, short id) {
         final IntObjectMap<DnsQueryContext> contexts = getContextMap(nameServerAddr);
         if (contexts == null) {
             return null;

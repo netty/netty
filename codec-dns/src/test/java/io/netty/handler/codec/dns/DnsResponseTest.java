@@ -82,7 +82,7 @@ public class DnsResponseTest {
             assertThat(response, is(sameInstance((Object) envelope)));
 
             ByteBuf raw = Unpooled.wrappedBuffer(p);
-            assertThat(response.id(), is(raw.getUnsignedShort(0)));
+            assertThat(response.id(), is(raw.getShort(0)));
             assertThat(response.count(DnsSection.QUESTION), is(raw.getUnsignedShort(4)));
             assertThat(response.count(DnsSection.ANSWER), is(raw.getUnsignedShort(6)));
             assertThat(response.count(DnsSection.AUTHORITY), is(raw.getUnsignedShort(8)));

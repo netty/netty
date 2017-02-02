@@ -77,7 +77,7 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
     }
 
     private static DnsQuery newQuery(DatagramPacket packet, ByteBuf buf) {
-        final int id = buf.readUnsignedShort();
+        final short id = buf.readShort();
 
         final int flags = buf.readUnsignedShort();
         if (flags >> 15 == 1) {

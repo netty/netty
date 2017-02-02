@@ -77,7 +77,7 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
     }
 
     private static DnsResponse newResponse(DatagramPacket packet, ByteBuf buf) {
-        final int id = buf.readUnsignedShort();
+        final short id = buf.readShort();
 
         final int flags = buf.readUnsignedShort();
         if (flags >> 15 == 0) {

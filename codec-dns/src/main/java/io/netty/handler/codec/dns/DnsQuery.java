@@ -23,7 +23,7 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public interface DnsQuery extends DnsMessage {
     @Override
-    DnsQuery setId(int id);
+    DnsQuery setId(short id);
 
     @Override
     DnsQuery setOpCode(DnsOpCode opCode);

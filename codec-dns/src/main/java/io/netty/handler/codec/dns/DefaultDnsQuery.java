@@ -28,7 +28,7 @@ public class DefaultDnsQuery extends AbstractDnsMessage implements DnsQuery {
      *
      * @param id the {@code ID} of the DNS query
      */
-    public DefaultDnsQuery(int id) {
+    public DefaultDnsQuery(short id) {
         super(id);
     }
 
@@ -38,12 +38,12 @@ public class DefaultDnsQuery extends AbstractDnsMessage implements DnsQuery {
      * @param id the {@code ID} of the DNS query
      * @param opCode the {@code opCode} of the DNS query
      */
-    public DefaultDnsQuery(int id, DnsOpCode opCode) {
+    public DefaultDnsQuery(short id, DnsOpCode opCode) {
         super(id, opCode);
     }
 
     @Override
-    public DnsQuery setId(int id) {
+    public DnsQuery setId(short id) {
         return (DnsQuery) super.setId(id);
     }
 

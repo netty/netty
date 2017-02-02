@@ -910,7 +910,7 @@ public class DnsNameResolver extends InetNameResolver {
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             try {
                 final DatagramDnsResponse res = (DatagramDnsResponse) msg;
-                final int queryId = res.id();
+                final short queryId = res.id();
 
                 if (logger.isDebugEnabled()) {
                     logger.debug("{} RECEIVED: [{}: {}], {}", ch, queryId, res.sender(), res);

@@ -39,7 +39,7 @@ public class DatagramDnsResponse extends DefaultDnsResponse
      * @param recipient the address of the recipient
      * @param id the {@code ID} of the DNS response
      */
-    public DatagramDnsResponse(InetSocketAddress sender, InetSocketAddress recipient, int id) {
+    public DatagramDnsResponse(InetSocketAddress sender, InetSocketAddress recipient, short id) {
         this(sender, recipient, id, DnsOpCode.QUERY, DnsResponseCode.NOERROR);
     }
 
@@ -51,7 +51,7 @@ public class DatagramDnsResponse extends DefaultDnsResponse
      * @param id the {@code ID} of the DNS response
      * @param opCode the {@code opCode} of the DNS response
      */
-    public DatagramDnsResponse(InetSocketAddress sender, InetSocketAddress recipient, int id, DnsOpCode opCode) {
+    public DatagramDnsResponse(InetSocketAddress sender, InetSocketAddress recipient, short id, DnsOpCode opCode) {
         this(sender, recipient, id, opCode, DnsResponseCode.NOERROR);
     }
 
@@ -66,7 +66,7 @@ public class DatagramDnsResponse extends DefaultDnsResponse
      */
     public DatagramDnsResponse(
             InetSocketAddress sender, InetSocketAddress recipient,
-            int id, DnsOpCode opCode, DnsResponseCode responseCode) {
+            short id, DnsOpCode opCode, DnsResponseCode responseCode) {
         super(id, opCode, responseCode);
 
         if (recipient == null && sender == null) {
@@ -113,7 +113,7 @@ public class DatagramDnsResponse extends DefaultDnsResponse
     }
 
     @Override
-    public DatagramDnsResponse setId(int id) {
+    public DatagramDnsResponse setId(short id) {
         return (DatagramDnsResponse) super.setId(id);
     }
 

@@ -39,7 +39,7 @@ public class DatagramDnsQuery extends DefaultDnsQuery
      * @param id the {@code ID} of the DNS query
      */
     public DatagramDnsQuery(
-            InetSocketAddress sender, InetSocketAddress recipient, int id) {
+            InetSocketAddress sender, InetSocketAddress recipient, short id) {
         this(sender, recipient, id, DnsOpCode.QUERY);
     }
 
@@ -52,7 +52,7 @@ public class DatagramDnsQuery extends DefaultDnsQuery
      * @param opCode the {@code opCode} of the DNS query
      */
     public DatagramDnsQuery(
-            InetSocketAddress sender, InetSocketAddress recipient, int id, DnsOpCode opCode) {
+            InetSocketAddress sender, InetSocketAddress recipient, short id, DnsOpCode opCode) {
         super(id, opCode);
 
         if (recipient == null && sender == null) {
@@ -79,7 +79,7 @@ public class DatagramDnsQuery extends DefaultDnsQuery
     }
 
     @Override
-    public DatagramDnsQuery setId(int id) {
+    public DatagramDnsQuery setId(short id) {
         return (DatagramDnsQuery) super.setId(id);
     }
 
