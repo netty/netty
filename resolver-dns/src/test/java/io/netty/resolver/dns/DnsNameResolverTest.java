@@ -31,24 +31,29 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
-import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.apache.directory.server.dns.DnsException;
 import org.apache.directory.server.dns.messages.DnsMessage;
+import org.apache.directory.server.dns.messages.QuestionRecord;
 import org.apache.directory.server.dns.messages.RecordClass;
 import org.apache.directory.server.dns.messages.RecordType;
 import org.apache.directory.server.dns.messages.ResourceRecord;
 import org.apache.directory.server.dns.messages.ResourceRecordModifier;
 import org.apache.directory.server.dns.store.DnsAttribute;
+import org.apache.directory.server.dns.store.RecordStore;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -64,11 +69,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.resolver.dns.DnsServerAddresses.sequential;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
@@ -271,9 +278,15 @@ public class DnsNameResolverTest {
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
 
     private static DnsNameResolverBuilder newResolver(boolean decodeToUnicode) {
+        return newResolver(decodeToUnicode, NoopDnsServerAddressStreamProvider.INSTANCE);
+    }
+
+    private static DnsNameResolverBuilder newResolver(boolean decodeToUnicode,
+                                                      DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
         return new DnsNameResolverBuilder(group.next())
                 .channelType(NioDatagramChannel.class)
                 .nameServerAddresses(DnsServerAddresses.singleton(dnsServer.localAddress()))
+                .nameServerCache(dnsServerAddressStreamProvider)
                 .maxQueriesPerResolve(1)
                 .decodeIdn(decodeToUnicode)
                 .optResourceEnabled(false);
@@ -321,6 +334,73 @@ public class DnsNameResolverTest {
             testResolve0(resolver, EXCLUSIONS_RESOLVE_A);
         } finally {
             resolver.close();
+        }
+    }
+
+    /**
+     * This test will start an second DNS test server which returns fixed results that can be easily verified as
+     * originating from the second DNS test server. The resolver will put {@link DnsServerAddressStreamProvider} under
+     * test to ensure that some hostnames can be directed toward both the primary and secondary DNS test servers
+     * simultaneously.
+     */
+    @Test
+    public void testNameServerCache() throws IOException, InterruptedException {
+        final String overriddenIP = "12.34.12.34";
+        final TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) throws DnsException {
+                ResourceRecordModifier rm = new ResourceRecordModifier();
+                rm.setDnsClass(RecordClass.IN);
+                rm.setDnsName(question.getDomainName());
+                rm.setDnsTtl(100);
+                rm.setDnsType(question.getRecordType());
+                switch (question.getRecordType()) {
+                    case A:
+                        rm.put(DnsAttribute.IP_ADDRESS, overriddenIP);
+                        break;
+                    default:
+                        return null;
+                }
+                return Collections.singleton(rm.getEntry());
+            }
+        });
+        dnsServer2.start();
+        try {
+            final Set<String> overridenHostnames = new HashSet<String>();
+            for (String name : DOMAINS) {
+                if (EXCLUSIONS_RESOLVE_A.contains(name)) {
+                    continue;
+                }
+                if (ThreadLocalRandom.current().nextBoolean()) {
+                    overridenHostnames.add(name);
+                }
+            }
+            DnsNameResolver resolver = newResolver(false, new DnsServerAddressStreamProvider() {
+                @Override
+                public DnsServerAddressStream nameServerAddressStream(String hostname) {
+                    return overridenHostnames.contains(hostname) ? sequential(dnsServer2.localAddress()).stream() :
+                                                                   null;
+                }
+            }).build();
+            try {
+                final Map<String, InetAddress> resultA = testResolve0(resolver, EXCLUSIONS_RESOLVE_A);
+                for (Entry<String, InetAddress> resolvedEntry : resultA.entrySet()) {
+                    if (resolvedEntry.getValue().getHostAddress().equalsIgnoreCase("localhost")) {
+                        continue;
+                    }
+                    if (overridenHostnames.contains(resolvedEntry.getKey())) {
+                        assertEquals("failed to resolve " + resolvedEntry.getKey(),
+                                overriddenIP, resolvedEntry.getValue().getHostAddress());
+                    } else {
+                        assertNotEquals("failed to resolve " + resolvedEntry.getKey(),
+                                overriddenIP, resolvedEntry.getValue().getHostAddress());
+                    }
+                }
+            } finally {
+                resolver.close();
+            }
+        } finally {
+            dnsServer2.stop();
         }
     }
 
@@ -683,7 +763,7 @@ public class DnsNameResolverTest {
                 group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
                 DnsServerAddresses.singleton(dnsServer.localAddress()), NoopDnsCache.INSTANCE, nsCache,
                 3000, ResolvedAddressTypes.IPV4_ONLY, true, 10,
-                true, 4096, false, HostsFileEntriesResolver.DEFAULT,
+                true, 4096, false, HostsFileEntriesResolver.DEFAULT, NoopDnsServerAddressStreamProvider.INSTANCE,
                 DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
             @Override
             int dnsRedirectPort(InetAddress server) {

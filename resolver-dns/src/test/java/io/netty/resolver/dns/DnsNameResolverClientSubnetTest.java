@@ -61,6 +61,7 @@ public class DnsNameResolverClientSubnetTest {
         return new DnsNameResolverBuilder(group.next())
                 .channelType(NioDatagramChannel.class)
                 .nameServerAddresses(DnsServerAddresses.singleton(SocketUtils.socketAddress("8.8.8.8", 53)))
+                .nameServerCache(NoopDnsServerAddressStreamProvider.INSTANCE)
                 .maxQueriesPerResolve(1)
                 .optResourceEnabled(false);
     }
