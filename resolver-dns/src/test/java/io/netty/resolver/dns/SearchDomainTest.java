@@ -46,6 +46,7 @@ public class SearchDomainTest {
         return new DnsNameResolverBuilder(group.next())
             .channelType(NioDatagramChannel.class)
             .nameServerAddresses(DnsServerAddresses.singleton(dnsServer.localAddress()))
+            .nameServerCache(NoopDnsServerAddressStreamProvider.INSTANCE)
             .maxQueriesPerResolve(1)
             .optResourceEnabled(false);
     }

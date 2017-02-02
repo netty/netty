@@ -23,13 +23,13 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsRecordDecoder;
-import io.netty.handler.codec.dns.DnsResponseCode;
-import io.netty.handler.codec.dns.DnsSection;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
+import io.netty.handler.codec.dns.DnsResponseCode;
+import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -89,13 +89,14 @@ abstract class DnsNameResolverContext<T> {
     protected DnsNameResolverContext(DnsNameResolver parent,
                                      String hostname,
                                      DnsRecord[] additionals,
-                                     DnsCache resolveCache) {
+                                     DnsCache resolveCache,
+                                     DnsServerAddressStream nameServerAddrs) {
         this.parent = parent;
         this.hostname = hostname;
         this.additionals = additionals;
         this.resolveCache = resolveCache;
 
-        nameServerAddrs = parent.nameServerAddresses.stream();
+        this.nameServerAddrs = nameServerAddrs;
         maxAllowedQueries = parent.maxQueriesPerResolve();
         resolvedInternetProtocolFamilies = parent.resolvedInternetProtocolFamiliesUnsafe();
         traceEnabled = parent.isTraceEnabled();
@@ -120,7 +121,7 @@ abstract class DnsNameResolverContext<T> {
                         Promise<T> nextPromise = parent.executor().newPromise();
                         String nextHostname = hostname + '.' + searchDomain;
                         DnsNameResolverContext<T> nextContext = newResolverContext(parent,
-                            nextHostname, additionals, resolveCache);
+                            nextHostname, additionals, resolveCache, nameServerAddrs);
                         nextContext.pristineHostname = hostname;
                         nextContext.internalResolve(nextPromise);
                         nextPromise.addListener(this);
@@ -654,7 +655,8 @@ abstract class DnsNameResolverContext<T> {
                                    Promise<T> promise);
 
     abstract DnsNameResolverContext<T> newResolverContext(DnsNameResolver parent, String hostname,
-                                                          DnsRecord[] additionals, DnsCache resolveCache);
+                                                          DnsRecord[] additionals, DnsCache resolveCache,
+                                                          DnsServerAddressStream nameServerAddrs);
 
     static String decodeDomainName(ByteBuf in) {
         in.markReaderIndex();
