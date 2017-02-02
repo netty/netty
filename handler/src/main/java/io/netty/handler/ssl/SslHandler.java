@@ -417,8 +417,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * {@link Channel}. If the close_notify was not flushed in the given timeout the {@link Channel} will be closed
      * forcibily.
      */
-    public final void setCloseNotifyFlushTimeout(long closeNotifyFlushTimeoutMillis, TimeUnit unit) {
-        setCloseNotifyFlushTimeoutMillis(unit.toMillis(closeNotifyFlushTimeoutMillis));
+    public final void setCloseNotifyFlushTimeout(long closeNotifyFlushTimeout, TimeUnit unit) {
+        setCloseNotifyFlushTimeoutMillis(unit.toMillis(closeNotifyFlushTimeout));
     }
 
     /**
@@ -446,8 +446,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * {@link Channel}. This timeout starts after the close_notify message was successfully written to the
      * remote peer. Use {@code 0} to directly close the {@link Channel} and not wait for the response.
      */
-    public final void setCloseNotifyReadTimeout(long closeNotifyReadTimeoutMillis, TimeUnit unit) {
-        setCloseNotifyReadTimeoutMillis(unit.toMillis(closeNotifyReadTimeoutMillis));
+    public final void setCloseNotifyReadTimeout(long closeNotifyReadTimeout, TimeUnit unit) {
+        setCloseNotifyReadTimeoutMillis(unit.toMillis(closeNotifyReadTimeout));
     }
 
     /**
