@@ -106,6 +106,12 @@
       <artifactId>Agrona</artifactId>
       <version>0.5.1</version>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>${tcnative.artifactId}</artifactId>
+      <classifier>${tcnative.classifier}</classifier>
+      <optional>false</optional>
+    </dependency>
   </dependencies>
 
   <build>
