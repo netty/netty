@@ -916,59 +916,65 @@ public abstract class SSLEngineTest {
             int cTOsPos = cTOs.position();
             int sTOcPos = sTOc.position();
 
-            clientResult = clientEngine.wrap(empty, cTOs);
-            runDelegatedTasks(clientResult, clientEngine);
-            serverResult = serverEngine.wrap(empty, sTOc);
-            runDelegatedTasks(serverResult, serverEngine);
+            if (!clientHandshakeFinished) {
+                clientResult = clientEngine.wrap(empty, cTOs);
+                runDelegatedTasks(clientResult, clientEngine);
+                assertEquals(empty.remaining(), clientResult.bytesConsumed());
+                assertEquals(cTOs.position() - cTOsPos,  clientResult.bytesProduced());
 
-            // Verify that the consumed and produced number match what is in the buffers now.
-            assertEquals(empty.remaining(), clientResult.bytesConsumed());
-            assertEquals(empty.remaining(), serverResult.bytesConsumed());
-            assertEquals(cTOs.position() - cTOsPos,  clientResult.bytesProduced());
-            assertEquals(sTOc.position() - sTOcPos, serverResult.bytesProduced());
+                if (isHandshakeFinished(clientResult)) {
+                    clientHandshakeFinished = true;
+                }
+            }
+
+            if (!serverHandshakeFinished) {
+                serverResult = serverEngine.wrap(empty, sTOc);
+                runDelegatedTasks(serverResult, serverEngine);
+                assertEquals(empty.remaining(), serverResult.bytesConsumed());
+                assertEquals(sTOc.position() - sTOcPos, serverResult.bytesProduced());
+
+                if (isHandshakeFinished(serverResult)) {
+                    serverHandshakeFinished = true;
+                }
+            }
 
             cTOs.flip();
             sTOc.flip();
 
-            // Verify that we only had one SSLEngineResult.HandshakeStatus.FINISHED
-            if (isHandshakeFinished(clientResult)) {
-                assertFalse(clientHandshakeFinished);
-                clientHandshakeFinished = true;
-            }
-            if (isHandshakeFinished(serverResult)) {
-                assertFalse(serverHandshakeFinished);
-                serverHandshakeFinished = true;
-            }
-
             cTOsPos = cTOs.position();
             sTOcPos = sTOc.position();
 
-            int clientAppReadBufferPos = clientAppReadBuffer.position();
-            int serverAppReadBufferPos = serverAppReadBuffer.position();
+            if (!clientHandshakeFinished) {
+                int clientAppReadBufferPos = clientAppReadBuffer.position();
+                clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
 
-            clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
-            runDelegatedTasks(clientResult, clientEngine);
-            serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
-            runDelegatedTasks(serverResult, serverEngine);
+                runDelegatedTasks(clientResult, clientEngine);
+                assertEquals(sTOc.position() - sTOcPos, clientResult.bytesConsumed());
+                assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos, clientResult.bytesProduced());
 
-            // Verify that the consumed and produced number match what is in the buffers now.
-            assertEquals(sTOc.position() - sTOcPos, clientResult.bytesConsumed());
-            assertEquals(cTOs.position() - cTOsPos, serverResult.bytesConsumed());
-            assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos, clientResult.bytesProduced());
-            assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos, serverResult.bytesProduced());
+                if (isHandshakeFinished(clientResult)) {
+                    clientHandshakeFinished = true;
+                }
+            } else {
+                assertFalse(sTOc.hasRemaining());
+            }
 
-            cTOs.compact();
+            if (!serverHandshakeFinished) {
+                int serverAppReadBufferPos = serverAppReadBuffer.position();
+                serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
+                runDelegatedTasks(serverResult, serverEngine);
+                assertEquals(cTOs.position() - cTOsPos, serverResult.bytesConsumed());
+                assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos, serverResult.bytesProduced());
+
+                if (isHandshakeFinished(serverResult)) {
+                    serverHandshakeFinished = true;
+                }
+            } else {
+                assertFalse(cTOs.hasRemaining());
+            }
+
             sTOc.compact();
-
-            // Verify that we only had one SSLEngineResult.HandshakeStatus.FINISHED
-            if (isHandshakeFinished(clientResult)) {
-                assertFalse(clientHandshakeFinished);
-                clientHandshakeFinished = true;
-            }
-            if (isHandshakeFinished(serverResult)) {
-                assertFalse(serverHandshakeFinished);
-                serverHandshakeFinished = true;
-            }
+            cTOs.compact();
         } while (!clientHandshakeFinished || !serverHandshakeFinished);
     }
 
