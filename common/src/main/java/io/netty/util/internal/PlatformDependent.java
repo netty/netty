@@ -288,10 +288,12 @@ public final class PlatformDependent {
     }
 
     /**
-     * Creates a new fastest {@link LongCounter} implementaion for the current platform.
+     * Creates a new fastest {@link LongCounter} implementation for the current platform.
      */
     public static LongCounter newLongCounter() {
-        if (HAS_UNSAFE) {
+        if (JAVA_VERSION >= 8) {
+            return LongAdderFactory.newLongCounter();
+        } else if (HAS_UNSAFE) {
             return new LongAdderV8();
         } else {
             return new AtomicLongCounter();
