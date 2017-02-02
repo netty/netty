@@ -523,11 +523,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         @Override
         void epollInReady() {
             assert eventLoop().inEventLoop();
-            if (fd().isInputShutdown()) {
+            DatagramChannelConfig config = config();
+            if (shouldBreakEpollInReady(config)) {
                 clearEpollIn0();
                 return;
             }
-            DatagramChannelConfig config = config();
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 

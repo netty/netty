@@ -15,12 +15,11 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
 
 final class EpollRecvByteAllocatorStreamingHandle extends EpollRecvByteAllocatorHandle {
-    public EpollRecvByteAllocatorStreamingHandle(RecvByteBufAllocator.Handle handle, ChannelConfig config) {
-        super(handle, config);
+    public EpollRecvByteAllocatorStreamingHandle(RecvByteBufAllocator.ExtendedHandle handle) {
+        super(handle);
     }
 
     @Override
@@ -31,6 +30,6 @@ final class EpollRecvByteAllocatorStreamingHandle extends EpollRecvByteAllocator
          *
          * If EPOLLRDHUP has been received we must read until we get a read error.
          */
-        return isEdgeTriggered() && (lastBytesRead() == attemptedBytesRead() || isReceivedRdHup());
+        return lastBytesRead() == attemptedBytesRead() || isReceivedRdHup();
     }
 }
