@@ -795,7 +795,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     }
 
     class EpollStreamUnsafe extends AbstractEpollUnsafe {
-
         // Overridden here just to be able to access this method from AbstractEpollStreamChannel
         @Override
         protected Executor prepareToClose() {
@@ -816,7 +815,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             pipeline.fireChannelReadComplete();
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof IOException) {
-                shutdownInput();
+                shutdownInput(false);
             }
         }
 
@@ -963,17 +962,17 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
 
         @Override
-        EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.Handle handle) {
-            return new EpollRecvByteAllocatorStreamingHandle(handle, config());
+        EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.ExtendedHandle handle) {
+            return new EpollRecvByteAllocatorStreamingHandle(handle);
         }
 
         @Override
         void epollInReady() {
-            if (fd().isInputShutdown()) {
+            final ChannelConfig config = config();
+            if (shouldBreakEpollInReady(config)) {
                 clearEpollIn0();
                 return;
             }
-            final ChannelConfig config = config();
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
@@ -1018,7 +1017,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
 
-                    if (fd().isInputShutdown()) {
+                    if (shouldBreakEpollInReady(config)) {
                         // We need to do this for two reasons:
                         //
                         // - If the input was shutdown in between (which may be the case when the user did it in the
@@ -1038,7 +1037,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 pipeline.fireChannelReadComplete();
 
                 if (close) {
-                    shutdownInput();
+                    shutdownInput(false);
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
