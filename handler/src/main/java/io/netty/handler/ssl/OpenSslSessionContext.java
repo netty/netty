@@ -81,6 +81,20 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
     }
 
     /**
+     * Sets the SSL session ticket keys of this context.
+     */
+    public void setTicketKeys(OpenSslSessionTicketKey... keys) {
+        if (keys == null) {
+            throw new NullPointerException("keys");
+        }
+        SessionTicketKey[] ticketKeys = new SessionTicketKey[keys.length];
+        for (int i = 0; i < ticketKeys.length; i++) {
+            ticketKeys[i] = keys[i].key;
+        }
+        SSLContext.setSessionTicketKeys(context, ticketKeys);
+    }
+
+    /**
      * Enable or disable caching of SSL sessions.
      */
     public abstract void setSessionCacheEnabled(boolean enabled);
