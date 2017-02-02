@@ -15,17 +15,26 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.util.UncheckedBooleanSupplier;
+import io.netty.util.internal.ObjectUtil;
 
-class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle {
+class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandle {
+    private final RecvByteBufAllocator.ExtendedHandle delegate;
     private boolean isEdgeTriggered;
-    private final ChannelConfig config;
     private boolean receivedRdHup;
+    private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = new UncheckedBooleanSupplier() {
+        @Override
+        public boolean get() {
+            return maybeMoreDataToRead();
+        }
+    };
 
-    EpollRecvByteAllocatorHandle(RecvByteBufAllocator.Handle handle, ChannelConfig config) {
-        super(handle);
-        this.config = config;
+    EpollRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
+        this.delegate = ObjectUtil.checkNotNull(handle, "handle");
     }
 
     final void receivedRdHup() {
@@ -37,8 +46,16 @@ class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle
     }
 
     boolean maybeMoreDataToRead() {
-        // If EPOLLRDHUP has been received we must read until we get a read error.
-        return isEdgeTriggered && (lastBytesRead() > 0 || receivedRdHup);
+        /**
+         * EPOLL ET requires that we read until we get an EAGAIN
+         * (see Q9 in <a href="http://man7.org/linux/man-pages/man7/epoll.7.html">epoll man</a>). However in order to
+         * respect auto read we supporting reading to stop if auto read is off. It is expected that the
+         * {@link #EpollSocketChannel} implementations will track if we are in edgeTriggered mode and all data was not
+         * read, and will force a EPOLLIN ready event.
+         */
+        return (isEdgeTriggered && lastBytesRead() > 0) ||
+               (!isEdgeTriggered && lastBytesRead() == attemptedBytesRead()) ||
+                receivedRdHup;
     }
 
     final void edgeTriggered(boolean edgeTriggered) {
@@ -50,15 +67,58 @@ class EpollRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle
     }
 
     @Override
+    public final ByteBuf allocate(ByteBufAllocator alloc) {
+        return delegate.allocate(alloc);
+    }
+
+    @Override
+    public final int guess() {
+        return delegate.guess();
+    }
+
+    @Override
+    public final void reset(ChannelConfig config) {
+        delegate.reset(config);
+    }
+
+    @Override
+    public final void incMessagesRead(int numMessages) {
+        delegate.incMessagesRead(numMessages);
+    }
+
+    @Override
+    public final void lastBytesRead(int bytes) {
+        delegate.lastBytesRead(bytes);
+    }
+
+    @Override
+    public final int lastBytesRead() {
+        return delegate.lastBytesRead();
+    }
+
+    @Override
+    public final int attemptedBytesRead() {
+        return delegate.attemptedBytesRead();
+    }
+
+    @Override
+    public final void attemptedBytesRead(int bytes) {
+        delegate.attemptedBytesRead(bytes);
+    }
+
+    @Override
+    public final void readComplete() {
+        delegate.readComplete();
+    }
+
+    @Override
+    public final boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
+        return delegate.continueReading(maybeMoreDataSupplier);
+    }
+
+    @Override
     public final boolean continueReading() {
-        /**
-         * EPOLL ET requires that we read until we get an EAGAIN
-         * (see Q9 in <a href="http://man7.org/linux/man-pages/man7/epoll.7.html">epoll man</a>). However in order to
-         * respect auto read we supporting reading to stop if auto read is off. If auto read is on we force reading to
-         * continue to avoid a {@link StackOverflowError} between channelReadComplete and reading from the
-         * channel. It is expected that the {@link #EpollSocketChannel} implementations will track if we are in
-         * edgeTriggered mode and all data was not read, and will force a EPOLLIN ready event.
-         */
-        return maybeMoreDataToRead() && config.isAutoRead() || super.continueReading();
+        // We must override the supplier which determines if there maybe more data to read.
+        return delegate.continueReading(defaultMaybeMoreDataSupplier);
     }
 }
