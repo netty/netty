@@ -62,7 +62,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -165,6 +164,7 @@ public class DnsNameResolver extends InetNameResolver {
     private final int maxPayloadSize;
     private final boolean optResourceEnabled;
     private final HostsFileEntriesResolver hostsFileEntriesResolver;
+    private final DnsServerAddressStreamProvider dnsServerAddressStreamProvider;
     private final String[] searchDomains;
     private final int ndots;
     private final boolean supportsAAAARecords;
@@ -191,6 +191,8 @@ public class DnsNameResolver extends InetNameResolver {
      * @param maxPayloadSize the capacity of the datagram packet buffer
      * @param optResourceEnabled if automatic inclusion of a optional records is enabled
      * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to check for local aliases
+     * @param dnsServerAddressStreamProvider The {@link DnsServerAddressStreamProvider} used to override the name
+     *                                       servers for each hostname lookup.
      * @param searchDomains the list of search domain
      * @param ndots the ndots value
      * @param decodeIdn {@code true} if domain / host names should be decoded to unicode when received.
@@ -210,6 +212,7 @@ public class DnsNameResolver extends InetNameResolver {
             int maxPayloadSize,
             boolean optResourceEnabled,
             HostsFileEntriesResolver hostsFileEntriesResolver,
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
             String[] searchDomains,
             int ndots,
             boolean decodeIdn) {
@@ -224,6 +227,8 @@ public class DnsNameResolver extends InetNameResolver {
         this.maxPayloadSize = checkPositive(maxPayloadSize, "maxPayloadSize");
         this.optResourceEnabled = optResourceEnabled;
         this.hostsFileEntriesResolver = checkNotNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
+        this.dnsServerAddressStreamProvider =
+                checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
         this.resolveCache = checkNotNull(resolveCache, "resolveCache");
         this.authoritativeDnsServerCache = checkNotNull(authoritativeDnsServerCache, "authoritativeDnsServerCache");
         this.searchDomains = checkNotNull(searchDomains, "searchDomains").clone();
@@ -631,21 +636,25 @@ public class DnsNameResolver extends InetNameResolver {
                                    DnsRecord[] additionals,
                                    Promise<InetAddress> promise,
                                    DnsCache resolveCache) {
-        SingleResolverContext ctx = new SingleResolverContext(this, hostname, additionals, resolveCache);
+        DnsServerAddressStream dnsServerAddressStream =
+                dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
+        SingleResolverContext ctx = dnsServerAddressStream == null ?
+             new SingleResolverContext(this, hostname, additionals, resolveCache, nameServerAddresses.stream()) :
+             new SingleResolverContext(this, hostname, additionals, resolveCache, dnsServerAddressStream);
         ctx.resolve(promise);
     }
 
     static final class SingleResolverContext extends DnsNameResolverContext<InetAddress> {
-
         SingleResolverContext(DnsNameResolver parent, String hostname,
-                             DnsRecord[] additionals, DnsCache resolveCache) {
-            super(parent, hostname, additionals, resolveCache);
+                              DnsRecord[] additionals, DnsCache resolveCache, DnsServerAddressStream nameServerAddrs) {
+            super(parent, hostname, additionals, resolveCache, nameServerAddrs);
         }
 
         @Override
         DnsNameResolverContext<InetAddress> newResolverContext(DnsNameResolver parent, String hostname,
-                                                               DnsRecord[] additionals, DnsCache resolveCache) {
-            return new SingleResolverContext(parent, hostname, additionals, resolveCache);
+                                                               DnsRecord[] additionals, DnsCache resolveCache,
+                                                               DnsServerAddressStream nameServerAddrs) {
+            return new SingleResolverContext(parent, hostname, additionals, resolveCache, nameServerAddrs);
         }
 
         @Override
@@ -748,14 +757,15 @@ public class DnsNameResolver extends InetNameResolver {
 
     static final class ListResolverContext extends DnsNameResolverContext<List<InetAddress>> {
         ListResolverContext(DnsNameResolver parent, String hostname,
-                            DnsRecord[] additionals, DnsCache resolveCache) {
-            super(parent, hostname, additionals, resolveCache);
+                            DnsRecord[] additionals, DnsCache resolveCache, DnsServerAddressStream nameServerAddrs) {
+            super(parent, hostname, additionals, resolveCache, nameServerAddrs);
         }
 
         @Override
         DnsNameResolverContext<List<InetAddress>> newResolverContext(
-                DnsNameResolver parent, String hostname,  DnsRecord[] additionals, DnsCache resolveCache) {
-            return new ListResolverContext(parent, hostname, additionals, resolveCache);
+                DnsNameResolver parent, String hostname,  DnsRecord[] additionals, DnsCache resolveCache,
+                DnsServerAddressStream nameServerAddrs) {
+            return new ListResolverContext(parent, hostname, additionals, resolveCache, nameServerAddrs);
         }
 
         @Override
@@ -787,8 +797,11 @@ public class DnsNameResolver extends InetNameResolver {
                                       DnsRecord[] additionals,
                                       Promise<List<InetAddress>> promise,
                                       DnsCache resolveCache) {
-        DnsNameResolverContext<List<InetAddress>> ctx = new ListResolverContext(
-                this, hostname, additionals, resolveCache);
+        DnsServerAddressStream dnsServerAddressStream =
+                dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
+        ListResolverContext ctx = dnsServerAddressStream == null ?
+               new ListResolverContext(this, hostname, additionals, resolveCache, nameServerAddresses.stream()) :
+               new ListResolverContext(this, hostname, additionals, resolveCache, dnsServerAddressStream);
         ctx.resolve(promise);
     }
 

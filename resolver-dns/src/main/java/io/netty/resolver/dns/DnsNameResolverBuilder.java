@@ -15,8 +15,6 @@
  */
 package io.netty.resolver.dns;
 
-import static io.netty.util.internal.ObjectUtil.intValue;
-
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ReflectiveChannelFactory;
@@ -30,12 +28,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.intValue;
 
 /**
  * A {@link DnsNameResolver} builder.
  */
 @UnstableApi
 public final class DnsNameResolverBuilder {
+    // TODO(scott): how is this done on Windows? This may require a JNI call to GetNetworkParams
+    // https://msdn.microsoft.com/en-us/library/aa365968(VS.85).aspx.
+    private static final DnsServerAddressStreamProvider DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER =
+            UnixResolverDnsServerAddressStreamProvider.parseSilently();
 
     private final EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
@@ -53,6 +56,7 @@ public final class DnsNameResolverBuilder {
     private int maxPayloadSize = 4096;
     private boolean optResourceEnabled = true;
     private HostsFileEntriesResolver hostsFileEntriesResolver = HostsFileEntriesResolver.DEFAULT;
+    private DnsServerAddressStreamProvider dnsServerAddressStreamProvider = DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER;
     private String[] searchDomains = DnsNameResolver.DEFAULT_SEARCH_DOMAINS;
     private int ndots = 1;
     private boolean decodeIdn = true;
@@ -274,6 +278,17 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
+     * Set the {@link DnsServerAddressStreamProvider} which is used to determine which DNS server is used to resolve
+     * each hostname.
+     * @return {@code this}.
+     */
+    public DnsNameResolverBuilder nameServerCache(DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
+        this.dnsServerAddressStreamProvider =
+                checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
+        return this;
+    }
+
+    /**
      * Set the list of search domains of the resolver.
      *
      * @param searchDomains the search domains
@@ -360,6 +375,7 @@ public final class DnsNameResolverBuilder {
                 maxPayloadSize,
                 optResourceEnabled,
                 hostsFileEntriesResolver,
+                dnsServerAddressStreamProvider,
                 searchDomains,
                 ndots,
                 decodeIdn);
