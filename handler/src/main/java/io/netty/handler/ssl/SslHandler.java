@@ -893,11 +893,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     private boolean ignoreException(Throwable t) {
         if (!(t instanceof SSLException) && t instanceof IOException && sslClosePromise.isDone()) {
-            String message = String.valueOf(t.getMessage()).toLowerCase();
+            String message = t.getMessage();
 
             // first try to match connection reset / broke peer based on the regex. This is the fastest way
             // but may fail on different jdk impls or OS's
-            if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
+            if (message != null && IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
                 return true;
             }
 
