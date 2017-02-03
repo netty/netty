@@ -142,6 +142,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     private final List<PoolArenaMetric> heapArenaMetrics;
     private final List<PoolArenaMetric> directArenaMetrics;
     private final PoolThreadLocalCache threadCache;
+    private final int chunkSize;
 
     public PooledByteBufAllocator() {
         this(false);
@@ -186,7 +187,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         this.tinyCacheSize = tinyCacheSize;
         this.smallCacheSize = smallCacheSize;
         this.normalCacheSize = normalCacheSize;
-        final int chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
+        chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
 
         if (nHeapArena < 0) {
             throw new IllegalArgumentException("nHeapArena: " + nHeapArena + " (expected: >= 0)");
@@ -474,6 +475,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
      */
     public int normalCacheSize() {
         return normalCacheSize;
+    }
+
+    /**
+     * Return the chunk size for an arena.
+     */
+    public int chunkSize() {
+        return chunkSize;
     }
 
     final PoolThreadCache threadCache() {
