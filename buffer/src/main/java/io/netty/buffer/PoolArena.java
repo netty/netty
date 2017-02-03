@@ -440,8 +440,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     private static List<PoolSubpageMetric> subPageMetricList(PoolSubpage<?>[] pages) {
         List<PoolSubpageMetric> metrics = new ArrayList<PoolSubpageMetric>();
-        for (int i = 0; i < pages.length; i ++) {
-            PoolSubpage<?> head = pages[i];
+        for (PoolSubpage<?> head : pages) {
             if (head.next == head) {
                 continue;
             }
