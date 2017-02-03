@@ -203,7 +203,8 @@ public final class MacAddressUtil {
     /**
      * @return positive - current is better, 0 - cannot tell from MAC addr, negative - candidate is better.
      */
-    private static int compareAddresses(byte[] current, byte[] candidate) {
+    // visible for testing
+    static int compareAddresses(byte[] current, byte[] candidate) {
         if (candidate == null || candidate.length < EUI48_MAC_ADDRESS_LENGTH) {
             return 1;
         }
@@ -227,20 +228,23 @@ public final class MacAddressUtil {
         }
 
         // Prefer globally unique address.
-        if (current.length == 0 || (current[0] & 2) == 0) {
-            if ((candidate[0] & 2) == 0) {
+        if ((candidate[0] & 2) == 0) {
+            if (current.length != 0 && (current[0] & 2) == 0) {
                 // Both current and candidate are globally unique addresses.
                 return 0;
             } else {
+                // Only candidate is globally unique.
+                return -1;
+            }
+        } else {
+            if (current.length != 0 && (current[0] & 2) == 0) {
                 // Only current is globally unique.
                 return 1;
+            } else {
+                // Both current and candidate are non-unique.
+                return 0;
             }
-        } else if ((candidate[0] & 2) == 0) {
-            // Only candidate is globally unique.
-            return -1;
         }
-        // Both current and candidate are non-unique.
-        return 0;
     }
 
     /**

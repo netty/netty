@@ -17,10 +17,57 @@ package io.netty.util.internal;
 
 import org.junit.Test;
 
+import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static io.netty.util.internal.MacAddressUtil.parseMAC;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 public class MacAddressUtilTest {
+    @Test
+    public void testCompareAddresses() {
+        // should not prefer empty address when candidate is not globally unique
+        assertEquals(
+                0,
+                MacAddressUtil.compareAddresses(
+                        EMPTY_BYTES,
+                        new byte[]{(byte) 0x52, (byte) 0x54, (byte) 0x00, (byte) 0xf9, (byte) 0x32, (byte) 0xbd}));
+
+        // only candidate is globally unique
+        assertEquals(
+                -1,
+                MacAddressUtil.compareAddresses(
+                        EMPTY_BYTES,
+                        new byte[]{(byte) 0x50, (byte) 0x54, (byte) 0x00, (byte) 0xf9, (byte) 0x32, (byte) 0xbd}));
+
+        // only candidate is globally unique
+        assertEquals(
+                -1,
+                MacAddressUtil.compareAddresses(
+                        new byte[]{(byte) 0x52, (byte) 0x54, (byte) 0x00, (byte) 0xf9, (byte) 0x32, (byte) 0xbd},
+                        new byte[]{(byte) 0x50, (byte) 0x54, (byte) 0x00, (byte) 0xf9, (byte) 0x32, (byte) 0xbd}));
+
+        // only current is globally unique
+        assertEquals(
+                1,
+                MacAddressUtil.compareAddresses(
+                        new byte[]{(byte) 0x52, (byte) 0x54, (byte) 0x00, (byte) 0xf9, (byte) 0x32, (byte) 0xbd},
+                        EMPTY_BYTES));
+
+        // only current is globally unique
+        assertEquals(
+                1,
+                MacAddressUtil.compareAddresses(
+                        new byte[]{(byte) 0x50, (byte) 0x54, (byte) 0x00, (byte) 0xf9, (byte) 0x32, (byte) 0xbd},
+                        new byte[]{(byte) 0x52, (byte) 0x54, (byte) 0x00, (byte) 0xf9, (byte) 0x32, (byte) 0xbd}));
+
+        // both are globally unique
+        assertEquals(
+                0,
+                MacAddressUtil.compareAddresses(
+                        new byte[]{(byte) 0x50, (byte) 0x54, (byte) 0x00, (byte) 0xf9, (byte) 0x32, (byte) 0xbd},
+                        new byte[]{(byte) 0x50, (byte) 0x55, (byte) 0x01, (byte) 0xfa, (byte) 0x33, (byte) 0xbe}));
+    }
+
     @Test
     public void testParseMacEUI48() {
         assertArrayEquals(new byte[]{0, (byte) 0xaa, 0x11, (byte) 0xbb, 0x22, (byte) 0xcc},
