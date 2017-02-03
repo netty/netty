@@ -448,8 +448,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         int total = 0;
-        for (int i = 0; i < arenas.length; i++) {
-            total += arenas[i].numThreadCaches.get();
+        for (PoolArena<?> arena : arenas) {
+            total += arena.numThreadCaches.get();
         }
 
         return total;

@@ -117,8 +117,8 @@ final class Bzip2BlockCompressor {
             }
         }
 
-        for (int i = 0; i < condensedInUse.length; i++) {
-            writer.writeBoolean(out, condensedInUse[i]);
+        for (boolean isCondensedInUse : condensedInUse) {
+            writer.writeBoolean(out, isCondensedInUse);
         }
 
         for (int i = 0; i < condensedInUse.length; i++) {
