@@ -20,6 +20,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
@@ -416,5 +417,41 @@ public class HttpObjectAggregatorTest {
 
         fullMsg.release();
         assertFalse(embedder.finish());
+    }
+
+    @Test
+    public void testReplaceAggregatedRequest() {
+        EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(1024 * 1024));
+
+        Exception boom = new Exception("boom");
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
+        req.setDecoderResult(DecoderResult.failure(boom));
+
+        assertTrue(embedder.writeInbound(req) && embedder.finish());
+
+        FullHttpRequest aggregatedReq = embedder.readInbound();
+        FullHttpRequest replacedReq = aggregatedReq.replace(Unpooled.EMPTY_BUFFER);
+
+        assertEquals(replacedReq.decoderResult(), aggregatedReq.decoderResult());
+        aggregatedReq.release();
+        replacedReq.release();
+    }
+
+    @Test
+    public void testReplaceAggregatedResponse() {
+        EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(1024 * 1024));
+
+        Exception boom = new Exception("boom");
+        HttpResponse rep = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        rep.setDecoderResult(DecoderResult.failure(boom));
+
+        assertTrue(embedder.writeInbound(rep) && embedder.finish());
+
+        FullHttpResponse aggregatedRep = embedder.readInbound();
+        FullHttpResponse replacedRep = aggregatedRep.replace(Unpooled.EMPTY_BUFFER);
+
+        assertEquals(replacedRep.decoderResult(), aggregatedRep.decoderResult());
+        aggregatedRep.release();
+        replacedRep.release();
     }
 }
