@@ -27,8 +27,9 @@ import javax.net.ssl.SSLEngine;
  * and manually release the native memory see {@link ReferenceCountedOpenSslEngine}.
  */
 public final class OpenSslEngine extends ReferenceCountedOpenSslEngine {
-    OpenSslEngine(OpenSslContext context, ByteBufAllocator alloc, String peerHost, int peerPort) {
-        super(context, alloc, peerHost, peerPort, false);
+    OpenSslEngine(OpenSslContext context, ByteBufAllocator alloc, String peerHost, int peerPort,
+                  boolean jdkCompatibilityMode) {
+        super(context, alloc, peerHost, peerPort, jdkCompatibilityMode, false);
     }
 
     @Override
