@@ -882,11 +882,11 @@ public abstract class SslContext {
      * Creates a new {@link SslHandler}.
      * <p>If {@link SslProvider#OPENSSL_REFCNT} is used then the returned {@link SslHandler} will release the engine
      * that is wrapped. If the returned {@link SslHandler} is not inserted into a pipeline then you may leak native
-     * memory!</p>
+     * memory!
      * <p><b>Beware</b>: the underlying generated {@link SSLEngine} won't have
      * <a href="https://wiki.openssl.org/index.php/Hostname_validation">hostname verification</a> enabled by default.
      * If you create {@link SslHandler} for the client side and want proper security, we advice that you configure
-     * the {@link SSLEngine} (see {@link javax.net.ssl.SSLParameters#setEndpointIdentificationAlgorithm(String)}):</p>
+     * the {@link SSLEngine} (see {@link javax.net.ssl.SSLParameters#setEndpointIdentificationAlgorithm(String)}):
      * <pre>
      * SSLEngine sslEngine = sslHandler.engine();
      * SSLParameters sslParameters = sslEngine.getSSLParameters();
@@ -894,12 +894,22 @@ public abstract class SslContext {
      * sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
      * sslEngine.setSSLParameters(sslParameters);
      * </pre>
-     *
+     * <p>
+     * The underlying {@link SSLEngine} may not follow the restrictions imposed by the
+     * <a href="https://docs.oracle.com/javase/7/docs/api/javax/net/ssl/SSLEngine.html">SSLEngine javadocs</a> which
+     * limits wrap/unwrap to operate on a single SSL/TLS packet.
      * @param alloc If supported by the SSLEngine then the SSLEngine will use this to allocate ByteBuf objects.
-     *
      * @return a new {@link SslHandler}
      */
     public final SslHandler newHandler(ByteBufAllocator alloc) {
+        return newHandler(alloc, startTls);
+    }
+
+    /**
+     * Create a new SslHandler.
+     * @see #newHandler(io.netty.buffer.ByteBufAllocator)
+     */
+    SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
         return new SslHandler(newEngine(alloc), startTls);
     }
 
@@ -907,11 +917,11 @@ public abstract class SslContext {
      * Creates a new {@link SslHandler} with advisory peer information.
      * <p>If {@link SslProvider#OPENSSL_REFCNT} is used then the returned {@link SslHandler} will release the engine
      * that is wrapped. If the returned {@link SslHandler} is not inserted into a pipeline then you may leak native
-     * memory!</p>
+     * memory!
      * <p><b>Beware</b>: the underlying generated {@link SSLEngine} won't have
      * <a href="https://wiki.openssl.org/index.php/Hostname_validation">hostname verification</a> enabled by default.
      * If you create {@link SslHandler} for the client side and want proper security, we advice that you configure
-     * the {@link SSLEngine} (see {@link javax.net.ssl.SSLParameters#setEndpointIdentificationAlgorithm(String)}):</p>
+     * the {@link SSLEngine} (see {@link javax.net.ssl.SSLParameters#setEndpointIdentificationAlgorithm(String)}):
      * <pre>
      * SSLEngine sslEngine = sslHandler.engine();
      * SSLParameters sslParameters = sslEngine.getSSLParameters();
@@ -919,7 +929,10 @@ public abstract class SslContext {
      * sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
      * sslEngine.setSSLParameters(sslParameters);
      * </pre>
-     *
+     * <p>
+     * The underlying {@link SSLEngine} may not follow the restrictions imposed by the
+     * <a href="https://docs.oracle.com/javase/7/docs/api/javax/net/ssl/SSLEngine.html">SSLEngine javadocs</a> which
+     * limits wrap/unwrap to operate on a single SSL/TLS packet.
      * @param alloc If supported by the SSLEngine then the SSLEngine will use this to allocate ByteBuf objects.
      * @param peerHost the non-authoritative name of the host
      * @param peerPort the non-authoritative port
@@ -927,6 +940,14 @@ public abstract class SslContext {
      * @return a new {@link SslHandler}
      */
     public final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort) {
+        return newHandler(alloc, peerHost, peerPort, startTls);
+    }
+
+    /**
+     * Create a new SslHandler.
+     * @see #newHandler(io.netty.buffer.ByteBufAllocator, String, int, boolean)
+     */
+    SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
         return new SslHandler(newEngine(alloc, peerHost, peerPort), startTls);
     }
 
