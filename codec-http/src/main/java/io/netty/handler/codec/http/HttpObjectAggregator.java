@@ -404,6 +404,7 @@ public class HttpObjectAggregator
             DefaultFullHttpRequest dup = new DefaultFullHttpRequest(protocolVersion(), method(), uri(), content);
             dup.headers().set(headers());
             dup.trailingHeaders().set(trailingHeaders());
+            dup.setDecoderResult(decoderResult());
             return dup;
         }
 
@@ -502,6 +503,7 @@ public class HttpObjectAggregator
             DefaultFullHttpResponse dup = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(), content);
             dup.headers().set(headers());
             dup.trailingHeaders().set(trailingHeaders());
+            dup.setDecoderResult(decoderResult());
             return dup;
         }
 
