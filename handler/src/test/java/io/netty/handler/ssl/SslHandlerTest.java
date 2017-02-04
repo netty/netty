@@ -388,8 +388,14 @@ public class SslHandlerTest {
         SslHandler handler = new SslHandler(SSLContext.getDefault().createSSLEngine());
         EmbeddedChannel ch = new EmbeddedChannel(handler);
 
-        // Closing the Channel will also produce a close_notify so it is expected to return true.
-        assertTrue(ch.finishAndReleaseAll());
+        ch.close();
+
+        // When the channel is closed the SslHandler will write an empty buffer to the channel.
+        ByteBuf buf = ch.readOutbound();
+        assertFalse(buf.isReadable());
+        buf.release();
+
+        assertFalse(ch.finishAndReleaseAll());
 
         assertTrue(handler.handshakeFuture().cause() instanceof ClosedChannelException);
         assertTrue(handler.sslCloseFuture().cause() instanceof ClosedChannelException);
