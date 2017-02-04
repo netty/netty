@@ -45,8 +45,8 @@ public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     }
 
     @Override
-    final SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort) {
-        return new OpenSslEngine(this, alloc, peerHost, peerPort);
+    final SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
+        return new OpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode);
     }
 
     @Override
