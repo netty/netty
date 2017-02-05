@@ -20,7 +20,7 @@ import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class MessageBuilder {
+public final class MqttMessageBuilder {
 
     public static class PublishBuilder {
         private String topic;
@@ -254,6 +254,6 @@ public final class MessageBuilder {
         return new UnsubscribeBuilder();
     }
 
-    private MessageBuilder() {
+    private MqttMessageBuilder() {
     }
 }
