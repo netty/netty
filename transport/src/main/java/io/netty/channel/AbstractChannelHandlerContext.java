@@ -184,8 +184,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap impleme
 
     @Override
     public ChannelHandlerContext fireChannelActive() {
-        final AbstractChannelHandlerContext next = findContextInbound();
-        invokeChannelActive(next);
+        invokeChannelActive(findContextInbound());
         return this;
     }
 
