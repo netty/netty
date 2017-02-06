@@ -119,7 +119,6 @@ public final class OpenSsl {
                 long privateKeyBio = 0;
                 long certBio = 0;
                 try {
-                    SSLContext.setOptions(sslCtx, SSL.SSL_OP_ALL);
                     SSLContext.setCipherSuite(sslCtx, "ALL");
                     final long ssl = SSL.newSSL(sslCtx, true);
                     try {
