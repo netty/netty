@@ -581,46 +581,42 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         }
                     } else {
                         int sslError = SSL.getError(ssl, bytesWritten);
-                        switch (sslError) {
-                            case SSL.SSL_ERROR_ZERO_RETURN:
-                                // This means the connection was shutdown correctly, close inbound and outbound
-                                if (!receivedShutdown) {
-                                    closeAll();
+                        if (sslError == SSL.SSL_ERROR_ZERO_RETURN) {
+                            // This means the connection was shutdown correctly, close inbound and outbound
+                            if (!receivedShutdown) {
+                                closeAll();
 
-                                    bytesProduced += bioLengthBefore - SSL.bioLengthByteBuffer(networkBIO);
+                                bytesProduced += bioLengthBefore - SSL.bioLengthByteBuffer(networkBIO);
 
-                                    SSLEngineResult.HandshakeStatus hs = mayFinishHandshake(
+                                SSLEngineResult.HandshakeStatus hs = mayFinishHandshake(
                                         status != FINISHED ? getHandshakeStatus(SSL.bioLengthNonApplication(networkBIO))
-                                                           : FINISHED);
-                                    return newResult(hs, bytesConsumed, bytesProduced);
-                                }
+                                                : FINISHED);
+                                return newResult(hs, bytesConsumed, bytesProduced);
+                            }
 
-                                return newResult(NOT_HANDSHAKING, bytesConsumed, bytesProduced);
-
-                            case SSL.SSL_ERROR_WANT_READ:
-                                // If there is no pending data to read from BIO we should go back to event loop and try
-                                // to read more data [1]. It is also possible that event loop will detect the socket has
-                                // been closed. [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
-                                return newResult(NEED_UNWRAP, bytesConsumed, bytesProduced);
-
-                            case SSL.SSL_ERROR_WANT_WRITE:
-                                // SSL_ERROR_WANT_WRITE typically means that the underlying transport is not writable
-                                // and we should set the "want write" flag on the selector and try again when the
-                                // underlying transport is writable [1]. However we are not directly writing to the
-                                // underlying transport and instead writing to a BIO buffer. The OpenSsl documentation
-                                // says we should do the following [1]:
-                                //
-                                // "When using a buffering BIO, like a BIO pair, data must be written into or retrieved
-                                // out of the BIO before being able to continue."
-                                //
-                                // So we attempt to drain the BIO buffer below, but if there is no data this condition
-                                // is undefined and we assume their is a fatal error with the openssl engine and close.
-                                // [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
-                                return newResult(NEED_WRAP, bytesConsumed, bytesProduced);
-
-                            default:
-                                // Everything else is considered as error
-                                throw shutdownWithError("SSL_write");
+                            return newResult(NOT_HANDSHAKING, bytesConsumed, bytesProduced);
+                        } else if (sslError == SSL.SSL_ERROR_WANT_READ) {
+                            // If there is no pending data to read from BIO we should go back to event loop and try
+                            // to read more data [1]. It is also possible that event loop will detect the socket has
+                            // been closed. [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
+                            return newResult(NEED_UNWRAP, bytesConsumed, bytesProduced);
+                        } else if (sslError == SSL.SSL_ERROR_WANT_WRITE) {
+                            // SSL_ERROR_WANT_WRITE typically means that the underlying transport is not writable
+                            // and we should set the "want write" flag on the selector and try again when the
+                            // underlying transport is writable [1]. However we are not directly writing to the
+                            // underlying transport and instead writing to a BIO buffer. The OpenSsl documentation
+                            // says we should do the following [1]:
+                            //
+                            // "When using a buffering BIO, like a BIO pair, data must be written into or retrieved
+                            // out of the BIO before being able to continue."
+                            //
+                            // So we attempt to drain the BIO buffer below, but if there is no data this condition
+                            // is undefined and we assume their is a fatal error with the openssl engine and close.
+                            // [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
+                            return newResult(NEED_WRAP, bytesConsumed, bytesProduced);
+                        } else {
+                            // Everything else is considered as error
+                            throw shutdownWithError("SSL_write");
                         }
                     }
                 }
@@ -844,24 +840,20 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 break;
                             } else {
                                 int sslError = SSL.getError(ssl, bytesRead);
-                                switch (sslError) {
-                                    case SSL.SSL_ERROR_WANT_WRITE:
-                                    case SSL.SSL_ERROR_WANT_READ:
-                                        // break to the outer loop as we want to read more data which means we need to
-                                        // write more to the BIO.
-                                        break readLoop;
-
-                                    case SSL.SSL_ERROR_ZERO_RETURN:
-                                        // This means the connection was shutdown correctly, close inbound and outbound
-                                        if (!receivedShutdown) {
-                                            closeAll();
-                                        }
-                                        return newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status,
-                                                bytesConsumed, bytesProduced);
-
-                                    default:
-                                        return sslReadErrorResult(SSL.getLastErrorNumber(), bytesConsumed,
-                                                                  bytesProduced);
+                                if (sslError == SSL.SSL_ERROR_WANT_READ || sslError == SSL.SSL_ERROR_WANT_WRITE) {
+                                    // break to the outer loop as we want to read more data which means we need to
+                                    // write more to the BIO.
+                                    break readLoop;
+                                } else if (sslError == SSL.SSL_ERROR_ZERO_RETURN) {
+                                    // This means the connection was shutdown correctly, close inbound and outbound
+                                    if (!receivedShutdown) {
+                                        closeAll();
+                                    }
+                                    return newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status,
+                                            bytesConsumed, bytesProduced);
+                                } else {
+                                    return sslReadErrorResult(SSL.getLastErrorNumber(), bytesConsumed,
+                                            bytesProduced);
                                 }
                             }
                         }
@@ -1038,27 +1030,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 int err = SSL.shutdownSSL(ssl);
                 if (err < 0) {
                     int sslErr = SSL.getError(ssl, err);
-                    switch (sslErr) {
-                        case SSL.SSL_ERROR_NONE:
-                        case SSL.SSL_ERROR_WANT_ACCEPT:
-                        case SSL.SSL_ERROR_WANT_CONNECT:
-                        case SSL.SSL_ERROR_WANT_WRITE:
-                        case SSL.SSL_ERROR_WANT_READ:
-                        case SSL.SSL_ERROR_WANT_X509_LOOKUP:
-                        case SSL.SSL_ERROR_ZERO_RETURN:
-                            // Nothing to do here
-                            break;
-                        case SSL.SSL_ERROR_SYSCALL:
-                        case SSL.SSL_ERROR_SSL:
-                            if (logger.isDebugEnabled()) {
-                                logger.debug("SSL_shutdown failed: OpenSSL error: {}", SSL.getLastError());
-                            }
-                            // There was an internal error -- shutdown
-                            shutdown();
-                            break;
-                        default:
-                            SSL.clearError();
-                            break;
+                    if (sslErr == SSL.SSL_ERROR_SYSCALL || sslErr == SSL.SSL_ERROR_SSL) {
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("SSL_shutdown failed: OpenSSL error: {}", SSL.getLastError());
+                        }
+                        // There was an internal error -- shutdown
+                        shutdown();
+                    } else {
+                        SSL.clearError();
                     }
                 }
             }
@@ -1214,9 +1193,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
         synchronized (this) {
             if (!isDestroyed()) {
-                // Enable all and then disable what we not want
-                SSL.setOptions(ssl, SSL.SSL_OP_ALL);
-
                 // Clear out options which disable protocols
                 SSL.clearOptions(ssl, SSL.SSL_OP_NO_SSLv2 | SSL.SSL_OP_NO_SSLv3 | SSL.SSL_OP_NO_TLSv1 |
                         SSL.SSL_OP_NO_TLSv1_1 | SSL.SSL_OP_NO_TLSv1_2);
@@ -1290,17 +1266,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 int status;
                 if ((status = SSL.renegotiate(ssl)) != 1 || (status = SSL.doHandshake(ssl)) != 1) {
                     int err = SSL.getError(ssl, status);
-                    switch (err) {
-                        case SSL.SSL_ERROR_WANT_READ:
-                        case SSL.SSL_ERROR_WANT_WRITE:
-                            // If the internal SSL buffer is small it is possible that doHandshake may "fail" because
-                            // there is not enough room to write, so we should wait until the renegotiation has been.
-                            renegotiationPending = true;
-                            handshakeState = HandshakeState.STARTED_EXPLICITLY;
-                            lastAccessed = System.currentTimeMillis();
-                            return;
-                        default:
-                            throw shutdownWithError("renegotiation failed");
+                    if (err == SSL.SSL_ERROR_WANT_READ || err == SSL.SSL_ERROR_WANT_WRITE) {
+                        // If the internal SSL buffer is small it is possible that doHandshake may "fail" because
+                        // there is not enough room to write, so we should wait until the renegotiation has been.
+                        renegotiationPending = true;
+                        handshakeState = HandshakeState.STARTED_EXPLICITLY;
+                        lastAccessed = System.currentTimeMillis();
+                        return;
+                    } else {
+                        throw shutdownWithError("renegotiation failed");
                     }
                 }
 
@@ -1383,13 +1357,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
 
             int sslError = SSL.getError(ssl, code);
-            switch (sslError) {
-                case SSL.SSL_ERROR_WANT_READ:
-                case SSL.SSL_ERROR_WANT_WRITE:
-                    return pendingStatus(SSL.bioLengthNonApplication(networkBIO));
-                default:
-                    // Everything else is considered as error
-                    throw shutdownWithError("SSL_do_handshake");
+            if (sslError == SSL.SSL_ERROR_WANT_READ || sslError == SSL.SSL_ERROR_WANT_WRITE) {
+                return pendingStatus(SSL.bioLengthNonApplication(networkBIO));
+            } else {
+                // Everything else is considered as error
+                throw shutdownWithError("SSL_do_handshake");
             }
         }
         // if SSL_do_handshake returns > 0 or sslError == SSL.SSL_ERROR_NAME it means the handshake was finished.
