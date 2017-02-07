@@ -17,21 +17,16 @@ package io.netty.resolver;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.SocketUtils;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * A skeletal {@link NameResolver} implementation that resolves {@link InetAddress}.
  */
+@UnstableApi
 public abstract class InetNameResolver extends SimpleNameResolver<InetAddress> {
-
-    private final InetAddress loopbackAddress;
-
     private volatile AddressResolver<InetSocketAddress> addressResolver;
 
     /**
@@ -40,32 +35,6 @@ public abstract class InetNameResolver extends SimpleNameResolver<InetAddress> {
      */
     protected InetNameResolver(EventExecutor executor) {
         super(executor);
-        loopbackAddress = SocketUtils.loopbackAddress();
-    }
-
-    /**
-     * Returns the {@link InetAddress} for loopback.
-     */
-    protected InetAddress loopbackAddress() {
-        return loopbackAddress;
-    }
-
-    @Override
-    public Future<InetAddress> resolve(String inetHost, Promise<InetAddress> promise) {
-        if (inetHost == null || inetHost.isEmpty()) {
-            // If an empty hostname is used we should use "localhost", just like InetAddress.getByName(...) does.
-            return promise.setSuccess(loopbackAddress());
-        }
-        return super.resolve(inetHost, promise);
-    }
-
-    @Override
-    public Future<List<InetAddress>> resolveAll(String inetHost, Promise<List<InetAddress>> promise) {
-        if (inetHost == null || inetHost.isEmpty()) {
-            // If an empty hostname is used we should use "localhost", just like InetAddress.getByName(...) does.
-            return promise.setSuccess(Collections.singletonList(loopbackAddress()));
-        }
-        return super.resolveAll(inetHost, promise);
     }
 
     /**
