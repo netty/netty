@@ -467,8 +467,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
             long tooLongFrameLength = this.tooLongFrameLength;
             this.tooLongFrameLength = 0;
             discardingTooLongFrame = false;
-            if (!failFast ||
-                failFast && firstDetectionOfTooLongFrame) {
+            if (!failFast || firstDetectionOfTooLongFrame) {
                 fail(tooLongFrameLength);
             }
         } else {
