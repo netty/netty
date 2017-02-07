@@ -31,10 +31,10 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.dns.DatagramDnsQueryEncoder;
 import io.netty.handler.codec.dns.DatagramDnsResponse;
-import io.netty.handler.codec.dns.DnsRawRecord;
-import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DatagramDnsResponseDecoder;
 import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsRawRecord;
+import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.resolver.HostsFileEntriesResolver;
@@ -64,7 +64,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * A DNS-based {@link InetNameResolver}.
@@ -479,10 +482,6 @@ public class DnsNameResolver extends InetNameResolver {
     public final Future<InetAddress> resolve(String inetHost, Iterable<DnsRecord> additionals,
                                              Promise<InetAddress> promise) {
         checkNotNull(promise, "promise");
-        if (inetHost == null || inetHost.isEmpty()) {
-            // If an empty hostname is used we should use "localhost", just like InetAddress.getByName(...) does.
-            return promise.setSuccess(loopbackAddress());
-        }
         DnsRecord[] additionalsArray = toArray(additionals, true);
         try {
             doResolve(inetHost, additionalsArray, promise, resolveCache);
@@ -516,12 +515,6 @@ public class DnsNameResolver extends InetNameResolver {
     public final Future<List<InetAddress>> resolveAll(String inetHost, Iterable<DnsRecord> additionals,
                                                 Promise<List<InetAddress>> promise) {
         checkNotNull(promise, "promise");
-
-        if (inetHost == null || inetHost.isEmpty()) {
-            // If an empty hostname is used we should use "localhost", just like InetAddress.getAllByName(...) does.
-            return promise.setSuccess(Collections.singletonList(loopbackAddress()));
-        }
-
         DnsRecord[] additionalsArray = toArray(additionals, true);
         try {
             doResolveAll(inetHost, additionalsArray, promise, resolveCache);
@@ -567,8 +560,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    @Override
-    protected final InetAddress loopbackAddress() {
+    private InetAddress loopbackAddress() {
         return preferredAddressType() == InternetProtocolFamily.IPv4 ?
                     NetUtil.LOCALHOST4 : NetUtil.LOCALHOST6;
     }
@@ -581,6 +573,11 @@ public class DnsNameResolver extends InetNameResolver {
                              DnsRecord[] additionals,
                              Promise<InetAddress> promise,
                              DnsCache resolveCache) throws Exception {
+        if (inetHost == null || inetHost.isEmpty()) {
+            // If an empty hostname is used we should use "localhost", just like InetAddress.getByName(...) does.
+            promise.setSuccess(loopbackAddress());
+            return;
+        }
         final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(inetHost);
         if (bytes != null) {
             // The inetHost is actually an ipaddress.
@@ -706,6 +703,11 @@ public class DnsNameResolver extends InetNameResolver {
                                 DnsRecord[] additionals,
                                 Promise<List<InetAddress>> promise,
                                 DnsCache resolveCache) throws Exception {
+        if (inetHost == null || inetHost.isEmpty()) {
+            // If an empty hostname is used we should use "localhost", just like InetAddress.getAllByName(...) does.
+            promise.setSuccess(Collections.singletonList(loopbackAddress()));
+            return;
+        }
         final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(inetHost);
         if (bytes != null) {
             // The unresolvedAddress was created via a String that contains an ipaddress.
