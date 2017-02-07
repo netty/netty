@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,14 +20,16 @@ import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class MqttMessageBuilder {
+public final class MqttMessageBuilders {
 
-    public static class PublishBuilder {
+    public static final class PublishBuilder {
         private String topic;
         private boolean retained;
         private MqttQoS qos;
         private byte[] payload;
         private int messageId;
+
+        PublishBuilder() {}
 
         public PublishBuilder topicName(String topic) {
             this.topic = topic;
@@ -61,7 +63,7 @@ public final class MqttMessageBuilder {
         }
     }
 
-    public static class ConnectBuilder {
+    public static final class ConnectBuilder {
 
         private MqttVersion version = MqttVersion.MQTT_3_1_1;
         private String clientId;
@@ -76,6 +78,8 @@ public final class MqttMessageBuilder {
         private String willMessage;
         private String username;
         private String password;
+
+        ConnectBuilder() {}
 
         public ConnectBuilder protocolVersion(MqttVersion version) {
             this.version = version;
@@ -162,12 +166,17 @@ public final class MqttMessageBuilder {
         }
     }
 
-    public static class SubscribeBuilder {
+    public static final class SubscribeBuilder {
 
-        private List<MqttTopicSubscription> subscriptions = new ArrayList<MqttTopicSubscription>();
+        private List<MqttTopicSubscription> subscriptions;
         private int messageId;
 
+        SubscribeBuilder() {}
+
         public SubscribeBuilder addSubscription(MqttQoS qos, String topic) {
+            if (subscriptions == null) {
+                subscriptions = new ArrayList<MqttTopicSubscription>();
+            }
             subscriptions.add(new MqttTopicSubscription(topic, qos));
             return this;
         }
@@ -186,10 +195,12 @@ public final class MqttMessageBuilder {
         }
     }
 
-    public static class UnsubscribeBuilder {
+    public static final class UnsubscribeBuilder {
 
         private List<String> topicFilters = new ArrayList<String>();
         private int messageId;
+
+        UnsubscribeBuilder() {}
 
         public UnsubscribeBuilder addTopicFilter(String topic) {
             topicFilters.add(topic);
@@ -210,10 +221,12 @@ public final class MqttMessageBuilder {
         }
     }
 
-    public static class ConnAckBuilder {
+    public static final class ConnAckBuilder {
 
         private MqttConnectReturnCode returnCode;
         private boolean sessionPresent;
+
+        ConnAckBuilder() {}
 
         public ConnAckBuilder returnCode(MqttConnectReturnCode returnCode) {
             this.returnCode = returnCode;
@@ -254,6 +267,6 @@ public final class MqttMessageBuilder {
         return new UnsubscribeBuilder();
     }
 
-    private MqttMessageBuilder() {
+    private MqttMessageBuilders() {
     }
 }
