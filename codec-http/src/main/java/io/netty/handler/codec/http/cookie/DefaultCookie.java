@@ -28,7 +28,7 @@ public class DefaultCookie implements Cookie {
     private boolean wrap;
     private String domain;
     private String path;
-    private long maxAge = Long.MIN_VALUE;
+    private long maxAge = UNDEFINED_MAX_AGE;
     private boolean secure;
     private boolean httpOnly;
 
