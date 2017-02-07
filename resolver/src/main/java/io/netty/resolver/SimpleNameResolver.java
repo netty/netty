@@ -55,7 +55,6 @@ public abstract class SimpleNameResolver<T> implements NameResolver<T> {
 
     @Override
     public Future<T> resolve(String inetHost, Promise<T> promise) {
-        checkNotNull(inetHost, "inetHost");
         checkNotNull(promise, "promise");
 
         try {
@@ -74,7 +73,6 @@ public abstract class SimpleNameResolver<T> implements NameResolver<T> {
 
     @Override
     public Future<List<T>> resolveAll(String inetHost, Promise<List<T>> promise) {
-        checkNotNull(inetHost, "inetHost");
         checkNotNull(promise, "promise");
 
         try {
