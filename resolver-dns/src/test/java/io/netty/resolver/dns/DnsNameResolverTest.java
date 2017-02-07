@@ -34,6 +34,7 @@ import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.NetUtil;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -369,6 +370,47 @@ public class DnsNameResolverTest {
         DnsNameResolver resolver = newNonCachedResolver(InternetProtocolFamily.IPv4).build();
         try {
             testResolve0(resolver, EXCLUSIONS_RESOLVE_A);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test(timeout = 5000)
+    public void testNonCachedResolveEmptyHostName() throws Exception {
+        testNonCachedResolveEmptyHostName("");
+    }
+
+    @Test(timeout = 5000)
+    public void testNonCachedResolveNullHostName() throws Exception {
+        testNonCachedResolveEmptyHostName(null);
+    }
+
+    public void testNonCachedResolveEmptyHostName(String inetHost) throws Exception {
+        DnsNameResolver resolver = newNonCachedResolver(InternetProtocolFamily.IPv4).build();
+        try {
+            InetAddress addr = resolver.resolve(inetHost).syncUninterruptibly().getNow();
+            assertEquals(SocketUtils.addressByName(inetHost), addr);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test(timeout = 5000)
+    public void testNonCachedResolveAllEmptyHostName() throws Exception {
+        testNonCachedResolveAllEmptyHostName("");
+    }
+
+    @Test(timeout = 5000)
+    public void testNonCachedResolveAllNullHostName() throws Exception {
+        testNonCachedResolveAllEmptyHostName(null);
+    }
+
+    private static void testNonCachedResolveAllEmptyHostName(String inetHost) throws UnknownHostException {
+        DnsNameResolver resolver = newNonCachedResolver(InternetProtocolFamily.IPv4).build();
+        try {
+            List<InetAddress> addrs = resolver.resolveAll(inetHost).syncUninterruptibly().getNow();
+            assertEquals(Arrays.asList(
+                    SocketUtils.allAddressesByName(inetHost)), addrs);
         } finally {
             resolver.close();
         }
