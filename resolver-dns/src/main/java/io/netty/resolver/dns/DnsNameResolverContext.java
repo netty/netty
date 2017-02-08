@@ -74,7 +74,7 @@ abstract class DnsNameResolverContext<T> {
     private final DnsCache resolveCache;
     private final boolean traceEnabled;
     private final int maxAllowedQueries;
-    private final InternetProtocolFamily[] resolveAddressTypes;
+    private final InternetProtocolFamily[] resolvedInternetProtocolFamilies;
     private final DnsRecord[] additionals;
 
     private final Set<Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> queriesInProgress =
@@ -97,7 +97,7 @@ abstract class DnsNameResolverContext<T> {
 
         nameServerAddrs = parent.nameServerAddresses.stream();
         maxAllowedQueries = parent.maxQueriesPerResolve();
-        resolveAddressTypes = parent.resolveAddressTypesUnsafe();
+        resolvedInternetProtocolFamilies = parent.resolvedInternetProtocolFamiliesUnsafe();
         traceEnabled = parent.isTraceEnabled();
         allowedQueries = maxAllowedQueries;
     }
@@ -611,7 +611,7 @@ abstract class DnsNameResolverContext<T> {
 
         if (resolvedEntries != null) {
             // Found at least one resolved address.
-            for (InternetProtocolFamily f: resolveAddressTypes) {
+            for (InternetProtocolFamily f: resolvedInternetProtocolFamilies) {
                 if (finishResolve(f.addressType(), resolvedEntries, promise)) {
                     return;
                 }
