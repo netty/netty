@@ -17,6 +17,9 @@ package io.netty.handler.ssl;
 
 import org.junit.BeforeClass;
 
+import javax.net.ssl.SSLException;
+
+import static io.netty.tcnative.jni.SSL.SSL_CVERIFY_IGNORED;
 import static org.junit.Assume.assumeTrue;
 
 public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
@@ -38,5 +41,17 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
     @Override
     protected SslProvider sslServerProvider() {
         return SslProvider.OPENSSL;
+    }
+
+    @Override
+    protected void mySetupMutualAuthServerInitSslHandler(SslHandler handler) {
+        ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) handler.engine();
+        engine.setVerify(SSL_CVERIFY_IGNORED, 1);
+    }
+
+    @Override
+    protected boolean mySetupMutualAuthServerIsValidClientException(Throwable cause) {
+        // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
+        return super.mySetupMutualAuthServerIsValidException(cause) || cause instanceof SSLException;
     }
 }
