@@ -387,4 +387,14 @@ public class CombinedChannelDuplexHandlerTest {
         promise.syncUninterruptibly();
         ch.finish();
     }
+
+    @Test(expected = IllegalStateException.class)
+    public void testNotSharable() {
+        new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>() {
+            @Override
+            public boolean isSharable() {
+                return true;
+            }
+        };
+    }
 }
