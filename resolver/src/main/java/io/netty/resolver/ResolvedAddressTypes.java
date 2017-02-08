@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,24 +17,25 @@ package io.netty.resolver;
 
 import io.netty.util.internal.UnstableApi;
 
-import java.net.InetAddress;
-
 /**
- * Resolves a hostname against the hosts file entries.
+ * Defined resolved address types.
  */
 @UnstableApi
-public interface HostsFileEntriesResolver {
-
+public enum ResolvedAddressTypes {
     /**
-     * Default instance: a {@link DefaultHostsFileEntriesResolver}.
+     * Only resolve IPv4 addresses
      */
-    HostsFileEntriesResolver DEFAULT = new DefaultHostsFileEntriesResolver();
-
+    IPV4_ONLY,
     /**
-     * Resolve the address of a hostname against the entries in a hosts file, depending on some address types.
-     * @param inetHost the hostname to resolve
-     * @param resolvedAddressTypes the address types to resolve
-     * @return the first matching address
+     * Only resolve IPv6 addresses
      */
-    InetAddress address(String inetHost, ResolvedAddressTypes resolvedAddressTypes);
+    IPV6_ONLY,
+    /**
+     * Prefer IPv4 addresses over IPv6 ones
+     */
+    IPV4_PREFERRED,
+    /**
+     * Prefer IPv6 addresses over IPv4 ones
+     */
+    IPV6_PREFERRED
 }
