@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 
 import static org.junit.Assume.assumeTrue;
 
@@ -38,5 +39,15 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     @Override
     protected SslProvider sslServerProvider() {
         return SslProvider.JDK;
+    }
+
+    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @Override
+    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() throws Exception {
+    }
+
+    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @Override
+    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
     }
 }
