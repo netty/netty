@@ -57,6 +57,8 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
@@ -65,7 +67,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -510,6 +512,207 @@ public abstract class SSLEngineTest {
                           clientCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
         assertTrue(clientLatch.await(2, TimeUnit.SECONDS));
         assertTrue(clientException instanceof SSLHandshakeException);
+    }
+
+    @Test
+    public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth() throws Exception {
+        testMutualAuthInvalidClientCertSucceed(ClientAuth.NONE);
+    }
+
+    @Test
+    public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth() throws Exception {
+        testMutualAuthClientCertFail(ClientAuth.OPTIONAL);
+    }
+
+    @Test
+    public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth() throws Exception {
+        testMutualAuthClientCertFail(ClientAuth.REQUIRE);
+    }
+
+    @Test
+    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() throws Exception {
+        testMutualAuthClientCertFail(ClientAuth.OPTIONAL, "mutual_auth_client.p12", true);
+    }
+
+    @Test
+    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
+        testMutualAuthClientCertFail(ClientAuth.REQUIRE, "mutual_auth_client.p12", true);
+    }
+
+    private void testMutualAuthInvalidClientCertSucceed(ClientAuth auth) throws Exception {
+        char[] password = "example".toCharArray();
+        final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
+        serverKeyStore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
+        final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
+        clientKeyStore.load(getClass().getResourceAsStream("mutual_auth_invalid_client.p12"), password);
+        final KeyManagerFactory serverKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        serverKeyManagerFactory.init(serverKeyStore, password);
+        final KeyManagerFactory clientKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        clientKeyManagerFactory.init(clientKeyStore, password);
+        File commonCertChain = new File(getClass().getResource("mutual_auth_ca.pem").getFile());
+
+        mySetupMutualAuth(serverKeyManagerFactory, commonCertChain, clientKeyManagerFactory, commonCertChain,
+                auth, false, false);
+        assertTrue(clientLatch.await(5, TimeUnit.SECONDS));
+        assertNull(clientException);
+        assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
+        assertNull(serverException);
+    }
+
+    private void testMutualAuthClientCertFail(ClientAuth auth) throws Exception {
+        testMutualAuthClientCertFail(auth, "mutual_auth_invalid_client.p12", false);
+    }
+
+    private void testMutualAuthClientCertFail(ClientAuth auth, String clientCert, boolean serverInitEngine) throws Exception {
+        char[] password = "example".toCharArray();
+        final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
+        serverKeyStore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
+        final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
+        clientKeyStore.load(getClass().getResourceAsStream(clientCert), password);
+        final KeyManagerFactory serverKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        serverKeyManagerFactory.init(serverKeyStore, password);
+        final KeyManagerFactory clientKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        clientKeyManagerFactory.init(clientKeyStore, password);
+        File commonCertChain = new File(getClass().getResource("mutual_auth_ca.pem").getFile());
+
+        mySetupMutualAuth(serverKeyManagerFactory, commonCertChain, clientKeyManagerFactory, commonCertChain,
+                          auth, true, serverInitEngine);
+        assertTrue(clientLatch.await(5, TimeUnit.SECONDS));
+        assertTrue("unexpected exception: " + clientException,
+                mySetupMutualAuthServerIsValidClientException(clientException));
+        assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
+        assertTrue("unexpected exception: " + serverException,
+                mySetupMutualAuthServerIsValidServerException(serverException));
+    }
+
+    protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
+        return mySetupMutualAuthServerIsValidException(cause);
+    }
+
+    protected boolean mySetupMutualAuthServerIsValidClientException(Throwable cause) {
+        return mySetupMutualAuthServerIsValidException(cause);
+    }
+
+    protected boolean mySetupMutualAuthServerIsValidException(Throwable cause) {
+        return cause instanceof SSLHandshakeException || cause instanceof ClosedChannelException;
+    }
+
+    protected void mySetupMutualAuthServerInitSslHandler(SslHandler handler) {
+    }
+
+    private void mySetupMutualAuth(KeyManagerFactory serverKMF, final File serverTrustManager,
+                                   KeyManagerFactory clientKMF, File clientTrustManager,
+                                   ClientAuth clientAuth, final boolean failureExpected,
+                                   final boolean serverInitEngine)
+            throws SSLException, InterruptedException {
+        serverSslCtx = SslContextBuilder.forServer(serverKMF)
+                .sslProvider(sslServerProvider())
+                .trustManager(serverTrustManager)
+                .clientAuth(clientAuth)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .sessionCacheSize(0)
+                .sessionTimeout(0)
+                .build();
+
+        clientSslCtx = SslContextBuilder.forClient()
+                .sslProvider(sslClientProvider())
+                .trustManager(clientTrustManager)
+                .keyManager(clientKMF)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .sessionCacheSize(0)
+                .sessionTimeout(0)
+                .build();
+        serverConnectedChannel = null;
+        sb = new ServerBootstrap();
+        cb = new Bootstrap();
+
+        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.channel(NioServerSocketChannel.class);
+        sb.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
+
+                ChannelPipeline p = ch.pipeline();
+                SslHandler handler = serverSslCtx.newHandler(ch.alloc());
+                if (serverInitEngine) {
+                    mySetupMutualAuthServerInitSslHandler(handler);
+                }
+                p.addLast(handler);
+                p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
+                p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+                            if (failureExpected) {
+                                serverException = new IllegalStateException("handshake complete. expected failure");
+                            }
+                            serverLatch.countDown();
+                        } else if (evt instanceof SslHandshakeCompletionEvent) {
+                            serverException = ((SslHandshakeCompletionEvent) evt).cause();
+                            serverLatch.countDown();
+                        }
+                        ctx.fireUserEventTriggered(evt);
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        if (cause.getCause() instanceof SSLHandshakeException) {
+                            serverException = cause.getCause();
+                            serverLatch.countDown();
+                        } else {
+                            serverException = cause;
+                            ctx.fireExceptionCaught(cause);
+                        }
+                    }
+                });
+                serverConnectedChannel = ch;
+            }
+        });
+
+        cb.group(new NioEventLoopGroup());
+        cb.channel(NioSocketChannel.class);
+        cb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
+                ChannelPipeline p = ch.pipeline();
+                p.addLast(clientSslCtx.newHandler(ch.alloc()));
+                p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
+                p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+                            if (failureExpected) {
+                                clientException = new IllegalStateException("handshake complete. expected failure");
+                            }
+                            clientLatch.countDown();
+                        } else if (evt instanceof SslHandshakeCompletionEvent) {
+                            clientException = ((SslHandshakeCompletionEvent) evt).cause();
+                            clientLatch.countDown();
+                        }
+                        ctx.fireUserEventTriggered(evt);
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        if (cause.getCause() instanceof SSLHandshakeException) {
+                            clientException = cause.getCause();
+                            clientLatch.countDown();
+                        } else {
+                            ctx.fireExceptionCaught(cause);
+                        }
+                    }
+                });
+            }
+        });
+
+        serverChannel = sb.bind(new InetSocketAddress(9999)).sync().channel();
+        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        clientChannel = ccf.channel();
     }
 
     private void mySetupMutualAuth(File keyFile, File crtFile, String keyPassword)

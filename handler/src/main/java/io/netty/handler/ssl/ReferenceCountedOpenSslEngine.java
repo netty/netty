@@ -28,6 +28,7 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -1461,6 +1462,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return clientAuth == ClientAuth.OPTIONAL;
     }
 
+    /**
+     * See <a href="https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_verify.html">SSL_set_verify</a> and
+     * {@link SSL#setVerify(long, int, int)}.
+     */
+    @UnstableApi
+    public synchronized final void setVerify(int verifyMode, int depth) {
+        SSL.setVerify(ssl, verifyMode, depth);
+    }
+
     private void setClientAuth(ClientAuth mode) {
         if (clientMode) {
             return;
@@ -1475,7 +1485,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     SSL.setVerify(ssl, SSL.SSL_CVERIFY_NONE, ReferenceCountedOpenSslContext.VERIFY_DEPTH);
                     break;
                 case REQUIRE:
-                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_REQUIRE, ReferenceCountedOpenSslContext.VERIFY_DEPTH);
+                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_REQUIRED, ReferenceCountedOpenSslContext.VERIFY_DEPTH);
                     break;
                 case OPTIONAL:
                     SSL.setVerify(ssl, SSL.SSL_CVERIFY_OPTIONAL, ReferenceCountedOpenSslContext.VERIFY_DEPTH);
