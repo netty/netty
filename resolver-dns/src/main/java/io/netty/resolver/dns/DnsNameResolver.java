@@ -39,6 +39,7 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
+import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
@@ -56,13 +57,10 @@ import java.net.IDN;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -78,24 +76,37 @@ public class DnsNameResolver extends InetNameResolver {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
     private static final String LOCALHOST = "localhost";
     private static final InetAddress LOCALHOST_ADDRESS;
-    private static final DnsRecord[] EMTPY_ADDITIONALS = new DnsRecord[0];
+    private static final DnsRecord[] EMPTY_ADDITIONALS = new DnsRecord[0];
+    private static final DnsRecordType[] IPV4_ONLY_RESOLVED_RECORD_TYPES =
+            new DnsRecordType[] {DnsRecordType.A};
+    private static final InternetProtocolFamily[] IPV4_ONLY_RESOLVED_PROTOCOL_FAMILIES =
+            new InternetProtocolFamily[] {InternetProtocolFamily.IPv4};
+    private static final DnsRecordType[] IPV4_PREFERRED_RESOLVED_RECORD_TYPES =
+            new DnsRecordType[] {DnsRecordType.A, DnsRecordType.AAAA};
+    private static final InternetProtocolFamily[] IPV4_PREFERRED_RESOLVED_PROTOCOL_FAMILIES =
+            new InternetProtocolFamily[] {InternetProtocolFamily.IPv4, InternetProtocolFamily.IPv6};
+    private static final DnsRecordType[] IPV6_ONLY_RESOLVED_RECORD_TYPES =
+            new DnsRecordType[] {DnsRecordType.AAAA};
+    private static final InternetProtocolFamily[] IPV6_ONLY_RESOLVED_PROTOCOL_FAMILIES =
+            new InternetProtocolFamily[] {InternetProtocolFamily.IPv6};
+    private static final DnsRecordType[] IPV6_PREFERRED_RESOLVED_RECORD_TYPES =
+            new DnsRecordType[] {DnsRecordType.AAAA, DnsRecordType.A};
+    private static final InternetProtocolFamily[] IPV6_PREFERRED_RESOLVED_PROTOCOL_FAMILIES =
+            new InternetProtocolFamily[] {InternetProtocolFamily.IPv6, InternetProtocolFamily.IPv4};
 
-    static final InternetProtocolFamily[] DEFAULT_RESOLVE_ADDRESS_TYPES;
-    static final String[] DEFAULT_SEACH_DOMAINS;
+    static final ResolvedAddressTypes DEFAULT_RESOLVE_ADDRESS_TYPES;
+    static final String[] DEFAULT_SEARCH_DOMAINS;
 
     static {
         if (NetUtil.isIpV4StackPreferred()) {
-            DEFAULT_RESOLVE_ADDRESS_TYPES = new InternetProtocolFamily[] { InternetProtocolFamily.IPv4 };
+            DEFAULT_RESOLVE_ADDRESS_TYPES = ResolvedAddressTypes.IPV4_ONLY;
             LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
         } else {
-            DEFAULT_RESOLVE_ADDRESS_TYPES = new InternetProtocolFamily[2];
             if (NetUtil.isIpV6AddressesPreferred()) {
-                DEFAULT_RESOLVE_ADDRESS_TYPES[0] = InternetProtocolFamily.IPv6;
-                DEFAULT_RESOLVE_ADDRESS_TYPES[1] = InternetProtocolFamily.IPv4;
+                DEFAULT_RESOLVE_ADDRESS_TYPES = ResolvedAddressTypes.IPV6_PREFERRED;
                 LOCALHOST_ADDRESS = NetUtil.LOCALHOST6;
             } else {
-                DEFAULT_RESOLVE_ADDRESS_TYPES[0] = InternetProtocolFamily.IPv4;
-                DEFAULT_RESOLVE_ADDRESS_TYPES[1] = InternetProtocolFamily.IPv6;
+                DEFAULT_RESOLVE_ADDRESS_TYPES = ResolvedAddressTypes.IPV4_PREFERRED;
                 LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
             }
         }
@@ -116,7 +127,7 @@ public class DnsNameResolver extends InetNameResolver {
             // Failed to get the system name search domain list.
             searchDomains = EmptyArrays.EMPTY_STRINGS;
         }
-        DEFAULT_SEACH_DOMAINS = searchDomains;
+        DEFAULT_SEARCH_DOMAINS = searchDomains;
     }
 
     private static final DatagramDnsResponseDecoder DECODER = new DatagramDnsResponseDecoder();
@@ -148,7 +159,8 @@ public class DnsNameResolver extends InetNameResolver {
     private final long queryTimeoutMillis;
     private final int maxQueriesPerResolve;
     private final boolean traceEnabled;
-    private final InternetProtocolFamily[] resolvedAddressTypes;
+    private final ResolvedAddressTypes resolvedAddressTypes;
+    private final InternetProtocolFamily[] resolvedInternetProtocolFamilies;
     private final boolean recursionDesired;
     private final int maxPayloadSize;
     private final boolean optResourceEnabled;
@@ -170,52 +182,9 @@ public class DnsNameResolver extends InetNameResolver {
      *                            this to determine which DNS server should be contacted for the next retry in case
      *                            of failure.
      * @param resolveCache the DNS resolved entries cache
-     * @param queryTimeoutMillis timeout of each DNS query in millis
-     * @param resolvedAddressTypes list of the protocol families
-     * @param recursionDesired if recursion desired flag must be set
-     * @param maxQueriesPerResolve the maximum allowed number of DNS queries for a given name resolution
-     * @param traceEnabled if trace is enabled
-     * @param maxPayloadSize the capacity of the datagram packet buffer
-     * @param optResourceEnabled if automatic inclusion of a optional records is enabled
-     * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to check for local aliases
-     * @param searchDomains the list of search domain
-     * @param ndots the ndots value
-     * @deprecated use {@link DnsNameResolver#DnsNameResolver(EventLoop, ChannelFactory, DnsServerAddresses, DnsCache,
-     *                  DnsCache, long, InternetProtocolFamily[], boolean, int, boolean, int, boolean,
-     *                  HostsFileEntriesResolver, String[], int, boolean)}
-     */
-    @Deprecated
-    public DnsNameResolver(
-            EventLoop eventLoop,
-            ChannelFactory<? extends DatagramChannel> channelFactory,
-            DnsServerAddresses nameServerAddresses,
-            final DnsCache resolveCache,
-            long queryTimeoutMillis,
-            InternetProtocolFamily[] resolvedAddressTypes,
-            boolean recursionDesired,
-            int maxQueriesPerResolve,
-            boolean traceEnabled,
-            int maxPayloadSize,
-            boolean optResourceEnabled,
-            HostsFileEntriesResolver hostsFileEntriesResolver,
-            String[] searchDomains,
-            int ndots) {
-        this(eventLoop, channelFactory, nameServerAddresses, resolveCache, NoopDnsCache.INSTANCE, queryTimeoutMillis,
-                resolvedAddressTypes, recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize,
-                optResourceEnabled, hostsFileEntriesResolver, searchDomains, ndots, true);
-    }
-    /**
-     * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
-     *
-     * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
-     * @param channelFactory the {@link ChannelFactory} that will create a {@link DatagramChannel}
-     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
-     *                            this to determine which DNS server should be contacted for the next retry in case
-     *                            of failure.
-     * @param resolveCache the DNS resolved entries cache
      * @param authoritativeDnsServerCache the cache used to find the authoritative DNS server for a domain
      * @param queryTimeoutMillis timeout of each DNS query in millis
-     * @param resolvedAddressTypes list of the protocol families
+     * @param resolvedAddressTypes the preferred address types
      * @param recursionDesired if recursion desired flag must be set
      * @param maxQueriesPerResolve the maximum allowed number of DNS queries for a given name resolution
      * @param traceEnabled if trace is enabled
@@ -234,7 +203,7 @@ public class DnsNameResolver extends InetNameResolver {
             final DnsCache resolveCache,
             DnsCache authoritativeDnsServerCache,
             long queryTimeoutMillis,
-            InternetProtocolFamily[] resolvedAddressTypes,
+            ResolvedAddressTypes resolvedAddressTypes,
             boolean recursionDesired,
             int maxQueriesPerResolve,
             boolean traceEnabled,
@@ -248,7 +217,7 @@ public class DnsNameResolver extends InetNameResolver {
         checkNotNull(channelFactory, "channelFactory");
         this.nameServerAddresses = checkNotNull(nameServerAddresses, "nameServerAddresses");
         this.queryTimeoutMillis = checkPositive(queryTimeoutMillis, "queryTimeoutMillis");
-        this.resolvedAddressTypes = checkNonEmpty(resolvedAddressTypes, "resolvedAddressTypes");
+        this.resolvedAddressTypes = resolvedAddressTypes != null ? resolvedAddressTypes : DEFAULT_RESOLVE_ADDRESS_TYPES;
         this.recursionDesired = recursionDesired;
         this.maxQueriesPerResolve = checkPositive(maxQueriesPerResolve, "maxQueriesPerResolve");
         this.traceEnabled = traceEnabled;
@@ -261,31 +230,38 @@ public class DnsNameResolver extends InetNameResolver {
         this.ndots = checkPositiveOrZero(ndots, "ndots");
         this.decodeIdn = decodeIdn;
 
-        boolean supportsARecords = false;
-        boolean supportsAAAARecords = false;
-        // Use LinkedHashSet to maintain correct ordering.
-        Set<DnsRecordType> recordTypes = new LinkedHashSet<DnsRecordType>(resolvedAddressTypes.length);
-        for (InternetProtocolFamily family: resolvedAddressTypes) {
-            switch (family) {
-                case IPv4:
-                    supportsARecords = true;
-                    recordTypes.add(DnsRecordType.A);
-                    break;
-                case IPv6:
-                    supportsAAAARecords = true;
-                    recordTypes.add(DnsRecordType.AAAA);
-                    break;
-                default:
-                    throw new Error();
-            }
+        switch (this.resolvedAddressTypes) {
+            case IPV4_ONLY:
+                supportsAAAARecords = false;
+                supportsARecords = true;
+                resolveRecordTypes = IPV4_ONLY_RESOLVED_RECORD_TYPES;
+                resolvedInternetProtocolFamilies = IPV4_ONLY_RESOLVED_PROTOCOL_FAMILIES;
+                preferredAddressType = InternetProtocolFamily.IPv4;
+                break;
+            case IPV4_PREFERRED:
+                supportsAAAARecords = true;
+                supportsARecords = true;
+                resolveRecordTypes = IPV4_PREFERRED_RESOLVED_RECORD_TYPES;
+                resolvedInternetProtocolFamilies = IPV4_PREFERRED_RESOLVED_PROTOCOL_FAMILIES;
+                preferredAddressType = InternetProtocolFamily.IPv4;
+                break;
+            case IPV6_ONLY:
+                supportsAAAARecords = true;
+                supportsARecords = false;
+                resolveRecordTypes = IPV6_ONLY_RESOLVED_RECORD_TYPES;
+                resolvedInternetProtocolFamilies = IPV6_ONLY_RESOLVED_PROTOCOL_FAMILIES;
+                preferredAddressType = InternetProtocolFamily.IPv6;
+                break;
+            case IPV6_PREFERRED:
+                supportsAAAARecords = true;
+                supportsARecords = true;
+                resolveRecordTypes = IPV6_PREFERRED_RESOLVED_RECORD_TYPES;
+                resolvedInternetProtocolFamilies = IPV6_PREFERRED_RESOLVED_PROTOCOL_FAMILIES;
+                preferredAddressType = InternetProtocolFamily.IPv6;
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
         }
-
-        // One of both must be always true.
-        assert supportsARecords || supportsAAAARecords;
-        this.supportsAAAARecords = supportsAAAARecords;
-        this.supportsARecords = supportsARecords;
-        resolveRecordTypes = recordTypes.toArray(new DnsRecordType[recordTypes.size()]);
-        preferredAddressType = resolvedAddressTypes[0];
 
         Bootstrap b = new Bootstrap();
         b.group(executor());
@@ -339,16 +315,15 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     /**
-     * Returns the list of the protocol families of the address resolved by {@link #resolve(String)}
-     * in the order of preference.
+     * Returns the {@link ResolvedAddressTypes} resolved by {@link #resolve(String)}.
      * The default value depends on the value of the system property {@code "java.net.preferIPv6Addresses"}.
      */
-    public List<InternetProtocolFamily> resolvedAddressTypes() {
-        return Arrays.asList(resolvedAddressTypes);
+    public ResolvedAddressTypes resolvedAddressTypes() {
+        return resolvedAddressTypes;
     }
 
-    InternetProtocolFamily[] resolveAddressTypesUnsafe() {
-        return resolvedAddressTypes;
+    InternetProtocolFamily[] resolvedInternetProtocolFamiliesUnsafe() {
+        return resolvedInternetProtocolFamilies;
     }
 
     final String[] searchDomains() {
@@ -447,7 +422,7 @@ public class DnsNameResolver extends InetNameResolver {
         if (hostsFileEntriesResolver == null) {
             return null;
         } else {
-            InetAddress address = hostsFileEntriesResolver.address(hostname);
+            InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
             if (address == null && PlatformDependent.isWindows() && LOCALHOST.equalsIgnoreCase(hostname)) {
                 // If we tried to resolve localhost we need workaround that windows removed localhost from its
                 // hostfile in later versions.
@@ -526,7 +501,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     @Override
     protected void doResolve(String inetHost, Promise<InetAddress> promise) throws Exception {
-        doResolve(inetHost, EMTPY_ADDITIONALS, promise, resolveCache);
+        doResolve(inetHost, EMPTY_ADDITIONALS, promise, resolveCache);
     }
 
     private static DnsRecord[] toArray(Iterable<DnsRecord> additionals, boolean validateType) {
@@ -541,7 +516,7 @@ public class DnsNameResolver extends InetNameResolver {
 
         Iterator<DnsRecord> additionalsIt = additionals.iterator();
         if (!additionalsIt.hasNext()) {
-            return EMTPY_ADDITIONALS;
+            return EMPTY_ADDITIONALS;
         }
         List<DnsRecord> records = new ArrayList<DnsRecord>();
         do {
@@ -617,7 +592,7 @@ public class DnsNameResolver extends InetNameResolver {
                 cause = cachedEntries.get(0).cause();
             } else {
                 // Find the first entry with the preferred address type.
-                for (InternetProtocolFamily f : resolvedAddressTypes) {
+                for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
                     for (int i = 0; i < numEntries; i++) {
                         final DnsCacheEntry e = cachedEntries.get(i);
                         if (f.addressType().isInstance(e.address())) {
@@ -692,7 +667,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     @Override
     protected void doResolveAll(String inetHost, Promise<List<InetAddress>> promise) throws Exception {
-        doResolveAll(inetHost, EMTPY_ADDITIONALS, promise, resolveCache);
+        doResolveAll(inetHost, EMPTY_ADDITIONALS, promise, resolveCache);
     }
 
     /**
@@ -746,7 +721,7 @@ public class DnsNameResolver extends InetNameResolver {
             if (cachedEntries.get(0).cause() != null) {
                 cause = cachedEntries.get(0).cause();
             } else {
-                for (InternetProtocolFamily f : resolvedAddressTypes) {
+                for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
                     for (int i = 0; i < numEntries; i++) {
                         final DnsCacheEntry e = cachedEntries.get(i);
                         if (f.addressType().isInstance(e.address())) {
@@ -859,7 +834,7 @@ public class DnsNameResolver extends InetNameResolver {
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             InetSocketAddress nameServerAddr, DnsQuestion question) {
 
-        return query0(nameServerAddr, question, EMTPY_ADDITIONALS,
+        return query0(nameServerAddr, question, EMPTY_ADDITIONALS,
                 ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
     }
 
@@ -880,7 +855,7 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        return query0(nameServerAddr, question, EMTPY_ADDITIONALS, promise);
+        return query0(nameServerAddr, question, EMPTY_ADDITIONALS, promise);
     }
 
     /**
