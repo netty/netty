@@ -70,7 +70,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
      *                              {@link ByteBuf}, which is backed by an byte array.
      */
     protected ByteToMessageCodec(boolean preferDirect) {
-        CodecUtil.ensureNotSharable(this);
+        ensureNotSharable();
         outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
         encoder = new Encoder(preferDirect);
     }
@@ -84,7 +84,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
      *                              {@link ByteBuf}, which is backed by an byte array.
      */
     protected ByteToMessageCodec(Class<? extends I> outboundMessageType, boolean preferDirect) {
-        CodecUtil.ensureNotSharable(this);
+        ensureNotSharable();
         outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
         encoder = new Encoder(preferDirect);
     }
