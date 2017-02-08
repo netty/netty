@@ -1702,6 +1702,56 @@ public abstract class SSLEngineTest {
     }
 
     @Test
+    public void testMultipleRecordsInOneBufferBiggerThenPacketBufferSize() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .trustManager(cert.cert())
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            ByteBuffer plainClientOut = allocateBuffer(4096);
+            ByteBuffer plainServerOut = allocateBuffer(server.getSession().getApplicationBufferSize());
+
+            ByteBuffer encClientToServer = allocateBuffer(server.getSession().getPacketBufferSize() * 2);
+
+            handshake(client, server);
+
+            int srcLen = plainClientOut.remaining();
+            SSLEngineResult result;
+
+            while (encClientToServer.position() <= server.getSession().getPacketBufferSize()) {
+                result = client.wrap(plainClientOut, encClientToServer);
+                assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+                assertEquals(srcLen, result.bytesConsumed());
+                assertTrue(result.bytesProduced() > 0);
+
+                plainClientOut.clear();
+            }
+
+            encClientToServer.flip();
+
+            result = server.unwrap(encClientToServer, plainServerOut);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertTrue(result.bytesConsumed() > 0);
+            assertTrue(result.bytesProduced() > 0);
+        } finally {
+            cert.delete();
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    @Test
     public void testBufferUnderFlow() throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
 

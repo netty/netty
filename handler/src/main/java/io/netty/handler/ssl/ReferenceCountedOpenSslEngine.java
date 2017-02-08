@@ -804,12 +804,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 return isOutboundDone() || isDestroyed() ? CLOSED_NOT_HANDSHAKING : NEED_WRAP_CLOSED;
             }
 
-            // protect against protocol overflow attack vector
-            if (len > MAX_ENCRYPTED_PACKET_LENGTH) {
-                shutdown();
-                throw ENCRYPTED_PACKET_OVERSIZED;
-            }
-
             SSLEngineResult.HandshakeStatus status = NOT_HANDSHAKING;
             // Prepare OpenSSL to work in server mode and receive handshake
             if (handshakeState != HandshakeState.FINISHED) {
