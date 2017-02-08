@@ -138,7 +138,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private int numReads;
 
     protected ByteToMessageDecoder() {
-        CodecUtil.ensureNotSharable(this);
+        ensureNotSharable();
     }
 
     /**
