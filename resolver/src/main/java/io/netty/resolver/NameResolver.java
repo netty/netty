@@ -18,6 +18,7 @@ package io.netty.resolver;
 
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.Closeable;
 import java.util.List;
@@ -25,6 +26,7 @@ import java.util.List;
 /**
  * Resolves an arbitrary string that represents the name of an endpoint into an address.
  */
+@UnstableApi
 public interface NameResolver<T> extends Closeable {
 
     /**
