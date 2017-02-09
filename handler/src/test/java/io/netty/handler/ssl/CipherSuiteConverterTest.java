@@ -20,8 +20,10 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 
 public class CipherSuiteConverterTest {
 
@@ -269,6 +271,34 @@ public class CipherSuiteConverterTest {
     @Test
     public void testCachedJ2OMappings() {
         testCachedJ2OMapping("TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256", "ECDHE-ECDSA-AES128-SHA256");
+    }
+
+    @Test
+    public void testUnknownOpenSSLCiphersToJava() {
+        testUnknownOpenSSLCiphersToJava("(NONE)");
+        testUnknownOpenSSLCiphersToJava("unknown");
+        testUnknownOpenSSLCiphersToJava("");
+    }
+
+    @Test
+    public void testUnknownJavaCiphersToOpenSSL() {
+        testUnknownJavaCiphersToOpenSSL("(NONE)");
+        testUnknownJavaCiphersToOpenSSL("unknown");
+        testUnknownJavaCiphersToOpenSSL("");
+    }
+
+    private void testUnknownOpenSSLCiphersToJava(String openSslCipherSuite) {
+        CipherSuiteConverter.clearCache();
+
+        assertNull(CipherSuiteConverter.toJava(openSslCipherSuite, "TLS"));
+        assertNull(CipherSuiteConverter.toJava(openSslCipherSuite, "SSL"));
+    }
+
+    private void testUnknownJavaCiphersToOpenSSL(String javaCipherSuite) {
+        CipherSuiteConverter.clearCache();
+
+        assertNull(CipherSuiteConverter.toOpenSsl(javaCipherSuite));
+        assertNull(CipherSuiteConverter.toOpenSsl(javaCipherSuite));
     }
 
     private static void testCachedJ2OMapping(String javaCipherSuite, String openSslCipherSuite) {
