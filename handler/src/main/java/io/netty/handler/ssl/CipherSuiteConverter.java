@@ -276,6 +276,11 @@ final class CipherSuiteConverter {
         Map<String, String> p2j = o2j.get(openSslCipherSuite);
         if (p2j == null) {
             p2j = cacheFromOpenSsl(openSslCipherSuite);
+            // This may happen if this method is queried when OpenSSL doesn't yet have a cipher setup. It will return
+            // "(NONE)" in this case.
+            if (p2j == null) {
+                return null;
+            }
         }
 
         String javaCipherSuite = p2j.get(protocol);
