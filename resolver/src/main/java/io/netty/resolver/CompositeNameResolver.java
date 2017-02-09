@@ -19,6 +19,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Arrays;
 import java.util.List;
@@ -30,6 +31,7 @@ import static io.netty.util.internal.ObjectUtil.*;
  *
  * In case of a failure, only the last one will be reported.
  */
+@UnstableApi
 public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
 
     private final NameResolver<T>[] resolvers;
