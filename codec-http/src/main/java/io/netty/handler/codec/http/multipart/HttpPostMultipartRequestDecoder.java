@@ -1287,7 +1287,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                         found = true;
                         break;
                     }
-                    continue;
                 } else {
                     newLine = false;
                     index = 0;
@@ -1403,7 +1402,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                         found = true;
                         break;
                     }
-                    continue;
                 } else {
                     newLine = false;
                     index = 0;
@@ -1509,7 +1507,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                             found = true;
                             break;
                         }
-                        continue;
                     } else {
                         newLine = false;
                         index = 0;
@@ -1625,7 +1622,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                             found = true;
                             break;
                         }
-                        continue;
                     } else {
                         newLine = false;
                         index = 0;
@@ -1709,7 +1705,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *
      * @return the cleaned String
      */
-    @SuppressWarnings("IfStatementWithIdenticalBranches")
+    @SuppressWarnings("StatementWithEmptyBody")
     private static String cleanString(String field) {
         StringBuilder sb = new StringBuilder(field.length());
         for (int i = 0; i < field.length(); i++) {
