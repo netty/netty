@@ -504,6 +504,49 @@ public class DefaultChannelPipelineTest {
         assertTrue(future.isCancelled());
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testWrongPromiseChannel() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel()).sync();
+
+        ChannelPipeline pipeline2 = new LocalChannel().pipeline();
+        group.register(pipeline2.channel()).sync();
+
+        try {
+            ChannelPromise promise2 = pipeline2.channel().newPromise();
+            pipeline.close(promise2);
+        } finally {
+            pipeline.close();
+            pipeline2.close();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testUnexpectedVoidChannelPromise() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel()).sync();
+
+        try {
+            ChannelPromise promise = new VoidChannelPromise(pipeline.channel(), false);
+            pipeline.close(promise);
+        } finally {
+            pipeline.close();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testUnexpectedVoidChannelPromiseCloseFuture() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel()).sync();
+
+        try {
+            ChannelPromise promise = (ChannelPromise) pipeline.channel().closeFuture();
+            pipeline.close(promise);
+        } finally {
+            pipeline.close();
+        }
+    }
+
     @Test
     public void testCancelDeregister() throws Exception {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
