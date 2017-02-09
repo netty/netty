@@ -63,6 +63,8 @@ final class SslUtils {
      */
     static final int NOT_ENCRYPTED = -2;
 
+    static final int MIN_HANDSHAKE_BUFFER_SIZE = 2048;
+
     /**
      * Return how much bytes can be read out of the encrypted data. Be aware that this method will not increase
      * the readerIndex of the given {@link ByteBuf}.
