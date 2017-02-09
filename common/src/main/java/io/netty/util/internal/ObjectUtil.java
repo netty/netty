@@ -95,7 +95,7 @@ public final class ObjectUtil {
      * @return the primitive value
      */
     public static int intValue(Integer wrapper, int defaultValue) {
-        return wrapper != null ? wrapper.intValue() : defaultValue;
+        return wrapper != null ? wrapper : defaultValue;
     }
 
     /**
@@ -105,6 +105,6 @@ public final class ObjectUtil {
      * @return the primitive value
      */
     public static long longValue(Long wrapper, long defaultValue) {
-        return wrapper != null ? wrapper.longValue() : defaultValue;
+        return wrapper != null ? wrapper : defaultValue;
     }
 }
