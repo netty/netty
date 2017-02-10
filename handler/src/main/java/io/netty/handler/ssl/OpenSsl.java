@@ -24,10 +24,10 @@ import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.tcnative.jni.Buffer;
-import io.netty.tcnative.jni.Library;
-import io.netty.tcnative.jni.SSL;
-import io.netty.tcnative.jni.SSLContext;
+import io.netty.internal.tcnative.Buffer;
+import io.netty.internal.tcnative.Library;
+import io.netty.internal.tcnative.SSL;
+import io.netty.internal.tcnative.SSLContext;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -68,7 +68,7 @@ public final class OpenSsl {
 
         // Test if netty-tcnative is in the classpath first.
         try {
-            Class.forName("io.netty.tcnative.jni.SSL", false, OpenSsl.class.getClassLoader());
+            Class.forName("io.netty.internal.tcnative.SSL", false, OpenSsl.class.getClassLoader());
         } catch (ClassNotFoundException t) {
             cause = t;
             logger.debug(
