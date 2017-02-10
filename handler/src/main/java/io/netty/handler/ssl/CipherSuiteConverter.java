@@ -194,7 +194,7 @@ final class CipherSuiteConverter {
         String handshakeAlgo = toOpenSslHandshakeAlgo(m.group(1));
         String bulkCipher = toOpenSslBulkCipher(m.group(2));
         String hmacAlgo = toOpenSslHmacAlgo(m.group(3));
-        if (handshakeAlgo.length() == 0) {
+        if (handshakeAlgo.isEmpty()) {
             return bulkCipher + '-' + hmacAlgo;
         } else {
             return handshakeAlgo + '-' + bulkCipher + '-' + hmacAlgo;
@@ -214,7 +214,7 @@ final class CipherSuiteConverter {
         }
 
         if (export) {
-            if (handshakeAlgo.length() == 0) {
+            if (handshakeAlgo.isEmpty()) {
                 handshakeAlgo = "EXP";
             } else {
                 handshakeAlgo = "EXP-" + handshakeAlgo;
@@ -346,7 +346,7 @@ final class CipherSuiteConverter {
     }
 
     private static String toJavaHandshakeAlgo(String handshakeAlgo, boolean export) {
-        if (handshakeAlgo.length() == 0) {
+        if (handshakeAlgo.isEmpty()) {
             handshakeAlgo = "RSA";
         } else if ("ADH".equals(handshakeAlgo)) {
             handshakeAlgo = "DH_anon";

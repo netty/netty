@@ -125,14 +125,14 @@ public final class OpenSsl {
                     try {
                         for (String c: SSL.getCiphers(ssl)) {
                             // Filter out bad input.
-                            if (c == null || c.length() == 0 || availableOpenSslCipherSuites.contains(c)) {
+                            if (c == null || c.isEmpty() || availableOpenSslCipherSuites.contains(c)) {
                                 continue;
                             }
                             availableOpenSslCipherSuites.add(c);
                         }
                         try {
                             SelfSignedCertificate cert = new SelfSignedCertificate();
-                            certBio = OpenSslContext.toBIO(cert.cert());
+                            certBio = ReferenceCountedOpenSslContext.toBIO(cert.cert());
                             SSL.setCertificateChainBio(ssl, certBio, false);
                             supportsKeyManagerFactory = true;
                             useKeyManagerFactory = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
@@ -334,10 +334,6 @@ public final class OpenSsl {
 
     static boolean useKeyManagerFactory() {
         return USE_KEYMANAGER_FACTORY;
-    }
-
-    static boolean isError(long errorCode) {
-        return errorCode != SSL.SSL_ERROR_NONE;
     }
 
     static long memoryAddress(ByteBuf buf) {
