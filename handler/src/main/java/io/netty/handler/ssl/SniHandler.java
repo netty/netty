@@ -324,11 +324,11 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * @see #select(ChannelHandlerContext, String)
      */
     private void onSslContext(ChannelHandlerContext ctx, String hostname, SslContext sslContext) {
-        this.selection = new Selection(sslContext, hostname);
+        selection = new Selection(sslContext, hostname);
         try {
             replaceHandler(ctx, hostname, sslContext);
         } catch (Throwable cause) {
-            this.selection = EMPTY_SELECTION;
+            selection = EMPTY_SELECTION;
             ctx.fireExceptionCaught(cause);
         }
     }

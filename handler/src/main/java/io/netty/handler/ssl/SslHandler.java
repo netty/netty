@@ -727,8 +727,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     /**
      * This method will not call
-     * {@link #setHandshakeFailure(io.netty.channel.ChannelHandlerContext, Throwable, boolean)} or
-     * {@link #setHandshakeFailure(io.netty.channel.ChannelHandlerContext, Throwable)}.
+     * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable, boolean)} or
+     * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable)}.
      * @return {@code true} if this method ends on {@link SSLEngineResult.HandshakeStatus#NOT_HANDSHAKING}.
      */
     private boolean wrapNonAppData(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
@@ -995,7 +995,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         boolean nonSslRecord = false;
 
-        while (totalLength < OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH) {
+        while (totalLength < ReferenceCountedOpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH) {
             final int readableBytes = endOffset - offset;
             if (readableBytes < SslUtils.SSL_RECORD_HEADER_LENGTH) {
                 break;
@@ -1016,7 +1016,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             int newTotalLength = totalLength + packetLength;
-            if (newTotalLength > OpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH) {
+            if (newTotalLength > ReferenceCountedOpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH) {
                 // Don't read too much.
                 break;
             }

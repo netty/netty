@@ -17,7 +17,6 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.tcnative.jni.Buffer;
 import io.netty.tcnative.jni.SSL;
 import io.netty.util.AbstractReferenceCounted;
@@ -175,9 +174,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             AtomicIntegerFieldUpdater.newUpdater(ReferenceCountedOpenSslEngine.class, "destroyed");
 
     private static final String INVALID_CIPHER = "SSL_NULL_WITH_NULL_NULL";
-
-    private static final long EMPTY_ADDR = Buffer.address(Unpooled.EMPTY_BUFFER.nioBuffer());
-
     private static final SSLEngineResult NEED_UNWRAP_OK = new SSLEngineResult(OK, NEED_UNWRAP, 0, 0);
     private static final SSLEngineResult NEED_UNWRAP_CLOSED = new SSLEngineResult(CLOSED, NEED_UNWRAP, 0, 0);
     private static final SSLEngineResult NEED_WRAP_OK = new SSLEngineResult(OK, NEED_WRAP, 0, 0);
@@ -573,9 +569,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                     0, bytesProduced);
                         }
                         return newResult(NEED_WRAP, 0, bytesProduced);
-                    } else {
-                        status = handshake();
                     }
+
+                    status = handshake();
 
                     if (status == NEED_UNWRAP) {
                         // Signal if the outbound is done or not.
@@ -902,7 +898,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 if (!dst.hasRemaining()) {
                                     // Move to the next dst buffer as this one is full.
                                     continue;
-                                } else if (packetLength == 0) {
+                                }
+                                if (packetLength == 0) {
                                     // We read everything return now.
                                     return newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status,
                                                                        bytesConsumed, bytesProduced);
@@ -1508,7 +1505,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      */
     private static String toJavaCipherSuitePrefix(String protocolVersion) {
         final char c;
-        if (protocolVersion == null || protocolVersion.length() == 0) {
+        if (protocolVersion == null || protocolVersion.isEmpty()) {
             c = 0;
         } else {
             c = protocolVersion.charAt(0);
@@ -1567,13 +1564,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
             switch (mode) {
                 case NONE:
-                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_NONE, OpenSslContext.VERIFY_DEPTH);
+                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_NONE, ReferenceCountedOpenSslContext.VERIFY_DEPTH);
                     break;
                 case REQUIRE:
-                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_REQUIRE, OpenSslContext.VERIFY_DEPTH);
+                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_REQUIRE, ReferenceCountedOpenSslContext.VERIFY_DEPTH);
                     break;
                 case OPTIONAL:
-                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_OPTIONAL, OpenSslContext.VERIFY_DEPTH);
+                    SSL.setVerify(ssl, SSL.SSL_CVERIFY_OPTIONAL, ReferenceCountedOpenSslContext.VERIFY_DEPTH);
                     break;
                 default:
                     throw new Error(mode.toString());
