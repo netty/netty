@@ -22,8 +22,6 @@
 
 package io.netty.util.internal.chmv8;
 
-import java.util.concurrent.RecursiveAction;
-
 /**
  * A {@link ForkJoinTask} with a completion action performed when
  * triggered and there are no remaining pending actions.
