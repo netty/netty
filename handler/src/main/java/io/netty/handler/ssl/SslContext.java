@@ -282,7 +282,7 @@ public abstract class SslContext {
      * @param keyFile a PKCS#8 private key file in PEM format
      * @param keyPassword the password of the {@code keyFile}.
      *                    {@code null} if it's not password-protected.
-     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link javax.net.ssl.TrustManager}s
+     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
      *                            that verifies the certificates sent from servers.
      *                            {@code null} to use the default.
      * @param ciphers the cipher suites to enable, in the order of preference.
@@ -777,7 +777,7 @@ public abstract class SslContext {
     }
 
     /**
-     * Creates a new instance (startTls set to <code>false</code>).
+     * Creates a new instance (startTls set to {@code false}).
      */
     protected SslContext() {
         this(false);
@@ -1096,12 +1096,5 @@ public abstract class SslContext {
         kmf.init(ks, keyPasswordChars);
 
         return kmf;
-    }
-
-    static KeyManagerFactory buildDefaultKeyManagerFactory()
-            throws NoSuchAlgorithmException, KeyStoreException, UnrecoverableKeyException {
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        keyManagerFactory.init(null, null);
-        return keyManagerFactory;
     }
 }
