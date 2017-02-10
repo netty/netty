@@ -17,8 +17,8 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.tcnative.jni.Buffer;
-import io.netty.tcnative.jni.SSL;
+import io.netty.internal.tcnative.Buffer;
+import io.netty.internal.tcnative.SSL;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
