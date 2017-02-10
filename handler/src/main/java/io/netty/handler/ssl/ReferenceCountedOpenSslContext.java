@@ -256,7 +256,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
 
         unmodifiableCiphers = Arrays.asList(checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
-                convertedCiphers, DEFAULT_CIPHERS, OpenSsl.availableCipherSuites()));
+                convertedCiphers, DEFAULT_CIPHERS, OpenSsl.availableOpenSslCipherSuites()));
 
         this.apn = checkNotNull(apn, "apn");
 
@@ -453,9 +453,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * Set the size of the buffer used by the BIO for non-application based writes
      * (e.g. handshake, renegotiation, etc...).
      */
-    public void setBioNonApplicationBufferSize(int bioNonApplicationSize) {
+    public void setBioNonApplicationBufferSize(int bioNonApplicationBufferSize) {
         this.bioNonApplicationBufferSize =
-                checkPositiveOrZero(bioNonApplicationSize, "bioNonApplicationBufferSize");
+                checkPositiveOrZero(bioNonApplicationBufferSize, "bioNonApplicationBufferSize");
     }
 
     /**
