@@ -17,9 +17,9 @@ package io.netty.handler.ssl;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.tcnative.jni.CertificateRequestedCallback;
-import io.netty.tcnative.jni.SSL;
-import io.netty.tcnative.jni.SSLContext;
+import io.netty.internal.tcnative.CertificateRequestedCallback;
+import io.netty.internal.tcnative.SSL;
+import io.netty.internal.tcnative.SSLContext;
 
 import java.security.KeyStore;
 import java.security.PrivateKey;
