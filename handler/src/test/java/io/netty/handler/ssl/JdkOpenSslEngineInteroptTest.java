@@ -19,7 +19,7 @@ import org.junit.BeforeClass;
 
 import javax.net.ssl.SSLException;
 
-import static io.netty.tcnative.jni.SSL.SSL_CVERIFY_IGNORED;
+import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static org.junit.Assume.assumeTrue;
 
 public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {

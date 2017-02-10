@@ -33,7 +33,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 
-import static io.netty.tcnative.jni.SSL.SSL_CVERIFY_IGNORED;
+import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
