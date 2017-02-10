@@ -16,7 +16,7 @@
 
 package io.netty.handler.ssl;
 
-import io.netty.tcnative.jni.SSLContext;
+import io.netty.internal.tcnative.SSLContext;
 
 /**
  * Stats exposed by an OpenSSL session context.

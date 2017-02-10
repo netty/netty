@@ -15,8 +15,8 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.tcnative.jni.SSL;
-import io.netty.tcnative.jni.SSLContext;
+import io.netty.internal.tcnative.SSL;
+import io.netty.internal.tcnative.SSLContext;
 
 
 /**

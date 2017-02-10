@@ -16,9 +16,9 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.ObjectUtil;
-import io.netty.tcnative.jni.SSL;
-import io.netty.tcnative.jni.SSLContext;
-import io.netty.tcnative.jni.SessionTicketKey;
+import io.netty.internal.tcnative.SSL;
+import io.netty.internal.tcnative.SSLContext;
+import io.netty.internal.tcnative.SessionTicketKey;
 
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionContext;
