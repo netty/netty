@@ -386,7 +386,7 @@ public class DnsNameResolverTest {
     }
 
     public void testNonCachedResolveEmptyHostName(String inetHost) throws Exception {
-        DnsNameResolver resolver = newNonCachedResolver(InternetProtocolFamily.IPv4).build();
+        DnsNameResolver resolver = newNonCachedResolver(ResolvedAddressTypes.IPV4_ONLY).build();
         try {
             InetAddress addr = resolver.resolve(inetHost).syncUninterruptibly().getNow();
             assertEquals(SocketUtils.addressByName(inetHost), addr);
@@ -406,7 +406,7 @@ public class DnsNameResolverTest {
     }
 
     private static void testNonCachedResolveAllEmptyHostName(String inetHost) throws UnknownHostException {
-        DnsNameResolver resolver = newNonCachedResolver(InternetProtocolFamily.IPv4).build();
+        DnsNameResolver resolver = newNonCachedResolver(ResolvedAddressTypes.IPV4_ONLY).build();
         try {
             List<InetAddress> addrs = resolver.resolveAll(inetHost).syncUninterruptibly().getNow();
             assertEquals(Arrays.asList(
