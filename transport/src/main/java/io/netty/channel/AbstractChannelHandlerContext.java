@@ -820,7 +820,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             if (flush) {
                 task = WriteAndFlushTask.newInstance(next, m, promise);
             }  else {
-                task = WriteTask.newInstance(next, m, promise);
+                boolean wakeup = Boolean.TRUE.equals(channel().config().getOption(ChannelOption.WAKEUP_ON_WRITE));
+                task = wakeup ? WakeupWriteTask.newInstance(next, m, promise) :
+                        WriteTask.newInstance(next, m, promise);
             }
             safeExecute(executor, task, promise, m);
         }
@@ -1135,6 +1137,27 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         public void write(AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             super.write(ctx, msg, promise);
             ctx.invokeFlush();
+        }
+    }
+
+    static final class WakeupWriteTask extends AbstractWriteTask {
+
+        private static final Recycler<WakeupWriteTask> RECYCLER = new Recycler<WakeupWriteTask>() {
+            @Override
+            protected WakeupWriteTask newObject(Handle<WakeupWriteTask> handle) {
+                return new WakeupWriteTask(handle);
+            }
+        };
+
+        private static WakeupWriteTask newInstance(
+                AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            WakeupWriteTask task = RECYCLER.get();
+            init(task, ctx, msg, promise);
+            return task;
+        }
+
+        private WakeupWriteTask(Recycler.Handle<WakeupWriteTask> handle) {
+            super(handle);
         }
     }
 }
