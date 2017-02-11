@@ -292,8 +292,8 @@ public class MqttCodecTest {
         return MqttMessageBuilders.connect()
                 .clientId(CLIENT_ID)
                 .protocolVersion(mqttVersion)
-                .hasUser().username(USER_NAME)
-                .hasPassword().password(PASSWORD)
+                .username(USER_NAME)
+                .password(PASSWORD)
                 .willRetain(true)
                 .willQoS(MqttQoS.AT_LEAST_ONCE)
                 .willFlag(true)
@@ -307,7 +307,7 @@ public class MqttCodecTest {
     private static MqttConnAckMessage createConnAckMessage() {
         return MqttMessageBuilders.connAck()
                 .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
-                .sessionPresent()
+                .sessionPresent(true)
                 .build();
     }
 
