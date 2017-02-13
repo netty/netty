@@ -24,6 +24,7 @@ import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ReflectionUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -195,8 +196,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
                     Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
 
-                    selectedKeysField.setAccessible(true);
-                    publicSelectedKeysField.setAccessible(true);
+                    Throwable cause = ReflectionUtil.trySetAccessible(selectedKeysField);
+                    if (cause != null) {
+                        return cause;
+                    }
+                    cause = ReflectionUtil.trySetAccessible(publicSelectedKeysField);
+                    if (cause != null) {
+                        return cause;
+                    }
 
                     selectedKeysField.set(selector, selectedKeySet);
                     publicSelectedKeysField.set(selector, selectedKeySet);
@@ -205,15 +212,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     return e;
                 } catch (IllegalAccessException e) {
                     return e;
-                } catch (RuntimeException e) {
-                    // JDK 9 can throw an inaccessible object exception here; since Netty compiles
-                    // against JDK 7 and this exception was only added in JDK 9, we have to weakly
-                    // check the type
-                    if ("java.lang.reflect.InaccessibleObjectException".equals(e.getClass().getName())) {
-                        return e;
-                    } else {
-                        throw e;
-                    }
                 }
             }
         });
