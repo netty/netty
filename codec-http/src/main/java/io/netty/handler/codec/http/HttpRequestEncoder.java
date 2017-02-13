@@ -42,7 +42,7 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
         // See http://tools.ietf.org/html/rfc2616#section-5.1.2
         String uri = request.getUri();
 
-        if (uri.length() == 0) {
+        if (uri.isEmpty()) {
             uri += SLASH;
         } else {
             int start = uri.indexOf("://");
