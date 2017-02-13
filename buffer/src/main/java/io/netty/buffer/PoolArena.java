@@ -722,7 +722,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         private int offsetCacheLine(ByteBuffer memory) {
-            return (int) (PlatformDependent.directBufferAddress(memory) & directMemoryCacheAlignmentMask);
+            // We can only calculate the offset if Unsafe is present as otherwise directBufferAddress(...) will
+            // throw an NPE.
+            return HAS_UNSAFE ?
+                    (int) (PlatformDependent.directBufferAddress(memory) & directMemoryCacheAlignmentMask) : 0;
         }
 
         @Override
