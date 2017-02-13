@@ -30,7 +30,7 @@ import java.io.IOException;
 
 import static org.junit.Assert.*;
 
-public abstract class AbstractCompatibleMarshallingDecoderTest {
+public abstract class AbstractCompatibleMarshallingDecoderTest extends AbstractMarshallingTest {
     @SuppressWarnings("RedundantStringConstructorCall")
     private final String testObject = new String("test");
 
