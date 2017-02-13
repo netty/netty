@@ -31,7 +31,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
 
     private final ConcurrentMap<String, T> constants = PlatformDependent.newConcurrentHashMap();
 
-    private AtomicInteger nextId = new AtomicInteger(1);
+    private final AtomicInteger nextId = new AtomicInteger(1);
 
     /**
      * Shortcut of {@link #valueOf(String) valueOf(firstNameComponent.getName() + "#" + secondNameComponent)}.

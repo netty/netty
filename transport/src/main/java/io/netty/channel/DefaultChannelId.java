@@ -154,7 +154,7 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     private final byte[] data;
-    private int hashCode;
+    private final int hashCode;
 
     private transient String shortValue;
     private transient String longValue;
