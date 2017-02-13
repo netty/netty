@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
 
-    private Map<Integer, Entry<ChannelFuture, ChannelPromise>> streamidPromiseMap;
+    private final Map<Integer, Entry<ChannelFuture, ChannelPromise>> streamidPromiseMap;
 
     public HttpResponseHandler() {
         // Use a concurrent map because we add and iterate from the main thread (just for the purposes of the example),
