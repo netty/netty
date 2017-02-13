@@ -19,6 +19,7 @@ package io.netty.buffer;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.SystemPropertyUtil;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -59,6 +60,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
 
     @Test
     public void testArenaMetricsCacheAlign() {
+        Assume.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 1000, 1000, 1000, true, 64), 100, 1, 1, 0);
     }
 

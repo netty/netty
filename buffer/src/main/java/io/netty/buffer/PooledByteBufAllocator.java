@@ -212,6 +212,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             throw new IllegalArgumentException("directMemoryCacheAlignment: "
                     + directMemoryCacheAlignment + " (expected: >= 0)");
         }
+        if (directMemoryCacheAlignment > 0 && !isDirectMemoryCacheAlignmentSupported()) {
+            throw new IllegalArgumentException("directMemoryCacheAlignment is not supported");
+        }
 
         if ((directMemoryCacheAlignment & -directMemoryCacheAlignment) != directMemoryCacheAlignment) {
             throw new IllegalArgumentException("directMemoryCacheAlignment: "
@@ -368,6 +371,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
      */
     public static int defaultNormalCacheSize() {
         return DEFAULT_NORMAL_CACHE_SIZE;
+    }
+
+    /**
+     * Return {@code true} if direct memory cache aligment is supported, {@code false} otherwise.
+     */
+    public static boolean isDirectMemoryCacheAlignmentSupported() {
+        return PlatformDependent.hasUnsafe();
     }
 
     @Override
