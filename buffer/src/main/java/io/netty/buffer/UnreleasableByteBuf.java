@@ -26,7 +26,7 @@ final class UnreleasableByteBuf extends WrappedByteBuf {
     private SwappedByteBuf swappedBuf;
 
     UnreleasableByteBuf(ByteBuf buf) {
-        super(buf);
+        super(buf instanceof UnreleasableByteBuf ? buf.unwrap() : buf);
     }
 
     @Override
@@ -47,7 +47,7 @@ final class UnreleasableByteBuf extends WrappedByteBuf {
 
     @Override
     public ByteBuf asReadOnly() {
-        return new UnreleasableByteBuf(buf.asReadOnly());
+        return buf.isReadOnly() ? this : new UnreleasableByteBuf(buf.asReadOnly());
     }
 
     @Override
