@@ -36,7 +36,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 final class PlatformDependent0 {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
-    static final Unsafe UNSAFE;
+    private static final Unsafe UNSAFE;
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
@@ -69,7 +69,10 @@ final class PlatformDependent0 {
                 public Object run() {
                     try {
                         final Field field = Buffer.class.getDeclaredField("address");
-                        field.setAccessible(true);
+                        Throwable cause = ReflectionUtil.trySetAccessible(field);
+                        if (cause != null) {
+                            return cause;
+                        }
                         // if direct really is a direct buffer, address will be non-zero
                         if (field.getLong(direct) == 0) {
                             return null;
@@ -102,7 +105,10 @@ final class PlatformDependent0 {
                 public Object run() {
                     try {
                         final Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
-                        unsafeField.setAccessible(true);
+                        Throwable cause = ReflectionUtil.trySetAccessible(unsafeField);
+                        if (cause != null) {
+                            return cause;
+                        }
                         // the unsafe instance
                         return unsafeField.get(null);
                     } catch (NoSuchFieldException e) {
@@ -179,7 +185,10 @@ final class PlatformDependent0 {
                                 try {
                                     final Constructor<?> constructor =
                                             direct.getClass().getDeclaredConstructor(long.class, int.class);
-                                    constructor.setAccessible(true);
+                                    Throwable cause = ReflectionUtil.trySetAccessible(constructor);
+                                    if (cause != null) {
+                                        return cause;
+                                    }
                                     return constructor;
                                 } catch (NoSuchMethodException e) {
                                     return e;
@@ -226,10 +235,21 @@ final class PlatformDependent0 {
                         Class<?> bitsClass =
                                 Class.forName("java.nio.Bits", false, PlatformDependent.getSystemClassLoader());
                         Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
-                        unalignedMethod.setAccessible(true);
+                        Throwable cause = ReflectionUtil.trySetAccessible(unalignedMethod);
+                        if (cause != null) {
+                            return cause;
+                        }
                         return unalignedMethod.invoke(null);
-                    } catch (Throwable cause) {
-                        return cause;
+                    } catch (NoSuchMethodException e) {
+                        return e;
+                    } catch (SecurityException e) {
+                        return e;
+                    } catch (IllegalAccessException e) {
+                        return e;
+                    } catch (ClassNotFoundException e) {
+                        return e;
+                    } catch (InvocationTargetException e) {
+                        return e;
                     }
                 }
             });
