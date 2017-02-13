@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import java.io.InputStream;
 import java.util.zip.Checksum;
 
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,6 +38,7 @@ import org.mockito.MockitoAnnotations;
 
 import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.when;
 
 public class Lz4FrameEncoderTest extends AbstractEncoderTest {
@@ -111,7 +113,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         testAllocateBuffer(blockSize, NONALLOCATABLE_SIZE, false);
     }
 
-    private void testAllocateBuffer(int blockSize, int bufSize, boolean isDirect) {
+    private void testAllocateBuffer(int blockSize, int bufSize, boolean preferDirect) {
         // allocate the input buffer to an arbitrary size less than the blockSize
         ByteBuf in = ByteBufAllocator.DEFAULT.buffer(bufSize, bufSize);
         in.writerIndex(in.capacity());
@@ -119,13 +121,17 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         ByteBuf out = null;
         try {
             Lz4FrameEncoder encoder = newEncoder(blockSize, Lz4FrameEncoder.DEFAULT_MAX_ENCODE_SIZE);
-            out = encoder.allocateBuffer(ctx, in, isDirect);
+            out = encoder.allocateBuffer(ctx, in, preferDirect);
             Assert.assertNotNull(out);
             if (NONALLOCATABLE_SIZE == bufSize) {
                 Assert.assertFalse(out.isWritable());
             } else {
                 Assert.assertTrue(out.writableBytes() > 0);
-                Assert.assertEquals(isDirect, out.isDirect());
+                if (!preferDirect) {
+                    // Only check if preferDirect is not true as if a direct buffer is returned or not depends on
+                    // if sun.misc.Unsafe is present.
+                    assertFalse(out.isDirect());
+                }
             }
         } finally {
             in.release();

@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -24,6 +25,11 @@ public abstract class AbstractByteBufAllocatorTest extends ByteBufAllocatorTest 
 
     @Override
     protected abstract AbstractByteBufAllocator newAllocator(boolean preferDirect);
+
+    @Override
+    protected boolean isDirectExpected(boolean preferDirect) {
+        return preferDirect && PlatformDependent.hasUnsafe();
+    }
 
     @Override
     protected final int defaultMaxCapacity() {
