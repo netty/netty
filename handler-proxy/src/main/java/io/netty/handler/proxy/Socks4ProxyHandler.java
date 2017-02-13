@@ -44,7 +44,7 @@ public final class Socks4ProxyHandler extends ProxyHandler {
 
     public Socks4ProxyHandler(SocketAddress proxyAddress, String username) {
         super(proxyAddress);
-        if (username != null && username.length() == 0) {
+        if (username != null && username.isEmpty()) {
             username = null;
         }
         this.username = username;

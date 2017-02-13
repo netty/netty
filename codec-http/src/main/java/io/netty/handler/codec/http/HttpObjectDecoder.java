@@ -574,10 +574,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             do {
                 char firstChar = line.charAt(0);
                 if (name != null && (firstChar == ' ' || firstChar == '\t')) {
-                    StringBuilder buf = new StringBuilder(value.length() + line.length() + 1);
+                    String trimmedLine = line.toString().trim();
+                    StringBuilder buf = new StringBuilder(value.length() + trimmedLine.length() + 1);
                     buf.append(value)
                        .append(' ')
-                       .append(line.toString().trim());
+                       .append(trimmedLine);
                     value = buf.toString();
                 } else {
                     if (name != null) {
