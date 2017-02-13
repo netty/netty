@@ -26,7 +26,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public abstract class AbstractCompatibleMarshallingEncoderTest {
+public abstract class AbstractCompatibleMarshallingEncoderTest extends AbstractMarshallingTest {
 
     @Test
     public void testMarshalling() throws Exception {
