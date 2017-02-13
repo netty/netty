@@ -184,7 +184,6 @@ public class DefaultAttributeMap implements AttributeMap {
 
         private void remove0() {
             synchronized (head) {
-                assert head != null;
                 if (prev == null) {
                     // Removed before.
                     return;
