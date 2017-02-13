@@ -182,4 +182,13 @@ public class ReadOnlyByteBufTest {
     public void shouldIndicteNotWritableAnyNumber() {
         assertFalse(unmodifiableBuffer(buffer(1)).isWritable(1));
     }
+
+    @Test
+    public void asReadOnly() {
+        ByteBuf buf = buffer(1);
+        ByteBuf readOnly = buf.asReadOnly();
+        assertTrue(readOnly.isReadOnly());
+        assertSame(readOnly, readOnly.asReadOnly());
+        readOnly.release();
+    }
 }
