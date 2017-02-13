@@ -37,7 +37,7 @@ public abstract class ByteBufAllocatorTest {
         ByteBufAllocator allocator = newAllocator(preferDirect);
         ByteBuf buffer = allocator.buffer(1);
         try {
-            assertBuffer(buffer, preferDirect, 1, defaultMaxCapacity());
+            assertBuffer(buffer, isDirectExpected(preferDirect), 1, defaultMaxCapacity());
         } finally {
             buffer.release();
         }
@@ -53,11 +53,13 @@ public abstract class ByteBufAllocatorTest {
         ByteBufAllocator allocator = newAllocator(preferDirect);
         ByteBuf buffer = allocator.buffer(1, maxCapacity);
         try {
-            assertBuffer(buffer, preferDirect, 1, maxCapacity);
+            assertBuffer(buffer, isDirectExpected(preferDirect), 1, maxCapacity);
         } finally {
             buffer.release();
         }
     }
+
+    protected abstract boolean isDirectExpected(boolean preferDirect);
 
     @Test
     public void testHeapBuffer() {
