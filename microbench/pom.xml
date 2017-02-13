@@ -32,6 +32,7 @@
     <!-- Skip tests by default; run only if -DskipTests=false is specified -->
     <skipTests>true</skipTests>
     <epoll.arch>x86_64</epoll.arch>
+    <jmh.version>1.17.4</jmh.version>
   </properties>
 
   <profiles>
@@ -92,12 +93,12 @@
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
-      <version>1.14.1</version>
+      <version>${jmh.version}</version>
     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-generator-annprocess</artifactId>
-      <version>1.14.1</version>
+      <version>${jmh.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
