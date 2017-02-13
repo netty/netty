@@ -27,7 +27,7 @@ import io.netty.util.internal.UnstableApi;
 public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implements Http2GoAwayFrame {
 
     private final long errorCode;
-    private int lastStreamId;
+    private final int lastStreamId;
     private int extraStreamIds;
 
     /**
