@@ -65,10 +65,10 @@ public final class Socks5ProxyHandler extends ProxyHandler {
 
     public Socks5ProxyHandler(SocketAddress proxyAddress, String username, String password) {
         super(proxyAddress);
-        if (username != null && username.length() == 0) {
+        if (username != null && username.isEmpty()) {
             username = null;
         }
-        if (password != null && password.length() == 0) {
+        if (password != null && password.isEmpty()) {
             password = null;
         }
         this.username = username;
