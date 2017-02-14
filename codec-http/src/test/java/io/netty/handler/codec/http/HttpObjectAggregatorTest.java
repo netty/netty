@@ -293,9 +293,9 @@ public class HttpObjectAggregatorTest {
         // Send a request with 100-continue + large Content-Length header value.
         assertFalse(embedder.writeInbound(message));
 
-        // The aggregator should respond with '417.'
+        // The aggregator should respond with '413.'
         FullHttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.EXPECTATION_FAILED, response.status());
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
         // An ill-behaving client could continue to send data without a respect, and such data should be discarded.
@@ -325,6 +325,52 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
+    public void testUnsupportedExpectHeaderExpectation() {
+        runUnsupportedExceptHeaderExceptionTest(true);
+        runUnsupportedExceptHeaderExceptionTest(false);
+    }
+
+    private void runUnsupportedExceptHeaderExceptionTest(final boolean close) {
+        final HttpObjectAggregator aggregator;
+        final int maxContentLength = 4;
+        if (close) {
+            aggregator = new HttpObjectAggregator(maxContentLength, true);
+        } else {
+            aggregator = new HttpObjectAggregator(maxContentLength);
+        }
+        final EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), aggregator);
+
+        assertFalse(embedder.writeInbound(Unpooled.copiedBuffer(
+                "GET / HTTP/1.1\r\n" +
+                        "Expect: chocolate=yummy\r\n" +
+                        "Content-Length: 100\r\n\r\n", CharsetUtil.US_ASCII)));
+        assertNull(embedder.readInbound());
+
+        final FullHttpResponse response = (FullHttpResponse) embedder.readOutbound();
+        assertEquals(HttpResponseStatus.EXPECTATION_FAILED, response.status());
+        assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+        response.release();
+
+        if (close) {
+            assertFalse(embedder.isOpen());
+        } else {
+            // keep-alive is on by default in HTTP/1.1, so the connection should be still alive
+            assertTrue(embedder.isOpen());
+
+            // the decoder should be reset by the aggregator at this point and be able to decode the next request
+            assertTrue(embedder.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.1\r\n\r\n", CharsetUtil.US_ASCII)));
+
+            final FullHttpRequest request = (FullHttpRequest) embedder.readInbound();
+            assertThat(request.method(), is(HttpMethod.GET));
+            assertThat(request.uri(), is("/"));
+            assertThat(request.content().readableBytes(), is(0));
+            request.release();
+        }
+
+        assertFalse(embedder.finish());
+    }
+
+    @Test
     public void testOversizedRequestWith100ContinueAndDecoder() {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(4));
         embedder.writeInbound(Unpooled.copiedBuffer(
@@ -335,7 +381,7 @@ public class HttpObjectAggregatorTest {
         assertNull(embedder.readInbound());
 
         FullHttpResponse response = (FullHttpResponse) embedder.readOutbound();
-        assertEquals(HttpResponseStatus.EXPECTATION_FAILED, response.status());
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
         // Keep-alive is on by default in HTTP/1.1, so the connection should be still alive.
@@ -364,7 +410,7 @@ public class HttpObjectAggregatorTest {
         assertNull(embedder.readInbound());
 
         FullHttpResponse response = (FullHttpResponse) embedder.readOutbound();
-        assertEquals(HttpResponseStatus.EXPECTATION_FAILED, response.status());
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
         // We are forcing the connection closed if an expectation is exceeded.
@@ -388,9 +434,9 @@ public class HttpObjectAggregatorTest {
         // Send a request with 100-continue + large Content-Length header value.
         assertFalse(embedder.writeInbound(message));
 
-        // The aggregator should respond with '417'.
+        // The aggregator should respond with '413'.
         FullHttpResponse response = embedder.readOutbound();
-        assertEquals(HttpResponseStatus.EXPECTATION_FAILED, response.status());
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
         // An ill-behaving client could continue to send data without a respect, and such data should be discarded.
