@@ -1467,7 +1467,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * {@link SSL#setVerify(long, int, int)}.
      */
     @UnstableApi
-    public synchronized final void setVerify(int verifyMode, int depth) {
+    public final synchronized void setVerify(int verifyMode, int depth) {
         SSL.setVerify(ssl, verifyMode, depth);
     }
 
