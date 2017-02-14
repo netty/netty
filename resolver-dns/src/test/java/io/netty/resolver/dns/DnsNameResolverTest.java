@@ -385,7 +385,7 @@ public class DnsNameResolverTest {
             try {
                 final Map<String, InetAddress> resultA = testResolve0(resolver, EXCLUSIONS_RESOLVE_A);
                 for (Entry<String, InetAddress> resolvedEntry : resultA.entrySet()) {
-                    if (resolvedEntry.getValue().getHostAddress().equalsIgnoreCase("localhost")) {
+                    if (resolvedEntry.getValue().isLoopbackAddress()) {
                         continue;
                     }
                     if (overridenHostnames.contains(resolvedEntry.getKey())) {
