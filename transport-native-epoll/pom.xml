@@ -28,6 +28,8 @@
 
   <properties>
     <jni.compiler.args.ldflags>LDFLAGS=-Wl,--no-as-needed -lrt</jni.compiler.args.ldflags>
+    <!-- Needed by the native transport as we need the memoryAddress of the ByteBuffer -->
+    <argLine.java9.extras>--add-opens=java.base/java.nio=ALL-UNNAMED</argLine.java9.extras>
   </properties>
 
   <dependencies>
