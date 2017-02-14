@@ -545,9 +545,11 @@ public abstract class SSLEngineTest {
         serverKeyStore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
         final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
         clientKeyStore.load(getClass().getResourceAsStream("mutual_auth_invalid_client.p12"), password);
-        final KeyManagerFactory serverKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        final KeyManagerFactory serverKeyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         serverKeyManagerFactory.init(serverKeyStore, password);
-        final KeyManagerFactory clientKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        final KeyManagerFactory clientKeyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         clientKeyManagerFactory.init(clientKeyStore, password);
         File commonCertChain = new File(getClass().getResource("mutual_auth_ca.pem").getFile());
 
@@ -563,15 +565,18 @@ public abstract class SSLEngineTest {
         testMutualAuthClientCertFail(auth, "mutual_auth_invalid_client.p12", false);
     }
 
-    private void testMutualAuthClientCertFail(ClientAuth auth, String clientCert, boolean serverInitEngine) throws Exception {
+    private void testMutualAuthClientCertFail(ClientAuth auth, String clientCert, boolean serverInitEngine)
+            throws Exception {
         char[] password = "example".toCharArray();
         final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
         serverKeyStore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
         final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
         clientKeyStore.load(getClass().getResourceAsStream(clientCert), password);
-        final KeyManagerFactory serverKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        final KeyManagerFactory serverKeyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         serverKeyManagerFactory.init(serverKeyStore, password);
-        final KeyManagerFactory clientKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        final KeyManagerFactory clientKeyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         clientKeyManagerFactory.init(clientKeyStore, password);
         File commonCertChain = new File(getClass().getResource("mutual_auth_ca.pem").getFile());
 
