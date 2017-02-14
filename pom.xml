@@ -246,6 +246,7 @@
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
     <asm.version>5.1</asm.version>
+    <testJavaHome>${env.JAVA_HOME}</testJavaHome>
   </properties>
 
   <modules>
@@ -818,6 +819,7 @@
               <value>io.netty.build.junit.TimedOutTestsListener</value>
             </property>
           </properties>
+          <jvm>${testJavaHome}/bin/java</jvm>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
