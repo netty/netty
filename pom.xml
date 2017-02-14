@@ -713,6 +713,9 @@
             <ignore>java.nio.ByteBuffer</ignore>
             <ignore>java.nio.CharBuffer</ignore>
 
+            <!-- JDK 8 -->
+            <ignore>java.util.concurrent.atomic.LongAdder</ignore>
+
             <!-- Resolver -->
             <ignore>java.net.InetAddress</ignore>
           </ignores>

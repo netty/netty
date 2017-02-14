@@ -16,8 +16,6 @@
 package io.netty.util.internal;
 
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.chmv8.ConcurrentHashMapV8;
-import io.netty.util.internal.chmv8.LongAdderV8;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MpscArrayQueue;
@@ -285,19 +283,15 @@ public final class PlatformDependent {
      * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
-        if (CAN_USE_CHM_V8) {
-            return new ConcurrentHashMapV8<K, V>();
-        } else {
-            return new ConcurrentHashMap<K, V>();
-        }
+        return new ConcurrentHashMap<K, V>();
     }
 
     /**
      * Creates a new fastest {@link LongCounter} implementaion for the current platform.
      */
     public static LongCounter newLongCounter() {
-        if (HAS_UNSAFE) {
-            return new LongAdderV8();
+        if (javaVersion() >= 8) {
+            return new LongAdderCounter();
         } else {
             return new AtomicLongCounter();
         }
@@ -307,22 +301,14 @@ public final class PlatformDependent {
      * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity) {
-        if (CAN_USE_CHM_V8) {
-            return new ConcurrentHashMapV8<K, V>(initialCapacity);
-        } else {
-            return new ConcurrentHashMap<K, V>(initialCapacity);
-        }
+        return new ConcurrentHashMap<K, V>(initialCapacity);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity, float loadFactor) {
-        if (CAN_USE_CHM_V8) {
-            return new ConcurrentHashMapV8<K, V>(initialCapacity, loadFactor);
-        } else {
-            return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
-        }
+        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
     }
 
     /**
@@ -330,22 +316,14 @@ public final class PlatformDependent {
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(
             int initialCapacity, float loadFactor, int concurrencyLevel) {
-        if (CAN_USE_CHM_V8) {
-            return new ConcurrentHashMapV8<K, V>(initialCapacity, loadFactor, concurrencyLevel);
-        } else {
-            return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor, concurrencyLevel);
-        }
+        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor, concurrencyLevel);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(Map<? extends K, ? extends V> map) {
-        if (CAN_USE_CHM_V8) {
-            return new ConcurrentHashMapV8<K, V>(map);
-        } else {
-            return new ConcurrentHashMap<K, V>(map);
-        }
+        return new ConcurrentHashMap<K, V>(map);
     }
 
     /**
