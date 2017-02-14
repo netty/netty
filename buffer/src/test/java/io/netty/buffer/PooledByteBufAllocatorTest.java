@@ -55,6 +55,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
 
     @Test
     public void testArenaMetricsNoCacheAlign() {
+        Assume.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0, true, 64), 100, 0, 100, 100);
     }
 
