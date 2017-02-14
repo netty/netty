@@ -72,8 +72,9 @@
     <profile>
       <id>java9</id>
       <properties>
+        <argLine.java9.extras></argLine.java9.extras>
         <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--add-modules java.xml.bind --add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9>
+        <argLine.java9>--add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java9 supports alpn out of the box -->
         <argLine.alpnAgent />
         <!-- This is needed as earlier ASM versions not support java9 -->
