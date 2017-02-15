@@ -31,7 +31,7 @@ public class CustomChannelId implements ChannelId {
     @Override
     public int compareTo(final ChannelId o) {
         if (o instanceof CustomChannelId) {
-            return MathUtil.compare(id, ((CustomChannelId)o).id);
+            return MathUtil.compare(id, ((CustomChannelId) o).id);
         }
 
         return asLongText().compareTo(o.asLongText());
