@@ -1162,22 +1162,28 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 return enabled.toArray(new String[1]);
             }
         }
-        if ((opts & SSL.SSL_OP_NO_TLSv1) == 0) {
+        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1, OpenSsl.PROTOCOL_TLS_V1)) {
             enabled.add(OpenSsl.PROTOCOL_TLS_V1);
         }
-        if ((opts & SSL.SSL_OP_NO_TLSv1_1) == 0) {
+        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_1, OpenSsl.PROTOCOL_TLS_V1_1)) {
             enabled.add(OpenSsl.PROTOCOL_TLS_V1_1);
         }
-        if ((opts & SSL.SSL_OP_NO_TLSv1_2) == 0) {
+        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_2, OpenSsl.PROTOCOL_TLS_V1_2)) {
             enabled.add(OpenSsl.PROTOCOL_TLS_V1_2);
         }
-        if ((opts & SSL.SSL_OP_NO_SSLv2) == 0) {
+        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv2, OpenSsl.PROTOCOL_SSL_V2)) {
             enabled.add(OpenSsl.PROTOCOL_SSL_V2);
         }
-        if ((opts & SSL.SSL_OP_NO_SSLv3) == 0) {
+        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv3, OpenSsl.PROTOCOL_SSL_V3)) {
             enabled.add(OpenSsl.PROTOCOL_SSL_V3);
         }
         return enabled.toArray(new String[enabled.size()]);
+    }
+
+    private static boolean isProtocolEnabled(int opts, int disableMask, String protocolString) {
+        // We also need to check if the actual protocolString is supported as depending on the openssl API
+        // implementations it may use a disableMask of 0 (BoringSSL is doing this for example).
+        return (opts & disableMask) == 0 && OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocolString);
     }
 
     @Override

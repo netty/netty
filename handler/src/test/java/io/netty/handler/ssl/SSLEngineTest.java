@@ -1081,7 +1081,6 @@ public abstract class SSLEngineTest {
 
             // The only protocol that should be enabled is SSLv2Hello
             String[] enabledProtocols = sslEngine.getEnabledProtocols();
-            assertEquals(protocols1.length, enabledProtocols.length);
             assertArrayEquals(protocols1, enabledProtocols);
 
             // Enable a protocol that is currently disabled
