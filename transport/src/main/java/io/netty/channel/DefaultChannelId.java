@@ -178,10 +178,10 @@ public final class DefaultChannelId implements ChannelId {
 
         // random
         int random = ThreadLocalRandom.current().nextInt();
-        hashCode = random;
         i = writeInt(i, random);
-
         assert i == data.length;
+
+        hashCode = Arrays.hashCode(data);
     }
 
     private int writeInt(int i, int value) {
@@ -247,21 +247,35 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     @Override
-    public int compareTo(ChannelId o) {
-        return 0;
+    public int compareTo(final ChannelId o) {
+        if (o instanceof DefaultChannelId) {
+            final byte[] otherData = ((DefaultChannelId)o).data;
+            if (this == o) {
+                // short circuit
+                return 0;
+            }
+            // lexicographic comparison
+            int len1 = data.length;
+            int len2 = otherData.length;
+            int len = Math.min(len1, len2);
+
+            for (int k = 0; k < len; k++) {
+                byte x = data[k];
+                byte y = otherData[k];
+                if (x != y) {
+                    // treat these as unsigned bytes for comparison
+                    return (x & 0xff) - (y & 0xff);
+                }
+            }
+            return len1 - len2;
+        }
+
+        return asLongText().compareTo(o.asLongText());
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
-        }
-
-        if (!(obj instanceof DefaultChannelId)) {
-            return false;
-        }
-
-        return Arrays.equals(data, ((DefaultChannelId) obj).data);
+        return this == obj || (obj instanceof DefaultChannelId && Arrays.equals(data, ((DefaultChannelId) obj).data));
     }
 
     @Override
