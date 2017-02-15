@@ -19,7 +19,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
@@ -98,6 +98,6 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
     }
 
     private static int randomIndex(int numAddresses) {
-        return numAddresses == 1 ? 0 : ThreadLocalRandom.current().nextInt(numAddresses);
+        return numAddresses == 1 ? 0 : PlatformDependent.threadLocalRandom().nextInt(numAddresses);
     }
 }
