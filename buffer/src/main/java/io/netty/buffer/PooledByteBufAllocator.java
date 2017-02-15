@@ -296,11 +296,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         PoolThreadCache cache = threadCache.get();
         PoolArena<byte[]> heapArena = cache.heapArena;
 
-        ByteBuf buf;
+        final ByteBuf buf;
         if (heapArena != null) {
             buf = heapArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
-            buf = new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+            buf = PlatformDependent.hasUnsafe() ?
+                    new UnpooledUnsafeHeapByteBuf(this, initialCapacity, maxCapacity) :
+                    new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
         }
 
         return toLeakAwareBuffer(buf);
@@ -311,15 +313,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         PoolThreadCache cache = threadCache.get();
         PoolArena<ByteBuffer> directArena = cache.directArena;
 
-        ByteBuf buf;
+        final ByteBuf buf;
         if (directArena != null) {
             buf = directArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
-            if (PlatformDependent.hasUnsafe()) {
-                buf = UnsafeByteBufUtil.newUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
-            } else {
-                buf = new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
-            }
+            buf = PlatformDependent.hasUnsafe() ?
+                    UnsafeByteBufUtil.newUnsafeDirectByteBuf(this, initialCapacity, maxCapacity) :
+                    new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
         }
 
         return toLeakAwareBuffer(buf);

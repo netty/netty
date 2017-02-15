@@ -18,6 +18,7 @@ package io.netty.buffer;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import org.junit.Assume;
 import org.junit.Test;
@@ -41,6 +42,25 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
     @Override
     protected AbstractByteBufAllocator newAllocator(boolean preferDirect) {
         return new PooledByteBufAllocator(preferDirect);
+    }
+
+    @Override
+    protected AbstractByteBufAllocator newUnpooledAllocator() {
+        return new PooledByteBufAllocator(0, 0, 8192, 1);
+    }
+
+    @Test
+    public void testPooledUnsafeHeapBufferAndUnsafeDirectBuffer() {
+        AbstractByteBufAllocator allocator = newAllocator(true);
+        ByteBuf directBuffer = allocator.directBuffer();
+        assertInstanceOf(directBuffer,
+                PlatformDependent.hasUnsafe() ? PooledUnsafeDirectByteBuf.class : PooledDirectByteBuf.class);
+        directBuffer.release();
+
+        ByteBuf heapBuffer = allocator.heapBuffer();
+        assertInstanceOf(heapBuffer,
+                PlatformDependent.hasUnsafe() ? PooledUnsafeHeapByteBuf.class : PooledHeapByteBuf.class);
+        heapBuffer.release();
     }
 
     @Test

@@ -19,12 +19,15 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public abstract class AbstractByteBufAllocatorTest extends ByteBufAllocatorTest {
 
     @Override
     protected abstract AbstractByteBufAllocator newAllocator(boolean preferDirect);
+
+    protected abstract AbstractByteBufAllocator newUnpooledAllocator();
 
     @Override
     protected boolean isDirectExpected(boolean preferDirect) {
@@ -71,5 +74,24 @@ public abstract class AbstractByteBufAllocatorTest extends ByteBufAllocatorTest 
         } catch (IllegalArgumentException e) {
             // expected
         }
+    }
+
+    @Test
+    public void testUnsafeHeapBufferAndUnsafeDirectBuffer() {
+        AbstractByteBufAllocator allocator = newUnpooledAllocator();
+        ByteBuf directBuffer = allocator.directBuffer();
+        assertInstanceOf(directBuffer,
+                PlatformDependent.hasUnsafe() ? UnpooledUnsafeDirectByteBuf.class : UnpooledDirectByteBuf.class);
+        directBuffer.release();
+
+        ByteBuf heapBuffer = allocator.heapBuffer();
+        assertInstanceOf(heapBuffer,
+                PlatformDependent.hasUnsafe() ? UnpooledUnsafeHeapByteBuf.class : UnpooledHeapByteBuf.class);
+        heapBuffer.release();
+    }
+
+    protected static void assertInstanceOf(ByteBuf buffer, Class<? extends ByteBuf> clazz) {
+        // Unwrap if needed
+        assertTrue(clazz.isInstance(buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer));
     }
 }
