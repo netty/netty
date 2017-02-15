@@ -385,12 +385,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // read pending data from the underlying file descriptor.
                 // See https://github.com/netty/netty/issues/3709
                 epollInReady();
-
-                // Clear the EPOLLRDHUP flag to prevent continuously getting woken up on this event.
-                clearEpollRdHup();
+            } else {
+                // Just to be safe make sure the input marked as closed.
+                shutdownInput(true);
             }
-            // epollInReady may call this, but we should ensure that it gets called.
-            shutdownInput(true);
+
+            // Clear the EPOLLRDHUP flag to prevent continuously getting woken up on this event.
+            clearEpollRdHup();
         }
 
         /**
