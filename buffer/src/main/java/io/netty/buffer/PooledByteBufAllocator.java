@@ -18,6 +18,7 @@ package io.netty.buffer;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -209,9 +210,18 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             throw new IllegalArgumentException("nDirectArea: " + nDirectArena + " (expected: >= 0)");
         }
 
-        if (directMemoryCacheAlignment < 0) {
+        if (directMemoryCacheAlignment < -1) {
             throw new IllegalArgumentException("directMemoryCacheAlignment: "
-                    + directMemoryCacheAlignment + " (expected: >= 0)");
+                    + directMemoryCacheAlignment + " (expected: >= -1)");
+        }
+
+        if (directMemoryCacheAlignment == -1) {
+            directMemoryCacheAlignment = PlatformDependent.cacheLineSize();
+            if (directMemoryCacheAlignment == -1) {
+                directMemoryCacheAlignment = DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT;
+            } else {
+                directMemoryCacheAlignment = MathUtil.findNextPositivePowerOfTwo(directMemoryCacheAlignment);
+            }
         }
         if (directMemoryCacheAlignment > 0 && !isDirectMemoryCacheAlignmentSupported()) {
             throw new IllegalArgumentException("directMemoryCacheAlignment is not supported");
