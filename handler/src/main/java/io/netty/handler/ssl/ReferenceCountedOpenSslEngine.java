@@ -483,38 +483,36 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     // Flush any data that may have been written implicitly during the handshake by OpenSSL.
                     bytesProduced = SSL.bioFlushByteBuffer(networkBIO);
 
-                    // Check to see if the engine wrote data into the network BIO.
-                    if (bytesProduced > 0) {
+                    if (bytesProduced > 0 && handshakeException != null) {
                         // We produced / consumed some data during the handshake, signal back to the caller.
                         // If there is a handshake exception and we have produced data, we should send the data before
                         // we allow handshake() to throw the handshake exception.
-                        if (handshakeException == null) {
-                            status = handshake();
-
-                            if (renegotiationPending && status == FINISHED) {
-                                // If renegotiationPending is true that means when we attempted to start renegotiation
-                                // the BIO buffer didn't have enough space to hold the HelloRequest which prompts the
-                                // client to initiate a renegotiation. At this point the HelloRequest has been written
-                                // so we can actually start the handshake process.
-                                renegotiationPending = false;
-                                SSL.setState(ssl, SSL.SSL_ST_ACCEPT);
-                                handshakeState = HandshakeState.STARTED_EXPLICITLY;
-                                status = handshake();
-                            }
-
-                            // Handshake may have generated more data, for example if the internal SSL buffer is small
-                            // we may have freed up space by flushing above.
-                            bytesProduced = bioLengthBefore - SSL.bioLengthByteBuffer(networkBIO);
-
-                            // It's important we call this before wrapStatus() as wrapStatus() may shutdown the engine.
-                            return newResult(mayFinishHandshake(status != FINISHED ?
-                                    getHandshakeStatus(SSL.bioLengthNonApplication(networkBIO)) : FINISHED),
-                                    0, bytesProduced);
-                        }
                         return newResult(NEED_WRAP, 0, bytesProduced);
                     }
 
                     status = handshake();
+
+                    if (renegotiationPending && status == FINISHED) {
+                        // If renegotiationPending is true that means when we attempted to start renegotiation
+                        // the BIO buffer didn't have enough space to hold the HelloRequest which prompts the
+                        // client to initiate a renegotiation. At this point the HelloRequest has been written
+                        // so we can actually start the handshake process.
+                        renegotiationPending = false;
+                        SSL.setState(ssl, SSL.SSL_ST_ACCEPT);
+                        handshakeState = HandshakeState.STARTED_EXPLICITLY;
+                        status = handshake();
+                    }
+
+                    // Handshake may have generated more data, for example if the internal SSL buffer is small
+                    // we may have freed up space by flushing above.
+                    bytesProduced = bioLengthBefore - SSL.bioLengthByteBuffer(networkBIO);
+
+                    if (bytesProduced > 0) {
+                        // It's important we call this before wrapStatus() as wrapStatus() may shutdown the engine.
+                        return newResult(mayFinishHandshake(status != FINISHED ?
+                                         getHandshakeStatus(SSL.bioLengthNonApplication(networkBIO)) : FINISHED),
+                                         0, bytesProduced);
+                    }
 
                     if (status == NEED_UNWRAP) {
                         // Signal if the outbound is done or not.
