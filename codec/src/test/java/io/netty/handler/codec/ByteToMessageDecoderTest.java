@@ -20,8 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.util.List;
@@ -217,7 +216,7 @@ public class ByteToMessageDecoderTest {
             }
         });
         byte[] bytes = new byte[1024];
-        ThreadLocalRandom.current().nextBytes(bytes);
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
 
         assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
         assertBuffer(Unpooled.wrappedBuffer(bytes), (ByteBuf) channel.readInbound());
@@ -249,7 +248,7 @@ public class ByteToMessageDecoderTest {
             }
         });
         byte[] bytes = new byte[1024];
-        ThreadLocalRandom.current().nextBytes(bytes);
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
 
         assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
         assertBuffer(Unpooled.wrappedBuffer(bytes, 0, bytes.length - 1), (ByteBuf) channel.readInbound());

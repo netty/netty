@@ -21,7 +21,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBeh
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -142,7 +142,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
             ByteBuffer src = allocateBuffer(1024 * 10);
             byte[] data = new byte[src.capacity()];
-            ThreadLocalRandom.current().nextBytes(data);
+            PlatformDependent.threadLocalRandom().nextBytes(data);
             src.put(data).flip();
             ByteBuffer dst = allocateBuffer(1);
             // Try to wrap multiple times so we are more likely to hit the issue.
