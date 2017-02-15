@@ -86,8 +86,8 @@ public class WebSocket13FrameDecoder extends WebSocket08FrameDecoder {
      *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
      *            helps check for denial of services attacks.
      * @param allowMaskMismatch
-     *            Allows to loosen the masking requirement on received frames. When this is set to false then also
-     *            frames which are not masked properly according to the standard will still be accepted.
+     *            When set to true, frames which are not masked properly according to the standard will still be
+     *            accepted.
      */
     public WebSocket13FrameDecoder(boolean expectMaskedFrames, boolean allowExtensions, int maxFramePayloadLength,
                                    boolean allowMaskMismatch) {
