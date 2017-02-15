@@ -248,13 +248,13 @@ public final class DefaultChannelId implements ChannelId {
 
     @Override
     public int compareTo(final ChannelId o) {
+        if (this == o) {
+            // short circuit
+            return 0;
+        }
         if (o instanceof DefaultChannelId) {
-            final byte[] otherData = ((DefaultChannelId)o).data;
-            if (this == o) {
-                // short circuit
-                return 0;
-            }
             // lexicographic comparison
+            final byte[] otherData = ((DefaultChannelId) o).data;
             int len1 = data.length;
             int len2 = otherData.length;
             int len = Math.min(len1, len2);
