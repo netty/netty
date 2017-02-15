@@ -710,6 +710,7 @@
             <ignore>java.security.cert.CertPathValidatorException$BasicReason</ignore>
 
             <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
+            <ignore>java.util.concurrent.ThreadLocalRandom</ignore>
 
             <!-- Compression -->
             <ignore>java.util.zip.CRC32</ignore>

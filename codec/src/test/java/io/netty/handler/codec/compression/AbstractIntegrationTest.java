@@ -22,19 +22,19 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Random;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 public abstract class AbstractIntegrationTest {
 
-    protected static final ThreadLocalRandom rand = ThreadLocalRandom.current();
+    protected static final Random rand = new Random();
 
     protected EmbeddedChannel encoder;
     protected EmbeddedChannel decoder;

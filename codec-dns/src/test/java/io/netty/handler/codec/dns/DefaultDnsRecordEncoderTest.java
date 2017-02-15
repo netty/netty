@@ -18,9 +18,9 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.Test;
 
 import java.net.InetAddress;
@@ -143,6 +143,6 @@ public class DefaultDnsRecordEncoderTest {
     }
 
     private static int nextInt(int max) {
-        return ThreadLocalRandom.current().nextInt(0, max);
+        return PlatformDependent.threadLocalRandom().nextInt(max);
     }
 }

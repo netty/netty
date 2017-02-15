@@ -35,9 +35,9 @@ import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.apache.directory.server.dns.DnsException;
@@ -371,7 +371,7 @@ public class DnsNameResolverTest {
                 if (EXCLUSIONS_RESOLVE_A.contains(name)) {
                     continue;
                 }
-                if (ThreadLocalRandom.current().nextBoolean()) {
+                if (PlatformDependent.threadLocalRandom().nextBoolean()) {
                     overridenHostnames.add(name);
                 }
             }
