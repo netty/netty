@@ -34,7 +34,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.io.DataInput;
@@ -170,7 +170,7 @@ public class NioSocketChannelTest {
 
         // Just some random bytes
         byte[] bytes = new byte[1024];
-        ThreadLocalRandom.current().nextBytes(bytes);
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
 
         Channel sc = null;
         Channel cc = null;

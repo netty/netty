@@ -649,6 +649,7 @@
             <ignore>java.security.cert.CertPathValidatorException$BasicReason</ignore>
 
             <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
+            <ignore>java.util.concurrent.ThreadLocalRandom</ignore>
 
             <!-- JDK 9 -->
             <ignore>java.nio.ByteBuffer</ignore>

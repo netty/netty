@@ -15,12 +15,12 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -30,14 +30,13 @@ import static org.junit.Assert.assertTrue;
  * Tests sliced channel buffers
  */
 public class SlicedByteBufTest extends AbstractByteBufTest {
-
-    private final Random random = new Random();
-
     @Override
     protected ByteBuf newBuffer(int length, int maxCapacity) {
         Assume.assumeTrue(maxCapacity == Integer.MAX_VALUE);
         ByteBuf buffer = Unpooled.wrappedBuffer(
-                new byte[length * 2], random.nextInt(length - 1) + 1, length);
+                new byte[length * 2], length > 1 ?
+                        PlatformDependent.threadLocalRandom().nextInt(length - 1) + 1 : 0, length);
+        assertEquals(0, buffer.readerIndex());
         assertEquals(length, buffer.writerIndex());
         return buffer;
     }
