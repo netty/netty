@@ -29,7 +29,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.net.URI;
@@ -102,7 +102,7 @@ public abstract class WebSocketClientHandshakerTest {
         };
 
         byte[] data = new byte[24];
-        ThreadLocalRandom.current().nextBytes(data);
+        PlatformDependent.threadLocalRandom().nextBytes(data);
 
         // Create a EmbeddedChannel which we will use to encode a BinaryWebsocketFrame to bytes and so use these
         // to test the actual handshaker.

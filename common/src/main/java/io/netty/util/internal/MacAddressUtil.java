@@ -138,7 +138,7 @@ public final class MacAddressUtil {
         byte[] bestMacAddr = MacAddressUtil.bestAvailableMac();
         if (bestMacAddr == null) {
             bestMacAddr = new byte[EUI64_MAC_ADDRESS_LENGTH];
-            ThreadLocalRandom.current().nextBytes(bestMacAddr);
+            PlatformDependent.threadLocalRandom().nextBytes(bestMacAddr);
             logger.warn(
                     "Failed to find a usable hardware address from the network interfaces; using random bytes: {}",
                     MacAddressUtil.formatAddress(bestMacAddr));

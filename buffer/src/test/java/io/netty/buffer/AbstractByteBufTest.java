@@ -18,9 +18,8 @@ package io.netty.buffer;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.After;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -38,7 +37,6 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -2126,7 +2124,7 @@ public abstract class AbstractByteBufTest {
         assertEquals(1, buf.remaining());
 
         byte[] data = new byte[a];
-        ThreadLocalRandom.current().nextBytes(data);
+        PlatformDependent.threadLocalRandom().nextBytes(data);
         buffer.writeBytes(data);
 
         buf = buffer.internalNioBuffer(0, a);

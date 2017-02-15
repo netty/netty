@@ -16,7 +16,7 @@
 
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetSocketAddress;
 import java.util.Random;
@@ -34,7 +34,7 @@ final class ShuffledDnsServerAddressStream implements DnsServerAddressStream {
 
     private void shuffle() {
         final InetSocketAddress[] addresses = this.addresses;
-        final Random r = ThreadLocalRandom.current();
+        final Random r = PlatformDependent.threadLocalRandom();
 
         for (int i = addresses.length - 1; i >= 0; i --) {
             InetSocketAddress tmp = addresses[i];
