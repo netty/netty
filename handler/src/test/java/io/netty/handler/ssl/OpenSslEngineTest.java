@@ -54,6 +54,41 @@ public class OpenSslEngineTest extends SSLEngineTest {
         assumeTrue(OpenSsl.isAvailable());
     }
 
+    @Override
+    @Test
+    public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth() throws Exception {
+        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        super.testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth();
+    }
+
+    @Override
+    @Test
+    public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth() throws Exception {
+        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        super.testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth();
+    }
+
+    @Override
+    @Test
+    public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth() throws Exception {
+        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        super.testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth();
+    }
+
+    @Override
+    @Test
+    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() throws Exception {
+        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        super.testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth();
+    }
+
+    @Override
+    @Test
+    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
+        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        super.testMutualAuthValidClientCertChainTooLongFailRequireClientAuth();
+    }
+
     @Test
     public void testNpn() throws Exception {
         ApplicationProtocolConfig apn = acceptingNegotiator(Protocol.NPN,
