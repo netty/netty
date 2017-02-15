@@ -21,7 +21,6 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.MacAddressUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -146,7 +145,7 @@ public final class DefaultChannelId implements ChannelId {
         }
 
         if (pid < 0) {
-            pid = ThreadLocalRandom.current().nextInt();
+            pid = PlatformDependent.threadLocalRandom().nextInt();
             logger.warn("Failed to find the current process ID from '{}'; using a random value: {}",  value, pid);
         }
 
@@ -177,7 +176,7 @@ public final class DefaultChannelId implements ChannelId {
         i = writeLong(i, Long.reverse(System.nanoTime()) ^ System.currentTimeMillis());
 
         // random
-        int random = ThreadLocalRandom.current().nextInt();
+        int random = PlatformDependent.threadLocalRandom().nextInt();
         i = writeInt(i, random);
         assert i == data.length;
 

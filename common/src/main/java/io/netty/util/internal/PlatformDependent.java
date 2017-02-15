@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -107,10 +108,26 @@ public final class PlatformDependent {
     private static final boolean USE_DIRECT_BUFFER_NO_CLEANER;
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
+    private static final ThreadLocalRandomProvider RANDOM_PROVIDER;
 
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
     static {
+        if (javaVersion() >= 7) {
+            RANDOM_PROVIDER = new ThreadLocalRandomProvider() {
+                @Override
+                public Random current() {
+                    return java.util.concurrent.ThreadLocalRandom.current();
+                }
+            };
+        } else {
+            RANDOM_PROVIDER = new ThreadLocalRandomProvider() {
+                @Override
+                public Random current() {
+                    return ThreadLocalRandom.current();
+                }
+            };
+        }
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
         }
@@ -877,6 +894,13 @@ public final class PlatformDependent {
         }
     }
 
+    /**
+     * Return a {@link Random} which is not-threadsafe and so can only be used from the same thread.
+     */
+    public static Random threadLocalRandom() {
+        return RANDOM_PROVIDER.current();
+    }
+
     private static boolean isAndroid0() {
         boolean android;
         try {
@@ -1380,6 +1404,10 @@ public final class PlatformDependent {
         public long value() {
             return get();
         }
+    }
+
+    private interface ThreadLocalRandomProvider {
+        Random current();
     }
 
     private PlatformDependent() {

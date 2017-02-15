@@ -19,7 +19,7 @@ package io.netty.resolver.dns;
 import io.netty.util.NetUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -41,7 +41,7 @@ final class DnsQueryContextManager {
     int add(DnsQueryContext qCtx) {
         final IntObjectMap<DnsQueryContext> contexts = getOrCreateContextMap(qCtx.nameServerAddr());
 
-        int id = ThreadLocalRandom.current().nextInt(1, 65536);
+        int id = PlatformDependent.threadLocalRandom().nextInt(65536 - 1) + 1;
         final int maxTries = 65535 << 1;
         int tries = 0;
 

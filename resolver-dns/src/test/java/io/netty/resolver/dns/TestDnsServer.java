@@ -16,7 +16,7 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.NetUtil;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 import org.apache.directory.server.dns.DnsException;
 import org.apache.directory.server.dns.DnsServer;
 import org.apache.directory.server.dns.io.encoder.DnsMessageEncoder;
@@ -237,7 +237,7 @@ class TestDnsServer extends DnsServer {
         }
 
         private static int index(int arrayLength) {
-            return Math.abs(ThreadLocalRandom.current().nextInt()) % arrayLength;
+            return Math.abs(PlatformDependent.threadLocalRandom().nextInt()) % arrayLength;
         }
 
         private static String nextDomain() {
@@ -276,19 +276,19 @@ class TestDnsServer extends DnsServer {
                     case A:
                         do {
                             rm.put(DnsAttribute.IP_ADDRESS, nextIp());
-                        } while (ThreadLocalRandom.current().nextBoolean());
+                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
                         break;
                     case AAAA:
                         do {
                             rm.put(DnsAttribute.IP_ADDRESS, nextIp6());
-                        } while (ThreadLocalRandom.current().nextBoolean());
+                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
                         break;
                     case MX:
                         int priority = 0;
                         do {
                             rm.put(DnsAttribute.DOMAIN_NAME, nextDomain());
                             rm.put(DnsAttribute.MX_PREFERENCE, String.valueOf(++priority));
-                        } while (ThreadLocalRandom.current().nextBoolean());
+                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
                         break;
                     default:
                         return null;
