@@ -92,8 +92,8 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      *            with the websocket specifications. Client applications that communicate with a non-standard server
      *            which doesn't require masking might set this to false to achieve a higher performance.
      * @param allowMaskMismatch
-     *            Allows to loosen the masking requirement on received frames. When this is set to false then also
-     *            frames which are not masked properly according to the standard will still be accepted.
+     *            When set to true, frames which are not masked properly according to the standard will still be
+     *            accepted.
      */
     public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
