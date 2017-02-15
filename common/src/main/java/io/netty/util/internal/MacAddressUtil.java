@@ -52,14 +52,17 @@ public final class MacAddressUtil {
         // Retrieve the list of available network interfaces.
         Map<NetworkInterface, InetAddress> ifaces = new LinkedHashMap<NetworkInterface, InetAddress>();
         try {
-            for (Enumeration<NetworkInterface> i = NetworkInterface.getNetworkInterfaces(); i.hasMoreElements();) {
-                NetworkInterface iface = i.nextElement();
-                // Use the interface with proper INET addresses only.
-                Enumeration<InetAddress> addrs = SocketUtils.addressesFromNetworkInterface(iface);
-                if (addrs.hasMoreElements()) {
-                    InetAddress a = addrs.nextElement();
-                    if (!a.isLoopbackAddress()) {
-                        ifaces.put(iface, a);
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            if (interfaces != null) {
+                while (interfaces.hasMoreElements()) {
+                    NetworkInterface iface = interfaces.nextElement();
+                    // Use the interface with proper INET addresses only.
+                    Enumeration<InetAddress> addrs = SocketUtils.addressesFromNetworkInterface(iface);
+                    if (addrs.hasMoreElements()) {
+                        InetAddress a = addrs.nextElement();
+                        if (!a.isLoopbackAddress()) {
+                            ifaces.put(iface, a);
+                        }
                     }
                 }
             }
