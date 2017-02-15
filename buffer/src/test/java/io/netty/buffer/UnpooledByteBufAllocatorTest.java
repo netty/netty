@@ -21,4 +21,9 @@ public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
     protected AbstractByteBufAllocator newAllocator(boolean preferDirect) {
         return new UnpooledByteBufAllocator(preferDirect);
     }
+
+    @Override
+    protected AbstractByteBufAllocator newUnpooledAllocator() {
+        return new UnpooledByteBufAllocator(false);
+    }
 }
