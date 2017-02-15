@@ -92,8 +92,8 @@ public class WebSocketServerHandshakerFactory {
      *            Maximum allowable frame payload length. Setting this value to your application's
      *            requirement may reduce denial of service attacks using long data frames.
      * @param allowMaskMismatch
-     *            Allows to loosen the masking requirement on received frames. When this is set to false then also
-     *            frames which are not masked properly according to the standard will still be accepted.
+     *            When set to true, frames which are not masked properly according to the standard will still be
+     *            accepted.
      */
     public WebSocketServerHandshakerFactory(
             String webSocketURL, String subprotocols, boolean allowExtensions,
