@@ -664,6 +664,7 @@ public final class ByteBufUtil {
      *
      * @return a cached thread-local direct buffer, if available.  {@code null} otherwise.
      */
+    @Deprecated
     public static ByteBuf threadLocalDirectBuffer() {
         if (THREAD_LOCAL_BUFFER_SIZE <= 0) {
             return null;

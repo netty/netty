@@ -17,7 +17,6 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
@@ -234,7 +233,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             return newDirectBuffer0(holder, buf, alloc, readableBytes);
         }
 
-        final ByteBuf directBuf = ByteBufUtil.threadLocalDirectBuffer();
+        final ByteBuf directBuf = ((EpollEventLoop) eventLoop()).bufferPool().acquire(readableBytes);
         if (directBuf == null) {
             return newDirectBuffer0(holder, buf, alloc, readableBytes);
         }

@@ -17,7 +17,6 @@ package io.netty.channel.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
@@ -452,14 +451,14 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             return directBuf;
         }
 
-        final ByteBuf directBuf = ByteBufUtil.threadLocalDirectBuffer();
-        if (directBuf != null) {
-            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+        ByteBuf buffer = eventLoop().bufferPool.acquire(readableBytes);
+        if (buffer != null) {
+            buffer.writeBytes(buf, buf.readerIndex(), readableBytes);
             ReferenceCountUtil.safeRelease(buf);
-            return directBuf;
+            return buffer;
         }
 
-        // Allocating and deallocating an unpooled direct buffer is very expensive; give up.
+        // Allocating and deallocating an unpooled direct buffer is very expensive; give up and let the JDK handle it.
         return buf;
     }
 
@@ -484,14 +483,14 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             return directBuf;
         }
 
-        final ByteBuf directBuf = ByteBufUtil.threadLocalDirectBuffer();
-        if (directBuf != null) {
-            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+        ByteBuf buffer = eventLoop().bufferPool.acquire(readableBytes);
+        if (buffer != null) {
+            buffer.writeBytes(buf, buf.readerIndex(), readableBytes);
             ReferenceCountUtil.safeRelease(holder);
-            return directBuf;
+            return buffer;
         }
 
-        // Allocating and deallocating an unpooled direct buffer is very expensive; give up.
+        // Allocating and deallocating an unpooled direct buffer is very expensive; give up and let the JDK handle it.
         if (holder != buf) {
             // Ensure to call holder.release() to give the holder a chance to release other resources than its content.
             buf.retain();
