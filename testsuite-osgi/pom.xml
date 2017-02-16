@@ -30,7 +30,7 @@
 
   <properties>
     <exam.version>4.9.1</exam.version>
-    <skipOsgiTestsuite>false</skipOsgiTestsuite>
+    <argLine.java9.extras>--add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.security=ALL-UNNAMED</argLine.java9.extras>
   </properties>
 
   <profiles>
