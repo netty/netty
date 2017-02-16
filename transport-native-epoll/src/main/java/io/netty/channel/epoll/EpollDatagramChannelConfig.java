@@ -131,6 +131,10 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         this.activeOnOpen = activeOnOpen;
     }
 
+    boolean getActiveOnOpen() {
+        return activeOnOpen;
+    }
+
     @Override
     public EpollDatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
