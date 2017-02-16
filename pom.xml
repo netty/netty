@@ -596,9 +596,9 @@
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <!-- Enforce JDK 1.7+ for compilation. -->
+                  <!-- Enforce JDK 1.8+ for compilation. -->
                   <!-- This is needed because of java.util.zip.Deflater and NIO UDP multicast. -->
-                  <version>[1.7.0,)</version>
+                  <version>[1.8.0,)</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
                   <version>[3.1.1,)</version>
