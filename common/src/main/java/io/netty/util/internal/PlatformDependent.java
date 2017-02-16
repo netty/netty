@@ -806,7 +806,7 @@ public final class PlatformDependent {
                 // up to the next power of two and so will overflow otherwise.
                 final int capacity =
                         Math.max(Math.min(maxCapacity, MAX_ALLOWED_MPSC_CAPACITY), MIN_MAX_MPSC_CAPACITY);
-                return new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE, capacity, true);
+                return new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE, capacity);
             } else {
                 return new MpscLinkedAtomicQueue<T>();
             }
