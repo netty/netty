@@ -81,6 +81,10 @@
         <!-- https://issues.apache.org/jira/browse/MSHADE-242 -->
         <!-- https://github.com/netty/netty/issues/6100 -->
         <asm.version>6.0_ALPHA</asm.version>
+        <!-- Skip as maven plugin not works with Java9 yet --> 
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <!-- Skip as jython not works with Java9 yet -->
+        <skipAutobahnTestsuite>true</skipAutobahnTestsuite>
       </properties>
       <activation>
         <jdk>9</jdk>
@@ -248,6 +252,8 @@
     <log4j2.version>2.6.2</log4j2.version>
     <asm.version>5.1</asm.version>
     <testJavaHome>${env.JAVA_HOME}</testJavaHome>
+    <skipOsgiTestsuite>false</skipOsgiTestsuite>
+    <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
   </properties>
 
   <modules>
