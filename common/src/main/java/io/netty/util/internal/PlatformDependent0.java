@@ -56,49 +56,16 @@ final class PlatformDependent0 {
 
     static {
         final ByteBuffer direct;
-        final Field addressField;
+        Field addressField = null;
+        Unsafe unsafe;
 
         if (PlatformDependent.isExplicitNoUnsafe()) {
             direct = null;
             addressField = null;
+            unsafe = null;
         } else {
             direct = ByteBuffer.allocateDirect(1);
-            // attempt to access field Buffer#address
-            final Object maybeAddressField = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    try {
-                        final Field field = Buffer.class.getDeclaredField("address");
-                        Throwable cause = ReflectionUtil.trySetAccessible(field);
-                        if (cause != null) {
-                            return cause;
-                        }
-                        // if direct really is a direct buffer, address will be non-zero
-                        if (field.getLong(direct) == 0) {
-                            return null;
-                        }
-                        return field;
-                    } catch (IllegalAccessException e) {
-                        return e;
-                    } catch (NoSuchFieldException e) {
-                        return e;
-                    } catch (SecurityException e) {
-                        return e;
-                    }
-                }
-            });
 
-            if (maybeAddressField instanceof Field) {
-                addressField = (Field) maybeAddressField;
-                logger.debug("java.nio.Buffer.address: available");
-            } else {
-                logger.debug("java.nio.Buffer.address: unavailable", (Throwable) maybeAddressField);
-                addressField = null;
-            }
-        }
-
-        Unsafe unsafe;
-        if (addressField != null) {
             // attempt to access field Unsafe#theUnsafe
             final Object maybeUnsafe = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
@@ -161,12 +128,46 @@ final class PlatformDependent0 {
                     logger.debug("sun.misc.Unsafe.copyMemory: unavailable", (Throwable) maybeException);
                 }
             }
-        } else {
-            // If we cannot access the address of a direct buffer, there's no point of using unsafe.
-            // Let's just pretend unsafe is unavailable for overall simplicity.
-            unsafe = null;
-        }
 
+            if (unsafe != null) {
+                final Unsafe finalUnsafe = unsafe;
+
+                // attempt to access field Buffer#address
+                final Object maybeAddressField = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                    @Override
+                    public Object run() {
+                        try {
+                            final Field field = Buffer.class.getDeclaredField("address");
+                            // Use Unsafe to read value of the address field. This way it will not fail on JDK9+ which
+                            // will forbid changing the access level via reflection.
+                            final long offset = finalUnsafe.objectFieldOffset(field);
+                            final long address = finalUnsafe.getLong(direct, offset);
+
+                            // if direct really is a direct buffer, address will be non-zero
+                            if (address == 0) {
+                                return null;
+                            }
+                            return field;
+                        } catch (NoSuchFieldException e) {
+                            return e;
+                        } catch (SecurityException e) {
+                            return e;
+                        }
+                    }
+                });
+
+                if (maybeAddressField instanceof Field) {
+                    addressField = (Field) maybeAddressField;
+                    logger.debug("java.nio.Buffer.address: available");
+                } else {
+                    logger.debug("java.nio.Buffer.address: unavailable", (Throwable) maybeAddressField);
+
+                    // If we cannot access the address of a direct buffer, there's no point of using unsafe.
+                    // Let's just pretend unsafe is unavailable for overall simplicity.
+                    unsafe = null;
+                }
+            }
+        }
         UNSAFE = unsafe;
 
         if (unsafe == null) {
