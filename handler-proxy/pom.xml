@@ -26,6 +26,11 @@
   <artifactId>netty-handler-proxy</artifactId>
   <packaging>jar</packaging>
 
+  <properties>
+    <!-- Needed for SelfSignedCertificate -->
+    <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
+  </properties>
+
   <name>Netty/Handler/Proxy</name>
 
   <dependencies>
