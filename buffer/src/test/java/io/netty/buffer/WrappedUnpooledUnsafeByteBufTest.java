@@ -27,7 +27,8 @@ public class WrappedUnpooledUnsafeByteBufTest extends BigEndianUnsafeDirectByteB
     @Before
     @Override
     public void init() {
-        Assume.assumeTrue("sun.misc.Unsafe not found, skip tests", PlatformDependent.hasUnsafe());
+        Assume.assumeTrue("PlatformDependent.useDirectBufferNoCleaner() returned false, skip tests",
+                PlatformDependent.useDirectBufferNoCleaner());
         super.init();
     }
 
