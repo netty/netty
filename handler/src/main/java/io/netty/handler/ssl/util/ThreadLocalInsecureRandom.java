@@ -22,7 +22,8 @@ import java.security.SecureRandom;
 import java.util.Random;
 
 /**
- * Insecure {@link SecureRandom} which relies on {@link PlatformDependent#threadLocalRandom()} for random number generation.
+ * Insecure {@link SecureRandom} which relies on {@link PlatformDependent#threadLocalRandom()} for random number
+ * generation.
  */
 final class ThreadLocalInsecureRandom extends SecureRandom {
 
