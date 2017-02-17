@@ -19,6 +19,8 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import javax.net.ssl.SSLException;
+
 import static org.junit.Assume.assumeTrue;
 
 public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
@@ -71,5 +73,25 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth() throws Exception {
         assumeTrue(OpenSsl.supportsKeyManagerFactory());
         super.testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth();
+    }
+
+    @Override
+    @Test
+    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
+        assumeTrue(OpenSsl.supportsHostnameValidation());
+        super.testClientHostnameValidationSuccess();
+    }
+
+    @Override
+    @Test
+    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
+        assumeTrue(OpenSsl.supportsHostnameValidation());
+        super.testClientHostnameValidationFail();
+    }
+
+    @Override
+    protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
+        // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
+        return super.mySetupMutualAuthServerIsValidServerException(cause) || cause instanceof SSLException;
     }
 }
