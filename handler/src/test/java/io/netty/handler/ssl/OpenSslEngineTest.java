@@ -89,6 +89,20 @@ public class OpenSslEngineTest extends SSLEngineTest {
         super.testMutualAuthValidClientCertChainTooLongFailRequireClientAuth();
     }
 
+    @Override
+    @Test
+    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
+        assumeTrue(OpenSsl.supportsHostnameValidation());
+        super.testClientHostnameValidationSuccess();
+    }
+
+    @Override
+    @Test
+    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
+        assumeTrue(OpenSsl.supportsHostnameValidation());
+        super.testClientHostnameValidationFail();
+    }
+
     @Test
     public void testNpn() throws Exception {
         ApplicationProtocolConfig apn = acceptingNegotiator(Protocol.NPN,

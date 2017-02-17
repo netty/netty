@@ -19,6 +19,7 @@ import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLParameters;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 final class Java8SslParametersUtils {
@@ -27,6 +28,9 @@ final class Java8SslParametersUtils {
 
     static List<String> getSniHostNames(SSLParameters sslParameters) {
         List<SNIServerName> names = sslParameters.getServerNames();
+        if (names == null || names.isEmpty()) {
+            return Collections.emptyList();
+        }
         List<String> strings = new ArrayList<String>(names.size());
 
         for (SNIServerName serverName : names) {

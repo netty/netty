@@ -51,6 +51,7 @@ public final class OpenSsl {
     private static final Set<String> AVAILABLE_OPENSSL_CIPHER_SUITES;
     private static final Set<String> AVAILABLE_JAVA_CIPHER_SUITES;
     private static final boolean SUPPORTS_KEYMANAGER_FACTORY;
+    private static final boolean SUPPORTS_HOSTNAME_VALIDATION;
     private static final boolean USE_KEYMANAGER_FACTORY;
 
     // Protocols
@@ -114,6 +115,7 @@ public final class OpenSsl {
             final Set<String> availableOpenSslCipherSuites = new LinkedHashSet<String>(128);
             boolean supportsKeyManagerFactory = false;
             boolean useKeyManagerFactory = false;
+            boolean supportsHostNameValidation = false;
             try {
                 final long sslCtx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
                 long privateKeyBio = 0;
@@ -128,6 +130,12 @@ public final class OpenSsl {
                                 continue;
                             }
                             availableOpenSslCipherSuites.add(c);
+                        }
+                        try {
+                            SSL.setHostNameValidation(ssl, 0, "netty.io");
+                            supportsHostNameValidation = true;
+                        } catch (Throwable ignore) {
+                            logger.debug("Hostname Verification not supported.");
                         }
                         try {
                             SelfSignedCertificate cert = new SelfSignedCertificate();
@@ -180,6 +188,7 @@ public final class OpenSsl {
             }
             AVAILABLE_CIPHER_SUITES = availableCipherSuites;
             SUPPORTS_KEYMANAGER_FACTORY = supportsKeyManagerFactory;
+            SUPPORTS_HOSTNAME_VALIDATION = supportsHostNameValidation;
             USE_KEYMANAGER_FACTORY = useKeyManagerFactory;
 
             Set<String> protocols = new LinkedHashSet<String>(6);
@@ -207,6 +216,7 @@ public final class OpenSsl {
             AVAILABLE_JAVA_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_CIPHER_SUITES = Collections.emptySet();
             SUPPORTS_KEYMANAGER_FACTORY = false;
+            SUPPORTS_HOSTNAME_VALIDATION = false;
             USE_KEYMANAGER_FACTORY = false;
             SUPPORTED_PROTOCOLS_SET = Collections.emptySet();
         }
@@ -329,6 +339,14 @@ public final class OpenSsl {
      */
     public static boolean supportsKeyManagerFactory() {
         return SUPPORTS_KEYMANAGER_FACTORY;
+    }
+
+    /**
+     * Returns {@code true} if <a href="https://wiki.openssl.org/index.php/Hostname_validation">Hostname Validation</a>
+     * is supported when using OpenSSL.
+     */
+    public static boolean supportsHostnameValidation() {
+        return SUPPORTS_HOSTNAME_VALIDATION;
     }
 
     static boolean useKeyManagerFactory() {

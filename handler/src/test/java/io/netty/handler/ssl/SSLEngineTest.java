@@ -63,15 +63,18 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import javax.security.cert.X509Certificate;
 
@@ -716,6 +719,145 @@ public abstract class SSLEngineTest {
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        clientChannel = ccf.channel();
+    }
+
+    @Test
+    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
+        mySetupClientHostnameValidation(new File(getClass().getResource("localhost_server.pem").getFile()),
+                                        new File(getClass().getResource("localhost_server.key").getFile()),
+                                        new File(getClass().getResource("mutual_auth_ca.pem").getFile()),
+                                        false);
+        assertTrue(clientLatch.await(5, TimeUnit.SECONDS));
+        assertNull(clientException);
+        assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
+        assertNull(serverException);
+    }
+
+    @Test
+    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
+        mySetupClientHostnameValidation(new File(getClass().getResource("notlocalhost_server.pem").getFile()),
+                                        new File(getClass().getResource("notlocalhost_server.key").getFile()),
+                                        new File(getClass().getResource("mutual_auth_ca.pem").getFile()),
+                                        true);
+        assertTrue(clientLatch.await(5, TimeUnit.SECONDS));
+        assertTrue("unexpected exception: " + clientException,
+                mySetupMutualAuthServerIsValidClientException(clientException));
+        assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
+        assertTrue("unexpected exception: " + serverException,
+                mySetupMutualAuthServerIsValidServerException(serverException));
+    }
+
+    private void mySetupClientHostnameValidation(File serverCrtFile, File serverKeyFile,
+                                                 File clientTrustCrtFile,
+                                                 final boolean failureExpected)
+            throws SSLException, InterruptedException {
+        final String expectedHost = "localhost";
+        serverSslCtx = SslContextBuilder.forServer(serverCrtFile, serverKeyFile, null)
+                .sslProvider(sslServerProvider())
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .sessionCacheSize(0)
+                .sessionTimeout(0)
+                .build();
+
+        clientSslCtx = SslContextBuilder.forClient()
+                .sslProvider(sslClientProvider())
+                .trustManager(clientTrustCrtFile)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .sessionCacheSize(0)
+                .sessionTimeout(0)
+                .build();
+        serverConnectedChannel = null;
+        sb = new ServerBootstrap();
+        cb = new Bootstrap();
+
+        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.channel(NioServerSocketChannel.class);
+        sb.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
+                ChannelPipeline p = ch.pipeline();
+                p.addLast(serverSslCtx.newHandler(ch.alloc()));
+                p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
+                p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+                            if (failureExpected) {
+                                serverException = new IllegalStateException("handshake complete. expected failure");
+                            }
+                            serverLatch.countDown();
+                        } else if (evt instanceof SslHandshakeCompletionEvent) {
+                            serverException = ((SslHandshakeCompletionEvent) evt).cause();
+                            serverLatch.countDown();
+                        }
+                        ctx.fireUserEventTriggered(evt);
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        if (cause.getCause() instanceof SSLHandshakeException) {
+                            serverException = cause.getCause();
+                            serverLatch.countDown();
+                        } else {
+                            serverException = cause;
+                            ctx.fireExceptionCaught(cause);
+                        }
+                    }
+                });
+                serverConnectedChannel = ch;
+            }
+        });
+
+        cb.group(new NioEventLoopGroup());
+        cb.channel(NioSocketChannel.class);
+        cb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
+                ChannelPipeline p = ch.pipeline();
+                InetSocketAddress remoteAddress = (InetSocketAddress) serverChannel.localAddress();
+                SslHandler sslHandler = clientSslCtx.newHandler(ch.alloc(), expectedHost, 0);
+                SSLParameters parameters = sslHandler.engine().getSSLParameters();
+                parameters.setEndpointIdentificationAlgorithm("HTTPS");
+                sslHandler.engine().setSSLParameters(parameters);
+                p.addLast(sslHandler);
+                p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
+                p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+                            if (failureExpected) {
+                                clientException = new IllegalStateException("handshake complete. expected failure");
+                            }
+                            clientLatch.countDown();
+                        } else if (evt instanceof SslHandshakeCompletionEvent) {
+                            clientException = ((SslHandshakeCompletionEvent) evt).cause();
+                            clientLatch.countDown();
+                        }
+                        ctx.fireUserEventTriggered(evt);
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        if (cause.getCause() instanceof SSLHandshakeException) {
+                            clientException = cause.getCause();
+                            clientLatch.countDown();
+                        } else {
+                            ctx.fireExceptionCaught(cause);
+                        }
+                    }
+                });
+            }
+        });
+
+        serverChannel = sb.bind(new InetSocketAddress(expectedHost, 0)).sync().channel();
+        final int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(expectedHost, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
     }
