@@ -7,6 +7,18 @@ openssl req -extensions v3_ca -new -x509 -days 30 -nodes -subj "/CN=NettyTestRoo
 openssl req -new -keyout mutual_auth_server.key -nodes -newkey rsa:2048 -subj "/CN=NettyTestServer" | \
     openssl x509 -req -CAkey mutual_auth_ca.key -CA mutual_auth_ca.pem -days 36500 -set_serial $RANDOM -sha512 -out mutual_auth_server.pem
 
+# Generate a certificate/key for the server to use for Hostname Verification via localhost
+openssl req -new -keyout localhost_server_rsa.key -nodes -newkey rsa:2048 -subj "/CN=localhost" | \
+    openssl x509 -req -CAkey mutual_auth_ca.key -CA mutual_auth_ca.pem -days 36500 -set_serial $RANDOM -sha512 -out localhost_server.pem
+openssl pkcs8 -topk8 -inform PEM -outform PEM -in localhost_server_rsa.key -out localhost_server.key -nocrypt
+rm localhost_server_rsa.key
+
+# Generate a certificate/key for the server to fail for Hostname Verification via localhost
+openssl req -new -keyout notlocalhost_server_rsa.key -nodes -newkey rsa:2048 -subj "/CN=NOTlocalhost" | \
+    openssl x509 -req -CAkey mutual_auth_ca.key -CA mutual_auth_ca.pem -days 36500 -set_serial $RANDOM -sha512 -out notlocalhost_server.pem
+openssl pkcs8 -topk8 -inform PEM -outform PEM -in notlocalhost_server_rsa.key -out notlocalhost_server.key -nocrypt
+rm notlocalhost_server_rsa.key
+
 # Generate an invalid intermediate CA which will be used to sign the client certificate
 openssl req -new -keyout mutual_auth_invalid_intermediate_ca.key -nodes -newkey rsa:2048 -subj "/CN=NettyTestInvalidIntermediate" | \
     openssl x509 -req -CAkey mutual_auth_ca.key -CA mutual_auth_ca.pem -days 36500 -set_serial $RANDOM -sha512 -out mutual_auth_invalid_intermediate_ca.pem
