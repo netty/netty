@@ -87,10 +87,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             new SSLException("engine closed"), ReferenceCountedOpenSslEngine.class, "handshake()");
     private static final SSLException RENEGOTIATION_UNSUPPORTED =  ThrowableUtil.unknownStackTrace(
             new SSLException("renegotiation unsupported"), ReferenceCountedOpenSslEngine.class, "beginHandshake()");
-    private static final SSLException ENCRYPTED_PACKET_OVERSIZED = ThrowableUtil.unknownStackTrace(
-            new SSLException("encrypted packet oversized"), ReferenceCountedOpenSslEngine.class, "unwrap(...)");
     private static final ResourceLeakDetector<ReferenceCountedOpenSslEngine> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ReferenceCountedOpenSslEngine.class);
+    /**
+     * <a href="https://www.openssl.org/docs/man1.0.2/crypto/X509_check_host.html">The flags argument is usually 0</a>.
+     */
+    private static final int DEFAULT_HOSTNAME_VALIDATION_FLAGS = 0;
 
     static final int MAX_PLAINTEXT_LENGTH = 16 * 1024; // 2^14
 
@@ -1557,14 +1559,26 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         int version = PlatformDependent.javaVersion();
         if (version >= 7) {
-            endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
+            final String endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
+            final boolean endPointVerificationEnabled = endPointIdentificationAlgorithm != null &&
+                    !endPointIdentificationAlgorithm.isEmpty();
+            SSL.setHostNameValidation(ssl, DEFAULT_HOSTNAME_VALIDATION_FLAGS,
+                    endPointVerificationEnabled ? getPeerHost() : null);
+            // If the user asks for hostname verification we must ensure we verify the peer.
+            // If the user disables hostname verification we leave it up to the user to change the mode manually.
+            if (clientMode && endPointVerificationEnabled) {
+                SSL.setVerify(ssl, SSL.SSL_CVERIFY_REQUIRED, -1);
+            }
+
+            this.endPointIdentificationAlgorithm = endPointIdentificationAlgorithm;
             algorithmConstraints = sslParameters.getAlgorithmConstraints();
             if (version >= 8 && !isDestroyed()) {
                 if (clientMode) {
-                    sniHostNames = Java8SslParametersUtils.getSniHostNames(sslParameters);
+                    final List<String> sniHostNames = Java8SslParametersUtils.getSniHostNames(sslParameters);
                     for (String name: sniHostNames) {
                         SSL.setTlsExtHostName(ssl, name);
                     }
+                    this.sniHostNames = sniHostNames;
                 }
                 if (Java8SslParametersUtils.getUseCipherSuitesOrder(sslParameters)) {
                     SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
