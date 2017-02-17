@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.mqtt;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ public final class MqttMessageBuilders {
         private String topic;
         private boolean retained;
         private MqttQoS qos;
-        private byte[] payload;
+        private ByteBuf payload;
         private int messageId;
 
         PublishBuilder() {}
@@ -46,7 +47,7 @@ public final class MqttMessageBuilders {
             return this;
         }
 
-        public PublishBuilder payload(byte[] payload) {
+        public PublishBuilder payload(ByteBuf payload) {
             this.payload = payload;
             return this;
         }
@@ -126,22 +127,24 @@ public final class MqttMessageBuilders {
             return this;
         }
 
-        public ConnectBuilder hasUser() {
-            this.hasUser = true;
+        public ConnectBuilder hasUser(boolean value) {
+            this.hasUser = value;
             return this;
         }
 
-        public ConnectBuilder hasPassword() {
-            this.hasPassword = true;
+        public ConnectBuilder hasPassword(boolean value) {
+            this.hasPassword = value;
             return this;
         }
 
         public ConnectBuilder username(String username) {
+            this.hasUser = true;
             this.username = username;
             return this;
         }
 
         public ConnectBuilder password(String password) {
+            this.hasPassword = true;
             this.password = password;
             return this;
         }
@@ -175,7 +178,7 @@ public final class MqttMessageBuilders {
 
         public SubscribeBuilder addSubscription(MqttQoS qos, String topic) {
             if (subscriptions == null) {
-                subscriptions = new ArrayList<MqttTopicSubscription>();
+                subscriptions = new ArrayList<MqttTopicSubscription>(5);
             }
             subscriptions.add(new MqttTopicSubscription(topic, qos));
             return this;
@@ -197,12 +200,15 @@ public final class MqttMessageBuilders {
 
     public static final class UnsubscribeBuilder {
 
-        private List<String> topicFilters = new ArrayList<String>();
+        private List<String> topicFilters;
         private int messageId;
 
         UnsubscribeBuilder() {}
 
         public UnsubscribeBuilder addTopicFilter(String topic) {
+            if (topicFilters == null) {
+                topicFilters = new ArrayList<String>(5);
+            }
             topicFilters.add(topic);
             return this;
         }
@@ -233,8 +239,8 @@ public final class MqttMessageBuilders {
             return this;
         }
 
-        public ConnAckBuilder sessionPresent() {
-            this.sessionPresent = true;
+        public ConnAckBuilder sessionPresent(boolean sessionPresent) {
+            this.sessionPresent = sessionPresent;
             return this;
         }
 
