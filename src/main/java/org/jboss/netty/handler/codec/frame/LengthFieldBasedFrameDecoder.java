@@ -362,13 +362,20 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         }
 
         if (frameLength > maxFrameLength) {
-            // Enter the discard mode and discard everything received so far.
-            discardingTooLongFrame = true;
-            tooLongFrameLength = frameLength;
-            bytesToDiscard = frameLength - buffer.readableBytes();
-            buffer.skipBytes(buffer.readableBytes());
-            failIfNecessary(ctx, true);
-            return null;
+    	   long discard = frameLength - buffer.readableBytes();
+           tooLongFrameLength = frameLength;
+
+           if (discard < 0) {
+               // buffer contains more bytes then the frameLength so we can discard all now
+        	   buffer.skipBytes((int) frameLength);
+           } else {
+               // Enter the discard mode and discard everything received so far.
+               discardingTooLongFrame = true;
+               bytesToDiscard = discard;
+               buffer.skipBytes(buffer.readableBytes());
+           }
+           failIfNecessary(ctx, true);
+           return null;
         }
 
         // never overflows because it's less than maxFrameLength
