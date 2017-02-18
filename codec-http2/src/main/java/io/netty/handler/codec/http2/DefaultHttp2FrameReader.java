@@ -227,6 +227,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 break;
             default:
                 // Unknown frame type, could be an extension.
+                verifyUnknownFrame();
                 break;
         }
     }
@@ -404,12 +405,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     }
 
     private void verifyUnknownFrame() throws Http2Exception {
-        if (headersContinuation != null) {
-            int streamId = headersContinuation.getStreamId();
-            closeHeadersContinuation();
-            throw connectionError(PROTOCOL_ERROR, "Extension frames must not be in the middle of headers "
-                    + "on stream %d", streamId);
-        }
+        verifyNotProcessingHeaders();
     }
 
     private void readDataFrame(ChannelHandlerContext ctx, ByteBuf payload,
@@ -617,7 +613,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void readUnknownFrame(ChannelHandlerContext ctx, ByteBuf payload, Http2FrameListener listener)
             throws Http2Exception {
-        verifyUnknownFrame();
         payload = payload.readSlice(payload.readableBytes());
         listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
     }
@@ -768,9 +763,14 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         }
     }
 
+    /**
+     * Verify that current state is not processing on header block
+     * @throws Http2Exception thrown if {@link #headersContinuation} is not null
+     */
     private void verifyNotProcessingHeaders() throws Http2Exception {
         if (headersContinuation != null) {
-            throw connectionError(PROTOCOL_ERROR, "Received frame of type %s while processing headers.", frameType);
+            throw connectionError(PROTOCOL_ERROR, "Received frame of type %s while processing headers on stream %d.",
+                                  frameType, headersContinuation.getStreamId());
         }
     }
 
