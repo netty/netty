@@ -283,6 +283,7 @@
     <module>testsuite-osgi</module>
     <module>microbench</module>
     <module>all</module>
+    <module>bom</module>
     <module>tarball</module>
   </modules>
 
