@@ -91,20 +91,6 @@
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
   </properties>
 
-  <profiles>
-    <profile>
-      <id>skipTests</id>
-      <activation>
-        <property>
-          <name>skipTests</name>
-        </property>
-      </activation>
-      <properties>
-        <skipAutobahnTestsuite>true</skipAutobahnTestsuite>
-      </properties>
-    </profile>
-  </profiles>
-
   <build>
     <plugins>
       <plugin>
@@ -113,28 +99,6 @@
           <testSourceDirectory>${project.build.sourceDirectory}</testSourceDirectory>
           <testClassesDirectory>${project.build.outputDirectory}</testClassesDirectory>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>me.normanmaurer.maven.autobahntestsuite</groupId>
-        <artifactId>autobahntestsuite-maven-plugin</artifactId>
-        <version>0.1.4</version>
-        <configuration>
-          <mainClass>io.netty.testsuite.websockets.autobahn.AutobahnServer</mainClass>
-          <cases>
-            <case>*</case>
-          </cases>
-          <excludeCases />
-          <failOnNonStrict>false</failOnNonStrict>
-          <skip>${skipAutobahnTestsuite}</skip>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>test</phase>
-            <goals>
-              <goal>fuzzingclient</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>

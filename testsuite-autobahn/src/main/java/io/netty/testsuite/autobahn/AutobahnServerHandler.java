@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testsuite.websockets.autobahn;
+package io.netty.testsuite.autobahn;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
