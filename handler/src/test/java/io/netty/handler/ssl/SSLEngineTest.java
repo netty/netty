@@ -593,6 +593,17 @@ public abstract class SSLEngineTest {
                 mySetupMutualAuthServerIsValidServerException(serverException));
     }
 
+    protected static boolean causedBySSLException(Throwable cause) {
+        Throwable next = cause;
+        while (next != null) {
+            if (next instanceof SSLException) {
+                return true;
+            }
+            next = next.getCause();
+        }
+        return false;
+    }
+
     protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
         return mySetupMutualAuthServerIsValidException(cause);
     }
