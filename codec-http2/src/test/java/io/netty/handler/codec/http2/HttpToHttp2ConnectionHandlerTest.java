@@ -113,9 +113,10 @@ public class HttpToHttp2ConnectionHandlerTest {
             serverChannel.close().sync();
             serverChannel = null;
         }
+        final Channel serverConnectedChannel = this.serverConnectedChannel;
         if (serverConnectedChannel != null) {
             serverConnectedChannel.close().sync();
-            serverConnectedChannel = null;
+            this.serverConnectedChannel = null;
         }
         Future<?> serverGroup = sb.config().group().shutdownGracefully(0, 0, MILLISECONDS);
         Future<?> serverChildGroup = sb.config().childGroup().shutdownGracefully(0, 0, MILLISECONDS);

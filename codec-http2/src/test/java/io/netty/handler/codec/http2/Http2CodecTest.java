@@ -93,11 +93,18 @@ public class Http2CodecTest {
 
     @After
     public void tearDown() throws Exception {
-        clientChannel.close().sync();
-        serverChannel.close().sync();
+        if (clientChannel != null) {
+            clientChannel.close().sync();
+            clientChannel = null;
+        }
+        if (serverChannel != null) {
+            serverChannel.close().sync();
+            serverChannel = null;
+        }
+        final Channel serverConnectedChannel = this.serverConnectedChannel;
         if (serverConnectedChannel != null) {
             serverConnectedChannel.close().sync();
-            serverConnectedChannel = null;
+            this.serverConnectedChannel = null;
         }
     }
 
