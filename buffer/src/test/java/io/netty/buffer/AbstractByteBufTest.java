@@ -18,9 +18,8 @@ package io.netty.buffer;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.After;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -62,6 +61,8 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * An abstract test class for channel buffers
@@ -75,7 +76,11 @@ public abstract class AbstractByteBufTest {
     private Random random;
     private ByteBuf buffer;
 
-    protected abstract ByteBuf newBuffer(int capacity);
+    protected final ByteBuf newBuffer(int capacity) {
+        return newBuffer(capacity, Integer.MAX_VALUE);
+    }
+
+    protected abstract ByteBuf newBuffer(int capacity, int maxCapacity);
 
     protected boolean discardReadBytesDoesNotMoveWritableBytes() {
         return true;
@@ -101,6 +106,24 @@ public abstract class AbstractByteBufTest {
             }
             buffer = null;
         }
+    }
+
+    @Test
+    public void comparableInterfaceNotViolated() {
+        assumeFalse(buffer.isReadOnly());
+        buffer.writerIndex(buffer.readerIndex());
+        assumeTrue(buffer.writableBytes() >= 4);
+
+        buffer.writeLong(0);
+        ByteBuf buffer2 = newBuffer(CAPACITY);
+        assumeFalse(buffer2.isReadOnly());
+        buffer2.writerIndex(buffer2.readerIndex());
+        // Write an unsigned integer that will cause buffer.getUnsignedInt() - buffer2.getUnsignedInt() to underflow the
+        // int type and wrap around on the negative side.
+        buffer2.writeLong(0xF0000000L);
+        assertTrue(buffer.compareTo(buffer2) < 0);
+        assertTrue(buffer2.compareTo(buffer) > 0);
+        buffer2.release();
     }
 
     @Test
@@ -1909,7 +1932,7 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testNioBuffer1() {
-        Assume.assumeTrue(buffer.nioBufferCount() == 1);
+        assumeTrue(buffer.nioBufferCount() == 1);
 
         byte[] value = new byte[buffer.capacity()];
         random.nextBytes(value);
@@ -1921,7 +1944,7 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testToByteBuffer2() {
-        Assume.assumeTrue(buffer.nioBufferCount() == 1);
+        assumeTrue(buffer.nioBufferCount() == 1);
 
         byte[] value = new byte[buffer.capacity()];
         random.nextBytes(value);
@@ -1947,7 +1970,7 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testToByteBuffer3() {
-        Assume.assumeTrue(buffer.nioBufferCount() == 1);
+        assumeTrue(buffer.nioBufferCount() == 1);
 
         assertEquals(buffer.order(), buffer.nioBuffer().order());
     }
@@ -2101,7 +2124,7 @@ public abstract class AbstractByteBufTest {
         assertEquals(1, buf.remaining());
 
         byte[] data = new byte[a];
-        ThreadLocalRandom.current().nextBytes(data);
+        PlatformDependent.threadLocalRandom().nextBytes(data);
         buffer.writeBytes(data);
 
         buf = buffer.internalNioBuffer(0, a);
@@ -3999,6 +4022,58 @@ public abstract class AbstractByteBufTest {
         @Override
         public boolean process(byte value) throws Exception {
             return true;
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testCapacityEnforceMaxCapacity() {
+        ByteBuf buffer = newBuffer(3, 13);
+        assertEquals(13, buffer.maxCapacity());
+        assertEquals(3, buffer.capacity());
+        try {
+            buffer.capacity(14);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testCapacityNegative() {
+        ByteBuf buffer = newBuffer(3, 13);
+        assertEquals(13, buffer.maxCapacity());
+        assertEquals(3, buffer.capacity());
+        try {
+            buffer.capacity(-1);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testCapacityDecrease() {
+        ByteBuf buffer = newBuffer(3, 13);
+        assertEquals(13, buffer.maxCapacity());
+        assertEquals(3, buffer.capacity());
+        try {
+            buffer.capacity(2);
+            assertEquals(2, buffer.capacity());
+            assertEquals(13, buffer.maxCapacity());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testCapacityIncrease() {
+        ByteBuf buffer = newBuffer(3, 13);
+        assertEquals(13, buffer.maxCapacity());
+        assertEquals(3, buffer.capacity());
+        try {
+            buffer.capacity(4);
+            assertEquals(4, buffer.capacity());
+            assertEquals(13, buffer.maxCapacity());
+        } finally {
+            buffer.release();
         }
     }
 }

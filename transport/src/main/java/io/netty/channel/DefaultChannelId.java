@@ -21,7 +21,6 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.MacAddressUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -107,9 +106,10 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     private static int defaultProcessId() {
-        final ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
+        ClassLoader loader = null;
         String value;
         try {
+            loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
             // Invoke java.lang.management.ManagementFactory.getRuntimeMXBean().getName()
             Class<?> mgmtFactoryType = Class.forName("java.lang.management.ManagementFactory", true, loader);
             Class<?> runtimeMxBeanType = Class.forName("java.lang.management.RuntimeMXBean", true, loader);
@@ -118,15 +118,15 @@ public final class DefaultChannelId implements ChannelId {
             Object bean = getRuntimeMXBean.invoke(null, EmptyArrays.EMPTY_OBJECTS);
             Method getName = runtimeMxBeanType.getMethod("getName", EmptyArrays.EMPTY_CLASSES);
             value = (String) getName.invoke(bean, EmptyArrays.EMPTY_OBJECTS);
-        } catch (Exception e) {
-            logger.debug("Could not invoke ManagementFactory.getRuntimeMXBean().getName(); Android?", e);
+        } catch (Throwable t) {
+            logger.debug("Could not invoke ManagementFactory.getRuntimeMXBean().getName(); Android?", t);
             try {
                 // Invoke android.os.Process.myPid()
                 Class<?> processType = Class.forName("android.os.Process", true, loader);
                 Method myPid = processType.getMethod("myPid", EmptyArrays.EMPTY_CLASSES);
                 value = myPid.invoke(null, EmptyArrays.EMPTY_OBJECTS).toString();
-            } catch (Exception e2) {
-                logger.debug("Could not invoke Process.myPid(); not Android?", e2);
+            } catch (Throwable t2) {
+                logger.debug("Could not invoke Process.myPid(); not Android?", t2);
                 value = "";
             }
         }
@@ -145,7 +145,7 @@ public final class DefaultChannelId implements ChannelId {
         }
 
         if (pid < 0) {
-            pid = ThreadLocalRandom.current().nextInt();
+            pid = PlatformDependent.threadLocalRandom().nextInt();
             logger.warn("Failed to find the current process ID from '{}'; using a random value: {}",  value, pid);
         }
 
@@ -153,7 +153,7 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     private final byte[] data;
-    private int hashCode;
+    private final int hashCode;
 
     private transient String shortValue;
     private transient String longValue;
@@ -176,11 +176,11 @@ public final class DefaultChannelId implements ChannelId {
         i = writeLong(i, Long.reverse(System.nanoTime()) ^ System.currentTimeMillis());
 
         // random
-        int random = ThreadLocalRandom.current().nextInt();
-        hashCode = random;
+        int random = PlatformDependent.threadLocalRandom().nextInt();
         i = writeInt(i, random);
-
         assert i == data.length;
+
+        hashCode = Arrays.hashCode(data);
     }
 
     private int writeInt(int i, int value) {
@@ -246,21 +246,35 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     @Override
-    public int compareTo(ChannelId o) {
-        return 0;
+    public int compareTo(final ChannelId o) {
+        if (this == o) {
+            // short circuit
+            return 0;
+        }
+        if (o instanceof DefaultChannelId) {
+            // lexicographic comparison
+            final byte[] otherData = ((DefaultChannelId) o).data;
+            int len1 = data.length;
+            int len2 = otherData.length;
+            int len = Math.min(len1, len2);
+
+            for (int k = 0; k < len; k++) {
+                byte x = data[k];
+                byte y = otherData[k];
+                if (x != y) {
+                    // treat these as unsigned bytes for comparison
+                    return (x & 0xff) - (y & 0xff);
+                }
+            }
+            return len1 - len2;
+        }
+
+        return asLongText().compareTo(o.asLongText());
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
-        }
-
-        if (!(obj instanceof DefaultChannelId)) {
-            return false;
-        }
-
-        return Arrays.equals(data, ((DefaultChannelId) obj).data);
+        return this == obj || (obj instanceof DefaultChannelId && Arrays.equals(data, ((DefaultChannelId) obj).data));
     }
 
     @Override

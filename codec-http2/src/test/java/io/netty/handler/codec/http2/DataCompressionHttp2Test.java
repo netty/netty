@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -92,8 +93,8 @@ public class DataCompressionHttp2Test {
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
-                if (invocation.getArgumentAt(4, Boolean.class)) {
-                    serverConnection.stream(invocation.getArgumentAt(1, Integer.class)).close();
+                if (invocation.getArgument(4)) {
+                    serverConnection.stream((Integer) invocation.getArgument(1)).close();
                 }
                 return null;
             }
@@ -102,8 +103,8 @@ public class DataCompressionHttp2Test {
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
-                if (invocation.getArgumentAt(7, Boolean.class)) {
-                    serverConnection.stream(invocation.getArgumentAt(1, Integer.class)).close();
+                if (invocation.getArgument(7)) {
+                    serverConnection.stream((Integer) invocation.getArgument(1)).close();
                 }
                 return null;
             }
@@ -256,6 +257,7 @@ public class DataCompressionHttp2Test {
     }
 
     private void bootstrapEnv(int serverOutSize) throws Exception {
+        final CountDownLatch prefaceWrittenLatch = new CountDownLatch(1);
         serverOut = new ByteArrayOutputStream(serverOutSize);
         serverLatch = new CountDownLatch(1);
         sb = new ServerBootstrap();
@@ -281,8 +283,8 @@ public class DataCompressionHttp2Test {
 
                 buf.readBytes(serverOut, buf.readableBytes());
 
-                if (in.getArgumentAt(4, Boolean.class)) {
-                    serverConnection.stream(in.getArgumentAt(1, Integer.class)).close();
+                if (in.getArgument(4)) {
+                    serverConnection.stream((Integer) in.getArgument(1)).close();
                 }
                 return processedBytes;
             }
@@ -336,6 +338,14 @@ public class DataCompressionHttp2Test {
                         .gracefulShutdownTimeoutMillis(0)
                         .codec(decoder, clientEncoder).build();
                 p.addLast(clientHandler);
+                p.addLast(new ChannelInboundHandlerAdapter() {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt instanceof Http2ConnectionPrefaceWrittenEvent) {
+                            prefaceWrittenLatch.countDown();
+                            ctx.pipeline().remove(this);
+                        }
+                    }
+                });
             }
         });
 
@@ -345,6 +355,7 @@ public class DataCompressionHttp2Test {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
+        assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
 

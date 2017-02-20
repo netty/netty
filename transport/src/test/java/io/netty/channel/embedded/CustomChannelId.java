@@ -16,22 +16,25 @@
 package io.netty.channel.embedded;
 
 import io.netty.channel.ChannelId;
+import io.netty.util.internal.MathUtil;
 
 public class CustomChannelId implements ChannelId {
+
     private static final long serialVersionUID = 1L;
 
     private int id;
 
-    public CustomChannelId(int id) {
+    CustomChannelId(int id) {
         this.id = id;
     }
 
     @Override
-    public int compareTo(ChannelId o) {
+    public int compareTo(final ChannelId o) {
         if (o instanceof CustomChannelId) {
-            return id - ((CustomChannelId) o).id;
+            return MathUtil.compare(id, ((CustomChannelId) o).id);
         }
-        return -1;
+
+        return asLongText().compareTo(o.asLongText());
     }
 
     @Override
@@ -41,10 +44,7 @@ public class CustomChannelId implements ChannelId {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof CustomChannelId) {
-            return id == ((CustomChannelId) obj).id;
-        }
-        return false;
+        return obj instanceof CustomChannelId && id == ((CustomChannelId) obj).id;
     }
 
     @Override

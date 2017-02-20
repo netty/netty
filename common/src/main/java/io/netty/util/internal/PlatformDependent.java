@@ -16,8 +16,6 @@
 package io.netty.util.internal;
 
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.chmv8.ConcurrentHashMapV8;
-import io.netty.util.internal.chmv8.LongAdderV8;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MpscArrayQueue;
@@ -46,14 +44,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -112,10 +108,26 @@ public final class PlatformDependent {
     private static final boolean USE_DIRECT_BUFFER_NO_CLEANER;
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
+    private static final ThreadLocalRandomProvider RANDOM_PROVIDER;
 
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
     static {
+        if (javaVersion() >= 7) {
+            RANDOM_PROVIDER = new ThreadLocalRandomProvider() {
+                @Override
+                public Random current() {
+                    return java.util.concurrent.ThreadLocalRandom.current();
+                }
+            };
+        } else {
+            RANDOM_PROVIDER = new ThreadLocalRandomProvider() {
+                @Override
+                public Random current() {
+                    return ThreadLocalRandom.current();
+                }
+            };
+        }
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
         }
@@ -288,19 +300,15 @@ public final class PlatformDependent {
      * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
-        if (CAN_USE_CHM_V8) {
-            return new ConcurrentHashMapV8<K, V>();
-        } else {
-            return new ConcurrentHashMap<K, V>();
-        }
+        return new ConcurrentHashMap<K, V>();
     }
 
     /**
      * Creates a new fastest {@link LongCounter} implementaion for the current platform.
      */
     public static LongCounter newLongCounter() {
-        if (HAS_UNSAFE) {
-            return new LongAdderV8();
+        if (javaVersion() >= 8) {
+            return new LongAdderCounter();
         } else {
             return new AtomicLongCounter();
         }
@@ -310,22 +318,14 @@ public final class PlatformDependent {
      * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity) {
-        if (CAN_USE_CHM_V8) {
-            return new ConcurrentHashMapV8<K, V>(initialCapacity);
-        } else {
-            return new ConcurrentHashMap<K, V>(initialCapacity);
-        }
+        return new ConcurrentHashMap<K, V>(initialCapacity);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity, float loadFactor) {
-        if (CAN_USE_CHM_V8) {
-            return new ConcurrentHashMapV8<K, V>(initialCapacity, loadFactor);
-        } else {
-            return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
-        }
+        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
     }
 
     /**
@@ -333,22 +333,14 @@ public final class PlatformDependent {
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(
             int initialCapacity, float loadFactor, int concurrencyLevel) {
-        if (CAN_USE_CHM_V8) {
-            return new ConcurrentHashMapV8<K, V>(initialCapacity, loadFactor, concurrencyLevel);
-        } else {
-            return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor, concurrencyLevel);
-        }
+        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor, concurrencyLevel);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(Map<? extends K, ? extends V> map) {
-        if (CAN_USE_CHM_V8) {
-            return new ConcurrentHashMapV8<K, V>(map);
-        } else {
-            return new ConcurrentHashMap<K, V>(map);
-        }
+        return new ConcurrentHashMap<K, V>(map);
     }
 
     /**
@@ -517,10 +509,6 @@ public final class PlatformDependent {
      */
     private static int hashCodeAsciiSanitizsByte(char value) {
         return value & 0x1f;
-    }
-
-    public static void putOrderedObject(Object object, long address, Object value) {
-        PlatformDependent0.putOrderedObject(object, address, value);
     }
 
     public static void putByte(long address, byte value) {
@@ -835,7 +823,7 @@ public final class PlatformDependent {
                 // up to the next power of two and so will overflow otherwise.
                 final int capacity =
                         Math.max(Math.min(maxCapacity, MAX_ALLOWED_MPSC_CAPACITY), MIN_MAX_MPSC_CAPACITY);
-                return new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE, capacity, true);
+                return new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE, capacity);
             } else {
                 return new MpscLinkedAtomicQueue<T>();
             }
@@ -904,6 +892,13 @@ public final class PlatformDependent {
         } else {
             return new ConcurrentLinkedDeque<C>();
         }
+    }
+
+    /**
+     * Return a {@link Random} which is not-threadsafe and so can only be used from the same thread.
+     */
+    public static Random threadLocalRandom() {
+        return RANDOM_PROVIDER.current();
     }
 
     private static boolean isAndroid0() {
@@ -1409,6 +1404,10 @@ public final class PlatformDependent {
         public long value() {
             return get();
         }
+    }
+
+    private interface ThreadLocalRandomProvider {
+        Random current();
     }
 
     private PlatformDependent() {

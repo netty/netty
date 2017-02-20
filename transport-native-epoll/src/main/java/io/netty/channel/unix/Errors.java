@@ -61,7 +61,7 @@ public final class Errors {
         private static final long serialVersionUID = 8222160204268655526L;
         private final int expectedErr;
         public NativeIoException(String method, int expectedErr) {
-            super(method);
+            super(method + " failed: " + ERRORS[-expectedErr]);
             this.expectedErr = expectedErr;
         }
 
@@ -74,7 +74,7 @@ public final class Errors {
         private static final long serialVersionUID = -5532328671712318161L;
         private final int expectedErr;
         NativeConnectException(String method, int expectedErr) {
-            super(method);
+            super(method + " failed: " + ERRORS[-expectedErr]);
             this.expectedErr = expectedErr;
         }
 

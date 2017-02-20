@@ -15,8 +15,8 @@
  */
 package io.netty.handler.ssl;
 
-import org.apache.tomcat.jni.SSL;
-import org.apache.tomcat.jni.SSLContext;
+import io.netty.internal.tcnative.SSL;
+import io.netty.internal.tcnative.SSLContext;
 
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -153,6 +153,21 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                 } else {
                     SSLContext.setCertVerifyCallback(ctx, new TrustManagerVerifyCallback(engineMap, manager));
                 }
+
+                X509Certificate[] issuers = manager.getAcceptedIssuers();
+                if (issuers != null && issuers.length > 0) {
+                    long bio = 0;
+                    try {
+                        bio = toBIO(issuers);
+                        if (!SSLContext.setCACertificateBio(ctx, bio)) {
+                            throw new SSLException("unable to setup accepted issuers for trustmanager " + manager);
+                        }
+                    } finally {
+                        freeBio(bio);
+                    }
+                }
+            } catch (SSLException e) {
+                throw e;
             } catch (Exception e) {
                 throw new SSLException("unable to setup trustmanager", e);
             }

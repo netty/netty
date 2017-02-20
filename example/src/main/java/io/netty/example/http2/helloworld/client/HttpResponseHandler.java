@@ -22,12 +22,12 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -35,10 +35,12 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
 
-    private SortedMap<Integer, Entry<ChannelFuture, ChannelPromise>> streamidPromiseMap;
+    private final Map<Integer, Entry<ChannelFuture, ChannelPromise>> streamidPromiseMap;
 
     public HttpResponseHandler() {
-        streamidPromiseMap = new TreeMap<Integer, Entry<ChannelFuture, ChannelPromise>>();
+        // Use a concurrent map because we add and iterate from the main thread (just for the purposes of the example),
+        // but Netty also does a get on the map when messages are received in a EventLoop thread.
+        streamidPromiseMap = PlatformDependent.newConcurrentHashMap();
     }
 
     /**

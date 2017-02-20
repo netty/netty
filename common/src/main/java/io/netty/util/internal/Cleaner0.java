@@ -42,12 +42,12 @@ final class Cleaner0 {
         long fieldOffset = -1;
         Method clean = null;
         boolean cleanerIsRunnable = false;
+        Throwable error = null;
         if (PlatformDependent0.hasUnsafe()) {
             try {
                 cleanerField = direct.getClass().getDeclaredField("cleaner");
-                cleanerField.setAccessible(true);
                 fieldOffset = PlatformDependent0.objectFieldOffset(cleanerField);
-                Object cleaner = cleanerField.get(direct);
+                Object cleaner = PlatformDependent0.getObject(direct, fieldOffset);
                 try {
                     // Cleaner implements Runnable from JDK9 onwards.
                     Runnable runnable = (Runnable) cleaner;
@@ -62,9 +62,14 @@ final class Cleaner0 {
                 fieldOffset = -1;
                 clean = null;
                 cleanerIsRunnable = false;
+                error = t;
             }
         }
-        logger.debug("java.nio.ByteBuffer.cleaner(): {}", fieldOffset != -1? "available" : "unavailable");
+        if (error == null) {
+            logger.debug("java.nio.ByteBuffer.cleaner(): available");
+        } else {
+            logger.debug("java.nio.ByteBuffer.cleaner(): unavailable", error);
+        }
         CLEANER_FIELD_OFFSET = fieldOffset;
         CLEAN_METHOD = clean;
         CLEANER_IS_RUNNABLE = cleanerIsRunnable;

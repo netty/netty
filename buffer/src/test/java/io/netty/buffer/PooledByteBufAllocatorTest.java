@@ -18,7 +18,9 @@ package io.netty.buffer;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -35,7 +37,31 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class PooledByteBufAllocatorTest {
+public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
+
+    @Override
+    protected AbstractByteBufAllocator newAllocator(boolean preferDirect) {
+        return new PooledByteBufAllocator(preferDirect);
+    }
+
+    @Override
+    protected AbstractByteBufAllocator newUnpooledAllocator() {
+        return new PooledByteBufAllocator(0, 0, 8192, 1);
+    }
+
+    @Test
+    public void testPooledUnsafeHeapBufferAndUnsafeDirectBuffer() {
+        AbstractByteBufAllocator allocator = newAllocator(true);
+        ByteBuf directBuffer = allocator.directBuffer();
+        assertInstanceOf(directBuffer,
+                PlatformDependent.hasUnsafe() ? PooledUnsafeDirectByteBuf.class : PooledDirectByteBuf.class);
+        directBuffer.release();
+
+        ByteBuf heapBuffer = allocator.heapBuffer();
+        assertInstanceOf(heapBuffer,
+                PlatformDependent.hasUnsafe() ? PooledUnsafeHeapByteBuf.class : PooledHeapByteBuf.class);
+        heapBuffer.release();
+    }
 
     @Test
     public void testArenaMetricsNoCache() {
@@ -45,6 +71,18 @@ public class PooledByteBufAllocatorTest {
     @Test
     public void testArenaMetricsCache() {
         testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 1000, 1000, 1000), 100, 1, 1, 0);
+    }
+
+    @Test
+    public void testArenaMetricsNoCacheAlign() {
+        Assume.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
+        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0, true, 64), 100, 0, 100, 100);
+    }
+
+    @Test
+    public void testArenaMetricsCacheAlign() {
+        Assume.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
+        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 1000, 1000, 1000, true, 64), 100, 1, 1, 0);
     }
 
     private static void testArenaMetrics0(

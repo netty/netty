@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.util.internal.SocketUtils;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -182,6 +183,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
+    protected boolean isInputShutdown0() {
+        return isInputShutdown();
+    }
+
+    @Override
     public ChannelFuture shutdownInput(final ChannelPromise promise) {
         Executor closeExecutor = ((NioSocketChannelUnsafe) unsafe()).prepareToClose();
         if (closeExecutor != null) {
@@ -314,9 +320,9 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     private void doBind0(SocketAddress localAddress) throws Exception {
         if (PlatformDependent.javaVersion() >= 7) {
-            javaChannel().bind(localAddress);
+            SocketUtils.bind(javaChannel(), localAddress);
         } else {
-            javaChannel().socket().bind(localAddress);
+            SocketUtils.bind(javaChannel().socket(), localAddress);
         }
     }
 
@@ -328,7 +334,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
         boolean success = false;
         try {
-            boolean connected = javaChannel().connect(remoteAddress);
+            boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
             if (!connected) {
                 selectionKey().interestOps(SelectionKey.OP_CONNECT);
             }

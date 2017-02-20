@@ -83,7 +83,7 @@ public class Http2CodecTest {
                 .group(group)
                 .handler(new Http2Codec(false, new TestChannelInitializer()));
         clientChannel = cb.connect(serverAddress).sync().channel();
-        assertTrue(serverChannelLatch.await(2, TimeUnit.SECONDS));
+        assertTrue(serverChannelLatch.await(5, TimeUnit.SECONDS));
     }
 
     @AfterClass

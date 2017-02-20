@@ -156,14 +156,19 @@ public class HttpObjectAggregator
 
     @Override
     protected Object newContinueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
-        if (HttpUtil.is100ContinueExpected(start)) {
+        if (HttpUtil.isUnsupportedExpectation(start)) {
+            // if the request contains an unsupported expectation, we return 417
+            pipeline.fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
+            return EXPECTATION_FAILED.retainedDuplicate();
+        } else if (HttpUtil.is100ContinueExpected(start)) {
+            // if the request contains 100-continue but the content-length is too large, we return 413
             if (getContentLength(start, -1L) <= maxContentLength) {
                 return CONTINUE.retainedDuplicate();
             }
-
             pipeline.fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
-            return EXPECTATION_FAILED.retainedDuplicate();
+            return TOO_LARGE.retainedDuplicate();
         }
+
         return null;
     }
 
@@ -174,8 +179,11 @@ public class HttpObjectAggregator
 
     @Override
     protected boolean ignoreContentAfterContinueResponse(Object msg) {
-        return msg instanceof HttpResponse &&
-               ((HttpResponse) msg).status().code() == HttpResponseStatus.EXPECTATION_FAILED.code();
+        if (msg instanceof HttpResponse) {
+            final HttpResponse httpResponse = (HttpResponse) msg;
+            return httpResponse.status().codeClass().equals(HttpStatusClass.CLIENT_ERROR);
+        }
+        return false;
     }
 
     @Override
@@ -404,6 +412,7 @@ public class HttpObjectAggregator
             DefaultFullHttpRequest dup = new DefaultFullHttpRequest(protocolVersion(), method(), uri(), content);
             dup.headers().set(headers());
             dup.trailingHeaders().set(trailingHeaders());
+            dup.setDecoderResult(decoderResult());
             return dup;
         }
 
@@ -502,6 +511,7 @@ public class HttpObjectAggregator
             DefaultFullHttpResponse dup = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(), content);
             dup.headers().set(headers());
             dup.trailingHeaders().set(trailingHeaders());
+            dup.setDecoderResult(decoderResult());
             return dup;
         }
 

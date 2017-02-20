@@ -25,8 +25,8 @@ import static org.junit.Assert.assertEquals;
 public class DuplicatedByteBufTest extends AbstractByteBufTest {
 
     @Override
-    protected ByteBuf newBuffer(int length) {
-        ByteBuf wrapped = Unpooled.buffer(length);
+    protected ByteBuf newBuffer(int length, int maxCapacity) {
+        ByteBuf wrapped = Unpooled.buffer(length, maxCapacity);
         ByteBuf buffer = new DuplicatedByteBuf(wrapped);
         assertEquals(wrapped.writerIndex(), buffer.writerIndex());
         assertEquals(wrapped.readerIndex(), buffer.readerIndex());

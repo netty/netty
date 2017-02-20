@@ -17,6 +17,9 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.internal.tcnative.CertificateVerifier;
+import io.netty.internal.tcnative.SSL;
+import io.netty.internal.tcnative.SSLContext;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
@@ -27,10 +30,6 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.apache.tomcat.jni.CertificateVerifier;
-import org.apache.tomcat.jni.Pool;
-import org.apache.tomcat.jni.SSL;
-import org.apache.tomcat.jni.SSLContext;
 
 import java.security.AccessController;
 import java.security.PrivateKey;
@@ -46,7 +45,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -58,6 +56,7 @@ import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * An implementation of {@link SslContext} which works with libraries that support the
@@ -86,6 +85,17 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     return SystemPropertyUtil.getBoolean("jdk.tls.rejectClientInitiatedRenegotiation", false);
                 }
             });
+
+    private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE =
+            AccessController.doPrivileged(new PrivilegedAction<Integer>() {
+                @Override
+                public Integer run() {
+                    return Math.max(1,
+                            SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
+                                                      2048));
+                }
+            });
+
     private static final List<String> DEFAULT_CIPHERS;
     private static final Integer DH_KEY_LENGTH;
     private static final ResourceLeakDetector<ReferenceCountedOpenSslContext> leakDetector =
@@ -98,7 +108,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * The OpenSSL SSL_CTX object
      */
     protected volatile long ctx;
-    long aprPool;
     @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile int aprPoolDestroyed;
     private final List<String> unmodifiableCiphers;
@@ -132,7 +141,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final Certificate[] keyCertChain;
     final ClientAuth clientAuth;
     final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
-    volatile boolean rejectRemoteInitiatedRenegotiation;
+    private volatile boolean rejectRemoteInitiatedRenegotiation;
+    private volatile int bioNonApplicationBufferSize = DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE;
 
     static final OpenSslApplicationProtocolNegotiator NONE_PROTOCOL_NEGOTIATOR =
             new OpenSslApplicationProtocolNegotiator() {
@@ -246,39 +256,33 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
 
         unmodifiableCiphers = Arrays.asList(checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
-                convertedCiphers, DEFAULT_CIPHERS, OpenSsl.availableCipherSuites()));
+                convertedCiphers, DEFAULT_CIPHERS, OpenSsl.availableOpenSslCipherSuites()));
 
         this.apn = checkNotNull(apn, "apn");
-
-        // Allocate a new APR pool.
-        aprPool = Pool.create(0);
 
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
             synchronized (ReferenceCountedOpenSslContext.class) {
                 try {
-                    ctx = SSLContext.make(aprPool, SSL.SSL_PROTOCOL_ALL, mode);
+                    ctx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, mode);
                 } catch (Exception e) {
                     throw new SSLException("failed to create an SSL_CTX", e);
                 }
 
-                SSLContext.setOptions(ctx, SSL.SSL_OP_ALL);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SSLv2);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SSLv3);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_ECDH_USE);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_SINGLE_DH_USE);
-                SSLContext.setOptions(ctx, SSL.SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
+                SSLContext.setOptions(ctx, SSLContext.getOptions(ctx) |
+                        SSL.SSL_OP_NO_SSLv2 |
+                        SSL.SSL_OP_NO_SSLv3 |
+                        SSL.SSL_OP_CIPHER_SERVER_PREFERENCE |
 
-                // We do not support compression as the moment so we should explicitly disable it.
-                SSLContext.setOptions(ctx, SSL.SSL_OP_NO_COMPRESSION);
+                // We do not support compression at the moment so we should explicitly disable it.
+                        SSL.SSL_OP_NO_COMPRESSION |
 
                 // Disable ticket support by default to be more inline with SSLEngineImpl of the JDK.
                 // This also let SSLSession.getId() work the same way for the JDK implementation and the OpenSSLEngine.
                 // If tickets are supported SSLSession.getId() will only return an ID on the server-side if it could
                 // make use of tickets.
-                SSLContext.setOptions(ctx, SSL.SSL_OP_NO_TICKET);
+                        SSL.SSL_OP_NO_TICKET);
 
                 // We need to enable SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER as the memory address may change between
                 // calling OpenSSLEngine.wrap(...).
@@ -436,6 +440,29 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     /**
+     * Returns if remote initiated renegotiation is supported or not.
+     */
+    public boolean getRejectRemoteInitiatedRenegotiation() {
+        return rejectRemoteInitiatedRenegotiation;
+    }
+
+    /**
+     * Set the size of the buffer used by the BIO for non-application based writes
+     * (e.g. handshake, renegotiation, etc...).
+     */
+    public void setBioNonApplicationBufferSize(int bioNonApplicationBufferSize) {
+        this.bioNonApplicationBufferSize =
+                checkPositiveOrZero(bioNonApplicationBufferSize, "bioNonApplicationBufferSize");
+    }
+
+    /**
+     * Returns the size of the buffer used by the BIO for non-application based writes
+     */
+    public int getBioNonApplicationBufferSize() {
+        return bioNonApplicationBufferSize;
+    }
+
+    /**
      * Sets the SSL session ticket keys of this context.
      *
      * @deprecated use {@link OpenSslSessionContext#setTicketKeys(byte[])}
@@ -465,12 +492,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             if (ctx != 0) {
                 SSLContext.free(ctx);
                 ctx = 0;
-            }
-
-            // Guard against multiple destroyPools() calls triggered by construction exception and finalize() later
-            if (aprPool != 0) {
-                Pool.destroy(aprPool);
-                aprPool = 0;
             }
         }
     }
@@ -794,7 +815,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         try {
             long bio = SSL.newMemBIO();
             int readable = buffer.readableBytes();
-            if (SSL.writeToBIO(bio, OpenSsl.memoryAddress(buffer) + buffer.readerIndex(), readable) != readable) {
+            if (SSL.bioWrite(bio, OpenSsl.memoryAddress(buffer) + buffer.readerIndex(), readable) != readable) {
                 SSL.freeBIO(bio);
                 throw new IllegalStateException("Could not write data to memory BIO");
             }

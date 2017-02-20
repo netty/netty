@@ -30,7 +30,7 @@ public class BigEndianUnsafeDirectByteBufTest extends BigEndianDirectByteBufTest
     }
 
     @Override
-    protected ByteBuf newBuffer(int length) {
-        return new UnpooledUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, length, Integer.MAX_VALUE);
+    protected ByteBuf newBuffer(int length, int maxCapacity) {
+        return new UnpooledUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, length, maxCapacity);
     }
 }

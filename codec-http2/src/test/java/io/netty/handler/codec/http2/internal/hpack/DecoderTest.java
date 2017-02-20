@@ -33,16 +33,20 @@ package io.netty.handler.codec.http2.internal.hpack;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
 import org.junit.Before;
 import org.junit.Test;
 
-import static io.netty.handler.codec.http2.Http2TestUtil.newTestDecoder;
+import static io.netty.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
+import static io.netty.handler.codec.http2.internal.hpack.Decoder.decodeULE128;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.AsciiString.of;
 import static java.lang.Integer.MAX_VALUE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -50,10 +54,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 public class DecoderTest {
-
-    private static final int MAX_HEADER_LIST_SIZE = 8192;
-    private static final int MAX_HEADER_TABLE_SIZE = 4096;
-
     private Decoder decoder;
     private Http2Headers mockHeaders;
 
@@ -73,8 +73,111 @@ public class DecoderTest {
 
     @Before
     public void setUp() throws Http2Exception {
-        decoder = new Decoder();
+        decoder = new Decoder(8192, 32);
         mockHeaders = mock(Http2Headers.class);
+    }
+
+    @Test
+    public void testDecodeULE128IntMax() throws Http2Exception {
+        byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x07};
+        ByteBuf in = Unpooled.wrappedBuffer(input);
+        try {
+            assertEquals(Integer.MAX_VALUE, decodeULE128(in, 0));
+        } finally {
+            in.release();
+        }
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void testDecodeULE128IntOverflow1() throws Http2Exception {
+        byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x07};
+        ByteBuf in = Unpooled.wrappedBuffer(input);
+        final int readerIndex = in.readerIndex();
+        try {
+            decodeULE128(in, 1);
+        } finally {
+            assertEquals(readerIndex, in.readerIndex());
+            in.release();
+        }
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void testDecodeULE128IntOverflow2() throws Http2Exception {
+        byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x08};
+        ByteBuf in = Unpooled.wrappedBuffer(input);
+        final int readerIndex = in.readerIndex();
+        try {
+            decodeULE128(in, 0);
+        } finally {
+            assertEquals(readerIndex, in.readerIndex());
+            in.release();
+        }
+    }
+
+    @Test
+    public void testDecodeULE128LongMax() throws Http2Exception {
+        byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+                        (byte) 0xFF, (byte) 0x7F};
+        ByteBuf in = Unpooled.wrappedBuffer(input);
+        try {
+            assertEquals(Long.MAX_VALUE, decodeULE128(in, 0L));
+        } finally {
+            in.release();
+        }
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void testDecodeULE128LongOverflow1() throws Http2Exception {
+        byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+                        (byte) 0xFF, (byte) 0xFF};
+        ByteBuf in = Unpooled.wrappedBuffer(input);
+        final int readerIndex = in.readerIndex();
+        try {
+            decodeULE128(in, 0L);
+        } finally {
+            assertEquals(readerIndex, in.readerIndex());
+            in.release();
+        }
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void testDecodeULE128LongOverflow2() throws Http2Exception {
+        byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF,
+                        (byte) 0xFF, (byte) 0x7F};
+        ByteBuf in = Unpooled.wrappedBuffer(input);
+        final int readerIndex = in.readerIndex();
+        try {
+            decodeULE128(in, 1L);
+        } finally {
+            assertEquals(readerIndex, in.readerIndex());
+            in.release();
+        }
+    }
+
+    @Test
+    public void testSetTableSizeWithMaxUnsigned32BitValueSucceeds() throws Http2Exception {
+        byte[] input = {(byte) 0x3F, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x0E};
+        ByteBuf in = Unpooled.wrappedBuffer(input);
+        try {
+            final long expectedHeaderSize = 4026531870L; // based on the input above
+            decoder.setMaxHeaderTableSize(expectedHeaderSize);
+            decoder.decode(0, in, mockHeaders);
+            assertEquals(expectedHeaderSize, decoder.getMaxHeaderTableSize());
+        } finally {
+            in.release();
+        }
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void testSetTableSizeOverLimitFails() throws Http2Exception {
+        byte[] input = {(byte) 0x3F, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x0E};
+        ByteBuf in = Unpooled.wrappedBuffer(input);
+        try {
+            decoder.setMaxHeaderTableSize(4026531870L - 1); // based on the input above ... 1 less than is above.
+            decoder.decode(0, in, mockHeaders);
+        } finally {
+            in.release();
+        }
     }
 
     @Test
@@ -123,7 +226,7 @@ public class DecoderTest {
     }
 
     @Test(expected = Http2Exception.class)
-    public void testIncompleteIndex() throws Http2Exception, Http2Exception {
+    public void testIncompleteIndex() throws Http2Exception {
         byte[] compressed = Hex.decodeHex("FFF0".toCharArray());
         ByteBuf in = Unpooled.wrappedBuffer(compressed);
         try {
@@ -319,5 +422,39 @@ public class DecoderTest {
             sb.append("61"); // 'a'
         }
         decode(sb.toString());
+    }
+
+    @Test
+    public void testDecodeLargerThanMaxHeaderListSizeButSmallerThanMaxHeaderListSizeUpdatesDynamicTable()
+        throws Http2Exception {
+        ByteBuf in = Unpooled.buffer(200);
+        try {
+            decoder.setMaxHeaderListSize(100, 200);
+            Encoder encoder = new Encoder(true);
+
+            // encode headers that are slightly larger than maxHeaderListSize
+            // but smaller than maxHeaderListSizeGoAway
+            Http2Headers toEncode = new DefaultHttp2Headers();
+            toEncode.add("test_1", "1");
+            toEncode.add("test_2", "2");
+            toEncode.add("long", String.format("%0100d", 0).replace('0', 'A'));
+            toEncode.add("test_3", "3");
+            encoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
+
+            // decode the headers, we should get an exception, but
+            // the decoded headers object should contain all of the headers
+            Http2Headers decoded = new DefaultHttp2Headers();
+            try {
+                decoder.decode(1, in, decoded);
+                fail();
+            } catch (Http2Exception e) {
+                assertTrue(e instanceof Http2Exception.HeaderListSizeException);
+            }
+
+            assertEquals(4, decoded.size());
+            assertTrue(decoded.contains("test_3"));
+        } finally {
+            in.release();
+        }
     }
 }

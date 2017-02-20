@@ -240,7 +240,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         while (!pendingStreams.isEmpty() && canCreateStream()) {
             Map.Entry<Integer, PendingStream> entry = pendingStreams.pollFirstEntry();
             PendingStream pendingStream = entry.getValue();
-            pendingStream.sendFrames();
+            try {
+                pendingStream.sendFrames();
+            } catch (Throwable t) {
+                pendingStream.close(t);
+            }
         }
     }
 
@@ -332,8 +336,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
         @Override
         void send(ChannelHandlerContext ctx, int streamId) {
-            writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding,
-                    endOfStream, promise);
+            writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endOfStream, promise);
         }
     }
 

@@ -40,7 +40,7 @@ final class EmbeddedChannelId implements ChannelId {
     }
 
     @Override
-    public int compareTo(ChannelId o) {
+    public int compareTo(final ChannelId o) {
         if (o instanceof EmbeddedChannelId) {
             return 0;
         }

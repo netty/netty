@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.UncheckedBooleanSupplier;
 
 /**
  * Default implementation of {@link MaxMessagesRecvByteBufAllocator} which respects {@link ChannelConfig#isAutoRead()}
@@ -50,13 +51,19 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
     /**
      * Focuses on enforcing the maximum messages per read condition for {@link #continueReading()}.
      */
-    public abstract class MaxMessageHandle implements Handle {
+    public abstract class MaxMessageHandle implements ExtendedHandle {
         private ChannelConfig config;
         private int maxMessagePerRead;
         private int totalMessages;
         private int totalBytesRead;
         private int attemptedBytesRead;
         private int lastBytesRead;
+        private final UncheckedBooleanSupplier defaultMaybeMoreSupplier = new UncheckedBooleanSupplier() {
+            @Override
+            public boolean get() {
+                return attemptedBytesRead == lastBytesRead;
+            }
+        };
 
         /**
          * Only {@link ChannelConfig#getMaxMessagesPerRead()} is used.
@@ -81,11 +88,8 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         @Override
         public final void lastBytesRead(int bytes) {
             lastBytesRead = bytes;
-            // Ignore if bytes is negative, the interface contract states it will be detected externally after call.
-            // The value may be "invalid" after this point, but it doesn't matter because reading will be stopped.
-            totalBytesRead += bytes;
-            if (totalBytesRead < 0) {
-                totalBytesRead = Integer.MAX_VALUE;
+            if (bytes > 0) {
+                totalBytesRead += bytes;
             }
         }
 
@@ -96,10 +100,15 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
 
         @Override
         public boolean continueReading() {
+            return continueReading(defaultMaybeMoreSupplier);
+        }
+
+        @Override
+        public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
             return config.isAutoRead() &&
-                   attemptedBytesRead == lastBytesRead &&
+                   maybeMoreDataSupplier.get() &&
                    totalMessages < maxMessagePerRead &&
-                   totalBytesRead < Integer.MAX_VALUE;
+                   totalBytesRead > 0;
         }
 
         @Override
@@ -117,7 +126,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         }
 
         protected final int totalBytesRead() {
-            return totalBytesRead;
+            return totalBytesRead < 0 ? Integer.MAX_VALUE : totalBytesRead;
         }
     }
 }

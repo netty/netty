@@ -28,9 +28,31 @@ public interface Http2HeadersEncoder {
      */
     interface Configuration {
         /**
-         * Access the Http2HeaderTable for this {@link Http2HeadersEncoder}
+         * Represents the value for
+         * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_HEADER_TABLE_SIZE</a>.
+         * This method should only be called by Netty (not users) as a result of a receiving a {@code SETTINGS} frame.
          */
-        Http2HeaderTable headerTable();
+        void maxHeaderTableSize(long max) throws Http2Exception;
+
+        /**
+         * Represents the value for
+         * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_HEADER_TABLE_SIZE</a>.
+         * The initial value returned by this method must be {@link Http2CodecUtil#DEFAULT_HEADER_TABLE_SIZE}.
+         */
+        long maxHeaderTableSize();
+
+        /**
+         * Represents the value for
+         * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>.
+         * This method should only be called by Netty (not users) as a result of a receiving a {@code SETTINGS} frame.
+         */
+        void maxHeaderListSize(long max) throws Http2Exception;
+
+        /**
+         * Represents the value for
+         * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>.
+         */
+        long maxHeaderListSize();
     }
 
     /**

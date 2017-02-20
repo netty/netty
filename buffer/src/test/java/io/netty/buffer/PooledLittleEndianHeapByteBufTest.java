@@ -25,8 +25,8 @@ import static org.junit.Assert.*;
 public class PooledLittleEndianHeapByteBufTest extends AbstractPooledByteBufTest {
 
     @Override
-    protected ByteBuf alloc(int length) {
-        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(length).order(ByteOrder.LITTLE_ENDIAN);
+    protected ByteBuf alloc(int length, int maxCapacity) {
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(length, maxCapacity).order(ByteOrder.LITTLE_ENDIAN);
         assertSame(ByteOrder.LITTLE_ENDIAN, buffer.order());
         return buffer;
     }

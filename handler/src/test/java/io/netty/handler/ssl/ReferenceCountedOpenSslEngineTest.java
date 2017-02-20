@@ -20,6 +20,11 @@ import io.netty.util.ReferenceCountUtil;
 import javax.net.ssl.SSLEngine;
 
 public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
+
+    public ReferenceCountedOpenSslEngineTest(BufferType type) {
+        super(type);
+    }
+
     @Override
     protected SslProvider sslClientProvider() {
         return SslProvider.OPENSSL_REFCNT;

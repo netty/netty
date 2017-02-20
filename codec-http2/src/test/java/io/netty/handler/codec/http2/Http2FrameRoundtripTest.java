@@ -40,7 +40,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_PADDING;
 import static io.netty.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
 import static io.netty.handler.codec.http2.Http2TestUtil.newTestDecoder;
@@ -283,7 +282,9 @@ public class Http2FrameRoundtripTest {
     @Test
     public void headersThatAreTooBigShouldFail() throws Exception {
         reader = new DefaultHttp2FrameReader(false);
-        final Http2Headers headers = headersOfSize(DEFAULT_HEADER_LIST_SIZE + 1);
+        final int maxListSize = 100;
+        reader.configuration().headersConfiguration().maxHeaderListSize(maxListSize, maxListSize);
+        final Http2Headers headers = headersOfSize(maxListSize + 1);
         writer.writeHeaders(ctx, STREAM_ID, headers, 2, (short) 3, true, MAX_PADDING, true, ctx.newPromise());
         try {
             readFrames();

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import org.apache.tomcat.jni.SessionTicketKey;
+import io.netty.internal.tcnative.SessionTicketKey;
 
 /**
  * Session Ticket Key

@@ -429,6 +429,21 @@ public final class StringUtil {
     }
 
     /**
+     * Find the index of the first non-white space character in {@code s} starting at {@code offset}.
+     * @param seq The string to search.
+     * @param offset The offset to start searching at.
+     * @return the index of the first non-white space character or &lt;{@code 0} if none was found.
+     */
+    public static int indexOfNonWhiteSpace(CharSequence seq, int offset) {
+        for (; offset < seq.length(); ++offset) {
+            if (!Character.isWhitespace(seq.charAt(offset))) {
+                return offset;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * Determine if {@code c} lies within the range of values defined for
      * <a href="http://unicode.org/glossary/#surrogate_code_point">Surrogate Code Point</a>.
      * @param c the character to check.

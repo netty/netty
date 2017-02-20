@@ -50,6 +50,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.headerListSizeExceeded;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.internal.hpack.HeaderField.sizeOf;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.INCREMENTAL;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NEVER;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NONE;
@@ -116,18 +117,18 @@ public final class Encoder {
                                                        SensitivityDetector sensitivityDetector)
             throws Http2Exception {
         long headerSize = 0;
+        // To ensure we stay consistent with our peer check the size is valid before we potentially modify HPACK state.
         for (Map.Entry<CharSequence, CharSequence> header : headers) {
             CharSequence name = header.getKey();
             CharSequence value = header.getValue();
-            long currHeaderSize = HeaderField.sizeOf(name, value);
             // OK to increment now and check for bounds after because this value is limited to unsigned int and will not
             // overflow.
-            headerSize += currHeaderSize;
+            headerSize += sizeOf(name, value);
             if (headerSize > maxHeaderListSize) {
                 headerListSizeExceeded(streamId, maxHeaderListSize, false);
             }
-            encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value), currHeaderSize);
         }
+        encodeHeadersIgnoreMaxHeaderListSize(out, headers, sensitivityDetector);
     }
 
     private void encodeHeadersIgnoreMaxHeaderListSize(ByteBuf out, Http2Headers headers,
@@ -135,8 +136,7 @@ public final class Encoder {
         for (Map.Entry<CharSequence, CharSequence> header : headers) {
             CharSequence name = header.getKey();
             CharSequence value = header.getValue();
-            encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value),
-                         HeaderField.sizeOf(name, value));
+            encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value), sizeOf(name, value));
         }
     }
 
@@ -204,7 +204,7 @@ public final class Encoder {
         this.maxHeaderTableSize = maxHeaderTableSize;
         ensureCapacity(0);
         // Casting to integer is safe as we verified the maxHeaderTableSize is a valid unsigned int.
-        encodeInteger(out, 0x20, 5, (int) maxHeaderTableSize);
+        encodeInteger(out, 0x20, 5, maxHeaderTableSize);
     }
 
     /**
@@ -227,20 +227,27 @@ public final class Encoder {
     }
 
     /**
-     * Encode integer according to Section 5.1.
+     * Encode integer according to <a href="https://tools.ietf.org/html/rfc7541#section-5.1">Section 5.1</a>.
      */
     private static void encodeInteger(ByteBuf out, int mask, int n, int i) {
+        encodeInteger(out, mask, n, (long) i);
+    }
+
+    /**
+     * Encode integer according to <a href="https://tools.ietf.org/html/rfc7541#section-5.1">Section 5.1</a>.
+     */
+    private static void encodeInteger(ByteBuf out, int mask, int n, long i) {
         assert n >= 0 && n <= 8 : "N: " + n;
         int nbits = 0xFF >>> (8 - n);
         if (i < nbits) {
-            out.writeByte(mask | i);
+            out.writeByte((int) (mask | i));
         } else {
             out.writeByte(mask | nbits);
-            int length = i - nbits;
+            long length = i - nbits;
             for (; (length & ~0x7F) != 0; length >>>= 7) {
-                out.writeByte((length & 0x7F) | 0x80);
+                out.writeByte((int) ((length & 0x7F) | 0x80));
             }
-            out.writeByte(length);
+            out.writeByte((int) length);
         }
     }
 

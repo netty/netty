@@ -44,6 +44,7 @@ import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.channels.NotYetConnectedException;
 import java.util.List;
 import java.util.Locale;
 
@@ -253,17 +254,23 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             }
 
             final int length = data.readableBytes();
-            if (remoteAddress != null) {
-                tmpPacket.setSocketAddress(remoteAddress);
-            }
-            if (data.hasArray()) {
-                tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
-            } else {
-                byte[] tmp = new byte[length];
-                data.getBytes(data.readerIndex(), tmp);
-                tmpPacket.setData(tmp);
-            }
             try {
+                if (remoteAddress != null) {
+                    tmpPacket.setSocketAddress(remoteAddress);
+                } else {
+                    if (!isConnected()) {
+                        // If not connected we should throw a NotYetConnectedException() to be consistent with
+                        // NioDatagramChannel
+                        throw new NotYetConnectedException();
+                    }
+                }
+                if (data.hasArray()) {
+                    tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
+                } else {
+                    byte[] tmp = new byte[length];
+                    data.getBytes(data.readerIndex(), tmp);
+                    tmpPacket.setData(tmp);
+                }
                 socket.send(tmpPacket);
                 in.remove();
             } catch (IOException e) {

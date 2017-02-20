@@ -128,4 +128,43 @@ public class LineBasedFrameDecoderTest {
         buf.release();
         buf2.release();
     }
+
+    @Test
+    public void testDecodeSplitsCorrectly() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, false, false));
+
+        assertTrue(ch.writeInbound(copiedBuffer("line\r\n.\r\n", CharsetUtil.US_ASCII)));
+
+        ByteBuf buf = ch.readInbound();
+        assertEquals("line\r\n", buf.toString(CharsetUtil.US_ASCII));
+
+        ByteBuf buf2 = ch.readInbound();
+        assertEquals(".\r\n", buf2.toString(CharsetUtil.US_ASCII));
+        assertFalse(ch.finishAndReleaseAll());
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
+    public void testFragmentedDecode() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, false, false));
+
+        assertFalse(ch.writeInbound(copiedBuffer("huu", CharsetUtil.US_ASCII)));
+        assertNull(ch.readInbound());
+
+        assertFalse(ch.writeInbound(copiedBuffer("haa\r", CharsetUtil.US_ASCII)));
+        assertNull(ch.readInbound());
+
+        assertTrue(ch.writeInbound(copiedBuffer("\nhuuhaa\r\n", CharsetUtil.US_ASCII)));
+        ByteBuf buf = ch.readInbound();
+        assertEquals("huuhaa\r\n", buf.toString(CharsetUtil.US_ASCII));
+
+        ByteBuf buf2 = ch.readInbound();
+        assertEquals("huuhaa\r\n", buf2.toString(CharsetUtil.US_ASCII));
+        assertFalse(ch.finishAndReleaseAll());
+
+        buf.release();
+        buf2.release();
+    }
 }

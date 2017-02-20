@@ -49,6 +49,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static io.netty.microbench.http2.internal.hpack.HpackUtilBenchmark.newTestEncoder;
@@ -79,7 +80,7 @@ public class DecoderBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     public void decode(final Blackhole bh) throws Http2Exception {
-        Decoder decoder = new Decoder();
+        Decoder decoder = new Decoder(DEFAULT_HEADER_LIST_SIZE, 32);
         @SuppressWarnings("unchecked")
         Http2Headers headers =
                 new DefaultHttp2Headers() {

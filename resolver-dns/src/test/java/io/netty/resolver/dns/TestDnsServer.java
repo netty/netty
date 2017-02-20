@@ -16,7 +16,7 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.NetUtil;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 import org.apache.directory.server.dns.DnsException;
 import org.apache.directory.server.dns.DnsServer;
 import org.apache.directory.server.dns.io.encoder.DnsMessageEncoder;
@@ -54,7 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-final class TestDnsServer extends DnsServer {
+class TestDnsServer extends DnsServer {
     private static final Map<String, byte[]> BYTES = new HashMap<String, byte[]>();
     private static final String[] IPV6_ADDRESSES;
 
@@ -74,7 +74,7 @@ final class TestDnsServer extends DnsServer {
     private final RecordStore store;
 
     TestDnsServer(Set<String> domains) {
-        this.store = new TestRecordStore(domains);
+        this(new TestRecordStore(domains));
     }
 
     TestDnsServer(RecordStore store) {
@@ -83,7 +83,7 @@ final class TestDnsServer extends DnsServer {
 
     @Override
     public void start() throws IOException {
-        InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST4, 50000);
+        InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST4, 0);
         UdpTransport transport = new UdpTransport(address.getHostName(), address.getPort());
         setTransports(transport);
 
@@ -108,10 +108,14 @@ final class TestDnsServer extends DnsServer {
         return (InetSocketAddress) getTransports()[0].getAcceptor().getLocalAddress();
     }
 
+    protected DnsMessage filterMessage(DnsMessage message) {
+        return message;
+    }
+
     /**
      * {@link ProtocolCodecFactory} which allows to test AAAA resolution.
      */
-    private static final class TestDnsProtocolUdpCodecFactory implements ProtocolCodecFactory {
+    private final class TestDnsProtocolUdpCodecFactory implements ProtocolCodecFactory {
         private final DnsMessageEncoder encoder = new DnsMessageEncoder();
         private final TestAAAARecordEncoder recordEncoder = new TestAAAARecordEncoder();
 
@@ -122,7 +126,7 @@ final class TestDnsServer extends DnsServer {
                 @Override
                 public void encode(IoSession session, Object message, ProtocolEncoderOutput out) {
                     IoBuffer buf = IoBuffer.allocate(1024);
-                    DnsMessage dnsMessage = (DnsMessage) message;
+                    DnsMessage dnsMessage = filterMessage((DnsMessage) message);
                     encoder.encode(buf, dnsMessage);
                     for (ResourceRecord record : dnsMessage.getAnswerRecords()) {
                         // This is a hack to allow to also test for AAAA resolution as DnsMessageEncoder
@@ -150,7 +154,7 @@ final class TestDnsServer extends DnsServer {
             return new DnsUdpDecoder();
         }
 
-        private static final class TestAAAARecordEncoder extends ResourceRecordEncoder {
+        private final class TestAAAARecordEncoder extends ResourceRecordEncoder {
 
             @Override
             protected void putResourceRecordData(IoBuffer ioBuffer, ResourceRecord resourceRecord) {
@@ -233,7 +237,7 @@ final class TestDnsServer extends DnsServer {
         }
 
         private static int index(int arrayLength) {
-            return Math.abs(ThreadLocalRandom.current().nextInt()) % arrayLength;
+            return Math.abs(PlatformDependent.threadLocalRandom().nextInt()) % arrayLength;
         }
 
         private static String nextDomain() {
@@ -272,19 +276,19 @@ final class TestDnsServer extends DnsServer {
                     case A:
                         do {
                             rm.put(DnsAttribute.IP_ADDRESS, nextIp());
-                        } while (ThreadLocalRandom.current().nextBoolean());
+                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
                         break;
                     case AAAA:
                         do {
                             rm.put(DnsAttribute.IP_ADDRESS, nextIp6());
-                        } while (ThreadLocalRandom.current().nextBoolean());
+                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
                         break;
                     case MX:
                         int priority = 0;
                         do {
                             rm.put(DnsAttribute.DOMAIN_NAME, nextDomain());
                             rm.put(DnsAttribute.MX_PREFERENCE, String.valueOf(++priority));
-                        } while (ThreadLocalRandom.current().nextBoolean());
+                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
                         break;
                     default:
                         return null;

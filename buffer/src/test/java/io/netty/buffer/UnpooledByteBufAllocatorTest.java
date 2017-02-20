@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,20 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec;
+package io.netty.buffer;
 
-import io.netty.channel.ChannelHandlerAdapter;
+public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
 
-final class CodecUtil {
-
-    /**
-     * Throws {@link IllegalStateException} if {@link ChannelHandlerAdapter#isSharable()} returns {@code true}
-     */
-    static void ensureNotSharable(ChannelHandlerAdapter handler) {
-        if (handler.isSharable()) {
-            throw new IllegalStateException("@Sharable annotation is not allowed");
-        }
+    @Override
+    protected AbstractByteBufAllocator newAllocator(boolean preferDirect) {
+        return new UnpooledByteBufAllocator(preferDirect);
     }
 
-    private CodecUtil() { }
+    @Override
+    protected AbstractByteBufAllocator newUnpooledAllocator() {
+        return new UnpooledByteBufAllocator(false);
+    }
 }

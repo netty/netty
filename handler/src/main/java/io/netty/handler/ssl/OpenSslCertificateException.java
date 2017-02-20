@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import org.apache.tomcat.jni.CertificateVerifier;
+import io.netty.internal.tcnative.CertificateVerifier;
 
 import java.security.cert.CertificateException;
 
