@@ -26,6 +26,8 @@
   <artifactId>netty-testsuite-osgi</artifactId>
   <packaging>jar</packaging>
 
+
+
   <name>Netty/Testsuite/OSGI</name>
 
   <properties>
