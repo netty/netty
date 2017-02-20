@@ -268,6 +268,7 @@
     <module>handler</module>
     <module>example</module>
     <module>testsuite</module>
+    <module>testsuite-autobahn</module>
     <module>testsuite-osgi</module>
     <module>microbench</module>
     <module>all</module>
