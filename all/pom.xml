@@ -244,6 +244,13 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-redis</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-smtp</artifactId>
       <version>${project.version}</version>
       <scope>compile</scope>
@@ -259,6 +266,13 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-stomp</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-xml</artifactId>
       <version>${project.version}</version>
       <scope>compile</scope>
       <optional>true</optional>
