@@ -210,8 +210,8 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
     }
 
     private static final class SlowHeaders implements Headers<CharSequence, CharSequence, SlowHeaders> {
-        private final Headers<CharSequence, CharSequence, ? extends Headers> delegate;
-        private SlowHeaders(Headers<CharSequence, CharSequence, ? extends Headers> delegate) {
+        private final Headers<CharSequence, CharSequence, ? extends Headers<?, ?, ?>> delegate;
+        private SlowHeaders(Headers<CharSequence, CharSequence, ? extends Headers<?, ?, ?>> delegate) {
             this.delegate = delegate;
         }
 
