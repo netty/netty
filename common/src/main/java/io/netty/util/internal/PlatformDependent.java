@@ -98,8 +98,6 @@ public final class PlatformDependent {
 
     private static final long BYTE_ARRAY_BASE_OFFSET = byteArrayBaseOffset0();
 
-    private static final boolean HAS_JAVASSIST = hasJavassist0();
-
     private static final File TMPDIR = tmpdir0();
 
     private static final int BIT_MODE = bitMode0();
@@ -241,13 +239,6 @@ public final class PlatformDependent {
      */
     public static long maxDirectMemory() {
         return MAX_DIRECT_MEMORY;
-    }
-
-    /**
-     * Returns {@code true} if and only if Javassist is available.
-     */
-    public static boolean hasJavassist() {
-        return HAS_JAVASSIST;
     }
 
     /**
@@ -1172,33 +1163,6 @@ public final class PlatformDependent {
         }
 
         return maxDirectMemory;
-    }
-
-    private static boolean hasJavassist0() {
-        if (isAndroid()) {
-            return false;
-        }
-
-        boolean noJavassist = SystemPropertyUtil.getBoolean("io.netty.noJavassist", false);
-        logger.debug("-Dio.netty.noJavassist: {}", noJavassist);
-
-        if (noJavassist) {
-            logger.debug("Javassist: unavailable (io.netty.noJavassist)");
-            return false;
-        }
-
-        try {
-            JavassistTypeParameterMatcherGenerator.generate(Object.class, getClassLoader(PlatformDependent.class));
-            logger.debug("Javassist: available");
-            return true;
-        } catch (Throwable t) {
-            // Failed to generate a Javassist-based matcher.
-            logger.debug("Javassist: unavailable");
-            logger.debug(
-                    "You don't have Javassist in your class path or you don't have enough permission " +
-                    "to load dynamically generated classes.  Please check the configuration for better performance.");
-            return false;
-        }
     }
 
     private static File tmpdir0() {

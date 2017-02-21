@@ -37,13 +37,6 @@
   </properties>
 
   <dependencies>
-    <!-- Byte code generator - completely optional -->
-    <dependency>
-      <groupId>org.javassist</groupId>
-      <artifactId>javassist</artifactId>
-      <scope>compile</scope> <!-- override the 'test' scope defined at parent pom.xml -->
-      <optional>true</optional>
-    </dependency>
     <dependency>
       <groupId>org.jctools</groupId>
       <artifactId>jctools-core</artifactId>
