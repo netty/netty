@@ -88,8 +88,8 @@ public final class DateFormatter {
     /**
      * Parse some text into a {@link Date}, according to RFC6265
      * @param txt text to parse
-     * @param start the start index inside <code>txt</code>
-     * @param end the end index inside <code>txt</code>
+     * @param start the start index inside {@code txt}
+     * @param end the end index inside {@code txt}
      * @return a {@link Date}, or null if text couldn't be parsed
      */
     public static Date parseHttpDate(CharSequence txt, int start, int end) {

@@ -49,14 +49,14 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
     };
 
     /**
-     * @see {@link #ByteToMessageCodec(boolean)} with {@code true} as boolean parameter.
+     * see {@link #ByteToMessageCodec(boolean)} with {@code true} as boolean parameter.
      */
     protected ByteToMessageCodec() {
         this(true);
     }
 
     /**
-     * @see {@link #ByteToMessageCodec(Class, boolean)} with {@code true} as boolean value.
+     * see {@link #ByteToMessageCodec(Class, boolean)} with {@code true} as boolean value.
      */
     protected ByteToMessageCodec(Class<? extends I> outboundMessageType) {
         this(outboundMessageType, true);

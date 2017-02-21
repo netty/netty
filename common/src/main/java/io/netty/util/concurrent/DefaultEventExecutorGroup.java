@@ -24,7 +24,7 @@ import java.util.concurrent.ThreadFactory;
  */
 public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
     /**
-     * @see {@link #DefaultEventExecutorGroup(int, ThreadFactory)}
+     * @see #DefaultEventExecutorGroup(int, ThreadFactory)
      */
     public DefaultEventExecutorGroup(int nThreads) {
         this(nThreads, null);

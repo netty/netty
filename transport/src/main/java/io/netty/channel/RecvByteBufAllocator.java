@@ -34,7 +34,7 @@ public interface RecvByteBufAllocator {
     Handle newHandle();
 
     /**
-     * @Deprecated Use {@link ExtendedHandle}.
+     * @deprecated Use {@link ExtendedHandle}.
      */
     @Deprecated
     interface Handle {
