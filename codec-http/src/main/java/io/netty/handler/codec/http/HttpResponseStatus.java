@@ -473,10 +473,10 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         private final AsciiString string;
         private int i;
         /**
-         * 0 = New or havn't seen {@link ASCII_SPACE}.
-         * 1 = Last byte was {@link ASCII_SPACE}.
-         * 2 = Terminal State. Processed the byte after {@link ASCII_SPACE}, and parsed the status line.
-         * 3 = Terminal State. There was no byte after {@link ASCII_SPACE} but status has been parsed with what we saw.
+         * 0 = New or havn't seen {@link #ASCII_SPACE}.
+         * 1 = Last byte was {@link #ASCII_SPACE}.
+         * 2 = Terminal State. Processed the byte after {@link #ASCII_SPACE}, and parsed the status line.
+         * 3 = Terminal State. There was no byte after {@link #ASCII_SPACE} but status has been parsed with what we saw.
          */
         private int state;
         private HttpResponseStatus status;

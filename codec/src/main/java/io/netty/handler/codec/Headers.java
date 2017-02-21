@@ -971,9 +971,9 @@ public interface Headers<K, V, T extends Headers<K, V, T>> extends Iterable<Entr
     T set(Headers<? extends K, ? extends V, ?> headers);
 
     /**
-     * Retains all current headers but calls {@link #set(T, T)} for each entry in {@code headers}.
+     * Retains all current headers but calls {@link #set(K, V)} for each entry in {@code headers}.
      *
-     * @param headers The headers used to {@link #set(T, T)} values in this instance
+     * @param headers The headers used to {@link #set(K, V)} values in this instance
      * @return {@code this}
      */
     T setAll(Headers<? extends K, ? extends V, ?> headers);

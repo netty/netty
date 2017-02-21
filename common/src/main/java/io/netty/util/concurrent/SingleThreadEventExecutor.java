@@ -196,7 +196,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * @see {@link Queue#poll()}
+     * @see Queue#poll()
      */
     protected Runnable pollTask() {
         assert inEventLoop();
@@ -284,7 +284,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * @see {@link Queue#peek()}
+     * @see Queue#peek()
      */
     protected Runnable peekTask() {
         assert inEventLoop();
@@ -292,7 +292,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * @see {@link Queue#isEmpty()}
+     * @see Queue#isEmpty()
      */
     protected boolean hasTasks() {
         assert inEventLoop();
@@ -330,7 +330,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * @see {@link Queue#remove(Object)}
+     * @see Queue#remove(Object)
      */
     protected boolean removeTask(Runnable task) {
         if (task == null) {

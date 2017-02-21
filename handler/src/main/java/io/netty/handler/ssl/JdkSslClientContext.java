@@ -88,9 +88,6 @@ public final class JdkSslClientContext extends JdkSslContext {
     }
 
     /**
-     * @deprecated Use the constructors that accept {@link ApplicationProtocolConfig} or
-     *             {@link ApplicationProtocolNegotiator} instead.
-     *
      * Creates a new instance.
      *
      * @param certChainFile an X.509 certificate chain file in PEM format.
