@@ -26,8 +26,12 @@ import java.util.Map;
 
 public abstract class TypeParameterMatcher {
 
-    private static final TypeParameterMatcher NOOP = new NoOpTypeParameterMatcher();
-    private static final Object TEST_OBJECT = new Object();
+    private static final TypeParameterMatcher NOOP = new TypeParameterMatcher() {
+        @Override
+        public boolean match(Object msg) {
+            return true;
+        }
+    };
 
     public static TypeParameterMatcher get(final Class<?> parameterType) {
         final Map<Class<?>, TypeParameterMatcher> getCache =
@@ -37,23 +41,9 @@ public abstract class TypeParameterMatcher {
         if (matcher == null) {
             if (parameterType == Object.class) {
                 matcher = NOOP;
-            } else if (PlatformDependent.hasJavassist()) {
-                try {
-                    matcher = JavassistTypeParameterMatcherGenerator.generate(parameterType);
-                    matcher.match(TEST_OBJECT);
-                } catch (IllegalAccessError e) {
-                    // Happens if parameterType is not public.
-                    matcher = null;
-                } catch (Exception e) {
-                    // Will not usually happen, but just in case.
-                    matcher = null;
-                }
-            }
-
-            if (matcher == null) {
+            } else {
                 matcher = new ReflectiveMatcher(parameterType);
             }
-
             getCache.put(parameterType, matcher);
         }
 
@@ -172,5 +162,5 @@ public abstract class TypeParameterMatcher {
         }
     }
 
-    protected TypeParameterMatcher() { }
+    TypeParameterMatcher() { }
 }
