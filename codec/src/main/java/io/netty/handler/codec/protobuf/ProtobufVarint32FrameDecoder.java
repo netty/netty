@@ -37,7 +37,8 @@ import java.util.List;
  * +--------+---------------+      +---------------+
  * </pre>
  *
- * @see {@link CodedInputStream} or {@link CodedInputByteBufferNano}
+ * @see CodedInputStream
+ * @see CodedInputByteBufferNano
  */
 public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
 

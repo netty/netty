@@ -31,6 +31,6 @@
  */
 
 /**
- * Benchmarks for {@link io.netty.handler.codec.http2.hpack}.
+ * Benchmarks for {@link io.netty.handler.codec.http2.internal.hpack}.
  */
 package io.netty.microbench.http2.internal.hpack;

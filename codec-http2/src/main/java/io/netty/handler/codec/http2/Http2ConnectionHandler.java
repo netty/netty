@@ -664,7 +664,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      *
      * @param ctx the channel context
      * @param stream the Http2Stream on which the header was received
-     * @throws Http2Exception if an exception occurs while processing the decode error.
      */
     protected void handleServerHeaderDecodeSizeError(ChannelHandlerContext ctx, Http2Stream stream) {
         encoder().writeHeaders(ctx, stream.id(), HEADERS_TOO_LARGE_HEADERS, 0, true, ctx.newPromise());

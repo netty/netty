@@ -141,21 +141,21 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     /**
-     * @see {@link #localAddress(SocketAddress)}
+     * @see #localAddress(SocketAddress)
      */
     public B localAddress(int inetPort) {
         return localAddress(new InetSocketAddress(inetPort));
     }
 
     /**
-     * @see {@link #localAddress(SocketAddress)}
+     * @see #localAddress(SocketAddress)
      */
     public B localAddress(String inetHost, int inetPort) {
         return localAddress(SocketUtils.socketAddress(inetHost, inetPort));
     }
 
     /**
-     * @see {@link #localAddress(SocketAddress)}
+     * @see #localAddress(SocketAddress)
      */
     public B localAddress(InetAddress inetHost, int inetPort) {
         return localAddress(new InetSocketAddress(inetHost, inetPort));

@@ -48,8 +48,7 @@ import static java.lang.Math.min;
  * bytes.
  * <p>
  * Inspiration for this distributor was taken from Linux's
- * <a href="https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/tree/Documentation/scheduler
- * /sched-design-CFS.txt">Completely Fair Scheduler</a>
+ * <a href="https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt">Completely Fair Scheduler</a>
  * to model the distribution of bytes to simulate an "ideal multi-tasking CPU", but in this case we are simulating
  * an "ideal multi-tasking NIC".
  * <p>

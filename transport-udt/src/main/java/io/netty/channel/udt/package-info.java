@@ -16,7 +16,7 @@
 /**
  * UDT Transport.
  * <p>
- * @see /netty/example/src/main/java/io/netty/example/udt
+ * @see io.netty.example.udt
  */
 package io.netty.channel.udt;
 

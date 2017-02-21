@@ -38,8 +38,6 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
 
-import java.io.IOException;
-
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.HUFFMAN_CODES;
@@ -65,8 +63,7 @@ final class HuffmanDecoder {
      *
      * @param buf the string literal to be decoded
      * @return the output stream for the compressed data
-     * @throws IOException if an I/O error occurs. In particular, an <code>IOException</code> may be
-     * thrown if the output stream has been closed.
+     * @throws Http2Exception EOS Decoded
      */
     public AsciiString decode(ByteBuf buf, int length) throws Http2Exception {
         processor.reset();
