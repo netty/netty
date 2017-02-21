@@ -68,7 +68,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     /**
-     * @see {@link #pollScheduledTask(long)}
+     * @see #pollScheduledTask(long)
      */
     protected final Runnable pollScheduledTask() {
         return pollScheduledTask(nanoTime());

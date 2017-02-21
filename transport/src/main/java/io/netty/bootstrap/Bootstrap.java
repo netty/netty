@@ -62,7 +62,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     }
 
     /**
-     * @see {@link #remoteAddress(SocketAddress)}
+     * @see #remoteAddress(SocketAddress)
      */
     public Bootstrap remoteAddress(String inetHost, int inetPort) {
         remoteAddress = new InetSocketAddress(inetHost, inetPort);
@@ -70,7 +70,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     }
 
     /**
-     * @see {@link #remoteAddress(SocketAddress)}
+     * @see #remoteAddress(SocketAddress)
      */
     public Bootstrap remoteAddress(InetAddress inetHost, int inetPort) {
         remoteAddress = new InetSocketAddress(inetHost, inetPort);
@@ -128,7 +128,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     }
 
     /**
-     * @see {@link #connect()}
+     * @see #connect()
      */
     private ChannelFuture doConnect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
         final ChannelFuture regFuture = initAndRegister();

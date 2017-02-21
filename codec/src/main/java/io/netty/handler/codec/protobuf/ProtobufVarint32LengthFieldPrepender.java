@@ -24,8 +24,8 @@ import io.netty.handler.codec.MessageToByteEncoder;
 
 /**
  * An encoder that prepends the the Google Protocol Buffers
- * <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html#varints">Base
- * 128 Varints</a> integer length field.  For example:
+ * <a href="https://developers.google.com/protocol-buffers/docs/encoding?csw=1#varints">Base
+ * 128 Varints</a> integer length field. For example:
  * <pre>
  * BEFORE DECODE (300 bytes)       AFTER DECODE (302 bytes)
  * +---------------+               +--------+---------------+

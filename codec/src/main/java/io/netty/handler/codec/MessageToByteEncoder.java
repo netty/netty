@@ -49,14 +49,14 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
     private final boolean preferDirect;
 
     /**
-     * @see {@link #MessageToByteEncoder(boolean)} with {@code true} as boolean parameter.
+     * see {@link #MessageToByteEncoder(boolean)} with {@code true} as boolean parameter.
      */
     protected MessageToByteEncoder() {
         this(true);
     }
 
     /**
-     * @see {@link #MessageToByteEncoder(Class, boolean)} with {@code true} as boolean value.
+     * see {@link #MessageToByteEncoder(Class, boolean)} with {@code true} as boolean value.
      */
     protected MessageToByteEncoder(Class<? extends I> outboundMessageType) {
         this(outboundMessageType, true);
