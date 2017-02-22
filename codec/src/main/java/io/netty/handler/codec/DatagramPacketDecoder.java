@@ -108,4 +108,9 @@ public class DatagramPacketDecoder extends MessageToMessageDecoder<DatagramPacke
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         decoder.handlerRemoved(ctx);
     }
+
+    @Override
+    public boolean isSharable() {
+        return decoder.isSharable();
+    }
 }
