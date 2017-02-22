@@ -203,7 +203,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return pollTaskFrom(taskQueue);
     }
 
-    protected final Runnable pollTaskFrom(Queue<Runnable> taskQueue) {
+    protected static Runnable pollTaskFrom(Queue<Runnable> taskQueue) {
         for (;;) {
             Runnable task = taskQueue.poll();
             if (task == WAKEUP_TASK) {

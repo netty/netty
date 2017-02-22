@@ -227,7 +227,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
             return sb;
         }
 
-        private CharSequence commaSeparateEscapedValues(CharSequence currentValue, CharSequence value) {
+        private static CharSequence commaSeparateEscapedValues(CharSequence currentValue, CharSequence value) {
             return new StringBuilder(currentValue.length() + 1 + value.length())
                     .append(currentValue)
                     .append(COMMA)
