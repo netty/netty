@@ -147,7 +147,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         }
     }
 
-    private void rethrowHandlerExceptions(ReadAndDiscardHandler sh, ReadAndDiscardHandler ch) throws Throwable {
+    private static void rethrowHandlerExceptions(ReadAndDiscardHandler sh, ReadAndDiscardHandler ch) throws Throwable {
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();
         }
@@ -162,7 +162,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         }
     }
 
-    private Set<String> sessionIdSet(Enumeration<byte[]> sessionIds) {
+    private static Set<String> sessionIdSet(Enumeration<byte[]> sessionIds) {
         Set<String> idSet = new HashSet<String>();
         byte[] id;
         while (sessionIds.hasMoreElements()) {
