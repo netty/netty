@@ -21,7 +21,6 @@ package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.PlatformDependent;
 
@@ -362,43 +361,74 @@ public final class Base64 {
         }
 
         private static int decode4to3(byte[] src, ByteBuf dest, int destOffset, byte[] decodabet) {
-            if (src[2] == EQUALS_SIGN) {
+            final byte src0 = src[0];
+            final byte src1 = src[1];
+            final byte src2 = src[2];
+            final int decodedValue;
+            if (src2 == EQUALS_SIGN) {
                 // Example: Dk==
-                dest.setByte(destOffset, (byte) ((decodabet[src[0]] & 0xff) << 2 | (decodabet[src[1]] & 0xff) >>> 4));
+                try {
+                    decodedValue = (decodabet[src0] & 0xff) << 2 | (decodabet[src1] & 0xff) >>> 4;
+                } catch (IndexOutOfBoundsException ignored) {
+                    throw new IllegalArgumentException("not encoded in Base64");
+                }
+                dest.setByte(destOffset, decodedValue);
                 return 1;
             }
 
-            if (src[3] == EQUALS_SIGN) {
+            final byte src3 = src[3];
+            if (src3 == EQUALS_SIGN) {
                 // Example: DkL=
-                int outBuff = (decodabet[src[0]] & 0xff) << 18 |
-                              (decodabet[src[1]] & 0xff) << 12 |
-                              (decodabet[src[2]] & 0xff) << 6;
-
+                final byte b1 = decodabet[src1];
                 // Packing bytes into a short to reduce bound and reference count checking.
-                if (dest.order() == ByteOrder.BIG_ENDIAN) {
-                    dest.setShort(destOffset, (short) ((outBuff & 0xff0000) >>> 8 | (outBuff & 0xff00) >>> 8));
-                } else {
-                    dest.setShort(destOffset, (short) ((outBuff & 0xff0000) >>> 16 | (outBuff & 0xff00)));
+                try {
+                    if (dest.order() == ByteOrder.BIG_ENDIAN) {
+                        // The decodabet bytes are meant to straddle byte boundaries and so we must carefully mask out
+                        // the bits we care about.
+                        decodedValue = ((decodabet[src0] & 0x3f) << 2 | (b1 & 0xf0) >> 4) << 8 |
+                                        (b1 & 0xf) << 4 | (decodabet[src2] & 0xfc) >>> 2;
+                    } else {
+                        // This is just a simple byte swap of the operation above.
+                        decodedValue = (decodabet[src0] & 0x3f) << 2 | (b1 & 0xf0) >> 4 |
+                                      ((b1 & 0xf) << 4 | (decodabet[src2] & 0xfc) >>> 2) << 8;
+                    }
+                } catch (IndexOutOfBoundsException ignored) {
+                    throw new IllegalArgumentException("not encoded in Base64");
                 }
+                dest.setShort(destOffset, decodedValue);
                 return 2;
             }
 
             // Example: DkLE
-            final int outBuff;
             try {
-                outBuff = (decodabet[src[0]] & 0xff) << 18 |
-                          (decodabet[src[1]] & 0xff) << 12 |
-                          (decodabet[src[2]] & 0xff) <<  6 |
-                           decodabet[src[3]] & 0xff;
+                if (dest.order() == ByteOrder.BIG_ENDIAN) {
+                    decodedValue = (decodabet[src0] & 0x3f) << 18 |
+                                   (decodabet[src1] & 0xff) << 12 |
+                                   (decodabet[src2] & 0xff) << 6 |
+                                    decodabet[src3] & 0xff;
+                } else {
+                    final byte b1 = decodabet[src1];
+                    final byte b2 = decodabet[src2];
+                    // The goal is to byte swap the BIG_ENDIAN case above. There are 2 interesting things to consider:
+                    // 1. We are byte swapping a 3 byte data type. The left and the right byte switch, but the middle
+                    //    remains the same.
+                    // 2. The contents straddles byte boundaries. This means bytes will be pulled apart during the byte
+                    //    swapping process.
+                    decodedValue = (decodabet[src0] & 0x3f) << 2 |
+                                   // The bottom half of b1 remains in the middle.
+                                   (b1 & 0xf) << 12 |
+                                   // The top half of b1 are the least significant bits after the swap.
+                                   (b1 & 0xf0) >>> 4 |
+                                   // The bottom 2 bits of b2 will be the most significant bits after the swap.
+                                   (b2 & 0x3) << 22 |
+                                   // The remaining 6 bits of b2 remain in the middle.
+                                   (b2 & 0xfc) << 6 |
+                                   (decodabet[src3] & 0xff) << 16;
+                }
             } catch (IndexOutOfBoundsException ignored) {
                 throw new IllegalArgumentException("not encoded in Base64");
             }
-            // Just directly set it as medium
-            if (dest.order() == ByteOrder.BIG_ENDIAN) {
-                dest.setMedium(destOffset, outBuff);
-            } else {
-                dest.setMedium(destOffset,  ByteBufUtil.swapMedium(outBuff));
-            }
+            dest.setMedium(destOffset, decodedValue);
             return 3;
         }
     }
