@@ -896,13 +896,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-<<<<<<< HEAD
-     * @see {@link #setDateHeader(HttpMessage, CharSequence, Date)}
-=======
-     * @deprecated Use {@link #set(CharSequence, Object)} instead.
-     *
      * @see #setDateHeader(HttpMessage, CharSequence, Date)
->>>>>>> 0623c6c... Fix javadoc issues
      */
     public static void setDateHeader(HttpMessage message, String name, Date value) {
         setDateHeader(message, (CharSequence) name, value);
@@ -923,13 +917,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-<<<<<<< HEAD
-     * @see {@link #setDateHeader(HttpMessage, CharSequence, Iterable)}
-=======
-     * @deprecated Use {@link #set(CharSequence, Iterable)} instead.
-     *
      * @see #setDateHeader(HttpMessage, CharSequence, Iterable)
->>>>>>> 0623c6c... Fix javadoc issues
      */
     public static void setDateHeader(HttpMessage message, String name, Iterable<Date> values) {
         message.headers().set(name, values);
@@ -946,13 +934,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-<<<<<<< HEAD
-     * @see {@link #addDateHeader(HttpMessage, CharSequence, Date)}
-=======
-     * @deprecated Use {@link #add(CharSequence, Object)} instead.
-     *
      * @see #addDateHeader(HttpMessage, CharSequence, Date)
->>>>>>> 0623c6c... Fix javadoc issues
      */
     public static void addDateHeader(HttpMessage message, String name, Date value) {
         message.headers().add(name, value);
@@ -1077,13 +1059,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-<<<<<<< HEAD
-     * @see {@link #setHost(HttpMessage, CharSequence)}
-=======
-     * @deprecated Use {@link #set(CharSequence, Object)} instead.
-     *
      * @see #setHost(HttpMessage, CharSequence)
->>>>>>> 0623c6c... Fix javadoc issues
      */
     public static void setHost(HttpMessage message, String value) {
         message.headers().set(HOST_ENTITY, value);
