@@ -19,6 +19,8 @@ package io.netty.handler.ssl;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -31,9 +33,14 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.xml.bind.DatatypeConverter;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThrowableUtil;
 import org.junit.Test;
 
 import io.netty.bootstrap.Bootstrap;
@@ -432,6 +439,73 @@ public class SniHandlerTest {
                 return;
             default:
                 throw new Error();
+        }
+    }
+
+    @Test
+    public void testPlainTextClose() throws Exception {
+        testPlainText(true);
+    }
+
+    @Test
+    public void testPlainTextNotClose() throws Exception {
+        testPlainText(false);
+    }
+
+    private void testPlainText(final boolean close) throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        final SslContext sslContext = SslContextBuilder
+                .forServer(cert.key(), cert.cert())
+                .sslProvider(provider)
+                .build();
+        try {
+            final Mapping<String, SslContext> mapping = new Mapping<String, SslContext>() {
+                @Override
+                public SslContext map(String input) {
+                    return sslContext;
+                }
+            };
+            final byte[] bytes = new byte[512];
+            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+
+            SniHandler handler = new SniHandler(mapping);
+            handler.setCloseOnHandshakeFailure(close);
+            EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    // Remove the SslHandler and write back some bytes in plain text. This should success if the channel
+                    // was not closed and fail otherwise.
+                    ctx.pipeline().remove(SslHandler.class);
+                    ctx.writeAndFlush(Unpooled.wrappedBuffer(bytes));
+                    ctx.fireExceptionCaught(cause);
+                }
+            });
+
+            try {
+                ch.writeInbound(Unpooled.wrappedBuffer(bytes));
+                fail();
+            } catch (Throwable e) {
+                assertTrue("Unexpected exception type: " + ThrowableUtil.stackTraceToString(e),
+                        e instanceof NotSslRecordException);
+
+                if (!close) {
+                    assertTrue(ch.finish());
+                    assertNull(ch.readInbound());
+
+                    ByteBuf expected = Unpooled.wrappedBuffer(bytes);
+                    ByteBuf buffer = ch.readOutbound();
+                    assertEquals(expected, buffer);
+
+                    expected.release();
+                    buffer.release();
+                    assertNull(ch.readOutbound());
+                } else {
+                    assertFalse(ch.finish());
+                }
+            }
+        } finally {
+            ReferenceCountUtil.release(sslContext);
+            cert.delete();
         }
     }
 

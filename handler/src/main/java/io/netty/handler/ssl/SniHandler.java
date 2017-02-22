@@ -22,6 +22,7 @@ import java.util.Locale;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
@@ -61,6 +62,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private boolean suppressRead;
     private boolean readPending;
     private volatile Selection selection = EMPTY_SELECTION;
+    private volatile boolean closeOnHandshakeFailure = true;
 
     /**
      * Creates a SNI detection handler with configured {@link SslContext}
@@ -91,6 +93,20 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
     @SuppressWarnings("unchecked")
     public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping) {
         this.mapping = (AsyncMapping<String, SslContext>) ObjectUtil.checkNotNull(mapping, "mapping");
+    }
+
+    /**
+     * Sets if the {@link Channel} should be closed on a handshake failure, default is {@code true}.
+     */
+    public final void setCloseOnHandshakeFailure(boolean closeOnHandshakeFailure) {
+        this.closeOnHandshakeFailure = closeOnHandshakeFailure;
+    }
+
+    /**
+     * Gets if the {@link Channel} should be closed on a handshake failure, default is {@code true}.
+     */
+    public final boolean getCloseOnHandshakeFailure() {
+        return closeOnHandshakeFailure;
     }
 
     /**
@@ -135,9 +151,10 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
                                 NotSslRecordException e = new NotSslRecordException(
                                         "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
                                 in.skipBytes(in.readableBytes());
-                                ctx.fireExceptionCaught(e);
 
-                                SslUtils.notifyHandshakeFailure(ctx, e);
+                                SslUtils.notifyHandshakeFailure(ctx, e, closeOnHandshakeFailure);
+
+                                ctx.fireExceptionCaught(e);
                                 return;
                             }
                             if (len == SslUtils.NOT_ENOUGH_DATA ||
@@ -346,6 +363,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
         SslHandler sslHandler = null;
         try {
             sslHandler = sslContext.newHandler(ctx.alloc());
+            sslHandler.setCloseOnHandshakeFailure(closeOnHandshakeFailure);
             ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
             sslHandler = null;
         } finally {
