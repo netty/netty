@@ -16,11 +16,12 @@
 package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import org.junit.Test;
-
 
 import java.io.ByteArrayInputStream;
 import java.nio.ByteOrder;
@@ -148,7 +149,8 @@ public class Base64Test {
         ByteBuf decoded = Base64.decode(encoded);
         ByteBuf expectedBuf = Unpooled.wrappedBuffer(bytes);
         try {
-            assertEquals(expectedBuf, decoded);
+            assertEquals(StringUtil.NEWLINE + "expected: " + ByteBufUtil.hexDump(expectedBuf) +
+                         StringUtil.NEWLINE + "actual--: " + ByteBufUtil.hexDump(decoded), expectedBuf, decoded);
         } finally {
             src.release();
             encoded.release();
