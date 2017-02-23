@@ -27,11 +27,20 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.security.AlgorithmConstraints;
+import java.security.AlgorithmParameters;
+import java.security.CryptoPrimitive;
+import java.security.Key;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import javax.net.ssl.SNIMatcher;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLParameters;
 
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static org.junit.Assert.assertEquals;
@@ -555,6 +564,66 @@ public class OpenSslEngineTest extends SSLEngineTest {
         dst.flip();
         assertEquals(produced, dst.remaining());
         assertFalse(src.hasRemaining());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSNIMatchersThrows() throws Exception {
+        assumeTrue(PlatformDependent.javaVersion() >= 8);
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+
+        SSLEngine engine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        try {
+            SSLParameters parameters = new SSLParameters();
+            SNIMatcher matcher = new SNIMatcher(0) {
+                @Override
+                public boolean matches(SNIServerName sniServerName) {
+                    return false;
+                }
+            };
+            parameters.setSNIMatchers(Collections.singleton(matcher));
+            engine.setSSLParameters(parameters);
+        } finally {
+            cleanupServerSslEngine(engine);
+            ssc.delete();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAlgorithmConstraintsThrows() throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+
+        SSLEngine engine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        try {
+            SSLParameters parameters = new SSLParameters();
+            parameters.setAlgorithmConstraints(new AlgorithmConstraints() {
+                @Override
+                public boolean permits(
+                        Set<CryptoPrimitive> primitives, String algorithm, AlgorithmParameters parameters) {
+                    return false;
+                }
+
+                @Override
+                public boolean permits(Set<CryptoPrimitive> primitives, Key key) {
+                    return false;
+                }
+
+                @Override
+                public boolean permits(
+                        Set<CryptoPrimitive> primitives, String algorithm, Key key, AlgorithmParameters parameters) {
+                    return false;
+                }
+            });
+            engine.setSSLParameters(parameters);
+        } finally {
+            cleanupServerSslEngine(engine);
+            ssc.delete();
+        }
     }
 
     @Override

@@ -34,14 +34,17 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
+import java.security.AlgorithmConstraints;
 import java.security.Principal;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -1555,10 +1558,34 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final synchronized void setSSLParameters(SSLParameters sslParameters) {
-        super.setSSLParameters(sslParameters);
-
         int version = PlatformDependent.javaVersion();
         if (version >= 7) {
+            if (sslParameters.getAlgorithmConstraints() != null) {
+                throw new IllegalArgumentException("AlgorithmConstraints are not supported.");
+            }
+
+            if (version >= 8) {
+                Collection<SNIMatcher> matchers = sslParameters.getSNIMatchers();
+                if (matchers != null && !matchers.isEmpty()) {
+                    throw new IllegalArgumentException("SNIMatchers are not supported.");
+                }
+
+                if (!isDestroyed()) {
+                    if (clientMode) {
+                        final List<String> sniHostNames = Java8SslParametersUtils.getSniHostNames(sslParameters);
+                        for (String name: sniHostNames) {
+                            SSL.setTlsExtHostName(ssl, name);
+                        }
+                        this.sniHostNames = sniHostNames;
+                    }
+                    if (Java8SslParametersUtils.getUseCipherSuitesOrder(sslParameters)) {
+                        SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
+                    } else {
+                        SSL.clearOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
+                    }
+                }
+            }
+
             final String endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
             final boolean endPointVerificationEnabled = endPointIdentificationAlgorithm != null &&
                     !endPointIdentificationAlgorithm.isEmpty();
@@ -1572,21 +1599,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
             this.endPointIdentificationAlgorithm = endPointIdentificationAlgorithm;
             algorithmConstraints = sslParameters.getAlgorithmConstraints();
-            if (version >= 8 && !isDestroyed()) {
-                if (clientMode) {
-                    final List<String> sniHostNames = Java8SslParametersUtils.getSniHostNames(sslParameters);
-                    for (String name: sniHostNames) {
-                        SSL.setTlsExtHostName(ssl, name);
-                    }
-                    this.sniHostNames = sniHostNames;
-                }
-                if (Java8SslParametersUtils.getUseCipherSuitesOrder(sslParameters)) {
-                    SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
-                } else {
-                    SSL.clearOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
-                }
-            }
         }
+        super.setSSLParameters(sslParameters);
     }
 
     private boolean isDestroyed() {

@@ -702,6 +702,7 @@
             <ignore>javax.net.ssl.SSLParameters</ignore>
             <ignore>javax.net.ssl.SNIServerName</ignore>
             <ignore>javax.net.ssl.SNIHostName</ignore>
+            <ignore>javax.net.ssl.SNIMatcher</ignore>
             <ignore>java.security.AlgorithmConstraints</ignore>
             <ignore>java.security.cert.CertificateRevokedException</ignore>
             <ignore>java.security.cert.CertPathValidatorException</ignore>
