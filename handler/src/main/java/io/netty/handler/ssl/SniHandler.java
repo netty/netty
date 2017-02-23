@@ -22,6 +22,10 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -109,10 +113,9 @@ public class SniHandler extends ByteToMessageDecoder {
                                 NotSslRecordException e = new NotSslRecordException(
                                         "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
                                 in.skipBytes(in.readableBytes());
-                                ctx.fireExceptionCaught(e);
 
                                 SslUtils.notifyHandshakeFailure(ctx, e);
-                                return;
+                                throw e;
                             }
                             if (len == SslUtils.NOT_ENOUGH_DATA ||
                                     writerIndex - readerIndex - SslUtils.SSL_RECORD_HEADER_LENGTH < len) {
@@ -221,7 +224,7 @@ public class SniHandler extends ByteToMessageDecoder {
                                                 select(ctx, IDN.toASCII(hostname,
                                                                         IDN.ALLOW_UNASSIGNED).toLowerCase(Locale.US));
                                             } catch (Throwable t) {
-                                                ctx.fireExceptionCaught(t);
+                                                PlatformDependent.throwException(t);
                                             }
                                             return;
                                         } else {
@@ -265,7 +268,7 @@ public class SniHandler extends ByteToMessageDecoder {
             if (sslHandler != null) {
                 ReferenceCountUtil.safeRelease(sslHandler.engine());
             }
-            ctx.fireExceptionCaught(cause);
+            PlatformDependent.throwException(cause);
         }
     }
 
