@@ -85,7 +85,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
     private void configureClearText(SocketChannel ch) {
         ch.pipeline().addLast(new ClearTextHttp2ServerDispatcher() {
             @Override
-            public void configureUpgrade(ChannelHandlerContext ctx) {
+            protected void configureUpgrade(ChannelHandlerContext ctx) {
                 final HttpServerCodec sourceCodec = new HttpServerCodec();
                 ctx.pipeline().addLast(sourceCodec,
                                        new HttpServerUpgradeHandler(sourceCodec, upgradeCodecFactory),
@@ -95,7 +95,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
             }
 
             @Override
-            public void configurePriorKnowledge(ChannelHandlerContext ctx) {
+            protected void configurePriorKnowledge(ChannelHandlerContext ctx) {
                 ctx.pipeline().addLast(new HelloWorldHttp2HandlerBuilder().build());
             }
         });

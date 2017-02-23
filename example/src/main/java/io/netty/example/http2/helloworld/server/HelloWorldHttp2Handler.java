@@ -19,24 +19,19 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
-import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Flags;
 import io.netty.handler.codec.http2.Http2FrameListener;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.buffer.Unpooled.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
 
 /**
  * A simple handler that responds with the message "Hello World!".
@@ -70,13 +65,14 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
         ctx.close();
     }
 
-    private Http2Headers http1HeadersToHttp2Headers(FullHttpRequest request) {
+    private static Http2Headers http1HeadersToHttp2Headers(FullHttpRequest request) {
         return new DefaultHttp2Headers()
                 .authority(request.headers().get("Host"))
                 .method("GET")
                 .path(request.uri())
                 .scheme("http");
     }
+
     /**
      * Sends a "Hello World" DATA frame to the client.
      */
