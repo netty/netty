@@ -1068,7 +1068,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // be released because the user will remove the SslHandler in an exceptionCaught(...) implementation.
             setHandshakeFailure(ctx, e);
 
-            ctx.fireExceptionCaught(e);
+            throw e;
         }
     }
 

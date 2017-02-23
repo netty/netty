@@ -36,6 +36,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -135,10 +136,9 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
                                 NotSslRecordException e = new NotSslRecordException(
                                         "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
                                 in.skipBytes(in.readableBytes());
-                                ctx.fireExceptionCaught(e);
 
                                 SslUtils.notifyHandshakeFailure(ctx, e);
-                                return;
+                                throw e;
                             }
                             if (len == SslUtils.NOT_ENOUGH_DATA ||
                                     writerIndex - readerIndex - SslUtils.SSL_RECORD_HEADER_LENGTH < len) {
@@ -247,7 +247,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
                                                 select(ctx, IDN.toASCII(hostname,
                                                                         IDN.ALLOW_UNASSIGNED).toLowerCase(Locale.US));
                                             } catch (Throwable t) {
-                                                ctx.fireExceptionCaught(t);
+                                                PlatformDependent.throwException(t);
                                             }
                                             return;
                                         } else {
@@ -292,7 +292,11 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     try {
                         suppressRead = false;
                         if (future.isSuccess()) {
-                            onSslContext(ctx, hostname, future.getNow());
+                            try {
+                                onSslContext(ctx, hostname, future.getNow());
+                            } catch (Throwable cause) {
+                                ctx.fireExceptionCaught(new DecoderException(cause));
+                            }
                         } else {
                             ctx.fireExceptionCaught(new DecoderException("failed to get the SslContext for "
                                     + hostname, future.cause()));
@@ -329,7 +333,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
             replaceHandler(ctx, hostname, sslContext);
         } catch (Throwable cause) {
             selection = EMPTY_SELECTION;
-            ctx.fireExceptionCaught(cause);
+            PlatformDependent.throwException(cause);
         }
     }
 
