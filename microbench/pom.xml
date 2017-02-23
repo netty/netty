@@ -46,6 +46,11 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
       <version>${jmh.version}</version>
@@ -70,9 +75,12 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <testSourceDirectory>${project.build.sourceDirectory}</testSourceDirectory>
+          <testClassesDirectory>${project.build.outputDirectory}</testClassesDirectory>
           <excludes>
             <exclude>**/AbstractMicrobenchmark.java</exclude>
             <exclude>**/*$*.class</exclude>
+            <exclude>**/generated/*.class</exclude>
           </excludes>
           <systemPropertyVariables>
             <perfReportDir>${project.build.directory}/reports/performance/</perfReportDir>
