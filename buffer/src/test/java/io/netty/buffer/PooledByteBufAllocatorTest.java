@@ -35,6 +35,7 @@ import java.util.concurrent.locks.LockSupport;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
@@ -157,6 +158,26 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
         } finally {
             buffer.release();
         }
+    }
+
+    @Test
+    public void testAllocNotNull() {
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
+        // Huge allocation
+        testAllocNotNull(allocator, allocator.chunkSize() + 1);
+        // Normal allocation
+        testAllocNotNull(allocator, 1024);
+        // Small allocation
+        testAllocNotNull(allocator, 512);
+        // Tiny allocation
+        testAllocNotNull(allocator, 1);
+    }
+
+    private static void testAllocNotNull(PooledByteBufAllocator allocator, int capacity) {
+        ByteBuf buffer = allocator.heapBuffer(capacity);
+        assertNotNull(buffer.alloc());
+        assertTrue(buffer.release());
+        assertNotNull(buffer.alloc());
     }
 
     @Test
