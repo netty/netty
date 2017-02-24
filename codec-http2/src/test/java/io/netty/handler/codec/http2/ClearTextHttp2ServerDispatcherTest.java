@@ -72,7 +72,6 @@ public class ClearTextHttp2ServerDispatcherTest {
             @Override
             protected void configurePriorKnowledge(ChannelHandlerContext ctx) {
                 ctx.pipeline().addLast(priorKnowledgeHandler);
-
             }
         };
 
