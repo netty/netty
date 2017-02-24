@@ -19,9 +19,22 @@ import org.junit.Test;
 
 import java.util.Arrays;
 
-import static io.netty.util.internal.StringUtil.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static io.netty.util.internal.StringUtil.NEWLINE;
+import static io.netty.util.internal.StringUtil.commonSuffixOfLength;
+import static io.netty.util.internal.StringUtil.simpleClassName;
+import static io.netty.util.internal.StringUtil.substringAfter;
+import static io.netty.util.internal.StringUtil.toHexString;
+import static io.netty.util.internal.StringUtil.toHexStringPadded;
+import static io.netty.util.internal.StringUtil.unescapeCsv;
+import static io.netty.util.internal.StringUtil.unescapeCsvFields;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class StringUtilTest {
 
@@ -331,11 +344,37 @@ public class StringUtilTest {
     }
 
     private static void escapeCsv(CharSequence value, CharSequence expected) {
+        escapeCsv(value, expected, false);
+    }
+
+    private static void escapeCsvWithTrimming(CharSequence value, CharSequence expected) {
+        escapeCsv(value, expected, true);
+    }
+
+    private static void escapeCsv(CharSequence value, CharSequence expected, boolean trimOws) {
         CharSequence escapedValue = value;
         for (int i = 0; i < 10; ++i) {
-            escapedValue = StringUtil.escapeCsv(escapedValue);
+            escapedValue = StringUtil.escapeCsv(escapedValue, trimOws);
             assertEquals(expected, escapedValue.toString());
         }
+    }
+
+    @Test
+    public void escapeCsvWithTrimming() {
+        assertSame("", StringUtil.escapeCsv("", true));
+        assertSame("ab", StringUtil.escapeCsv("ab", true));
+
+        escapeCsvWithTrimming("", "");
+        escapeCsvWithTrimming(" \t ", "");
+        escapeCsvWithTrimming("ab", "ab");
+        escapeCsvWithTrimming("a b", "a b");
+        escapeCsvWithTrimming(" \ta \tb", "a \tb");
+        escapeCsvWithTrimming("a \tb \t", "a \tb");
+        escapeCsvWithTrimming("\t a \tb \t", "a \tb");
+        escapeCsvWithTrimming("\"\t a b \"", "\"\t a b \"");
+        escapeCsvWithTrimming(" \"\t a b \"\t", "\"\t a b \"");
+        escapeCsvWithTrimming(" testing\t\n ", "\"testing\t\n\"");
+        escapeCsvWithTrimming("\ttest,ing ", "\"test,ing\"");
     }
 
     @Test
@@ -464,5 +503,22 @@ public class StringUtilTest {
         assertTrue(StringUtil.endsWith("-u", 'u'));
         assertFalse(StringUtil.endsWith("-", 'u'));
         assertFalse(StringUtil.endsWith("u-", 'u'));
+    }
+
+    @Test
+    public void trimOws() {
+        assertSame("", StringUtil.trimOws(""));
+        assertEquals("", StringUtil.trimOws(" \t "));
+        assertSame("a", StringUtil.trimOws("a"));
+        assertEquals("a", StringUtil.trimOws(" a"));
+        assertEquals("a", StringUtil.trimOws("a "));
+        assertEquals("a", StringUtil.trimOws(" a "));
+        assertSame("abc", StringUtil.trimOws("abc"));
+        assertEquals("abc", StringUtil.trimOws("\tabc"));
+        assertEquals("abc", StringUtil.trimOws("abc\t"));
+        assertEquals("abc", StringUtil.trimOws("\tabc\t"));
+        assertSame("a\t b", StringUtil.trimOws("a\t b"));
+        assertEquals("", StringUtil.trimOws("\t ").toString());
+        assertEquals("a b", StringUtil.trimOws("\ta b \t").toString());
     }
 }
