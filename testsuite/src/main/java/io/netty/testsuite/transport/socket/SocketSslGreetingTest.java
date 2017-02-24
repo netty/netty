@@ -123,7 +123,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
             @Override
             public void initChannel(Channel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
-                p.addLast(serverCtx.newHandler(sch.alloc()));
+                p.addLast(new SslHandler(serverCtx.newEngine(sch.alloc())));
                 p.addLast(new LoggingHandler(LOG_LEVEL));
                 p.addLast(sh);
             }
@@ -133,7 +133,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
             @Override
             public void initChannel(Channel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
-                p.addLast(clientCtx.newHandler(sch.alloc()));
+                p.addLast(new SslHandler(clientCtx.newEngine(sch.alloc())));
                 p.addLast(new LoggingHandler(LOG_LEVEL));
                 p.addLast(ch);
             }

@@ -135,7 +135,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             @SuppressWarnings("deprecation")
             public void initChannel(Channel sch) throws Exception {
                 serverChannel = sch;
-                serverSslHandler = serverCtx.newHandler(sch.alloc());
+                serverSslHandler = new SslHandler(serverCtx.newEngine(sch.alloc()));
 
                 sch.pipeline().addLast("ssl", serverSslHandler);
                 sch.pipeline().addLast("handler", serverHandler);
@@ -147,7 +147,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             @SuppressWarnings("deprecation")
             public void initChannel(Channel sch) throws Exception {
                 clientChannel = sch;
-                clientSslHandler = clientCtx.newHandler(sch.alloc());
+                clientSslHandler = new SslHandler(clientCtx.newEngine(sch.alloc()));
 
                 sch.pipeline().addLast("ssl", clientSslHandler);
                 sch.pipeline().addLast("handler", clientHandler);
