@@ -32,11 +32,8 @@ import java.security.AlgorithmParameters;
 import java.security.CryptoPrimitive;
 import java.security.Key;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import javax.net.ssl.SNIMatcher;
-import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -577,13 +574,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine engine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
         try {
             SSLParameters parameters = new SSLParameters();
-            SNIMatcher matcher = new SNIMatcher(0) {
-                @Override
-                public boolean matches(SNIServerName sniServerName) {
-                    return false;
-                }
-            };
-            parameters.setSNIMatchers(Collections.singleton(matcher));
+            Java8SslUtils.setSNIMatcher(parameters);
             engine.setSSLParameters(parameters);
         } finally {
             cleanupServerSslEngine(engine);
