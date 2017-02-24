@@ -1573,7 +1573,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * Returns {@code true} if a header with the {@code name} and {@code value} exists, {@code false} otherwise.
-     * This also handles multiple values that are seperated with a {@code ,}.
+     * This also handles multiple values that are separated with a {@code ,}.
      * <p>
      * If {@code ignoreCase} is {@code true} then a case insensitive compare is done on the value.
      * @param name the name of the header to find
