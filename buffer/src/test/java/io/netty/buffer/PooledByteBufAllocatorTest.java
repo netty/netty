@@ -38,21 +38,34 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
+public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<PooledByteBufAllocator> {
 
     @Override
-    protected AbstractByteBufAllocator newAllocator(boolean preferDirect) {
+    protected PooledByteBufAllocator newAllocator(boolean preferDirect) {
         return new PooledByteBufAllocator(preferDirect);
     }
 
     @Override
-    protected AbstractByteBufAllocator newUnpooledAllocator() {
+    protected PooledByteBufAllocator newUnpooledAllocator() {
         return new PooledByteBufAllocator(0, 0, 8192, 1);
+    }
+
+    @Override
+    protected long expectedUsedMemory(PooledByteBufAllocator allocator, int capacity) {
+        return allocator.chunkSize();
+    }
+
+    @Override
+    protected long expectedUsedMemoryAfterRelease(PooledByteBufAllocator allocator, int capacity) {
+        // This is the case as allocations will start in qInit and chunks in qInit will never be released until
+        // these are moved to q000.
+        // See https://www.bsdcan.org/2006/papers/jemalloc.pdf
+        return allocator.chunkSize();
     }
 
     @Test
     public void testPooledUnsafeHeapBufferAndUnsafeDirectBuffer() {
-        AbstractByteBufAllocator allocator = newAllocator(true);
+        PooledByteBufAllocator allocator = newAllocator(true);
         ByteBuf directBuffer = allocator.directBuffer();
         assertInstanceOf(directBuffer,
                 PlatformDependent.hasUnsafe() ? PooledUnsafeDirectByteBuf.class : PooledDirectByteBuf.class);

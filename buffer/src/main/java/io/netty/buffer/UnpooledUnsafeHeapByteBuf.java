@@ -17,7 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
 
-final class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
+class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     /**
      * Creates a new heap buffer with a newly allocated byte array.
