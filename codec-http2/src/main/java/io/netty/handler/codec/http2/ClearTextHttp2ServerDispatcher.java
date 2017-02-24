@@ -41,8 +41,6 @@ public abstract class ClearTextHttp2ServerDispatcher extends ByteToMessageDecode
     private static final ByteBuf PRI_KNOWLEDGE_FIRST_BYTES = unreleasableBuffer(
             directBuffer(PRI_KNOWLEDGE_PEAK_LENGTH).writeBytes(PRI_KNOWLEDGE_MAGIC.array()));
 
-    private boolean pipelineConfigured;
-
     /**
      * Peak the first {@link #PRI_KNOWLEDGE_PEAK_LENGTH} bytes of msg, and verify that
      * if it matches to {@link #PRI_KNOWLEDGE_FIRST_BYTES} then assume client want to
@@ -56,12 +54,6 @@ public abstract class ClearTextHttp2ServerDispatcher extends ByteToMessageDecode
      */
     @Override
     public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        if (pipelineConfigured) {
-            // After pipeline configured, just forward data to next inbound handler
-            out.add(in.readBytes(in.readableBytes()));
-            return;
-        }
-
         if (in.readableBytes() < PRI_KNOWLEDGE_PEAK_LENGTH) {
             return;
         }
@@ -73,8 +65,9 @@ public abstract class ClearTextHttp2ServerDispatcher extends ByteToMessageDecode
             configureUpgrade(ctx);
         }
 
-        pipelineConfigured = true;
         out.add(in.readBytes(in.readableBytes()));
+
+        ctx.pipeline().remove(this);
     }
 
     /**
