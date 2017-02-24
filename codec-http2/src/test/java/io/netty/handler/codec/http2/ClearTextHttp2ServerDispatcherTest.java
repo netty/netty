@@ -37,8 +37,6 @@ import static org.junit.Assert.*;
 public class ClearTextHttp2ServerDispatcherTest {
     private EmbeddedChannel channel;
 
-    private ClearTextHttp2ServerDispatcher dispatcher;
-
     private List<ByteBuf> upgradeInbounds;
 
     private ChannelInboundHandler upgradeHandler;
@@ -65,7 +63,7 @@ public class ClearTextHttp2ServerDispatcherTest {
             }
         };
 
-        dispatcher = new ClearTextHttp2ServerDispatcher() {
+        ClearTextHttp2ServerDispatcher dispatcher = new ClearTextHttp2ServerDispatcher() {
             @Override
             protected void configureUpgrade(ChannelHandlerContext ctx) {
                 ctx.pipeline().addLast(upgradeHandler);
@@ -137,6 +135,41 @@ public class ClearTextHttp2ServerDispatcherTest {
         } finally {
             firstInbound.release();
             secondInbound.release();
+        }
+    }
+
+    @Test
+    public void priorKnowledgeWhenFirstInboundNotEnough() throws Exception {
+        ByteBuf inbound = Unpooled.directBuffer().writeBytes(
+                AsciiString.of("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n").array());
+
+        try {
+            ByteBuf copied = inbound.copy();
+            channel.writeInbound(copied.readBytes(2), copied);
+
+            assertTrue(upgradeInbounds.isEmpty());
+
+            assertEquals(1, priorKnowledgeInbounds.size());
+            assertEquals(inbound, priorKnowledgeInbounds.get(0));
+        } finally {
+            inbound.release();
+        }
+    }
+
+    @Test
+    public void ignoreNonByteBuf() throws Exception {
+        ByteBuf inbound = Unpooled.directBuffer().writeBytes(
+                AsciiString.of("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n").array());
+
+        try {
+            channel.writeInbound(new Http2Settings(), inbound.copy());
+
+            assertTrue(upgradeInbounds.isEmpty());
+
+            assertEquals(1, priorKnowledgeInbounds.size());
+            assertEquals(inbound, priorKnowledgeInbounds.get(0));
+        } finally {
+            inbound.release();
         }
     }
 }
