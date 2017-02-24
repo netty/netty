@@ -19,7 +19,7 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
 
-final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
+class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
 
     UnpooledUnsafeNoCleanerDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(alloc, initialCapacity, maxCapacity);
@@ -28,6 +28,10 @@ final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByt
     @Override
     protected ByteBuffer allocateDirect(int initialCapacity) {
         return PlatformDependent.allocateDirectNoCleaner(initialCapacity);
+    }
+
+    ByteBuffer reallocateDirect(ByteBuffer oldBuffer, int initialCapacity) {
+        return PlatformDependent.reallocateDirectNoCleaner(oldBuffer, initialCapacity);
     }
 
     @Override
@@ -45,7 +49,7 @@ final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByt
 
         if (newCapacity > oldCapacity) {
             ByteBuffer oldBuffer = buffer;
-            ByteBuffer newBuffer = PlatformDependent.reallocateDirectNoCleaner(oldBuffer, newCapacity);
+            ByteBuffer newBuffer = reallocateDirect(oldBuffer, newCapacity);
             setByteBuffer(newBuffer, false);
         } else if (newCapacity < oldCapacity) {
             ByteBuffer oldBuffer = buffer;

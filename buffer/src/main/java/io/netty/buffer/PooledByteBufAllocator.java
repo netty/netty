@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class PooledByteBufAllocator extends AbstractByteBufAllocator {
+public class PooledByteBufAllocator extends AbstractByteBufAllocator implements InstrumentedByteBufAllocator {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
     private static final int DEFAULT_NUM_HEAP_ARENA;
@@ -184,9 +184,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     }
 
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena,
-            int nDirectArena, int pageSize, int maxOrder, int tinyCacheSize,
-            int smallCacheSize, int normalCacheSize,
-            boolean useCacheForAllThreads) {
+                                  int nDirectArena, int pageSize, int maxOrder, int tinyCacheSize,
+                                  int smallCacheSize, int normalCacheSize,
+                                  boolean useCacheForAllThreads) {
         this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder,
                 tinyCacheSize, smallCacheSize, normalCacheSize,
                 useCacheForAllThreads, DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
@@ -517,6 +517,30 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
      */
     public final int chunkSize() {
         return chunkSize;
+    }
+
+    @Override
+    public final long usedHeapMemory() {
+        return usedMemory(heapArenas);
+    }
+
+    @Override
+    public final long usedDirectMemory() {
+        return usedMemory(directArenas);
+    }
+
+    private static long usedMemory(PoolArena<?>... arenas) {
+        if (arenas == null) {
+            return -1;
+        }
+        long used = 0;
+        for (PoolArena<?> arena : arenas) {
+            used += arena.numActiveBytes();
+            if (used < 0) {
+                return Long.MAX_VALUE;
+            }
+        }
+        return used;
     }
 
     final PoolThreadCache threadCache() {
