@@ -15,15 +15,17 @@
  */
 package io.netty.buffer;
 
-public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<UnpooledByteBufAllocator> {
+/**
+ * {@link ByteBufAllocator} which exposes metrics.
+ */
+public interface InstrumentedByteBufAllocator extends ByteBufAllocator {
+    /**
+     * Returns the number of bytes of heap memory used by a {@link ByteBufAllocator} or {@code -1} if unknown.
+     */
+    long usedHeapMemory();
 
-    @Override
-    protected UnpooledByteBufAllocator newAllocator(boolean preferDirect) {
-        return new UnpooledByteBufAllocator(preferDirect);
-    }
-
-    @Override
-    protected UnpooledByteBufAllocator newUnpooledAllocator() {
-        return new UnpooledByteBufAllocator(false);
-    }
+    /**
+     * Returns the number of bytes of direct memory used by a {@link ByteBufAllocator} or {@code -1} if unknown.
+     */
+    long usedDirectMemory();
 }
