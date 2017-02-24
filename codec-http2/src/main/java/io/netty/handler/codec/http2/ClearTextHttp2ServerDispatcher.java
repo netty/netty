@@ -77,7 +77,15 @@ public abstract class ClearTextHttp2ServerDispatcher extends ByteToMessageDecode
         out.add(in.readBytes(in.readableBytes()));
     }
 
+    /**
+     * Invoked when dispatcher knows that the client want to start HTTP/2 by upgrade.
+     * Implement this method to configure your pipeline for handling HTTP -> HTTP/2 upgrade.
+     */
     protected abstract void configureUpgrade(ChannelHandlerContext ctx);
 
+    /**
+     * Invoked when dispatcher knows that the client want to start HTTP/2 by sending prior knowledge.
+     * Implement this method to configure your pipeline for HTTP/2 protocol.
+     */
     protected abstract void configurePriorKnowledge(ChannelHandlerContext ctx);
 }
