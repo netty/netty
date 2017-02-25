@@ -111,6 +111,11 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         tc.start();
     }
 
+    @Override
+    protected int userDefinedWritabilityIndex() {
+        return AbstractTrafficShapingHandler.GLOBAL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
+    }
+
     /**
      * Create a new instance.
      *
