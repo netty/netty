@@ -146,13 +146,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      *              {@value #GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX}.
      */
     protected int userDefinedWritabilityIndex() {
-        if (this instanceof GlobalChannelTrafficShapingHandler) {
-            return GLOBALCHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
-        } else if (this instanceof GlobalTrafficShapingHandler) {
-            return GLOBAL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
-        } else {
-            return CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
-        }
+        return CHANNEL_DEFAULT_USER_DEFINED_WRITABILITY_INDEX;
     }
 
     /**
