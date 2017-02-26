@@ -15,6 +15,8 @@
  */
 package io.netty.microbench.handler.ssl;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -32,10 +34,13 @@ import java.util.concurrent.TimeUnit;
 @Threads(1)
 public class SslEngineHandshakeBenchmark extends AbstractSslEngineBenchmark {
 
+    private ByteBufAllocator allocator;
+
     @Setup(Level.Iteration)
     public void setup() {
+        allocator = new PooledByteBufAllocator(true);
         // Init an engine one time and create the buffers needed for an handshake so we can use them in the benchmark
-        initEngines();
+        initEngines(allocator);
         initHandshakeBuffers();
         destroyEngines();
     }
@@ -49,7 +54,7 @@ public class SslEngineHandshakeBenchmark extends AbstractSslEngineBenchmark {
     @BenchmarkMode(Mode.AverageTime)
     @OutputTimeUnit(TimeUnit.MICROSECONDS)
     public boolean handshake() throws Exception {
-        initEngines();
+        initEngines(allocator);
         boolean ok = doHandshake();
         destroyEngines();
         assert ok;
