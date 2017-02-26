@@ -16,23 +16,26 @@
 package io.netty.microbench.handler.ssl;
 
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 
+import java.nio.ByteBuffer;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
-import java.nio.ByteBuffer;
 
 @State(Scope.Benchmark)
 @Threads(1)
 public class SslEngineEchoBenchmark extends AbstractSslEngineThroughputBenchmark {
 
+    @Param({ "1", "2", "5", "10" })
+    public int numWraps;
     private ByteBuffer unwrapDstBuffer;
 
     @Override
     protected void doSetup()  {
-        unwrapDstBuffer = allocateBuffer(serverEngine.getSession().getApplicationBufferSize());
+        unwrapDstBuffer = allocateBuffer(serverEngine.getSession().getApplicationBufferSize() << 2);
     }
 
     @Override
@@ -42,12 +45,15 @@ public class SslEngineEchoBenchmark extends AbstractSslEngineThroughputBenchmark
 
     @Benchmark
     public ByteBuffer wrapUnwrap() throws SSLException {
-        ByteBuffer src = doWrap();
+        ByteBuffer src = doWrap(numWraps);
         src.flip();
 
         unwrapDstBuffer.clear();
 
-        SSLEngineResult unwrapResult = serverEngine.unwrap(src, unwrapDstBuffer);
+        SSLEngineResult unwrapResult;
+        do {
+            unwrapResult = serverEngine.unwrap(src, unwrapDstBuffer);
+        } while (unwrapResult.getStatus() == SSLEngineResult.Status.OK && src.hasRemaining());
 
         assert checkSslEngineResult(unwrapResult, src, unwrapDstBuffer);
         return unwrapDstBuffer;

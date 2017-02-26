@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -14,24 +14,41 @@
  */
 package io.netty.microbench.channel;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.ReferenceCounted;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.internal.ObjectUtil;
 
-public abstract class EmbeddedChannelWriteReleaseHandlerContext extends EmbeddedChannelHandlerContext {
-    protected EmbeddedChannelWriteReleaseHandlerContext(ByteBufAllocator alloc, ChannelHandler handler) {
-        this(alloc, handler, new EmbeddedChannel());
+public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends EmbeddedChannelHandlerContext {
+    private ByteBuf cumulation;
+    private ByteToMessageDecoder.Cumulator cumulator;
+
+    protected EmbeddedChannelWriteAccumulatingHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
+                                                          ByteToMessageDecoder.Cumulator writeCumulator) {
+        this(alloc, handler, writeCumulator, new EmbeddedChannel());
     }
 
-    protected EmbeddedChannelWriteReleaseHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
-            EmbeddedChannel channel) {
+    protected EmbeddedChannelWriteAccumulatingHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
+                                                          ByteToMessageDecoder.Cumulator writeCumulator,
+                                                          EmbeddedChannel channel) {
         super(alloc, handler, channel);
+        this.cumulator = ObjectUtil.checkNotNull(writeCumulator, "writeCumulator");
     }
 
-    protected abstract void handleException(Throwable t);
+    public final ByteBuf cumulation() {
+        return cumulation;
+    }
+
+    public final void releaseCumulation() {
+        if (cumulation != null) {
+            cumulation.release();
+            cumulation = null;
+        }
+    }
 
     @Override
     public final ChannelFuture write(Object msg) {
@@ -41,8 +58,12 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     @Override
     public final ChannelFuture write(Object msg, ChannelPromise promise) {
         try {
-            if (msg instanceof ReferenceCounted) {
-                ((ReferenceCounted) msg).release();
+            if (msg instanceof ByteBuf) {
+                if (cumulation == null) {
+                    cumulation = (ByteBuf) msg;
+                } else {
+                    cumulation = cumulator.cumulate(alloc(), cumulation, (ByteBuf) msg);
+                }
                 promise.setSuccess();
             } else {
                 channel().write(msg, promise);
@@ -57,8 +78,13 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     @Override
     public final ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
         try {
-            if (msg instanceof ReferenceCounted) {
-                ((ReferenceCounted) msg).release();
+            if (msg instanceof ByteBuf) {
+                ByteBuf buf = (ByteBuf) msg;
+                if (cumulation == null) {
+                    cumulation = buf;
+                } else {
+                    cumulation = cumulator.cumulate(alloc(), cumulation, buf);
+                }
                 promise.setSuccess();
             } else {
                 channel().writeAndFlush(msg, promise);
