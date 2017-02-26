@@ -15,24 +15,24 @@
  */
 package io.netty.microbench.handler.ssl;
 
+import io.netty.buffer.ByteBuf;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Threads;
 
-import java.nio.ByteBuffer;
-import javax.net.ssl.SSLException;
-
-@State(Scope.Benchmark)
-@Threads(1)
-public class SslEngineWrapBenchmark extends AbstractSslEngineThroughputBenchmark {
-
+public class SslHandlerEchoBenchmark extends AbstractSslHandlerThroughputBenchmark {
     @Param({ "1", "2", "5", "10" })
-    public int numWraps;
+    public int numWrites;
 
     @Benchmark
-    public ByteBuffer wrap() throws SSLException {
-        return doWrap(numWraps);
+    public ByteBuf wrapUnwrap() throws Exception {
+        ByteBuf src = doWrite(numWrites);
+
+        do {
+            serverSslHandler.channelRead(serverCtx, src);
+        } while (src.isReadable());
+
+        assert !src.isReadable() && src.refCnt() == 1 : "src: " + src + " src.refCnt(): " + src.refCnt();
+
+        return src;
     }
 }
