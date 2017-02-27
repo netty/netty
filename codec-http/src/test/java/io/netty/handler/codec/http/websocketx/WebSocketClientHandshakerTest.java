@@ -41,6 +41,37 @@ public abstract class WebSocketClientHandshakerTest {
     protected abstract WebSocketClientHandshaker newHandshaker(URI uri);
 
     @Test
+    public void testHostHeader() {
+        testHostHeaderDefaultHttp(URI.create("ws://localhost:80/"), "localhost");
+        testHostHeaderDefaultHttp(URI.create("http://localhost:80/"), "localhost");
+        testHostHeaderDefaultHttp(URI.create("ws://[::1]:80/"), "[::1]");
+        testHostHeaderDefaultHttp(URI.create("http://[::1]:80/"), "[::1]");
+        testHostHeaderDefaultHttp(URI.create("ws://localhost:9999/"), "localhost:9999");
+        testHostHeaderDefaultHttp(URI.create("http://localhost:9999/"), "localhost:9999");
+        testHostHeaderDefaultHttp(URI.create("ws://[::1]:9999/"), "[::1]:9999");
+        testHostHeaderDefaultHttp(URI.create("http://[::1]:9999/"), "[::1]:9999");
+
+        testHostHeaderDefaultHttp(URI.create("wss://localhost:443/"), "localhost");
+        testHostHeaderDefaultHttp(URI.create("https://localhost:443/"), "localhost");
+        testHostHeaderDefaultHttp(URI.create("wss://[::1]:443/"), "[::1]");
+        testHostHeaderDefaultHttp(URI.create("https://[::1]:443/"), "[::1]");
+        testHostHeaderDefaultHttp(URI.create("wss://localhost:9999/"), "localhost:9999");
+        testHostHeaderDefaultHttp(URI.create("https://localhost:9999/"), "localhost:9999");
+        testHostHeaderDefaultHttp(URI.create("wss://[::1]:9999/"), "[::1]:9999");
+        testHostHeaderDefaultHttp(URI.create("https://[::1]:9999/"), "[::1]:9999");
+    }
+
+    private void testHostHeaderDefaultHttp(URI uri, String expected) {
+        WebSocketClientHandshaker handshaker = newHandshaker(uri);
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals(expected, request.headers().get(HttpHeaders.Names.HOST));
+        } finally {
+            request.release();
+        }
+    }
+
+    @Test
     public void testRawPath() {
         URI uri = URI.create("ws://localhost:9999/path%20with%20ws");
         WebSocketClientHandshaker handshaker = newHandshaker(uri);

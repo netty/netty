@@ -26,6 +26,7 @@ import java.io.FileReader;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -870,6 +871,52 @@ public final class NetUtil {
     }
 
     /**
+     * Returns the {@link String} representation of an {@link InetSocketAddress}.
+     * <p>
+     * The output does not include Scope ID.
+     * @param addr {@link InetSocketAddress} to be converted to an address string
+     * @return {@code String} containing the text-formatted IP address
+     */
+    public static String toSocketAddressString(InetSocketAddress addr) {
+        String port = String.valueOf(addr.getPort());
+        final StringBuilder sb;
+
+        if (addr.isUnresolved()) {
+            String hostString = PlatformDependent.javaVersion() >= 7 ? addr.getHostString() : addr.getHostName();
+            sb = newSocketAddressStringBuilder(hostString, port, !isValidIpV6Address(hostString));
+        } else {
+            InetAddress address = addr.getAddress();
+            String hostString = toAddressString(address);
+            sb = newSocketAddressStringBuilder(hostString, port, address instanceof Inet4Address);
+        }
+        return sb.append(':').append(port).toString();
+    }
+
+    /**
+     * Returns the {@link String} representation of a host port combo.
+     */
+    public static String toSocketAddressString(String host, int port) {
+        String portStr = String.valueOf(port);
+        return newSocketAddressStringBuilder(
+                host, portStr, isValidIpV4Address(host)).append(portStr).toString();
+    }
+
+    private static StringBuilder newSocketAddressStringBuilder(String host, String port, boolean ipv4) {
+        int hostLen = host.length();
+        if (ipv4) {
+            // Need to include enough space for hostString:port.
+            return new StringBuilder(hostLen + 1 + port.length()).append(host);
+        }
+        // Need to include enough space for [hostString]:port.
+        StringBuilder stringBuilder = new StringBuilder(hostLen + 3 + port.length());
+        if (hostLen > 1 && host.charAt(0) == '[' && host.charAt(hostLen - 1) == ']') {
+            return stringBuilder.append(host);
+        }
+        return stringBuilder.append('[').append(host).append(']');
+    }
+
+    /**
+>>>>>>> 0514b0c... Only add port to HOST header value if needed
      * Returns the {@link String} representation of an {@link InetAddress}.
      * <ul>
      * <li>Inet4Address results are identical to {@link InetAddress#getHostAddress()}</li>

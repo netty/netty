@@ -31,9 +31,11 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ThrowableUtil;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 
@@ -451,13 +453,35 @@ public abstract class WebSocketClientHandshaker {
         return wsPort;
     }
 
+    static CharSequence websocketHostValue(URI wsURL) {
+        int port = wsURL.getPort();
+        if (port == -1) {
+            return wsURL.getHost();
+        }
+        String host = wsURL.getHost();
+        if (port == 80) {
+            return "http".equals(wsURL.getScheme())
+                    || "ws".equals(wsURL.getScheme()) ?
+                    host : NetUtil.toSocketAddressString(host, 80);
+        }
+        if (port == 443) {
+            return "https".equals(wsURL.getScheme())
+                    || "wss".equals(wsURL.getScheme()) ?
+                    host : NetUtil.toSocketAddressString(host, 443);
+        }
+
+        // if the port is not standard (80/443) its needed to add the port to the header.
+        // See http://tools.ietf.org/html/rfc6454#section-6.2
+        return NetUtil.toSocketAddressString(InetSocketAddress.createUnresolved(host, port));
+    }
+
     static CharSequence websocketOriginValue(String host, int wsPort) {
         String originValue = (wsPort == 443 ?
                 "https" : "http") + "://" + host;
         if (wsPort != 80 && wsPort != 443) {
             // if the port is not standard (80/443) its needed to add the port to the header.
             // See http://tools.ietf.org/html/rfc6454#section-6.2
-            return originValue + ':' + wsPort;
+            return NetUtil.toSocketAddressString(originValue, wsPort);
         }
         return originValue;
     }
