@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
@@ -39,6 +40,37 @@ import static org.junit.Assert.assertTrue;
 
 public abstract class WebSocketClientHandshakerTest {
     protected abstract WebSocketClientHandshaker newHandshaker(URI uri);
+
+    @Test
+    public void testHostHeader() {
+        testHostHeaderDefaultHttp(URI.create("ws://localhost:80/"), "localhost");
+        testHostHeaderDefaultHttp(URI.create("http://localhost:80/"), "localhost");
+        testHostHeaderDefaultHttp(URI.create("ws://[::1]:80/"), "[::1]");
+        testHostHeaderDefaultHttp(URI.create("http://[::1]:80/"), "[::1]");
+        testHostHeaderDefaultHttp(URI.create("ws://localhost:9999/"), "localhost:9999");
+        testHostHeaderDefaultHttp(URI.create("http://localhost:9999/"), "localhost:9999");
+        testHostHeaderDefaultHttp(URI.create("ws://[::1]:9999/"), "[::1]:9999");
+        testHostHeaderDefaultHttp(URI.create("http://[::1]:9999/"), "[::1]:9999");
+
+        testHostHeaderDefaultHttp(URI.create("wss://localhost:443/"), "localhost");
+        testHostHeaderDefaultHttp(URI.create("https://localhost:443/"), "localhost");
+        testHostHeaderDefaultHttp(URI.create("wss://[::1]:443/"), "[::1]");
+        testHostHeaderDefaultHttp(URI.create("https://[::1]:443/"), "[::1]");
+        testHostHeaderDefaultHttp(URI.create("wss://localhost:9999/"), "localhost:9999");
+        testHostHeaderDefaultHttp(URI.create("https://localhost:9999/"), "localhost:9999");
+        testHostHeaderDefaultHttp(URI.create("wss://[::1]:9999/"), "[::1]:9999");
+        testHostHeaderDefaultHttp(URI.create("https://[::1]:9999/"), "[::1]:9999");
+    }
+
+    private void testHostHeaderDefaultHttp(URI uri, String expected) {
+        WebSocketClientHandshaker handshaker = newHandshaker(uri);
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals(expected, request.headers().get(HttpHeaderNames.HOST));
+        } finally {
+            request.release();
+        }
+    }
 
     @Test
     public void testRawPath() {
