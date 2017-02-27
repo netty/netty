@@ -89,8 +89,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         this.maxOrder = maxOrder;
         this.pageShifts = pageShifts;
         this.chunkSize = chunkSize;
-        this.directMemoryCacheAlignment = cacheAlignment;
-        this.directMemoryCacheAlignmentMask = cacheAlignment - 1;
+        directMemoryCacheAlignment = cacheAlignment;
+        directMemoryCacheAlignmentMask = cacheAlignment - 1;
         subpageOverflowMask = ~(pageSize - 1);
         tinySubpagePools = newSubpagePoolArray(numTinySubpagePools);
         for (int i = 0; i < tinySubpagePools.length; i ++) {
@@ -103,12 +103,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             smallSubpagePools[i] = newSubpagePoolHead(pageSize);
         }
 
-        q100 = new PoolChunkList<T>(null, 100, Integer.MAX_VALUE, chunkSize);
-        q075 = new PoolChunkList<T>(q100, 75, 100, chunkSize);
-        q050 = new PoolChunkList<T>(q075, 50, 100, chunkSize);
-        q025 = new PoolChunkList<T>(q050, 25, 75, chunkSize);
-        q000 = new PoolChunkList<T>(q025, 1, 50, chunkSize);
-        qInit = new PoolChunkList<T>(q000, Integer.MIN_VALUE, 25, chunkSize);
+        q100 = new PoolChunkList<T>(this, null, 100, Integer.MAX_VALUE, chunkSize);
+        q075 = new PoolChunkList<T>(this, q100, 75, 100, chunkSize);
+        q050 = new PoolChunkList<T>(this, q075, 50, 100, chunkSize);
+        q025 = new PoolChunkList<T>(this, q050, 25, 75, chunkSize);
+        q000 = new PoolChunkList<T>(this, q025, 1, 50, chunkSize);
+        qInit = new PoolChunkList<T>(this, q000, Integer.MIN_VALUE, 25, chunkSize);
 
         q100.prevList(q075);
         q075.prevList(q050);
