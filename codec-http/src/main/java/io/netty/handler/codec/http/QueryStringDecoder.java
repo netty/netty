@@ -60,6 +60,7 @@ public class QueryStringDecoder {
     private final Charset charset;
     private final String uri;
     private final boolean hasPath;
+    private final boolean withCommaDecoding;
     private final int maxParams;
     private String path;
     private Map<String, List<String>> params;
@@ -68,6 +69,8 @@ public class QueryStringDecoder {
     /**
      * Creates a new decoder that decodes the specified URI. The decoder will
      * assume that the query string is encoded in UTF-8.
+     *
+     * @param uri the raw uri to decode
      */
     public QueryStringDecoder(String uri) {
         this(uri, HttpConstants.DEFAULT_CHARSET);
@@ -76,6 +79,9 @@ public class QueryStringDecoder {
     /**
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
+     *
+     * @param uri the raw uri to decode
+     * @param hasPath if the uri has a path this boolean should be set true
      */
     public QueryStringDecoder(String uri, boolean hasPath) {
         this(uri, HttpConstants.DEFAULT_CHARSET, hasPath);
@@ -84,6 +90,9 @@ public class QueryStringDecoder {
     /**
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
+     *
+     * @param uri the raw uri to decode
+     * @param charset the charset of the request uri
      */
     public QueryStringDecoder(String uri, Charset charset) {
         this(uri, charset, true);
@@ -92,6 +101,10 @@ public class QueryStringDecoder {
     /**
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
+     *
+     * @param uri the raw uri to decode
+     * @param charset the charset of the request uri
+     * @param hasPath if the uri has a path this boolean should be set true
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath) {
         this(uri, charset, hasPath, DEFAULT_MAX_PARAMS);
@@ -100,8 +113,27 @@ public class QueryStringDecoder {
     /**
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
+     *
+     * @param uri the raw uri to decode
+     * @param charset the charset of the request uri
+     * @param hasPath if the uri has a path this boolean should be set true
+     * @param maxParams the maximum of params to parse, be aware that setting it to high could lead to HashDOS
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath, int maxParams) {
+        this(uri, charset, hasPath, maxParams, false);
+    }
+
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     *
+     * @param uri the raw uri to decode
+     * @param charset the charset of the request uri
+     * @param hasPath if the uri has a path this boolean should be set true
+     * @param maxParams the maximum of params to parse, be aware that setting it to high could lead to HashDOS
+     * @param withCommaDecoding splits the query string values on comma
+     */
+    public QueryStringDecoder(String uri, Charset charset, boolean hasPath, int maxParams, boolean withCommaDecoding) {
         if (uri == null) {
             throw new NullPointerException("getUri");
         }
@@ -117,11 +149,14 @@ public class QueryStringDecoder {
         this.charset = charset;
         this.maxParams = maxParams;
         this.hasPath = hasPath;
+        this.withCommaDecoding = withCommaDecoding;
     }
 
     /**
      * Creates a new decoder that decodes the specified URI. The decoder will
      * assume that the query string is encoded in UTF-8.
+     *
+     * @param uri the raw uri as a {@link java.net.URI} to decode
      */
     public QueryStringDecoder(URI uri) {
         this(uri, HttpConstants.DEFAULT_CHARSET);
@@ -130,6 +165,9 @@ public class QueryStringDecoder {
     /**
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
+     *
+     * @param uri the raw uri as a {@link java.net.URI} to decode
+     * @param charset the charset of the request uri
      */
     public QueryStringDecoder(URI uri, Charset charset) {
         this(uri, charset, DEFAULT_MAX_PARAMS);
@@ -138,8 +176,25 @@ public class QueryStringDecoder {
     /**
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
+     *
+     * @param uri the raw uri as a {@link java.net.URI} to decode
+     * @param charset the charset of the request uri
+     * @param maxParams the maximum of params to parse, be aware that setting it to high could lead to HashDOS
      */
     public QueryStringDecoder(URI uri, Charset charset, int maxParams) {
+        this(uri, charset, maxParams, false);
+    }
+
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     *
+     * @param uri the raw uri as a {@link java.net.URI} to decode
+     * @param charset the charset of the request uri
+     * @param maxParams the maximum of params to parse, be aware that setting it to high could lead to HashDOS
+     * @param withCommaDecoding splits the query string values on comma
+     */
+    public QueryStringDecoder(URI uri, Charset charset, int maxParams, boolean withCommaDecoding) {
         if (uri == null) {
             throw new NullPointerException("getUri");
         }
@@ -163,6 +218,7 @@ public class QueryStringDecoder {
 
         this.charset = charset;
         this.maxParams = maxParams;
+        this.withCommaDecoding = withCommaDecoding;
     }
 
     /**
@@ -223,6 +279,10 @@ public class QueryStringDecoder {
                 if (pos != i) {
                     name = decodeComponent(s.substring(pos, i), charset);
                 }
+                pos = i + 1;
+            } else if (withCommaDecoding && c == ',' && name != null) {
+                // if there is a comma we need to add a param
+                addParam(params, name, decodeComponent(s.substring(pos, i), charset));
                 pos = i + 1;
             // http://www.w3.org/TR/html401/appendix/notes.html#h-B.2.2
             } else if (c == '&' || c == ';') {

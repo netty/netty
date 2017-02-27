@@ -94,6 +94,52 @@ public class QueryStringDecoderTest {
         Assert.assertEquals(2, d.parameters().get("a").size());
         Assert.assertEquals("1=", d.parameters().get("a").get(0));
         Assert.assertEquals("=2", d.parameters().get("a").get(1));
+
+        d = new QueryStringDecoder("/dynatable/?queries%5Bsearch%5D=%7B%22condition%22%3A%22AND%22%2C%22rules%22%3A" +
+                "%5B%5D%7D&page=1&perPage=10&offset=0", HttpConstants.DEFAULT_CHARSET, true, 1024, true);
+        Assert.assertEquals("/dynatable/", d.path());
+        Assert.assertEquals(4, d.parameters().size());
+        Assert.assertEquals(1, d.parameters().get("queries[search]").size());
+        Assert.assertEquals("{\"condition\":\"AND\",\"rules\":[]}", d.parameters().get("queries[search]").get(0));
+        Assert.assertEquals("1", d.parameters().get("page").get(0));
+        Assert.assertEquals("10", d.parameters().get("perPage").get(0));
+        Assert.assertEquals("0", d.parameters().get("offset").get(0));
+
+        d = new QueryStringDecoder("/foo?filter=a=b,c", HttpConstants.DEFAULT_CHARSET, true, 1024, true);
+        Assert.assertEquals("/foo", d.path());
+        Assert.assertEquals(1, d.parameters().size());
+        Assert.assertEquals(2, d.parameters().get("filter").size());
+        Assert.assertEquals("a=b", d.parameters().get("filter").get(0));
+        Assert.assertEquals("c", d.parameters().get("filter").get(1));
+
+        d = new QueryStringDecoder("/foo?filter=a=b,c,d,f", HttpConstants.DEFAULT_CHARSET, true, 1024, true);
+        Assert.assertEquals("/foo", d.path());
+        Assert.assertEquals(1, d.parameters().size());
+        Assert.assertEquals(4, d.parameters().get("filter").size());
+        Assert.assertEquals("a=b", d.parameters().get("filter").get(0));
+        Assert.assertEquals("c", d.parameters().get("filter").get(1));
+        Assert.assertEquals("d", d.parameters().get("filter").get(2));
+        Assert.assertEquals("f", d.parameters().get("filter").get(3));
+
+        d = new QueryStringDecoder("/foo?filter=a=b,c,d,f&hello=demo,tag&filter=x", HttpConstants.DEFAULT_CHARSET,
+                true, 1024, true);
+        Assert.assertEquals("/foo", d.path());
+        Assert.assertEquals(2, d.parameters().size());
+        Assert.assertEquals(5, d.parameters().get("filter").size());
+        Assert.assertEquals("a=b", d.parameters().get("filter").get(0));
+        Assert.assertEquals("c", d.parameters().get("filter").get(1));
+        Assert.assertEquals("d", d.parameters().get("filter").get(2));
+        Assert.assertEquals("f", d.parameters().get("filter").get(3));
+        Assert.assertEquals("x", d.parameters().get("filter").get(4));
+        Assert.assertEquals(2, d.parameters().get("hello").size());
+        Assert.assertEquals("demo", d.parameters().get("hello").get(0));
+        Assert.assertEquals("tag", d.parameters().get("hello").get(1));
+
+        d = new QueryStringDecoder("/foo?filter=a=b,c");
+        Assert.assertEquals("/foo", d.path());
+        Assert.assertEquals(1, d.parameters().size());
+        Assert.assertEquals(1, d.parameters().get("filter").size());
+        Assert.assertEquals("a=b,c", d.parameters().get("filter").get(0));
     }
 
     @Test
