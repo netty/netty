@@ -135,7 +135,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         HttpHeaders headers = request.headers();
         headers.add(HttpHeaderNames.UPGRADE, WEBSOCKET)
                .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
-               .add(HttpHeaderNames.HOST, host)
+               .add(HttpHeaderNames.HOST, websocketHostValue(wsURL))
                .add(HttpHeaderNames.ORIGIN, websocketOriginValue(host, wsPort))
                .add(HttpHeaderNames.SEC_WEBSOCKET_KEY1, key1)
                .add(HttpHeaderNames.SEC_WEBSOCKET_KEY2, key2);
