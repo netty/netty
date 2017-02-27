@@ -26,6 +26,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.StringUtil.EMPTY_STRING;
+
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.
  * This decoder is for one time use only.  Create a new instance for each URI:
@@ -102,16 +106,9 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath, int maxParams) {
-        if (uri == null) {
-            throw new NullPointerException("getUri");
-        }
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
-        if (maxParams <= 0) {
-            throw new IllegalArgumentException(
-                    "maxParams: " + maxParams + " (expected: a positive integer)");
-        }
+        checkNotNull(uri, "uri");
+        checkNotNull(charset, "charset");
+        checkPositive(maxParams, "maxParams");
 
         this.uri = uri;
         this.charset = charset;
@@ -140,26 +137,19 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(URI uri, Charset charset, int maxParams) {
-        if (uri == null) {
-            throw new NullPointerException("getUri");
-        }
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
-        if (maxParams <= 0) {
-            throw new IllegalArgumentException(
-                    "maxParams: " + maxParams + " (expected: a positive integer)");
-        }
+        checkNotNull(uri, "uri");
+        checkNotNull(charset, "charset");
+        checkPositive(maxParams, "maxParams");
 
         String rawPath = uri.getRawPath();
         if (rawPath != null) {
             hasPath = true;
         } else {
-            rawPath = "";
+            rawPath = EMPTY_STRING;
             hasPath = false;
         }
         // Also take care of cut of things like "http://localhost"
-        this.uri = rawPath + (uri.getRawQuery() == null? "" : '?' + uri.getRawQuery());
+        this.uri = uri.getRawQuery() == null? rawPath : rawPath + '?' + uri.getRawQuery();
 
         this.charset = charset;
         this.maxParams = maxParams;
@@ -178,10 +168,10 @@ public class QueryStringDecoder {
     public String path() {
         if (path == null) {
             if (!hasPath) {
-                path = "";
+                path = EMPTY_STRING;
             } else {
                 int pathEndPos = uri.indexOf('?');
-                path = decodeComponent(pathEndPos < 0 ? uri : uri.substring(0, pathEndPos), this.charset);
+                path = decodeComponent(pathEndPos < 0 ? uri : uri.substring(0, pathEndPos), charset);
             }
         }
         return path;
@@ -230,7 +220,7 @@ public class QueryStringDecoder {
                     // We haven't seen an `=' so far but moved forward.
                     // Must be a param of the form '&a&' so add it with
                     // an empty value.
-                    if (!addParam(params, decodeComponent(s.substring(pos, i), charset), "")) {
+                    if (!addParam(params, decodeComponent(s.substring(pos, i), charset), EMPTY_STRING)) {
                         return;
                     }
                 } else if (name != null) {
@@ -245,7 +235,7 @@ public class QueryStringDecoder {
 
         if (pos != i) {  // Are there characters we haven't dealt with?
             if (name == null) {     // Yes and we haven't seen any `='.
-                addParam(params, decodeComponent(s.substring(pos, i), charset), "");
+                addParam(params, decodeComponent(s.substring(pos, i), charset), EMPTY_STRING);
             } else {                // Yes and this must be the last value.
                 addParam(params, name, decodeComponent(s.substring(pos, i), charset));
             }
@@ -308,7 +298,7 @@ public class QueryStringDecoder {
      */
     public static String decodeComponent(final String s, final Charset charset) {
         if (s == null) {
-            return "";
+            return EMPTY_STRING;
         }
         final int size = s.length();
         boolean modified = false;
