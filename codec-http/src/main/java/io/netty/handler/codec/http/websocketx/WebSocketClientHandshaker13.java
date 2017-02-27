@@ -151,7 +151,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         headers.add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                .add(HttpHeaderNames.SEC_WEBSOCKET_KEY, key)
-               .add(HttpHeaderNames.HOST, host + ':' + wsPort)
+               .add(HttpHeaderNames.HOST, websocketHostValue(wsURL))
                .add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, websocketOriginValue(host, wsPort));
 
         String expectedSubprotocol = expectedSubprotocol();
