@@ -27,6 +27,7 @@ import static java.lang.Math.*;
 
 final class PoolChunkList<T> implements PoolChunkListMetric {
     private static final Iterator<PoolChunkMetric> EMPTY_METRICS = Collections.<PoolChunkMetric>emptyList().iterator();
+    private final PoolArena<T> arena;
     private final PoolChunkList<T> nextList;
     private final int minUsage;
     private final int maxUsage;
@@ -39,8 +40,9 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
-    PoolChunkList(PoolChunkList<T> nextList, int minUsage, int maxUsage, int chunkSize) {
+    PoolChunkList(PoolArena<T> arena, PoolChunkList<T> nextList, int minUsage, int maxUsage, int chunkSize) {
         assert minUsage <= maxUsage;
+        this.arena = arena;
         this.nextList = nextList;
         this.minUsage = minUsage;
         this.maxUsage = maxUsage;
@@ -190,36 +192,39 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
 
     @Override
     public Iterator<PoolChunkMetric> iterator() {
-        if (head == null) {
-            return EMPTY_METRICS;
-        }
-        List<PoolChunkMetric> metrics = new ArrayList<PoolChunkMetric>();
-        for (PoolChunk<T> cur = head;;) {
-            metrics.add(cur);
-            cur = cur.next;
-            if (cur == null) {
-                break;
+        synchronized (arena) {
+            if (head == null) {
+                return EMPTY_METRICS;
             }
+            List<PoolChunkMetric> metrics = new ArrayList<PoolChunkMetric>();
+            for (PoolChunk<T> cur = head;;) {
+                metrics.add(cur);
+                cur = cur.next;
+                if (cur == null) {
+                    break;
+                }
+            }
+            return metrics.iterator();
         }
-        return metrics.iterator();
     }
 
     @Override
     public String toString() {
-        if (head == null) {
-            return "none";
-        }
-
         StringBuilder buf = new StringBuilder();
-        for (PoolChunk<T> cur = head;;) {
-            buf.append(cur);
-            cur = cur.next;
-            if (cur == null) {
-                break;
+        synchronized (arena) {
+            if (head == null) {
+                return "none";
             }
-            buf.append(StringUtil.NEWLINE);
-        }
 
+            for (PoolChunk<T> cur = head;;) {
+                buf.append(cur);
+                cur = cur.next;
+                if (cur == null) {
+                    break;
+                }
+                buf.append(StringUtil.NEWLINE);
+            }
+        }
         return buf.toString();
     }
 

@@ -192,7 +192,14 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     @Override
     public int usage() {
-        final int freeBytes = this.freeBytes;
+        final int freeBytes;
+        synchronized (arena) {
+            freeBytes = this.freeBytes;
+        }
+        return usage(freeBytes);
+    }
+
+    private int usage(int freeBytes) {
         if (freeBytes == 0) {
             return 100;
         }
@@ -447,22 +454,29 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     @Override
     public int freeBytes() {
-        return freeBytes;
+        synchronized (arena) {
+            return freeBytes;
+        }
     }
 
     @Override
     public String toString() {
+        final int freeBytes;
+        synchronized (arena) {
+            freeBytes = this.freeBytes;
+        }
+
         return new StringBuilder()
-            .append("Chunk(")
-            .append(Integer.toHexString(System.identityHashCode(this)))
-            .append(": ")
-            .append(usage())
-            .append("%, ")
-            .append(chunkSize - freeBytes)
-            .append('/')
-            .append(chunkSize)
-            .append(')')
-            .toString();
+                .append("Chunk(")
+                .append(Integer.toHexString(System.identityHashCode(this)))
+                .append(": ")
+                .append(usage(freeBytes))
+                .append("%, ")
+                .append(chunkSize - freeBytes)
+                .append('/')
+                .append(chunkSize)
+                .append(')')
+                .toString();
     }
 
     void destroy() {
