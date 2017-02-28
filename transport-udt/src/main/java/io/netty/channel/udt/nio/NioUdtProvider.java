@@ -38,7 +38,10 @@ import java.nio.channels.spi.SelectorProvider;
  * Provides {@link ChannelFactory} for UDT channels.
  * <p>
  * Provides {@link SelectorProvider} for UDT channels.
+ *
+ * @deprecated The UDT transport is no longer maintained and will be removed.
  */
+@Deprecated
 public final class NioUdtProvider<T extends UdtChannel> implements ChannelFactory<T> {
 
     /**

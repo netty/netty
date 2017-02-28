@@ -41,7 +41,10 @@ import static java.nio.channels.SelectionKey.*;
 
 /**
  * Byte Channel Connector for UDT Streams.
+ *
+ * @deprecated The UDT transport is no longer maintained and will be removed.
  */
+@Deprecated
 public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implements UdtChannel {
 
     private static final InternalLogger logger =

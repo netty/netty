@@ -31,7 +31,10 @@ import static io.netty.channel.udt.UdtChannelOption.*;
 
 /**
  * The default {@link UdtChannelConfig} implementation.
+ *
+ * @deprecated The UDT transport is no longer maintained and will be removed.
  */
+@Deprecated
 public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
         UdtChannelConfig {
 
