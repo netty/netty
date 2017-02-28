@@ -22,7 +22,10 @@ import io.netty.channel.udt.nio.NioUdtProvider;
  * UDT {@link ServerChannel}.
  * <p>
  * Supported UDT {@link UdtServerChannel} are available via {@link NioUdtProvider}.
+ *
+ * @deprecated The UDT transport is no longer maintained and will be removed.
  */
+@Deprecated
 public interface UdtServerChannel extends ServerChannel, UdtChannel {
 
 }
