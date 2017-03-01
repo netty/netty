@@ -966,7 +966,7 @@ public final class NetUtil {
     public static String toSocketAddressString(String host, int port) {
         String portStr = String.valueOf(port);
         return newSocketAddressStringBuilder(
-                host, portStr, isValidIpV4Address(host)).append(portStr).toString();
+                host, portStr, !isValidIpV6Address(host)).append(':').append(portStr).toString();
     }
 
     private static StringBuilder newSocketAddressStringBuilder(String host, String port, boolean ipv4) {
