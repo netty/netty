@@ -653,7 +653,7 @@ public abstract class SSLEngineTest {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 ChannelPipeline p = ch.pipeline();
-                SslHandler handler = serverSslCtx.newHandler(ch.alloc());
+                SslHandler handler = new SslHandler(serverSslCtx.newEngine(ch.alloc()));
                 if (serverInitEngine) {
                     mySetupMutualAuthServerInitSslHandler(handler);
                 }
@@ -696,7 +696,7 @@ public abstract class SSLEngineTest {
             protected void initChannel(Channel ch) throws Exception {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(clientSslCtx.newHandler(ch.alloc()));
+                p.addLast(new SslHandler(clientSslCtx.newEngine(ch.alloc())));
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
@@ -791,7 +791,7 @@ public abstract class SSLEngineTest {
             protected void initChannel(Channel ch) throws Exception {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(serverSslCtx.newHandler(ch.alloc()));
+                p.addLast(new SslHandler(serverSslCtx.newEngine(ch.alloc())));
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
@@ -831,7 +831,7 @@ public abstract class SSLEngineTest {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
                 ChannelPipeline p = ch.pipeline();
                 InetSocketAddress remoteAddress = (InetSocketAddress) serverChannel.localAddress();
-                SslHandler sslHandler = clientSslCtx.newHandler(ch.alloc(), expectedHost, 0);
+                SslHandler sslHandler = new SslHandler(clientSslCtx.newEngine(ch.alloc(), expectedHost, 0));
                 SSLParameters parameters = sslHandler.engine().getSSLParameters();
                 parameters.setEndpointIdentificationAlgorithm("HTTPS");
                 sslHandler.engine().setSSLParameters(parameters);
@@ -970,7 +970,7 @@ public abstract class SSLEngineTest {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(clientSslCtx.newHandler(ch.alloc()));
+                p.addLast(new SslHandler(clientSslCtx.newEngine(ch.alloc())));
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
@@ -1124,7 +1124,7 @@ public abstract class SSLEngineTest {
                         ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                         ChannelPipeline p = ch.pipeline();
-                        p.addLast(serverSslCtx.newHandler(ch.alloc()));
+                        p.addLast(new SslHandler(serverSslCtx.newEngine(ch.alloc())));
                         p.addLast(new ChannelInboundHandlerAdapter() {
                             @Override
                             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
@@ -1176,7 +1176,7 @@ public abstract class SSLEngineTest {
                         ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                         ChannelPipeline p = ch.pipeline();
-                        SslHandler sslHandler = clientSslCtx.newHandler(ch.alloc());
+                        SslHandler sslHandler = new SslHandler(clientSslCtx.newEngine(ch.alloc()));
                         // The renegotiate is not expected to succeed, so we should stop trying in a timely manner so
                         // the unit test can terminate relativley quicly.
                         sslHandler.setHandshakeTimeout(1, TimeUnit.SECONDS);
@@ -1427,7 +1427,7 @@ public abstract class SSLEngineTest {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(serverSslCtx.newHandler(ch.alloc()));
+                p.addLast(new SslHandler(serverSslCtx.newEngine(ch.alloc())));
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
@@ -1452,7 +1452,7 @@ public abstract class SSLEngineTest {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(clientSslCtx.newHandler(ch.alloc()));
+                p.addLast(new SslHandler(clientSslCtx.newEngine(ch.alloc())));
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
@@ -1493,7 +1493,7 @@ public abstract class SSLEngineTest {
             protected void initChannel(Channel ch) throws Exception {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
-                ch.pipeline().addFirst(serverSslCtx.newHandler(ch.alloc()));
+                ch.pipeline().addFirst(new SslHandler(serverSslCtx.newEngine(ch.alloc())));
                 ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {

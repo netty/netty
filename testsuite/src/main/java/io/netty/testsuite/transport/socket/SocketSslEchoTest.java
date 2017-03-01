@@ -247,7 +247,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                     SSLEngine sse = serverCtx.newEngine(sch.alloc());
                     serverSslHandler = new SslHandler(sse, delegatedTaskExecutor);
                 } else {
-                    serverSslHandler = serverCtx.newHandler(sch.alloc());
+                    serverSslHandler = new SslHandler(serverCtx.newEngine(sch.alloc()));
                 }
 
                 sch.pipeline().addLast("ssl", serverSslHandler);
@@ -268,7 +268,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                     SSLEngine cse = clientCtx.newEngine(sch.alloc());
                     clientSslHandler = new SslHandler(cse, delegatedTaskExecutor);
                 } else {
-                    clientSslHandler = clientCtx.newHandler(sch.alloc());
+                    clientSslHandler = new SslHandler(clientCtx.newEngine(sch.alloc()));
                 }
 
                 sch.pipeline().addLast("ssl", clientSslHandler);

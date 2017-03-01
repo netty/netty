@@ -25,18 +25,20 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
 import javax.crypto.Cipher;
 import javax.crypto.EncryptedPrivateKeyInfo;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
@@ -857,27 +859,41 @@ public abstract class SslContext {
 
     /**
      * Creates a new {@link SslHandler}.
+     * <p>HTTPS endpointIdentificationAlgorithm is set, hence hostname verification is enabled.</p>
      * <p>If {@link SslProvider#OPENSSL_REFCNT} is used then the returned {@link SslHandler} will release the engine
      * that is wrapped. If the returned {@link SslHandler} is not inserted into a pipeline then you may leak native
      * memory!
      * @return a new {@link SslHandler}
      */
     public final SslHandler newHandler(ByteBufAllocator alloc) {
-        return new SslHandler(newEngine(alloc), startTls);
+        SSLEngine sslEngine = newEngine(alloc);
+        setHttpsEndpointIdentificationAlgorithm(sslEngine);
+        return new SslHandler(sslEngine, startTls);
     }
 
     /**
      * Creates a new {@link SslHandler} with advisory peer information.
+     * <p>HTTPS endpointIdentificationAlgorithm is set, hence hostname verification is enabled.</p>
      * <p>If {@link SslProvider#OPENSSL_REFCNT} is used then the returned {@link SslHandler} will release the engine
      * that is wrapped. If the returned {@link SslHandler} is not inserted into a pipeline then you may leak native
-     * memory!
+     * memory!</p>
      * @param peerHost the non-authoritative name of the host
      * @param peerPort the non-authoritative port
      *
      * @return a new {@link SslHandler}
      */
     public final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort) {
-        return new SslHandler(newEngine(alloc, peerHost, peerPort), startTls);
+        SSLEngine sslEngine = newEngine(alloc, peerHost, peerPort);
+        setHttpsEndpointIdentificationAlgorithm(sslEngine);
+        return new SslHandler(sslEngine, startTls);
+    }
+
+    private static void setHttpsEndpointIdentificationAlgorithm(SSLEngine sslEngine) {
+        if (PlatformDependent.javaVersion() >= 7) {
+            SSLParameters sslParameters = sslEngine.getSSLParameters();
+            sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+            sslEngine.setSSLParameters(sslParameters);
+        }
     }
 
     /**
