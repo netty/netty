@@ -916,7 +916,6 @@ public final class NetUtil {
     }
 
     /**
->>>>>>> 0514b0c... Only add port to HOST header value if needed
      * Returns the {@link String} representation of an {@link InetAddress}.
      * <ul>
      * <li>Inet4Address results are identical to {@link InetAddress#getHostAddress()}</li>
