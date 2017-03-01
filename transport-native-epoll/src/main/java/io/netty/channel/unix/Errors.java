@@ -61,7 +61,7 @@ public final class Errors {
         private static final long serialVersionUID = 8222160204268655526L;
         private final int expectedErr;
         public NativeIoException(String method, int expectedErr) {
-            super(method + " failed: " + ERRORS[-expectedErr]);
+            super(method + "(..) failed: " + ERRORS[-expectedErr]);
             this.expectedErr = expectedErr;
         }
 
@@ -74,7 +74,7 @@ public final class Errors {
         private static final long serialVersionUID = -5532328671712318161L;
         private final int expectedErr;
         NativeConnectException(String method, int expectedErr) {
-            super(method + " failed: " + ERRORS[-expectedErr]);
+            super(method + "(..) failed: " + ERRORS[-expectedErr]);
             this.expectedErr = expectedErr;
         }
 
@@ -104,7 +104,7 @@ public final class Errors {
         if (err == ERROR_EISCONN_NEGATIVE) {
             throw new AlreadyConnectedException();
         }
-        throw new ConnectException(method + "() failed: " + ERRORS[-err]);
+        throw new ConnectException(method + "(..) failed: " + ERRORS[-err]);
     }
 
     public static NativeIoException newConnectionResetException(String method, int errnoNegative) {
@@ -114,7 +114,7 @@ public final class Errors {
     }
 
     public static NativeIoException newIOException(String method, int err) {
-        return new NativeIoException(method + "() failed: " + ERRORS[-err], err);
+        return new NativeIoException(method, err);
     }
 
     public static int ioResult(String method, int err, NativeIoException resetCause,
