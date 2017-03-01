@@ -37,7 +37,6 @@ import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ThrowableUtil;
 
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 
@@ -475,7 +474,7 @@ public abstract class WebSocketClientHandshaker {
 
         // if the port is not standard (80/443) its needed to add the port to the header.
         // See http://tools.ietf.org/html/rfc6454#section-6.2
-        return NetUtil.toSocketAddressString(InetSocketAddress.createUnresolved(host, port));
+        return NetUtil.toSocketAddressString(host, port);
     }
 
     static CharSequence websocketOriginValue(String host, int wsPort) {
