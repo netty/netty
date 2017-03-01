@@ -343,6 +343,32 @@ public class Http2MultiplexCodecTest {
         assertEquals("bar", channel.attr(key).get());
     }
 
+    @Test
+    public void outboundStreamShouldWriteGoAwayWithoutReset() {
+        childChannelInitializer.handler = new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                ctx.writeAndFlush(new DefaultHttp2GoAwayFrame(Http2Error.NO_ERROR));
+                ctx.fireChannelActive();
+            }
+        };
+
+        Http2StreamChannelBootstrap b = new Http2StreamChannelBootstrap();
+        b.parentChannel(parentChannel).handler(childChannelInitializer);
+        Channel childChannel = b.connect().channel();
+        assertTrue(childChannel.isActive());
+
+        Http2GoAwayFrame goAwayFrame = parentChannel.readOutbound();
+        assertNotNull(goAwayFrame);
+        goAwayFrame.release();
+
+        childChannel.close();
+        parentChannel.runPendingTasks();
+
+        Http2ResetFrame reset = parentChannel.readOutbound();
+        assertNull(reset);
+    }
+
     private LastInboundHandler streamActiveAndWriteHeaders(int streamId) {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         childChannelInitializer.handler = inboundHandler;
