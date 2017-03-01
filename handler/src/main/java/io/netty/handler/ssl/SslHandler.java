@@ -310,6 +310,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private volatile long handshakeTimeoutMillis = 10000;
     private volatile long closeNotifyFlushTimeoutMillis = 3000;
     private volatile long closeNotifyReadTimeoutMillis;
+    private volatile boolean closeOnHandshakeFailure = true;
 
     /**
      * Creates a new instance.
@@ -442,7 +443,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     /**
-     * Sets the timeout  for receiving the response for the close_notify that was triggered by closing the
+     * Sets the timeout for receiving the response for the close_notify that was triggered by closing the
      * {@link Channel}. This timeout starts after the close_notify message was successfully written to the
      * remote peer. Use {@code 0} to directly close the {@link Channel} and not wait for the response.
      */
@@ -459,6 +460,20 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     "closeNotifyReadTimeoutMillis: " + closeNotifyReadTimeoutMillis + " (expected: >= 0)");
         }
         this.closeNotifyReadTimeoutMillis = closeNotifyReadTimeoutMillis;
+    }
+
+    /**
+     * Sets if the {@link Channel} should be closed on a handshake failure, default is {@code true}.
+     */
+    public final void setCloseOnHandshakeFailure(boolean closeOnHandshakeFailure) {
+        this.closeOnHandshakeFailure = closeOnHandshakeFailure;
+    }
+
+    /**
+     * Gets if the {@link Channel} should be closed on a handshake failure, default is {@code true}.
+     */
+    public final boolean getCloseOnHandshakeFailure() {
+        return closeOnHandshakeFailure;
     }
 
     /**
@@ -1389,7 +1404,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private void notifyHandshakeFailure(Throwable cause) {
         if (handshakePromise.tryFailure(cause)) {
-            SslUtils.notifyHandshakeFailure(ctx, cause);
+            SslUtils.notifyHandshakeFailure(ctx, cause, closeOnHandshakeFailure);
         }
     }
 

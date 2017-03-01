@@ -32,6 +32,7 @@ import javax.net.ssl.X509TrustManager;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
@@ -48,6 +49,7 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -73,6 +75,59 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SslHandlerTest {
+
+    @Test
+    public void testPlainTextClose() throws Exception {
+        testPlainText(true);
+    }
+
+    @Test
+    public void testPlainTextNotClose() throws Exception {
+        testPlainText(false);
+    }
+
+    private static void testPlainText(final boolean close) throws Exception {
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        engine.setUseClientMode(false);
+
+        final byte[] bytes = new byte[512];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+
+        SslHandler handler = new SslHandler(engine);
+        handler.setCloseOnHandshakeFailure(close);
+        EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                // Remove the SslHandler and write back some bytes in plain text. This should success if the channel
+                // was not closed and fail otherwise.
+                ctx.pipeline().remove(SslHandler.class);
+                ctx.writeAndFlush(Unpooled.wrappedBuffer(bytes));
+                ctx.fireExceptionCaught(cause);
+            }
+        });
+
+        try {
+            ch.writeInbound(Unpooled.wrappedBuffer(bytes));
+            fail();
+        } catch (Throwable e) {
+            assertTrue(e instanceof NotSslRecordException);
+
+            if (!close) {
+                assertTrue(ch.finish());
+                assertNull(ch.readInbound());
+
+                ByteBuf expected = Unpooled.wrappedBuffer(bytes);
+                ByteBuf buffer = ch.readOutbound();
+                assertEquals(expected, buffer);
+
+                expected.release();
+                buffer.release();
+                assertNull(ch.readOutbound());
+            } else {
+                assertFalse(ch.finish());
+            }
+        }
+    }
 
     @Test
     public void testTruncatedPacket() throws Exception {
