@@ -45,9 +45,6 @@ public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
         if (msg instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) msg;
 
-            if (HttpUtil.is100ContinueExpected(req)) {
-                ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
-            }
             boolean keepAlive = HttpUtil.isKeepAlive(req);
             FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(CONTENT));
             response.headers().set(CONTENT_TYPE, "text/plain");
