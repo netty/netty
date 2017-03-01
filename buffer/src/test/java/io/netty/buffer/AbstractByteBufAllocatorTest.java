@@ -35,6 +35,11 @@ public abstract class AbstractByteBufAllocatorTest extends ByteBufAllocatorTest 
     }
 
     @Override
+    protected boolean isDirectExpected(boolean preferDirect) {
+        return preferDirect && PlatformDependent.hasUnsafe();
+    }
+
+    @Override
     protected final int defaultMaxCapacity() {
         return AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY;
     }
