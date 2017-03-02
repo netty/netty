@@ -186,9 +186,7 @@ public final class SslContextBuilder {
     }
 
     /**
-     * Trusted manager for verifying the remote endpoint's certificate. Using a {@link
-     * TrustManagerFactory} is only supported for {@link SslProvider#JDK}; for other providers,
-     * you must use {@link #trustManager(File)}. {@code null} uses the system default.
+     * Trusted manager for verifying the remote endpoint's certificate. {@code null} uses the system default.
      */
     public SslContextBuilder trustManager(TrustManagerFactory trustManagerFactory) {
         trustCertCollection = null;
@@ -315,9 +313,11 @@ public final class SslContextBuilder {
 
     /**
      * Identifying manager for this host. {@code keyManagerFactory} may be {@code null} for
-     * client contexts, which disables mutual authentication. Using a {@code KeyManagerFactory}
-     * is only supported for {@link SslProvider#JDK}; for other providers, you must use {@link
-     * #keyManager(File, File)} or {@link #keyManager(File, File, String)}.
+     * client contexts, which disables mutual authentication. Using a {@link KeyManagerFactory}
+     * is only supported for {@link SslProvider#JDK} or {@link SslProvider#OPENSSL} / {@link SslProvider#OPENSSL_REFCNT}
+     * if the used openssl version is 1.0.1+. You can check if your openssl version supports using a
+     * {@link KeyManagerFactory} by calling {@link OpenSsl#supportsKeyManagerFactory()}. If this is not the case
+     * you must use {@link #keyManager(File, File)} or {@link #keyManager(File, File, String)}.
      */
     public SslContextBuilder keyManager(KeyManagerFactory keyManagerFactory) {
         if (forServer) {
@@ -340,8 +340,8 @@ public final class SslContextBuilder {
 
     /**
      * The cipher suites to enable, in the order of preference. {@code cipherFilter} will be
-     * applied to the ciphers before use if provider is {@link SslProvider#JDK}. If {@code
-     * ciphers} is {@code null}, then the default cipher suites will be used.
+     * applied to the ciphers before use. If {@code ciphers} is {@code null}, then the default
+     * cipher suites will be used.
      */
     public SslContextBuilder ciphers(Iterable<String> ciphers, CipherSuiteFilter cipherFilter) {
         checkNotNull(cipherFilter, "cipherFilter");
