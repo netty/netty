@@ -17,16 +17,16 @@ package io.netty.buffer;
 
 import io.netty.util.internal.LongCounter;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 
 import java.nio.ByteBuffer;
 
 /**
  * Simplistic {@link ByteBufAllocator} implementation that does not pool anything.
  */
-public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator implements InstrumentedByteBufAllocator {
+public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator implements ByteBufAllocatorMetricProvider {
 
-    private final LongCounter directCounter = PlatformDependent.newLongCounter();
-    private final LongCounter heapCounter = PlatformDependent.newLongCounter();
+    private final UnpooledByteBufAllocatorMetric metric = new UnpooledByteBufAllocatorMetric();
     private final boolean disableLeakDetector;
 
     /**
@@ -97,13 +97,24 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
     }
 
     @Override
-    public long usedHeapMemory() {
-        return heapCounter.value();
+    public ByteBufAllocatorMetric metric() {
+        return metric;
     }
 
-    @Override
-    public long usedDirectMemory() {
-        return directCounter.value();
+    void incrementDirect(int amount) {
+        metric.directCounter.add(amount);
+    }
+
+    void decrementDirect(int amount) {
+        metric.directCounter.add(-amount);
+    }
+
+    void incrementHeap(int amount) {
+        metric.heapCounter.add(amount);
+    }
+
+    void decrementHeap(int amount) {
+        metric.heapCounter.add(-amount);
     }
 
     private static final class InstrumentedUnpooledUnsafeHeapByteBuf extends UnpooledUnsafeHeapByteBuf {
@@ -114,7 +125,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         @Override
         byte[] allocateArray(int initialCapacity) {
             byte[] bytes = super.allocateArray(initialCapacity);
-            ((UnpooledByteBufAllocator) alloc()).heapCounter.add(bytes.length);
+            ((UnpooledByteBufAllocator) alloc()).incrementHeap(bytes.length);
             return bytes;
         }
 
@@ -122,7 +133,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         void freeArray(byte[] array) {
             int length = array.length;
             super.freeArray(array);
-            ((UnpooledByteBufAllocator) alloc()).heapCounter.add(-length);
+            ((UnpooledByteBufAllocator) alloc()).decrementHeap(length);
         }
     }
 
@@ -134,7 +145,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         @Override
         byte[] allocateArray(int initialCapacity) {
             byte[] bytes = super.allocateArray(initialCapacity);
-            ((UnpooledByteBufAllocator) alloc()).heapCounter.add(bytes.length);
+            ((UnpooledByteBufAllocator) alloc()).incrementHeap(bytes.length);
             return bytes;
         }
 
@@ -142,7 +153,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         void freeArray(byte[] array) {
             int length = array.length;
             super.freeArray(array);
-            ((UnpooledByteBufAllocator) alloc()).heapCounter.add(-length);
+            ((UnpooledByteBufAllocator) alloc()).decrementHeap(length);
         }
     }
 
@@ -156,7 +167,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         @Override
         protected ByteBuffer allocateDirect(int initialCapacity) {
             ByteBuffer buffer = super.allocateDirect(initialCapacity);
-            ((UnpooledByteBufAllocator) alloc()).directCounter.add(buffer.capacity());
+            ((UnpooledByteBufAllocator) alloc()).incrementDirect(buffer.capacity());
             return buffer;
         }
 
@@ -164,7 +175,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         ByteBuffer reallocateDirect(ByteBuffer oldBuffer, int initialCapacity) {
             int capacity = oldBuffer.capacity();
             ByteBuffer buffer = super.reallocateDirect(oldBuffer, initialCapacity);
-            ((UnpooledByteBufAllocator) alloc()).directCounter.add(buffer.capacity() - capacity);
+            ((UnpooledByteBufAllocator) alloc()).incrementDirect(buffer.capacity() - capacity);
             return buffer;
         }
 
@@ -172,7 +183,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         protected void freeDirect(ByteBuffer buffer) {
             int capacity = buffer.capacity();
             super.freeDirect(buffer);
-            ((UnpooledByteBufAllocator) alloc()).directCounter.add(-capacity);
+            ((UnpooledByteBufAllocator) alloc()).decrementDirect(capacity);
         }
     }
 
@@ -185,7 +196,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         @Override
         protected ByteBuffer allocateDirect(int initialCapacity) {
             ByteBuffer buffer = super.allocateDirect(initialCapacity);
-            ((UnpooledByteBufAllocator) alloc()).directCounter.add(buffer.capacity());
+            ((UnpooledByteBufAllocator) alloc()).incrementDirect(buffer.capacity());
             return buffer;
         }
 
@@ -193,7 +204,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         protected void freeDirect(ByteBuffer buffer) {
             int capacity = buffer.capacity();
             super.freeDirect(buffer);
-            ((UnpooledByteBufAllocator) alloc()).directCounter.add(-capacity);
+            ((UnpooledByteBufAllocator) alloc()).decrementDirect(capacity);
         }
     }
 
@@ -206,7 +217,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         @Override
         protected ByteBuffer allocateDirect(int initialCapacity) {
             ByteBuffer buffer = super.allocateDirect(initialCapacity);
-            ((UnpooledByteBufAllocator) alloc()).directCounter.add(buffer.capacity());
+            ((UnpooledByteBufAllocator) alloc()).incrementDirect(buffer.capacity());
             return buffer;
         }
 
@@ -214,7 +225,28 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         protected void freeDirect(ByteBuffer buffer) {
             int capacity = buffer.capacity();
             super.freeDirect(buffer);
-            ((UnpooledByteBufAllocator) alloc()).directCounter.add(-capacity);
+            ((UnpooledByteBufAllocator) alloc()).decrementDirect(capacity);
+        }
+    }
+
+    private static final class UnpooledByteBufAllocatorMetric implements ByteBufAllocatorMetric {
+        final LongCounter directCounter = PlatformDependent.newLongCounter();
+        final LongCounter heapCounter = PlatformDependent.newLongCounter();
+
+        @Override
+        public long usedHeapMemory() {
+            return heapCounter.value();
+        }
+
+        @Override
+        public long usedDirectMemory() {
+            return directCounter.value();
+        }
+
+        @Override
+        public String toString() {
+            return StringUtil.simpleClassName(this) +
+                    "(usedHeapMemory: " + usedHeapMemory() + "; usedDirectMemory: " + usedDirectMemory() + ')';
         }
     }
 }
