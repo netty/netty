@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class PooledByteBufAllocator extends AbstractByteBufAllocator implements InstrumentedByteBufAllocator {
+public class PooledByteBufAllocator extends AbstractByteBufAllocator implements ByteBufAllocatorMetricProvider {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
     private static final int DEFAULT_NUM_HEAP_ARENA;
@@ -147,6 +147,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     private final List<PoolArenaMetric> directArenaMetrics;
     private final PoolThreadLocalCache threadCache;
     private final int chunkSize;
+    private final PooledByteBufAllocatorMetric metric;
 
     public PooledByteBufAllocator() {
         this(false);
@@ -254,6 +255,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             directArenas = null;
             directArenaMetrics = Collections.emptyList();
         }
+        metric = new PooledByteBufAllocatorMetric(this);
     }
 
     @SuppressWarnings("unchecked")
@@ -446,37 +448,57 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         }
     }
 
+    @Override
+    public PooledByteBufAllocatorMetric metric() {
+        return metric;
+    }
+
     /**
      * Return the number of heap arenas.
+     *
+     * @deprecated use {@link PooledByteBufAllocatorMetric#numHeapArenas()}.
      */
+    @Deprecated
     public int numHeapArenas() {
         return heapArenaMetrics.size();
     }
 
     /**
      * Return the number of direct arenas.
+     *
+     * @deprecated use {@link PooledByteBufAllocatorMetric#numDirectArenas()}.
      */
+    @Deprecated
     public int numDirectArenas() {
         return directArenaMetrics.size();
     }
 
     /**
      * Return a {@link List} of all heap {@link PoolArenaMetric}s that are provided by this pool.
+     *
+     * @deprecated use {@link PooledByteBufAllocatorMetric#heapArenas()}.
      */
+    @Deprecated
     public List<PoolArenaMetric> heapArenas() {
         return heapArenaMetrics;
     }
 
     /**
      * Return a {@link List} of all direct {@link PoolArenaMetric}s that are provided by this pool.
+     *
+     * @deprecated use {@link PooledByteBufAllocatorMetric#directArenas()}.
      */
+    @Deprecated
     public List<PoolArenaMetric> directArenas() {
         return directArenaMetrics;
     }
 
     /**
      * Return the number of thread local caches used by this {@link PooledByteBufAllocator}.
+     *
+     * @deprecated use {@link PooledByteBufAllocatorMetric#numThreadLocalCaches()}.
      */
+    @Deprecated
     public int numThreadLocalCaches() {
         PoolArena<?>[] arenas = heapArenas != null ? heapArenas : directArenas;
         if (arenas == null) {
@@ -493,39 +515,49 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
     /**
      * Return the size of the tiny cache.
+     *
+     * @deprecated use {@link PooledByteBufAllocatorMetric#tinyCacheSize()}.
      */
+    @Deprecated
     public int tinyCacheSize() {
         return tinyCacheSize;
     }
 
     /**
      * Return the size of the small cache.
+     *
+     * @deprecated use {@link PooledByteBufAllocatorMetric#smallCacheSize()}.
      */
+    @Deprecated
     public int smallCacheSize() {
         return smallCacheSize;
     }
 
     /**
      * Return the size of the normal cache.
+     *
+     * @deprecated use {@link PooledByteBufAllocatorMetric#normalCacheSize()}.
      */
+    @Deprecated
     public int normalCacheSize() {
         return normalCacheSize;
     }
 
     /**
      * Return the chunk size for an arena.
+     *
+     * @deprecated use {@link PooledByteBufAllocatorMetric#chunkSize()}.
      */
+    @Deprecated
     public final int chunkSize() {
         return chunkSize;
     }
 
-    @Override
-    public final long usedHeapMemory() {
+    final long usedHeapMemory() {
         return usedMemory(heapArenas);
     }
 
-    @Override
-    public final long usedDirectMemory() {
+    final long usedDirectMemory() {
         return usedMemory(directArenas);
     }
 
