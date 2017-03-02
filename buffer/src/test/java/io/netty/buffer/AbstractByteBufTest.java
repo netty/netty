@@ -2120,14 +2120,14 @@ public abstract class AbstractByteBufTest {
 
     private void testInternalNioBuffer(int a) {
         ByteBuf buffer = newBuffer(2);
-        ByteBuffer buf = buffer.internalNioBuffer(0, 1);
+        ByteBuffer buf = buffer.internalNioBuffer(buffer.readerIndex(), 1);
         assertEquals(1, buf.remaining());
 
         byte[] data = new byte[a];
         PlatformDependent.threadLocalRandom().nextBytes(data);
         buffer.writeBytes(data);
 
-        buf = buffer.internalNioBuffer(0, a);
+        buf = buffer.internalNioBuffer(buffer.readerIndex(), a);
         assertEquals(a, buf.remaining());
 
         for (int i = 0; i < a; i++) {
@@ -2972,7 +2972,8 @@ public abstract class AbstractByteBufTest {
 
     @Test(expected = IllegalReferenceCountException.class)
     public void testInternalNioBufferAfterRelease() {
-        releasedBuffer().internalNioBuffer(0, 1);
+        ByteBuf releasedBuffer = releasedBuffer();
+        releasedBuffer.internalNioBuffer(releasedBuffer.readerIndex(), 1);
     }
 
     @Test(expected = IllegalReferenceCountException.class)
