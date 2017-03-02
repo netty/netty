@@ -16,7 +16,6 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -99,39 +98,40 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
     @SuppressWarnings("unchecked")
     @Test
     public void testUsedDirectMemory() {
-        InstrumentedByteBufAllocator allocator = (InstrumentedByteBufAllocator) newAllocator(true);
-        assertEquals(0, allocator.usedDirectMemory());
+        T allocator =  newAllocator(true);
+        ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider) allocator).metric();
+        assertEquals(0, metric.usedDirectMemory());
         ByteBuf buffer = allocator.directBuffer(1024, 4096);
         int capacity = buffer.capacity();
-        assertEquals(expectedUsedMemory((T) allocator, capacity), allocator.usedDirectMemory());
+        assertEquals(expectedUsedMemory(allocator, capacity), metric.usedDirectMemory());
 
         // Double the size of the buffer
         buffer.capacity(capacity << 1);
         capacity = buffer.capacity();
-        assertEquals(buffer.toString(), expectedUsedMemory((T) allocator, capacity), allocator.usedDirectMemory());
+        assertEquals(buffer.toString(), expectedUsedMemory(allocator, capacity), metric.usedDirectMemory());
 
         buffer.release();
-        assertEquals(expectedUsedMemoryAfterRelease((T) allocator, capacity), allocator.usedDirectMemory());
+        assertEquals(expectedUsedMemoryAfterRelease(allocator, capacity), metric.usedDirectMemory());
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testUsedHeapMemory() {
-        InstrumentedByteBufAllocator allocator = (InstrumentedByteBufAllocator) newAllocator(true);
-        Assume.assumeTrue(allocator instanceof InstrumentedByteBufAllocator);
+        T allocator =  newAllocator(true);
+        ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider) allocator).metric();
 
-        assertEquals(0, allocator.usedHeapMemory());
+        assertEquals(0, metric.usedHeapMemory());
         ByteBuf buffer = allocator.heapBuffer(1024, 4096);
         int capacity = buffer.capacity();
-        assertEquals(expectedUsedMemory((T) allocator, capacity), allocator.usedHeapMemory());
+        assertEquals(expectedUsedMemory(allocator, capacity), metric.usedHeapMemory());
 
         // Double the size of the buffer
         buffer.capacity(capacity << 1);
         capacity = buffer.capacity();
-        assertEquals(expectedUsedMemory((T) allocator, capacity), allocator.usedHeapMemory());
+        assertEquals(expectedUsedMemory(allocator, capacity), metric.usedHeapMemory());
 
         buffer.release();
-        assertEquals(expectedUsedMemoryAfterRelease((T) allocator, capacity), allocator.usedHeapMemory());
+        assertEquals(expectedUsedMemoryAfterRelease(allocator, capacity), metric.usedHeapMemory());
     }
 
     protected long expectedUsedMemory(T allocator, int capacity) {

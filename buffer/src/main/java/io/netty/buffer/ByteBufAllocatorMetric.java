@@ -15,10 +15,7 @@
  */
 package io.netty.buffer;
 
-/**
- * {@link ByteBufAllocator} which exposes metrics.
- */
-public interface InstrumentedByteBufAllocator extends ByteBufAllocator {
+public interface ByteBufAllocatorMetric {
     /**
      * Returns the number of bytes of heap memory used by a {@link ByteBufAllocator} or {@code -1} if unknown.
      */
