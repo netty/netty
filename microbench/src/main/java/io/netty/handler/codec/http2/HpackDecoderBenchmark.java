@@ -29,16 +29,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.microbench.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Headers;
-import io.netty.handler.codec.http2.Http2HeadersEncoder;
-import io.netty.handler.codec.http2.internal.hpack.Decoder;
-import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -50,14 +44,11 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
-import static io.netty.microbench.http2.internal.hpack.HpackUtilBenchmark.newTestEncoder;
 
-public class DecoderBenchmark extends AbstractMicrobenchmark {
+public class HpackDecoderBenchmark extends AbstractMicrobenchmark {
 
     @Param
-    public HeadersSize size;
+    public HpackHeadersSize size;
 
     @Param({ "true", "false" })
     public boolean sensitive;
@@ -69,7 +60,7 @@ public class DecoderBenchmark extends AbstractMicrobenchmark {
 
     @Setup(Level.Trial)
     public void setup() throws Http2Exception {
-        input = Unpooled.wrappedBuffer(getSerializedHeaders(Util.http2Headers(size, limitToAscii), sensitive));
+        input = Unpooled.wrappedBuffer(getSerializedHeaders(HpackUtil.http2Headers(size, limitToAscii), sensitive));
     }
 
     @TearDown(Level.Trial)
@@ -80,7 +71,7 @@ public class DecoderBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     public void decode(final Blackhole bh) throws Http2Exception {
-        Decoder decoder = new Decoder(DEFAULT_HEADER_LIST_SIZE, 32);
+        HpackDecoder hpackDecoder = new HpackDecoder(DEFAULT_HEADER_LIST_SIZE, 32);
         @SuppressWarnings("unchecked")
         Http2Headers headers =
                 new DefaultHttp2Headers() {
@@ -90,14 +81,14 @@ public class DecoderBenchmark extends AbstractMicrobenchmark {
                 return this;
             }
         };
-        decoder.decode(0, input.duplicate(), headers);
+        hpackDecoder.decode(0, input.duplicate(), headers);
     }
 
     private byte[] getSerializedHeaders(Http2Headers headers, boolean sensitive) throws Http2Exception {
-        Encoder encoder = newTestEncoder();
+        HpackEncoder hpackEncoder = HpackUtilBenchmark.newTestEncoder();
         ByteBuf out = size.newOutBuffer();
         try {
-            encoder.encodeHeaders(3 /* randomly chosen */, out, headers,
+            hpackEncoder.encodeHeaders(3 /* randomly chosen */, out, headers,
                                   sensitive ? Http2HeadersEncoder.ALWAYS_SENSITIVE
                                             : Http2HeadersEncoder.NEVER_SENSITIVE);
             byte[] bytes = new byte[out.readableBytes()];

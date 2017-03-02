@@ -29,12 +29,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.equalsConstantTime;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-class HeaderField {
+class HpackHeaderField {
 
     // Section 4.1. Calculating Table Size
     // The additional 32 octets account for an estimated
@@ -49,32 +48,32 @@ class HeaderField {
     final CharSequence value;
 
     // This constructor can only be used if name and value are ISO-8859-1 encoded.
-    HeaderField(CharSequence name, CharSequence value) {
+    HpackHeaderField(CharSequence name, CharSequence value) {
         this.name = checkNotNull(name, "name");
         this.value = checkNotNull(value, "value");
     }
 
-    int size() {
+    final int size() {
         return name.length() + value.length() + HEADER_ENTRY_OVERHEAD;
     }
 
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         // TODO(nmittler): Netty's build rules require this. Probably need a better implementation.
         return super.hashCode();
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public final boolean equals(Object obj) {
         if (obj == this) {
             return true;
         }
-        if (!(obj instanceof HeaderField)) {
+        if (!(obj instanceof HpackHeaderField)) {
             return false;
         }
-        HeaderField other = (HeaderField) obj;
+        HpackHeaderField other = (HpackHeaderField) obj;
         // To avoid short circuit behavior a bitwise operator is used instead of a boolean operator.
-        return (equalsConstantTime(name, other.name) & equalsConstantTime(value, other.value)) != 0;
+        return (HpackUtil.equalsConstantTime(name, other.name) & HpackUtil.equalsConstantTime(value, other.value)) != 0;
     }
 
     @Override

@@ -29,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.util.AsciiString;
 import io.netty.util.internal.ConstantTimeUtils;

@@ -29,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
@@ -41,10 +41,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Headers;
-import io.netty.handler.codec.http2.Http2HeadersEncoder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -60,11 +56,11 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SI
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2TestUtil.newTestEncoder;
 
-final class TestCase {
+final class HpackTestCase {
 
     private static final Gson GSON = new GsonBuilder()
             .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-            .registerTypeAdapter(HeaderField.class, new HeaderFieldDeserializer())
+            .registerTypeAdapter(HpackHeaderField.class, new HeaderFieldDeserializer())
             .create();
 
     int maxHeaderTableSize = -1;
@@ -72,39 +68,39 @@ final class TestCase {
 
     List<HeaderBlock> headerBlocks;
 
-    private TestCase() {
+    private HpackTestCase() {
     }
 
-    static TestCase load(InputStream is) throws IOException {
+    static HpackTestCase load(InputStream is) throws IOException {
         InputStreamReader r = new InputStreamReader(is);
-        TestCase testCase = GSON.fromJson(r, TestCase.class);
-        for (HeaderBlock headerBlock : testCase.headerBlocks) {
-            headerBlock.encodedBytes = Hex.decodeHex(headerBlock.getEncodedStr().toCharArray());
+        HpackTestCase hpackTestCase = GSON.fromJson(r, HpackTestCase.class);
+        for (HeaderBlock headerBlock : hpackTestCase.headerBlocks) {
+            headerBlock.encodedBytes = HpackHex.decodeHex(headerBlock.getEncodedStr().toCharArray());
         }
-        return testCase;
+        return hpackTestCase;
     }
 
     void testCompress() throws Exception {
-        Encoder encoder = createEncoder();
+        HpackEncoder hpackEncoder = createEncoder();
 
         for (HeaderBlock headerBlock : headerBlocks) {
 
             byte[] actual =
-                    encode(encoder, headerBlock.getHeaders(), headerBlock.getMaxHeaderTableSize(),
+                    encode(hpackEncoder, headerBlock.getHeaders(), headerBlock.getMaxHeaderTableSize(),
                             sensitiveHeaders);
 
             if (!Arrays.equals(actual, headerBlock.encodedBytes)) {
                 throw new AssertionError(
                         "\nEXPECTED:\n" + headerBlock.getEncodedStr() +
-                                "\nACTUAL:\n" + Hex.encodeHexString(actual));
+                                "\nACTUAL:\n" + HpackHex.encodeHexString(actual));
             }
 
-            List<HeaderField> actualDynamicTable = new ArrayList<HeaderField>();
-            for (int index = 0; index < encoder.length(); index++) {
-                actualDynamicTable.add(encoder.getHeaderField(index));
+            List<HpackHeaderField> actualDynamicTable = new ArrayList<HpackHeaderField>();
+            for (int index = 0; index < hpackEncoder.length(); index++) {
+                actualDynamicTable.add(hpackEncoder.getHeaderField(index));
             }
 
-            List<HeaderField> expectedDynamicTable = headerBlock.getDynamicTable();
+            List<HpackHeaderField> expectedDynamicTable = headerBlock.getDynamicTable();
 
             if (!expectedDynamicTable.equals(actualDynamicTable)) {
                 throw new AssertionError(
@@ -112,24 +108,24 @@ final class TestCase {
                                 "\nACTUAL DYNAMIC TABLE:\n" + actualDynamicTable);
             }
 
-            if (headerBlock.getTableSize() != encoder.size()) {
+            if (headerBlock.getTableSize() != hpackEncoder.size()) {
                 throw new AssertionError(
                         "\nEXPECTED TABLE SIZE: " + headerBlock.getTableSize() +
-                                "\n ACTUAL TABLE SIZE : " + encoder.size());
+                                "\n ACTUAL TABLE SIZE : " + hpackEncoder.size());
             }
         }
     }
 
     void testDecompress() throws Exception {
-        Decoder decoder = createDecoder();
+        HpackDecoder hpackDecoder = createDecoder();
 
         for (HeaderBlock headerBlock : headerBlocks) {
 
-            List<HeaderField> actualHeaders = decode(decoder, headerBlock.encodedBytes);
+            List<HpackHeaderField> actualHeaders = decode(hpackDecoder, headerBlock.encodedBytes);
 
-            List<HeaderField> expectedHeaders = new ArrayList<HeaderField>();
-            for (HeaderField h : headerBlock.getHeaders()) {
-                expectedHeaders.add(new HeaderField(h.name, h.value));
+            List<HpackHeaderField> expectedHeaders = new ArrayList<HpackHeaderField>();
+            for (HpackHeaderField h : headerBlock.getHeaders()) {
+                expectedHeaders.add(new HpackHeaderField(h.name, h.value));
             }
 
             if (!expectedHeaders.equals(actualHeaders)) {
@@ -138,12 +134,12 @@ final class TestCase {
                                 "\nACTUAL:\n" + actualHeaders);
             }
 
-            List<HeaderField> actualDynamicTable = new ArrayList<HeaderField>();
-            for (int index = 0; index < decoder.length(); index++) {
-                actualDynamicTable.add(decoder.getHeaderField(index));
+            List<HpackHeaderField> actualDynamicTable = new ArrayList<HpackHeaderField>();
+            for (int index = 0; index < hpackDecoder.length(); index++) {
+                actualDynamicTable.add(hpackDecoder.getHeaderField(index));
             }
 
-            List<HeaderField> expectedDynamicTable = headerBlock.getDynamicTable();
+            List<HpackHeaderField> expectedDynamicTable = headerBlock.getDynamicTable();
 
             if (!expectedDynamicTable.equals(actualDynamicTable)) {
                 throw new AssertionError(
@@ -151,15 +147,15 @@ final class TestCase {
                                 "\nACTUAL DYNAMIC TABLE:\n" + actualDynamicTable);
             }
 
-            if (headerBlock.getTableSize() != decoder.size()) {
+            if (headerBlock.getTableSize() != hpackDecoder.size()) {
                 throw new AssertionError(
                         "\nEXPECTED TABLE SIZE: " + headerBlock.getTableSize() +
-                                "\n ACTUAL TABLE SIZE : " + decoder.size());
+                                "\n ACTUAL TABLE SIZE : " + hpackDecoder.size());
             }
         }
     }
 
-    private Encoder createEncoder() {
+    private HpackEncoder createEncoder() {
         int maxHeaderTableSize = this.maxHeaderTableSize;
         if (maxHeaderTableSize == -1) {
             maxHeaderTableSize = Integer.MAX_VALUE;
@@ -172,16 +168,16 @@ final class TestCase {
         }
     }
 
-    private Decoder createDecoder() {
+    private HpackDecoder createDecoder() {
         int maxHeaderTableSize = this.maxHeaderTableSize;
         if (maxHeaderTableSize == -1) {
             maxHeaderTableSize = Integer.MAX_VALUE;
         }
 
-        return new Decoder(DEFAULT_HEADER_LIST_SIZE, 32, maxHeaderTableSize);
+        return new HpackDecoder(DEFAULT_HEADER_LIST_SIZE, 32, maxHeaderTableSize);
     }
 
-    private static byte[] encode(Encoder encoder, List<HeaderField> headers, int maxHeaderTableSize,
+    private static byte[] encode(HpackEncoder hpackEncoder, List<HpackHeaderField> headers, int maxHeaderTableSize,
                                  final boolean sensitive) throws Http2Exception {
         Http2Headers http2Headers = toHttp2Headers(headers);
         Http2HeadersEncoder.SensitivityDetector sensitivityDetector = new Http2HeadersEncoder.SensitivityDetector() {
@@ -193,10 +189,10 @@ final class TestCase {
         ByteBuf buffer = Unpooled.buffer();
         try {
             if (maxHeaderTableSize != -1) {
-                encoder.setMaxHeaderTableSize(buffer, maxHeaderTableSize);
+                hpackEncoder.setMaxHeaderTableSize(buffer, maxHeaderTableSize);
             }
 
-            encoder.encodeHeaders(3 /* randomly chosen */, buffer, http2Headers, sensitivityDetector);
+            hpackEncoder.encodeHeaders(3 /* randomly chosen */, buffer, http2Headers, sensitivityDetector);
             byte[] bytes = new byte[buffer.readableBytes()];
             buffer.readBytes(bytes);
             return bytes;
@@ -205,20 +201,20 @@ final class TestCase {
         }
     }
 
-    private static Http2Headers toHttp2Headers(List<HeaderField> inHeaders) {
+    private static Http2Headers toHttp2Headers(List<HpackHeaderField> inHeaders) {
         Http2Headers headers = new DefaultHttp2Headers(false);
-        for (HeaderField e : inHeaders) {
+        for (HpackHeaderField e : inHeaders) {
             headers.add(e.name, e.value);
         }
         return headers;
     }
 
-    private static List<HeaderField> decode(Decoder decoder, byte[] expected) throws Exception {
+    private static List<HpackHeaderField> decode(HpackDecoder hpackDecoder, byte[] expected) throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(expected);
         try {
-            List<HeaderField> headers = new ArrayList<HeaderField>();
+            List<HpackHeaderField> headers = new ArrayList<HpackHeaderField>();
             TestHeaderListener listener = new TestHeaderListener(headers);
-            decoder.decode(0, in, listener);
+            hpackDecoder.decode(0, in, listener);
             return headers;
         } finally {
             in.release();
@@ -237,8 +233,8 @@ final class TestCase {
         private int maxHeaderTableSize = -1;
         private byte[] encodedBytes;
         private List<String> encoded;
-        private List<HeaderField> headers;
-        private List<HeaderField> dynamicTable;
+        private List<HpackHeaderField> headers;
+        private List<HpackHeaderField> dynamicTable;
         private int tableSize;
 
         private int getMaxHeaderTableSize() {
@@ -249,11 +245,11 @@ final class TestCase {
             return concat(encoded).replaceAll(" ", "");
         }
 
-        public List<HeaderField> getHeaders() {
+        public List<HpackHeaderField> getHeaders() {
             return headers;
         }
 
-        public List<HeaderField> getDynamicTable() {
+        public List<HpackHeaderField> getDynamicTable() {
             return dynamicTable;
         }
 
@@ -262,11 +258,11 @@ final class TestCase {
         }
     }
 
-    static class HeaderFieldDeserializer implements JsonDeserializer<HeaderField> {
+    static class HeaderFieldDeserializer implements JsonDeserializer<HpackHeaderField> {
 
         @Override
-        public HeaderField deserialize(JsonElement json, Type typeOfT,
-                                       JsonDeserializationContext context) {
+        public HpackHeaderField deserialize(JsonElement json, Type typeOfT,
+                                            JsonDeserializationContext context) {
             JsonObject jsonObject = json.getAsJsonObject();
             Set<Map.Entry<String, JsonElement>> entrySet = jsonObject.entrySet();
             if (entrySet.size() != 1) {
@@ -275,7 +271,7 @@ final class TestCase {
             Map.Entry<String, JsonElement> entry = entrySet.iterator().next();
             String name = entry.getKey();
             String value = entry.getValue().getAsString();
-            return new HeaderField(name, value);
+            return new HpackHeaderField(name, value);
         }
     }
 }

@@ -31,23 +31,23 @@
  * limitations under the License.
  */
 
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 /**
  * Extracted from org/apache/commons/codec/binary/Hex.java Copyright Apache Software Foundation
  */
-final class Hex {
-    private Hex() {
+final class HpackHex {
+    private HpackHex() {
     }
 
     /**
-     * Used to build output as Hex
+     * Used to build output as HpackHex
      */
     private static final char[] DIGITS_LOWER =
             {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
     /**
-     * Used to build output as Hex
+     * Used to build output as HpackHex
      */
     private static final char[] DIGITS_UPPER =
             {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
@@ -89,7 +89,7 @@ final class Hex {
      * each byte in order. The returned array will be double the length of the passed array, as it
      * takes two characters to represent any given byte.
      *
-     * @param data a byte[] to convert to Hex characters
+     * @param data a byte[] to convert to HpackHex characters
      * @return A char[] containing hexadecimal characters
      */
     public static char[] encodeHex(byte[] data) {
@@ -101,7 +101,7 @@ final class Hex {
      * each byte in order. The returned array will be double the length of the passed array, as it
      * takes two characters to represent any given byte.
      *
-     * @param data a byte[] to convert to Hex characters
+     * @param data a byte[] to convert to HpackHex characters
      * @param toLowerCase <code>true</code> converts to lowercase, <code>false</code> to uppercase
      * @return A char[] containing hexadecimal characters
      * @since 1.4
@@ -115,7 +115,7 @@ final class Hex {
      * each byte in order. The returned array will be double the length of the passed array, as it
      * takes two characters to represent any given byte.
      *
-     * @param data a byte[] to convert to Hex characters
+     * @param data a byte[] to convert to HpackHex characters
      * @param toDigits the output alphabet
      * @return A char[] containing hexadecimal characters
      * @since 1.4
@@ -136,7 +136,7 @@ final class Hex {
      * order. The returned String will be double the length of the passed array, as it takes two
      * characters to represent any given byte.
      *
-     * @param data a byte[] to convert to Hex characters
+     * @param data a byte[] to convert to HpackHex characters
      * @return A String containing hexadecimal characters
      * @since 1.4
      */

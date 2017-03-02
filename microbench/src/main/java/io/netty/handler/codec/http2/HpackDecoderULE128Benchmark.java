@@ -13,12 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.microbench.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.Http2Error;
-import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -40,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
-public class DecoderULE128Benchmark extends AbstractMicrobenchmark {
+public class HpackDecoderULE128Benchmark extends AbstractMicrobenchmark {
     private static final Http2Exception DECODE_ULE_128_TO_LONG_DECOMPRESSION_EXCEPTION =
             new Http2Exception(Http2Error.COMPRESSION_ERROR);
     private static final Http2Exception DECODE_ULE_128_TO_INT_DECOMPRESSION_EXCEPTION =

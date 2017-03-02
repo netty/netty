@@ -29,11 +29,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.HpackUtil.IndexType;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
@@ -41,6 +40,7 @@ import io.netty.util.CharsetUtil;
 import java.util.Arrays;
 import java.util.Map;
 
+import static io.netty.handler.codec.http2.HpackUtil.equalsConstantTime;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
@@ -50,21 +50,16 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.headerListSizeExceeded;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.internal.hpack.HeaderField.sizeOf;
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.INCREMENTAL;
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NEVER;
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType.NONE;
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.equalsConstantTime;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
-public final class Encoder {
+final class HpackEncoder {
     // a linked hash map of header fields
     private final HeaderEntry[] headerFields;
     private final HeaderEntry head = new HeaderEntry(-1, AsciiString.EMPTY_STRING,
             AsciiString.EMPTY_STRING, Integer.MAX_VALUE, null);
-    private final HuffmanEncoder huffmanEncoder = new HuffmanEncoder();
+    private final HpackHuffmanEncoder hpackHuffmanEncoder = new HpackHuffmanEncoder();
     private final byte hashMask;
     private final boolean ignoreMaxHeaderListSize;
     private long size;
@@ -74,21 +69,21 @@ public final class Encoder {
     /**
      * Creates a new encoder.
      */
-    public Encoder() {
+    HpackEncoder() {
         this(false);
     }
 
     /**
      * Creates a new encoder.
      */
-    public Encoder(boolean ignoreMaxHeaderListSize) {
+    public HpackEncoder(boolean ignoreMaxHeaderListSize) {
         this(ignoreMaxHeaderListSize, 16);
     }
 
     /**
      * Creates a new encoder.
      */
-    public Encoder(boolean ignoreMaxHeaderListSize, int arraySizeHint) {
+    public HpackEncoder(boolean ignoreMaxHeaderListSize, int arraySizeHint) {
         this.ignoreMaxHeaderListSize = ignoreMaxHeaderListSize;
         maxHeaderTableSize = DEFAULT_HEADER_TABLE_SIZE;
         maxHeaderListSize = DEFAULT_HEADER_LIST_SIZE;
@@ -123,7 +118,7 @@ public final class Encoder {
             CharSequence value = header.getValue();
             // OK to increment now and check for bounds after because this value is limited to unsigned int and will not
             // overflow.
-            headerSize += sizeOf(name, value);
+            headerSize += HpackHeaderField.sizeOf(name, value);
             if (headerSize > maxHeaderListSize) {
                 headerListSizeExceeded(streamId, maxHeaderListSize, false);
             }
@@ -136,7 +131,8 @@ public final class Encoder {
         for (Map.Entry<CharSequence, CharSequence> header : headers) {
             CharSequence name = header.getKey();
             CharSequence value = header.getValue();
-            encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value), sizeOf(name, value));
+            encodeHeader(out, name, value, sensitivityDetector.isSensitive(name, value),
+                         HpackHeaderField.sizeOf(name, value));
         }
     }
 
@@ -149,16 +145,16 @@ public final class Encoder {
         // If the header value is sensitive then it must never be indexed
         if (sensitive) {
             int nameIndex = getNameIndex(name);
-            encodeLiteral(out, name, value, NEVER, nameIndex);
+            encodeLiteral(out, name, value, IndexType.NEVER, nameIndex);
             return;
         }
 
         // If the peer will only use the static table
         if (maxHeaderTableSize == 0) {
-            int staticTableIndex = StaticTable.getIndex(name, value);
+            int staticTableIndex = HpackStaticTable.getIndex(name, value);
             if (staticTableIndex == -1) {
-                int nameIndex = StaticTable.getIndex(name);
-                encodeLiteral(out, name, value, NONE, nameIndex);
+                int nameIndex = HpackStaticTable.getIndex(name);
+                encodeLiteral(out, name, value, IndexType.NONE, nameIndex);
             } else {
                 encodeInteger(out, 0x80, 7, staticTableIndex);
             }
@@ -168,23 +164,23 @@ public final class Encoder {
         // If the headerSize is greater than the max table size then it must be encoded literally
         if (headerSize > maxHeaderTableSize) {
             int nameIndex = getNameIndex(name);
-            encodeLiteral(out, name, value, NONE, nameIndex);
+            encodeLiteral(out, name, value, IndexType.NONE, nameIndex);
             return;
         }
 
         HeaderEntry headerField = getEntry(name, value);
         if (headerField != null) {
-            int index = getIndex(headerField.index) + StaticTable.length;
+            int index = getIndex(headerField.index) + HpackStaticTable.length;
             // Section 6.1. Indexed Header Field Representation
             encodeInteger(out, 0x80, 7, index);
         } else {
-            int staticTableIndex = StaticTable.getIndex(name, value);
+            int staticTableIndex = HpackStaticTable.getIndex(name, value);
             if (staticTableIndex != -1) {
                 // Section 6.1. Indexed Header Field Representation
                 encodeInteger(out, 0x80, 7, staticTableIndex);
             } else {
                 ensureCapacity(headerSize);
-                encodeLiteral(out, name, value, INCREMENTAL, getNameIndex(name));
+                encodeLiteral(out, name, value, IndexType.INCREMENTAL, getNameIndex(name));
                 add(name, value, headerSize);
             }
         }
@@ -255,10 +251,10 @@ public final class Encoder {
      * Encode string literal according to Section 5.2.
      */
     private void encodeStringLiteral(ByteBuf out, CharSequence string) {
-        int huffmanLength = huffmanEncoder.getEncodedLength(string);
+        int huffmanLength = hpackHuffmanEncoder.getEncodedLength(string);
         if (huffmanLength < string.length()) {
             encodeInteger(out, 0x80, 7, huffmanLength);
-            huffmanEncoder.encode(out, string);
+            hpackHuffmanEncoder.encode(out, string);
         } else {
             encodeInteger(out, 0x00, 7, string.length());
             if (string instanceof AsciiString) {
@@ -276,7 +272,7 @@ public final class Encoder {
     /**
      * Encode literal header field according to Section 6.2.
      */
-    private void encodeLiteral(ByteBuf out, CharSequence name, CharSequence value, HpackUtil.IndexType indexType,
+    private void encodeLiteral(ByteBuf out, CharSequence name, CharSequence value, IndexType indexType,
                                int nameIndex) {
         boolean nameIndexValid = nameIndex != -1;
         switch (indexType) {
@@ -299,11 +295,11 @@ public final class Encoder {
     }
 
     private int getNameIndex(CharSequence name) {
-        int index = StaticTable.getIndex(name);
+        int index = HpackStaticTable.getIndex(name);
         if (index == -1) {
             index = getIndex(name);
             if (index >= 0) {
-                index += StaticTable.length;
+                index += HpackStaticTable.length;
             }
         }
         return index;
@@ -340,7 +336,7 @@ public final class Encoder {
     /**
      * Return the header field at the given index. Exposed for testing.
      */
-    HeaderField getHeaderField(int index) {
+    HpackHeaderField getHeaderField(int index) {
         HeaderEntry entry = head;
         while (index-- >= 0) {
             entry = entry.before;
@@ -421,7 +417,7 @@ public final class Encoder {
     /**
      * Remove and return the oldest header field from the dynamic table.
      */
-    private HeaderField remove() {
+    private HpackHeaderField remove() {
         if (size == 0) {
             return null;
         }
@@ -465,9 +461,9 @@ public final class Encoder {
     }
 
     /**
-     * A linked hash map HeaderField entry.
+     * A linked hash map HpackHeaderField entry.
      */
-    private static class HeaderEntry extends HeaderField {
+    private static final class HeaderEntry extends HpackHeaderField {
         // These fields comprise the doubly linked list used for iteration.
         HeaderEntry before, after;
 

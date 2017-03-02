@@ -29,23 +29,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
-
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
+package io.netty.handler.codec.http2;
 
 import java.util.List;
 
 final class TestHeaderListener extends DefaultHttp2Headers {
 
-    private final List<HeaderField> headers;
+    private final List<HpackHeaderField> headers;
 
-    TestHeaderListener(List<HeaderField> headers) {
+    TestHeaderListener(List<HpackHeaderField> headers) {
         this.headers = headers;
     }
 
     @Override
     public TestHeaderListener add(CharSequence name, CharSequence value) {
-        headers.add(new HeaderField(name, value));
+        headers.add(new HpackHeaderField(name, value));
         return this;
     }
 }

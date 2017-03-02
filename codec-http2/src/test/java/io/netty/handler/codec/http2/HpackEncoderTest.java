@@ -13,12 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Headers;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,25 +25,25 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 
-public class EncoderTest {
-    private Decoder decoder;
-    private Encoder encoder;
+public class HpackEncoderTest {
+    private HpackDecoder hpackDecoder;
+    private HpackEncoder hpackEncoder;
     private Http2Headers mockHeaders;
 
     @Before
     public void setUp() throws Http2Exception {
-        encoder = new Encoder();
-        decoder = new Decoder(DEFAULT_HEADER_LIST_SIZE, 32);
+        hpackEncoder = new HpackEncoder();
+        hpackDecoder = new HpackDecoder(DEFAULT_HEADER_LIST_SIZE, 32);
         mockHeaders = mock(Http2Headers.class);
     }
 
     @Test
     public void testSetMaxHeaderTableSizeToMaxValue() throws Http2Exception {
         ByteBuf buf = Unpooled.buffer();
-        encoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
-        decoder.setMaxHeaderTableSize(MAX_HEADER_TABLE_SIZE);
-        decoder.decode(0, buf, mockHeaders);
-        assertEquals(MAX_HEADER_TABLE_SIZE, decoder.getMaxHeaderTableSize());
+        hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
+        hpackDecoder.setMaxHeaderTableSize(MAX_HEADER_TABLE_SIZE);
+        hpackDecoder.decode(0, buf, mockHeaders);
+        assertEquals(MAX_HEADER_TABLE_SIZE, hpackDecoder.getMaxHeaderTableSize());
         buf.release();
     }
 
@@ -53,7 +51,7 @@ public class EncoderTest {
     public void testSetMaxHeaderTableSizeOverflow() throws Http2Exception {
         ByteBuf buf = Unpooled.buffer();
         try {
-            encoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE + 1);
+            hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE + 1);
         } finally {
             buf.release();
         }

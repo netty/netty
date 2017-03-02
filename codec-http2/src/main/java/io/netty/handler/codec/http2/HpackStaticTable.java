@@ -29,22 +29,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.UnsupportedValueConverter;
-import io.netty.handler.codec.http2.CharSequenceMap;
 import io.netty.util.AsciiString;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.equalsConstantTime;
+import static io.netty.handler.codec.http2.HpackUtil.equalsConstantTime;
 
-final class StaticTable {
+final class HpackStaticTable {
 
     // Appendix A: Static Table
     // http://tools.ietf.org/html/rfc7541#appendix-A
-    private static final List<HeaderField> STATIC_TABLE = Arrays.asList(
+    private static final List<HpackHeaderField> STATIC_TABLE = Arrays.asList(
     /*  1 */ newEmptyHeaderField(":authority"),
     /*  2 */ newHeaderField(":method", "GET"),
     /*  3 */ newHeaderField(":method", "POST"),
@@ -108,12 +107,12 @@ final class StaticTable {
     /* 61 */ newEmptyHeaderField("www-authenticate")
     );
 
-    private static HeaderField newEmptyHeaderField(CharSequence name) {
+    private static HpackHeaderField newEmptyHeaderField(CharSequence name) {
         return newHeaderField(name, AsciiString.EMPTY_STRING);
     }
 
-    private static HeaderField newHeaderField(CharSequence name, CharSequence value) {
-        return new HeaderField(AsciiString.of(name), AsciiString.of(value));
+    private static HpackHeaderField newHeaderField(CharSequence name, CharSequence value) {
+        return new HpackHeaderField(AsciiString.of(name), AsciiString.of(value));
     }
 
     private static final CharSequenceMap<Integer> STATIC_INDEX_BY_NAME = createMap();
@@ -126,7 +125,7 @@ final class StaticTable {
     /**
      * Return the header field at the given index value.
      */
-    static HeaderField getEntry(int index) {
+    static HpackHeaderField getEntry(int index) {
         return STATIC_TABLE.get(index - 1);
     }
 
@@ -154,7 +153,7 @@ final class StaticTable {
 
         // Note this assumes all entries for a given header field are sequential.
         while (index <= length) {
-            HeaderField entry = getEntry(index);
+            HpackHeaderField entry = getEntry(index);
             if (equalsConstantTime(name, entry.name) == 0) {
                 break;
             }
@@ -176,7 +175,7 @@ final class StaticTable {
         // Iterate through the static table in reverse order to
         // save the smallest index for a given name in the map.
         for (int index = length; index > 0; index--) {
-            HeaderField entry = getEntry(index);
+            HpackHeaderField entry = getEntry(index);
             CharSequence name = entry.name;
             ret.set(name, index);
         }
@@ -184,6 +183,6 @@ final class StaticTable {
     }
 
     // singleton
-    private StaticTable() {
+    private HpackStaticTable() {
     }
 }

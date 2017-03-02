@@ -29,16 +29,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
-import static io.netty.handler.codec.http2.internal.hpack.HeaderField.HEADER_ENTRY_OVERHEAD;
 
-final class DynamicTable {
+final class HpackDynamicTable {
 
     // a circular queue of header fields
-    HeaderField[] headerFields;
+    HpackHeaderField[] hpackHeaderFields;
     int head;
     int tail;
     private long size;
@@ -47,7 +46,7 @@ final class DynamicTable {
     /**
      * Creates a new dynamic table with the specified initial capacity.
      */
-    DynamicTable(long initialCapacity) {
+    HpackDynamicTable(long initialCapacity) {
         setCapacity(initialCapacity);
     }
 
@@ -57,7 +56,7 @@ final class DynamicTable {
     public int length() {
         int length;
         if (head < tail) {
-            length = headerFields.length - tail + head;
+            length = hpackHeaderFields.length - tail + head;
         } else {
             length = head - tail;
         }
@@ -82,15 +81,15 @@ final class DynamicTable {
      * Return the header field at the given index. The first and newest entry is always at index 1,
      * and the oldest entry is at the index length().
      */
-    public HeaderField getEntry(int index) {
+    public HpackHeaderField getEntry(int index) {
         if (index <= 0 || index > length()) {
             throw new IndexOutOfBoundsException();
         }
         int i = head - index;
         if (i < 0) {
-            return headerFields[i + headerFields.length];
+            return hpackHeaderFields[i + hpackHeaderFields.length];
         } else {
-            return headerFields[i];
+            return hpackHeaderFields[i];
         }
     }
 
@@ -100,7 +99,7 @@ final class DynamicTable {
      * If the size of the new entry is larger than the table's capacity, the dynamic table will be
      * cleared.
      */
-    public void add(HeaderField header) {
+    public void add(HpackHeaderField header) {
         int headerSize = header.size();
         if (headerSize > capacity) {
             clear();
@@ -109,9 +108,9 @@ final class DynamicTable {
         while (capacity - size < headerSize) {
             remove();
         }
-        headerFields[head++] = header;
+        hpackHeaderFields[head++] = header;
         size += header.size();
-        if (head == headerFields.length) {
+        if (head == hpackHeaderFields.length) {
             head = 0;
         }
     }
@@ -119,14 +118,14 @@ final class DynamicTable {
     /**
      * Remove and return the oldest header field from the dynamic table.
      */
-    public HeaderField remove() {
-        HeaderField removed = headerFields[tail];
+    public HpackHeaderField remove() {
+        HpackHeaderField removed = hpackHeaderFields[tail];
         if (removed == null) {
             return null;
         }
         size -= removed.size();
-        headerFields[tail++] = null;
-        if (tail == headerFields.length) {
+        hpackHeaderFields[tail++] = null;
+        if (tail == hpackHeaderFields.length) {
             tail = 0;
         }
         return removed;
@@ -137,8 +136,8 @@ final class DynamicTable {
      */
     public void clear() {
         while (tail != head) {
-            headerFields[tail++] = null;
-            if (tail == headerFields.length) {
+            hpackHeaderFields[tail++] = null;
+            if (tail == hpackHeaderFields.length) {
                 tail = 0;
             }
         }
@@ -170,31 +169,31 @@ final class DynamicTable {
             }
         }
 
-        int maxEntries = (int) (capacity / HEADER_ENTRY_OVERHEAD);
-        if (capacity % HEADER_ENTRY_OVERHEAD != 0) {
+        int maxEntries = (int) (capacity / HpackHeaderField.HEADER_ENTRY_OVERHEAD);
+        if (capacity % HpackHeaderField.HEADER_ENTRY_OVERHEAD != 0) {
             maxEntries++;
         }
 
         // check if capacity change requires us to reallocate the array
-        if (headerFields != null && headerFields.length == maxEntries) {
+        if (hpackHeaderFields != null && hpackHeaderFields.length == maxEntries) {
             return;
         }
 
-        HeaderField[] tmp = new HeaderField[maxEntries];
+        HpackHeaderField[] tmp = new HpackHeaderField[maxEntries];
 
         // initially length will be 0 so there will be no copy
         int len = length();
         int cursor = tail;
         for (int i = 0; i < len; i++) {
-            HeaderField entry = headerFields[cursor++];
+            HpackHeaderField entry = hpackHeaderFields[cursor++];
             tmp[i] = entry;
-            if (cursor == headerFields.length) {
+            if (cursor == hpackHeaderFields.length) {
                 cursor = 0;
             }
         }
 
         tail = 0;
         head = tail + len;
-        headerFields = tmp;
+        hpackHeaderFields = tmp;
     }
 }
