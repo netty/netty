@@ -198,7 +198,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         handler.singleBuffer[0] = toByteBuffer(out, writerIndex,
                             out.writableBytes());
                         result = opensslEngine.unwrap(in.nioBuffers(readerIndex, len), handler.singleBuffer);
-                        out.writerIndex(writerIndex + result.bytesProduced());
                     } finally {
                         handler.singleBuffer[0] = null;
                     }
@@ -828,7 +827,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 newDirectIn = alloc.directBuffer(readableBytes);
                 newDirectIn.writeBytes(in, readerIndex, readableBytes);
                 in0 = singleBuffer;
-                in0[0] = newDirectIn.internalNioBuffer(0, readableBytes);
+                in0[0] = newDirectIn.internalNioBuffer(newDirectIn.readerIndex(), readableBytes);
             }
 
             for (;;) {
