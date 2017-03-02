@@ -29,12 +29,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.microbench.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http2.Http2Headers;
-import io.netty.handler.codec.http2.Http2HeadersEncoder;
-import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -56,18 +53,16 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.microbench.http2.internal.hpack.HpackUtilBenchmark.newTestEncoder;
-
 @Fork(1)
 @Threads(1)
 @State(Scope.Benchmark)
 @Warmup(iterations = 5)
 @Measurement(iterations = 5)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
-public class EncoderBenchmark extends AbstractMicrobenchmark {
+public class HpackEncoderBenchmark extends AbstractMicrobenchmark {
 
     @Param
-    public HeadersSize size;
+    public HpackHeadersSize size;
 
     @Param({ "true", "false" })
     public boolean sensitive;
@@ -84,7 +79,7 @@ public class EncoderBenchmark extends AbstractMicrobenchmark {
 
     @Setup(Level.Trial)
     public void setup() {
-        http2Headers = Util.http2Headers(size, limitToAscii);
+        http2Headers = HpackUtil.http2Headers(size, limitToAscii);
         if (duplicates) {
             int size = http2Headers.size();
             if (size > 0) {
@@ -108,9 +103,9 @@ public class EncoderBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
     public void encode(Blackhole bh) throws Exception {
-        Encoder encoder = newTestEncoder();
+        HpackEncoder hpackEncoder = HpackUtilBenchmark.newTestEncoder();
         output.clear();
-        encoder.encodeHeaders(3 /*randomly chosen*/, output, http2Headers, sensitivityDetector);
+        hpackEncoder.encodeHeaders(3 /*randomly chosen*/, output, http2Headers, sensitivityDetector);
         bh.consume(output);
     }
 }

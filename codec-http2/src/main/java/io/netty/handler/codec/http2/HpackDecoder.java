@@ -29,13 +29,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http2.Http2CodecUtil;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Headers;
-import io.netty.handler.codec.http2.internal.hpack.HpackUtil.IndexType;
+import io.netty.handler.codec.http2.HpackUtil.IndexType;
 import io.netty.util.AsciiString;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
@@ -52,25 +49,26 @@ import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
-public final class Decoder {
+final class HpackDecoder {
     private static final Http2Exception DECODE_ULE_128_DECOMPRESSION_EXCEPTION = unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - decompression failure"), Decoder.class, "decodeULE128(...)");
+            connectionError(COMPRESSION_ERROR, "HPACK - decompression failure"), HpackDecoder.class,
+            "decodeULE128(..)");
     private static final Http2Exception DECODE_ULE_128_TO_LONG_DECOMPRESSION_EXCEPTION = unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - long overflow"), Decoder.class, "decodeULE128(...)");
+            connectionError(COMPRESSION_ERROR, "HPACK - long overflow"), HpackDecoder.class, "decodeULE128(..)");
     private static final Http2Exception DECODE_ULE_128_TO_INT_DECOMPRESSION_EXCEPTION = unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - int overflow"), Decoder.class, "decodeULE128ToInt(...)");
+            connectionError(COMPRESSION_ERROR, "HPACK - int overflow"), HpackDecoder.class, "decodeULE128ToInt(..)");
     private static final Http2Exception DECODE_ILLEGAL_INDEX_VALUE = unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - illegal index value"), Decoder.class, "decode(...)");
+            connectionError(COMPRESSION_ERROR, "HPACK - illegal index value"), HpackDecoder.class, "decode(..)");
     private static final Http2Exception INDEX_HEADER_ILLEGAL_INDEX_VALUE = unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - illegal index value"), Decoder.class, "indexHeader(...)");
+            connectionError(COMPRESSION_ERROR, "HPACK - illegal index value"), HpackDecoder.class, "indexHeader(..)");
     private static final Http2Exception READ_NAME_ILLEGAL_INDEX_VALUE = unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - illegal index value"), Decoder.class, "readName(...)");
+            connectionError(COMPRESSION_ERROR, "HPACK - illegal index value"), HpackDecoder.class, "readName(..)");
     private static final Http2Exception INVALID_MAX_DYNAMIC_TABLE_SIZE = unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - invalid max dynamic table size"), Decoder.class,
-            "setDynamicTableSize(...)");
+            connectionError(COMPRESSION_ERROR, "HPACK - invalid max dynamic table size"), HpackDecoder.class,
+            "setDynamicTableSize(..)");
     private static final Http2Exception MAX_DYNAMIC_TABLE_SIZE_CHANGE_REQUIRED = unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - max dynamic table size change required"), Decoder.class,
-            "decode(...)");
+            connectionError(COMPRESSION_ERROR, "HPACK - max dynamic table size change required"), HpackDecoder.class,
+            "decode(..)");
     private static final byte READ_HEADER_REPRESENTATION = 0;
     private static final byte READ_MAX_DYNAMIC_TABLE_SIZE = 1;
     private static final byte READ_INDEXED_HEADER = 2;
@@ -82,8 +80,8 @@ public final class Decoder {
     private static final byte READ_LITERAL_HEADER_VALUE_LENGTH = 8;
     private static final byte READ_LITERAL_HEADER_VALUE = 9;
 
-    private final DynamicTable dynamicTable;
-    private final HuffmanDecoder huffmanDecoder;
+    private final HpackDynamicTable hpackDynamicTable;
+    private final HpackHuffmanDecoder hpackHuffmanDecoder;
     private long maxHeaderListSizeGoAway;
     private long maxHeaderListSize;
     private long maxDynamicTableSize;
@@ -98,7 +96,7 @@ public final class Decoder {
      *  (which is dangerous).
      * @param initialHuffmanDecodeCapacity Size of an intermediate buffer used during huffman decode.
      */
-    public Decoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity) {
+    HpackDecoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity) {
         this(maxHeaderListSize, initialHuffmanDecodeCapacity, DEFAULT_HEADER_TABLE_SIZE);
     }
 
@@ -106,14 +104,14 @@ public final class Decoder {
      * Exposed Used for testing only! Default values used in the initial settings frame are overriden intentionally
      * for testing but violate the RFC if used outside the scope of testing.
      */
-    Decoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity, int maxHeaderTableSize) {
+    HpackDecoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity, int maxHeaderTableSize) {
         this.maxHeaderListSize = checkPositive(maxHeaderListSize, "maxHeaderListSize");
         this.maxHeaderListSizeGoAway = Http2CodecUtil.calculateMaxHeaderListSizeGoAway(maxHeaderListSize);
 
         maxDynamicTableSize = encoderMaxDynamicTableSize = maxHeaderTableSize;
         maxDynamicTableSizeChangeRequired = false;
-        dynamicTable = new DynamicTable(maxHeaderTableSize);
-        huffmanDecoder = new HuffmanDecoder(initialHuffmanDecodeCapacity);
+        hpackDynamicTable = new HpackDynamicTable(maxHeaderTableSize);
+        hpackHuffmanDecoder = new HpackHuffmanDecoder(initialHuffmanDecodeCapacity);
     }
 
     /**
@@ -135,7 +133,7 @@ public final class Decoder {
                 case READ_HEADER_REPRESENTATION:
                     byte b = in.readByte();
                     if (maxDynamicTableSizeChangeRequired && (b & 0xE0) != 0x20) {
-                        // Encoder MUST signal maximum dynamic table size change
+                        // HpackEncoder MUST signal maximum dynamic table size change
                         throw MAX_DYNAMIC_TABLE_SIZE_CHANGE_REQUIRED;
                     }
                     if (b < 0) {
@@ -319,7 +317,7 @@ public final class Decoder {
             // decoder requires less space than encoder
             // encoder MUST signal this change
             maxDynamicTableSizeChangeRequired = true;
-            dynamicTable.setCapacity(maxDynamicTableSize);
+            hpackDynamicTable.setCapacity(maxDynamicTableSize);
         }
     }
 
@@ -349,28 +347,28 @@ public final class Decoder {
      * decoder.
      */
     public long getMaxHeaderTableSize() {
-        return dynamicTable.capacity();
+        return hpackDynamicTable.capacity();
     }
 
     /**
      * Return the number of header fields in the dynamic table. Exposed for testing.
      */
     int length() {
-        return dynamicTable.length();
+        return hpackDynamicTable.length();
     }
 
     /**
      * Return the size of the dynamic table. Exposed for testing.
      */
     long size() {
-        return dynamicTable.size();
+        return hpackDynamicTable.size();
     }
 
     /**
      * Return the header field at the given index. Exposed for testing.
      */
-    HeaderField getHeaderField(int index) {
-        return dynamicTable.getEntry(index + 1);
+    HpackHeaderField getHeaderField(int index) {
+        return hpackDynamicTable.getEntry(index + 1);
     }
 
     private void setDynamicTableSize(long dynamicTableSize) throws Http2Exception {
@@ -379,29 +377,29 @@ public final class Decoder {
         }
         encoderMaxDynamicTableSize = dynamicTableSize;
         maxDynamicTableSizeChangeRequired = false;
-        dynamicTable.setCapacity(dynamicTableSize);
+        hpackDynamicTable.setCapacity(dynamicTableSize);
     }
 
     private CharSequence readName(int index) throws Http2Exception {
-        if (index <= StaticTable.length) {
-            HeaderField headerField = StaticTable.getEntry(index);
-            return headerField.name;
+        if (index <= HpackStaticTable.length) {
+            HpackHeaderField hpackHeaderField = HpackStaticTable.getEntry(index);
+            return hpackHeaderField.name;
         }
-        if (index - StaticTable.length <= dynamicTable.length()) {
-            HeaderField headerField = dynamicTable.getEntry(index - StaticTable.length);
-            return headerField.name;
+        if (index - HpackStaticTable.length <= hpackDynamicTable.length()) {
+            HpackHeaderField hpackHeaderField = hpackDynamicTable.getEntry(index - HpackStaticTable.length);
+            return hpackHeaderField.name;
         }
         throw READ_NAME_ILLEGAL_INDEX_VALUE;
     }
 
     private long indexHeader(int streamId, int index, Http2Headers headers, long headersLength) throws Http2Exception {
-        if (index <= StaticTable.length) {
-            HeaderField headerField = StaticTable.getEntry(index);
-            return addHeader(streamId, headers, headerField.name, headerField.value, headersLength);
+        if (index <= HpackStaticTable.length) {
+            HpackHeaderField hpackHeaderField = HpackStaticTable.getEntry(index);
+            return addHeader(streamId, headers, hpackHeaderField.name, hpackHeaderField.value, headersLength);
         }
-        if (index - StaticTable.length <= dynamicTable.length()) {
-            HeaderField headerField = dynamicTable.getEntry(index - StaticTable.length);
-            return addHeader(streamId, headers, headerField.name, headerField.value, headersLength);
+        if (index - HpackStaticTable.length <= hpackDynamicTable.length()) {
+            HpackHeaderField hpackHeaderField = hpackDynamicTable.getEntry(index - HpackStaticTable.length);
+            return addHeader(streamId, headers, hpackHeaderField.name, hpackHeaderField.value, headersLength);
         }
         throw INDEX_HEADER_ILLEGAL_INDEX_VALUE;
     }
@@ -416,7 +414,7 @@ public final class Decoder {
                 break;
 
             case INCREMENTAL:
-                dynamicTable.add(new HeaderField(name, value));
+                hpackDynamicTable.add(new HpackHeaderField(name, value));
                 break;
 
             default:
@@ -438,7 +436,7 @@ public final class Decoder {
 
     private CharSequence readStringLiteral(ByteBuf in, int length, boolean huffmanEncoded) throws Http2Exception {
         if (huffmanEncoded) {
-            return huffmanDecoder.decode(in, length);
+            return hpackHuffmanDecoder.decode(in, length);
         }
         byte[] buf = new byte[length];
         in.readBytes(buf);

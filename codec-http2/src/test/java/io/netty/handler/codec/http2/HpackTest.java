@@ -29,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -72,8 +72,8 @@ public class HpackTest {
     @Test
     public void test() throws Exception {
         InputStream is = HpackTest.class.getResourceAsStream(TEST_DIR + fileName);
-        TestCase testCase = TestCase.load(is);
-        testCase.testCompress();
-        testCase.testDecompress();
+        HpackTestCase hpackTestCase = HpackTestCase.load(is);
+        hpackTestCase.testCompress();
+        hpackTestCase.testDecompress();
     }
 }

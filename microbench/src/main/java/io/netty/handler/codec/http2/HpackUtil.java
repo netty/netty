@@ -29,10 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.microbench.http2.internal.hpack;
-
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2Headers;
+package io.netty.handler.codec.http2;
 
 import java.util.HashMap;
 import java.util.List;
@@ -41,23 +38,23 @@ import java.util.Map;
 /**
  * Utility methods for hpack tests.
  */
-public final class Util {
-    private Util() {
+public final class HpackUtil {
+    private HpackUtil() {
     }
 
     /**
      * Internal key used to index a particular set of headers in the map.
      */
     private static class HeadersKey {
-        final HeadersSize size;
+        final HpackHeadersSize size;
         final boolean limitToAscii;
 
-        public HeadersKey(HeadersSize size, boolean limitToAscii) {
+        public HeadersKey(HpackHeadersSize size, boolean limitToAscii) {
             this.size = size;
             this.limitToAscii = limitToAscii;
         }
 
-        List<Header> newHeaders() {
+        List<HpackHeader> newHeaders() {
             return size.newHeaders(limitToAscii);
         }
 
@@ -86,12 +83,12 @@ public final class Util {
         }
     }
 
-    private static final Map<HeadersKey, List<Header>> headersMap;
+    private static final Map<HeadersKey, List<HpackHeader>> headersMap;
 
     static {
-        HeadersSize[] sizes = HeadersSize.values();
-        headersMap = new HashMap<HeadersKey, List<Header>>(sizes.length * 2);
-        for (HeadersSize size : sizes) {
+        HpackHeadersSize[] sizes = HpackHeadersSize.values();
+        headersMap = new HashMap<HeadersKey, List<HpackHeader>>(sizes.length * 2);
+        for (HpackHeadersSize size : sizes) {
             HeadersKey key = new HeadersKey(size, true);
             headersMap.put(key, key.newHeaders());
 
@@ -103,16 +100,16 @@ public final class Util {
     /**
      * Gets headers for the given size and whether the key/values should be limited to ASCII.
      */
-    static List<Header> headers(HeadersSize size, boolean limitToAscii) {
+    static List<HpackHeader> headers(HpackHeadersSize size, boolean limitToAscii) {
         return headersMap.get(new HeadersKey(size, limitToAscii));
     }
 
-    static Http2Headers http2Headers(HeadersSize size, boolean limitToAscii) {
-        List<Header> headers = headersMap.get(new HeadersKey(size, limitToAscii));
+    static Http2Headers http2Headers(HpackHeadersSize size, boolean limitToAscii) {
+        List<HpackHeader> hpackHeaders = headersMap.get(new HeadersKey(size, limitToAscii));
         Http2Headers http2Headers = new DefaultHttp2Headers(false);
-        for (int i = 0; i < headers.size(); ++i) {
-            Header header = headers.get(i);
-            http2Headers.add(header.name, header.value);
+        for (int i = 0; i < hpackHeaders.size(); ++i) {
+            HpackHeader hpackHeader = hpackHeaders.get(i);
+            http2Headers.add(hpackHeader.name, hpackHeader.value);
         }
         return http2Headers;
     }

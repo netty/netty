@@ -15,7 +15,7 @@
  */
 
 /*
- * Copyright 2014 Twitter, Inc.
+ * Copyright 2015 Twitter, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,10 +29,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.netty.handler.codec.http2;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+
+import java.util.List;
 
 /**
- * <a href="http://tools.ietf.org/html/rfc7541">HPACK: Header Compression for HTTP/2</a>.
- * Please note this implementation is only compliant when used with HTTP/2 and so not meant to be used outside of
- * this scope.
+ * Enum that indicates the size of the headers to be used for the benchmark.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+public enum HpackHeadersSize {
+    SMALL(5, 20, 40),
+    MEDIUM(20, 40, 80),
+    LARGE(100, 100, 300);
+
+    private final int numHeaders;
+    private final int nameLength;
+    private final int valueLength;
+
+    HpackHeadersSize(int numHeaders, int nameLength, int valueLength) {
+        this.numHeaders = numHeaders;
+        this.nameLength = nameLength;
+        this.valueLength = valueLength;
+    }
+
+    public List<HpackHeader> newHeaders(boolean limitAscii) {
+        return HpackHeader.createHeaders(numHeaders, nameLength, valueLength, limitAscii);
+    }
+
+    public ByteBuf newOutBuffer() {
+        return Unpooled.buffer(numHeaders * (nameLength + valueLength));
+    }
+}
