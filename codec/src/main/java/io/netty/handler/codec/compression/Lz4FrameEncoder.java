@@ -261,7 +261,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
             ByteBuffer outNioBuffer = out.internalNioBuffer(idx + HEADER_LENGTH, out.writableBytes() - HEADER_LENGTH);
             int pos = outNioBuffer.position();
             // We always want to start at position 0 as we take care of reusing the buffer in the encode(...) loop.
-            compressor.compress(buffer.internalNioBuffer(0, flushableBytes), outNioBuffer);
+            compressor.compress(buffer.internalNioBuffer(buffer.readerIndex(), flushableBytes), outNioBuffer);
             compressedLength = outNioBuffer.position() - pos;
         } catch (LZ4Exception e) {
             throw new CompressionException(e);
