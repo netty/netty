@@ -588,7 +588,7 @@ public final class ByteBufUtil {
             dst = alloc.buffer(length);
         }
         try {
-            final ByteBuffer dstBuf = dst.internalNioBuffer(0, length);
+            final ByteBuffer dstBuf = dst.internalNioBuffer(dst.readerIndex(), length);
             final int pos = dstBuf.position();
             CoderResult cr = encoder.encode(src, dstBuf, true);
             if (!cr.isUnderflow()) {
@@ -635,7 +635,7 @@ public final class ByteBufUtil {
             try {
                 buffer.writeBytes(src, readerIndex, len);
                 // Use internalNioBuffer(...) to reduce object creation.
-                decodeString(decoder, buffer.internalNioBuffer(0, len), dst);
+                decodeString(decoder, buffer.internalNioBuffer(buffer.readerIndex(), len), dst);
             } finally {
                 // Release the temporary buffer again.
                 buffer.release();
@@ -1087,7 +1087,7 @@ public final class ByteBufUtil {
                     ByteBuf heapBuffer =  buf.alloc().heapBuffer(length);
                     try {
                         heapBuffer.writeBytes(buf, index, length);
-                        decoder.decode(heapBuffer.internalNioBuffer(0, length));
+                        decoder.decode(heapBuffer.internalNioBuffer(heapBuffer.readerIndex(), length));
                     } finally {
                         heapBuffer.release();
                     }
