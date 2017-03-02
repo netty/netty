@@ -395,26 +395,21 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      */
     private int readPlaintextData(final ByteBuffer dst) {
         final int sslRead;
+        final int pos = dst.position();
         if (dst.isDirect()) {
-            final int pos = dst.position();
-            final long addr = Buffer.address(dst) + pos;
-            final int len = dst.limit() - pos;
-            sslRead = SSL.readFromSSL(ssl, addr, len);
+            sslRead = SSL.readFromSSL(ssl, Buffer.address(dst) + pos, dst.limit() - pos);
             if (sslRead > 0) {
                 dst.position(pos + sslRead);
             }
         } else {
-            final int pos = dst.position();
             final int limit = dst.limit();
             final int len = min(MAX_ENCRYPTED_PACKET_LENGTH, limit - pos);
             final ByteBuf buf = alloc.directBuffer(len);
             try {
-                final long addr = memoryAddress(buf);
-
-                sslRead = SSL.readFromSSL(ssl, addr, len);
+                sslRead = SSL.readFromSSL(ssl, memoryAddress(buf), len);
                 if (sslRead > 0) {
                     dst.limit(pos + sslRead);
-                    buf.getBytes(0, dst);
+                    buf.getBytes(buf.readerIndex(), dst);
                     dst.limit(limit);
                 }
             } finally {
@@ -646,8 +641,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 } else {
                     assert bioReadCopyBuf.readableBytes() <= dst.remaining() : "The destination buffer " + dst +
                             " didn't have enough remaining space to hold the encrypted content in " + bioReadCopyBuf;
-                    dst.put(bioReadCopyBuf.internalNioBuffer(bioReadCopyBuf.readerIndex(),
-                                                      bioReadCopyBuf.readerIndex() + bytesProduced));
+                    dst.put(bioReadCopyBuf.internalNioBuffer(bioReadCopyBuf.readerIndex(), bytesProduced));
                     bioReadCopyBuf.release();
                 }
             }
@@ -868,10 +862,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                         closeAll();
                                     }
                                     return newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status,
-                                            bytesConsumed, bytesProduced);
+                                                                       bytesConsumed, bytesProduced);
                                 } else {
                                     return sslReadErrorResult(SSL.getLastErrorNumber(), bytesConsumed,
-                                            bytesProduced);
+                                                              bytesProduced);
                                 }
                             }
                         }
@@ -1976,4 +1970,3 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 }
-
