@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.util.AsciiString;
 import org.junit.Before;
 import org.junit.Test;
@@ -119,13 +118,13 @@ public class DefaultHttp2HeadersDecoderTest {
     }
 
     private static ByteBuf encode(byte[]... entries) throws Exception {
-        Encoder encoder = newTestEncoder();
+        HpackEncoder hpackEncoder = newTestEncoder();
         ByteBuf out = Unpooled.buffer();
         Http2Headers http2Headers = new DefaultHttp2Headers(false);
         for (int ix = 0; ix < entries.length;) {
             http2Headers.add(new AsciiString(entries[ix++], false), new AsciiString(entries[ix++], false));
         }
-        encoder.encodeHeaders(3 /* randomly chosen */, out, http2Headers, NEVER_SENSITIVE);
+        hpackEncoder.encodeHeaders(3 /* randomly chosen */, out, http2Headers, NEVER_SENSITIVE);
         return out;
     }
 }

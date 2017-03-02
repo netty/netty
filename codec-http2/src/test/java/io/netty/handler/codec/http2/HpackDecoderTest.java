@@ -29,18 +29,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Headers;
 import org.junit.Before;
 import org.junit.Test;
 
+import static io.netty.handler.codec.http2.HpackDecoder.decodeULE128;
 import static io.netty.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
-import static io.netty.handler.codec.http2.internal.hpack.Decoder.decodeULE128;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.AsciiString.of;
 import static java.lang.Integer.MAX_VALUE;
@@ -53,19 +50,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-public class DecoderTest {
-    private Decoder decoder;
+public class HpackDecoderTest {
+    private HpackDecoder hpackDecoder;
     private Http2Headers mockHeaders;
 
     private static String hex(String s) {
-        return Hex.encodeHexString(s.getBytes());
+        return HpackHex.encodeHexString(s.getBytes());
     }
 
     private void decode(String encoded) throws Http2Exception {
-        byte[] b = Hex.decodeHex(encoded.toCharArray());
+        byte[] b = HpackHex.decodeHex(encoded.toCharArray());
         ByteBuf in = Unpooled.wrappedBuffer(b);
         try {
-            decoder.decode(0, in, mockHeaders);
+            hpackDecoder.decode(0, in, mockHeaders);
         } finally {
             in.release();
         }
@@ -73,7 +70,7 @@ public class DecoderTest {
 
     @Before
     public void setUp() throws Http2Exception {
-        decoder = new Decoder(8192, 32);
+        hpackDecoder = new HpackDecoder(8192, 32);
         mockHeaders = mock(Http2Headers.class);
     }
 
@@ -160,9 +157,9 @@ public class DecoderTest {
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
             final long expectedHeaderSize = 4026531870L; // based on the input above
-            decoder.setMaxHeaderTableSize(expectedHeaderSize);
-            decoder.decode(0, in, mockHeaders);
-            assertEquals(expectedHeaderSize, decoder.getMaxHeaderTableSize());
+            hpackDecoder.setMaxHeaderTableSize(expectedHeaderSize);
+            hpackDecoder.decode(0, in, mockHeaders);
+            assertEquals(expectedHeaderSize, hpackDecoder.getMaxHeaderTableSize());
         } finally {
             in.release();
         }
@@ -173,8 +170,8 @@ public class DecoderTest {
         byte[] input = {(byte) 0x3F, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x0E};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.setMaxHeaderTableSize(4026531870L - 1); // based on the input above ... 1 less than is above.
-            decoder.decode(0, in, mockHeaders);
+            hpackDecoder.setMaxHeaderTableSize(4026531870L - 1); // based on the input above ... 1 less than is above.
+            hpackDecoder.decode(0, in, mockHeaders);
         } finally {
             in.release();
         }
@@ -185,7 +182,7 @@ public class DecoderTest {
         byte[] input = {0, (byte) 0x80, 0};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(0, in, mockHeaders);
+            hpackDecoder.decode(0, in, mockHeaders);
             verify(mockHeaders, times(1)).add(EMPTY_STRING, EMPTY_STRING);
         } finally {
             in.release();
@@ -197,7 +194,7 @@ public class DecoderTest {
         byte[] input = {0, (byte) 0x81, -1};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(0, in, mockHeaders);
+            hpackDecoder.decode(0, in, mockHeaders);
         } finally {
             in.release();
         }
@@ -208,7 +205,7 @@ public class DecoderTest {
         byte[] input = {0, (byte) 0x84, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(0, in, mockHeaders);
+            hpackDecoder.decode(0, in, mockHeaders);
         } finally {
             in.release();
         }
@@ -219,7 +216,7 @@ public class DecoderTest {
         byte[] input = {0, (byte) 0x81, 0};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            decoder.decode(0, in, mockHeaders);
+            hpackDecoder.decode(0, in, mockHeaders);
         } finally {
             in.release();
         }
@@ -227,12 +224,12 @@ public class DecoderTest {
 
     @Test(expected = Http2Exception.class)
     public void testIncompleteIndex() throws Http2Exception {
-        byte[] compressed = Hex.decodeHex("FFF0".toCharArray());
+        byte[] compressed = HpackHex.decodeHex("FFF0".toCharArray());
         ByteBuf in = Unpooled.wrappedBuffer(compressed);
         try {
-            decoder.decode(0, in, mockHeaders);
+            hpackDecoder.decode(0, in, mockHeaders);
             assertEquals(1, in.readableBytes());
-            decoder.decode(0, in, mockHeaders);
+            hpackDecoder.decode(0, in, mockHeaders);
         } finally {
             in.release();
         }
@@ -259,16 +256,16 @@ public class DecoderTest {
     @Test
     public void testDynamicTableSizeUpdate() throws Http2Exception {
         decode("20");
-        assertEquals(0, decoder.getMaxHeaderTableSize());
+        assertEquals(0, hpackDecoder.getMaxHeaderTableSize());
         decode("3FE11F");
-        assertEquals(4096, decoder.getMaxHeaderTableSize());
+        assertEquals(4096, hpackDecoder.getMaxHeaderTableSize());
     }
 
     @Test
     public void testDynamicTableSizeUpdateRequired() throws Http2Exception {
-        decoder.setMaxHeaderTableSize(32);
+        hpackDecoder.setMaxHeaderTableSize(32);
         decode("3F00");
-        assertEquals(31, decoder.getMaxHeaderTableSize());
+        assertEquals(31, hpackDecoder.getMaxHeaderTableSize());
     }
 
     @Test(expected = Http2Exception.class)
@@ -279,14 +276,14 @@ public class DecoderTest {
 
     @Test(expected = Http2Exception.class)
     public void testInsidiousMaxDynamicTableSize() throws Http2Exception {
-        decoder.setMaxHeaderTableSize(MAX_VALUE);
+        hpackDecoder.setMaxHeaderTableSize(MAX_VALUE);
         // max header table size sign overflow
         decode("3FE1FFFFFF07");
     }
 
     @Test
     public void testMaxValidDynamicTableSize() throws Http2Exception {
-        decoder.setMaxHeaderTableSize(MAX_VALUE);
+        hpackDecoder.setMaxHeaderTableSize(MAX_VALUE);
         String baseValue = "3FE1FFFFFF0";
         for (int i = 0; i < 7; ++i) {
             decode(baseValue + i);
@@ -295,22 +292,22 @@ public class DecoderTest {
 
     @Test
     public void testReduceMaxDynamicTableSize() throws Http2Exception {
-        decoder.setMaxHeaderTableSize(0);
-        assertEquals(0, decoder.getMaxHeaderTableSize());
+        hpackDecoder.setMaxHeaderTableSize(0);
+        assertEquals(0, hpackDecoder.getMaxHeaderTableSize());
         decode("2081");
     }
 
     @Test(expected = Http2Exception.class)
     public void testTooLargeDynamicTableSizeUpdate() throws Http2Exception {
-        decoder.setMaxHeaderTableSize(0);
-        assertEquals(0, decoder.getMaxHeaderTableSize());
+        hpackDecoder.setMaxHeaderTableSize(0);
+        assertEquals(0, hpackDecoder.getMaxHeaderTableSize());
         decode("21"); // encoder max header table size not small enough
     }
 
     @Test(expected = Http2Exception.class)
     public void testMissingDynamicTableSizeUpdate() throws Http2Exception {
-        decoder.setMaxHeaderTableSize(0);
-        assertEquals(0, decoder.getMaxHeaderTableSize());
+        hpackDecoder.setMaxHeaderTableSize(0);
+        assertEquals(0, hpackDecoder.getMaxHeaderTableSize());
         decode("81");
     }
 
@@ -429,8 +426,8 @@ public class DecoderTest {
         throws Http2Exception {
         ByteBuf in = Unpooled.buffer(200);
         try {
-            decoder.setMaxHeaderListSize(100, 200);
-            Encoder encoder = new Encoder(true);
+            hpackDecoder.setMaxHeaderListSize(100, 200);
+            HpackEncoder hpackEncoder = new HpackEncoder(true);
 
             // encode headers that are slightly larger than maxHeaderListSize
             // but smaller than maxHeaderListSizeGoAway
@@ -439,13 +436,13 @@ public class DecoderTest {
             toEncode.add("test_2", "2");
             toEncode.add("long", String.format("%0100d", 0).replace('0', 'A'));
             toEncode.add("test_3", "3");
-            encoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
+            hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
 
             // decode the headers, we should get an exception, but
             // the decoded headers object should contain all of the headers
             Http2Headers decoded = new DefaultHttp2Headers();
             try {
-                decoder.decode(1, in, decoded);
+                hpackDecoder.decode(1, in, decoded);
                 fail();
             } catch (Http2Exception e) {
                 assertTrue(e instanceof Http2Exception.HeaderListSizeException);

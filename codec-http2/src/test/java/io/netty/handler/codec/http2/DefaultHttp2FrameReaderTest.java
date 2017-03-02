@@ -18,7 +18,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,7 +42,7 @@ public class DefaultHttp2FrameReaderTest {
     private DefaultHttp2FrameReader frameReader;
 
     // Used to generate frame
-    private Encoder encoder;
+    private HpackEncoder hpackEncoder;
 
     @Before
     public void setUp() throws Exception {
@@ -52,7 +51,7 @@ public class DefaultHttp2FrameReaderTest {
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
 
         frameReader = new DefaultHttp2FrameReader();
-        encoder = new Encoder();
+        hpackEncoder = new HpackEncoder();
     }
 
     @After
@@ -338,7 +337,7 @@ public class DefaultHttp2FrameReaderTest {
             Http2Flags flags) throws Http2Exception {
         ByteBuf headerBlock = Unpooled.buffer();
         try {
-            encoder.encodeHeaders(streamId, headerBlock, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
+            hpackEncoder.encodeHeaders(streamId, headerBlock, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
             writeFrameHeader(output, headerBlock.readableBytes(), HEADERS, flags, streamId);
             output.writeBytes(headerBlock, headerBlock.readableBytes());
         } finally {
@@ -351,7 +350,7 @@ public class DefaultHttp2FrameReaderTest {
             ByteBuf dataPayload) throws Http2Exception {
         ByteBuf headerBlock = Unpooled.buffer();
         try {
-            encoder.encodeHeaders(streamId, headerBlock, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
+            hpackEncoder.encodeHeaders(streamId, headerBlock, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
             writeFrameHeader(output, headerBlock.readableBytes(), HEADERS,
                     new Http2Flags().endOfHeaders(true), streamId);
             output.writeBytes(headerBlock, headerBlock.readableBytes());
@@ -370,7 +369,7 @@ public class DefaultHttp2FrameReaderTest {
         try {
             writeUnsignedInt(streamDependency, headerBlock);
             headerBlock.writeByte(weight - 1);
-            encoder.encodeHeaders(streamId, headerBlock, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
+            hpackEncoder.encodeHeaders(streamId, headerBlock, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
             writeFrameHeader(output, headerBlock.readableBytes(), HEADERS, flags, streamId);
             output.writeBytes(headerBlock, headerBlock.readableBytes());
         } finally {
@@ -383,7 +382,7 @@ public class DefaultHttp2FrameReaderTest {
             Http2Flags flags) throws Http2Exception {
         ByteBuf headerBlock = Unpooled.buffer();
         try {
-            encoder.encodeHeaders(streamId, headerBlock, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
+            hpackEncoder.encodeHeaders(streamId, headerBlock, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
             writeFrameHeader(output, headerBlock.readableBytes(), CONTINUATION, flags, streamId);
             output.writeBytes(headerBlock, headerBlock.readableBytes());
         } finally {

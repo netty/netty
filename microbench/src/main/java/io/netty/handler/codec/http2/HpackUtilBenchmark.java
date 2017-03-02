@@ -13,12 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.microbench.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.AsciiString;
 import io.netty.util.internal.ConstantTimeUtils;
@@ -41,21 +39,21 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 @Measurement(iterations = 5)
 public class HpackUtilBenchmark extends AbstractMicrobenchmark {
     @Param
-    public HeadersSize size;
+    public HpackHeadersSize size;
 
-    private List<Header> headers;
+    private List<HpackHeader> hpackHeaders;
 
     @Setup(Level.Trial)
     public void setup() {
-        headers = Util.headers(size, false);
+        hpackHeaders = HpackUtil.headers(size, false);
     }
 
     @Benchmark
     public int oldEquals() {
         int count = 0;
-        for (int i = 0; i < headers.size(); ++i) {
-            Header header = headers.get(i);
-            if (oldEquals(header.name, header.name)) {
+        for (int i = 0; i < hpackHeaders.size(); ++i) {
+            HpackHeader hpackHeader = hpackHeaders.get(i);
+            if (oldEquals(hpackHeader.name, hpackHeader.name)) {
                 ++count;
             }
         }
@@ -65,9 +63,9 @@ public class HpackUtilBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public int newEquals() {
         int count = 0;
-        for (int i = 0; i < headers.size(); ++i) {
-            Header header = headers.get(i);
-            if (newEquals(header.name, header.name)) {
+        for (int i = 0; i < hpackHeaders.size(); ++i) {
+            HpackHeader hpackHeader = hpackHeaders.get(i);
+            if (newEquals(hpackHeader.name, hpackHeader.name)) {
                 ++count;
             }
         }
@@ -99,17 +97,17 @@ public class HpackUtilBenchmark extends AbstractMicrobenchmark {
         return ConstantTimeUtils.equalsConstantTime(s1, s2) != 0;
     }
 
-    static Encoder newTestEncoder() {
-        Encoder encoder = new Encoder();
+    static HpackEncoder newTestEncoder() {
+        HpackEncoder hpackEncoder = new HpackEncoder();
         ByteBuf buf = Unpooled.buffer();
         try {
-            encoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
-            encoder.setMaxHeaderListSize(MAX_HEADER_LIST_SIZE);
+            hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
+            hpackEncoder.setMaxHeaderListSize(MAX_HEADER_LIST_SIZE);
         } catch (Http2Exception e) {
             throw new Error("max size not allowed?", e);
         } finally  {
             buf.release();
         }
-        return encoder;
+        return hpackEncoder;
     }
 }

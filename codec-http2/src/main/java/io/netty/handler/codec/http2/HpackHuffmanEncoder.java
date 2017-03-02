@@ -29,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
@@ -37,19 +37,15 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
-
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.HUFFMAN_CODES;
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.HUFFMAN_CODE_LENGTHS;
-
-final class HuffmanEncoder {
+final class HpackHuffmanEncoder {
 
     private final int[] codes;
     private final byte[] lengths;
     private final EncodedLengthProcessor encodedLengthProcessor = new EncodedLengthProcessor();
     private final EncodeProcessor encodeProcessor = new EncodeProcessor();
 
-    HuffmanEncoder() {
-        this(HUFFMAN_CODES, HUFFMAN_CODE_LENGTHS);
+    HpackHuffmanEncoder() {
+        this(HpackUtil.HUFFMAN_CODES, HpackUtil.HUFFMAN_CODE_LENGTHS);
     }
 
     /**
@@ -58,7 +54,7 @@ final class HuffmanEncoder {
      * @param codes the Huffman codes indexed by symbol
      * @param lengths the length of each Huffman code
      */
-    private HuffmanEncoder(int[] codes, byte[] lengths) {
+    private HpackHuffmanEncoder(int[] codes, byte[] lengths) {
         this.codes = codes;
         this.lengths = lengths;
     }

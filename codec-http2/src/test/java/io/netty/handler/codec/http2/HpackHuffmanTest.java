@@ -29,11 +29,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.util.AsciiString;
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,7 +40,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Random;
 
-public class HuffmanTest {
+public class HpackHuffmanTest {
 
     @Test
     public void testHuffman() throws Http2Exception {
@@ -123,19 +122,19 @@ public class HuffmanTest {
     }
 
     private static void roundTrip(String s) throws Http2Exception {
-        roundTrip(new HuffmanEncoder(), newHuffmanDecoder(), s);
+        roundTrip(new HpackHuffmanEncoder(), newHuffmanDecoder(), s);
     }
 
-    private static void roundTrip(HuffmanEncoder encoder, HuffmanDecoder decoder, String s)
+    private static void roundTrip(HpackHuffmanEncoder encoder, HpackHuffmanDecoder decoder, String s)
             throws Http2Exception {
         roundTrip(encoder, decoder, s.getBytes());
     }
 
     private static void roundTrip(byte[] buf) throws Http2Exception {
-        roundTrip(new HuffmanEncoder(), newHuffmanDecoder(), buf);
+        roundTrip(new HpackHuffmanEncoder(), newHuffmanDecoder(), buf);
     }
 
-    private static void roundTrip(HuffmanEncoder encoder, HuffmanDecoder decoder, byte[] buf)
+    private static void roundTrip(HpackHuffmanEncoder encoder, HpackHuffmanDecoder decoder, byte[] buf)
             throws Http2Exception {
         ByteBuf buffer = Unpooled.buffer();
         try {
@@ -151,7 +150,7 @@ public class HuffmanTest {
         }
     }
 
-    private static byte[] decode(HuffmanDecoder decoder, byte[] bytes) throws Http2Exception {
+    private static byte[] decode(HpackHuffmanDecoder decoder, byte[] bytes) throws Http2Exception {
         ByteBuf buffer = Unpooled.wrappedBuffer(bytes);
         try {
             AsciiString decoded = decoder.decode(buffer, buffer.readableBytes());
@@ -162,7 +161,7 @@ public class HuffmanTest {
         }
     }
 
-    private static HuffmanDecoder newHuffmanDecoder() {
-        return new HuffmanDecoder(32);
+    private static HpackHuffmanDecoder newHuffmanDecoder() {
+        return new HpackHuffmanDecoder(32);
     }
 }

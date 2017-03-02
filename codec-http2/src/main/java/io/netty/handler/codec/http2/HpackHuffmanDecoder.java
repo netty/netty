@@ -29,10 +29,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.handler.codec.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.ObjectUtil;
@@ -40,21 +39,19 @@ import io.netty.util.internal.ThrowableUtil;
 
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.HUFFMAN_CODES;
-import static io.netty.handler.codec.http2.internal.hpack.HpackUtil.HUFFMAN_CODE_LENGTHS;
 
-final class HuffmanDecoder {
+final class HpackHuffmanDecoder {
 
     private static final Http2Exception EOS_DECODED = ThrowableUtil.unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - EOS Decoded"), HuffmanDecoder.class, "decode(...)");
+            connectionError(COMPRESSION_ERROR, "HPACK - EOS Decoded"), HpackHuffmanDecoder.class, "decode(..)");
     private static final Http2Exception INVALID_PADDING = ThrowableUtil.unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - Invalid Padding"), HuffmanDecoder.class, "decode(...)");
+            connectionError(COMPRESSION_ERROR, "HPACK - Invalid Padding"), HpackHuffmanDecoder.class, "decode(..)");
 
-    private static final Node ROOT = buildTree(HUFFMAN_CODES, HUFFMAN_CODE_LENGTHS);
+    private static final Node ROOT = buildTree(HpackUtil.HUFFMAN_CODES, HpackUtil.HUFFMAN_CODE_LENGTHS);
 
     private final DecoderProcessor processor;
 
-    HuffmanDecoder(int initialCapacity) {
+    HpackHuffmanDecoder(int initialCapacity) {
         processor = new DecoderProcessor(initialCapacity);
     }
 

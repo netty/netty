@@ -29,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.netty.microbench.http2.internal.hpack;
+package io.netty.handler.codec.http2;
 
 import io.netty.util.AsciiString;
 
@@ -40,14 +40,14 @@ import java.util.Random;
 /**
  * Helper class representing a single header entry. Used by the benchmarks.
  */
-class Header {
+class HpackHeader {
     private static final String ALPHABET =
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
 
     final CharSequence name;
     final CharSequence value;
 
-    Header(byte[] name, byte[] value) {
+    HpackHeader(byte[] name, byte[] value) {
         this.name = new AsciiString(name, false);
         this.value = new AsciiString(value, false);
     }
@@ -55,15 +55,15 @@ class Header {
     /**
      * Creates a number of random headers with the given name/value lengths.
      */
-    static List<Header> createHeaders(int numHeaders, int nameLength, int valueLength,
-                                      boolean limitToAscii) {
-        List<Header> headers = new ArrayList<Header>(numHeaders);
+    static List<HpackHeader> createHeaders(int numHeaders, int nameLength, int valueLength,
+                                           boolean limitToAscii) {
+        List<HpackHeader> hpackHeaders = new ArrayList<HpackHeader>(numHeaders);
         for (int i = 0; i < numHeaders; ++i) {
             byte[] name = randomBytes(new byte[nameLength], limitToAscii);
             byte[] value = randomBytes(new byte[valueLength], limitToAscii);
-            headers.add(new Header(name, value));
+            hpackHeaders.add(new HpackHeader(name, value));
         }
-        return headers;
+        return hpackHeaders;
     }
 
     private static byte[] randomBytes(byte[] bytes, boolean limitToAscii) {

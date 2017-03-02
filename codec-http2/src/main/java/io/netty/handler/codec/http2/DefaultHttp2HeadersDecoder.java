@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http2.internal.hpack.Decoder;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -29,7 +28,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     private static final float HEADERS_COUNT_WEIGHT_NEW = 1 / 5f;
     private static final float HEADERS_COUNT_WEIGHT_HISTORICAL = 1 - HEADERS_COUNT_WEIGHT_NEW;
 
-    private final Decoder decoder;
+    private final HpackDecoder hpackDecoder;
     private final boolean validateHeaders;
     /**
      * Used to calculate an exponential moving average of header sizes to get an estimate of how large the data
@@ -68,41 +67,41 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      */
     public DefaultHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize,
                                       int initialHuffmanDecodeCapacity) {
-        this(validateHeaders, new Decoder(maxHeaderListSize, initialHuffmanDecodeCapacity));
+        this(validateHeaders, new HpackDecoder(maxHeaderListSize, initialHuffmanDecodeCapacity));
     }
 
     /**
      * Exposed Used for testing only! Default values used in the initial settings frame are overriden intentionally
      * for testing but violate the RFC if used outside the scope of testing.
      */
-    DefaultHttp2HeadersDecoder(boolean validateHeaders, Decoder decoder) {
-        this.decoder = ObjectUtil.checkNotNull(decoder, "decoder");
+    DefaultHttp2HeadersDecoder(boolean validateHeaders, HpackDecoder hpackDecoder) {
+        this.hpackDecoder = ObjectUtil.checkNotNull(hpackDecoder, "hpackDecoder");
         this.validateHeaders = validateHeaders;
     }
 
     @Override
     public void maxHeaderTableSize(long max) throws Http2Exception {
-        decoder.setMaxHeaderTableSize(max);
+        hpackDecoder.setMaxHeaderTableSize(max);
     }
 
     @Override
     public long maxHeaderTableSize() {
-        return decoder.getMaxHeaderTableSize();
+        return hpackDecoder.getMaxHeaderTableSize();
     }
 
     @Override
     public void maxHeaderListSize(long max, long goAwayMax) throws Http2Exception {
-        decoder.setMaxHeaderListSize(max, goAwayMax);
+        hpackDecoder.setMaxHeaderListSize(max, goAwayMax);
     }
 
     @Override
     public long maxHeaderListSize() {
-        return decoder.getMaxHeaderListSize();
+        return hpackDecoder.getMaxHeaderListSize();
     }
 
     @Override
     public long maxHeaderListSizeGoAway() {
-        return decoder.getMaxHeaderListSizeGoAway();
+        return hpackDecoder.getMaxHeaderListSizeGoAway();
     }
 
     @Override
@@ -114,7 +113,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     public Http2Headers decodeHeaders(int streamId, ByteBuf headerBlock) throws Http2Exception {
         try {
             final Http2Headers headers = new DefaultHttp2Headers(validateHeaders, (int) headerArraySizeAccumulator);
-            decoder.decode(streamId, headerBlock, headers);
+            hpackDecoder.decode(streamId, headerBlock, headers);
             headerArraySizeAccumulator = HEADERS_COUNT_WEIGHT_NEW * headers.size() +
                                          HEADERS_COUNT_WEIGHT_HISTORICAL * headerArraySizeAccumulator;
             return headers;
