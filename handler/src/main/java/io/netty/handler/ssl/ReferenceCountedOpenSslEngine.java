@@ -57,6 +57,7 @@ import javax.net.ssl.SSLSessionContext;
 import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.OpenSsl.memoryAddress;
+import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
 import static io.netty.util.internal.EmptyArrays.EMPTY_CERTIFICATES;
 import static io.netty.util.internal.EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -107,15 +108,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * allow up to 255 bytes. 16 bytes is the max for PKC#5 (which handles it the same way as PKC#7) as we use a block
      * size of 16. See <a href="https://tools.ietf.org/html/rfc5652#section-6.3">rfc5652#section-6.3</a>.
      *
-     * 16 (IV) + 48 (MAC) + 1 (Padding_length field) + 15 (Padding) + 1 (ContentType) + 2 (ProtocolVersion) + 2 (Length)
+     * TLS Header (5) + 16 (IV) + 48 (MAC) + 1 (Padding_length field) + 15 (Padding) + 1 (ContentType) +
+     * 2 (ProtocolVersion) + 2 (Length)
      *
      * TODO: We may need to review this calculation once TLS 1.3 becomes available.
      */
-    static final int MAX_ENCRYPTION_OVERHEAD_LENGTH = 15 + 48 + 1 + 16 + 1 + 2 + 2;
+    static final int MAX_TLS_RECORD_OVERHEAD_LENGTH = SSL_RECORD_HEADER_LENGTH + 16 + 48 + 1 + 15 + 1 + 2 + 2;
 
-    static final int MAX_ENCRYPTED_PACKET_LENGTH = MAX_PLAINTEXT_LENGTH + MAX_ENCRYPTION_OVERHEAD_LENGTH;
-
-    private static final int MAX_ENCRYPTION_OVERHEAD_DIFF = Integer.MAX_VALUE - MAX_ENCRYPTION_OVERHEAD_LENGTH;
+    static final int MAX_ENCRYPTED_PACKET_LENGTH = MAX_PLAINTEXT_LENGTH + MAX_TLS_RECORD_OVERHEAD_LENGTH;
 
     private static final AtomicIntegerFieldUpdater<ReferenceCountedOpenSslEngine> DESTROYED_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(ReferenceCountedOpenSslEngine.class, "destroyed");
@@ -561,7 +561,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                 }
 
-                if (dst.remaining() < calculateOutNetBufSize(srcsLen)) {
+                if (dst.remaining() < calculateOutNetBufSize(srcsLen, endOffset - offset)) {
                     // Can not hold the maximum packet so we need to tell the caller to use a bigger destination
                     // buffer.
                     return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), 0, 0);
@@ -772,7 +772,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
             }
 
-            if (len < SslUtils.SSL_RECORD_HEADER_LENGTH) {
+            if (len < SSL_RECORD_HEADER_LENGTH) {
                 return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
             }
 
@@ -782,7 +782,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 throw new NotSslRecordException("not an SSL/TLS record");
             }
 
-            if (packetLength - SslUtils.SSL_RECORD_HEADER_LENGTH > capacity) {
+            if (packetLength - SSL_RECORD_HEADER_LENGTH > capacity) {
                 // No enough space in the destination buffer so signal the caller
                 // that the buffer needs to be increased.
                 return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
@@ -1606,9 +1606,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return destroyed != 0;
     }
 
-    static int calculateOutNetBufSize(int pendingBytes) {
-        return min(MAX_ENCRYPTED_PACKET_LENGTH, MAX_ENCRYPTION_OVERHEAD_LENGTH
-                + min(MAX_ENCRYPTION_OVERHEAD_DIFF, pendingBytes));
+    static int calculateOutNetBufSize(int pendingBytes, int numComponents) {
+        return (int) min(Integer.MAX_VALUE, pendingBytes + (long) MAX_TLS_RECORD_OVERHEAD_LENGTH * numComponents);
     }
 
     private final class OpenSslSession implements SSLSession, ApplicationProtocolAccessor {
