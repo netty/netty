@@ -193,7 +193,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                      * we can use a special {@link OpenSslEngine#unwrap(ByteBuffer[], ByteBuffer[])} method
                      * that accepts multiple {@link ByteBuffer}s without additional memory copies.
                      */
-                    OpenSslEngine opensslEngine = (OpenSslEngine) handler.engine;
+                    ReferenceCountedOpenSslEngine opensslEngine = (ReferenceCountedOpenSslEngine) handler.engine;
                     try {
                         handler.singleBuffer[0] = toByteBuffer(out, writerIndex,
                             out.writableBytes());
@@ -210,8 +210,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             @Override
-            int calculateOutNetBufSize(SslHandler handler, int pendingBytes) {
-                return ReferenceCountedOpenSslEngine.calculateOutNetBufSize(pendingBytes);
+            int calculateOutNetBufSize(SslHandler handler, int pendingBytes, int numComponents) {
+                return ReferenceCountedOpenSslEngine.calculateOutNetBufSize(pendingBytes, numComponents);
             }
         },
         JDK(false, MERGE_CUMULATOR) {
@@ -226,16 +226,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             @Override
-            int calculateOutNetBufSize(SslHandler handler, int pendingBytes) {
+            int calculateOutNetBufSize(SslHandler handler, int pendingBytes, int numComponents) {
                 return handler.maxPacketBufferSize;
             }
         };
 
         static SslEngineType forEngine(SSLEngine engine) {
-            if (engine instanceof OpenSslEngine) {
-                return TCNATIVE;
-            }
-            return JDK;
+            return engine instanceof ReferenceCountedOpenSslEngine ? TCNATIVE : JDK;
         }
 
         SslEngineType(boolean wantsDirectBuffer, Cumulator cumulator) {
@@ -246,7 +243,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         abstract SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
                 throws SSLException;
 
-        abstract int calculateOutNetBufSize(SslHandler handler, int pendingBytes);
+        abstract int calculateOutNetBufSize(SslHandler handler, int pendingBytes, int numComponents);
 
         // BEGIN Platform-dependent flags
 
@@ -652,7 +649,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                 ByteBuf buf = (ByteBuf) msg;
                 if (out == null) {
-                    out = allocateOutNetBuf(ctx, buf.readableBytes());
+                    out = allocateOutNetBuf(ctx, buf.readableBytes(), buf.nioBufferCount());
                 }
 
                 SSLEngineResult result = wrap(alloc, engine, buf, out);
@@ -741,7 +738,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // As this is called for the handshake we have no real idea how big the buffer needs to be.
                     // That said 2048 should give us enough room to include everything like ALPN / NPN data.
                     // If this is not enough we will increase the buffer in wrap(...).
-                    out = allocateOutNetBuf(ctx, 2048);
+                    out = allocateOutNetBuf(ctx, 2048, 1);
                 }
                 SSLEngineResult result = wrap(alloc, engine, Unpooled.EMPTY_BUFFER, out);
 
@@ -1694,8 +1691,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Allocates an outbound network buffer for {@link SSLEngine#wrap(ByteBuffer, ByteBuffer)} which can encrypt
      * the specified amount of pending bytes.
      */
-    private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx, int pendingBytes) {
-        return allocate(ctx, engineType.calculateOutNetBufSize(this, pendingBytes));
+    private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx, int pendingBytes, int numComponents) {
+        return allocate(ctx, engineType.calculateOutNetBufSize(this, pendingBytes, numComponents));
     }
 
     private final class LazyChannelPromise extends DefaultPromise<Channel> {
