@@ -32,7 +32,11 @@ import javax.net.ssl.X509TrustManager;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -69,6 +73,7 @@ import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -558,6 +563,131 @@ public class SslHandlerTest {
 
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
+        }
+    }
+
+    @Test(timeout = 30000)
+    public void testCompositeBufSizeEstimationGuaranteesSynchronousWrite()
+            throws CertificateException, SSLException, ExecutionException, InterruptedException {
+        SslProvider[] providers = SslProvider.values();
+        for (int i = 0; i < providers.length; ++i) {
+            for (int j = 0; j < providers.length; ++j) {
+                compositeBufSizeEstimationGuaranteesSynchronousWrite(providers[i], providers[j]);
+            }
+        }
+    }
+
+    private void compositeBufSizeEstimationGuaranteesSynchronousWrite(
+            SslProvider serverProvider, SslProvider clientProvider)
+            throws CertificateException, SSLException, ExecutionException, InterruptedException {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+
+        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(serverProvider)
+                .build();
+
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(clientProvider).build();
+
+        EventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            final Promise<Void> donePromise = group.next().newPromise();
+            final int expectedBytes = 469 + 1024 + 1024;
+
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                    if (evt instanceof SslHandshakeCompletionEvent) {
+                                        SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
+                                        if (sslEvt.isSuccess()) {
+                                            final ByteBuf input = ctx.alloc().buffer();
+                                            input.writeBytes(new byte[expectedBytes]);
+                                            CompositeByteBuf content = ctx.alloc().compositeBuffer();
+                                            content.addComponent(true, input.readRetainedSlice(469));
+                                            content.addComponent(true, input.readRetainedSlice(1024));
+                                            content.addComponent(true, input.readRetainedSlice(1024));
+                                            ctx.writeAndFlush(content).addListener(new ChannelFutureListener() {
+                                                @Override
+                                                public void operationComplete(ChannelFuture future) {
+                                                    input.release();
+                                                }
+                                            });
+                                        } else {
+                                            donePromise.tryFailure(sslEvt.cause());
+                                        }
+                                    }
+                                    ctx.fireUserEventTriggered(evt);
+                                }
+
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    donePromise.tryFailure(cause);
+                                }
+
+                                @Override
+                                public void channelInactive(ChannelHandlerContext ctx) {
+                                    donePromise.tryFailure(new IllegalStateException("server closed"));
+                                }
+                            });
+                        }
+                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            cc = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                private int bytesSeen;
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                    if (msg instanceof ByteBuf) {
+                                        bytesSeen += ((ByteBuf) msg).readableBytes();
+                                        if (bytesSeen == expectedBytes) {
+                                            donePromise.trySuccess(null);
+                                        }
+                                    }
+                                    ReferenceCountUtil.release(msg);
+                                }
+
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    donePromise.tryFailure(cause);
+                                }
+
+                                @Override
+                                public void channelInactive(ChannelHandlerContext ctx) {
+                                    donePromise.tryFailure(new IllegalStateException("client closed"));
+                                }
+                            });
+                        }
+                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+
+            donePromise.get();
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
+
+            ReferenceCountUtil.release(sslServerCtx);
+            ReferenceCountUtil.release(sslClientCtx);
+            ssc.delete();
         }
     }
 }
