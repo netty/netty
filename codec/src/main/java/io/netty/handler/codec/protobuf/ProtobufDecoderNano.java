@@ -30,7 +30,7 @@ import io.netty.util.internal.ObjectUtil;
 
 /**
  * Decodes a received {@link ByteBuf} into a
- * <a href="http://code.google.com/p/protobuf/">Google Protocol Buffers</a>
+ * <a href="https://github.com/google/protobuf">Google Protocol Buffers</a>
  * {@link MessageNano}. Please note that this decoder must
  * be used with a proper {@link ByteToMessageDecoder} such as {@link LengthFieldBasedFrameDecoder}
  * if you are using a stream-based transport such as TCP/IP. A typical setup for TCP/IP would be:

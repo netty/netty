@@ -29,7 +29,7 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageEncoder;
 
 /**
- * Encodes the requested <a href="http://code.google.com/p/protobuf/">Google
+ * Encodes the requested <a href="https://github.com/google/protobuf">Google
  * Protocol Buffers</a> {@link MessageNano} into a
  * {@link ByteBuf}. A typical setup for TCP/IP would be:
  * <pre>
