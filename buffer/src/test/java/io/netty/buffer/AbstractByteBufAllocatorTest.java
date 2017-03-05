@@ -16,18 +16,19 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
+import org.junit.Assume;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public abstract class AbstractByteBufAllocatorTest extends ByteBufAllocatorTest {
+public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllocator> extends ByteBufAllocatorTest {
 
     @Override
-    protected abstract AbstractByteBufAllocator newAllocator(boolean preferDirect);
+    protected abstract T newAllocator(boolean preferDirect);
 
-    protected abstract AbstractByteBufAllocator newUnpooledAllocator();
+    protected abstract T newUnpooledAllocator();
 
     @Override
     protected boolean isDirectExpected(boolean preferDirect) {
@@ -51,7 +52,7 @@ public abstract class AbstractByteBufAllocatorTest extends ByteBufAllocatorTest 
     }
 
     private void testCalculateNewCapacity(boolean preferDirect) {
-        ByteBufAllocator allocator = newAllocator(preferDirect);
+        T allocator = newAllocator(preferDirect);
         assertEquals(8, allocator.calculateNewCapacity(1, 8));
         assertEquals(7, allocator.calculateNewCapacity(1, 7));
         assertEquals(64, allocator.calculateNewCapacity(1, 129));
@@ -78,7 +79,7 @@ public abstract class AbstractByteBufAllocatorTest extends ByteBufAllocatorTest 
 
     @Test
     public void testUnsafeHeapBufferAndUnsafeDirectBuffer() {
-        AbstractByteBufAllocator allocator = newUnpooledAllocator();
+        T allocator = newUnpooledAllocator();
         ByteBuf directBuffer = allocator.directBuffer();
         assertInstanceOf(directBuffer,
                 PlatformDependent.hasUnsafe() ? UnpooledUnsafeDirectByteBuf.class : UnpooledDirectByteBuf.class);
@@ -93,5 +94,51 @@ public abstract class AbstractByteBufAllocatorTest extends ByteBufAllocatorTest 
     protected static void assertInstanceOf(ByteBuf buffer, Class<? extends ByteBuf> clazz) {
         // Unwrap if needed
         assertTrue(clazz.isInstance(buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUsedDirectMemory() {
+        InstrumentedByteBufAllocator allocator = (InstrumentedByteBufAllocator) newAllocator(true);
+        assertEquals(0, allocator.usedDirectMemory());
+        ByteBuf buffer = allocator.directBuffer(1024, 4096);
+        int capacity = buffer.capacity();
+        assertEquals(expectedUsedMemory((T) allocator, capacity), allocator.usedDirectMemory());
+
+        // Double the size of the buffer
+        buffer.capacity(capacity << 1);
+        capacity = buffer.capacity();
+        assertEquals(buffer.toString(), expectedUsedMemory((T) allocator, capacity), allocator.usedDirectMemory());
+
+        buffer.release();
+        assertEquals(expectedUsedMemoryAfterRelease((T) allocator, capacity), allocator.usedDirectMemory());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUsedHeapMemory() {
+        InstrumentedByteBufAllocator allocator = (InstrumentedByteBufAllocator) newAllocator(true);
+        Assume.assumeTrue(allocator instanceof InstrumentedByteBufAllocator);
+
+        assertEquals(0, allocator.usedHeapMemory());
+        ByteBuf buffer = allocator.heapBuffer(1024, 4096);
+        int capacity = buffer.capacity();
+        assertEquals(expectedUsedMemory((T) allocator, capacity), allocator.usedHeapMemory());
+
+        // Double the size of the buffer
+        buffer.capacity(capacity << 1);
+        capacity = buffer.capacity();
+        assertEquals(expectedUsedMemory((T) allocator, capacity), allocator.usedHeapMemory());
+
+        buffer.release();
+        assertEquals(expectedUsedMemoryAfterRelease((T) allocator, capacity), allocator.usedHeapMemory());
+    }
+
+    protected long expectedUsedMemory(T allocator, int capacity) {
+        return capacity;
+    }
+
+    protected long expectedUsedMemoryAfterRelease(T allocator, int capacity) {
+        return 0;
     }
 }

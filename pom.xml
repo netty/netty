@@ -83,8 +83,6 @@
         <asm.version>6.0_ALPHA</asm.version>
         <!-- Skip as maven plugin not works with Java9 yet --> 
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <!-- Skip as jython not works with Java9 yet -->
-        <skipAutobahnTestsuite>true</skipAutobahnTestsuite>
       </properties>
       <activation>
         <jdk>9</jdk>
@@ -244,7 +242,7 @@
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>2.0.0.Beta5</tcnative.version>
+    <tcnative.version>2.0.0.Beta7</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
@@ -281,9 +279,11 @@
     <module>handler-proxy</module>
     <module>example</module>
     <module>testsuite</module>
+    <module>testsuite-autobahn</module>
     <module>testsuite-osgi</module>
     <module>microbench</module>
     <module>all</module>
+    <module>bom</module>
     <module>tarball</module>
   </modules>
 
@@ -703,6 +703,7 @@
             <ignore>javax.net.ssl.SSLParameters</ignore>
             <ignore>javax.net.ssl.SNIServerName</ignore>
             <ignore>javax.net.ssl.SNIHostName</ignore>
+            <ignore>javax.net.ssl.SNIMatcher</ignore>
             <ignore>java.security.AlgorithmConstraints</ignore>
             <ignore>java.security.cert.CertificateRevokedException</ignore>
             <ignore>java.security.cert.CertPathValidatorException</ignore>

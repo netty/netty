@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
@@ -26,6 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -81,5 +85,46 @@ public class DatagramPacketEncoderTest {
         String netty = "netty";
         assertTrue(channel.writeOutbound(netty));
         assertSame(netty, channel.readOutbound());
+    }
+
+    @Test
+    public void testIsNotSharable() {
+        testSharable(false);
+    }
+
+    @Test
+    public void testIsSharable() {
+        testSharable(true);
+    }
+
+    private static void testSharable(boolean sharable) {
+        MessageToMessageEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>> wrapped =
+                new TestMessageToMessageEncoder(sharable);
+
+        DatagramPacketEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>> encoder =
+                new DatagramPacketEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>>(wrapped);
+        assertEquals(wrapped.isSharable(), encoder.isSharable());
+    }
+
+    private static final class TestMessageToMessageEncoder
+            extends MessageToMessageEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>> {
+
+        private final boolean sharable;
+
+        TestMessageToMessageEncoder(boolean sharable) {
+            this.sharable = sharable;
+        }
+
+        @Override
+        protected void encode(
+                ChannelHandlerContext ctx, AddressedEnvelope<ByteBuf,
+                InetSocketAddress> msg, List<Object> out) {
+            // NOOP
+        }
+
+        @Override
+        public boolean isSharable() {
+            return sharable;
+        }
     }
 }

@@ -43,30 +43,26 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     }
 
     void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
+        init0(chunk, handle, offset, length, maxLength, cache);
+    }
+
+    void initUnpooled(PoolChunk<T> chunk, int length) {
+        init0(chunk, 0, chunk.offset, length, length, null);
+    }
+
+    private void init0(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
         assert handle >= 0;
         assert chunk != null;
 
         this.chunk = chunk;
-        this.handle = handle;
         memory = chunk.memory;
         allocator = chunk.arena.parent;
+        this.cache = cache;
+        this.handle = handle;
         this.offset = offset;
         this.length = length;
         this.maxLength = maxLength;
         tmpNioBuf = null;
-        this.cache = cache;
-    }
-
-    void initUnpooled(PoolChunk<T> chunk, int length) {
-        assert chunk != null;
-
-        this.chunk = chunk;
-        handle = 0;
-        memory = chunk.memory;
-        offset = chunk.offset;
-        this.length = maxLength = length;
-        tmpNioBuf = null;
-        cache = null;
     }
 
     /**

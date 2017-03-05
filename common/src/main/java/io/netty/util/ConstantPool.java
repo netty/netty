@@ -113,7 +113,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
         throw new IllegalArgumentException(String.format("'%s' is already in use", name));
     }
 
-    private String checkNotNullAndNotEmpty(String name) {
+    private static String checkNotNullAndNotEmpty(String name) {
         ObjectUtil.checkNotNull(name, "name");
 
         if (name.isEmpty()) {

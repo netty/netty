@@ -112,6 +112,8 @@ public final class OpenSsl {
         UNAVAILABILITY_CAUSE = cause;
 
         if (cause == null) {
+            logger.debug("netty-tcnative using native library: {}", SSL.versionString());
+
             final Set<String> availableOpenSslCipherSuites = new LinkedHashSet<String>(128);
             boolean supportsKeyManagerFactory = false;
             boolean useKeyManagerFactory = false;

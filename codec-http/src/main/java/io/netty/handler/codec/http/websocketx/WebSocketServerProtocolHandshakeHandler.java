@@ -62,12 +62,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         final FullHttpRequest req = (FullHttpRequest) msg;
-        if (checkStartsWith) {
-            if (!req.uri().startsWith(websocketPath)) {
-                ctx.fireChannelRead(msg);
-                return;
-            }
-        } else if (!req.uri().equals(websocketPath)) {
+        if (isNotWebSocketPath(req)) {
             ctx.fireChannelRead(msg);
             return;
         }
@@ -110,6 +105,10 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         }
     }
 
+    private boolean isNotWebSocketPath(FullHttpRequest req) {
+        return checkStartsWith ? !req.uri().startsWith(websocketPath) : !req.uri().equals(websocketPath);
+    }
+
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
         ChannelFuture f = ctx.channel().writeAndFlush(res);
         if (!isKeepAlive(req) || res.status().code() != 200) {
@@ -123,6 +122,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             // SSL in use so use Secure WebSockets
             protocol = "wss";
         }
-        return protocol + "://" + req.headers().get(HttpHeaderNames.HOST) + path;
+        String host = req.headers().get(HttpHeaderNames.HOST);
+        return protocol + "://" + host + path;
     }
 }

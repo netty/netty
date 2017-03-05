@@ -49,7 +49,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         testAutoReadOffDuringReadOnlyReadsOneTime(false, sb, cb);
     }
 
-    private void testAutoReadOffDuringReadOnlyReadsOneTime(boolean readOutsideEventLoopThread,
+    private static void testAutoReadOffDuringReadOnlyReadsOneTime(boolean readOutsideEventLoopThread,
                                                            ServerBootstrap sb, Bootstrap cb) throws Throwable {
         Channel serverChannel = null;
         Channel clientChannel = null;

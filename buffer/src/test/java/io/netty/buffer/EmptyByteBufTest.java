@@ -50,7 +50,7 @@ public class EmptyByteBufTest {
         assertThat(empty.nioBuffer().position(), is(0));
         assertThat(empty.nioBuffer().limit(), is(0));
         assertThat(empty.nioBuffer(), is(sameInstance(empty.nioBuffer())));
-        assertThat(empty.nioBuffer(), is(sameInstance(empty.internalNioBuffer(0, 0))));
+        assertThat(empty.nioBuffer(), is(sameInstance(empty.internalNioBuffer(empty.readerIndex(), 0))));
     }
 
     @Test

@@ -20,42 +20,42 @@ package io.netty.util.concurrent;
  */
 public interface ThreadProperties {
     /**
-     * @see {@link Thread#getState()}.
+     * @see Thread#getState()
      */
     Thread.State state();
 
     /**
-     * @see {@link Thread#getPriority()}.
+     * @see Thread#getPriority()
      */
     int priority();
 
     /**
-     * @see {@link Thread#isInterrupted()}.
+     * @see Thread#isInterrupted()
      */
     boolean isInterrupted();
 
     /**
-     * @see {@link Thread#isDaemon()} ()}.
+     * @see Thread#isDaemon()
      */
     boolean isDaemon();
 
     /**
-     * @see {@link Thread#getName()} ()}.
+     * @see Thread#getName()
      */
     String name();
 
     /**
-     * @see {@link Thread#getId()}.
+     * @see Thread#getId()
      */
     long id();
 
     /**
-     * @see {@link Thread#getStackTrace()}.
+     * @see Thread#getStackTrace()
      */
     StackTraceElement[] stackTrace();
 
     /**
-     * @see {@link Thread#isAlive()}.
+     * @see Thread#isAlive()
      */
     boolean isAlive();
 }

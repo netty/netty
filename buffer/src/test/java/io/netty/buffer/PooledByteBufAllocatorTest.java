@@ -35,23 +35,37 @@ import java.util.concurrent.locks.LockSupport;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
+public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<PooledByteBufAllocator> {
 
     @Override
-    protected AbstractByteBufAllocator newAllocator(boolean preferDirect) {
+    protected PooledByteBufAllocator newAllocator(boolean preferDirect) {
         return new PooledByteBufAllocator(preferDirect);
     }
 
     @Override
-    protected AbstractByteBufAllocator newUnpooledAllocator() {
+    protected PooledByteBufAllocator newUnpooledAllocator() {
         return new PooledByteBufAllocator(0, 0, 8192, 1);
+    }
+
+    @Override
+    protected long expectedUsedMemory(PooledByteBufAllocator allocator, int capacity) {
+        return allocator.chunkSize();
+    }
+
+    @Override
+    protected long expectedUsedMemoryAfterRelease(PooledByteBufAllocator allocator, int capacity) {
+        // This is the case as allocations will start in qInit and chunks in qInit will never be released until
+        // these are moved to q000.
+        // See https://www.bsdcan.org/2006/papers/jemalloc.pdf
+        return allocator.chunkSize();
     }
 
     @Test
     public void testPooledUnsafeHeapBufferAndUnsafeDirectBuffer() {
-        AbstractByteBufAllocator allocator = newAllocator(true);
+        PooledByteBufAllocator allocator = newAllocator(true);
         ByteBuf directBuffer = allocator.directBuffer();
         assertInstanceOf(directBuffer,
                 PlatformDependent.hasUnsafe() ? PooledUnsafeDirectByteBuf.class : PooledDirectByteBuf.class);
@@ -157,6 +171,26 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest {
         } finally {
             buffer.release();
         }
+    }
+
+    @Test
+    public void testAllocNotNull() {
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
+        // Huge allocation
+        testAllocNotNull(allocator, allocator.chunkSize() + 1);
+        // Normal allocation
+        testAllocNotNull(allocator, 1024);
+        // Small allocation
+        testAllocNotNull(allocator, 512);
+        // Tiny allocation
+        testAllocNotNull(allocator, 1);
+    }
+
+    private static void testAllocNotNull(PooledByteBufAllocator allocator, int capacity) {
+        ByteBuf buffer = allocator.heapBuffer(capacity);
+        assertNotNull(buffer.alloc());
+        assertTrue(buffer.release());
+        assertNotNull(buffer.alloc());
     }
 
     @Test

@@ -85,7 +85,7 @@ public class HelloWorldHttp2Handler extends ChannelDuplexHandler {
     /**
      * Sends a "Hello World" DATA frame to the client.
      */
-    private void sendResponse(ChannelHandlerContext ctx, ByteBuf payload) {
+    private static void sendResponse(ChannelHandlerContext ctx, ByteBuf payload) {
         // Send a frame for the response status
         Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
         ctx.write(new DefaultHttp2HeadersFrame(headers));

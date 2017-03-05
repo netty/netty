@@ -41,7 +41,10 @@ import static java.nio.channels.SelectionKey.*;
  * Message Connector for UDT Datagrams.
  * <p>
  * Note: send/receive must use {@link UdtMessage} in the pipeline
+ *
+ * @deprecated The UDT transport is no longer maintained and will be removed.
  */
+@Deprecated
 public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel implements UdtChannel {
 
     private static final InternalLogger logger =

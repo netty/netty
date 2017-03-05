@@ -140,4 +140,9 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         encoder.exceptionCaught(ctx, cause);
     }
+
+    @Override
+    public boolean isSharable() {
+        return encoder.isSharable();
+    }
 }
