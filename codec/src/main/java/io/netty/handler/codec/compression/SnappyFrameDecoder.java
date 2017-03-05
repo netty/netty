@@ -26,7 +26,7 @@ import static io.netty.handler.codec.compression.Snappy.validateChecksum;
 /**
  * Uncompresses a {@link ByteBuf} encoded with the Snappy framing format.
  *
- * See http://code.google.com/p/snappy/source/browse/trunk/framing_format.txt
+ * See <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format</a>.
  *
  * Note that by default, validation of the checksum header in each chunk is
  * DISABLED for performance improvements. If performance is less of an issue,

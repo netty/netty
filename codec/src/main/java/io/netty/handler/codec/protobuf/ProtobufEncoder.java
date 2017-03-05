@@ -31,7 +31,7 @@ import java.util.List;
 import static io.netty.buffer.Unpooled.*;
 
 /**
- * Encodes the requested <a href="http://code.google.com/p/protobuf/">Google
+ * Encodes the requested <a href="https://github.com/google/protobuf">Google
  * Protocol Buffers</a> {@link Message} and {@link MessageLite} into a
  * {@link ByteBuf}. A typical setup for TCP/IP would be:
  * <pre>

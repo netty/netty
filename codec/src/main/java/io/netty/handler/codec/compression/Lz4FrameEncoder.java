@@ -42,7 +42,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.*;
 /**
  * Compresses a {@link ByteBuf} using the LZ4 format.
  *
- * See original <a href="http://code.google.com/p/lz4/">LZ4 website</a>
+ * See original <a href="https://github.com/Cyan4973/lz4">LZ4 Github project</a>
  * and <a href="http://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
  * for full description.
  *
@@ -98,7 +98,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * Creates the fastest LZ4 encoder with default block size (64 KB)
      * and xxhash hashing for Java, based on Yann Collet's work available at
-     * <a href="http://code.google.com/p/xxhash/">Google Code</a>.
+     * <a href="https://github.com/Cyan4973/xxHash">Github</a>.
      */
     public Lz4FrameEncoder() {
         this(false);
@@ -107,7 +107,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * Creates a new LZ4 encoder with hight or fast compression, default block size (64 KB)
      * and xxhash hashing for Java, based on Yann Collet's work available at
-     * <a href="http://code.google.com/p/xxhash/">Google Code</a>.
+     * <a href="https://github.com/Cyan4973/xxHash">Github</a>.
      *
      * @param highCompressor  if {@code true} codec will use compressor which requires more memory
      *                        and is slower but compresses more efficiently
