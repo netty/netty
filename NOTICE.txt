@@ -66,7 +66,8 @@ It can be obtained at:
   * LICENSE:
     * license/LICENSE.abstractnodequeue.txt (Public Domain)
   * HOMEPAGE:
-    * https://github.com/akka/akka/blob/wip-2.2.3-for-scala-2.11/akka-actor/src/main/java/akka/dispatch/AbstractNodeQueue.java
+    * https://github.com/akka/akka/blob/master/akka-actor/src/main/java/akka/dispatch/AbstractNodeQueue.java
+
 
 This product contains a modified portion of Nitsan Wakart's 'JCTools', Java Concurrency Tools for the JVM,
  which can be obtained at:
@@ -91,7 +92,7 @@ interchange format, which can be obtained at:
   * LICENSE:
     * license/LICENSE.protobuf.txt (New BSD License)
   * HOMEPAGE:
-    * http://code.google.com/p/protobuf/
+    * https://github.com/google/protobuf
 
 This product optionally depends on 'Bouncy Castle Crypto APIs' to generate
 a temporary self-signed X.509 certificate when the JVM does not provide the
@@ -108,7 +109,7 @@ by Google Inc, which can be obtained at:
   * LICENSE:
     * license/LICENSE.snappy.txt (New BSD License)
   * HOMEPAGE:
-    * http://code.google.com/p/snappy/
+    * https://github.com/google/snappy
 
 This product optionally depends on 'JBoss Marshalling', an alternative Java
 serialization API, which can be obtained at:
@@ -124,7 +125,7 @@ benchmarking framework, which can be obtained at:
   * LICENSE:
     * license/LICENSE.caliper.txt (Apache License 2.0)
   * HOMEPAGE:
-    * http://code.google.com/p/caliper/
+    * https://github.com/google/caliper
 
 This product optionally depends on 'Apache Commons Logging', a logging
 framework, which can be obtained at:
