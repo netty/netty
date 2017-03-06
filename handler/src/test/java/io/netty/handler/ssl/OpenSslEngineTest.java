@@ -39,6 +39,7 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 
+import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty.handler.ssl.ReferenceCountedOpenSslEngine.MAX_ENCRYPTED_PACKET_LENGTH;
 import static io.netty.handler.ssl.ReferenceCountedOpenSslEngine.MAX_TLS_RECORD_OVERHEAD_LENGTH;
 import static io.netty.handler.ssl.ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH;
@@ -67,35 +68,35 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @Override
     @Test
     public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth() throws Exception {
-        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth();
     }
 
     @Override
     @Test
     public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth() throws Exception {
-        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth();
     }
 
     @Override
     @Test
     public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth() throws Exception {
-        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth();
     }
 
     @Override
     @Test
     public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() throws Exception {
-        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        checkShouldUseKeyManagerFactory();
         super.testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth();
     }
 
     @Override
     @Test
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
-        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        checkShouldUseKeyManagerFactory();
         super.testMutualAuthValidClientCertChainTooLongFailRequireClientAuth();
     }
 
