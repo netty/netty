@@ -144,13 +144,17 @@ public final class OpenSsl {
                             certBio = ReferenceCountedOpenSslContext.toBIO(cert.cert());
                             SSL.setCertificateChainBio(ssl, certBio, false);
                             supportsKeyManagerFactory = true;
-                            useKeyManagerFactory = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                                @Override
-                                public Boolean run() {
-                                    return SystemPropertyUtil.getBoolean(
-                                            "io.netty.handler.ssl.openssl.useKeyManagerFactory", true);
-                                }
-                            });
+                            try {
+                                useKeyManagerFactory = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                                    @Override
+                                    public Boolean run() {
+                                        return SystemPropertyUtil.getBoolean(
+                                                "io.netty.handler.ssl.openssl.useKeyManagerFactory", true);
+                                    }
+                                });
+                            } catch (Throwable ignore) {
+                                logger.debug("Failed to get useKeyManagerFactory system property.");
+                            }
                         } catch (Throwable ignore) {
                             logger.debug("KeyManagerFactory not supported.");
                         }
