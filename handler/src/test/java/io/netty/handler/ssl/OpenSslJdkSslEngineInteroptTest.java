@@ -21,6 +21,7 @@ import org.junit.Test;
 
 import javax.net.ssl.SSLException;
 
+import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static org.junit.Assume.assumeTrue;
 
 public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
@@ -57,21 +58,21 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     @Override
     @Test
     public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth() throws Exception {
-        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth();
     }
 
     @Override
     @Test
     public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth() throws Exception {
-        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth();
     }
 
     @Override
     @Test
     public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth() throws Exception {
-        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth();
     }
 
