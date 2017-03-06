@@ -399,7 +399,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             }
 
             flushedAmount += localFlushedAmount;
-            if (region.transfered() >= regionCount) {
+            if (region.transferred() >= regionCount) {
                 done = true;
                 break;
             }
