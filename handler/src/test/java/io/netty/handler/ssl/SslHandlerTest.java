@@ -616,9 +616,9 @@ public class SslHandlerTest {
                                             final ByteBuf input = ctx.alloc().buffer();
                                             input.writeBytes(new byte[expectedBytes]);
                                             CompositeByteBuf content = ctx.alloc().compositeBuffer();
-                                            content.addComponent(true, input.readRetainedSlice(469));
-                                            content.addComponent(true, input.readRetainedSlice(1024));
-                                            content.addComponent(true, input.readRetainedSlice(1024));
+                                            content.addComponent(true, input.readSlice(469).retain());
+                                            content.addComponent(true, input.readSlice(1024).retain());
+                                            content.addComponent(true, input.readSlice(1024).retain());
                                             ctx.writeAndFlush(content).addListener(new ChannelFutureListener() {
                                                 @Override
                                                 public void operationComplete(ChannelFuture future) {
