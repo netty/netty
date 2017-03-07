@@ -58,12 +58,6 @@ facade for Java, which can be obtained at:
   * HOMEPAGE:
     * http://www.slf4j.org/
 
-This product contains a modified portion of 'ArrayDeque', written by Josh
-Bloch of Google, Inc:
-
-  * LICENSE:
-    * license/LICENSE.deque.txt (Public Domain)
-
 This product contains a modified portion of 'Apache Harmony', an open source
 Java SE, which can be obtained at:
 
@@ -71,15 +65,6 @@ Java SE, which can be obtained at:
     * license/LICENSE.harmony.txt (Apache License 2.0)
   * HOMEPAGE:
     * http://archive.apache.org/dist/harmony/
-
-This product contains a modified version of Roland Kuhn's ASL2
-AbstractNodeQueue, which is based on Dmitriy Vyukov's non-intrusive MPSC queue.
-It can be obtained at:
-
-  * LICENSE:
-    * license/LICENSE.abstractnodequeue.txt (Public Domain)
-  * HOMEPAGE:
-    * https://github.com/akka/akka/blob/master/akka-actor/src/main/java/akka/dispatch/AbstractNodeQueue.java
 
 This product contains a modified portion of 'jbzip2', a Java bzip2 compression
 and decompression library written by Matthew J. Francis. It can be obtained at:
