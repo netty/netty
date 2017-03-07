@@ -15,7 +15,6 @@
  */
 package io.netty.util.internal;
 
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MpscArrayQueue;
@@ -27,13 +26,8 @@ import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
@@ -78,7 +72,7 @@ public final class PlatformDependent {
 
     private static final boolean IS_ANDROID = isAndroid0();
     private static final boolean IS_WINDOWS = isWindows0();
-    private static volatile Boolean IS_ROOT;
+    private static final boolean MAYBE_SUPER_USER;
 
     private static final int JAVA_VERSION = javaVersion0();
 
@@ -162,6 +156,8 @@ public final class PlatformDependent {
         }
         DIRECT_MEMORY_LIMIT = maxDirectMemory;
         logger.debug("io.netty.maxDirectMemory: {} bytes", maxDirectMemory);
+
+        MAYBE_SUPER_USER = maybeSuperUser0();
     }
 
     /**
@@ -179,18 +175,11 @@ public final class PlatformDependent {
     }
 
     /**
-     * Return {@code true} if the current user is root.  Note that this method returns
-     * {@code false} if on Windows.
+     * Return {@code true} if the current user may be a super-user. Be aware that this is just an hint and so it may
+     * return false-positives.
      */
-    public static boolean isRoot() {
-        if (IS_ROOT == null) {
-            synchronized (PlatformDependent.class) {
-                if (IS_ROOT == null) {
-                    IS_ROOT = isRoot0();
-                }
-            }
-        }
-        return IS_ROOT;
+    public static boolean maybeSuperUser() {
+        return MAYBE_SUPER_USER;
     }
 
     /**
@@ -902,97 +891,13 @@ public final class PlatformDependent {
         return windows;
     }
 
-    private static boolean isRoot0() {
+    private static boolean maybeSuperUser0() {
+        String username = SystemPropertyUtil.get("user.name");
         if (isWindows()) {
-            return false;
+            return "Administrator".equals(username);
         }
-
-        String[] ID_COMMANDS = { "/usr/bin/id", "/bin/id", "/usr/xpg4/bin/id", "id"};
-        Pattern UID_PATTERN = Pattern.compile("^(?:0|[1-9][0-9]*)$");
-        for (String idCmd: ID_COMMANDS) {
-            Process p = null;
-            BufferedReader in = null;
-            String uid = null;
-            try {
-                p = Runtime.getRuntime().exec(new String[] { idCmd, "-u" });
-                in = new BufferedReader(new InputStreamReader(p.getInputStream(), CharsetUtil.US_ASCII));
-                uid = in.readLine();
-                in.close();
-
-                for (;;) {
-                    try {
-                        int exitCode = p.waitFor();
-                        if (exitCode != 0) {
-                            uid = null;
-                        }
-                        break;
-                    } catch (InterruptedException e) {
-                        // Ignore
-                    }
-                }
-            } catch (Throwable ignored) {
-                // Failed to run the command.
-                uid = null;
-            } finally {
-                if (in != null) {
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        // Ignore
-                    }
-                }
-                if (p != null) {
-                    try {
-                        p.destroy();
-                    } catch (Exception e) {
-                        // Android sometimes triggers an ErrnoException.
-                    }
-                }
-            }
-
-            if (uid != null && UID_PATTERN.matcher(uid).matches()) {
-                logger.debug("UID: {}", uid);
-                return "0".equals(uid);
-            }
-        }
-
-        logger.debug("Could not determine the current UID using /usr/bin/id; attempting to bind at privileged ports.");
-
-        Pattern PERMISSION_DENIED = Pattern.compile(".*(?:denied|not.*permitted).*");
-        for (int i = 1023; i > 0; i --) {
-            ServerSocket ss = null;
-            try {
-                ss = new ServerSocket();
-                ss.setReuseAddress(true);
-                ss.bind(new InetSocketAddress(i));
-                if (logger.isDebugEnabled()) {
-                    logger.debug("UID: 0 (succeded to bind at port {})", i);
-                }
-                return true;
-            } catch (Exception e) {
-                // Failed to bind.
-                // Check the error message so that we don't always need to bind 1023 times.
-                String message = e.getMessage();
-                if (message == null) {
-                    message = "";
-                }
-                message = message.toLowerCase();
-                if (PERMISSION_DENIED.matcher(message).matches()) {
-                    break;
-                }
-            } finally {
-                if (ss != null) {
-                    try {
-                        ss.close();
-                    } catch (Exception e) {
-                        // Ignore.
-                    }
-                }
-            }
-        }
-
-        logger.debug("UID: non-root (failed to bind at any privileged ports)");
-        return false;
+        // Check for root and toor as some BSDs have a toor user that is basically the same as root.
+        return "root".equals(username) || "toor".equals(username);
     }
 
     private static int javaVersion0() {

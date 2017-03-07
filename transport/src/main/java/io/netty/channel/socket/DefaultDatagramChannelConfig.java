@@ -157,7 +157,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
             // See: https://github.com/netty/netty/issues/576
             if (broadcast &&
                 !javaSocket.getLocalAddress().isAnyLocalAddress() &&
-                !PlatformDependent.isWindows() && !PlatformDependent.isRoot()) {
+                !PlatformDependent.isWindows() && !PlatformDependent.maybeSuperUser()) {
                 // Warn a user about the fact that a non-root user can't receive a
                 // broadcast packet on *nix if the socket is bound on non-wildcard address.
                 logger.warn(
