@@ -265,7 +265,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         @Override
         @Deprecated
         public long transfered() {
-            return region.transferred();
+            return region.transfered();
         }
 
         @Override
