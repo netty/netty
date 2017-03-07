@@ -31,7 +31,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -86,7 +85,6 @@ public final class PlatformDependent {
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
     private static final boolean HAS_UNSAFE = hasUnsafe0();
-    private static final boolean CAN_USE_CHM_V8 = HAS_UNSAFE && JAVA_VERSION < 8;
     private static final boolean DIRECT_BUFFER_PREFERRED =
             HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
@@ -358,20 +356,8 @@ public final class PlatformDependent {
                 "sun.misc.Unsafe or java.nio.DirectByteBuffer.<init>(long, int) not available");
     }
 
-    public static Object getObject(Object object, long fieldOffset) {
-        return PlatformDependent0.getObject(object, fieldOffset);
-    }
-
-    public static Object getObjectVolatile(Object object, long fieldOffset) {
-        return PlatformDependent0.getObjectVolatile(object, fieldOffset);
-    }
-
     public static int getInt(Object object, long fieldOffset) {
         return PlatformDependent0.getInt(object, fieldOffset);
-    }
-
-    public static long objectFieldOffset(Field field) {
-        return PlatformDependent0.objectFieldOffset(field);
     }
 
     public static byte getByte(long address) {

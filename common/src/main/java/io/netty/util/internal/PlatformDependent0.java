@@ -339,10 +339,6 @@ final class PlatformDependent0 {
         return UNSAFE.getObject(object, fieldOffset);
     }
 
-    static Object getObjectVolatile(Object object, long fieldOffset) {
-        return UNSAFE.getObjectVolatile(object, fieldOffset);
-    }
-
     static int getInt(Object object, long fieldOffset) {
         return UNSAFE.getInt(object, fieldOffset);
     }
