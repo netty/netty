@@ -59,16 +59,6 @@ facade for Java, which can be obtained at:
     * http://www.slf4j.org/
 
 
-This product contains a modified version of Roland Kuhn's ASL2
-AbstractNodeQueue, which is based on Dmitriy Vyukov's non-intrusive MPSC queue.
-It can be obtained at:
-
-  * LICENSE:
-    * license/LICENSE.abstractnodequeue.txt (Public Domain)
-  * HOMEPAGE:
-    * https://github.com/akka/akka/blob/master/akka-actor/src/main/java/akka/dispatch/AbstractNodeQueue.java
-
-
 This product contains a modified portion of Nitsan Wakart's 'JCTools', Java Concurrency Tools for the JVM,
  which can be obtained at:
 
