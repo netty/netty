@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socks;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
@@ -22,17 +24,48 @@ import static org.junit.Assert.*;
 
 public class SocksAuthRequestDecoderTest {
 
+    private static final String username = "testUserName";
+    private static final String password = "testPassword";
+
     @Test
     public void testAuthRequestDecoder() {
-        String username = "test";
-        String password = "test";
         SocksAuthRequest msg = new SocksAuthRequest(username, password);
         SocksAuthRequestDecoder decoder = new SocksAuthRequestDecoder();
         EmbeddedChannel embedder = new EmbeddedChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
         msg = embedder.readInbound();
-        assertEquals(msg.username(), username);
-        assertEquals(msg.username(), password);
+        assertEquals(username, msg.username());
+        assertEquals(password, msg.password());
         assertNull(embedder.readInbound());
+    }
+
+    @Test
+    public void testAuthRequestDecoderPartialSend() {
+        EmbeddedChannel ch = new EmbeddedChannel(new SocksAuthRequestDecoder());
+        ByteBuf byteBuf = Unpooled.buffer(16);
+
+        // Send username and password size
+        byteBuf.writeByte(SocksSubnegotiationVersion.AUTH_PASSWORD.byteValue());
+        byteBuf.writeByte(username.length());
+        byteBuf.writeBytes(username.getBytes());
+        byteBuf.writeByte(password.length());
+        ch.writeInbound(byteBuf);
+
+        // Check that channel is empty
+        assertNull(ch.readInbound());
+
+        // Send password
+        ByteBuf byteBuf2 = Unpooled.buffer();
+        byteBuf2.writeBytes(password.getBytes());
+        ch.writeInbound(byteBuf2);
+
+        // Read message from channel
+        SocksAuthRequest msg = ch.readInbound();
+
+        // Check message
+        assertEquals(username, msg.username());
+        assertEquals(password, msg.password());
+
+        assertFalse(ch.finishAndReleaseAll());
     }
 }
