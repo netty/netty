@@ -16,15 +16,16 @@
 
 package io.netty.handler.ssl;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 import java.io.InputStream;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManagerFactory;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Builder for configuring a new SslContext for creation.
@@ -137,6 +138,7 @@ public final class SslContextBuilder {
     private long sessionCacheSize;
     private long sessionTimeout;
     private ClientAuth clientAuth = ClientAuth.NONE;
+    private String[] protocols;
     private boolean startTls;
 
     private SslContextBuilder(boolean forServer) {
@@ -385,6 +387,16 @@ public final class SslContextBuilder {
     }
 
     /**
+     * The TLS protocol versions to enable.
+     * @param protocols The protocols to enable, or {@code null} to enable the default protocols.
+     * @see SSLEngine#setEnabledCipherSuites(String[])
+     */
+    public SslContextBuilder protocols(String... protocols) {
+        this.protocols = protocols == null ? null : protocols.clone();
+        return this;
+    }
+
+    /**
      * {@code true} if the first write request shouldn't be encrypted.
      */
     public SslContextBuilder startTls(boolean startTls) {
@@ -401,11 +413,11 @@ public final class SslContextBuilder {
         if (forServer) {
             return SslContext.newServerContextInternal(provider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, startTls);
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls);
         } else {
             return SslContext.newClientContextInternal(provider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout);
         }
     }
 }

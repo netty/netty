@@ -140,6 +140,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     final Certificate[] keyCertChain;
     final ClientAuth clientAuth;
+    final String[] protocols;
     final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
     private volatile boolean rejectRemoteInitiatedRenegotiation;
     private volatile int bioNonApplicationBufferSize = DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE;
@@ -211,16 +212,17 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                                    ApplicationProtocolConfig apnCfg, long sessionCacheSize, long sessionTimeout,
-                                   int mode, Certificate[] keyCertChain, ClientAuth clientAuth, boolean startTls,
-                                   boolean leakDetection) throws SSLException {
+                                   int mode, Certificate[] keyCertChain, ClientAuth clientAuth, String[] protocols,
+                                   boolean startTls, boolean leakDetection) throws SSLException {
         this(ciphers, cipherFilter, toNegotiator(apnCfg), sessionCacheSize, sessionTimeout, mode, keyCertChain,
-                clientAuth, startTls, leakDetection);
+                clientAuth, protocols, startTls, leakDetection);
     }
 
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                                    OpenSslApplicationProtocolNegotiator apn, long sessionCacheSize,
                                    long sessionTimeout, int mode, Certificate[] keyCertChain,
-                                   ClientAuth clientAuth, boolean startTls, boolean leakDetection) throws SSLException {
+                                   ClientAuth clientAuth, String[] protocols, boolean startTls, boolean leakDetection)
+            throws SSLException {
         super(startTls);
 
         OpenSsl.ensureAvailability();
@@ -231,6 +233,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         leak = leakDetection ? leakDetector.track(this) : null;
         this.mode = mode;
         this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
+        this.protocols = protocols;
 
         if (mode == SSL.SSL_MODE_SERVER) {
             rejectRemoteInitiatedRenegotiation =
@@ -305,19 +308,19 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 List<String> nextProtoList = apn.protocols();
                 /* Set next protocols for next protocol negotiation extension, if specified */
                 if (!nextProtoList.isEmpty()) {
-                    String[] protocols = nextProtoList.toArray(new String[nextProtoList.size()]);
+                    String[] appProtocols = nextProtoList.toArray(new String[nextProtoList.size()]);
                     int selectorBehavior = opensslSelectorFailureBehavior(apn.selectorFailureBehavior());
 
                     switch (apn.protocol()) {
                         case NPN:
-                            SSLContext.setNpnProtos(ctx, protocols, selectorBehavior);
+                            SSLContext.setNpnProtos(ctx, appProtocols, selectorBehavior);
                             break;
                         case ALPN:
-                            SSLContext.setAlpnProtos(ctx, protocols, selectorBehavior);
+                            SSLContext.setAlpnProtos(ctx, appProtocols, selectorBehavior);
                             break;
                         case NPN_AND_ALPN:
-                            SSLContext.setNpnProtos(ctx, protocols, selectorBehavior);
-                            SSLContext.setAlpnProtos(ctx, protocols, selectorBehavior);
+                            SSLContext.setNpnProtos(ctx, appProtocols, selectorBehavior);
+                            SSLContext.setAlpnProtos(ctx, appProtocols, selectorBehavior);
                             break;
                         default:
                             throw new Error();
