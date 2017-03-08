@@ -21,7 +21,6 @@ import io.netty.internal.tcnative.SSLContext;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
@@ -109,9 +108,6 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                                 "KeyManagerFactory not supported");
                     }
                     checkNotNull(keyCertChain, "keyCertChain");
-
-                        /* Set certificate verification policy. */
-                    SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
 
                     setKeyMaterial(ctx, keyCertChain, key, keyPassword);
                 } else {
