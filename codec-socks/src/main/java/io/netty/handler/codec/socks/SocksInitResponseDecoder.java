@@ -37,11 +37,6 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<State> {
         return name;
     }
 
-    private SocksProtocolVersion version;
-    private SocksAuthScheme authScheme;
-
-    private SocksResponse msg = SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE;
-
     public SocksInitResponseDecoder() {
         super(State.CHECK_PROTOCOL_VERSION);
     }
@@ -50,20 +45,22 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<State> {
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksProtocolVersion.valueOf(byteBuf.readByte());
-                if (version != SocksProtocolVersion.SOCKS5) {
+                if (byteBuf.readByte() != SocksProtocolVersion.SOCKS5.byteValue()) {
+                    out.add(SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE);
                     break;
                 }
                 checkpoint(State.READ_PREFFERED_AUTH_TYPE);
             }
             case READ_PREFFERED_AUTH_TYPE: {
-                authScheme = SocksAuthScheme.valueOf(byteBuf.readByte());
-                msg = new SocksInitResponse(authScheme);
+                SocksAuthScheme authScheme = SocksAuthScheme.valueOf(byteBuf.readByte());
+                out.add(new SocksInitResponse(authScheme));
                 break;
+            }
+            default: {
+                throw new Error();
             }
         }
         ctx.pipeline().remove(this);
-        out.add(msg);
     }
 
     enum State {
