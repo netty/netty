@@ -59,7 +59,7 @@ public class DefaultAttributeMapTest {
         assertSame(one, map.attr(key));
 
         one.setIfAbsent(3653);
-        assertEquals(one.get(), Integer.valueOf(3653));
+        assertEquals(Integer.valueOf(3653), one.get());
 
         one.setIfAbsent(1);
         assertNotSame(1, one.get());

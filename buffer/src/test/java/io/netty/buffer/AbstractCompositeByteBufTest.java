@@ -1004,8 +1004,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         CompositeByteBuf cbuf = compositeBuffer();
         ByteBuf buf1 = buffer().writeByte((byte) 1);
         cbuf.addComponent(true, buf1);
-        ByteBuf buf2 = EMPTY_BUFFER;
-        cbuf.addComponent(true, buf2);
+        cbuf.addComponent(true, EMPTY_BUFFER);
         ByteBuf buf3 = buffer().writeByte((byte) 2);
         cbuf.addComponent(true, buf3);
 
@@ -1104,17 +1103,17 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             .addComponents(s2, s3, s4)
             .order(ByteOrder.LITTLE_ENDIAN);
 
-        assertEquals(composite.refCnt(), 1);
-        assertEquals(buffer.refCnt(), 5);
+        assertEquals(1, composite.refCnt());
+        assertEquals(5, buffer.refCnt());
 
         // releasing composite should release the 4 components
         ReferenceCountUtil.release(composite);
-        assertEquals(composite.refCnt(), 0);
-        assertEquals(buffer.refCnt(), 1);
+        assertEquals(0, composite.refCnt());
+        assertEquals(1, buffer.refCnt());
 
         // last remaining ref to buffer
         ReferenceCountUtil.release(buffer);
-        assertEquals(buffer.refCnt(), 0);
+        assertEquals(0, buffer.refCnt());
     }
 
 }
