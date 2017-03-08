@@ -384,7 +384,7 @@ public abstract class SslContext {
                                             toX509Certificates(keyCertChainFile),
                                             toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
-                                            sessionCacheSize, sessionTimeout, ClientAuth.NONE, false);
+                                            sessionCacheSize, sessionTimeout, ClientAuth.NONE, null, false);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -398,7 +398,8 @@ public abstract class SslContext {
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, boolean startTls) throws SSLException {
+            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls)
+            throws SSLException {
 
         if (provider == null) {
             provider = defaultServerProvider();
@@ -409,17 +410,17 @@ public abstract class SslContext {
             return new JdkSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, startTls);
+                    clientAuth, protocols, startTls);
         case OPENSSL:
             return new OpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, startTls);
+                    clientAuth, protocols, startTls);
         case OPENSSL_REFCNT:
             return new ReferenceCountedOpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, startTls);
+                    clientAuth, protocols, startTls);
         default:
             throw new Error(provider.toString());
         }
@@ -727,8 +728,7 @@ public abstract class SslContext {
             return newClientContextInternal(provider, toX509Certificates(trustCertCollectionFile), trustManagerFactory,
                                             toX509Certificates(keyCertChainFile), toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter,
-                                            apn,
-                                            sessionCacheSize, sessionTimeout);
+                                            apn, null, sessionCacheSize, sessionTimeout);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -741,7 +741,7 @@ public abstract class SslContext {
             SslProvider provider,
             X509Certificate[] trustCert, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
-            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         if (provider == null) {
             provider = defaultClientProvider();
@@ -750,15 +750,15 @@ public abstract class SslContext {
             case JDK:
                 return new JdkSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
-                        keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout);
             case OPENSSL:
                 return new OpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
-                        keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout);
             case OPENSSL_REFCNT:
                 return new ReferenceCountedOpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
-                        keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout);
             default:
                 throw new Error(provider.toString());
         }

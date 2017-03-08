@@ -215,17 +215,17 @@ public final class JdkSslServerContext extends JdkSslContext {
         super(newSSLContext(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout), false,
-                ciphers, cipherFilter, apn, ClientAuth.NONE, false);
+                ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
     }
 
     JdkSslServerContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                         ApplicationProtocolConfig apn, long sessionCacheSize, long sessionTimeout,
-                        ClientAuth clientAuth, boolean startTls) throws SSLException {
+                        ClientAuth clientAuth, String[] protocols, boolean startTls) throws SSLException {
         super(newSSLContext(trustCertCollection, trustManagerFactory, keyCertChain, key,
                 keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout), false,
-                ciphers, cipherFilter, toNegotiator(apn, true), clientAuth, startTls);
+                ciphers, cipherFilter, toNegotiator(apn, true), clientAuth, protocols, startTls);
     }
 
     private static SSLContext newSSLContext(X509Certificate[] trustCertCollection,

@@ -237,6 +237,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             // needed JNI methods.
             setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
 
+            if (context.protocols != null) {
+                setEnabledProtocols(context.protocols);
+            }
+
             // Use SNI if peerHost was specified
             // See https://github.com/netty/netty/issues/4746
             if (clientMode && peerHost != null) {
