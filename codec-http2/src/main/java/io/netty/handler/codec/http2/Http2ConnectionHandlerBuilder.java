@@ -57,6 +57,11 @@ public final class Http2ConnectionHandlerBuilder
     }
 
     @Override
+    public Http2ConnectionHandlerBuilder maxReservedStreams(int maxReservedStreams) {
+        return super.maxReservedStreams(maxReservedStreams);
+    }
+
+    @Override
     public Http2ConnectionHandlerBuilder codec(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
         return super.codec(decoder, encoder);
     }
@@ -70,6 +75,11 @@ public final class Http2ConnectionHandlerBuilder
     public Http2ConnectionHandlerBuilder encoderEnforceMaxConcurrentStreams(
             boolean encoderEnforceMaxConcurrentStreams) {
         return super.encoderEnforceMaxConcurrentStreams(encoderEnforceMaxConcurrentStreams);
+    }
+
+    @Override
+    public Http2ConnectionHandlerBuilder encoderIgnoreMaxHeaderListSize(boolean encoderIgnoreMaxHeaderListSize) {
+        return super.encoderIgnoreMaxHeaderListSize(encoderIgnoreMaxHeaderListSize);
     }
 
     @Override
