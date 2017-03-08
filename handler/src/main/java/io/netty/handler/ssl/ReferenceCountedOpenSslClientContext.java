@@ -54,10 +54,10 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                                          KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-                                         long sessionCacheSize, long sessionTimeout)
+                                         String[] protocols, long sessionCacheSize, long sessionTimeout)
             throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT, keyCertChain,
-              ClientAuth.NONE, false, true);
+              ClientAuth.NONE, protocols, false, true);
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
