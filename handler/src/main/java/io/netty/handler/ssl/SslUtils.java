@@ -49,6 +49,11 @@ final class SslUtils {
     static final int SSL_CONTENT_TYPE_APPLICATION_DATA = 23;
 
     /**
+     * HeartBeat Extension
+     */
+    static final int SSL_CONTENT_TYPE_EXTENSION_HEARTBEAT = 24;
+
+    /**
      * the length of the ssl record header (in bytes)
      */
     static final int SSL_RECORD_HEADER_LENGTH = 5;
@@ -90,6 +95,7 @@ final class SslUtils {
             case SSL_CONTENT_TYPE_ALERT:
             case SSL_CONTENT_TYPE_HANDSHAKE:
             case SSL_CONTENT_TYPE_APPLICATION_DATA:
+            case SSL_CONTENT_TYPE_EXTENSION_HEARTBEAT:
                 tls = true;
                 break;
             default:
@@ -176,6 +182,7 @@ final class SslUtils {
             case SSL_CONTENT_TYPE_ALERT:
             case SSL_CONTENT_TYPE_HANDSHAKE:
             case SSL_CONTENT_TYPE_APPLICATION_DATA:
+            case SSL_CONTENT_TYPE_EXTENSION_HEARTBEAT:
                 tls = true;
                 break;
             default:
