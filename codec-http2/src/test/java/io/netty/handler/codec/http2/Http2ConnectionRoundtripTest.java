@@ -348,6 +348,95 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @Test
+    public void testSettingsAckIsSentBeforeUsingFlowControl() throws Exception {
+        bootstrapEnv(1, 1, 1, 1);
+
+        final CountDownLatch serverSettingsAckLatch1 = new CountDownLatch(1);
+        final CountDownLatch serverSettingsAckLatch2 = new CountDownLatch(2);
+        final CountDownLatch serverDataLatch = new CountDownLatch(1);
+        final CountDownLatch clientWriteDataLatch = new CountDownLatch(1);
+        final byte[] data = new byte[] {1, 2, 3, 4, 5};
+        final ByteArrayOutputStream out = new ByteArrayOutputStream(data.length);
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                serverSettingsAckLatch1.countDown();
+                serverSettingsAckLatch2.countDown();
+                return null;
+            }
+        }).when(serverListener).onSettingsAckRead(any(ChannelHandlerContext.class));
+        doAnswer(new Answer<Integer>() {
+            @Override
+            public Integer answer(InvocationOnMock in) throws Throwable {
+                ByteBuf buf = (ByteBuf) in.getArguments()[2];
+                int padding = (Integer) in.getArguments()[3];
+                int processedBytes = buf.readableBytes() + padding;
+
+                buf.readBytes(out, buf.readableBytes());
+                serverDataLatch.countDown();
+                return processedBytes;
+            }
+        }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
+                any(ByteBuf.class), eq(0), anyBoolean());
+
+        final Http2Headers headers = dummyHeaders();
+
+        // The server initially reduces the connection flow control window to 0.
+        runInChannel(serverConnectedChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writeSettings(serverCtx(),
+                        new Http2Settings().copyFrom(http2Server.decoder().localSettings())
+                                .initialWindowSize(0),
+                        serverNewPromise());
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        assertTrue(serverSettingsAckLatch1.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+
+        // The client should now attempt to send data, but the window size is 0 so it will be queued in the flow
+        // controller.
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
+                        newPromise());
+                http2Client.encoder().writeData(ctx(), 3, Unpooled.wrappedBuffer(data), 0, true, newPromise());
+                http2Client.flush(ctx());
+                clientWriteDataLatch.countDown();
+            }
+        });
+
+        assertTrue(clientWriteDataLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+
+        // Now the server opens up the connection window to allow the client to send the pending data.
+        runInChannel(serverConnectedChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writeSettings(serverCtx(),
+                        new Http2Settings().copyFrom(http2Server.decoder().localSettings())
+                                .initialWindowSize(data.length),
+                        serverNewPromise());
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        assertTrue(serverSettingsAckLatch2.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+        assertTrue(serverDataLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+        assertArrayEquals(data, out.toByteArray());
+
+        // Verify that no errors have been received.
+        verify(serverListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+        verify(serverListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
+        verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+        verify(clientListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
+    }
+
+    @Test
     public void priorityUsingHigherValuedStreamIdDoesNotPreventUsingLowerStreamId() throws Exception {
         bootstrapEnv(1, 1, 2, 0);
 
