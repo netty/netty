@@ -17,6 +17,7 @@ package io.netty.util;
 
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -121,12 +122,13 @@ public final class NetUtil {
     /**
      * {@code true} if IPv4 should be used even if the system supports both IPv4 and IPv6.
      */
-    private static final boolean IPV4_PREFERRED = Boolean.getBoolean("java.net.preferIPv4Stack");
+    private static final boolean IPV4_PREFERRED = SystemPropertyUtil.getBoolean("java.net.preferIPv4Stack", false);
 
     /**
      * {@code true} if an IPv6 address should be preferred when a host has both an IPv4 address and an IPv6 address.
      */
-    private static final boolean IPV6_ADDRESSES_PREFERRED = Boolean.getBoolean("java.net.preferIPv6Addresses");
+    private static final boolean IPV6_ADDRESSES_PREFERRED =
+            SystemPropertyUtil.getBoolean("java.net.preferIPv6Addresses", false);
 
     /**
      * The logger being used by this class
