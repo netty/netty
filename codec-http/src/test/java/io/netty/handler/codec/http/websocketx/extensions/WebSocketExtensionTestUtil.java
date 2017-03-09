@@ -31,7 +31,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import org.mockito.ArgumentMatcher;
 
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.argThat;
 
 public final class WebSocketExtensionTestUtil {
 
