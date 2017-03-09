@@ -16,7 +16,6 @@
 package io.netty.util.internal;
 
 import java.io.IOException;
-import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -25,7 +24,7 @@ import static io.netty.util.internal.ObjectUtil.*;
  */
 public final class StringUtil {
 
-    public static final String NEWLINE = System.getProperty("line.separator");
+    public static final String NEWLINE = SystemPropertyUtil.get("line.separator", "\n");
     public static final char DOUBLE_QUOTE = '\"';
     public static final char COMMA = ',';
     public static final char LINE_FEED = '\n';

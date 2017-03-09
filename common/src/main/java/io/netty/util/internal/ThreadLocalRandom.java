@@ -26,8 +26,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.security.SecureRandom;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
@@ -77,24 +75,13 @@ public final class ThreadLocalRandom extends Random {
         long initialSeedUniquifier = ThreadLocalRandom.initialSeedUniquifier;
         if (initialSeedUniquifier == 0) {
             // Use the system property value.
-            ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier = AccessController.doPrivileged(
-                    new PrivilegedAction<Long>() {
-                @Override
-                public Long run() {
-                    return Long.getLong("io.netty.initialSeedUniquifier", 0);
-                }
-            });
+            ThreadLocalRandom.initialSeedUniquifier = initialSeedUniquifier =
+                    SystemPropertyUtil.getLong("io.netty.initialSeedUniquifier", 0);
         }
 
         // Otherwise, generate one.
         if (initialSeedUniquifier == 0) {
-            boolean secureRandom = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override
-                public Boolean run() {
-                    return Boolean.getBoolean("java.util.secureRandomSeed");
-                }
-            });
-
+            boolean secureRandom = SystemPropertyUtil.getBoolean("java.util.secureRandomSeed", false);
             if (secureRandom) {
                 // Try to generate a real random number from /dev/random.
                 // Get from a different thread to avoid blocking indefinitely on a machine without much entropy.
