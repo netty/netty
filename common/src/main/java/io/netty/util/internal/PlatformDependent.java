@@ -915,18 +915,7 @@ public final class PlatformDependent {
     }
 
     static int majorVersionFromJavaSpecificationVersion() {
-        try {
-            final String javaSpecVersion = AccessController.doPrivileged(new PrivilegedAction<String>() {
-                @Override
-                public String run() {
-                    return System.getProperty("java.specification.version");
-                }
-            });
-            return majorVersion(javaSpecVersion);
-        } catch (SecurityException e) {
-            logger.debug("security exception while reading java.specification.version", e);
-            return 6;
-        }
+        return majorVersion(SystemPropertyUtil.get("java.specification.version", "1.6"));
     }
 
     static int majorVersion(final String javaSpecVersion) {
