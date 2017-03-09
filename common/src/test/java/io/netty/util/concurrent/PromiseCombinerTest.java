@@ -22,8 +22,8 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -33,7 +33,7 @@ public class PromiseCombinerTest {
     @Mock
     private Promise<Void> p1;
     private GenericFutureListener<Future<Void>> l1;
-    private GenericFutureListenerConsumer l1Consumer = new GenericFutureListenerConsumer() {
+    private final GenericFutureListenerConsumer l1Consumer = new GenericFutureListenerConsumer() {
         @Override
         public void accept(GenericFutureListener<Future<Void>> listener) {
             l1 = listener;
@@ -42,7 +42,7 @@ public class PromiseCombinerTest {
     @Mock
     private Promise<Void> p2;
     private GenericFutureListener<Future<Void>> l2;
-    private GenericFutureListenerConsumer l2Consumer = new GenericFutureListenerConsumer() {
+    private final GenericFutureListenerConsumer l2Consumer = new GenericFutureListenerConsumer() {
         @Override
         public void accept(GenericFutureListener<Future<Void>> listener) {
             l2 = listener;
@@ -148,28 +148,28 @@ public class PromiseCombinerTest {
         verifyFail(p3, e1);
     }
 
-    private void verifyFail(Promise<Void> p, Throwable cause) {
+    private static void verifyFail(Promise<Void> p, Throwable cause) {
         verify(p).tryFailure(eq(cause));
     }
 
-    private void verifySuccess(Promise<Void> p) {
+    private static void verifySuccess(Promise<Void> p) {
         verify(p).trySuccess(null);
     }
 
-    private void verifyNotCompleted(Promise<Void> p) {
+    private static void verifyNotCompleted(Promise<Void> p) {
         verify(p, never()).trySuccess(any(Void.class));
         verify(p, never()).tryFailure(any(Throwable.class));
         verify(p, never()).setSuccess(any(Void.class));
         verify(p, never()).setFailure(any(Throwable.class));
     }
 
-    private void mockSuccessPromise(Promise<Void> p, GenericFutureListenerConsumer consumer) {
+    private static void mockSuccessPromise(Promise<Void> p, GenericFutureListenerConsumer consumer) {
         when(p.isDone()).thenReturn(true);
         when(p.isSuccess()).thenReturn(true);
         mockListener(p, consumer);
     }
 
-    private void mockFailedPromise(Promise<Void> p, Throwable cause, GenericFutureListenerConsumer consumer) {
+    private static void mockFailedPromise(Promise<Void> p, Throwable cause, GenericFutureListenerConsumer consumer) {
         when(p.isDone()).thenReturn(true);
         when(p.isSuccess()).thenReturn(false);
         when(p.cause()).thenReturn(cause);
@@ -177,7 +177,7 @@ public class PromiseCombinerTest {
     }
 
     @SuppressWarnings("unchecked")
-    private void mockListener(final Promise<Void> p, final GenericFutureListenerConsumer consumer) {
+    private static void mockListener(final Promise<Void> p, final GenericFutureListenerConsumer consumer) {
         doAnswer(new Answer<Promise<Void>>() {
             @SuppressWarnings({ "unchecked", "raw-types" })
             @Override

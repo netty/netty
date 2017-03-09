@@ -39,8 +39,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -939,7 +939,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         return flowControlled;
     }
 
-    private void sendData(int streamId, FakeFlowControlled data) throws Http2Exception {
+    private void sendData(int streamId, FakeFlowControlled data) {
         Http2Stream stream = stream(streamId);
         controller.addFlowControlled(stream, data);
     }
@@ -948,7 +948,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         incrementWindowSize(streamId, -window(streamId));
     }
 
-    private int window(int streamId) throws Http2Exception {
+    private int window(int streamId) {
         return controller.windowSize(stream(streamId));
     }
 

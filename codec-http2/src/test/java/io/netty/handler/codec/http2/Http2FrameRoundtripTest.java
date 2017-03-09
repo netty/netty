@@ -50,12 +50,12 @@ import static java.lang.Math.min;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyShort;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyShort;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -88,7 +88,7 @@ public class Http2FrameRoundtripTest {
 
     private Http2FrameWriter writer;
     private Http2FrameReader reader;
-    private List<ByteBuf> needReleasing = new LinkedList<ByteBuf>();
+    private final List<ByteBuf> needReleasing = new LinkedList<ByteBuf>();
 
     @Before
     public void setup() throws Exception {
@@ -428,7 +428,7 @@ public class Http2FrameRoundtripTest {
         reader.readFrame(ctx, write, listener);
     }
 
-    private ByteBuf data(int size) {
+    private static ByteBuf data(int size) {
         byte[] data = new byte[size];
         for (int ix = 0; ix < data.length;) {
             int length = min(MESSAGE.length, data.length - ix);
@@ -438,7 +438,7 @@ public class Http2FrameRoundtripTest {
         return buf(data);
     }
 
-    private ByteBuf buf(byte[] bytes) {
+    private static ByteBuf buf(byte[] bytes) {
         return Unpooled.wrappedBuffer(bytes);
     }
 
@@ -474,7 +474,7 @@ public class Http2FrameRoundtripTest {
         return headers;
     }
 
-    private Http2Headers headersOfSize(final int minSize) {
+    private static Http2Headers headersOfSize(final int minSize) {
         final AsciiString singleByte = new AsciiString(new byte[]{0}, false);
         DefaultHttp2Headers headers = new DefaultHttp2Headers(false);
         for (int size = 0; size < minSize; size += 2) {
