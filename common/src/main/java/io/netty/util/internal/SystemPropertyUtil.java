@@ -75,7 +75,7 @@ public final class SystemPropertyUtil {
                     }
                 });
             }
-        } catch (Exception e) {
+        } catch (SecurityException e) {
             logger.warn("Unable to retrieve a system property '{}'; default values will be used.", key, e);
         }
 
