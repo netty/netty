@@ -21,9 +21,9 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -48,9 +48,6 @@ public class DefaultHttp2LocalFlowControllerTest {
     private static final int STREAM_ID = 1;
 
     private DefaultHttp2LocalFlowController controller;
-
-    @Mock
-    private ByteBuf buffer;
 
     @Mock
     private Http2FrameWriter frameWriter;
@@ -369,7 +366,7 @@ public class DefaultHttp2LocalFlowControllerTest {
                 any(ChannelPromise.class));
     }
 
-    private int window(int streamId) throws Http2Exception {
+    private int window(int streamId) {
         return controller.windowSize(stream(streamId));
     }
 

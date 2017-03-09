@@ -29,6 +29,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -43,11 +44,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isNull;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -167,7 +167,7 @@ public class DefaultHttp2ConnectionTest {
         final CountDownLatch latch = new CountDownLatch(client.numActiveStreams());
         client.forEachActiveStream(new Http2StreamVisitor() {
             @Override
-            public boolean visit(Http2Stream stream) throws Http2Exception {
+            public boolean visit(Http2Stream stream) {
                 client.close(promise).addListener(new FutureListener<Void>() {
                     @Override
                     public void operationComplete(Future<Void> future) throws Exception {
@@ -578,7 +578,8 @@ public class DefaultHttp2ConnectionTest {
         assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 
-    private void incrementAndGetStreamShouldRespectOverflow(Endpoint<?> endpoint, int streamId) throws Http2Exception {
+    private static void incrementAndGetStreamShouldRespectOverflow(Endpoint<?> endpoint, int streamId)
+            throws Http2Exception {
         assertTrue(streamId > 0);
         try {
             endpoint.createStream(streamId, true);
@@ -590,7 +591,7 @@ public class DefaultHttp2ConnectionTest {
         endpoint.createStream(streamId, true);
     }
 
-    private void incrementAndGetStreamShouldSucceed(Endpoint<?> endpoint) throws Http2Exception {
+    private static void incrementAndGetStreamShouldSucceed(Endpoint<?> endpoint) throws Http2Exception {
         Http2Stream streamA = endpoint.createStream(endpoint.incrementAndGetNextStreamId(), true);
         Http2Stream streamB = endpoint.createStream(streamA.id() + 2, true);
         Http2Stream streamC = endpoint.createStream(endpoint.incrementAndGetNextStreamId(), true);
@@ -633,6 +634,6 @@ public class DefaultHttp2ConnectionTest {
 
     @SuppressWarnings("unchecked")
     private static <T> T streamEq(T stream) {
-        return (T) (stream == null ? isNull(Http2Stream.class) : eq(stream));
+        return (T) (stream == null ? ArgumentMatchers.<Http2Stream>isNull() : eq(stream));
     }
 }

@@ -25,8 +25,8 @@ import static io.netty.handler.codec.http2.WeightedFairQueueByteDistributor.INIT
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.doAnswer;
 
 public class WeightedFairQueueByteDistributorDependencyTreeTest extends
@@ -67,12 +67,12 @@ public class WeightedFairQueueByteDistributorDependencyTreeTest extends
         final Http2Stream streamA = connection.local().createStream(3, false);
         final Http2Stream streamB = connection.local().createStream(5, false);
         final Http2Stream streamC = connection.local().createStream(7, false);
-        setPriority(streamB.id(), streamA.id(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT, false);
+        setPriority(streamB.id(), streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
         connection.forEachActiveStream(new Http2StreamVisitor() {
             @Override
             public boolean visit(Http2Stream stream) throws Http2Exception {
                 streamA.close();
-                setPriority(streamB.id(), streamC.id(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT, false);
+                setPriority(streamB.id(), streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
                 return true;
             }
         });
@@ -584,8 +584,8 @@ public class WeightedFairQueueByteDistributorDependencyTreeTest extends
         setPriority(streamC.id(), streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
         setPriority(streamD.id(), streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
 
-        boolean[] exclusives = new boolean[] {true, false};
-        short[] weights = new short[] { DEFAULT_PRIORITY_WEIGHT/*, 100, 200, DEFAULT_PRIORITY_WEIGHT */};
+        boolean[] exclusives = { true, false };
+        short[] weights = { DEFAULT_PRIORITY_WEIGHT, 100, 200, DEFAULT_PRIORITY_WEIGHT };
 
         assertEquals(4, connection.numActiveStreams());
 

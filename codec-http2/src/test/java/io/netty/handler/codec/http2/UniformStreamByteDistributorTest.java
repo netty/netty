@@ -30,10 +30,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.same;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -46,7 +46,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
  * Tests for {@link UniformStreamByteDistributor}.
  */
 public class UniformStreamByteDistributorTest {
-    private static int CHUNK_SIZE = DEFAULT_MIN_ALLOCATION_CHUNK;
+    private static final int CHUNK_SIZE = DEFAULT_MIN_ALLOCATION_CHUNK;
 
     private static final int STREAM_A = 1;
     private static final int STREAM_B = 3;
@@ -258,7 +258,7 @@ public class UniformStreamByteDistributorTest {
         });
     }
 
-    private void setPriority(int streamId, int parent, int weight, boolean exclusive) throws Http2Exception {
+    private void setPriority(int streamId, int parent, int weight, boolean exclusive) {
         distributor.updateDependencyTree(streamId, parent, (short) weight, exclusive);
     }
 
