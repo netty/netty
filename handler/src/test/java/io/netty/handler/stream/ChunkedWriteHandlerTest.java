@@ -98,6 +98,13 @@ public class ChunkedWriteHandlerTest {
         check(new ChunkedNioFile(TMP), new ChunkedNioFile(TMP), new ChunkedNioFile(TMP));
     }
 
+    @Test
+    public void testUnchunkedData() throws IOException {
+        check(Unpooled.wrappedBuffer(BYTES));
+
+        check(Unpooled.wrappedBuffer(BYTES), Unpooled.wrappedBuffer(BYTES), Unpooled.wrappedBuffer(BYTES));
+    }
+
     // Test case which shows that there is not a bug like stated here:
     // http://stackoverflow.com/a/10426305
     @Test
@@ -220,10 +227,10 @@ public class ChunkedWriteHandlerTest {
         assertNull(ch.readOutbound());
     }
 
-    private static void check(ChunkedInput<?>... inputs) {
+    private static void check(Object... inputs) {
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
 
-        for (ChunkedInput<?> input: inputs) {
+        for (Object input: inputs) {
             ch.writeOutbound(input);
         }
 
