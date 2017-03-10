@@ -182,6 +182,7 @@ final class SslUtils {
             case SSL_CONTENT_TYPE_ALERT:
             case SSL_CONTENT_TYPE_HANDSHAKE:
             case SSL_CONTENT_TYPE_APPLICATION_DATA:
+            case SSL_CONTENT_TYPE_EXTENSION_HEARTBEAT:
                 tls = true;
                 break;
             default:
