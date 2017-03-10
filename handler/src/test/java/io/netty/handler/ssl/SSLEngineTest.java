@@ -611,6 +611,7 @@ public abstract class SSLEngineTest {
             throws SSLException, InterruptedException {
         serverSslCtx = SslContextBuilder.forServer(serverKMF)
                 .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
                 .trustManager(serverTrustManager)
                 .clientAuth(clientAuth)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
@@ -620,6 +621,7 @@ public abstract class SSLEngineTest {
 
         clientSslCtx = SslContextBuilder.forClient()
                 .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
                 .trustManager(clientTrustManager)
                 .keyManager(clientKMF)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
@@ -752,6 +754,7 @@ public abstract class SSLEngineTest {
         final String expectedHost = "localhost";
         serverSslCtx = SslContextBuilder.forServer(serverCrtFile, serverKeyFile, null)
                 .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                 .sessionCacheSize(0)
@@ -760,6 +763,7 @@ public abstract class SSLEngineTest {
 
         clientSslCtx = SslContextBuilder.forClient()
                 .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
                 .trustManager(clientTrustCrtFile)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                 .sessionCacheSize(0)
@@ -869,6 +873,7 @@ public abstract class SSLEngineTest {
             throws InterruptedException, SSLException {
         serverSslCtx = SslContextBuilder.forServer(serverCrtFile, serverKeyFile, serverKeyPassword)
                 .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
                 .trustManager(servertTrustCrtFile)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                 .sessionCacheSize(0)
@@ -877,6 +882,7 @@ public abstract class SSLEngineTest {
 
         clientSslCtx = SslContextBuilder.forClient()
                 .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
                 .trustManager(clientTrustCrtFile)
                 .keyManager(clientCrtFile, clientKeyFile, clientKeyPassword)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
@@ -1025,7 +1031,9 @@ public abstract class SSLEngineTest {
 
     @Test
     public void testGetCreationTime() throws Exception {
-        clientSslCtx = SslContextBuilder.forClient().sslProvider(sslClientProvider()).build();
+        clientSslCtx = SslContextBuilder.forClient()
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider()).build();
         SSLEngine engine = null;
         try {
             engine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
@@ -1040,10 +1048,12 @@ public abstract class SSLEngineTest {
         clientSslCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
                 .build();
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
                 .build();
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
@@ -1067,10 +1077,12 @@ public abstract class SSLEngineTest {
         clientSslCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
                 .build();
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
                 .build();
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
@@ -1099,7 +1111,8 @@ public abstract class SSLEngineTest {
             throws CertificateException, SSLException, InterruptedException, ExecutionException {
         final SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(sslServerProvider()).build();
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider()).build();
         sb = new ServerBootstrap()
                 .group(new NioEventLoopGroup(1))
                 .channel(NioServerSocketChannel.class)
@@ -1210,6 +1223,7 @@ public abstract class SSLEngineTest {
             File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
             serverSslCtx = SslContextBuilder.forServer(serverCrtFile, serverKeyFile)
                .sslProvider(sslServerProvider())
+               .sslContextProvider(serverSslContextProvider())
                .build();
 
             sslEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
@@ -1475,7 +1489,8 @@ public abstract class SSLEngineTest {
                 new ByteArrayInputStream(X509_CERT_PEM.getBytes(CharsetUtil.UTF_8)),
                 new ByteArrayInputStream(PRIVATE_KEY_PEM.getBytes(CharsetUtil.UTF_8)))
                 .trustManager(new ByteArrayInputStream(X509_CERT_PEM.getBytes(CharsetUtil.UTF_8)))
-                .clientAuth(ClientAuth.REQUIRE).sslProvider(sslServerProvider()).build();
+                .clientAuth(ClientAuth.REQUIRE).sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider()).build();
 
         sb = new ServerBootstrap();
         sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
@@ -1531,7 +1546,8 @@ public abstract class SSLEngineTest {
                         new ByteArrayInputStream(CLIENT_X509_CERT_CHAIN_PEM.getBytes(CharsetUtil.UTF_8)),
                         new ByteArrayInputStream(CLIENT_PRIVATE_KEY_PEM.getBytes(CharsetUtil.UTF_8)))
                 .trustManager(new ByteArrayInputStream(X509_CERT_PEM.getBytes(CharsetUtil.UTF_8)))
-                .sslProvider(sslClientProvider()).build();
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider()).build();
         cb = new Bootstrap();
         cb.group(new NioEventLoopGroup());
         cb.channel(NioSocketChannel.class);

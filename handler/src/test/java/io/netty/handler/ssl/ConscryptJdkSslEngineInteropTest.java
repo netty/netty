@@ -103,12 +103,8 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
     @Override
     @Test
+    @Ignore("TODO: Make this work with Conscrypt")
     public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
         super.testClientHostnameValidationFail();
-    }
-
-    @Override
-    protected boolean mySetupMutualAuthServerIsValidException(Throwable cause) {
-        return super.mySetupMutualAuthServerIsValidException(cause) || causedBySSLException(cause);
     }
 }
