@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.9.Final-SNAPSHOT</version>
+  <version>4.1.9.Final</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -53,7 +53,7 @@
     <url>https://github.com/netty/netty</url>
     <connection>scm:git:git://github.com/netty/netty.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>netty-4.1.9.Final</tag>
   </scm>
 
   <developers>
@@ -72,7 +72,7 @@
     <profile>
       <id>java9</id>
       <properties>
-        <argLine.java9.extras></argLine.java9.extras>
+        <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java9 supports alpn out of the box -->
