@@ -43,7 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
+import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -189,6 +189,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     // Store as object as AlgorithmConstraints only exists since java 7.
     private Object algorithmConstraints;
     private List<String> sniHostNames;
+
+    // Mark as volatile as accessed by checkSniHostnameMatch(...)
+    private volatile Collection<SNIMatcher> matchers;
 
     // SSL Engine status variables
     private boolean isInboundDone;
@@ -1597,6 +1600,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     Java8SslParametersUtils.setUseCipherSuitesOrder(
                             sslParameters, (SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
                 }
+
+                sslParameters.setSNIMatchers(matchers);
             }
         }
         return sslParameters;
@@ -1611,11 +1616,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
 
             if (version >= 8) {
-                Collection<SNIMatcher> matchers = sslParameters.getSNIMatchers();
-                if (matchers != null && !matchers.isEmpty()) {
-                    throw new IllegalArgumentException("SNIMatchers are not supported.");
-                }
-
                 if (!isDestroyed()) {
                     if (clientMode) {
                         final List<String> sniHostNames = Java8SslParametersUtils.getSniHostNames(sslParameters);
@@ -1630,6 +1630,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         SSL.clearOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
                     }
                 }
+                matchers = sslParameters.getSNIMatchers();
             }
 
             final String endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
@@ -1656,6 +1657,21 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     static int calculateOutNetBufSize(int pendingBytes, int numComponents) {
         return (int) min(MAX_ENCRYPTED_PACKET_LENGTH,
                 pendingBytes + (long) MAX_TLS_RECORD_OVERHEAD_LENGTH * numComponents);
+    }
+
+    final boolean checkSniHostnameMatch(String hostname) {
+        Collection<SNIMatcher> matchers = this.matchers;
+        if (matchers != null && !matchers.isEmpty()) {
+            SNIHostName name = new SNIHostName(hostname);
+            for (SNIMatcher matcher: matchers) {
+                // type 0 is for hostname
+                if (matcher.getType() == 0 && matcher.matches(name)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
     }
 
     private final class OpenSslSession implements SSLSession, ApplicationProtocolAccessor {
