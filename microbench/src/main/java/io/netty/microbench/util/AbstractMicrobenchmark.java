@@ -17,6 +17,8 @@ package io.netty.microbench.util;
 
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -34,10 +36,12 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
     protected static final int DEFAULT_FORKS = 2;
 
     public static final class HarnessExecutor extends ThreadPoolExecutor {
+        private final  InternalLogger logger = InternalLoggerFactory.getInstance(AbstractMicrobenchmark.class);
+
         public HarnessExecutor(int maxThreads, String prefix) {
             super(maxThreads, maxThreads, 0, TimeUnit.MILLISECONDS,
                     new LinkedBlockingQueue<Runnable>(), new DefaultThreadFactory(prefix));
-            System.out.println("Using harness executor");
+            logger.debug("Using harness executor");
         }
     }
 
