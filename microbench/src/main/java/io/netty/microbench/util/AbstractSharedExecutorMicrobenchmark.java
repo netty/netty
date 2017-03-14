@@ -35,6 +35,7 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
 
     protected static final int DEFAULT_FORKS = 1;
     protected static final String[] JVM_ARGS;
+    private final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
 
     static {
         final String[] customArgs = {
@@ -64,7 +65,9 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
     public static final class DelegateHarnessExecutor extends AbstractEventExecutor {
         private static EventLoop executor;
         public DelegateHarnessExecutor(int maxThreads, String prefix) {
-            System.out.println("Using DelegateHarnessExecutor executor " + this);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Using DelegateHarnessExecutor executor " + this);
+            }
         }
 
         /**
