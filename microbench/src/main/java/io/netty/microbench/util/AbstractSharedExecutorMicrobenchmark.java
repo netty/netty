@@ -66,7 +66,7 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
         private static EventLoop executor;
         public DelegateHarnessExecutor(int maxThreads, String prefix) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Using DelegateHarnessExecutor executor " + this);
+                logger.debug("Using DelegateHarnessExecutor executor {}" + this);
             }
         }
 
