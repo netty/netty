@@ -114,12 +114,8 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
             String protocol = getAlpnSelectedProtocol(getWrappedConscryptEngine());
             try {
                 protocolListener.selected(protocol);
-            } catch (SSLException e) {
-                throw e;
-            } catch (Throwable cause) {
-                SSLHandshakeException e = new SSLHandshakeException("Protocol selection failed");
-                e.initCause(cause);
-                throw e;
+            } catch (Throwable e) {
+                throw toSSLHandshakeException(e);
             }
         }
     }
@@ -141,12 +137,18 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
                 String protocol = getAlpnSelectedProtocol(getWrappedConscryptEngine());
                 protocolSelector.select(protocol != null ? Collections.singletonList(protocol)
                         : Collections.<String>emptyList());
-            } catch (SSLException e) {
-                throw e;
-            } catch (Throwable cause) {
-                PlatformDependent.throwException(cause);
+            } catch (Throwable e) {
+                throw toSSLHandshakeException(e);
             }
         }
+    }
+
+    private static SSLHandshakeException toSSLHandshakeException(Throwable e) {
+        if (e instanceof SSLHandshakeException) {
+            return (SSLHandshakeException) e;
+        }
+
+        return (SSLHandshakeException) new SSLHandshakeException(e.getMessage()).initCause(e);
     }
 
     private static Class<?> getEngineClass() {
