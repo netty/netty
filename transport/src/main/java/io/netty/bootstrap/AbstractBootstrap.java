@@ -461,7 +461,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             }
         } catch (Throwable t) {
             logger.warn(
-                    "Failed to set channel option '{}' with value '{}' for channel '{}'", option, channel, channel, t);
+                    "Failed to set channel option '{}' with value '{}' for channel '{}'", option, value, channel, t);
         }
     }
 
