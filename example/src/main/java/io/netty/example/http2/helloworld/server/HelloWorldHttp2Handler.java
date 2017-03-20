@@ -18,23 +18,20 @@ package io.netty.example.http2.helloworld.server;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
-import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Flags;
 import io.netty.handler.codec.http2.Http2FrameListener;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static io.netty.example.http2.Http2ExampleUtil.UPGRADE_RESPONSE_HEADER;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.buffer.Unpooled.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
 
 /**
  * A simple handler that responds with the message "Hello World!".
@@ -55,11 +52,8 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof HttpServerUpgradeHandler.UpgradeEvent) {
-            // Write an HTTP/2 response to the upgrade request
-            Http2Headers headers =
-                    new DefaultHttp2Headers().status(OK.codeAsText())
-                    .set(new AsciiString(UPGRADE_RESPONSE_HEADER), new AsciiString("true"));
-            encoder().writeHeaders(ctx, 1, headers, 0, true, ctx.newPromise());
+            HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = (HttpServerUpgradeHandler.UpgradeEvent) evt;
+            onHeadersRead(ctx, 1, http1HeadersToHttp2Headers(upgradeEvent.upgradeRequest()), 0 , true);
         }
         super.userEventTriggered(ctx, evt);
     }
@@ -69,6 +63,14 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
         super.exceptionCaught(ctx, cause);
         cause.printStackTrace();
         ctx.close();
+    }
+
+    private static Http2Headers http1HeadersToHttp2Headers(FullHttpRequest request) {
+        return new DefaultHttp2Headers()
+                .authority(request.headers().get("Host"))
+                .method("GET")
+                .path(request.uri())
+                .scheme("http");
     }
 
     /**
