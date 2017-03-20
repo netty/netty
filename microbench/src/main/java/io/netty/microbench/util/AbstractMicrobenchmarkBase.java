@@ -18,8 +18,6 @@ package io.netty.microbench.util;
 import static org.junit.Assert.assertNull;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
