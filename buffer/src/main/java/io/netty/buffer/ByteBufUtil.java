@@ -72,6 +72,10 @@ public final class ByteBufUtil {
     static final int WRITE_CHUNK_SIZE = 8192;
     static final ByteBufAllocator DEFAULT_ALLOCATOR;
 
+    static final String BOM_STR = "\uFEFF";
+    static final byte[] BOM_UTF8 = BOM_STR.getBytes(CharsetUtil.UTF_8);
+    static final byte[] BOM_US_ASCII = BOM_STR.getBytes(CharsetUtil.US_ASCII);
+
     static {
         String allocType = SystemPropertyUtil.get(
                 "io.netty.allocator.type", PlatformDependent.isAndroid() ? "unpooled" : "pooled");
@@ -1471,6 +1475,37 @@ public final class ByteBufUtil {
             out.write(in, inOffset, len);
             outLen -= len;
         } while (outLen > 0);
+    }
+
+    /**
+     * Determines the length of the byte-order mark as it occurs at the beginning of the
+     * specified {@link ByteBuf} input.  Returns the length if found, otherwise -1.
+     *
+     * @param buf the input buffer, in which to locate the BOM (U+FEFF)
+     * @param charset the charset that should be used to interpret the buffer
+     * @return the length of the byte-order mark, if it occurs in the input, or -1 if the BOM does not occur
+     */
+    public static int lengthOfByteOrderMark(ByteBuf buf, Charset charset) {
+        byte[] bom;
+        if (CharsetUtil.UTF_8.equals(charset)) {
+            bom = BOM_UTF8;
+        } else if (CharsetUtil.US_ASCII.equals(charset)) {
+            bom = BOM_US_ASCII;
+        } else {
+            bom = BOM_STR.getBytes(charset);
+        }
+
+        int i;
+        for (i = 0; i < bom.length && i < buf.readableBytes(); i++) {
+            if (bom[i] != buf.getByte(i)) {
+                break;
+            }
+        }
+        if (i == bom.length) {
+            return i;
+        } else {
+            return 0;
+        }
     }
 
     private ByteBufUtil() { }

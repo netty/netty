@@ -15,10 +15,13 @@
  */
 package io.netty.buffer;
 
+import com.google.common.base.Charsets;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
+import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -29,11 +32,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.*;
 
 public class ByteBufUtilTest {
     @Test

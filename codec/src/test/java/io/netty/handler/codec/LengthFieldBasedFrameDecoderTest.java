@@ -83,4 +83,52 @@ public class LengthFieldBasedFrameDecoderTest {
 
         buf.release();
     }
+
+    @Test
+    public void goodFrameAfterTooLongFrame() {
+        ByteBuf goodBuf1 = Unpooled.buffer();
+        goodBuf1.writeInt(16);
+        for (int i = 0; i < 16; i++) {
+            goodBuf1.writeByte(i);
+        }
+
+        ByteBuf longBuf = Unpooled.buffer();
+        longBuf.writeInt(32);
+        for (int i = 0; i < 32; i++) {
+            longBuf.writeByte(i);
+        }
+
+        ByteBuf goodBuf2 = Unpooled.buffer();
+        goodBuf2.writeInt(2);
+        goodBuf2.writeByte('x');
+        goodBuf2.writeByte('y');
+
+        EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(20, 0, 4));
+        // write first record (16 bits, should succeed)
+        channel.writeInbound(goodBuf1);
+        ByteBuf in1 = channel.readInbound();
+        assertByteBufsMatch(goodBuf1, in1);
+
+        try {
+            // write too-long frame in 3 chunks to hit all code paths in decode method
+            channel.writeInbound(longBuf.retainedSlice(0, 20),
+                                 longBuf.retainedSlice(20, 8),
+                                 longBuf.retainedSlice(28, 8));
+            Assert.fail();
+        } catch (TooLongFrameException expected) {
+            // do nothing
+        }
+
+        channel.writeInbound(goodBuf2);
+        ByteBuf in2 = channel.readInbound();
+        assertByteBufsMatch(goodBuf2, in2);
+
+        Assert.assertFalse(channel.finishAndReleaseAll());
+    }
+
+    private static void assertByteBufsMatch(ByteBuf expected, ByteBuf actual) {
+        for (int i = 0; i < actual.readableBytes(); i++) {
+            Assert.assertEquals(expected.getByte(i), actual.getByte(i));
+        }
+    }
 }

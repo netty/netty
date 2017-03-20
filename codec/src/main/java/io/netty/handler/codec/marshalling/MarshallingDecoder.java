@@ -81,7 +81,18 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
     }
 
     @Override
-    protected ByteBuf extractFrame(ChannelHandlerContext ctx, ByteBuf buffer, int index, int length) {
+    protected ByteBuf extractFrame(ByteBuf buffer, int index, int length) {
         return buffer.slice(index, length);
+    }
+
+    /**
+     * @deprecated - use {@link #extractFrame(ByteBuf, int, int)} instead, since the
+     * {@link ChannelHandlerContext} is not actually needed for implementation
+     */
+    @Override
+    @Deprecated
+    protected ByteBuf extractFrame(@SuppressWarnings({ "unused", "squid:S1172" }) ChannelHandlerContext ignored,
+                                   ByteBuf buffer, int index, int length) {
+        return extractFrame(buffer, index, length);
     }
 }

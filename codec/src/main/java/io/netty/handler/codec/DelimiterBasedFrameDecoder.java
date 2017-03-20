@@ -233,7 +233,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
         int minFrameLength = Integer.MAX_VALUE;
         ByteBuf minDelim = null;
         for (ByteBuf delim: delimiters) {
-            int frameLength = indexOf(buffer, delim);
+            int frameLength = indexWithin(buffer, delim);
             if (frameLength >= 0 && frameLength < minFrameLength) {
                 minFrameLength = frameLength;
                 minDelim = delim;
@@ -250,10 +250,10 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
                 discardingTooLongFrame = false;
                 buffer.skipBytes(minFrameLength + minDelimLength);
 
-                int tooLongFrameLength = this.tooLongFrameLength;
-                this.tooLongFrameLength = 0;
+                final int prevTooLongFrameLength = tooLongFrameLength;
+                tooLongFrameLength = 0;
                 if (!failFast) {
-                    fail(tooLongFrameLength);
+                    fail(prevTooLongFrameLength);
                 }
                 return null;
             }
@@ -309,8 +309,13 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
      * Returns the number of bytes between the readerIndex of the haystack and
      * the first needle found in the haystack.  -1 is returned if no needle is
      * found in the haystack.
+     *
+     * @param haystack the buffer to search for an occurence of the needle
+     * @param needle the buffer to find in the haystack
+     *
+     * @return the first relative byte index of the needle found within the haystack, or -1 if not found
      */
-    private static int indexOf(ByteBuf haystack, ByteBuf needle) {
+    protected static int indexWithin(ByteBuf haystack, ByteBuf needle) {
         for (int i = haystack.readerIndex(); i < haystack.writerIndex(); i ++) {
             int haystackIndex = i;
             int needleIndex;
