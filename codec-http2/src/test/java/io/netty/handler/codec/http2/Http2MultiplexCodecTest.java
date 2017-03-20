@@ -39,6 +39,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static io.netty.util.ReferenceCountUtil.release;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -341,6 +342,28 @@ public class Http2MultiplexCodecTest {
         assertFalse(channel.config().isAutoRead());
         assertSame(mark, channel.config().getWriteBufferWaterMark());
         assertEquals("bar", channel.attr(key).get());
+    }
+
+    @Test
+    public void childChannelShouldShareParentsChannelOptions() {
+        EmbeddedChannel parent = new EmbeddedChannel();
+        parent.config().setAutoRead(false);
+        parent.config().setWriteSpinCount(42);
+
+        Http2StreamChannelBootstrap b = new Http2StreamChannelBootstrap();
+        parent.pipeline().addLast(new Http2MultiplexCodec(true, b));
+
+        Channel child = b
+            .parentChannel(parent)
+            .handler(new TestChannelInitializer())
+            .connect()
+            .channel();
+
+        assertFalse(child.config().isAutoRead());
+        assertEquals(child.config().getWriteSpinCount(), 42);
+
+        child.close();
+        assertTrue(!parent.finish());
     }
 
     @Test
