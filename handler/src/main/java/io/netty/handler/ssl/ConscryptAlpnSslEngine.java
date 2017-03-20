@@ -21,7 +21,6 @@ import static java.lang.Math.min;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.PlatformDependent;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
