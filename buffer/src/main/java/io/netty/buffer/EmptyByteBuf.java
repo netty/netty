@@ -760,7 +760,7 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(ByteBuf src) {
-        throw new IndexOutOfBoundsException();
+        return checkLength(src.readableBytes());
     }
 
     @Override
