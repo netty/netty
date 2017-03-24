@@ -112,6 +112,17 @@ public class LoggingHandlerTest {
     }
 
     @Test
+    public void shouldLogChannelWritabilityChanged() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        // this is used to switch the channel to become unwritable
+        channel.config().setWriteBufferLowWaterMark(5);
+        channel.config().setWriteBufferHighWaterMark(10);
+        channel.write("hello", channel.newPromise());
+
+        verify(appender).doAppend(argThat(new RegexLogMatcher(".+WRITABILITY CHANGED$")));
+    }
+
+    @Test
     public void shouldLogChannelRegistered() {
         new EmbeddedChannel(new LoggingHandler());
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+REGISTERED$")));
@@ -194,7 +205,7 @@ public class LoggingHandlerTest {
         String msg = "hello";
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+RECEIVED: " + msg + '$')));
+        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg + '$')));
 
         String handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
@@ -206,7 +217,7 @@ public class LoggingHandlerTest {
         ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8);
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+RECEIVED: " + msg.readableBytes() + "B$")));
+        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$")));
 
         ByteBuf handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
@@ -219,7 +230,7 @@ public class LoggingHandlerTest {
         ByteBuf msg = Unpooled.EMPTY_BUFFER;
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+RECEIVED: 0B$")));
+        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: 0B$")));
 
         ByteBuf handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
@@ -237,12 +248,20 @@ public class LoggingHandlerTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+RECEIVED: foobar, 5B$")));
+        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: foobar, 5B$")));
 
         ByteBufHolder handledMsg = channel.readInbound();
         assertThat(msg, is(sameInstance(handledMsg)));
         handledMsg.release();
         assertThat(channel.readInbound(), is(nullValue()));
+    }
+
+    @Test
+    public void shouldLogChannelReadComplete() throws Exception {
+        ByteBuf msg = Unpooled.EMPTY_BUFFER;
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        channel.writeInbound(msg);
+        verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ COMPLETE$")));
     }
 
     /**
