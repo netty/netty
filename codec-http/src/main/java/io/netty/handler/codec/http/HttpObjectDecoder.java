@@ -805,7 +805,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         @Override
         public boolean process(byte value) throws Exception {
-            char nextByte = (char) value;
+            char nextByte = (char) (value & 0xFF);
             if (nextByte == HttpConstants.CR) {
                 return true;
             }
