@@ -67,9 +67,6 @@ public final class PlatformDependent {
     private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
             "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
 
-    // this must be initialized before any code below triggers initialization of PlatformDependent0
-    private static final boolean IS_EXPLICIT_NO_UNSAFE = explicitNoUnsafe0();
-
     private static final boolean IS_ANDROID = isAndroid0();
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean MAYBE_SUPER_USER;
@@ -99,8 +96,16 @@ public final class PlatformDependent {
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
     private static final ThreadLocalRandomProvider RANDOM_PROVIDER;
+    private static final Cleaner CLEANER;
 
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
+
+    private static final Cleaner NOOP = new Cleaner() {
+        @Override
+        public void freeDirectBuffer(ByteBuffer buffer) {
+            // NOOP
+        }
+    };
 
     static {
         if (javaVersion() >= 7) {
@@ -122,7 +127,7 @@ public final class PlatformDependent {
             logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
         }
 
-        if (!hasUnsafe() && !isAndroid() && !IS_EXPLICIT_NO_UNSAFE) {
+        if (!hasUnsafe() && !isAndroid()) {
             logger.info(
                     "Your platform does not provide complete low-level API for accessing direct buffers reliably. " +
                     "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
@@ -158,6 +163,18 @@ public final class PlatformDependent {
         logger.debug("io.netty.maxDirectMemory: {} bytes", maxDirectMemory);
 
         MAYBE_SUPER_USER = maybeSuperUser0();
+
+        if (!isAndroid()) {
+            // only direct to method if we are not running on android.
+            // See https://github.com/netty/netty/issues/2604
+            if (javaVersion() >= 9) {
+                CLEANER = CleanerJava9.isSupported() ? new CleanerJava9() : NOOP;
+            } else {
+                CLEANER = CleanerJava6.isSupported() ? new CleanerJava6() : NOOP;
+            }
+        } else {
+            CLEANER = NOOP;
+        }
     }
 
     /**
@@ -322,15 +339,11 @@ public final class PlatformDependent {
     }
 
     /**
-     * Try to deallocate the specified direct {@link ByteBuffer}.  Please note this method does nothing if
+     * Try to deallocate the specified direct {@link ByteBuffer}. Please note this method does nothing if
      * the current platform does not support this operation or the specified buffer is not a direct buffer.
      */
     public static void freeDirectBuffer(ByteBuffer buffer) {
-        if (hasUnsafe() && !isAndroid()) {
-            // only direct to method if we are not running on android.
-            // See https://github.com/netty/netty/issues/2604
-            PlatformDependent0.freeDirectBuffer(buffer);
-        }
+        CLEANER.freeDirectBuffer(buffer);
     }
 
     public static long directBufferAddress(ByteBuffer buffer) {
@@ -933,42 +946,13 @@ public final class PlatformDependent {
         }
     }
 
-    static boolean isExplicitNoUnsafe() {
-        return IS_EXPLICIT_NO_UNSAFE;
-    }
-
-    private static boolean explicitNoUnsafe0() {
-        final boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
-        logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
-
-        if (noUnsafe) {
-            logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
-            return true;
-        }
-
-        // Legacy properties
-        boolean tryUnsafe;
-        if (SystemPropertyUtil.contains("io.netty.tryUnsafe")) {
-            tryUnsafe = SystemPropertyUtil.getBoolean("io.netty.tryUnsafe", true);
-        } else {
-            tryUnsafe = SystemPropertyUtil.getBoolean("org.jboss.netty.tryUnsafe", true);
-        }
-
-        if (!tryUnsafe) {
-            logger.debug("sun.misc.Unsafe: unavailable (io.netty.tryUnsafe/org.jboss.netty.tryUnsafe)");
-            return true;
-        }
-
-        return false;
-    }
-
     private static boolean hasUnsafe0() {
         if (isAndroid()) {
             logger.debug("sun.misc.Unsafe: unavailable (Android)");
             return false;
         }
 
-        if (IS_EXPLICIT_NO_UNSAFE) {
+        if (PlatformDependent0.isExplicitNoUnsafe()) {
             return false;
         }
 

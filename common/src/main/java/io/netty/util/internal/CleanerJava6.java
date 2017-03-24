@@ -29,41 +29,32 @@ import java.nio.ByteBuffer;
  *
  * For more details see <a href="https://github.com/netty/netty/issues/2604">#2604</a>.
  */
-final class Cleaner0 {
+final class CleanerJava6 implements Cleaner {
     private static final long CLEANER_FIELD_OFFSET;
     private static final Method CLEAN_METHOD;
-    private static final boolean CLEANER_IS_RUNNABLE;
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Cleaner0.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CleanerJava6.class);
 
     static {
-        ByteBuffer direct = ByteBuffer.allocateDirect(1);
-        Field cleanerField;
         long fieldOffset = -1;
         Method clean = null;
-        boolean cleanerIsRunnable = false;
         Throwable error = null;
         if (PlatformDependent0.hasUnsafe()) {
+            ByteBuffer direct = ByteBuffer.allocateDirect(1);
             try {
-                cleanerField = direct.getClass().getDeclaredField("cleaner");
+                Field cleanerField = direct.getClass().getDeclaredField("cleaner");
                 fieldOffset = PlatformDependent0.objectFieldOffset(cleanerField);
                 Object cleaner = PlatformDependent0.getObject(direct, fieldOffset);
-                try {
-                    // Cleaner implements Runnable from JDK9 onwards.
-                    Runnable runnable = (Runnable) cleaner;
-                    runnable.run();
-                    cleanerIsRunnable = true;
-                } catch (ClassCastException ignored) {
-                    clean = cleaner.getClass().getDeclaredMethod("clean");
-                    clean.invoke(cleaner);
-                }
+                clean = cleaner.getClass().getDeclaredMethod("clean");
+                clean.invoke(cleaner);
             } catch (Throwable t) {
                 // We don't have ByteBuffer.cleaner().
                 fieldOffset = -1;
                 clean = null;
-                cleanerIsRunnable = false;
                 error = t;
             }
+        } else {
+            error = new UnsupportedOperationException("sun.misc.Unsafe unavailable");
         }
         if (error == null) {
             logger.debug("java.nio.ByteBuffer.cleaner(): available");
@@ -72,31 +63,24 @@ final class Cleaner0 {
         }
         CLEANER_FIELD_OFFSET = fieldOffset;
         CLEAN_METHOD = clean;
-        CLEANER_IS_RUNNABLE = cleanerIsRunnable;
-
-        // free buffer if possible
-        freeDirectBuffer(direct);
     }
 
-    static void freeDirectBuffer(ByteBuffer buffer) {
-        if (CLEANER_FIELD_OFFSET == -1 || !buffer.isDirect()) {
+    static boolean isSupported() {
+        return CLEANER_FIELD_OFFSET != -1;
+    }
+
+    @Override
+    public void freeDirectBuffer(ByteBuffer buffer) {
+        if (!buffer.isDirect()) {
             return;
         }
-        assert CLEAN_METHOD != null || CLEANER_IS_RUNNABLE:
-                "CLEANER_FIELD_OFFSET != -1 implies CLEAN_METHOD != null or CLEANER_IS_RUNNABLE == true";
         try {
             Object cleaner = PlatformDependent0.getObject(buffer, CLEANER_FIELD_OFFSET);
             if (cleaner != null) {
-                if (CLEANER_IS_RUNNABLE) {
-                    ((Runnable) cleaner).run();
-                } else {
-                    CLEAN_METHOD.invoke(cleaner);
-                }
+                CLEAN_METHOD.invoke(cleaner);
             }
-        } catch (Throwable t) {
-            // Nothing we can do here.
+        } catch (Throwable cause) {
+            PlatformDependent0.throwException(cause);
         }
     }
-
-    private Cleaner0() { }
 }

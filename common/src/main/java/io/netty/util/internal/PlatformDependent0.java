@@ -36,10 +36,12 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 final class PlatformDependent0 {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
-    private static final Unsafe UNSAFE;
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
+    private static final boolean IS_EXPLICIT_NO_UNSAFE = explicitNoUnsafe0();
+
+    static final Unsafe UNSAFE;
 
     // constants borrowed from murmur3
     static final int HASH_CODE_ASCII_SEED = 0xc2b2ae35;
@@ -59,7 +61,7 @@ final class PlatformDependent0 {
         Field addressField = null;
         Unsafe unsafe;
 
-        if (PlatformDependent.isExplicitNoUnsafe()) {
+        if (isExplicitNoUnsafe()) {
             direct = null;
             addressField = null;
             unsafe = null;
@@ -244,7 +246,7 @@ final class PlatformDependent0 {
                 public Object run() {
                     try {
                         Class<?> bitsClass =
-                                Class.forName("java.nio.Bits", false, PlatformDependent.getSystemClassLoader());
+                                Class.forName("java.nio.Bits", false, getSystemClassLoader());
                         Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
                         Throwable cause = ReflectionUtil.trySetAccessible(unalignedMethod);
                         if (cause != null) {
@@ -281,10 +283,35 @@ final class PlatformDependent0 {
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, int): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
+    }
 
-        if (direct != null) {
-            freeDirectBuffer(direct);
+    static boolean isExplicitNoUnsafe() {
+        return IS_EXPLICIT_NO_UNSAFE;
+    }
+
+    private static boolean explicitNoUnsafe0() {
+        final boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
+        logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
+
+        if (noUnsafe) {
+            logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
+            return true;
         }
+
+        // Legacy properties
+        boolean tryUnsafe;
+        if (SystemPropertyUtil.contains("io.netty.tryUnsafe")) {
+            tryUnsafe = SystemPropertyUtil.getBoolean("io.netty.tryUnsafe", true);
+        } else {
+            tryUnsafe = SystemPropertyUtil.getBoolean("org.jboss.netty.tryUnsafe", true);
+        }
+
+        if (!tryUnsafe) {
+            logger.debug("sun.misc.Unsafe: unavailable (io.netty.tryUnsafe/org.jboss.netty.tryUnsafe)");
+            return true;
+        }
+
+        return false;
     }
 
     static boolean isUnaligned() {
@@ -328,12 +355,6 @@ final class PlatformDependent0 {
             }
             throw new Error(cause);
         }
-    }
-
-    static void freeDirectBuffer(ByteBuffer buffer) {
-        // Delegate to other class to not break on android
-        // See https://github.com/netty/netty/issues/2604
-        Cleaner0.freeDirectBuffer(buffer);
     }
 
     static long directBufferAddress(ByteBuffer buffer) {
