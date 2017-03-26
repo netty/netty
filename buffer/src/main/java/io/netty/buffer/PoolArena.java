@@ -672,6 +672,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     directMemoryCacheAlignment);
         }
 
+        private static byte[] newByteArray(int size) {
+            return PlatformDependent.allocateUninitializedArray(size);
+        }
+
         @Override
         boolean isDirect() {
             return false;
@@ -679,12 +683,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected PoolChunk<byte[]> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
-            return new PoolChunk<byte[]>(this, new byte[chunkSize], pageSize, maxOrder, pageShifts, chunkSize, 0);
+            return new PoolChunk<byte[]>(this, newByteArray(chunkSize), pageSize, maxOrder, pageShifts, chunkSize, 0);
         }
 
         @Override
         protected PoolChunk<byte[]> newUnpooledChunk(int capacity) {
-            return new PoolChunk<byte[]>(this, new byte[capacity], capacity, 0);
+            return new PoolChunk<byte[]>(this, newByteArray(capacity), capacity, 0);
         }
 
         @Override
