@@ -318,7 +318,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Test
     public void testCalculateOutNetBufSizeOverflow() {
-        assertEquals(MAX_VALUE,
+        assertEquals(MAX_ENCRYPTED_PACKET_LENGTH,
                 ReferenceCountedOpenSslEngine.calculateOutNetBufSize(MAX_VALUE, 1));
     }
 
@@ -326,6 +326,12 @@ public class OpenSslEngineTest extends SSLEngineTest {
     public void testCalculateOutNetBufSize0() {
         assertEquals(MAX_TLS_RECORD_OVERHEAD_LENGTH,
                 ReferenceCountedOpenSslEngine.calculateOutNetBufSize(0, 1));
+    }
+
+    @Test
+    public void testCalculateOutNetBufSizeMaxEncryptedPacketLength() {
+        assertEquals(MAX_ENCRYPTED_PACKET_LENGTH,
+                ReferenceCountedOpenSslEngine.calculateOutNetBufSize(MAX_ENCRYPTED_PACKET_LENGTH + 1, 2));
     }
 
     @Override
