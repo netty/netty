@@ -1611,7 +1611,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     static int calculateOutNetBufSize(int pendingBytes, int numComponents) {
-        return (int) min(Integer.MAX_VALUE, pendingBytes + (long) MAX_TLS_RECORD_OVERHEAD_LENGTH * numComponents);
+        return (int) min(MAX_ENCRYPTED_PACKET_LENGTH,
+                pendingBytes + (long) MAX_TLS_RECORD_OVERHEAD_LENGTH * numComponents);
     }
 
     private final class OpenSslSession implements SSLSession, ApplicationProtocolAccessor {
