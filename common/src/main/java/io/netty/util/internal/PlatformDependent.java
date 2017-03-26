@@ -97,6 +97,7 @@ public final class PlatformDependent {
     private static final long DIRECT_MEMORY_LIMIT;
     private static final ThreadLocalRandomProvider RANDOM_PROVIDER;
     private static final Cleaner CLEANER;
+    private static final int UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD;
 
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
@@ -160,7 +161,13 @@ public final class PlatformDependent {
             }
         }
         DIRECT_MEMORY_LIMIT = maxDirectMemory;
-        logger.debug("io.netty.maxDirectMemory: {} bytes", maxDirectMemory);
+        logger.debug("-Dio.netty.maxDirectMemory: {} bytes", maxDirectMemory);
+
+        int tryAllocateUninitializedArray =
+                SystemPropertyUtil.getInt("io.netty.uninitializedArrayAllocationThreshold", 1024);
+        UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD = javaVersion() >= 9 && PlatformDependent0.hasAllocateArrayMethod() ?
+                tryAllocateUninitializedArray : -1;
+        logger.debug("-Dio.netty.uninitializedArrayAllocationThreshold: {}", UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD);
 
         MAYBE_SUPER_USER = maybeSuperUser0();
 
@@ -175,6 +182,11 @@ public final class PlatformDependent {
         } else {
             CLEANER = NOOP;
         }
+    }
+
+    public static byte[] allocateUninitializedArray(int size) {
+        return UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD < 0 || UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD > size ?
+                new byte[size] : PlatformDependent0.allocateUninitializedArray(size);
     }
 
     /**
