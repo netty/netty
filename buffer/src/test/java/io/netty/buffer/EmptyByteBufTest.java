@@ -38,6 +38,8 @@ public class EmptyByteBufTest {
             fail();
         } catch (IndexOutOfBoundsException ignored) {
             // Ignore.
+        } finally {
+            nonEmpty.release();
         }
     }
 
