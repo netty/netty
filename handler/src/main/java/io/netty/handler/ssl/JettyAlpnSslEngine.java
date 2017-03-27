@@ -100,14 +100,20 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
 
         @Override
         public void closeInbound() throws SSLException {
-            ALPN.remove(getWrappedEngine());
-            super.closeInbound();
+            try {
+                ALPN.remove(getWrappedEngine());
+            } finally {
+                super.closeInbound();
+            }
         }
 
         @Override
         public void closeOutbound() {
-            ALPN.remove(getWrappedEngine());
-            super.closeOutbound();
+            try {
+                ALPN.remove(getWrappedEngine());
+            } finally {
+                super.closeOutbound();
+            }
         }
     }
 
