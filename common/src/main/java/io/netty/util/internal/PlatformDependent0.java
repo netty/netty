@@ -308,7 +308,6 @@ final class PlatformDependent0 {
     }
 
     static ByteBuffer newDirectBuffer(long address, int capacity) {
-        ObjectUtil.checkPositiveOrZero(address, "address");
         ObjectUtil.checkPositiveOrZero(capacity, "capacity");
 
         try {
