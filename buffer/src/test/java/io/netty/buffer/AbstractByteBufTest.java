@@ -57,7 +57,6 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -67,6 +66,7 @@ public abstract class AbstractByteBufTest {
 
     private static final int CAPACITY = 4096; // Must be even
     private static final int BLOCK_SIZE = 128;
+    private static final int JAVA_BYTEBUFFER_CONSISTENCY_ITERATIONS = 100;
 
     private long seed;
     private Random random;
@@ -438,6 +438,38 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testShortConsistentWithByteBuffer() {
+        testShortConsistentWithByteBuffer(true, true);
+        testShortConsistentWithByteBuffer(true, false);
+        testShortConsistentWithByteBuffer(false, true);
+        testShortConsistentWithByteBuffer(false, false);
+    }
+
+    private void testShortConsistentWithByteBuffer(boolean direct, boolean testBigEndian) {
+        for (int i = 0; i < JAVA_BYTEBUFFER_CONSISTENCY_ITERATIONS; ++i) {
+            ByteBuffer javaBuffer = direct ? ByteBuffer.allocateDirect(buffer.capacity())
+                                           : ByteBuffer.allocate(buffer.capacity());
+            if (!testBigEndian) {
+                javaBuffer = javaBuffer.order(ByteOrder.LITTLE_ENDIAN);
+            }
+
+            short expected = (short) (random.nextInt() & 0xFFFF);
+            javaBuffer.putShort(expected);
+
+            final int bufferIndex = buffer.capacity() - 2;
+            if (!testBigEndian) {
+                buffer = buffer.order(ByteOrder.LITTLE_ENDIAN);
+            }
+            buffer.setShort(bufferIndex, expected);
+            javaBuffer.flip();
+
+            short javaActual = javaBuffer.getShort();
+            assertEquals(expected, javaActual);
+            assertEquals(javaActual, buffer.getShort(bufferIndex));
+        }
+    }
+
+    @Test
     public void testRandomUnsignedShortAccess() {
         for (int i = 0; i < buffer.capacity() - 1; i += 2) {
             short value = (short) random.nextInt();
@@ -480,6 +512,38 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testMediumConsistentWithByteBuffer() {
+        testMediumConsistentWithByteBuffer(true, true);
+        testMediumConsistentWithByteBuffer(true, false);
+        testMediumConsistentWithByteBuffer(false, true);
+        testMediumConsistentWithByteBuffer(false, false);
+    }
+
+    private void testMediumConsistentWithByteBuffer(boolean direct, boolean testBigEndian) {
+        for (int i = 0; i < JAVA_BYTEBUFFER_CONSISTENCY_ITERATIONS; ++i) {
+            ByteBuffer javaBuffer = direct ? ByteBuffer.allocateDirect(buffer.capacity())
+                                           : ByteBuffer.allocate(buffer.capacity());
+            if (!testBigEndian) {
+                javaBuffer = javaBuffer.order(ByteOrder.LITTLE_ENDIAN);
+            }
+
+            int expected = random.nextInt() & 0x00FFFFFF;
+            javaBuffer.putInt(expected);
+
+            final int bufferIndex = buffer.capacity() - 3;
+            if (testBigEndian) {
+                buffer = buffer.order(ByteOrder.LITTLE_ENDIAN);
+            }
+            buffer.setMedium(bufferIndex, expected);
+            javaBuffer.flip();
+
+            int javaActual = javaBuffer.getInt();
+            assertEquals(expected, javaActual);
+            assertEquals(javaActual, buffer.getUnsignedMedium(bufferIndex));
+        }
+    }
+
+    @Test
     public void testRandomIntAccess() {
         for (int i = 0; i < buffer.capacity() - 3; i += 4) {
             int value = random.nextInt();
@@ -490,6 +554,38 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity() - 3; i += 4) {
             int value = random.nextInt();
             assertEquals(value, buffer.getInt(i));
+        }
+    }
+
+    @Test
+    public void testIntConsistentWithByteBuffer() {
+        testIntConsistentWithByteBuffer(true, true);
+        testIntConsistentWithByteBuffer(true, false);
+        testIntConsistentWithByteBuffer(false, true);
+        testIntConsistentWithByteBuffer(false, false);
+    }
+
+    private void testIntConsistentWithByteBuffer(boolean direct, boolean testBigEndian) {
+        for (int i = 0; i < JAVA_BYTEBUFFER_CONSISTENCY_ITERATIONS; ++i) {
+            ByteBuffer javaBuffer = direct ? ByteBuffer.allocateDirect(buffer.capacity())
+                                           : ByteBuffer.allocate(buffer.capacity());
+            if (!testBigEndian) {
+                javaBuffer = javaBuffer.order(ByteOrder.LITTLE_ENDIAN);
+            }
+
+            int expected = random.nextInt();
+            javaBuffer.putInt(expected);
+
+            final int bufferIndex = buffer.capacity() - 4;
+            if (testBigEndian) {
+                buffer = buffer.order(ByteOrder.LITTLE_ENDIAN);
+            }
+            buffer.setInt(bufferIndex, expected);
+            javaBuffer.flip();
+
+            int javaActual = javaBuffer.getInt();
+            assertEquals(expected, javaActual);
+            assertEquals(javaActual, buffer.getInt(bufferIndex));
         }
     }
 
