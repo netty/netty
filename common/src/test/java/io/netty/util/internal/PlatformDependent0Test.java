@@ -28,6 +28,7 @@ public class PlatformDependent0Test {
     @BeforeClass
     public static void assumeUnsafe() {
         assumeTrue(PlatformDependent0.hasUnsafe());
+        assumeTrue(PlatformDependent0.hasDirectBufferNoCleanerConstructor());
     }
 
     @Test
