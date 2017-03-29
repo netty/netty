@@ -103,7 +103,6 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
     @Override
     @Test
-    @Ignore("TODO: Make this work with Conscrypt")
     public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
         super.testClientHostnameValidationFail();
     }

@@ -246,7 +246,8 @@
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
-    <conscrypt.version>1.0.0.RC6</conscrypt.version>
+    <conscrypt.version>1.0.0.RC7</conscrypt.version>
+    <conscrypt.classifier></conscrypt.classifier>
     <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
@@ -350,6 +351,7 @@
       <dependency>
         <groupId>${conscrypt.groupId}</groupId>
         <artifactId>${conscrypt.artifactId}</artifactId>
+        <classifier>${conscrypt.classifier}</classifier>
         <version>${conscrypt.version}</version>
         <scope>compile</scope>
         <optional>true</optional>

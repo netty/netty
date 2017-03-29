@@ -20,60 +20,50 @@ import static java.lang.Math.min;
 
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import io.netty.util.CharsetUtil;
+import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
-import org.conscrypt.OpenSSLEngineImpl;
-import org.conscrypt.OpenSSLEngineImpl.HandshakeListener;
+import org.conscrypt.Conscrypt;
+import org.conscrypt.HandshakeListener;
 
 /**
  * A {@link JdkSslEngine} that uses the Conscrypt provider or SSL with ALPN.
  */
 abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
-    private static final Class<?> ENGINE_CLASS = getEngineClass();
+    private static final Class<?> ENGINES_CLASS = getEnginesClass();
 
     /**
      * Indicates whether or not conscrypt is available on the current system.
      */
     static boolean isAvailable() {
-        return ENGINE_CLASS != null;
+        return ENGINES_CLASS != null;
     }
 
     static boolean isEngineSupported(SSLEngine engine) {
-        return isAvailable() && ENGINE_CLASS.isInstance(engine);
+        return isAvailable() && isConscryptEngine(engine, ENGINES_CLASS);
     }
 
     static ConscryptAlpnSslEngine newClientEngine(SSLEngine engine,
             JdkApplicationProtocolNegotiator applicationNegotiator) {
-        return new ClientEngine((OpenSSLEngineImpl) engine, applicationNegotiator);
+        return new ClientEngine(engine, applicationNegotiator);
     }
 
     static ConscryptAlpnSslEngine newServerEngine(SSLEngine engine,
             JdkApplicationProtocolNegotiator applicationNegotiator) {
-        return new ServerEngine((OpenSSLEngineImpl) engine, applicationNegotiator);
+        return new ServerEngine(engine, applicationNegotiator);
     }
 
-    private ConscryptAlpnSslEngine(OpenSSLEngineImpl engine, List<String> protocols) {
+    private ConscryptAlpnSslEngine(SSLEngine engine, List<String> protocols) {
         super(engine);
 
-        // Register for completion of the handshake.
-        engine.setHandshakeListener(new HandshakeListener() {
-            @Override
-            public void onHandshakeFinished() throws SSLException {
-                ConscryptAlpnSslEngine.this.onHandshakeFinished();
-            }
-        });
-
         // Set the list of supported ALPN protocols on the engine.
-        engine.setAlpnProtocols(protocols.toArray(new String[protocols.size()]));
-    }
-
-    OpenSSLEngineImpl getWrappedConscryptEngine() {
-        return (OpenSSLEngineImpl) getWrappedEngine();
+        Conscrypt.Engines.setAlpnProtocols(engine, protocols.toArray(new String[protocols.size()]));
     }
 
     /**
@@ -86,31 +76,35 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
      */
     final int calculateOutNetBufSize(int plaintextBytes, int numBuffers) {
         // Assuming a max of one frame per component in a composite buffer.
-        long maxOverhead = (long) getWrappedConscryptEngine().maxSealOverhead() * numBuffers;
+        long maxOverhead = (long) Conscrypt.Engines.maxSealOverhead(getWrappedEngine()) * numBuffers;
         return (int) min(Integer.MAX_VALUE, plaintextBytes + maxOverhead);
     }
 
-    abstract void onHandshakeFinished() throws SSLException;
-
-    private static String getAlpnSelectedProtocol(OpenSSLEngineImpl engine) {
-        byte[] data = engine.getAlpnSelectedProtocol();
-        return data == null ? null : new String(data, CharsetUtil.US_ASCII);
+    final SSLEngineResult unwrap(ByteBuffer[] srcs, ByteBuffer[] dests) throws SSLException {
+        return Conscrypt.Engines.unwrap(getWrappedEngine(), srcs, dests);
     }
 
     private static final class ClientEngine extends ConscryptAlpnSslEngine {
         private final ProtocolSelectionListener protocolListener;
 
-        ClientEngine(OpenSSLEngineImpl engine,
+        ClientEngine(SSLEngine engine,
                 JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine, applicationNegotiator.protocols());
+            // Register for completion of the handshake.
+            Conscrypt.Engines.setHandshakeListener(engine, new HandshakeListener() {
+                @Override
+                public void onHandshakeFinished() throws SSLException {
+                    selectProtocol();
+                }
+            });
+
             protocolListener = checkNotNull(applicationNegotiator
                             .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()),
                     "protocolListener");
         }
 
-        @Override
-        public void onHandshakeFinished() throws SSLException {
-            String protocol = getAlpnSelectedProtocol(getWrappedConscryptEngine());
+        private void selectProtocol() throws SSLException {
+            String protocol = Conscrypt.Engines.getAlpnSelectedProtocol(getWrappedEngine());
             try {
                 protocolListener.selected(protocol);
             } catch (Throwable e) {
@@ -122,18 +116,26 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
     private static final class ServerEngine extends ConscryptAlpnSslEngine {
         private final ProtocolSelector protocolSelector;
 
-        ServerEngine(OpenSSLEngineImpl engine, JdkApplicationProtocolNegotiator applicationNegotiator) {
+        ServerEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine, applicationNegotiator.protocols());
+
+            // Register for completion of the handshake.
+            Conscrypt.Engines.setHandshakeListener(engine, new HandshakeListener() {
+                @Override
+                public void onHandshakeFinished() throws SSLException {
+                    selectProtocol();
+                }
+            });
+
             protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
                             .newSelector(this,
                                     new LinkedHashSet<String>(applicationNegotiator.protocols())),
                     "protocolSelector");
         }
 
-        @Override
-        public void onHandshakeFinished() throws SSLException {
+        private void selectProtocol() throws SSLException {
             try {
-                String protocol = getAlpnSelectedProtocol(getWrappedConscryptEngine());
+                String protocol = Conscrypt.Engines.getAlpnSelectedProtocol(getWrappedEngine());
                 protocolSelector.select(protocol != null ? Collections.singletonList(protocol)
                         : Collections.<String>emptyList());
             } catch (Throwable e) {
@@ -150,14 +152,30 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
         return (SSLHandshakeException) new SSLHandshakeException(e.getMessage()).initCause(e);
     }
 
-    private static Class<?> getEngineClass() {
+    private static Class<?> getEnginesClass() {
         try {
             // Always use bootstrap class loader.
-            return Class.forName("org.conscrypt.OpenSSLEngineImpl", true,
+            Class<?> engineClass = Class.forName("org.conscrypt.Conscrypt$Engines", true,
                     ConscryptAlpnSslEngine.class.getClassLoader());
+            // Ensure that it also has the isConscrypt method.
+            getIsConscryptMethod(engineClass);
+            return engineClass;
         } catch (Throwable ignore) {
             // Conscrypt was not loaded.
             return null;
         }
+    }
+
+    private static boolean isConscryptEngine(SSLEngine engine, Class<?> enginesClass) {
+        try {
+            Method method = getIsConscryptMethod(enginesClass);
+            return (Boolean) method.invoke(null, engine);
+        } catch (Throwable ignore) {
+            return false;
+        }
+    }
+
+    private static Method getIsConscryptMethod(Class<?> enginesClass) throws NoSuchMethodException {
+        return enginesClass.getMethod("isConscrypt", SSLEngine.class);
     }
 }

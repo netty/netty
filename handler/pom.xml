@@ -73,6 +73,7 @@
     <dependency>
       <groupId>${conscrypt.groupId}</groupId>
       <artifactId>${conscrypt.artifactId}</artifactId>
+      <classifier>${conscrypt.classifier}</classifier>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>

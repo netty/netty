@@ -188,7 +188,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 int writerIndex = out.writerIndex();
                 final SSLEngineResult result;
                 if (nioBufferCount > 1) {
-                    /**
+                    /*
                      * If {@link OpenSslEngine} is in use,
                      * we can use a special {@link OpenSslEngine#unwrap(ByteBuffer[], ByteBuffer[])} method
                      * that accepts multiple {@link ByteBuffer}s without additional memory copies.
@@ -222,17 +222,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 int writerIndex = out.writerIndex();
                 final SSLEngineResult result;
                 if (nioBufferCount > 1) {
-                    /**
-                     * If {@link org.conscrypt.OpenSslEngine} is in use,
-                     * we can use a special
-                     * {@link org.conscrypt.OpenSslEngine#unwrap(ByteBuffer[], ByteBuffer[])} method
-                     * that accepts multiple {@link ByteBuffer}s without additional memory copies.
+                    /*
+                     * Use a special unwrap method without additional memory copies.
                      */
-                    org.conscrypt.OpenSSLEngineImpl conscryptEngine =
-                            ((ConscryptAlpnSslEngine) handler.engine).getWrappedConscryptEngine();
                     try {
                         handler.singleBuffer[0] = toByteBuffer(out, writerIndex, out.writableBytes());
-                        result = conscryptEngine.unwrap(in.nioBuffers(readerIndex, len), handler.singleBuffer);
+                        result = ((ConscryptAlpnSslEngine) handler.engine).unwrap(
+                                in.nioBuffers(readerIndex, len),
+                                handler.singleBuffer);
                     } finally {
                         handler.singleBuffer[0] = null;
                     }
