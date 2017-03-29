@@ -242,7 +242,7 @@
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>2.0.0.Final</tcnative.version>
+    <tcnative.version>2.0.1.Final-SNAPSHOT</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
