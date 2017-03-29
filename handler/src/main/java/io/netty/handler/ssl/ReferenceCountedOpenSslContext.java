@@ -615,7 +615,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         return refCnt.release(decrement);
     }
 
-    abstract static class AbstractCertificateVerifier implements CertificateVerifier {
+    abstract static class AbstractCertificateVerifier extends CertificateVerifier {
         private final OpenSslEngineMap engineMap;
 
         AbstractCertificateVerifier(OpenSslEngineMap engineMap) {
