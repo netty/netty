@@ -50,6 +50,7 @@ import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
 import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.buffer.Unpooled.directBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.hamcrest.CoreMatchers.is;
@@ -3458,6 +3459,106 @@ public abstract class AbstractByteBufTest {
     @Test(expected = UnsupportedOperationException.class)
     public void testRetainedSliceCapacityChange() {
         testSliceCapacityChange(true);
+    }
+
+    @Test
+    public void testRetainedSliceUnreleasble1() {
+        testRetainedSliceUnreleasble(true, true);
+    }
+
+    @Test
+    public void testRetainedSliceUnreleasble2() {
+        testRetainedSliceUnreleasble(true, false);
+    }
+
+    @Test
+    public void testRetainedSliceUnreleasble3() {
+        testRetainedSliceUnreleasble(false, true);
+    }
+
+    @Test
+    public void testRetainedSliceUnreleasble4() {
+        testRetainedSliceUnreleasble(false, false);
+    }
+
+    @Test
+    public void testReadRetainedSliceUnreleasble1() {
+        testReadRetainedSliceUnreleasble(true, true);
+    }
+
+    @Test
+    public void testReadRetainedSliceUnreleasble2() {
+        testReadRetainedSliceUnreleasble(true, false);
+    }
+
+    @Test
+    public void testReadRetainedSliceUnreleasble3() {
+        testReadRetainedSliceUnreleasble(false, true);
+    }
+
+    @Test
+    public void testReadRetainedSliceUnreleasble4() {
+        testReadRetainedSliceUnreleasble(false, false);
+    }
+
+    @Test
+    public void testRetainedDuplicateUnreleasble1() {
+        testRetainedDuplicateUnreleasble(true, true);
+    }
+
+    @Test
+    public void testRetainedDuplicateUnreleasble2() {
+        testRetainedDuplicateUnreleasble(true, false);
+    }
+
+    @Test
+    public void testRetainedDuplicateUnreleasble3() {
+        testRetainedDuplicateUnreleasble(false, true);
+    }
+
+    @Test
+    public void testRetainedDuplicateUnreleasble4() {
+        testRetainedDuplicateUnreleasble(false, false);
+    }
+
+    private void testRetainedSliceUnreleasble(boolean initRetainedSlice, boolean finalRetainedSlice) {
+        ByteBuf buf = newBuffer(8);
+        ByteBuf buf1 = initRetainedSlice ? buf.retainedSlice() : buf.slice().retain();
+        ByteBuf buf2 = unreleasableBuffer(buf1);
+        ByteBuf buf3 = finalRetainedSlice ? buf2.retainedSlice() : buf2.slice().retain();
+        assertFalse(buf3.release());
+        assertFalse(buf2.release());
+        buf1.release();
+        assertTrue(buf.release());
+        assertEquals(0, buf1.refCnt());
+        assertEquals(0, buf.refCnt());
+    }
+
+    private void testReadRetainedSliceUnreleasble(boolean initRetainedSlice, boolean finalRetainedSlice) {
+        ByteBuf buf = newBuffer(8);
+        ByteBuf buf1 = initRetainedSlice ? buf.retainedSlice() : buf.slice().retain();
+        ByteBuf buf2 = unreleasableBuffer(buf1);
+        ByteBuf buf3 = finalRetainedSlice ? buf2.readRetainedSlice(buf2.readableBytes())
+                                          : buf2.readSlice(buf2.readableBytes()).retain();
+        assertFalse(buf3.release());
+        assertFalse(buf2.release());
+        buf1.release();
+        assertTrue(buf.release());
+        assertEquals(0, buf1.refCnt());
+        assertEquals(0, buf.refCnt());
+    }
+
+    private void testRetainedDuplicateUnreleasble(boolean initRetainedDuplicate, boolean finalRetainedDuplicate) {
+        ByteBuf buf = newBuffer(8);
+        ByteBuf buf1 = initRetainedDuplicate ? buf.retainedDuplicate() : buf.duplicate().retain();
+        ByteBuf buf2 = unreleasableBuffer(buf1);
+        ByteBuf buf3 = finalRetainedDuplicate ? buf2.retainedDuplicate() : buf2.duplicate().retain();
+        assertFalse(buf3.release());
+        assertFalse(buf2.release());
+        buf1.release();
+        assertTrue(buf.release());
+        assertEquals(0, buf1.refCnt());
+        assertEquals(0, buf.refCnt());
     }
 
     private void testDuplicateCapacityChange(boolean retainedDuplicate) {
