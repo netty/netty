@@ -27,9 +27,19 @@ import org.junit.runners.Parameterized.Parameters;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static io.netty.handler.codec.http.HttpHeaderValues.*;
-import static io.netty.handler.codec.http.HttpUtil.*;
-import static org.junit.Assert.*;
+import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
+import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
+import static io.netty.handler.codec.http.HttpHeaderValues.MULTIPART_MIXED;
+import static io.netty.handler.codec.http.HttpResponseStatus.NO_CONTENT;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpUtil.isContentLengthSet;
+import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
+import static io.netty.handler.codec.http.HttpUtil.setContentLength;
+import static io.netty.handler.codec.http.HttpUtil.setKeepAlive;
+import static io.netty.handler.codec.http.HttpUtil.setTransferEncodingChunked;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public class HttpServerKeepAliveHandlerTest {
@@ -41,6 +51,7 @@ public class HttpServerKeepAliveHandlerTest {
 
     private final boolean isKeepAliveResponseExpected;
     private final HttpVersion httpVersion;
+    private final HttpResponseStatus responseStatus;
     private final String sendKeepAlive;
     private final int setSelfDefinedMessageLength;
     private final String setResponseConnection;
@@ -49,27 +60,30 @@ public class HttpServerKeepAliveHandlerTest {
     @Parameters
     public static Collection<Object[]> keepAliveProvider() {
         return Arrays.asList(new Object[][] {
-                { true, HttpVersion.HTTP_1_0, REQUEST_KEEP_ALIVE, SET_RESPONSE_LENGTH, KEEP_ALIVE },            //  0
-                { true, HttpVersion.HTTP_1_0, REQUEST_KEEP_ALIVE, SET_MULTIPART, KEEP_ALIVE },                  //  1
-                { false, HttpVersion.HTTP_1_0, null, SET_RESPONSE_LENGTH, null },                               //  2
-                { true, HttpVersion.HTTP_1_1, REQUEST_KEEP_ALIVE, SET_RESPONSE_LENGTH, null },                  //  3
-                { false, HttpVersion.HTTP_1_1, REQUEST_KEEP_ALIVE, SET_RESPONSE_LENGTH, CLOSE },                //  4
-                { true, HttpVersion.HTTP_1_1, REQUEST_KEEP_ALIVE, SET_MULTIPART, null },                        //  5
-                { true, HttpVersion.HTTP_1_1, REQUEST_KEEP_ALIVE, SET_CHUNKED, null },                          //  6
-                { false, HttpVersion.HTTP_1_1, null, SET_RESPONSE_LENGTH, null },                               //  7
-                { false, HttpVersion.HTTP_1_0, REQUEST_KEEP_ALIVE, NOT_SELF_DEFINED_MSG_LENGTH, null },         //  8
-                { false, HttpVersion.HTTP_1_0, null, NOT_SELF_DEFINED_MSG_LENGTH, null },                       //  9
-                { false, HttpVersion.HTTP_1_1, REQUEST_KEEP_ALIVE, NOT_SELF_DEFINED_MSG_LENGTH, null },         // 10
-                { false, HttpVersion.HTTP_1_1, null, NOT_SELF_DEFINED_MSG_LENGTH, null },                       // 11
-                { false, HttpVersion.HTTP_1_0, REQUEST_KEEP_ALIVE, SET_RESPONSE_LENGTH, null },                 // 12
+                { true, HttpVersion.HTTP_1_0, OK, REQUEST_KEEP_ALIVE, SET_RESPONSE_LENGTH, KEEP_ALIVE },          //  0
+                { true, HttpVersion.HTTP_1_0, OK, REQUEST_KEEP_ALIVE, SET_MULTIPART, KEEP_ALIVE },                //  1
+                { false, HttpVersion.HTTP_1_0, OK, null, SET_RESPONSE_LENGTH, null },                             //  2
+                { true, HttpVersion.HTTP_1_1, OK, REQUEST_KEEP_ALIVE, SET_RESPONSE_LENGTH, null },                //  3
+                { false, HttpVersion.HTTP_1_1, OK, REQUEST_KEEP_ALIVE, SET_RESPONSE_LENGTH, CLOSE },              //  4
+                { true, HttpVersion.HTTP_1_1, OK, REQUEST_KEEP_ALIVE, SET_MULTIPART, null },                      //  5
+                { true, HttpVersion.HTTP_1_1, OK, REQUEST_KEEP_ALIVE, SET_CHUNKED, null },                        //  6
+                { false, HttpVersion.HTTP_1_1, OK, null, SET_RESPONSE_LENGTH, null },                             //  7
+                { false, HttpVersion.HTTP_1_0, OK, REQUEST_KEEP_ALIVE, NOT_SELF_DEFINED_MSG_LENGTH, null },       //  8
+                { false, HttpVersion.HTTP_1_0, OK, null, NOT_SELF_DEFINED_MSG_LENGTH, null },                     //  9
+                { false, HttpVersion.HTTP_1_1, OK, REQUEST_KEEP_ALIVE, NOT_SELF_DEFINED_MSG_LENGTH, null },       // 10
+                { false, HttpVersion.HTTP_1_1, OK, null, NOT_SELF_DEFINED_MSG_LENGTH, null },                     // 11
+                { false, HttpVersion.HTTP_1_0, OK, REQUEST_KEEP_ALIVE, SET_RESPONSE_LENGTH, null },               // 12
+                { true, HttpVersion.HTTP_1_1, NO_CONTENT, REQUEST_KEEP_ALIVE, NOT_SELF_DEFINED_MSG_LENGTH, null}, // 13
+                { false, HttpVersion.HTTP_1_0, NO_CONTENT, null, NOT_SELF_DEFINED_MSG_LENGTH, null}               // 14
         });
     }
 
     public HttpServerKeepAliveHandlerTest(boolean isKeepAliveResponseExpected, HttpVersion httpVersion,
-                                          String sendKeepAlive,
+                                          HttpResponseStatus responseStatus, String sendKeepAlive,
                                           int setSelfDefinedMessageLength, CharSequence setResponseConnection) {
         this.isKeepAliveResponseExpected = isKeepAliveResponseExpected;
         this.httpVersion = httpVersion;
+        this.responseStatus = responseStatus;
         this.sendKeepAlive = sendKeepAlive;
         this.setSelfDefinedMessageLength = setSelfDefinedMessageLength;
         this.setResponseConnection = setResponseConnection == null? null : setResponseConnection.toString();
@@ -84,7 +98,7 @@ public class HttpServerKeepAliveHandlerTest {
     public void test_KeepAlive() throws Exception {
         FullHttpRequest request = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/v1/foo/bar");
         setKeepAlive(request, REQUEST_KEEP_ALIVE.equals(sendKeepAlive));
-        HttpResponse response = new DefaultFullHttpResponse(httpVersion, HttpResponseStatus.OK);
+        HttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus);
         if (!StringUtil.isNullOrEmpty(setResponseConnection)) {
             response.headers().set(HttpHeaderNames.CONNECTION, setResponseConnection);
         }
@@ -111,7 +125,7 @@ public class HttpServerKeepAliveHandlerTest {
         setKeepAlive(secondRequest, REQUEST_KEEP_ALIVE.equals(sendKeepAlive));
         FullHttpRequest finalRequest = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/v1/foo/bar");
         setKeepAlive(finalRequest, false);
-        FullHttpResponse response = new DefaultFullHttpResponse(httpVersion, HttpResponseStatus.OK);
+        FullHttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus);
         FullHttpResponse informationalResp = new DefaultFullHttpResponse(httpVersion, HttpResponseStatus.PROCESSING);
         setKeepAlive(response, true);
         setContentLength(response, 0);
