@@ -48,13 +48,13 @@ public final class Http2CodecUtil {
     public static final CharSequence TLS_UPGRADE_PROTOCOL_NAME = ApplicationProtocolNames.HTTP_2;
 
     public static final int PING_FRAME_PAYLOAD_LENGTH = 8;
-    public static final short MAX_UNSIGNED_BYTE = 0xFF;
+    public static final short MAX_UNSIGNED_BYTE = 0xff;
     /**
      * The maximum number of padding bytes. That is the 255 padding bytes appended to the end of a frame and the 1 byte
      * pad length field.
      */
     public static final int MAX_PADDING = 256;
-    public static final long MAX_UNSIGNED_INT = 0xFFFFFFFFL;
+    public static final long MAX_UNSIGNED_INT = 0xffffffffL;
     public static final int FRAME_HEADER_LENGTH = 9;
     public static final int SETTING_ENTRY_LENGTH = 6;
     public static final int PRIORITY_ENTRY_LENGTH = 5;
@@ -93,7 +93,7 @@ public final class Http2CodecUtil {
     public static final long MAX_CONCURRENT_STREAMS = MAX_UNSIGNED_INT;
     public static final int MAX_INITIAL_WINDOW_SIZE = Integer.MAX_VALUE;
     public static final int MAX_FRAME_SIZE_LOWER_BOUND = 0x4000;
-    public static final int MAX_FRAME_SIZE_UPPER_BOUND = 0xFFFFFF;
+    public static final int MAX_FRAME_SIZE_UPPER_BOUND = 0xffffff;
     public static final long MAX_HEADER_LIST_SIZE = MAX_UNSIGNED_INT;
 
     public static final long MIN_HEADER_TABLE_SIZE = 0;
@@ -202,26 +202,7 @@ public final class Http2CodecUtil {
      * Reads a big-endian (31-bit) integer from the buffer.
      */
     public static int readUnsignedInt(ByteBuf buf) {
-        return (buf.readByte() & 0x7F) << 24 | (buf.readByte() & 0xFF) << 16
-                | (buf.readByte() & 0xFF) << 8 | buf.readByte() & 0xFF;
-    }
-
-    /**
-     * Writes a big-endian (32-bit) unsigned integer to the buffer.
-     */
-    public static void writeUnsignedInt(long value, ByteBuf out) {
-        out.writeByte((int) (value >> 24 & 0xFF));
-        out.writeByte((int) (value >> 16 & 0xFF));
-        out.writeByte((int) (value >> 8 & 0xFF));
-        out.writeByte((int) (value & 0xFF));
-    }
-
-    /**
-     * Writes a big-endian (16-bit) unsigned integer to the buffer.
-     */
-    public static void writeUnsignedShort(int value, ByteBuf out) {
-        out.writeByte(value >> 8 & 0xFF);
-        out.writeByte(value & 0xFF);
+        return buf.readInt() & 0x7fffffff;
     }
 
     /**
