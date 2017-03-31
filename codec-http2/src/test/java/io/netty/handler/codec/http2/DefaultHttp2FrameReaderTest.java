@@ -377,6 +377,38 @@ public class DefaultHttp2FrameReaderTest {
         }
     }
 
+    private void writeHeaderFrameWithData(
+            ByteBuf output, int streamId, Http2Headers headers,
+            ByteBuf dataPayload) throws Http2Exception {
+        ByteBuf headerBlock = Unpooled.buffer();
+        try {
+            encoder.encodeHeaders(streamId, headerBlock, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
+            writeFrameHeader(output, headerBlock.readableBytes(), HEADERS,
+                    new Http2Flags().endOfHeaders(true), streamId);
+            output.writeBytes(headerBlock, headerBlock.readableBytes());
+
+            writeFrameHeader(output, dataPayload.readableBytes(), DATA, new Http2Flags().endOfStream(true), streamId);
+            output.writeBytes(dataPayload);
+        } finally {
+            headerBlock.release();
+        }
+    }
+
+    private void writeHeaderFramePriorityPresent(
+            ByteBuf output, int streamId, Http2Headers headers,
+            Http2Flags flags, int streamDependency, int weight) throws Http2Exception {
+        ByteBuf headerBlock = Unpooled.buffer();
+        try {
+            writeUnsignedInt(streamDependency, headerBlock);
+            headerBlock.writeByte(weight - 1);
+            encoder.encodeHeaders(streamId, headerBlock, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
+            writeFrameHeader(output, headerBlock.readableBytes(), HEADERS, flags, streamId);
+            output.writeBytes(headerBlock, headerBlock.readableBytes());
+        } finally {
+            headerBlock.release();
+        }
+    }
+
     private void writeContinuationFrame(
             ByteBuf output, int streamId, Http2Headers headers,
             Http2Flags flags) throws Http2Exception {
