@@ -132,7 +132,6 @@ public class DnsNameResolver extends InetNameResolver {
     private static final DatagramDnsResponseDecoder DECODER = new DatagramDnsResponseDecoder();
     private static final DatagramDnsQueryEncoder ENCODER = new DatagramDnsQueryEncoder();
 
-    final DnsServerAddresses nameServerAddresses;
     final Future<Channel> channelFuture;
     final DatagramChannel ch;
 
@@ -151,7 +150,7 @@ public class DnsNameResolver extends InetNameResolver {
             new FastThreadLocal<DnsServerAddressStream>() {
                 @Override
                 protected DnsServerAddressStream initialValue() throws Exception {
-                    return nameServerAddresses.stream();
+                    return dnsServerAddressStreamProvider.nameServerAddressStream("");
                 }
             };
 
@@ -178,9 +177,6 @@ public class DnsNameResolver extends InetNameResolver {
      *
      * @param eventLoop the {@link EventLoop} which will perform the communication with the DNS servers
      * @param channelFactory the {@link ChannelFactory} that will create a {@link DatagramChannel}
-     * @param nameServerAddresses the addresses of the DNS server. For each DNS query, a new stream is created from
-     *                            this to determine which DNS server should be contacted for the next retry in case
-     *                            of failure.
      * @param resolveCache the DNS resolved entries cache
      * @param authoritativeDnsServerCache the cache used to find the authoritative DNS server for a domain
      * @param queryTimeoutMillis timeout of each DNS query in millis
@@ -191,7 +187,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @param maxPayloadSize the capacity of the datagram packet buffer
      * @param optResourceEnabled if automatic inclusion of a optional records is enabled
      * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} used to check for local aliases
-     * @param dnsServerAddressStreamProvider The {@link DnsServerAddressStreamProvider} used to override the name
+     * @param dnsServerAddressStreamProvider The {@link DnsServerAddressStreamProvider} used to determine the name
      *                                       servers for each hostname lookup.
      * @param searchDomains the list of search domain
      * @param ndots the ndots value
@@ -201,7 +197,6 @@ public class DnsNameResolver extends InetNameResolver {
     public DnsNameResolver(
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
-            DnsServerAddresses nameServerAddresses,
             final DnsCache resolveCache,
             DnsCache authoritativeDnsServerCache,
             long queryTimeoutMillis,
@@ -218,7 +213,6 @@ public class DnsNameResolver extends InetNameResolver {
             boolean decodeIdn) {
         super(eventLoop);
         checkNotNull(channelFactory, "channelFactory");
-        this.nameServerAddresses = checkNotNull(nameServerAddresses, "nameServerAddresses");
         this.queryTimeoutMillis = checkPositive(queryTimeoutMillis, "queryTimeoutMillis");
         this.resolvedAddressTypes = resolvedAddressTypes != null ? resolvedAddressTypes : DEFAULT_RESOLVE_ADDRESS_TYPES;
         this.recursionDesired = recursionDesired;
@@ -636,12 +630,8 @@ public class DnsNameResolver extends InetNameResolver {
                                    DnsRecord[] additionals,
                                    Promise<InetAddress> promise,
                                    DnsCache resolveCache) {
-        DnsServerAddressStream dnsServerAddressStream =
-                dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        SingleResolverContext ctx = dnsServerAddressStream == null ?
-             new SingleResolverContext(this, hostname, additionals, resolveCache, nameServerAddresses.stream()) :
-             new SingleResolverContext(this, hostname, additionals, resolveCache, dnsServerAddressStream);
-        ctx.resolve(promise);
+        new SingleResolverContext(this, hostname, additionals, resolveCache,
+                                  dnsServerAddressStreamProvider.nameServerAddressStream(hostname)).resolve(promise);
     }
 
     static final class SingleResolverContext extends DnsNameResolverContext<InetAddress> {
@@ -797,12 +787,8 @@ public class DnsNameResolver extends InetNameResolver {
                                       DnsRecord[] additionals,
                                       Promise<List<InetAddress>> promise,
                                       DnsCache resolveCache) {
-        DnsServerAddressStream dnsServerAddressStream =
-                dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        ListResolverContext ctx = dnsServerAddressStream == null ?
-               new ListResolverContext(this, hostname, additionals, resolveCache, nameServerAddresses.stream()) :
-               new ListResolverContext(this, hostname, additionals, resolveCache, dnsServerAddressStream);
-        ctx.resolve(promise);
+        new ListResolverContext(this, hostname, additionals, resolveCache,
+                                dnsServerAddressStreamProvider.nameServerAddressStream(hostname)).resolve(promise);
     }
 
     private static String hostname(String inetHost) {

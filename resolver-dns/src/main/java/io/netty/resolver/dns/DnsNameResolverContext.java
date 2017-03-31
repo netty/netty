@@ -34,6 +34,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.IDN;
@@ -96,7 +97,7 @@ abstract class DnsNameResolverContext<T> {
         this.additionals = additionals;
         this.resolveCache = resolveCache;
 
-        this.nameServerAddrs = nameServerAddrs;
+        this.nameServerAddrs = ObjectUtil.checkNotNull(nameServerAddrs, "nameServerAddrs");
         maxAllowedQueries = parent.maxQueriesPerResolve();
         resolvedInternetProtocolFamilies = parent.resolvedInternetProtocolFamiliesUnsafe();
         traceEnabled = parent.isTraceEnabled();
