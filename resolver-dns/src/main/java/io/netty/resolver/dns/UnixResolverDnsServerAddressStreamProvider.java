@@ -31,7 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.netty.resolver.dns.DnsServerAddresses.DNS_PORT;
+import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty.util.internal.StringUtil.indexOfNonWhiteSpace;
 
 /**
