@@ -75,7 +75,7 @@ public class SniHandlerTest {
                 assumeTrue(OpenSsl.isAlpnSupported());
                 break;
             case JDK:
-                assumeTrue(JdkAlpnSslEngine.isAvailable());
+                assumeTrue(JettyAlpnSslEngine.isAvailable());
                 break;
             default:
                 throw new Error();

@@ -25,6 +25,8 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.nio.ByteBuffer;
 import java.security.AlgorithmConstraints;
@@ -32,6 +34,7 @@ import java.security.AlgorithmParameters;
 import java.security.CryptoPrimitive;
 import java.security.Key;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import javax.net.ssl.SSLEngine;
@@ -52,9 +55,19 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
+@RunWith(Parameterized.class)
 public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
+
+    @Parameterized.Parameters(name = "{index}: bufferType = {0}")
+    public static Collection<Object> data() {
+        List<Object> params = new ArrayList<Object>();
+        for (BufferType type: BufferType.values()) {
+            params.add(type);
+        }
+        return params;
+    }
 
     public OpenSslEngineTest(BufferType type) {
         super(type);

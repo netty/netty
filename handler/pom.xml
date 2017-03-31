@@ -71,6 +71,11 @@
       <optional>true</optional>
     </dependency>
     <dependency>
+      <groupId>${conscrypt.groupId}</groupId>
+      <artifactId>${conscrypt.artifactId}</artifactId>
+      <classifier>${conscrypt.classifier}</classifier>
+    </dependency>
+    <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
     </dependency>
