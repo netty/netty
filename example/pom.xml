@@ -90,6 +90,11 @@
       <classifier>${tcnative.classifier}</classifier>
     </dependency>
     <dependency>
+      <groupId>${conscrypt.groupId}</groupId>
+      <artifactId>${conscrypt.artifactId}</artifactId>
+      <classifier>${conscrypt.classifier}</classifier>
+    </dependency>
+    <dependency>
       <groupId>org.eclipse.jetty.npn</groupId>
       <artifactId>npn-api</artifactId>
     </dependency>

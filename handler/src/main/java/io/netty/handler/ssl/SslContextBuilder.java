@@ -16,16 +16,17 @@
 
 package io.netty.handler.ssl;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
+import java.security.Provider;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 import java.io.InputStream;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.TrustManagerFactory;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Builder for configuring a new SslContext for creation.
@@ -126,6 +127,7 @@ public final class SslContextBuilder {
 
     private final boolean forServer;
     private SslProvider provider;
+    private Provider sslContextProvider;
     private X509Certificate[] trustCertCollection;
     private TrustManagerFactory trustManagerFactory;
     private X509Certificate[] keyCertChain;
@@ -150,6 +152,15 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder sslProvider(SslProvider provider) {
         this.provider = provider;
+        return this;
+    }
+
+    /**
+     * The SSLContext {@link Provider} to use. {@code null} uses the default one. This is only
+     * used with {@link SslProvider#JDK}.
+     */
+    public SslContextBuilder sslContextProvider(Provider sslContextProvider) {
+        this.sslContextProvider = sslContextProvider;
         return this;
     }
 
@@ -411,11 +422,11 @@ public final class SslContextBuilder {
      */
     public SslContext build() throws SSLException {
         if (forServer) {
-            return SslContext.newServerContextInternal(provider, trustCertCollection,
+            return SslContext.newServerContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls);
         } else {
-            return SslContext.newClientContextInternal(provider, trustCertCollection,
+            return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout);
         }

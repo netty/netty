@@ -188,7 +188,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 int writerIndex = out.writerIndex();
                 final SSLEngineResult result;
                 if (nioBufferCount > 1) {
-                    /**
+                    /*
                      * If {@link OpenSslEngine} is in use,
                      * we can use a special {@link OpenSslEngine#unwrap(ByteBuffer[], ByteBuffer[])} method
                      * that accepts multiple {@link ByteBuffer}s without additional memory copies.
@@ -214,6 +214,38 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 return ReferenceCountedOpenSslEngine.calculateOutNetBufSize(pendingBytes, numComponents);
             }
         },
+        CONSCRYPT(true, COMPOSITE_CUMULATOR) {
+            @Override
+            SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
+                    throws SSLException {
+                int nioBufferCount = in.nioBufferCount();
+                int writerIndex = out.writerIndex();
+                final SSLEngineResult result;
+                if (nioBufferCount > 1) {
+                    /*
+                     * Use a special unwrap method without additional memory copies.
+                     */
+                    try {
+                        handler.singleBuffer[0] = toByteBuffer(out, writerIndex, out.writableBytes());
+                        result = ((ConscryptAlpnSslEngine) handler.engine).unwrap(
+                                in.nioBuffers(readerIndex, len),
+                                handler.singleBuffer);
+                    } finally {
+                        handler.singleBuffer[0] = null;
+                    }
+                } else {
+                    result = handler.engine.unwrap(toByteBuffer(in, readerIndex, len),
+                            toByteBuffer(out, writerIndex, out.writableBytes()));
+                }
+                out.writerIndex(writerIndex + result.bytesProduced());
+                return result;
+            }
+
+            @Override
+            int calculateOutNetBufSize(SslHandler handler, int pendingBytes, int numComponents) {
+                return ((ConscryptAlpnSslEngine) handler.engine).calculateOutNetBufSize(pendingBytes, numComponents);
+            }
+        },
         JDK(false, MERGE_CUMULATOR) {
             @Override
             SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
@@ -232,7 +264,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         };
 
         static SslEngineType forEngine(SSLEngine engine) {
-            return engine instanceof ReferenceCountedOpenSslEngine ? TCNATIVE : JDK;
+            if (engine instanceof ReferenceCountedOpenSslEngine) {
+                return TCNATIVE;
+            }
+            if (engine instanceof ConscryptAlpnSslEngine) {
+                return CONSCRYPT;
+            }
+            return JDK;
         }
 
         SslEngineType(boolean wantsDirectBuffer, Cumulator cumulator) {

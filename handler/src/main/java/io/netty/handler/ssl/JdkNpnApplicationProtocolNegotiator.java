@@ -23,7 +23,7 @@ import javax.net.ssl.SSLEngine;
 public final class JdkNpnApplicationProtocolNegotiator extends JdkBaseApplicationProtocolNegotiator {
     private static final SslEngineWrapperFactory NPN_WRAPPER = new SslEngineWrapperFactory() {
         {
-            if (!JdkNpnSslEngine.isAvailable()) {
+            if (!JettyNpnSslEngine.isAvailable()) {
                 throw new RuntimeException("NPN unsupported. Is your classpatch configured correctly?"
                         + " See https://wiki.eclipse.org/Jetty/Feature/NPN");
             }
@@ -32,7 +32,7 @@ public final class JdkNpnApplicationProtocolNegotiator extends JdkBaseApplicatio
         @Override
         public SSLEngine wrapSslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator,
                 boolean isServer) {
-            return new JdkNpnSslEngine(engine, applicationNegotiator, isServer);
+            return new JettyNpnSslEngine(engine, applicationNegotiator, isServer);
         }
     };
 

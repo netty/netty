@@ -244,6 +244,10 @@
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <tcnative.version>2.0.0.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
+    <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
+    <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
+    <conscrypt.version>1.0.0.RC7</conscrypt.version>
+    <conscrypt.classifier></conscrypt.classifier>
     <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
@@ -339,6 +343,16 @@
         <artifactId>${tcnative.artifactId}</artifactId>
         <version>${tcnative.version}</version>
         <classifier>${tcnative.classifier}</classifier>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
+      <!-- Conscrypt - needed for running tests, used for acclerating SSL with OpenSSL. -->
+      <dependency>
+        <groupId>${conscrypt.groupId}</groupId>
+        <artifactId>${conscrypt.artifactId}</artifactId>
+        <classifier>${conscrypt.classifier}</classifier>
+        <version>${conscrypt.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
