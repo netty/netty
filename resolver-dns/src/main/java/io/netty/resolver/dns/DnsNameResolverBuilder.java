@@ -27,6 +27,7 @@ import io.netty.util.internal.UnstableApi;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.netty.resolver.dns.DnsServerAddressStreamProviders.platformDefault;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.intValue;
 
@@ -35,14 +36,8 @@ import static io.netty.util.internal.ObjectUtil.intValue;
  */
 @UnstableApi
 public final class DnsNameResolverBuilder {
-    // TODO(scott): how is this done on Windows? This may require a JNI call to GetNetworkParams
-    // https://msdn.microsoft.com/en-us/library/aa365968(VS.85).aspx.
-    private static final DnsServerAddressStreamProvider DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER =
-            UnixResolverDnsServerAddressStreamProvider.parseSilently();
-
     private final EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
-    private DnsServerAddresses nameServerAddresses = DnsServerAddresses.defaultAddresses();
     private DnsCache resolveCache;
     private DnsCache authoritativeDnsServerCache;
     private Integer minTtl;
@@ -56,7 +51,7 @@ public final class DnsNameResolverBuilder {
     private int maxPayloadSize = 4096;
     private boolean optResourceEnabled = true;
     private HostsFileEntriesResolver hostsFileEntriesResolver = HostsFileEntriesResolver.DEFAULT;
-    private DnsServerAddressStreamProvider dnsServerAddressStreamProvider = DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER;
+    private DnsServerAddressStreamProvider dnsServerAddressStreamProvider = platformDefault();
     private String[] searchDomains = DnsNameResolver.DEFAULT_SEARCH_DOMAINS;
     private int ndots = 1;
     private boolean decodeIdn = true;
@@ -91,17 +86,6 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder channelType(Class<? extends DatagramChannel> channelType) {
         return channelFactory(new ReflectiveChannelFactory<DatagramChannel>(channelType));
-    }
-
-    /**
-     * Sets the addresses of the DNS server.
-     *
-     * @param nameServerAddresses the DNS server addresses
-     * @return {@code this}
-     */
-    public DnsNameResolverBuilder nameServerAddresses(DnsServerAddresses nameServerAddresses) {
-        this.nameServerAddresses = nameServerAddresses;
-        return this;
     }
 
     /**
@@ -282,7 +266,7 @@ public final class DnsNameResolverBuilder {
      * each hostname.
      * @return {@code this}.
      */
-    public DnsNameResolverBuilder nameServerCache(DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
+    public DnsNameResolverBuilder nameServerProvider(DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
         this.dnsServerAddressStreamProvider =
                 checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
         return this;
@@ -364,7 +348,6 @@ public final class DnsNameResolverBuilder {
         return new DnsNameResolver(
                 eventLoop,
                 channelFactory,
-                nameServerAddresses,
                 resolveCache,
                 authoritativeDnsServerCache,
                 queryTimeoutMillis,

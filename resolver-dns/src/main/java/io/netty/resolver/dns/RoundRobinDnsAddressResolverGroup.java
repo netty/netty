@@ -21,8 +21,8 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.RoundRobinInetAddressResolver;
 import io.netty.resolver.NameResolver;
+import io.netty.resolver.RoundRobinInetAddressResolver;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
@@ -38,21 +38,22 @@ public class RoundRobinDnsAddressResolverGroup extends DnsAddressResolverGroup {
 
     public RoundRobinDnsAddressResolverGroup(
             Class<? extends DatagramChannel> channelType,
-            DnsServerAddresses nameServerAddresses) {
-        super(channelType, nameServerAddresses);
+            DnsServerAddressStreamProvider nameServerProvider) {
+        super(channelType, nameServerProvider);
     }
 
     public RoundRobinDnsAddressResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory,
-            DnsServerAddresses nameServerAddresses) {
-        super(channelFactory, nameServerAddresses);
+            DnsServerAddressStreamProvider nameServerProvider) {
+        super(channelFactory, nameServerProvider);
     }
 
     /**
      * We need to override this method, not
-     * {@link #newNameResolver(EventLoop, ChannelFactory, DnsServerAddresses)},
+     * {@link #newNameResolver(EventLoop, ChannelFactory, DnsServerAddressStreamProvider)},
      * because we need to eliminate possible caching of {@link io.netty.resolver.NameResolver#resolve}
-     * by {@link InflightNameResolver} created in {@link #newResolver(EventLoop, ChannelFactory, DnsServerAddresses)}.
+     * by {@link InflightNameResolver} created in
+     * {@link #newResolver(EventLoop, ChannelFactory, DnsServerAddressStreamProvider)}.
      */
     @Override
     protected final AddressResolver<InetSocketAddress> newAddressResolver(EventLoop eventLoop,

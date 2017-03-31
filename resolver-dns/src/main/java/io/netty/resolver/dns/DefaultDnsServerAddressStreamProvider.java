@@ -17,15 +17,21 @@ package io.netty.resolver.dns;
 
 import io.netty.util.internal.UnstableApi;
 
-@UnstableApi
-public final class NoopDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
-    public static final NoopDnsServerAddressStreamProvider INSTANCE = new NoopDnsServerAddressStreamProvider();
+import static io.netty.resolver.dns.DnsServerAddresses.defaultAddresses;
 
-    private NoopDnsServerAddressStreamProvider() {
+/**
+ * A {@link DnsServerAddressStreamProvider} which will use predefined default DNS servers to use for DNS resolution.
+ * These defaults do not respect your host's machines defaults.
+ */
+@UnstableApi
+public final class DefaultDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
+    public static final DefaultDnsServerAddressStreamProvider INSTANCE = new DefaultDnsServerAddressStreamProvider();
+
+    private DefaultDnsServerAddressStreamProvider() {
     }
 
     @Override
     public DnsServerAddressStream nameServerAddressStream(String hostname) {
-        return null;
+        return defaultAddresses().stream();
     }
 }
