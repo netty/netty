@@ -52,17 +52,17 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
 
     /**
      * Attempt to parse {@code /etc/resolv.conf} and files in the {@code /etc/resolver} directory by default.
-     * A failure to parse will return {@link NoopDnsServerAddressStreamProvider}.
+     * A failure to parse will return {@link DefaultDnsServerAddressStreamProvider}.
      */
     public static DnsServerAddressStreamProvider parseSilently() {
         try {
             UnixResolverDnsServerAddressStreamProvider nameServerCache =
                     new UnixResolverDnsServerAddressStreamProvider("/etc/resolv.conf", "/etc/resolver");
             return nameServerCache.mayOverrideNameServers() ? nameServerCache
-                                                            : NoopDnsServerAddressStreamProvider.INSTANCE;
+                                                            : DefaultDnsServerAddressStreamProvider.INSTANCE;
         } catch (Exception e) {
             logger.debug("failed to parse /etc/resolv.conf and/or /etc/resolver", e);
-            return NoopDnsServerAddressStreamProvider.INSTANCE;
+            return DefaultDnsServerAddressStreamProvider.INSTANCE;
         }
     }
 

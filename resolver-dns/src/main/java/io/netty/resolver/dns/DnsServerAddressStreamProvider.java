@@ -29,8 +29,9 @@ public interface DnsServerAddressStreamProvider {
     /**
      * Ask this provider for the name servers to query for {@code hostname}.
      * @param hostname The hostname for which to lookup the DNS server addressed to use.
-     * @return The {@link DnsServerAddressStream} which should be used to resolve {@code hostname} or {@code null} to
-     * use the default resolvers.
+     *                 If this is the final {@link DnsServerAddressStreamProvider} to be queried then generally empty
+     *                 string or {@code '.'} correspond to the default {@link DnsServerAddressStream}.
+     * @return The {@link DnsServerAddressStream} which should be used to resolve {@code hostname}.
      */
     DnsServerAddressStream nameServerAddressStream(String hostname);
 }

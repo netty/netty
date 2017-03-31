@@ -278,18 +278,25 @@ public class DnsNameResolverTest {
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
 
     private static DnsNameResolverBuilder newResolver(boolean decodeToUnicode) {
-        return newResolver(decodeToUnicode, NoopDnsServerAddressStreamProvider.INSTANCE);
+        return newResolver(decodeToUnicode, null);
     }
 
     private static DnsNameResolverBuilder newResolver(boolean decodeToUnicode,
                                                       DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
-        return new DnsNameResolverBuilder(group.next())
+        DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
                 .channelType(NioDatagramChannel.class)
-                .nameServerAddresses(DnsServerAddresses.singleton(dnsServer.localAddress()))
-                .nameServerCache(dnsServerAddressStreamProvider)
                 .maxQueriesPerResolve(1)
                 .decodeIdn(decodeToUnicode)
                 .optResourceEnabled(false);
+
+        if (dnsServerAddressStreamProvider == null) {
+            builder.nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()));
+        } else {
+            builder.nameServerProvider(new MultiDnsServerAddressStreamProvider(dnsServerAddressStreamProvider,
+                                                new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress())));
+        }
+
+        return builder;
     }
 
     private static DnsNameResolverBuilder newResolver() {
@@ -761,9 +768,8 @@ public class DnsNameResolverTest {
         EventLoopGroup group = new NioEventLoopGroup(1);
         DnsNameResolver resolver = new DnsNameResolver(
                 group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
-                DnsServerAddresses.singleton(dnsServer.localAddress()), NoopDnsCache.INSTANCE, nsCache,
-                3000, ResolvedAddressTypes.IPV4_ONLY, true, 10,
-                true, 4096, false, HostsFileEntriesResolver.DEFAULT, NoopDnsServerAddressStreamProvider.INSTANCE,
+                NoopDnsCache.INSTANCE, nsCache, 3000, ResolvedAddressTypes.IPV4_ONLY, true, 10, true, 4096, false,
+                HostsFileEntriesResolver.DEFAULT, new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()),
                 DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
             @Override
             int dnsRedirectPort(InetAddress server) {
