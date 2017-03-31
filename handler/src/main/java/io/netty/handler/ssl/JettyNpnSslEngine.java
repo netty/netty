@@ -31,7 +31,7 @@ import org.eclipse.jetty.npn.NextProtoNego;
 import org.eclipse.jetty.npn.NextProtoNego.ClientProvider;
 import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
 
-final class JdkNpnSslEngine extends JdkSslEngine {
+final class JettyNpnSslEngine extends JdkSslEngine {
     private static boolean available;
 
     static boolean isAvailable() {
@@ -52,7 +52,7 @@ final class JdkNpnSslEngine extends JdkSslEngine {
         }
     }
 
-    JdkNpnSslEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator, boolean server) {
+    JettyNpnSslEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator, boolean server) {
         super(engine);
         checkNotNull(applicationNegotiator, "applicationNegotiator");
 

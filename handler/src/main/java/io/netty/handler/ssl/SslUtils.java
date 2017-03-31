@@ -22,6 +22,7 @@ import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
 
 import java.nio.ByteBuffer;
+import javax.net.ssl.SSLHandshakeException;
 
 /**
  * Constants for SSL packets.
@@ -67,6 +68,17 @@ final class SslUtils {
      * data is not encrypted
      */
     static final int NOT_ENCRYPTED = -2;
+
+    /**
+     * Converts the given exception to a {@link SSLHandshakeException}, if it isn't already.
+     */
+    static SSLHandshakeException toSSLHandshakeException(Throwable e) {
+        if (e instanceof SSLHandshakeException) {
+            return (SSLHandshakeException) e;
+        }
+
+        return (SSLHandshakeException) new SSLHandshakeException(e.getMessage()).initCause(e);
+    }
 
     /**
      * Return how much bytes can be read out of the encrypted data. Be aware that this method will not increase
