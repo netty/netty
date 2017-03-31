@@ -20,10 +20,17 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import javax.naming.Context;
+import javax.naming.NamingException;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.InitialDirContext;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Hashtable;
 import java.util.List;
 
 import static io.netty.resolver.dns.DnsServerAddresses.sequential;
@@ -47,22 +54,48 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
 
     static {
         final List<InetSocketAddress> defaultNameServers = new ArrayList<InetSocketAddress>(2);
-        try {
-            Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
-            Method open = configClass.getMethod("open");
-            Method nameservers = configClass.getMethod("nameservers");
-            Object instance = open.invoke(null);
 
-            @SuppressWarnings("unchecked")
-            final List<String> list = (List<String>) nameservers.invoke(instance);
-            for (String a: list) {
-                if (a != null) {
-                    defaultNameServers.add(new InetSocketAddress(SocketUtils.addressByName(a), DNS_PORT));
+        // Using jndi-dns to obtain the default name servers.
+        //
+        // See:
+        // - http://docs.oracle.com/javase/8/docs/technotes/guides/jndi/jndi-dns.html
+        // - http://mail.openjdk.java.net/pipermail/net-dev/2017-March/010695.html
+        Hashtable<String, String> env = new Hashtable<String, String>();
+        env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.dns.DnsContextFactory");
+        env.put("java.naming.provider.url", "dns://");
+        try {
+            DirContext ctx = new InitialDirContext(env);
+            String dnsUrls = (String) ctx.getEnvironment().get("java.naming.provider.url");
+            String[] servers = dnsUrls.split(" ");
+            for (String server : servers) {
+                try {
+                    defaultNameServers.add(SocketUtils.socketAddress(new URI(server).getHost(), DNS_PORT));
+                } catch (URISyntaxException e) {
+                    logger.debug("Skipping a malformed nameserver URI: {}", server, e);
                 }
             }
-        } catch (Exception ignore) {
-            // Failed to get the system name server list.
-            // Will add the default name servers afterwards.
+        } catch (NamingException ignore) {
+            // Will try reflection if this fails.
+        }
+
+        if (defaultNameServers.isEmpty()) {
+            try {
+                Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
+                Method open = configClass.getMethod("open");
+                Method nameservers = configClass.getMethod("nameservers");
+                Object instance = open.invoke(null);
+
+                @SuppressWarnings("unchecked")
+                final List<String> list = (List<String>) nameservers.invoke(instance);
+                for (String a: list) {
+                    if (a != null) {
+                        defaultNameServers.add(new InetSocketAddress(SocketUtils.addressByName(a), DNS_PORT));
+                    }
+                }
+            } catch (Exception ignore) {
+                // Failed to get the system name server list via reflection.
+                // Will add the default name servers afterwards.
+            }
         }
 
         if (!defaultNameServers.isEmpty()) {
