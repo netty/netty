@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 
+import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.defaultAddressList;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
@@ -35,7 +36,7 @@ public class DnsServerAddressesTest {
 
     @Test
     public void testDefaultAddresses() {
-        assertThat(DnsServerAddresses.defaultAddressList().size(), is(greaterThan(0)));
+        assertThat(defaultAddressList().size(), is(greaterThan(0)));
     }
 
     @Test

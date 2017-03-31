@@ -69,6 +69,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty.resolver.dns.DnsServerAddresses.sequential;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
@@ -774,7 +775,7 @@ public class DnsNameResolverTest {
             @Override
             int dnsRedirectPort(InetAddress server) {
                 return server.equals(dnsServerAuthority.localAddress().getAddress()) ?
-                        dnsServerAuthority.localAddress().getPort() : DnsServerAddresses.DNS_PORT;
+                        dnsServerAuthority.localAddress().getPort() : DNS_PORT;
             }
         };
 
