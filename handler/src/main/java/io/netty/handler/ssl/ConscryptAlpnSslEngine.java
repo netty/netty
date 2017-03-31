@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
 
@@ -28,7 +29,6 @@ import java.util.List;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
 import org.conscrypt.Conscrypt;
 import org.conscrypt.HandshakeListener;
 
@@ -77,6 +77,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
     final int calculateOutNetBufSize(int plaintextBytes, int numBuffers) {
         // Assuming a max of one frame per component in a composite buffer.
         long maxOverhead = (long) Conscrypt.Engines.maxSealOverhead(getWrappedEngine()) * numBuffers;
+        // TODO(nmittler): update this to use MAX_ENCRYPTED_PACKET_LENGTH instead of Integer.MAX_VALUE
         return (int) min(Integer.MAX_VALUE, plaintextBytes + maxOverhead);
     }
 
@@ -142,14 +143,6 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
                 throw toSSLHandshakeException(e);
             }
         }
-    }
-
-    private static SSLHandshakeException toSSLHandshakeException(Throwable e) {
-        if (e instanceof SSLHandshakeException) {
-            return (SSLHandshakeException) e;
-        }
-
-        return (SSLHandshakeException) new SSLHandshakeException(e.getMessage()).initCause(e);
     }
 
     private static Class<?> getEnginesClass() {

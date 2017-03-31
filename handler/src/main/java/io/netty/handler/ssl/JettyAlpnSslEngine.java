@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
@@ -25,7 +26,6 @@ import java.util.List;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
 
 import io.netty.util.internal.PlatformDependent;
 import org.eclipse.jetty.alpn.ALPN;
@@ -82,12 +82,8 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
                 public void selected(String protocol) throws SSLException {
                     try {
                         protocolListener.selected(protocol);
-                    } catch (SSLHandshakeException e) {
-                        throw e;
                     } catch (Throwable t) {
-                        SSLHandshakeException e = new SSLHandshakeException(t.getMessage());
-                        e.initCause(t);
-                        throw e;
+                        throw toSSLHandshakeException(t);
                     }
                 }
 
@@ -129,12 +125,8 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
                 public String select(List<String> protocols) throws SSLException {
                     try {
                         return protocolSelector.select(protocols);
-                    } catch (SSLHandshakeException e) {
-                        throw e;
                     } catch (Throwable t) {
-                        SSLHandshakeException e = new SSLHandshakeException(t.getMessage());
-                        e.initCause(t);
-                        throw e;
+                        throw toSSLHandshakeException(t);
                     }
                 }
 

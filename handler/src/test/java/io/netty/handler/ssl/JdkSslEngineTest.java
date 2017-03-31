@@ -151,7 +151,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
             setupHandlers(apn);
             runTest();
         } catch (SkipTestException e) {
-            // NPN availability is dependent on the java version. If NPN is not available because of
+            // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
             assumeNoException(e);
         }
@@ -221,7 +221,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 assertTrue(clientException instanceof SSLHandshakeException);
             }
         } catch (SkipTestException e) {
-            // NPN availability is dependent on the java version. If NPN is not available because of
+            // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
             assumeNoException(e);
         }
@@ -239,7 +239,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
             assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
             assertTrue(serverException instanceof SSLHandshakeException);
         } catch (SkipTestException e) {
-            // NPN availability is dependent on the java version. If NPN is not available because of
+            // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
             assumeNoException(e);
         }

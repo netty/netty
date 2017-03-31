@@ -76,34 +76,4 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
     }
-
-    @Override
-    @Test
-    public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth() throws Exception {
-        super.testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth();
-    }
-
-    @Override
-    @Test
-    public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth() throws Exception {
-        super.testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth();
-    }
-
-    @Override
-    @Test
-    public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth() throws Exception {
-        super.testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth();
-    }
-
-    @Override
-    @Test
-    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
-        super.testClientHostnameValidationSuccess();
-    }
-
-    @Override
-    @Test
-    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
-        super.testClientHostnameValidationFail();
-    }
 }
