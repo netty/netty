@@ -62,6 +62,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -288,7 +289,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     // Only here to override in unit tests.
     int dnsRedirectPort(@SuppressWarnings("unused") InetAddress server) {
-        return DnsServerAddresses.DNS_PORT;
+        return DNS_PORT;
     }
 
     /**
