@@ -49,7 +49,7 @@ import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
-public final class HpackDecoder {
+final class HpackDecoder {
     private static final Http2Exception DECODE_ULE_128_DECOMPRESSION_EXCEPTION = unknownStackTrace(
             connectionError(COMPRESSION_ERROR, "HPACK - decompression failure"), HpackDecoder.class,
             "decodeULE128(..)");
@@ -96,7 +96,7 @@ public final class HpackDecoder {
      *  (which is dangerous).
      * @param initialHuffmanDecodeCapacity Size of an intermediate buffer used during huffman decode.
      */
-    public HpackDecoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity) {
+    HpackDecoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity) {
         this(maxHeaderListSize, initialHuffmanDecodeCapacity, DEFAULT_HEADER_TABLE_SIZE);
     }
 
@@ -104,7 +104,7 @@ public final class HpackDecoder {
      * Exposed Used for testing only! Default values used in the initial settings frame are overriden intentionally
      * for testing but violate the RFC if used outside the scope of testing.
      */
-    public HpackDecoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity, int maxHeaderTableSize) {
+    HpackDecoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity, int maxHeaderTableSize) {
         this.maxHeaderListSize = checkPositive(maxHeaderListSize, "maxHeaderListSize");
         this.maxHeaderListSizeGoAway = Http2CodecUtil.calculateMaxHeaderListSizeGoAway(maxHeaderListSize);
 
