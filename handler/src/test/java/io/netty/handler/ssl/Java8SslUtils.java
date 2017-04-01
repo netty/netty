@@ -16,9 +16,12 @@
 
 package io.netty.handler.ssl;
 
+import org.conscrypt.OpenSSLProvider;
+
 import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLParameters;
+import java.security.Provider;
 import java.util.Collections;
 
 final class Java8SslUtils {
@@ -33,5 +36,9 @@ final class Java8SslUtils {
             }
         };
         parameters.setSNIMatchers(Collections.singleton(matcher));
+    }
+
+    static Provider conscryptProvider() {
+        return new OpenSSLProvider();
     }
 }
