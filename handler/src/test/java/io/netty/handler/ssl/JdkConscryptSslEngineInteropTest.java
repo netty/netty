@@ -16,7 +16,6 @@
 package io.netty.handler.ssl;
 
 import java.security.Provider;
-import org.conscrypt.OpenSSLProvider;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -62,7 +61,7 @@ public class JdkConscryptSslEngineInteropTest extends SSLEngineTest {
 
     @Override
     protected Provider serverSslContextProvider() {
-        return new OpenSSLProvider();
+        return Java8SslUtils.conscryptProvider();
     }
 
     @Override
