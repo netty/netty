@@ -112,7 +112,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     @Override
     public Http2Headers decodeHeaders(int streamId, ByteBuf headerBlock) throws Http2Exception {
         try {
-            final Http2Headers headers = new DefaultHttp2Headers(validateHeaders, (int) headerArraySizeAccumulator);
+            final Http2Headers headers = newHeaders();
             hpackDecoder.decode(streamId, headerBlock, headers);
             headerArraySizeAccumulator = HEADERS_COUNT_WEIGHT_NEW * headers.size() +
                                          HEADERS_COUNT_WEIGHT_HISTORICAL * headerArraySizeAccumulator;
@@ -125,5 +125,29 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
             // for any reason (e.g. the key was an invalid pseudo-header).
             throw connectionError(COMPRESSION_ERROR, e, e.getMessage());
         }
+    }
+
+    /**
+     * A weighted moving average estimating how many headers are expected during the decode process.
+     * @return an estimate of how many headers are expected during the decode process.
+     */
+    protected final int numberOfHeadersGuess() {
+        return (int) headerArraySizeAccumulator;
+    }
+
+    /**
+     * Determines if the headers should be validated as a result of the decode operation.
+     * @return {@code true} if the headers should be validated as a result of the decode operation.
+     */
+    protected final boolean validateHeaders() {
+        return validateHeaders;
+    }
+
+    /**
+     * Create a new {@link Http2Headers} object which will store the results of the decode operation.
+     * @return a new {@link Http2Headers} object which will store the results of the decode operation.
+     */
+    protected Http2Headers newHeaders() {
+        return new DefaultHttp2Headers(validateHeaders, (int) headerArraySizeAccumulator);
     }
 }
