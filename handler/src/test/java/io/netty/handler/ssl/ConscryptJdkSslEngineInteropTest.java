@@ -16,12 +16,9 @@
 package io.netty.handler.ssl;
 
 import java.security.Provider;
-import org.conscrypt.OpenSSLProvider;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
-import org.junit.Test;
 
-import javax.net.ssl.SSLException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -64,7 +61,7 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
     @Override
     protected Provider clientSslContextProvider() {
-        return new OpenSSLProvider();
+        return Java8SslUtils.conscryptProvider();
     }
 
     @Ignore /* Does the JDK support a "max certificate chain length"? */
