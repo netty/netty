@@ -29,6 +29,8 @@ import java.util.List;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
+
+import io.netty.util.internal.PlatformDependent;
 import org.conscrypt.Conscrypt;
 import org.conscrypt.HandshakeListener;
 
@@ -42,7 +44,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
      * Indicates whether or not conscrypt is available on the current system.
      */
     static boolean isAvailable() {
-        return ENGINES_CLASS != null;
+        return ENGINES_CLASS != null && PlatformDependent.javaVersion() >= 8;
     }
 
     static boolean isEngineSupported(SSLEngine engine) {
