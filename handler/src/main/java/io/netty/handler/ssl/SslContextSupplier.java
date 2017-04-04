@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,16 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util;
+package io.netty.handler.ssl;
 
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.Supplier;
+import io.netty.util.internal.ObjectUtil;
 
-public interface AsyncMapping<U, R> {
+/**
+ * A {@link Supplier} for {@link SslContext}s.
+ */
+public final class SslContextSupplier implements Supplier<SslContext> {
+    private final SslContext sslContext;
 
-    /**
-     * Returns the {@link Future} that will provide the result of the mapping. The given {@link Promise} will
-     * be fulfilled when the result is available.
-     */
-    Future<R> map(U input, Promise<R> promise);
+    public SslContextSupplier(SslContext sslContext) {
+        this.sslContext = ObjectUtil.checkNotNull(sslContext, "sslContext");
+    }
+
+    @Override
+    public SslContext get() {
+        return sslContext;
+    }
 }

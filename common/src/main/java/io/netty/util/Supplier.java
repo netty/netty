@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,14 +15,12 @@
  */
 package io.netty.util;
 
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
-
-public interface AsyncMapping<U, R> {
+public interface Supplier<T> {
 
     /**
-     * Returns the {@link Future} that will provide the result of the mapping. The given {@link Promise} will
-     * be fulfilled when the result is available.
+     * Gets a result.
+     *
+     * @return a result
      */
-    Future<R> map(U input, Promise<R> promise);
+    T get();
 }

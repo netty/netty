@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,16 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util;
+package io.netty.handler.ssl;
 
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.AsyncMapping;
+import io.netty.util.Supplier;
 
-public interface AsyncMapping<U, R> {
-
-    /**
-     * Returns the {@link Future} that will provide the result of the mapping. The given {@link Promise} will
-     * be fulfilled when the result is available.
-     */
-    Future<R> map(U input, Promise<R> promise);
+/**
+ * A map of hostnames to {@link Supplier}s of {@link SslContext}s.
+ *
+ * @see SniHandler
+ */
+public interface SslContextMapping extends AsyncMapping<String, Supplier<? extends SslContext>> {
 }

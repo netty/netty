@@ -21,22 +21,26 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.Supplier;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.List;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
-import java.util.List;
 
 /**
  * {@link OptionalSslHandler} is a utility decoder to support both SSL and non-SSL handlers
  * based on the first message received.
  */
 public class OptionalSslHandler extends ByteToMessageDecoder {
-
-    private final SslContext sslContext;
+    private final Supplier<? extends SslContext> supplier;
 
     public OptionalSslHandler(SslContext sslContext) {
-        this.sslContext = ObjectUtil.checkNotNull(sslContext, "sslContext");
+        this(new SslContextSupplier(sslContext));
+    }
+
+    public OptionalSslHandler(Supplier<? extends SslContext> supplier) {
+        this.supplier = ObjectUtil.checkNotNull(supplier, "supplier");
     }
 
     @Override
@@ -54,7 +58,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
     private void handleSsl(ChannelHandlerContext context) {
         SslHandler sslHandler = null;
         try {
-            sslHandler = newSslHandler(context, sslContext);
+            sslHandler = newSslHandler(context, supplier);
             context.pipeline().replace(this, newSslHandlerName(), sslHandler);
             sslHandler = null;
         } finally {
@@ -81,6 +85,13 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
      */
     protected String newSslHandlerName() {
         return null;
+    }
+
+    /**
+     * @see #newSslHandler(ChannelHandlerContext, SslContext)
+     */
+    protected SslHandler newSslHandler(ChannelHandlerContext context, Supplier<? extends SslContext> supplier) {
+        return newSslHandler(context, supplier.get());
     }
 
     /**
