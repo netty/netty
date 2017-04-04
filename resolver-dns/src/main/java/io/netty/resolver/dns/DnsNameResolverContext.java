@@ -318,8 +318,7 @@ abstract class DnsNameResolverContext<T> {
     }
 
     /**
-     * Handle redirects if needed and returns {@code true} if there was a redirect handled. If {@code true} is returned
-     * this method took ownership of the {@code promise} otherwise {@code false} is returned.
+     * Handles a redirect answer if needed and returns {@code true} if a redirect query has been made.
      */
     private boolean handleRedirect(
             DnsQuestion question, AddressedEnvelope<DnsResponse, InetSocketAddress> envelope, Promise<T> promise) {
@@ -336,8 +335,8 @@ abstract class DnsNameResolverContext<T> {
                 for (int i = 0; i < additionalCount; i++) {
                     final DnsRecord r = res.recordAt(DnsSection.ADDITIONAL, i);
 
-                    if ((r.type() == DnsRecordType.A && !parent.supportsARecords()) ||
-                            r.type() == DnsRecordType.AAAA && !parent.supportsAAAARecords()) {
+                    if (r.type() == DnsRecordType.A && !parent.supportsARecords() ||
+                        r.type() == DnsRecordType.AAAA && !parent.supportsAAAARecords()) {
                         continue;
                     }
 
@@ -361,13 +360,15 @@ abstract class DnsNameResolverContext<T> {
                 }
 
                 if (nameServers.isEmpty()) {
-                    promise.tryFailure(
-                            new UnknownHostException("Unable to find correct name server for " + hostname));
+                    if (traceEnabled) {
+                        addTrace(envelope.sender(),
+                                 "no matching authoritative name server found in the ADDITIONALS section");
+                    }
                 } else {
                     // Shuffle as we want to re-distribute the load across name servers.
                     query(DnsServerAddresses.shuffled(nameServers).stream(), question, promise);
+                    return true;
                 }
-                return true;
             }
         }
         return false;
@@ -709,7 +710,9 @@ abstract class DnsNameResolverContext<T> {
             question = new DefaultDnsQuestion(hostname, type);
         } catch (IllegalArgumentException e) {
             // java.net.IDN.toASCII(...) may throw an IllegalArgumentException if it fails to parse the hostname
-            promise.tryFailure(e);
+            if (traceEnabled) {
+                addTrace(e);
+            }
             return false;
         }
         query(nextAddr, question, promise);
