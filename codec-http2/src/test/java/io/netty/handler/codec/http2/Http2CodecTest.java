@@ -72,7 +72,7 @@ public class Http2CodecTest {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         serverConnectedChannel = ch;
-                        ch.pipeline().addLast(new Http2Codec(true, serverLastInboundHandler));
+                        ch.pipeline().addLast(new Http2CodecBuilder(true, serverLastInboundHandler).build());
                         serverChannelLatch.countDown();
                     }
                 });
@@ -81,7 +81,7 @@ public class Http2CodecTest {
         Bootstrap cb = new Bootstrap()
                 .channel(LocalChannel.class)
                 .group(group)
-                .handler(new Http2Codec(false, new TestChannelInitializer()));
+                .handler(new Http2CodecBuilder(false, new TestChannelInitializer()).build());
         clientChannel = cb.connect(serverAddress).sync().channel();
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
