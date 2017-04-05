@@ -400,6 +400,17 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     }
 
     @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        // We might need keep reading the channel until the full message is aggregated.
+        //
+        // See https://github.com/netty/netty/issues/6583
+        if (currentMessage != null && !ctx.channel().config().isAutoRead()) {
+            ctx.read();
+        }
+        ctx.fireChannelReadComplete();
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         try {
             // release current message if it is not null as it may be a left-over
