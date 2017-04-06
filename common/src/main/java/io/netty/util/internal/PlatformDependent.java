@@ -527,6 +527,19 @@ public final class PlatformDependent {
         return USE_DIRECT_BUFFER_NO_CLEANER;
     }
 
+    /**
+     * Determine if a subsection of an array is zero.
+     * @param bytes The byte array.
+     * @param startPos The starting index (inclusive) in {@code bytes}.
+     * @param length The amount of bytes to check for zero.
+     * @return {@code false} if {@code bytes[startPos:startsPos+length)} contains a value other than zero.
+     */
+    public static boolean isZero(byte[] bytes, int startPos, int length) {
+        return !hasUnsafe() || !isUnaligned() ?
+                isZeroSafe(bytes, startPos, length) :
+                PlatformDependent0.isZero(bytes, startPos, length);
+    }
+
     private static final class Mpsc {
         private static final boolean USE_MPSC_CHUNKED_ARRAY_QUEUE;
 
@@ -926,6 +939,16 @@ public final class PlatformDependent {
             return -1;
         }
         return PlatformDependent0.addressSize();
+    }
+
+    private static boolean isZeroSafe(byte[] bytes, int startPos, int length) {
+        final int end = startPos + length;
+        for (; startPos < end; ++startPos) {
+            if (bytes[startPos] != 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static final class AtomicLongCounter extends AtomicLong implements LongCounter {

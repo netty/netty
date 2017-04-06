@@ -20,8 +20,23 @@ import org.junit.Test;
 import java.security.Permission;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class PlatformDependentTest {
+    @Test
+    public void testIsZero() {
+        byte[] bytes = new byte[100];
+        assertTrue(PlatformDependent.isZero(bytes, 0, 0));
+        assertTrue(PlatformDependent.isZero(bytes, 0, -1));
+        assertTrue(PlatformDependent.isZero(bytes, 0, 100));
+        assertTrue(PlatformDependent.isZero(bytes, 10, 90));
+        bytes[10] = 1;
+        assertTrue(PlatformDependent.isZero(bytes, 0, 10));
+        assertFalse(PlatformDependent.isZero(bytes, 0, 11));
+        assertFalse(PlatformDependent.isZero(bytes, 10, 1));
+        assertTrue(PlatformDependent.isZero(bytes, 11, 89));
+    }
 
     @Test
     public void testMajorVersionFromJavaSpecificationVersion() {
