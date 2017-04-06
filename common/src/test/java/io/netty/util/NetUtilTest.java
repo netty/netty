@@ -17,6 +17,7 @@ package io.netty.util;
 
 import org.junit.Test;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -29,7 +30,11 @@ import static io.netty.util.NetUtil.createByteArrayFromIpAddressString;
 import static io.netty.util.NetUtil.getByName;
 import static io.netty.util.NetUtil.toAddressString;
 import static io.netty.util.NetUtil.toSocketAddressString;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class NetUtilTest {
 
@@ -87,7 +92,11 @@ public class NetUtilTest {
             "[2001:0000:4136:e378:8000:63bf:3fff:fdd2]", "200100004136e378800063bf3ffffdd2",
             "0:1:2:3:4:5:6:789a",                        "0000000100020003000400050006789a",
             "0:1:2:3::f",                                "0000000100020003000000000000000f",
-            "0:0:0:0:0:0:10.0.0.1",                      "0000000000000000000000000a000001",
+            "0:0:0:0:0:0:10.0.0.1",                      "00000000000000000000ffff0a000001",
+            "0:0:0:0:0::10.0.0.1",                       "00000000000000000000ffff0a000001",
+            "::0:0:0:0:0:10.0.0.1",                      "00000000000000000000ffff0a000001",
+            "0:0:0:0:0:0::10.0.0.1",                     "00000000000000000000ffff0a000001",
+            "0:0:0:0:0:ffff:10.0.0.1",                   "00000000000000000000ffff0a000001",
             "::ffff:192.168.0.1",                        "00000000000000000000ffffc0a80001",
             // Test if various interface names after the percent sign are recognized.
             "[::1%1]",                                   "00000000000000000000000000000001",
@@ -134,8 +143,6 @@ public class NetUtilTest {
             "0:0:0:0:0:x:10.0.0.1",     null,
             // Test method with ipv4 style, bad ipv4 digits.
             "0:0:0:0:0:0:10.0.0.x",     null,
-            // Test method with ipv4 style, adjacent :
-            "0:0:0:0:0::0:10.0.0.1",    null,
             // Test method with ipv4 style, too many ipv6 digits.
             "0:0:0:0:0:00000:10.0.0.1", null,
             // Test method with ipv4 style, too many :
@@ -204,6 +211,8 @@ public class NetUtilTest {
             "0:0:0:0:0:0:10.0.0..1",    null,
             // Double compression symbol
             "::0::",                    null,
+            // Double compression symbol
+            "12::0::12",                null,
             // Empty contents
             "",                         null,
             // Trailing : (max number of : = 8)
@@ -220,6 +229,14 @@ public class NetUtilTest {
             "::ffff:0.0..0",            null,
             // Not enough IPv4 entries trailing .
             "::ffff:127.0.0.",          null,
+            // Invalid trailing IPv4 character
+            "::ffff:127.0.0.a",         null,
+            // Invalid leading IPv4 character
+            "::ffff:a.0.0.1",         null,
+            // Invalid middle IPv4 character
+            "::ffff:127.a.0.1",         null,
+            // Invalid middle IPv4 character
+            "::ffff:127.0.a.1",         null,
             // Not enough IPv4 entries no trailing .
             "::ffff:1.2.4",             null,
             // Extra IPv4 entry
@@ -227,7 +244,43 @@ public class NetUtilTest {
             // Not enough IPv6 content
             ":ffff:192.168.0.1.255",    null,
             // Intermixed IPv4 and IPv6 symbols
-            "::ffff:255.255:255.255.",  null);
+            "::ffff:255.255:255.255.",  null,
+            // Invalid IPv4 mapped address - invalid ipv4 separator
+            "0:0:0::0:0:00f.0.0.1", null,
+            // Invalid IPv4 mapped address - not enough f's
+            "0:0:0:0:0:fff:1.0.0.1", null,
+            // Invalid IPv4 mapped address - not IPv4 mapped, not IPv4 compatible
+            "0:0:0:0:0:ff00:1.0.0.1", null,
+            // Invalid IPv4 mapped address - not IPv4 mapped, not IPv4 compatible
+            "0:0:0:0:0:ff:1.0.0.1", null,
+            // Invalid IPv4 mapped address - too many f's
+            "0:0:0:0:0:fffff:1.0.0.1", null,
+            // Invalid IPv4 mapped address - too many bytes (too many 0's)
+            "0:0:0:0:0:0:ffff:1.0.0.1", null,
+            // Invalid IPv4 mapped address - too few bytes (not enough 0's)
+            "0:0:0:0:ffff:1.0.0.1", null,
+            // Invalid IPv4 mapped address - 0's after the mapped ffff indicator
+            "0:0:0:0:0:ffff::10.0.0.1", null,
+            // Invalid IPv4 mapped address - 0's after the mapped ffff indicator
+            "0:0:0:0:ffff::10.0.0.1", null,
+            // Invalid IPv4 mapped address - 0's after the mapped ffff indicator
+            "0:0:0:ffff::10.0.0.1", null,
+            // Invalid IPv4 mapped address - 0's after the mapped ffff indicator
+            "0:0:ffff::10.0.0.1", null,
+            // Invalid IPv4 mapped address - 0's after the mapped ffff indicator
+            "0:ffff::10.0.0.1", null,
+            // Invalid IPv4 mapped address - 0's after the mapped ffff indicator
+            "ffff::10.0.0.1", null,
+            // Invalid IPv4 mapped address - not all 0's before the mapped separator
+            "1:0:0:0:0:ffff:10.0.0.1", null,
+            // Address that is similar to IPv4 mapped, but is invalid
+            "0:0:0:0:ffff:ffff:1.0.0.1", null,
+            // Valid number of separators, but invalid IPv4 format
+            "::1:2:3:4:5:6.7.8.9", null,
+            // Too many digits
+            "0:0:0:0:0:0:ffff:10.0.0.1", null,
+            // Invalid IPv4 format
+            ":1.2.3.4", null);
 
     private static final Map<byte[], String> ipv6ToAddressStrings = new HashMap<byte[], String>() {
         private static final long serialVersionUID = 2999763170377573184L;
@@ -344,6 +397,24 @@ public class NetUtilTest {
             "1.2.3.4", "::ffff:1.2.3.4",
             "192.168.0.1", "::ffff:192.168.0.1",
 
+            // IPv4 compatible addresses are deprecated [1], so we don't support outputting them, but we do support
+            // parsing them into IPv4 mapped addresses. These values are treated the same as a plain IPv4 address above.
+            // [1] https://tools.ietf.org/html/rfc4291#section-2.5.5.1
+            "0:0:0:0:0:0:255.254.253.252", "::ffff:255.254.253.252",
+            "0:0:0:0:0::1.2.3.4", "::ffff:1.2.3.4",
+            "0:0:0:0::1.2.3.4", "::ffff:1.2.3.4",
+            "0:0:0:0:0:0::1.2.3.4", "::ffff:1.2.3.4",
+            "::0:0:0:0:0:1.2.3.4", "::ffff:1.2.3.4",
+            "::0:0:0:0:1.2.3.4", "::ffff:1.2.3.4",
+            "::0:0:0:0:1.2.3.4", "::ffff:1.2.3.4",
+            "::0:0:0:1.2.3.4", "::ffff:1.2.3.4",
+            "::0:0:1.2.3.4", "::ffff:1.2.3.4",
+            "::0:1.2.3.4", "::ffff:1.2.3.4",
+            "::1.2.3.4", "::ffff:1.2.3.4",
+
+            // IPv4 mapped (fully specified)
+            "0:0:0:0:0:ffff:1.2.3.4", "::ffff:1.2.3.4",
+
             // IPv6 addresses
             // Fully specified
             "2001:0:4136:e378:8000:63bf:3fff:fdd2", "2001:0:4136:e378:8000:63bf:3fff:fdd2",
@@ -435,10 +506,10 @@ public class NetUtilTest {
     @Test
     public void testIsValidIpV6Address() {
         for (String host : validIpV6Hosts.keySet()) {
-            assertTrue(NetUtil.isValidIpV6Address(host));
+            assertTrue(host, NetUtil.isValidIpV6Address(host));
         }
         for (String host : invalidIpV6Hosts.keySet()) {
-            assertFalse(NetUtil.isValidIpV6Address(host));
+            assertFalse(host, NetUtil.isValidIpV6Address(host));
         }
     }
 
@@ -485,20 +556,20 @@ public class NetUtilTest {
     @Test
     public void testIpv4MappedIp6GetByName() {
         for (Entry<String, String> testEntry : ipv4MappedToIPv6AddressStrings.entrySet()) {
-            assertEquals(
-                    testEntry.getValue(),
-                    toAddressString(getByName(testEntry.getKey(), true), true));
+            Inet6Address inet6Address = getByName(testEntry.getKey(), true);
+            assertNotNull(testEntry.getKey() + ", " + testEntry.getValue(), inet6Address);
+            assertEquals(testEntry.getKey(), testEntry.getValue(), toAddressString(inet6Address, true));
         }
     }
 
     @Test
     public void testinvalidIpv4MappedIp6GetByName() {
         for (String testEntry : invalidIpV4Hosts.keySet()) {
-            assertNull(getByName(testEntry, true));
+            assertNull(testEntry, getByName(testEntry, true));
         }
 
         for (String testEntry : invalidIpV6Hosts.keySet()) {
-            assertNull(getByName(testEntry, true));
+            assertNull(testEntry, getByName(testEntry, true));
         }
     }
 

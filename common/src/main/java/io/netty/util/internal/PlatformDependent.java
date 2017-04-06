@@ -646,6 +646,19 @@ public final class PlatformDependent {
     }
 
     /**
+     * Determine if a subsection of an array is zero.
+     * @param bytes The byte array.
+     * @param startPos The starting index (inclusive) in {@code bytes}.
+     * @param length The amount of bytes to check for zero.
+     * @return {@code false} if {@code bytes[startPos:startsPos+length)} contains a value other than zero.
+     */
+    public static boolean isZero(byte[] bytes, int startPos, int length) {
+        return !hasUnsafe() || !unalignedAccess() ?
+                isZeroSafe(bytes, startPos, length) :
+                PlatformDependent0.isZero(bytes, startPos, length);
+    }
+
+    /**
      * Compare two {@code byte} arrays for equality without leaking timing information.
      * For performance reasons no bounds checking on the parameters is performed.
      * <p>
@@ -1179,8 +1192,18 @@ public final class PlatformDependent {
 
     private static boolean equalsSafe(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
         final int end = startPos1 + length;
-        for (int i = startPos1, j = startPos2; i < end; ++i, ++j) {
-            if (bytes1[i] != bytes2[j]) {
+        for (; startPos1 < end; ++startPos1, ++startPos2) {
+            if (bytes1[startPos1] != bytes2[startPos2]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isZeroSafe(byte[] bytes, int startPos, int length) {
+        final int end = startPos + length;
+        for (; startPos < end; ++startPos) {
+            if (bytes[startPos] != 0) {
                 return false;
             }
         }
