@@ -21,10 +21,10 @@ import io.netty.util.internal.ObjectUtil;
 /**
  * A {@link Supplier} for {@link SslContext}s.
  */
-public final class SslContextSupplier implements Supplier<SslContext> {
+final class FixedSslContextSupplier implements Supplier<SslContext> {
     private final SslContext sslContext;
 
-    public SslContextSupplier(SslContext sslContext) {
+    public FixedSslContextSupplier(SslContext sslContext) {
         this.sslContext = ObjectUtil.checkNotNull(sslContext, "sslContext");
     }
 

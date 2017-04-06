@@ -36,7 +36,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
     private final Supplier<? extends SslContext> supplier;
 
     public OptionalSslHandler(SslContext sslContext) {
-        this(new SslContextSupplier(sslContext));
+        this(new FixedSslContextSupplier(sslContext));
     }
 
     public OptionalSslHandler(Supplier<? extends SslContext> supplier) {

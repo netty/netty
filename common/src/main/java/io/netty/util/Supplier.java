@@ -15,6 +15,10 @@
  */
 package io.netty.util;
 
+/**
+ * To be replaced with JDK8's own <a href="http://docs.oracle.com/javase/8/docs/api/java/util/function/Supplier.html">
+ * Supplier</a> interface.
+ */
 public interface Supplier<T> {
 
     /**
