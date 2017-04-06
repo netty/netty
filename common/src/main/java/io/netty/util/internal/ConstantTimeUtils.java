@@ -95,8 +95,8 @@ public final class ConstantTimeUtils {
         // Benchmarking demonstrates that using an int to accumulate is faster than other data types.
         int b = 0;
         final int end = startPos1 + length;
-        for (int i = startPos1, j = startPos2; i < end; ++i, ++j) {
-            b |= bytes1[i] ^ bytes2[j];
+        for (; startPos1 < end; ++startPos1, ++startPos2) {
+            b |= bytes1[startPos1] ^ bytes2[startPos2];
         }
         return equalsConstantTime(b, 0);
     }

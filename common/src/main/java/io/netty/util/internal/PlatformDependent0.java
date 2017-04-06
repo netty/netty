@@ -552,7 +552,7 @@ final class PlatformDependent0 {
     }
 
     static boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
-        if (length == 0) {
+        if (length <= 0) {
             return true;
         }
         final long baseOffset1 = BYTE_ARRAY_BASE_OFFSET + startPos1;
@@ -618,6 +618,32 @@ final class PlatformDependent0 {
             default:
                 return ConstantTimeUtils.equalsConstantTime(result, 0);
         }
+    }
+
+    static boolean isZero(byte[] bytes, int startPos, int length) {
+        if (length <= 0) {
+            return true;
+        }
+        final long baseOffset = BYTE_ARRAY_BASE_OFFSET + startPos;
+        int remainingBytes = length & 7;
+        final long end = baseOffset + remainingBytes;
+        for (long i = baseOffset - 8 + length; i >= end; i -= 8) {
+            if (UNSAFE.getLong(bytes, i) != 0) {
+                return false;
+            }
+        }
+
+        if (remainingBytes >= 4) {
+            remainingBytes -= 4;
+            if (UNSAFE.getInt(bytes, baseOffset + remainingBytes) != 0) {
+                return false;
+            }
+        }
+        if (remainingBytes >= 2) {
+            return UNSAFE.getChar(bytes, baseOffset) == 0 &&
+                    (remainingBytes == 2 || bytes[startPos + 2] == 0);
+        }
+        return bytes[startPos] == 0;
     }
 
     static int hashCodeAscii(byte[] bytes, int startPos, int length) {

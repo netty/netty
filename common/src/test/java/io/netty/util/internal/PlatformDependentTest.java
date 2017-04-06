@@ -49,6 +49,20 @@ public class PlatformDependentTest {
         });
     }
 
+    @Test
+    public void testIsZero() {
+        byte[] bytes = new byte[100];
+        assertTrue(PlatformDependent.isZero(bytes, 0, 0));
+        assertTrue(PlatformDependent.isZero(bytes, 0, -1));
+        assertTrue(PlatformDependent.isZero(bytes, 0, 100));
+        assertTrue(PlatformDependent.isZero(bytes, 10, 90));
+        bytes[10] = 1;
+        assertTrue(PlatformDependent.isZero(bytes, 0, 10));
+        assertFalse(PlatformDependent.isZero(bytes, 0, 11));
+        assertFalse(PlatformDependent.isZero(bytes, 10, 1));
+        assertTrue(PlatformDependent.isZero(bytes, 11, 89));
+    }
+
     private interface EqualityChecker {
         boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length);
     }
@@ -105,6 +119,9 @@ public class PlatformDependentTest {
             bytes2 = bytes1.clone();
             assertTrue(equalsChecker.equals(bytes1, 0, bytes2, 0, bytes1.length));
         }
+
+        assertTrue(equalsChecker.equals(bytes1, 0, bytes2, 0, 0));
+        assertTrue(equalsChecker.equals(bytes1, 0, bytes2, 0, -1));
     }
 
     private static char randomCharInByteRange() {
