@@ -19,6 +19,7 @@ import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.handler.codec.dns.AbstractDnsOptPseudoRrRecord;
 import io.netty.handler.codec.dns.DnsQuery;
@@ -84,7 +85,7 @@ final class DnsQueryContext {
         return question;
     }
 
-    void query() {
+    void query(ChannelPromise writePromise) {
         final DnsQuestion question = question();
         final InetSocketAddress nameServerAddr = nameServerAddr();
         final DatagramDnsQuery query = new DatagramDnsQuery(null, nameServerAddr, id);
@@ -105,28 +106,30 @@ final class DnsQueryContext {
             logger.debug("{} WRITE: [{}: {}], {}", parent.ch, id, nameServerAddr, question);
         }
 
-        sendQuery(query);
+        sendQuery(query, writePromise);
     }
 
-    private void sendQuery(final DnsQuery query) {
+    private void sendQuery(final DnsQuery query, final ChannelPromise writePromise) {
         if (parent.channelFuture.isDone()) {
-            writeQuery(query);
+            writeQuery(query, writePromise);
         } else {
             parent.channelFuture.addListener(new GenericFutureListener<Future<? super Channel>>() {
                 @Override
                 public void operationComplete(Future<? super Channel> future) throws Exception {
                     if (future.isSuccess()) {
-                        writeQuery(query);
+                        writeQuery(query, writePromise);
                     } else {
-                        promise.tryFailure(future.cause());
+                        Throwable cause = future.cause();
+                        promise.tryFailure(cause);
+                        writePromise.setFailure(cause);
                     }
                 }
             });
         }
     }
 
-    private void writeQuery(final DnsQuery query) {
-        final ChannelFuture writeFuture = parent.ch.writeAndFlush(query);
+    private void writeQuery(final DnsQuery query, final ChannelPromise writePromise) {
+        final ChannelFuture writeFuture = parent.ch.writeAndFlush(query, writePromise);
         if (writeFuture.isDone()) {
             onQueryWriteCompletion(writeFuture);
         } else {

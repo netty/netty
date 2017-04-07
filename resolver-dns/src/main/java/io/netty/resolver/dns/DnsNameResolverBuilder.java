@@ -52,6 +52,8 @@ public final class DnsNameResolverBuilder {
     private boolean optResourceEnabled = true;
     private HostsFileEntriesResolver hostsFileEntriesResolver = HostsFileEntriesResolver.DEFAULT;
     private DnsServerAddressStreamProvider dnsServerAddressStreamProvider = platformDefault();
+    private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory =
+            NoopDnsQueryLifecycleObserverFactory.INSTANCE;
     private String[] searchDomains = DnsNameResolver.DEFAULT_SEARCH_DOMAINS;
     private int ndots = 1;
     private boolean decodeIdn = true;
@@ -96,6 +98,17 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder resolveCache(DnsCache resolveCache) {
         this.resolveCache  = resolveCache;
+        return this;
+    }
+
+    /**
+     * Set the factory used to generate objects which can observe individual DNS queries.
+     * @param lifecycleObserverFactory the factory used to generate objects which can observe individual DNS queries.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder dnsQueryLifecycleObserverFactory(DnsQueryLifecycleObserverFactory
+                                                                           lifecycleObserverFactory) {
+        this.dnsQueryLifecycleObserverFactory = checkNotNull(lifecycleObserverFactory, "lifecycleObserverFactory");
         return this;
     }
 
@@ -350,6 +363,7 @@ public final class DnsNameResolverBuilder {
                 channelFactory,
                 resolveCache,
                 authoritativeDnsServerCache,
+                dnsQueryLifecycleObserverFactory,
                 queryTimeoutMillis,
                 resolvedAddressTypes,
                 recursionDesired,
