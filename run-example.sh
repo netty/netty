@@ -38,6 +38,7 @@ EXAMPLE_MAP=(
   'memcache-binary-client:io.netty.example.memcache.binary.MemcacheClient'
   'stomp-client:io.netty.example.stomp.StompClient'
   'uptime-client:io.netty.example.uptime.UptimeClient'
+  'uptime-server:io.netty.example.uptime.UptimeServer'
   'sctpecho-client:io.netty.example.sctp.SctpEchoClient'
   'sctpecho-server:io.netty.example.sctp.SctpEchoServer'
   'localecho:io.netty.example.localecho.LocalEcho'

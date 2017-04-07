@@ -38,34 +38,27 @@ public final class UptimeClient {
     // Sleep 5 seconds before a reconnection attempt.
     static final int RECONNECT_DELAY = Integer.parseInt(System.getProperty("reconnectDelay", "5"));
     // Reconnect when the server sends nothing for 10 seconds.
-    static final int READ_TIMEOUT = Integer.parseInt(System.getProperty("readTimeout", "10"));
+    private static final int READ_TIMEOUT = Integer.parseInt(System.getProperty("readTimeout", "10"));
 
     private static final UptimeClientHandler handler = new UptimeClientHandler();
+    private static final Bootstrap bs = new Bootstrap();
 
     public static void main(String[] args) throws Exception {
-        configureBootstrap(new Bootstrap()).connect();
+        EventLoopGroup group = new NioEventLoopGroup();
+        bs.group(group)
+                .channel(NioSocketChannel.class)
+                .remoteAddress(HOST, PORT)
+                .handler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(SocketChannel ch) throws Exception {
+                        ch.pipeline().addLast(new IdleStateHandler(READ_TIMEOUT, 0, 0), handler);
+                    }
+                });
+        bs.connect();
     }
 
-    private static Bootstrap configureBootstrap(Bootstrap b) {
-        return configureBootstrap(b, new NioEventLoopGroup());
-    }
-
-    static Bootstrap configureBootstrap(Bootstrap b, EventLoopGroup g) {
-        b.group(g)
-         .channel(NioSocketChannel.class)
-         .remoteAddress(HOST, PORT)
-         .handler(new ChannelInitializer<SocketChannel>() {
-             @Override
-             public void initChannel(SocketChannel ch) throws Exception {
-                 ch.pipeline().addLast(new IdleStateHandler(READ_TIMEOUT, 0, 0), handler);
-             }
-         });
-
-        return b;
-    }
-
-    static void connect(Bootstrap b) {
-        b.connect().addListener(new ChannelFutureListener() {
+    static void connect() {
+        bs.connect().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.cause() != null) {
