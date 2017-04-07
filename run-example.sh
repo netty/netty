@@ -31,6 +31,7 @@ EXAMPLE_MAP=(
   'proxy-server:io.netty.example.proxy.HexDumpProxy'
   'socksproxy-server:io.netty.example.socksproxy.SocksServer'
   'uptime-client:io.netty.example.uptime.UptimeClient'
+  'uptime-server:io.netty.example.uptime.UptimeServer'
   'sctpecho-client:io.netty.example.sctp.SctpEchoClient'
   'sctpecho-server:io.netty.example.sctp.SctpEchoServer'
   'localecho:io.netty.example.localecho.LocalEcho'
