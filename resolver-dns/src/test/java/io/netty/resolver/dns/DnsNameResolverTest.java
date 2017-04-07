@@ -28,6 +28,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
+import io.netty.handler.codec.dns.DnsMxRecord;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -600,28 +601,26 @@ public class DnsNameResolverTest {
                 assertThat(response.code(), is(DnsResponseCode.NOERROR));
 
                 final int answerCount = response.count(DnsSection.ANSWER);
-                final List<DnsRecord> mxList = new ArrayList<DnsRecord>(answerCount);
+                final List<DnsMxRecord> mxList = new ArrayList<DnsMxRecord>(answerCount);
                 for (int i = 0; i < answerCount; i++) {
                     final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
                     if (r.type() == DnsRecordType.MX) {
-                        mxList.add(r);
+                        mxList.add((DnsMxRecord) r);
                     }
                 }
 
                 assertThat(mxList.size(), is(greaterThan(0)));
                 StringBuilder buf = new StringBuilder();
-                for (DnsRecord r : mxList) {
-                    ByteBuf recordContent = ((ByteBufHolder) r).content();
-
+                for (DnsMxRecord r : mxList) {
                     buf.append(StringUtil.NEWLINE);
                     buf.append('\t');
                     buf.append(r.name());
                     buf.append(' ');
                     buf.append(r.type().name());
                     buf.append(' ');
-                    buf.append(recordContent.readUnsignedShort());
+                    buf.append(r.preference());
                     buf.append(' ');
-                    buf.append(DnsResolveContext.decodeDomainName(recordContent));
+                    buf.append(r.hostname());
                 }
 
                 logger.info("{} has the following MX records:{}", hostname, buf);
@@ -983,17 +982,17 @@ public class DnsNameResolverTest {
                 assertThat(mxList.size(), is(greaterThan(0)));
                 StringBuilder buf = new StringBuilder();
                 for (DnsRecord r : mxList) {
-                    ByteBuf recordContent = ((ByteBufHolder) r).content();
+                    DnsMxRecord mx = (DnsMxRecord) r;
 
                     buf.append(StringUtil.NEWLINE);
                     buf.append('\t');
-                    buf.append(r.name());
+                    buf.append(mx.name());
                     buf.append(' ');
-                    buf.append(r.type().name());
+                    buf.append(mx.type().name());
                     buf.append(' ');
-                    buf.append(recordContent.readUnsignedShort());
+                    buf.append(mx.preference());
                     buf.append(' ');
-                    buf.append(DnsResolveContext.decodeDomainName(recordContent));
+                    buf.append(mx.hostname());
 
                     ReferenceCountUtil.release(r);
                 }

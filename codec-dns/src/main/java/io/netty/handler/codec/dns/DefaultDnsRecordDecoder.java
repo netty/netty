@@ -20,6 +20,10 @@ import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+
 /**
  * The default {@link DnsRecordDecoder} implementation.
  *
@@ -90,6 +94,57 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             String name, DnsRecordType type, int dnsClass, long timeToLive,
             ByteBuf in, int offset, int length) throws Exception {
 
+        if (type == DnsRecordType.A) {
+            byte[] buf = new byte[length];
+            in.getBytes(offset, buf);
+            return new DefaultDnsARecord(
+                    name, dnsClass, timeToLive, (Inet4Address) InetAddress.getByAddress(buf));
+        }
+        if (type == DnsRecordType.AAAA) {
+            byte[] buf = new byte[length];
+            in.getBytes(offset, buf);
+            return new DefaultDnsAAAARecord(
+                    name, dnsClass, timeToLive, (Inet6Address) InetAddress.getByAddress(buf));
+        }
+        if (type == DnsRecordType.CNAME) {
+            return new DefaultDnsCNameRecord(
+                    name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
+        }
+        if (type == DnsRecordType.MX) {
+            ByteBuf buf = in.retainedDuplicate().setIndex(offset, offset + length);
+            int preference = buf.readShort();
+            String hostname = decodeName0(buf);
+            return new DefaultDnsMxRecord(
+                    name, dnsClass, timeToLive, preference, hostname);
+        }
+        if (type == DnsRecordType.NS) {
+            return new DefaultDnsNsRecord(
+                    name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
+        }
+        if (type == DnsRecordType.SOA) {
+            ByteBuf buf = in.retainedDuplicate().setIndex(offset, offset + length);
+            String primaryNameServer = decodeName0(buf);
+            String responsibleAuthorityMailbox = decodeName0(buf);
+            int serialNumber = buf.readInt();
+            int refreshInterval = buf.readInt();
+            int retryInterval = buf.readInt();
+            int expireLimit = buf.readInt();
+            int minimumTTL = buf.readInt();
+            return new DefaultDnsSoaRecord(
+                    name, dnsClass, timeToLive,
+                    primaryNameServer, responsibleAuthorityMailbox,
+                    serialNumber, refreshInterval, retryInterval, expireLimit, minimumTTL);
+        }
+        if (type == DnsRecordType.SRV) {
+            ByteBuf buf = in.retainedDuplicate().setIndex(offset, offset + length);
+            int priority = buf.readShort();
+            int weight = buf.readShort();
+            int port = buf.readShort();
+            String target = decodeName0(buf);
+            return new DefaultDnsSrvRecord(
+                    name, dnsClass, timeToLive, priority, weight, port, target);
+        }
+
         // DNS message compression means that domain names may contain "pointers" to other positions in the packet
         // to build a full message. This means the indexes are meaningful and we need the ability to reference the
         // indexes un-obstructed, and thus we cannot use a slice here.
@@ -98,6 +153,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             return new DefaultDnsPtrRecord(
                     name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
         }
+
         return new DefaultDnsRawRecord(
                 name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
     }

@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
+import java.net.InetAddress;
+
 import static org.junit.Assert.assertEquals;
 
 public class DefaultDnsRecordDecoderTest {
@@ -70,6 +72,117 @@ public class DefaultDnsRecordDecoderTest {
     }
 
     @Test
+    public void testDecodeARecord() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        InetAddress addr = InetAddress.getByName("1.2.3.4");
+        ByteBuf buffer = Unpooled.buffer().writeBytes(addr.getAddress());
+        int readerIndex = buffer.readerIndex();
+        int writerIndex = buffer.writerIndex();
+        try {
+            DnsARecord record = (DnsARecord) decoder.decodeRecord(
+                    "netty.io", DnsRecordType.A, DnsRecord.CLASS_IN, 60, buffer, 0, buffer.readableBytes());
+            assertEquals("netty.io.", record.name());
+            assertEquals(DnsRecord.CLASS_IN, record.dnsClass());
+            assertEquals(60, record.timeToLive());
+            assertEquals(DnsRecordType.A, record.type());
+            assertEquals(readerIndex, buffer.readerIndex());
+            assertEquals(writerIndex, buffer.writerIndex());
+            assertEquals(addr, record.address());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testDecodeAAAARecord() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        InetAddress addr = InetAddress.getByName("1080:0:0:0:8:800:200C:417A");
+        ByteBuf buffer = Unpooled.buffer().writeBytes(addr.getAddress());
+        int readerIndex = buffer.readerIndex();
+        int writerIndex = buffer.writerIndex();
+        try {
+            DnsAAAARecord record = (DnsAAAARecord) decoder.decodeRecord(
+                    "netty.io", DnsRecordType.AAAA, DnsRecord.CLASS_IN, 60, buffer, 0, buffer.readableBytes());
+            assertEquals("netty.io.", record.name());
+            assertEquals(DnsRecord.CLASS_IN, record.dnsClass());
+            assertEquals(60, record.timeToLive());
+            assertEquals(DnsRecordType.AAAA, record.type());
+            assertEquals(readerIndex, buffer.readerIndex());
+            assertEquals(writerIndex, buffer.writerIndex());
+            assertEquals(addr, record.address());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testDecodeCNameRecord() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        ByteBuf buffer = Unpooled.buffer();
+        DefaultDnsRecordEncoder.encodeName("cname.netty.io.", buffer);
+        int readerIndex = buffer.readerIndex();
+        int writerIndex = buffer.writerIndex();
+        try {
+            DnsCNameRecord record = (DnsCNameRecord) decoder.decodeRecord(
+                    "netty.io", DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 0, buffer.readableBytes());
+            assertEquals("netty.io.", record.name());
+            assertEquals(DnsRecord.CLASS_IN, record.dnsClass());
+            assertEquals(60, record.timeToLive());
+            assertEquals(DnsRecordType.CNAME, record.type());
+            assertEquals(readerIndex, buffer.readerIndex());
+            assertEquals(writerIndex, buffer.writerIndex());
+            assertEquals("cname.netty.io.", record.hostname());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testDecodeMxRecord() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        ByteBuf buffer = Unpooled.buffer().writeShort(0);
+        DefaultDnsRecordEncoder.encodeName("smtp.netty.io.", buffer);
+        int readerIndex = buffer.readerIndex();
+        int writerIndex = buffer.writerIndex();
+        try {
+            DnsMxRecord record = (DnsMxRecord) decoder.decodeRecord(
+                    "netty.io", DnsRecordType.MX, DnsRecord.CLASS_IN, 60, buffer, 0, buffer.readableBytes());
+            assertEquals("netty.io.", record.name());
+            assertEquals(DnsRecord.CLASS_IN, record.dnsClass());
+            assertEquals(60, record.timeToLive());
+            assertEquals(DnsRecordType.MX, record.type());
+            assertEquals(readerIndex, buffer.readerIndex());
+            assertEquals(writerIndex, buffer.writerIndex());
+            assertEquals(0, record.preference());
+            assertEquals("smtp.netty.io.", record.hostname());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testDecodeNsRecord() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        ByteBuf buffer = Unpooled.buffer();
+        DefaultDnsRecordEncoder.encodeName("ns.netty.io.", buffer);
+        int readerIndex = buffer.readerIndex();
+        int writerIndex = buffer.writerIndex();
+        try {
+            DnsNsRecord record = (DnsNsRecord) decoder.decodeRecord(
+                    "netty.io", DnsRecordType.NS, DnsRecord.CLASS_IN, 60, buffer, 0, buffer.readableBytes());
+            assertEquals("netty.io.", record.name());
+            assertEquals(DnsRecord.CLASS_IN, record.dnsClass());
+            assertEquals(60, record.timeToLive());
+            assertEquals(DnsRecordType.NS, record.type());
+            assertEquals(readerIndex, buffer.readerIndex());
+            assertEquals(writerIndex, buffer.writerIndex());
+            assertEquals("ns.netty.io.", record.hostname());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
     public void testDecodePtrRecord() throws Exception {
         DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
         ByteBuf buffer = Unpooled.buffer().writeByte(0);
@@ -84,6 +197,62 @@ public class DefaultDnsRecordDecoderTest {
             assertEquals(DnsRecordType.PTR, record.type());
             assertEquals(readerIndex, buffer.readerIndex());
             assertEquals(writerIndex, buffer.writerIndex());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testDecodeSoaRecord() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        ByteBuf buffer = Unpooled.buffer();
+        DefaultDnsRecordEncoder.encodeName("theo.ns.cloudflare.com.", buffer);
+        DefaultDnsRecordEncoder.encodeName("dns.cloudflare.com.", buffer);
+        buffer.writeInt(2024173464).writeInt(10000).writeInt(2400).writeInt(604800).writeInt(3600);
+        int readerIndex = buffer.readerIndex();
+        int writerIndex = buffer.writerIndex();
+        try {
+            DnsSoaRecord record = (DnsSoaRecord) decoder.decodeRecord(
+                    "netty.io", DnsRecordType.SOA, DnsRecord.CLASS_IN, 60, buffer, 0, buffer.readableBytes());
+            assertEquals("netty.io.", record.name());
+            assertEquals(DnsRecord.CLASS_IN, record.dnsClass());
+            assertEquals(60, record.timeToLive());
+            assertEquals(DnsRecordType.SOA, record.type());
+            assertEquals(readerIndex, buffer.readerIndex());
+            assertEquals(writerIndex, buffer.writerIndex());
+            assertEquals("theo.ns.cloudflare.com.", record.primaryNameServer());
+            assertEquals("dns.cloudflare.com.", record.responsibleAuthorityMailbox());
+            assertEquals(2024173464, record.serialNumber());
+            assertEquals(10000, record.refreshInterval());
+            assertEquals(2400, record.retryInterval());
+            assertEquals(604800, record.expireLimit());
+            assertEquals(3600, record.minimumTTL());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testDecodeSrvRecord() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        ByteBuf buffer = Unpooled.buffer().writeShort(0).writeShort(1).writeShort(8080);
+        DefaultDnsRecordEncoder.encodeName("srv.netty.io.", buffer);
+        buffer.writeInt(2024173464).writeInt(10000).writeInt(2400).writeInt(604800).writeInt(3600);
+        int readerIndex = buffer.readerIndex();
+        int writerIndex = buffer.writerIndex();
+        try {
+            DnsSrvRecord record = (DnsSrvRecord) decoder.decodeRecord(
+                    "netty.io", DnsRecordType.SRV, DnsRecord.CLASS_IN, 60, buffer, 0, buffer.readableBytes());
+            assertEquals("netty.io.", record.name());
+            assertEquals(DnsRecord.CLASS_IN, record.dnsClass());
+            assertEquals(60, record.timeToLive());
+            assertEquals(DnsRecordType.SRV, record.type());
+            assertEquals(readerIndex, buffer.readerIndex());
+            assertEquals(writerIndex, buffer.writerIndex());
+            assertEquals(0, record.priority());
+            assertEquals(1, record.weight());
+            assertEquals(8080, record.port());
+            assertEquals("srv.netty.io.", record.target());
         } finally {
             buffer.release();
         }
@@ -112,21 +281,20 @@ public class DefaultDnsRecordDecoderTest {
             assertEquals("FOO." + plainName, uncompressedIndexedName);
 
             // Now lets make sure out object parsing produces the same results for non PTR type (just use CNAME).
-            rawPlainRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            DnsCNameRecord cnameRecord = (DnsCNameRecord) decoder.decodeRecord(
                     plainName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 0, 11);
-            assertEquals(plainName, rawPlainRecord.name());
-            assertEquals(plainName, DefaultDnsRecordDecoder.decodeName(rawPlainRecord.content()));
+            assertEquals(plainName, cnameRecord.name());
+            assertEquals(plainName, cnameRecord.hostname());
 
-            rawUncompressedRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            cnameRecord = (DnsCNameRecord) decoder.decodeRecord(
                     uncompressedPlainName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 16, 4);
-            assertEquals(uncompressedPlainName, rawUncompressedRecord.name());
-            assertEquals(uncompressedPlainName, DefaultDnsRecordDecoder.decodeName(rawUncompressedRecord.content()));
+            assertEquals(uncompressedPlainName, cnameRecord.name());
+            assertEquals(uncompressedPlainName, cnameRecord.hostname());
 
-            rawUncompressedIndexedRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            cnameRecord = (DnsCNameRecord) decoder.decodeRecord(
                     uncompressedIndexedName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 12, 8);
-            assertEquals(uncompressedIndexedName, rawUncompressedIndexedRecord.name());
-            assertEquals(uncompressedIndexedName,
-                         DefaultDnsRecordDecoder.decodeName(rawUncompressedIndexedRecord.content()));
+            assertEquals(uncompressedIndexedName, cnameRecord.name());
+            assertEquals(uncompressedIndexedName, cnameRecord.hostname());
 
             // Now lets make sure out object parsing produces the same results for PTR type.
             DnsPtrRecord ptrRecord = (DnsPtrRecord) decoder.decodeRecord(
