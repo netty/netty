@@ -465,7 +465,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         @Override
         public Future<Supplier<? extends SslContext>> map(String input,
-                final Promise<Supplier<? extends SslContext>> promise) {
+                                                          final Promise<Supplier<? extends SslContext>> promise) {
 
             Future<SslContext> future = mapping.map(input,
                     ImmediateEventExecutor.INSTANCE.<SslContext>newPromise());
@@ -485,7 +485,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
 
         private static void onOperationComplete(Future<? extends SslContext> future,
-                Promise<Supplier<? extends SslContext>> promise) {
+                                                Promise<Supplier<? extends SslContext>> promise) {
             if (future.isSuccess()) {
                 promise.setSuccess(new FixedSupplier<SslContext>(future.getNow()));
             } else {
@@ -503,7 +503,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         @Override
         public Future<Supplier<? extends SslContext>> map(String input,
-                Promise<Supplier<? extends SslContext>> promise) {
+                                                          Promise<Supplier<? extends SslContext>> promise) {
 
             final Supplier<SslContext> supplier;
             try {
