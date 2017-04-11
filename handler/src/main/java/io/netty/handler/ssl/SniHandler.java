@@ -30,6 +30,7 @@ import io.netty.handler.codec.DecoderException;
 import io.netty.util.AsyncMapping;
 import io.netty.util.CharsetUtil;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.FixedSupplier;
 import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.Supplier;
@@ -364,7 +365,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
         } else {
             // If the user returned something other than a SslContext or Supplier<SslContext>
             // in the Future<?> then let it blow up with a ClassCastException
-            supplier = new FixedSslContextSupplier((SslContext) value);
+            supplier = new FixedSupplier<SslContext>((SslContext) value);
         }
 
         selection = new Selection(supplier, hostname);
@@ -486,7 +487,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
         private static void onOperationComplete(Future<? extends SslContext> future,
                 Promise<Supplier<? extends SslContext>> promise) {
             if (future.isSuccess()) {
-                promise.setSuccess(new FixedSslContextSupplier(future.getNow()));
+                promise.setSuccess(new FixedSupplier<SslContext>(future.getNow()));
             } else {
                 promise.setFailure(future.cause());
             }
@@ -507,7 +508,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
             final Supplier<SslContext> supplier;
             try {
                 SslContext sslContent = mapping.map(input);
-                supplier = new FixedSslContextSupplier(sslContent);
+                supplier = new FixedSupplier<SslContext>(sslContent);
             } catch (Throwable cause) {
                 return promise.setFailure(cause);
             }

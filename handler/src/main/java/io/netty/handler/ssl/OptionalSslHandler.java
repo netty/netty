@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.FixedSupplier;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.Supplier;
 import io.netty.util.internal.ObjectUtil;
@@ -36,7 +37,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
     private final Supplier<? extends SslContext> supplier;
 
     public OptionalSslHandler(SslContext sslContext) {
-        this(new FixedSslContextSupplier(sslContext));
+        this(new FixedSupplier<SslContext>(sslContext));
     }
 
     public OptionalSslHandler(Supplier<? extends SslContext> supplier) {

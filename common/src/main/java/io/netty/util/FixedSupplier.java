@@ -13,23 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.ssl;
-
-import io.netty.util.Supplier;
-import io.netty.util.internal.ObjectUtil;
+package io.netty.util;
 
 /**
- * A {@link Supplier} for {@link SslContext}s.
+ * @see Supplier
  */
-final class FixedSslContextSupplier implements Supplier<SslContext> {
-    private final SslContext sslContext;
+public final class FixedSupplier<T> implements Supplier<T> {
+    private final T value;
 
-    public FixedSslContextSupplier(SslContext sslContext) {
-        this.sslContext = ObjectUtil.checkNotNull(sslContext, "sslContext");
+    public FixedSupplier(T value) {
+        this.value = value;
     }
 
     @Override
-    public SslContext get() {
-        return sslContext;
+    public T get() {
+        return value;
     }
 }
