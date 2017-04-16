@@ -108,7 +108,7 @@ public class QueryStringEncoder {
     private static String encodeComponent(String s, Charset charset) {
         // TODO: Optimize me.
         try {
-            return URLEncoder.encode(s, PATTERN.matcher(charset.name()).replaceAll("%20"));
+            return PATTERN.matcher(URLEncoder.encode(s, charset.name())).replaceAll("%20");
         } catch (UnsupportedEncodingException ignored) {
             throw new UnsupportedCharsetException(charset.name());
         }
