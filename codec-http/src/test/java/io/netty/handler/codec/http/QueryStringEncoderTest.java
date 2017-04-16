@@ -59,4 +59,12 @@ public class QueryStringEncoderTest {
         Assert.assertEquals("/foo/\u00A5?a=%FE%FF%00%A5", e.toString());
         Assert.assertEquals(new URI("/foo/\u00A5?a=%FE%FF%00%A5"), e.toUri());
     }
+
+    @Test
+    public void testWhitespaceEncoding() throws Exception {
+        QueryStringEncoder e = new QueryStringEncoder("/foo");
+        e.addParam("a", "b c");
+        Assert.assertEquals("/foo?a=b%20c", e.toString());
+        Assert.assertEquals(new URI("/foo?a=b%20c"), e.toUri());
+    }
 }
