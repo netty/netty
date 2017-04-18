@@ -587,8 +587,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
         assertFalse(src.hasRemaining());
     }
 
-    @Test
-    public void testSNIMatchersDoesNotThrow() throws Exception {
+    @Test(expected = IllegalArgumentException.class)
+    public void testSNIMatchersThrows() throws Exception {
         assumeTrue(PlatformDependent.javaVersion() >= 8);
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
