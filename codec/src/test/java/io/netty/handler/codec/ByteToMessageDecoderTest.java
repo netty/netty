@@ -266,4 +266,16 @@ public class ByteToMessageDecoderTest {
             expected.release();
         }
     }
+
+    @Test
+    public void testReadOnlyBuffer() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            }
+        });
+        assertFalse(channel.writeInbound(Unpooled.buffer(8).writeByte(1).asReadOnly()));
+        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(new byte[] { (byte) 2 })));
+        assertFalse(channel.finish());
+    }
 }
