@@ -832,9 +832,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private static void notifyOutboundHandlerException(Throwable cause, ChannelPromise promise) {
-        if (!(promise instanceof VoidChannelPromise)) {
-            PromiseNotificationUtil.tryFailure(promise, cause, logger);
-        }
+        // Only log if the given promise is not of type VoidChannelPromise as tryFailure(...) is expected to return
+        // false.
+        PromiseNotificationUtil.tryFailure(promise, cause, promise instanceof VoidChannelPromise ? null : logger);
     }
 
     private void notifyHandlerException(Throwable cause) {

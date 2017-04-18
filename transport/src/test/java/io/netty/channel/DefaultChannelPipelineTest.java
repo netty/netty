@@ -1073,6 +1073,35 @@ public class DefaultChannelPipelineTest {
         group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
     }
 
+    @Test(timeout = 3000)
+    public void testVoidPromiseNotify() throws Throwable {
+        ChannelPipeline pipeline1 = new LocalChannel().pipeline();
+
+        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(1);
+        EventLoop eventLoop1 = defaultGroup.next();
+        final Promise<Throwable> promise = eventLoop1.newPromise();
+        final Exception exception = new IllegalArgumentException();
+        try {
+            eventLoop1.register(pipeline1.channel()).syncUninterruptibly();
+            pipeline1.addLast(new ChannelDuplexHandler() {
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                    throw exception;
+                }
+
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                    promise.setSuccess(cause);
+                }
+            });
+            pipeline1.write("test", pipeline1.voidPromise());
+            assertSame(exception, promise.syncUninterruptibly().getNow());
+        } finally {
+            pipeline1.channel().close().syncUninterruptibly();
+            defaultGroup.shutdownGracefully();
+        }
+    }
+
     private static final class TestTask implements Runnable {
 
         private final ChannelPipeline pipeline;
