@@ -894,9 +894,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     private ByteBuf fillByteBuf() {
         int length = currentBuffer.readableBytes();
         if (length > HttpPostBodyUtil.chunkSize) {
-            ByteBuf slice = currentBuffer.slice(currentBuffer.readerIndex(), HttpPostBodyUtil.chunkSize);
-            currentBuffer.skipBytes(HttpPostBodyUtil.chunkSize);
-            return slice;
+            return currentBuffer.readRetainedSlice(HttpPostBodyUtil.chunkSize);
         } else {
             // to continue
             ByteBuf slice = currentBuffer;
