@@ -18,6 +18,7 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.ReadOnlyByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -73,14 +74,15 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Cumulate {@link ByteBuf}s by merge them into one {@link ByteBuf}'s, using memory copies.
      */
     public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
+        @SuppressWarnings("deprecation")
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
-            ByteBuf buffer;
+            final ByteBuf buffer;
             if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes()
-                    || cumulation.refCnt() > 1) {
+                    || cumulation.refCnt() > 1 || cumulation instanceof ReadOnlyByteBuf) {
                 // Expand cumulation (by replace it) when either there is not more room in the buffer
                 // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
-                // duplicate().retain().
+                // duplicate().retain() or if its read-only.
                 //
                 // See:
                 // - https://github.com/netty/netty/issues/2327
