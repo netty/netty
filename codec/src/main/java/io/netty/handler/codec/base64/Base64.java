@@ -120,11 +120,7 @@ public final class Base64 {
             throw new NullPointerException("dialect");
         }
 
-        int len43 = (len << 2) / 3;
-        ByteBuf dest = allocator.buffer(
-                len43 +
-                        (len % 3 > 0 ? 4 : 0) + // Account for padding
-                        (breakLines ? len43 / MAX_LINE_LENGTH : 0)).order(src.order()); // New lines
+        ByteBuf dest = allocator.buffer(encodedBufferSize(len, breakLines)).order(src.order());
         byte[] alphabet = alphabet(dialect);
         int d = 0;
         int e = 0;
@@ -197,6 +193,21 @@ public final class Base64 {
             }
             encode3to4LittleEndian(inBuff, numSigBytes, dest, destOffset, alphabet);
         }
+    }
+
+    // package-private for testing
+    static int encodedBufferSize(int len, boolean breakLines) {
+        // Cast len to long to prevent overflow
+        long len43 = ((long) len << 2) / 3;
+
+        // Account for padding
+        long ret = (len43 + 3) & ~3;
+
+        if (breakLines) {
+            ret += len43 / MAX_LINE_LENGTH;
+        }
+
+        return ret < Integer.MAX_VALUE ? (int) ret : Integer.MAX_VALUE;
     }
 
     private static int toInt(byte value) {
@@ -312,6 +323,11 @@ public final class Base64 {
         return new Decoder().decode(src, off, len, allocator, dialect);
     }
 
+    // package-private for testing
+    static int decodedBufferSize(int len) {
+        return len - (len >>> 2);
+    }
+
     private static final class Decoder implements ByteProcessor {
         private final byte[] b4 = new byte[4];
         private int b4Posn;
@@ -322,8 +338,7 @@ public final class Base64 {
         private ByteBuf dest;
 
         ByteBuf decode(ByteBuf src, int off, int len, ByteBufAllocator allocator, Base64Dialect dialect) {
-            int len34 = (len * 3) >>> 2;
-            dest = allocator.buffer(len34).order(src.order()); // Upper limit on size of output
+            dest = allocator.buffer(decodedBufferSize(len)).order(src.order()); // Upper limit on size of output
 
             decodabet = decodabet(dialect);
             try {
