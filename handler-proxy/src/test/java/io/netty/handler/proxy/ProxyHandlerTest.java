@@ -139,36 +139,36 @@ public class ProxyHandlerTest {
                 new SuccessTestItem(
                         "Anonymous HTTP proxy: successful connection",
                         DESTINATION,
-                        new HttpProxyHandler(anonHttpProxy.address())),
+                        new HttpProxyHandler(anonHttpProxy.address(), false)),
 
                 new FailureTestItem(
                         "Anonymous HTTP proxy: rejected connection",
                         BAD_DESTINATION, "status: 403",
-                        new HttpProxyHandler(anonHttpProxy.address())),
+                        new HttpProxyHandler(anonHttpProxy.address(), false)),
 
                 new FailureTestItem(
                         "HTTP proxy: rejected anonymous connection",
                         DESTINATION, "status: 401",
-                        new HttpProxyHandler(httpProxy.address())),
+                        new HttpProxyHandler(httpProxy.address(), false)),
 
                 new SuccessTestItem(
                         "HTTP proxy: successful connection",
                         DESTINATION,
-                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
+                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD, false)),
 
                 new FailureTestItem(
                         "HTTP proxy: rejected connection",
                         BAD_DESTINATION, "status: 403",
-                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
+                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD, false)),
 
                 new FailureTestItem(
                         "HTTP proxy: authentication failure",
                         DESTINATION, "status: 401",
-                        new HttpProxyHandler(httpProxy.address(), BAD_USERNAME, BAD_PASSWORD)),
+                        new HttpProxyHandler(httpProxy.address(), BAD_USERNAME, BAD_PASSWORD, false)),
 
                 new TimeoutTestItem(
                         "HTTP proxy: timeout",
-                        new HttpProxyHandler(deadHttpProxy.address())),
+                        new HttpProxyHandler(deadHttpProxy.address(), false)),
 
                 // HTTPS ------------------------------------------------------
 
@@ -176,42 +176,42 @@ public class ProxyHandlerTest {
                         "Anonymous HTTPS proxy: successful connection",
                         DESTINATION,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(anonHttpsProxy.address())),
+                        new HttpProxyHandler(anonHttpsProxy.address(), false)),
 
                 new FailureTestItem(
                         "Anonymous HTTPS proxy: rejected connection",
                         BAD_DESTINATION, "status: 403",
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(anonHttpsProxy.address())),
+                        new HttpProxyHandler(anonHttpsProxy.address(), false)),
 
                 new FailureTestItem(
                         "HTTPS proxy: rejected anonymous connection",
                         DESTINATION, "status: 401",
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(httpsProxy.address())),
+                        new HttpProxyHandler(httpsProxy.address(), false)),
 
                 new SuccessTestItem(
                         "HTTPS proxy: successful connection",
                         DESTINATION,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
+                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD, false)),
 
                 new FailureTestItem(
                         "HTTPS proxy: rejected connection",
                         BAD_DESTINATION, "status: 403",
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
+                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD, false)),
 
                 new FailureTestItem(
                         "HTTPS proxy: authentication failure",
                         DESTINATION, "status: 401",
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(httpsProxy.address(), BAD_USERNAME, BAD_PASSWORD)),
+                        new HttpProxyHandler(httpsProxy.address(), BAD_USERNAME, BAD_PASSWORD, false)),
 
                 new TimeoutTestItem(
                         "HTTPS proxy: timeout",
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(deadHttpsProxy.address())),
+                        new HttpProxyHandler(deadHttpsProxy.address(), false)),
 
                 // SOCKS4 -----------------------------------------------------
 
@@ -293,9 +293,9 @@ public class ProxyHandlerTest {
                         new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
                         new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
-                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
-                        new HttpProxyHandler(anonHttpProxy.address())),
+                        new HttpProxyHandler(interHttpsProxy.address(), false), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address(), false), // HTTP
+                        new HttpProxyHandler(anonHttpProxy.address(), false)),
 
                 // (HTTP + HTTPS + SOCKS4 + SOCKS5) * 2
 
@@ -305,14 +305,14 @@ public class ProxyHandlerTest {
                         new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
                         new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
-                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
+                        new HttpProxyHandler(interHttpsProxy.address(), false), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address(), false), // HTTP
                         new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
                         new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
-                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
-                        new HttpProxyHandler(anonHttpProxy.address()))
+                        new HttpProxyHandler(interHttpsProxy.address(), false), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address(), false), // HTTP
+                        new HttpProxyHandler(anonHttpProxy.address(), false))
 
         );
 

@@ -45,17 +45,19 @@ public final class HttpProxyHandler extends ProxyHandler {
     private final HttpClientCodec codec = new HttpClientCodec();
     private final String username;
     private final String password;
+    private final boolean transparent;
     private final CharSequence authorization;
     private HttpResponseStatus status;
 
-    public HttpProxyHandler(SocketAddress proxyAddress) {
+    public HttpProxyHandler(SocketAddress proxyAddress, boolean transparent) {
         super(proxyAddress);
         username = null;
         password = null;
         authorization = null;
+        this.transparent = transparent ;
     }
 
-    public HttpProxyHandler(SocketAddress proxyAddress, String username, String password) {
+    public HttpProxyHandler(SocketAddress proxyAddress, String username, String password, boolean transparent) {
         super(proxyAddress);
         if (username == null) {
             throw new NullPointerException("username");
@@ -65,6 +67,7 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
         this.username = username;
         this.password = password;
+        this.transparent = transparent;
 
         ByteBuf authz = Unpooled.copiedBuffer(username + ':' + password, CharsetUtil.UTF_8);
         ByteBuf authzBase64 = Base64.encode(authz, false);
@@ -73,6 +76,13 @@ public final class HttpProxyHandler extends ProxyHandler {
 
         authz.release();
         authzBase64.release();
+    }
+
+    /**
+     * @return false if endpoint is https/wss otherwise(http/ws) true
+     */
+    public boolean isTransparent() {
+        return transparent;
     }
 
     @Override
@@ -148,5 +158,14 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
 
         return finished;
+    }
+
+    @Override
+    void sendInitialMessage(ChannelHandlerContext ctx) throws Exception {
+        if (isTransparent()) {
+            setConnectSuccess();
+        } else {
+            super.sendInitialMessage(ctx);
+        }
     }
 }
