@@ -123,7 +123,7 @@ public class WebSocketServerProtocolHandlerTest {
 
         if (ch.pipeline().context(HttpRequestDecoder.class) != null) {
             // Removing the HttpRequestDecoder because we are writing a TextWebSocketFrame and thus
-            // decoding is not neccessary.
+            // decoding is not necessary.
             ch.pipeline().remove(HttpRequestDecoder.class);
         }
 
@@ -146,7 +146,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     private static void writeUpgradeRequest(EmbeddedChannel ch) {
-        ch.writeInbound(WebSocketRequestBuilder.sucessful());
+        ch.writeInbound(WebSocketRequestBuilder.successful());
     }
 
     private static String getResponseMessage(FullHttpResponse response) {

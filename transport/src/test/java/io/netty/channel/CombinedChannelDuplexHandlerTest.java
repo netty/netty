@@ -76,7 +76,7 @@ public class CombinedChannelDuplexHandlerTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testOutboundHandlerImplementsInbboundHandler() {
+    public void testOutboundHandlerImplementsInboundHandler() {
         new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
                 new ChannelInboundHandlerAdapter(), new ChannelDuplexHandler());
     }

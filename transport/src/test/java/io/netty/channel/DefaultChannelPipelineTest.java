@@ -767,7 +767,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test(timeout = 3000)
-    public void testHandlerAddedExceptionFromChildHandlerIsPropegated() {
+    public void testHandlerAddedExceptionFromChildHandlerIsPropagated() {
         final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
         try {
             final Promise<Void> promise = group1.next().newPromise();
@@ -791,7 +791,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test(timeout = 3000)
-    public void testHandlerRemovedExceptionFromChildHandlerIsPropegated() {
+    public void testHandlerRemovedExceptionFromChildHandlerIsPropagated() {
         final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
         try {
             final Promise<Void> promise = group1.next().newPromise();

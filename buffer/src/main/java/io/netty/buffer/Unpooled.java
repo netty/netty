@@ -38,7 +38,7 @@ import java.util.List;
  * {@link ByteBuf} heapBuffer    = buffer(128);
  * {@link ByteBuf} directBuffer  = directBuffer(256);
  * {@link ByteBuf} wrappedBuffer = wrappedBuffer(new byte[128], new byte[256]);
- * {@link ByteBuf} copiedBuffe r = copiedBuffer({@link ByteBuffer}.allocate(128));
+ * {@link ByteBuf} copiedBuffer  = copiedBuffer({@link ByteBuffer}.allocate(128));
  * </pre>
  *
  * <h3>Allocating a new buffer</h3>

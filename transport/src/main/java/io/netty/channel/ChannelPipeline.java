@@ -168,7 +168,7 @@ import java.util.NoSuchElementException;
  *     }
  * }
  *
- * public clas MyOutboundHandler extends {@link ChannelOutboundHandlerAdapter} {
+ * public class MyOutboundHandler extends {@link ChannelOutboundHandlerAdapter} {
  *     {@code @Override}
  *     public void close({@link ChannelHandlerContext} ctx, {@link ChannelPromise} promise) {
  *         System.out.println("Closing ..");

@@ -111,7 +111,7 @@ public final class UnitHelp {
             socket = new ServerSocket(0, 3, address);
             return (InetSocketAddress) socket.getLocalSocketAddress();
         } catch (final Exception e) {
-            log.error("Failed to find addess.");
+            log.error("Failed to find address.");
             return null;
         } finally {
             if (socket != null) {

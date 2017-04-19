@@ -1,7 +1,7 @@
 /*
  * Copyright 2012 The Netty Project
  *
- * The Netty Project licenses this file tothe License at:
+ * The Netty Project licenses this file to the License at:
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *

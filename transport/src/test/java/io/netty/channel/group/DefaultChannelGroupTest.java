@@ -25,7 +25,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.Test;
 
-public class DefaultChannnelGroupTest {
+public class DefaultChannelGroupTest {
 
     // Test for #1183
     @Test

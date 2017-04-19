@@ -24,8 +24,8 @@ public final class JdkNpnApplicationProtocolNegotiator extends JdkBaseApplicatio
     private static final SslEngineWrapperFactory NPN_WRAPPER = new SslEngineWrapperFactory() {
         {
             if (!JettyNpnSslEngine.isAvailable()) {
-                throw new RuntimeException("NPN unsupported. Is your classpatch configured correctly?"
-                        + " See http://www.eclipse.org/jetty/documentation/current/npn-chapter.html#npn-starting");
+                throw new RuntimeException("NPN unsupported. Is your classpath configured correctly?"
+                        + " See https://wiki.eclipse.org/Jetty/Feature/NPN");
             }
         }
 

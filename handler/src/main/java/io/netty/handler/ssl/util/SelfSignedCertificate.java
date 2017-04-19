@@ -105,7 +105,7 @@ public final class SelfSignedCertificate {
      * @param notAfter Certificate is not valid after this time
      */
     public SelfSignedCertificate(String fqdn, Date notBefore, Date notAfter) throws CertificateException {
-        // Bypass entrophy collection by using insecure random generator.
+        // Bypass entropy collection by using insecure random generator.
         // We just want to generate it without any delay because it's for testing purposes only.
         this(fqdn, ThreadLocalInsecureRandom.current(), 1024, notBefore, notAfter);
     }

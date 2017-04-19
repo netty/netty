@@ -54,7 +54,7 @@ public final class RejectedExecutionHandlers {
             public void rejected(Runnable task, SingleThreadEventExecutor executor) {
                 if (!executor.inEventLoop()) {
                     for (int i = 0; i < retries; i++) {
-                        // Try to wakup the executor so it will empty its task queue.
+                        // Try to wake up the executor so it will empty its task queue.
                         executor.wakeup(false);
 
                         LockSupport.parkNanos(backOffNanos);

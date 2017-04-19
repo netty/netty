@@ -283,7 +283,7 @@ public class SimpleChannelPool implements ChannelPool {
         // Remove the POOL_KEY attribute from the Channel and check if it was acquired from this pool, if not fail.
         if (channel.attr(POOL_KEY).getAndSet(null) != this) {
             closeAndFail(channel,
-                         // Better include a stracktrace here as this is an user error.
+                         // Better include a stacktrace here as this is an user error.
                          new IllegalArgumentException(
                                  "Channel " + channel + " was not acquired from this ChannelPool"),
                          promise);
@@ -315,7 +315,7 @@ public class SimpleChannelPool implements ChannelPool {
     }
 
     /**
-     * Adds the channel back to the pool only if the channel is healty.
+     * Adds the channel back to the pool only if the channel is healthy.
      * @param channel the channel to put back to the pool
      * @param promise offer operation promise.
      * @param future the future that contains information fif channel is healthy or not.

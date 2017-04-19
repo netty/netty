@@ -227,14 +227,14 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestShortCurcuit() {
+    public void simpleRequestShortCircuit() {
         final CorsConfig config = CorsConfig.withOrigin("http://localhost:8080").shortCurcuit().build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
         assertThat(response.getStatus(), is(FORBIDDEN));
     }
 
     @Test
-    public void simpleRequestNoShortCurcuit() {
+    public void simpleRequestNoShortCircuit() {
         final CorsConfig config = CorsConfig.withOrigin("http://localhost:8080").build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
         assertThat(response.getStatus(), is(OK));
@@ -242,7 +242,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void shortCurcuitNonCorsRequest() {
+    public void shortCircuitNonCorsRequest() {
         final CorsConfig config = CorsConfig.withOrigin("https://localhost").shortCurcuit().build();
         final HttpResponse response = simpleRequest(config, null);
         assertThat(response.getStatus(), is(OK));
@@ -250,7 +250,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void shortCurcuitWithConnectionKeepAliveShouldStayOpen() {
+    public void shortCircuitWithConnectionKeepAliveShouldStayOpen() {
         final CorsConfig config = CorsConfig.withOrigin("http://localhost:8080").shortCurcuit().build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
         final FullHttpRequest request = createHttpRequest(GET);
@@ -268,7 +268,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void shortCurcuitWithoutConnectionShouldStayOpen() {
+    public void shortCircuitWithoutConnectionShouldStayOpen() {
         final CorsConfig config = CorsConfig.withOrigin("http://localhost:8080").shortCurcuit().build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
         final FullHttpRequest request = createHttpRequest(GET);
@@ -285,7 +285,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void shortCurcuitWithConnectionCloseShouldClose() {
+    public void shortCircuitWithConnectionCloseShouldClose() {
         final CorsConfig config = CorsConfig.withOrigin("http://localhost:8080").shortCurcuit().build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
         final FullHttpRequest request = createHttpRequest(GET);

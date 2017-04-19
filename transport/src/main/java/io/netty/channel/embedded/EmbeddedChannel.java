@@ -286,7 +286,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     /**
      * Mark this {@link Channel} as finished and release all pending message in the inbound and outbound buffer.
-     * Any futher try to write data to it will fail.
+     * Any further try to write data to it will fail.
      *
      * @return bufferReadable returns {@code true} if any of the used buffers has something left to read
      */
@@ -295,7 +295,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     /**
-     * Mark this {@link Channel} as finished. Any futher try to write data to it will fail.
+     * Mark this {@link Channel} as finished. Any further try to write data to it will fail.
      *
      * @param releaseAll if {@code true} all pending message in the inbound and outbound buffer are released.
      * @return bufferReadable returns {@code true} if any of the used buffers has something left to read

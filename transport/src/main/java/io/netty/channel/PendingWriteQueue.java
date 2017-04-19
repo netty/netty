@@ -85,7 +85,7 @@ public final class PendingWriteQueue {
         // we should add them to the queue and let removeAndFailAll() fail them later.
         int messageSize = estimatorHandle.size(msg);
         if (messageSize < 0) {
-            // Size may be unknow so just use 0
+            // Size may be unknown so just use 0
             messageSize = 0;
         }
         return messageSize + PENDING_WRITE_OVERHEAD;

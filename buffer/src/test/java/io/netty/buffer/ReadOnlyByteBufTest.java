@@ -16,8 +16,6 @@
 package io.netty.buffer;
 
 import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -173,11 +171,13 @@ public class ReadOnlyByteBufTest {
         unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuffer) null);
     }
 
-    public void shouldIndicateNotWriteable() {
+    @Test
+    public void shouldIndicateNotWritable() {
         assertFalse(unmodifiableBuffer(buffer(1)).isWritable());
     }
 
-    public void shouldIndicteNotWritableAnyNumber() {
+    @Test
+    public void shouldIndicateNotWritableAnyNumber() {
         assertFalse(unmodifiableBuffer(buffer(1)).isWritable(1));
     }
 }

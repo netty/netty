@@ -127,7 +127,7 @@ public final class PlatformDependent {
             logger.info(
                     "Your platform does not provide complete low-level API for accessing direct buffers reliably. " +
                     "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
-                    "unstability.");
+                    "instability.");
         }
 
         // Here is how the system property is used:
@@ -221,7 +221,7 @@ public final class PlatformDependent {
     }
 
     /**
-     * Return {@code true} if {@code sun.misc.Unsafe} was found on the classpath and can be used for acclerated
+     * Return {@code true} if {@code sun.misc.Unsafe} was found on the classpath and can be used for accelerated
      * direct memory access.
      */
     public static boolean hasUnsafe() {
@@ -299,14 +299,14 @@ public final class PlatformDependent {
     }
 
     /**
-     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
         return new ConcurrentHashMap<K, V>();
     }
 
     /**
-     * Creates a new fastest {@link LongCounter} implementaion for the current platform.
+     * Creates a new fastest {@link LongCounter} implementation for the current platform.
      */
     public static LongCounter newLongCounter() {
         if (javaVersion() >= 8) {
@@ -317,21 +317,21 @@ public final class PlatformDependent {
     }
 
     /**
-     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity) {
         return new ConcurrentHashMap<K, V>(initialCapacity);
     }
 
     /**
-     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity, float loadFactor) {
         return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
     }
 
     /**
-     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(
             int initialCapacity, float loadFactor, int concurrencyLevel) {
@@ -339,7 +339,7 @@ public final class PlatformDependent {
     }
 
     /**
-     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(Map<? extends K, ? extends V> map) {
         return new ConcurrentHashMap<K, V>(map);

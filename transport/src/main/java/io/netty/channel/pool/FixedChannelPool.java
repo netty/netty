@@ -72,7 +72,7 @@ public class FixedChannelPool extends SimpleChannelPool {
      *
      * @param bootstrap         the {@link Bootstrap} that is used for connections
      * @param handler           the {@link ChannelPoolHandler} that will be notified for the different pool actions
-     * @param maxConnections    the numnber of maximal active connections, once this is reached new tries to acquire
+     * @param maxConnections    the number of maximal active connections, once this is reached new tries to acquire
      *                          a {@link Channel} will be delayed until a connection is returned to the pool again.
      */
     public FixedChannelPool(Bootstrap bootstrap,
@@ -85,7 +85,7 @@ public class FixedChannelPool extends SimpleChannelPool {
      *
      * @param bootstrap             the {@link Bootstrap} that is used for connections
      * @param handler               the {@link ChannelPoolHandler} that will be notified for the different pool actions
-     * @param maxConnections        the numnber of maximal active connections, once this is reached new tries to
+     * @param maxConnections        the number of maximal active connections, once this is reached new tries to
      *                              acquire a {@link Channel} will be delayed until a connection is returned to the
      *                              pool again.
      * @param maxPendingAcquires    the maximum number of pending acquires. Once this is exceed acquire tries will
@@ -102,12 +102,12 @@ public class FixedChannelPool extends SimpleChannelPool {
      * @param bootstrap             the {@link Bootstrap} that is used for connections
      * @param handler               the {@link ChannelPoolHandler} that will be notified for the different pool actions
      * @param healthCheck           the {@link ChannelHealthChecker} that will be used to check if a {@link Channel} is
-     *                              still healty when obtain from the {@link ChannelPool}
+     *                              still healthy when obtain from the {@link ChannelPool}
      * @param action                the {@link AcquireTimeoutAction} to use or {@code null} if non should be used.
      *                              In this case {@param acquireTimeoutMillis} must be {@code -1}.
      * @param acquireTimeoutMillis  the time (in milliseconds) after which an pending acquire must complete or
      *                              the {@link AcquireTimeoutAction} takes place.
-     * @param maxConnections        the numnber of maximal active connections, once this is reached new tries to
+     * @param maxConnections        the number of maximal active connections, once this is reached new tries to
      *                              acquire a {@link Channel} will be delayed until a connection is returned to the
      *                              pool again.
      * @param maxPendingAcquires    the maximum number of pending acquires. Once this is exceed acquire tries will
@@ -127,12 +127,12 @@ public class FixedChannelPool extends SimpleChannelPool {
      * @param bootstrap             the {@link Bootstrap} that is used for connections
      * @param handler               the {@link ChannelPoolHandler} that will be notified for the different pool actions
      * @param healthCheck           the {@link ChannelHealthChecker} that will be used to check if a {@link Channel} is
-     *                              still healty when obtain from the {@link ChannelPool}
+     *                              still healthy when obtain from the {@link ChannelPool}
      * @param action                the {@link AcquireTimeoutAction} to use or {@code null} if non should be used.
      *                              In this case {@param acquireTimeoutMillis} must be {@code -1}.
      * @param acquireTimeoutMillis  the time (in milliseconds) after which an pending acquire must complete or
      *                              the {@link AcquireTimeoutAction} takes place.
-     * @param maxConnections        the numnber of maximal active connections, once this is reached new tries to
+     * @param maxConnections        the number of maximal active connections, once this is reached new tries to
      *                              acquire a {@link Channel} will be delayed until a connection is returned to the
      *                              pool again.
      * @param maxPendingAcquires    the maximum number of pending acquires. Once this is exceed acquire tries will
@@ -176,7 +176,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                     @Override
                     public void onTimeout(AcquireTask task) {
                         // Increment the acquire count and delegate to super to actually acquire a Channel which will
-                        // create a new connetion.
+                        // create a new connection.
                         task.acquired();
 
                         FixedChannelPool.super.acquire(task.promise);

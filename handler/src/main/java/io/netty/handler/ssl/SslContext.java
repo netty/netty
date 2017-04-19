@@ -939,8 +939,8 @@ public abstract class SslContext {
      * @return a key specification
      *
      * @throws IOException if parsing {@code key} fails
-     * @throws NoSuchAlgorithmException if the algorithm used to encrypt {@code key} is unkown
-     * @throws NoSuchPaddingException if the padding scheme specified in the decryption algorithm is unkown
+     * @throws NoSuchAlgorithmException if the algorithm used to encrypt {@code key} is unknown
+     * @throws NoSuchPaddingException if the padding scheme specified in the decryption algorithm is unknown
      * @throws InvalidKeySpecException if the decryption key based on {@code password} cannot be generated
      * @throws InvalidKeyException if the decryption key based on {@code password} cannot be used to decrypt
      *                             {@code key}
