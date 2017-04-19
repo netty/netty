@@ -65,7 +65,10 @@ public class HelloWorldHttp2Handler extends ChannelDuplexHandler {
      */
     public void onDataRead(ChannelHandlerContext ctx, Http2DataFrame data) throws Exception {
         if (data.isEndStream()) {
-            sendResponse(ctx, data.content().retain());
+            sendResponse(ctx, data.content());
+        } else {
+            // We do not send back the response to the remote-peer, so we need to release it.
+            data.release();
         }
     }
 
