@@ -158,4 +158,15 @@ public class Base64Test {
             expectedBuf.release();
         }
     }
+
+    @Test
+    public void testOverflowEncodedBufferSize() {
+        assertEquals(Integer.MAX_VALUE, Base64.encodedBufferSize(Integer.MAX_VALUE, true));
+        assertEquals(Integer.MAX_VALUE, Base64.encodedBufferSize(Integer.MAX_VALUE, false));
+    }
+
+    @Test
+    public void testOverflowDecodedBufferSize() {
+        assertEquals(1610612736, Base64.decodedBufferSize(Integer.MAX_VALUE));
+    }
 }
