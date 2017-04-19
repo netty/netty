@@ -126,6 +126,11 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     }
 
     @Override
+    public long transferred() {
+        return transfered;
+    }
+
+    @Override
     public long transferTo(WritableByteChannel target, long position) throws IOException {
         long count = this.count - position;
         if (count < 0 || position < 0) {
