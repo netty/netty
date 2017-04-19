@@ -86,12 +86,12 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         this(new DefaultHttp2HeadersEncoder());
     }
 
-    public DefaultHttp2FrameWriter(SensitivityDetector headersSensativityDetector) {
-        this(new DefaultHttp2HeadersEncoder(headersSensativityDetector));
+    public DefaultHttp2FrameWriter(SensitivityDetector headersSensitivityDetector) {
+        this(new DefaultHttp2HeadersEncoder(headersSensitivityDetector));
     }
 
-    public DefaultHttp2FrameWriter(SensitivityDetector headersSensativityDetector, boolean ignoreMaxHeaderListSize) {
-        this(new DefaultHttp2HeadersEncoder(headersSensativityDetector, ignoreMaxHeaderListSize));
+    public DefaultHttp2FrameWriter(SensitivityDetector headersSensitivityDetector, boolean ignoreMaxHeaderListSize) {
+        this(new DefaultHttp2HeadersEncoder(headersSensitivityDetector, ignoreMaxHeaderListSize));
     }
 
     public DefaultHttp2FrameWriter(Http2HeadersEncoder headersEncoder) {

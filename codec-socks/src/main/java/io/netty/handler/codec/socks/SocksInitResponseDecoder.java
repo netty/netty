@@ -40,9 +40,9 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<State> {
                     out.add(SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE);
                     break;
                 }
-                checkpoint(State.READ_PREFFERED_AUTH_TYPE);
+                checkpoint(State.READ_PREFERRED_AUTH_TYPE);
             }
-            case READ_PREFFERED_AUTH_TYPE: {
+            case READ_PREFERRED_AUTH_TYPE: {
                 SocksAuthScheme authScheme = SocksAuthScheme.valueOf(byteBuf.readByte());
                 out.add(new SocksInitResponse(authScheme));
                 break;
@@ -56,6 +56,6 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<State> {
 
     enum State {
         CHECK_PROTOCOL_VERSION,
-        READ_PREFFERED_AUTH_TYPE
+        READ_PREFERRED_AUTH_TYPE
     }
 }

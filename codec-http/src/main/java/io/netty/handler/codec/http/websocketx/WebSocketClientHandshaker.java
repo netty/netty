@@ -384,7 +384,7 @@ public abstract class WebSocketClientHandshaker {
     }
 
     /**
-     * Verfiy the {@link FullHttpResponse} and throws a {@link WebSocketHandshakeException} if something is wrong.
+     * Verify the {@link FullHttpResponse} and throws a {@link WebSocketHandshakeException} if something is wrong.
      */
     protected abstract void verify(FullHttpResponse response);
 

@@ -100,7 +100,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
         if (ctx.channel().isRegistered()) {
             // This should always be true with our current DefaultChannelPipeline implementation.
             // The good thing about calling initChannel(...) in handlerAdded(...) is that there will be no ordering
-            // suprises if a ChannelInitializer will add another ChannelInitializer. This is as all handlers
+            // surprises if a ChannelInitializer will add another ChannelInitializer. This is as all handlers
             // will be added in the expected order.
             initChannel(ctx);
         }

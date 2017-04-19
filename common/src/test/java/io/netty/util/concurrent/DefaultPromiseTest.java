@@ -458,7 +458,8 @@ public class DefaultPromiseTest {
             }
         });
 
-        assertTrue("Should have notifed " + expectedCount + " listeners", latch.await(5, TimeUnit.SECONDS));
+        assertTrue("Should have notified " + expectedCount + " listeners",
+                   latch.await(5, TimeUnit.SECONDS));
         executor.shutdownGracefully().sync();
     }
 

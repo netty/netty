@@ -606,7 +606,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 // to close ch.
                 return;
             }
-            // Only close ch if ch is still registerd to this EventLoop. ch could have deregistered from the event loop
+            // Only close ch if ch is still registered to this EventLoop. ch could have deregistered from the event loop
             // and thus the SelectionKey could be cancelled as part of the deregistration process, but the channel is
             // still healthy and should not be closed.
             // See https://github.com/netty/netty/issues/5125
@@ -716,7 +716,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         try {
             return selector.selectNow();
         } finally {
-            // restore wakup state if needed
+            // restore wakeup state if needed
             if (wakenUp.get()) {
                 selector.wakeup();
             }

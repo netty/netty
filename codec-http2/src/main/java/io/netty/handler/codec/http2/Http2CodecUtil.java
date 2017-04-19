@@ -173,7 +173,7 @@ public final class Http2CodecUtil {
     }
 
     /**
-     * Iteratively looks through the causaility chain for the given exception and returns the first
+     * Iteratively looks through the causality chain for the given exception and returns the first
      * {@link Http2Exception} or {@code null} if none.
      */
     public static Http2Exception getEmbeddedHttp2Exception(Throwable cause) {

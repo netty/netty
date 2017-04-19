@@ -155,7 +155,7 @@ public class HttpClientCodecTest {
         ServerBootstrap sb = new ServerBootstrap();
         Bootstrap cb = new Bootstrap();
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        final CountDownLatch responseRecievedLatch = new CountDownLatch(1);
+        final CountDownLatch responseReceivedLatch = new CountDownLatch(1);
         try {
             sb.group(new NioEventLoopGroup(2));
             sb.channel(NioServerSocketChannel.class);
@@ -212,7 +212,7 @@ public class HttpClientCodecTest {
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
                         @Override
                         protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
-                            responseRecievedLatch.countDown();
+                            responseReceivedLatch.countDown();
                         }
                     });
                 }
@@ -226,7 +226,7 @@ public class HttpClientCodecTest {
             Channel clientChannel = ccf.channel();
             assertTrue(serverChannelLatch.await(5, SECONDS));
             clientChannel.writeAndFlush(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
-            assertTrue(responseRecievedLatch.await(5, SECONDS));
+            assertTrue(responseReceivedLatch.await(5, SECONDS));
         } finally {
             sb.config().group().shutdownGracefully();
             sb.config().childGroup().shutdownGracefully();

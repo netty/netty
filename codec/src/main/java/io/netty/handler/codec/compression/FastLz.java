@@ -59,7 +59,7 @@ final class FastLz {
     /**
      * In this case {@link #compress(byte[], int, int, byte[], int, int)} will choose level
      * automatically depending on the length of the input buffer. If length less than
-     * {@link #MIN_RECOMENDED_LENGTH_FOR_LEVEL_2} {@link #LEVEL_1} will be choosen,
+     * {@link #MIN_RECOMENDED_LENGTH_FOR_LEVEL_2} {@link #LEVEL_1} will be chosen,
      * otherwise {@link #LEVEL_2}.
      */
     static final int LEVEL_AUTO = 0;

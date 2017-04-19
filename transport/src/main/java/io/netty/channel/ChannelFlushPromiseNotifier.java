@@ -162,7 +162,7 @@ public final class ChannelFlushPromiseNotifier {
      *
      * So after this operation this {@link ChannelFutureListener} is empty.
      *
-     * @param cause1    the {@link Throwable} which will be used to fail all of the {@link ChannelFuture}s whichs
+     * @param cause1    the {@link Throwable} which will be used to fail all of the {@link ChannelFuture}s which
      *                  pendingDataSize is smaller then the current writeCounter returned by {@link #writeCounter()}
      * @param cause2    the {@link Throwable} which will be used to fail the remaining {@link ChannelFuture}s
      */

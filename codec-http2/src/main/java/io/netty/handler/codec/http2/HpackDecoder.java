@@ -101,7 +101,7 @@ final class HpackDecoder {
     }
 
     /**
-     * Exposed Used for testing only! Default values used in the initial settings frame are overriden intentionally
+     * Exposed Used for testing only! Default values used in the initial settings frame are overridden intentionally
      * for testing but violate the RFC if used outside the scope of testing.
      */
     HpackDecoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity, int maxHeaderTableSize) {

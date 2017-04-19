@@ -55,7 +55,7 @@ public class WebSocketHandshakeHandOverTest {
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == ServerHandshakeStateEvent.HANDSHAKE_COMPLETE) {
                     serverReceivedHandshake = true;
-                    // immediatly send a message to the client on connect
+                    // immediately send a message to the client on connect
                     ctx.writeAndFlush(new TextWebSocketFrame("abc"));
                 } else if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
                     serverHandshakeComplete = (WebSocketServerProtocolHandler.HandshakeComplete) evt;

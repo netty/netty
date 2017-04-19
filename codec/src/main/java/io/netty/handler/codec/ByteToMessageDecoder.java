@@ -451,7 +451,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in            the {@link ByteBuf} from which to read data
      * @param out           the {@link List} to which decoded messages should be added
-     * @throws Exception    is thrown if an error accour
+     * @throws Exception    is thrown if an error occurs
      */
     protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
 

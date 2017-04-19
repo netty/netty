@@ -219,7 +219,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     private static void validate(int initialCapacity, int maxCapacity) {
         if (initialCapacity < 0) {
-            throw new IllegalArgumentException("initialCapacity: " + initialCapacity + " (expectd: 0+)");
+            throw new IllegalArgumentException("initialCapacity: " + initialCapacity + " (expected: 0+)");
         }
         if (initialCapacity > maxCapacity) {
             throw new IllegalArgumentException(String.format(
@@ -246,7 +246,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     @Override
     public int calculateNewCapacity(int minNewCapacity, int maxCapacity) {
         if (minNewCapacity < 0) {
-            throw new IllegalArgumentException("minNewCapacity: " + minNewCapacity + " (expectd: 0+)");
+            throw new IllegalArgumentException("minNewCapacity: " + minNewCapacity + " (expected: 0+)");
         }
         if (minNewCapacity > maxCapacity) {
             throw new IllegalArgumentException(String.format(

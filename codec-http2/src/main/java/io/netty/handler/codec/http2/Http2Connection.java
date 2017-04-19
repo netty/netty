@@ -270,7 +270,7 @@ public interface Http2Connection {
 
     /**
      * Removes a listener of stream life-cycle events. If the same listener was added multiple times
-     * then only the first occurence gets removed.
+     * then only the first occurrence gets removed.
      */
     void removeListener(Listener listener);
 

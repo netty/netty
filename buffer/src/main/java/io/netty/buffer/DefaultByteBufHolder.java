@@ -123,7 +123,7 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     }
 
     /**
-     * Return {@link ByteBuf#toString()} without checking the reference count first. This is useful to implemement
+     * Return {@link ByteBuf#toString()} without checking the reference count first. This is useful to implement
      * {@link #toString()}.
      */
     protected final String contentToString() {

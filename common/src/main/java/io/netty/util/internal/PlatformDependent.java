@@ -132,7 +132,7 @@ public final class PlatformDependent {
             logger.info(
                     "Your platform does not provide complete low-level API for accessing direct buffers reliably. " +
                     "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
-                    "unstability.");
+                    "instability.");
         }
 
         // Here is how the system property is used:
@@ -226,7 +226,7 @@ public final class PlatformDependent {
     }
 
     /**
-     * Return {@code true} if {@code sun.misc.Unsafe} was found on the classpath and can be used for acclerated
+     * Return {@code true} if {@code sun.misc.Unsafe} was found on the classpath and can be used for accelerated
      * direct memory access.
      */
     public static boolean hasUnsafe() {
@@ -304,14 +304,14 @@ public final class PlatformDependent {
     }
 
     /**
-     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
         return new ConcurrentHashMap<K, V>();
     }
 
     /**
-     * Creates a new fastest {@link LongCounter} implementaion for the current platform.
+     * Creates a new fastest {@link LongCounter} implementation for the current platform.
      */
     public static LongCounter newLongCounter() {
         if (javaVersion() >= 8) {
@@ -322,21 +322,21 @@ public final class PlatformDependent {
     }
 
     /**
-     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity) {
         return new ConcurrentHashMap<K, V>(initialCapacity);
     }
 
     /**
-     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity, float loadFactor) {
         return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
     }
 
     /**
-     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(
             int initialCapacity, float loadFactor, int concurrencyLevel) {
@@ -344,7 +344,7 @@ public final class PlatformDependent {
     }
 
     /**
-     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(Map<? extends K, ? extends V> map) {
         return new ConcurrentHashMap<K, V>(map);
@@ -498,7 +498,7 @@ public final class PlatformDependent {
     /**
      * Identical to {@link PlatformDependent0#hashCodeAsciiSanitize(byte)} but for {@link CharSequence}.
      */
-    private static int hashCodeAsciiSanitizsByte(char value) {
+    private static int hashCodeAsciiSanitizeByte(char value) {
         return value & 0x1f;
     }
 
@@ -754,24 +754,24 @@ public final class PlatformDependent {
         }
         switch(remainingBytes) {
             case 7:
-                return ((hash * HASH_CODE_C1 + hashCodeAsciiSanitizsByte(bytes.charAt(0)))
+                return ((hash * HASH_CODE_C1 + hashCodeAsciiSanitizeByte(bytes.charAt(0)))
                               * HASH_CODE_C2 + hashCodeAsciiSanitizeShort(bytes, 1))
                               * HASH_CODE_C1 + hashCodeAsciiSanitizeInt(bytes, 3);
             case 6:
                 return (hash * HASH_CODE_C1 + hashCodeAsciiSanitizeShort(bytes, 0))
                              * HASH_CODE_C2 + hashCodeAsciiSanitizeInt(bytes, 2);
             case 5:
-                return (hash * HASH_CODE_C1 + hashCodeAsciiSanitizsByte(bytes.charAt(0)))
+                return (hash * HASH_CODE_C1 + hashCodeAsciiSanitizeByte(bytes.charAt(0)))
                              * HASH_CODE_C2 + hashCodeAsciiSanitizeInt(bytes, 1);
             case 4:
                 return hash * HASH_CODE_C1 + hashCodeAsciiSanitizeInt(bytes, 0);
             case 3:
-                return (hash * HASH_CODE_C1 + hashCodeAsciiSanitizsByte(bytes.charAt(0)))
+                return (hash * HASH_CODE_C1 + hashCodeAsciiSanitizeByte(bytes.charAt(0)))
                              * HASH_CODE_C2 + hashCodeAsciiSanitizeShort(bytes, 1);
             case 2:
                 return hash * HASH_CODE_C1 + hashCodeAsciiSanitizeShort(bytes, 0);
             case 1:
-                return hash * HASH_CODE_C1 + hashCodeAsciiSanitizsByte(bytes.charAt(0));
+                return hash * HASH_CODE_C1 + hashCodeAsciiSanitizeByte(bytes.charAt(0));
             default:
                 return hash;
         }

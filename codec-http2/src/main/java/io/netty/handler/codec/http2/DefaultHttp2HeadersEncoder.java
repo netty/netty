@@ -47,7 +47,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
     }
 
     /**
-     * Exposed Used for testing only! Default values used in the initial settings frame are overriden intentionally
+     * Exposed Used for testing only! Default values used in the initial settings frame are overridden intentionally
      * for testing but violate the RFC if used outside the scope of testing.
      */
     DefaultHttp2HeadersEncoder(SensitivityDetector sensitivityDetector, HpackEncoder hpackEncoder) {

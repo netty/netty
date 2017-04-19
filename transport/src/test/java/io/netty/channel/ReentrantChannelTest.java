@@ -70,7 +70,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         //    -> flush() and channelWritabilityChanged() will be triggered.
         //
         // Note that the channelWritabilityChanged() in the step 4 can occur between
-        // the flush() and the channelWritabilityChanged() in the stap 5, because
+        // the flush() and the channelWritabilityChanged() in the step 5, because
         // the flush() is invoked from a non-I/O thread while the other are from
         // an I/O thread.
 

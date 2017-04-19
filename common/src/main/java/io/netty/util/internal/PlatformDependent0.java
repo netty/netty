@@ -289,7 +289,7 @@ final class PlatformDependent0 {
                 @Override
                 public Object run() {
                     try {
-                        // Java9 has jdk.internal.misc.Unsafe and not all methods are propergated to
+                        // Java9 has jdk.internal.misc.Unsafe and not all methods are propagated to
                         // sun.misc.Unsafe
                         Class<?> internalUnsafeClass = getClassLoader(PlatformDependent0.class)
                                 .loadClass("jdk.internal.misc.Unsafe");

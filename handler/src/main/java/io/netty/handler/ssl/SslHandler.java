@@ -82,7 +82,7 @@ import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
  *
  * <h3>Handshake</h3>
  * <p>
- * The handshake will be automaticly issued for you once the {@link Channel} is active and
+ * The handshake will be automatically issued for you once the {@link Channel} is active and
  * {@link SSLEngine#getUseClientMode()} returns {@code true}.
  * So no need to bother with it by your self.
  *
@@ -440,7 +440,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     /**
      * Gets the timeout for flushing the close_notify that was triggered by closing the
      * {@link Channel}. If the close_notify was not flushed in the given timeout the {@link Channel} will be closed
-     * forcibily.
+     * forcibly.
      */
     public final long getCloseNotifyFlushTimeoutMillis() {
         return closeNotifyFlushTimeoutMillis;
@@ -449,7 +449,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     /**
      * Sets the timeout for flushing the close_notify that was triggered by closing the
      * {@link Channel}. If the close_notify was not flushed in the given timeout the {@link Channel} will be closed
-     * forcibily.
+     * forcibly.
      */
     public final void setCloseNotifyFlushTimeout(long closeNotifyFlushTimeout, TimeUnit unit) {
         setCloseNotifyFlushTimeoutMillis(unit.toMillis(closeNotifyFlushTimeout));
@@ -519,7 +519,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     /**
      * Returns a {@link Future} that will get notified once the current TLS handshake completes.
      *
-     * @return the {@link Future} for the iniital TLS handshake if {@link #renegotiate()} was not invoked.
+     * @return the {@link Future} for the initial TLS handshake if {@link #renegotiate()} was not invoked.
      *         The {@link Future} for the most recent {@linkplain #renegotiate() TLS renegotiation} otherwise.
      */
     public Future<Channel> handshakeFuture() {
@@ -1121,7 +1121,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private void readIfNeeded(ChannelHandlerContext ctx) {
         // If handshake is not finished yet, we need more data.
         if (!ctx.channel().config().isAutoRead() && (!firedChannelRead || !handshakePromise.isDone())) {
-            // No auto-read used and no message passed through the ChannelPipeline or the handhshake was not complete
+            // No auto-read used and no message passed through the ChannelPipeline or the handshake was not complete
             // yet, which means we need to trigger the read to ensure we not encounter any stalls.
             ctx.read();
         }

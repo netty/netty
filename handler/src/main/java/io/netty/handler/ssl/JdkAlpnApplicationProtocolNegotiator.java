@@ -110,7 +110,7 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
         @Override
         public SSLEngine wrapSslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator,
                                        boolean isServer) {
-            throw new RuntimeException("ALPN unsupported. Is your classpatch configured correctly?"
+            throw new RuntimeException("ALPN unsupported. Is your classpath configured correctly?"
                     + " For Conscrypt, add the appropriate Conscrypt JAR to classpath and set the security provider."
                     + " For Jetty-ALPN, see "
                     + "http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-starting");

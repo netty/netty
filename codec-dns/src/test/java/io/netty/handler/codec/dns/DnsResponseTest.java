@@ -96,7 +96,7 @@ public class DnsResponseTest {
     public ExpectedException exception = ExpectedException.none();
 
     @Test
-    public void readMalormedResponseTest() throws Exception {
+    public void readMalformedResponseTest() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         ByteBuf packet = embedder.alloc().buffer(512).writeBytes(malformedLoopPacket);
         exception.expect(CorruptedFrameException.class);

@@ -103,7 +103,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     }
 
     /**
-     * Rerutns {@code true} if and only if the connection to the destination has been established successfully.
+     * Returns {@code true} if and only if the connection to the destination has been established successfully.
      */
     public final boolean isConnected() {
         return connectPromise.isSuccess();

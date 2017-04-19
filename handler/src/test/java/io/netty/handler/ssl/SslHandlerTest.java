@@ -244,7 +244,7 @@ public class SslHandlerTest {
                     public void operationComplete(final Future<Channel> future) {
                         ch.pipeline().remove(sslHandler);
 
-                        // Schedule the close so removal has time to propergate exception if any.
+                        // Schedule the close so removal has time to propagate exception if any.
                         ch.eventLoop().execute(new Runnable() {
                             @Override
                             public void run() {
