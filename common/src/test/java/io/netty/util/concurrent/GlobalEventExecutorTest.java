@@ -116,6 +116,29 @@ public class GlobalEventExecutorTest {
         assertEquals(group, capturedGroup.get());
     }
 
+    // ensure that when a task submission causes a new thread to be created, the thread inherits the thread group of the
+    // submitting thread
+    @Test(timeout = 2000)
+    public void testThreadGroup() throws InterruptedException {
+        final ThreadGroup group = new ThreadGroup("group");
+        final AtomicReference<ThreadGroup> capturedGroup = new AtomicReference<ThreadGroup>();
+        final Thread thread = new Thread(group, new Runnable() {
+            @Override
+            public void run() {
+                final Thread t = e.threadFactory.newThread(new Runnable() {
+                    @Override
+                    public void run() {
+                    }
+                });
+                capturedGroup.set(t.getThreadGroup());
+            }
+        });
+        thread.start();
+        thread.join();
+
+        assertEquals(group, capturedGroup.get());
+    }
+
     private static final class TestRunnable implements Runnable {
         final AtomicBoolean ran = new AtomicBoolean();
         final long delay;
