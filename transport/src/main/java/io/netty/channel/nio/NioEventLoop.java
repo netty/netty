@@ -611,7 +611,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // and thus the SelectionKey could be cancelled as part of the deregistration process, but the channel is
             // still healthy and should not be closed.
             // See https://github.com/netty/netty/issues/5125
-            if (eventLoop != this || eventLoop == null) {
+            if (eventLoop != this || !ch.isRegistered() || ch.selectionKey() != k) {
                 return;
             }
             // close the channel if the key is not valid anymore
