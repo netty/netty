@@ -38,8 +38,6 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.IDN;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -576,25 +574,13 @@ abstract class DnsNameResolverContext<T> {
         }
 
         final int size = resolvedEntries.size();
-        switch (parent.preferredAddressType()) {
-        case IPv4:
-            for (int i = 0; i < size; i ++) {
-                if (resolvedEntries.get(i).address() instanceof Inet4Address) {
-                    return true;
-                }
+        final Class<? extends InetAddress> inetAddressType = parent.preferredAddressType().addressType();
+        for (int i = 0; i < size; i++) {
+            InetAddress address = resolvedEntries.get(i).address();
+            if (inetAddressType.isInstance(address)) {
+                return true;
             }
-            break;
-        case IPv6:
-            for (int i = 0; i < size; i ++) {
-                if (resolvedEntries.get(i).address() instanceof Inet6Address) {
-                    return true;
-                }
-            }
-            break;
-        default:
-            throw new Error();
         }
-
         return false;
     }
 
