@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.internal.PlatformDependent;
 
@@ -45,6 +46,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     private final boolean checkSize;
 
     private long minSize;
+
+    private Charset charset = HttpConstants.DEFAULT_CHARSET;
 
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
@@ -79,6 +82,11 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         this.minSize = minSize;
     }
 
+    public DefaultHttpDataFactory(long minSize, Charset charset) {
+        this(minSize);
+        this.charset = charset;
+    }
+
     /**
      * @return the associated list of Files for the request
      */
@@ -94,13 +102,13 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     @Override
     public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {
-            Attribute attribute = new DiskAttribute(name);
+            Attribute attribute = new DiskAttribute(name, charset);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, minSize);
+            Attribute attribute = new MixedAttribute(name, minSize, charset);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
@@ -113,23 +121,23 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         if (useDisk) {
             Attribute attribute;
             try {
-                attribute = new DiskAttribute(name, value);
+                attribute = new DiskAttribute(name, value, charset);
             } catch (IOException e) {
                 // revert to Mixed mode
-                attribute = new MixedAttribute(name, value, minSize);
+                attribute = new MixedAttribute(name, value, minSize, charset);
             }
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, value, minSize);
+            Attribute attribute = new MixedAttribute(name, value, minSize, charset);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         try {
-            return new MemoryAttribute(name, value);
+            return new MemoryAttribute(name, value, charset);
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }

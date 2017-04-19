@@ -20,8 +20,9 @@ import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 
-import static io.netty.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 
 /**
  * Disk implementation of Attributes
@@ -42,8 +43,17 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
         super(name, HttpConstants.DEFAULT_CHARSET, 0);
     }
 
+    public DiskAttribute(String name, Charset charset) {
+        super(name, charset, 0);
+    }
+
     public DiskAttribute(String name, String value) throws IOException {
         super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
+        setValue(value);
+    }
+
+    public DiskAttribute(String name, String value, Charset charset) throws IOException {
+        super(name, charset, 0); // Attribute have no default size
         setValue(value);
     }
 
