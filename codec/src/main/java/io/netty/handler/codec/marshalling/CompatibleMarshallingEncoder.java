@@ -28,7 +28,7 @@ import org.jboss.marshalling.Marshaller;
  * an Object.
  *
  * See <a href="http://www.jboss.org/jbossmarshalling">JBoss Marshalling website</a>
- * for more informations
+ * for more information
  *
  * Use {@link MarshallingEncoder} if possible.
  *

@@ -159,7 +159,7 @@ public class JdkSslContext extends SslContext {
      *
      * @param sslContext the {@link SSLContext} to use.
      * @param isClient {@code true} if this context should create {@link SSLEngine}s for client-side usage.
-     * @param ciphers the ciphers to use or {@code null} if the standart should be used.
+     * @param ciphers the ciphers to use or {@code null} if the standard should be used.
      * @param cipherFilter the filter to use.
      * @param apn the {@link ApplicationProtocolConfig} to use.
      * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.

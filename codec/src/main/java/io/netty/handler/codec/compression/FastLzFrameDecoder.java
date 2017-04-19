@@ -71,7 +71,7 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
     private boolean hasChecksum;
 
     /**
-     * Chechsum value of current received chunk of data which has checksum.
+     * Checksum value of current received chunk of data which has checksum.
      */
     private int currentChecksum;
 

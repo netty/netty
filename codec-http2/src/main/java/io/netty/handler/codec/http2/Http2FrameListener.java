@@ -162,7 +162,7 @@ public interface Http2FrameListener {
      * Handles an inbound {@code PUSH_PROMISE} frame. Only called if {@code END_HEADERS} encountered.
      * <p>
      * Promised requests MUST be authoritative, cacheable, and safe.
-     * See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-17#section-8.2">[RFC http2], Seciton 8.2</a>.
+     * See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-17#section-8.2">[RFC http2], Section 8.2</a>.
      * <p>
      * Only one of the following methods will be called for each {@code HEADERS} frame sequence.
      * One will be called when the {@code END_HEADERS} flag has been received.

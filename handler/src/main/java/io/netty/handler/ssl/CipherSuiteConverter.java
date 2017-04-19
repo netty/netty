@@ -43,7 +43,7 @@ final class CipherSuiteConverter {
      * C - bulk cipher
      * D - HMAC algorithm
      *
-     * This regular expression assumees that:
+     * This regular expression assumes that:
      *
      * 1) A is always TLS or SSL, and
      * 2) D is always a single word.

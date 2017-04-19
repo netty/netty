@@ -61,7 +61,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
  * <li>Last-Modified</li>
  * <li>Pragma</li>
  * </ul>
- * Any of the above response headers can be retreived by:
+ * Any of the above response headers can be retrieved by:
  * <pre>
  * xhr.getResponseHeader("Content-Type");
  * </pre>

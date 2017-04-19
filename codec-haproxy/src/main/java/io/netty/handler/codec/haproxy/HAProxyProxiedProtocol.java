@@ -120,7 +120,7 @@ public enum HAProxyProxiedProtocol {
      */
     public enum AddressFamily {
         /**
-         * The UNSPECIFIED address family represents a connection which was forwarded for an unkown protocol.
+         * The UNSPECIFIED address family represents a connection which was forwarded for an unknown protocol.
          */
         AF_UNSPEC(AF_UNSPEC_BYTE),
         /**
@@ -184,7 +184,7 @@ public enum HAProxyProxiedProtocol {
      */
     public enum TransportProtocol {
         /**
-         * The UNSPEC transport protocol represents a connection which was forwarded for an unkown protocol.
+         * The UNSPEC transport protocol represents a connection which was forwarded for an unknown protocol.
          */
         UNSPEC(TRANSPORT_UNSPEC_BYTE),
         /**

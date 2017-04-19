@@ -55,7 +55,7 @@ public interface DnsCache {
      * Cache a resolved address for a given hostname.
      * @param hostname the hostname
      * @param additionals the additional records
-     * @param address the resolved adresse
+     * @param address the resolved address
      * @param originalTtl the TLL as returned by the DNS server
      * @param loop the {@link EventLoop} used to register the TTL timeout
      */

@@ -433,9 +433,9 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         return (B) this;
     }
 
-    private void enforceNonCodecConstraints(String rejectee) {
-        enforceConstraint(rejectee, "server/connection", decoder);
-        enforceConstraint(rejectee, "server/connection", encoder);
+    private void enforceNonCodecConstraints(String rejected) {
+        enforceConstraint(rejected, "server/connection", decoder);
+        enforceConstraint(rejected, "server/connection", encoder);
     }
 
     private static void enforceConstraint(String methodName, String rejectorName, Object value) {

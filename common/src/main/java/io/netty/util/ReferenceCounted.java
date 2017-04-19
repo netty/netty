@@ -53,7 +53,7 @@ public interface ReferenceCounted {
     ReferenceCounted touch();
 
     /**
-     * Records the current access location of this object with an additonal arbitrary information for debugging
+     * Records the current access location of this object with an additional arbitrary information for debugging
      * purposes.  If this object is determined to be leaked, the information recorded by this operation will be
      * provided to you via {@link ResourceLeakDetector}.
      */

@@ -21,5 +21,5 @@ package io.netty.handler.codec.compression;
  */
 @Deprecated
 public class SnappyFramedEncoder extends SnappyFrameEncoder {
-    // Nothing new. Just stting here for backward compatibility.
+    // Nothing new. Just staying here for backward compatibility.
 }

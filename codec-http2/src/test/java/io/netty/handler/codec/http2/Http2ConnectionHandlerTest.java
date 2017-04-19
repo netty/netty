@@ -620,7 +620,7 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
-    public void writeRstStreamForUnkownStreamUsingVoidPromise() throws Exception {
+    public void writeRstStreamForUnknownStreamUsingVoidPromise() throws Exception {
         writeRstStreamUsingVoidPromise(NON_EXISTANT_STREAM_ID);
     }
 

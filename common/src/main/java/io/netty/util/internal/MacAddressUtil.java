@@ -187,7 +187,7 @@ public final class MacAddressUtil {
 
     private static void validateMacSeparator(char separator) {
         if (separator != ':' && separator != '-') {
-            throw new IllegalArgumentException("unsupported seperator: " + separator + " (expected: [:-])");
+            throw new IllegalArgumentException("unsupported separator: " + separator + " (expected: [:-])");
         }
     }
 

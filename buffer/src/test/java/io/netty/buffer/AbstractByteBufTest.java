@@ -3462,66 +3462,66 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
-    public void testRetainedSliceUnreleasble1() {
-        testRetainedSliceUnreleasble(true, true);
+    public void testRetainedSliceUnreleasable1() {
+        testRetainedSliceUnreleasable(true, true);
     }
 
     @Test
-    public void testRetainedSliceUnreleasble2() {
-        testRetainedSliceUnreleasble(true, false);
+    public void testRetainedSliceUnreleasable2() {
+        testRetainedSliceUnreleasable(true, false);
     }
 
     @Test
-    public void testRetainedSliceUnreleasble3() {
-        testRetainedSliceUnreleasble(false, true);
+    public void testRetainedSliceUnreleasable3() {
+        testRetainedSliceUnreleasable(false, true);
     }
 
     @Test
-    public void testRetainedSliceUnreleasble4() {
-        testRetainedSliceUnreleasble(false, false);
+    public void testRetainedSliceUnreleasable4() {
+        testRetainedSliceUnreleasable(false, false);
     }
 
     @Test
-    public void testReadRetainedSliceUnreleasble1() {
-        testReadRetainedSliceUnreleasble(true, true);
+    public void testReadRetainedSliceUnreleasable1() {
+        testReadRetainedSliceUnreleasable(true, true);
     }
 
     @Test
-    public void testReadRetainedSliceUnreleasble2() {
-        testReadRetainedSliceUnreleasble(true, false);
+    public void testReadRetainedSliceUnreleasable2() {
+        testReadRetainedSliceUnreleasable(true, false);
     }
 
     @Test
-    public void testReadRetainedSliceUnreleasble3() {
-        testReadRetainedSliceUnreleasble(false, true);
+    public void testReadRetainedSliceUnreleasable3() {
+        testReadRetainedSliceUnreleasable(false, true);
     }
 
     @Test
-    public void testReadRetainedSliceUnreleasble4() {
-        testReadRetainedSliceUnreleasble(false, false);
+    public void testReadRetainedSliceUnreleasable4() {
+        testReadRetainedSliceUnreleasable(false, false);
     }
 
     @Test
-    public void testRetainedDuplicateUnreleasble1() {
-        testRetainedDuplicateUnreleasble(true, true);
+    public void testRetainedDuplicateUnreleasable1() {
+        testRetainedDuplicateUnreleasable(true, true);
     }
 
     @Test
-    public void testRetainedDuplicateUnreleasble2() {
-        testRetainedDuplicateUnreleasble(true, false);
+    public void testRetainedDuplicateUnreleasable2() {
+        testRetainedDuplicateUnreleasable(true, false);
     }
 
     @Test
-    public void testRetainedDuplicateUnreleasble3() {
-        testRetainedDuplicateUnreleasble(false, true);
+    public void testRetainedDuplicateUnreleasable3() {
+        testRetainedDuplicateUnreleasable(false, true);
     }
 
     @Test
-    public void testRetainedDuplicateUnreleasble4() {
-        testRetainedDuplicateUnreleasble(false, false);
+    public void testRetainedDuplicateUnreleasable4() {
+        testRetainedDuplicateUnreleasable(false, false);
     }
 
-    private void testRetainedSliceUnreleasble(boolean initRetainedSlice, boolean finalRetainedSlice) {
+    private void testRetainedSliceUnreleasable(boolean initRetainedSlice, boolean finalRetainedSlice) {
         ByteBuf buf = newBuffer(8);
         ByteBuf buf1 = initRetainedSlice ? buf.retainedSlice() : buf.slice().retain();
         ByteBuf buf2 = unreleasableBuffer(buf1);
@@ -3534,7 +3534,7 @@ public abstract class AbstractByteBufTest {
         assertEquals(0, buf.refCnt());
     }
 
-    private void testReadRetainedSliceUnreleasble(boolean initRetainedSlice, boolean finalRetainedSlice) {
+    private void testReadRetainedSliceUnreleasable(boolean initRetainedSlice, boolean finalRetainedSlice) {
         ByteBuf buf = newBuffer(8);
         ByteBuf buf1 = initRetainedSlice ? buf.retainedSlice() : buf.slice().retain();
         ByteBuf buf2 = unreleasableBuffer(buf1);
@@ -3548,7 +3548,7 @@ public abstract class AbstractByteBufTest {
         assertEquals(0, buf.refCnt());
     }
 
-    private void testRetainedDuplicateUnreleasble(boolean initRetainedDuplicate, boolean finalRetainedDuplicate) {
+    private void testRetainedDuplicateUnreleasable(boolean initRetainedDuplicate, boolean finalRetainedDuplicate) {
         ByteBuf buf = newBuffer(8);
         ByteBuf buf1 = initRetainedDuplicate ? buf.retainedDuplicate() : buf.duplicate().retain();
         ByteBuf buf2 = unreleasableBuffer(buf1);

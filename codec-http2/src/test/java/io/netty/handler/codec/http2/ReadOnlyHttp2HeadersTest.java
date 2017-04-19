@@ -60,7 +60,7 @@ public class ReadOnlyHttp2HeadersTest {
     }
 
     @Test
-    public void emtpyHeaderNameAllowed() {
+    public void emptyHeaderNameAllowed() {
         ReadOnlyHttp2Headers.trailers(false, AsciiString.EMPTY_STRING, new AsciiString("foo"));
     }
 

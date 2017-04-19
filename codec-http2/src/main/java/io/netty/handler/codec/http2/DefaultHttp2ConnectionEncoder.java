@@ -379,17 +379,17 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             }
 
             // Determine how much data to write.
-            int writeableData = min(queuedData, allowedBytes);
+            int writableData = min(queuedData, allowedBytes);
             ChannelPromise writePromise = ctx.newPromise().addListener(this);
-            ByteBuf toWrite = queue.remove(writeableData, writePromise);
+            ByteBuf toWrite = queue.remove(writableData, writePromise);
             dataSize = queue.readableBytes();
 
             // Determine how much padding to write.
-            int writeablePadding = min(allowedBytes - writeableData, padding);
-            padding -= writeablePadding;
+            int writablePadding = min(allowedBytes - writableData, padding);
+            padding -= writablePadding;
 
             // Write the frame(s).
-            frameWriter().writeData(ctx, stream.id(), toWrite, writeablePadding,
+            frameWriter().writeData(ctx, stream.id(), toWrite, writablePadding,
                     endOfStream && size() == 0, writePromise);
         }
 

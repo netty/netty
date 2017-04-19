@@ -341,7 +341,7 @@ public class ChannelOutboundBufferTest {
         ch.runPendingTasks();
         assertThat(buf.toString(), is("false "));
 
-        // Ensure reducing the totalPendingWriteBytes down to zero does not trigger channelWritabilityChannged()
+        // Ensure reducing the totalPendingWriteBytes down to zero does not trigger channelWritabilityChanged()
         // because of the user-defined writability flag.
         ch.flush();
         assertThat(cob.totalPendingWriteBytes(), is(0L));

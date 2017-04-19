@@ -31,7 +31,7 @@ import org.jboss.marshalling.Marshaller;
  * Use this with {@link MarshallingDecoder}
  *
  * See <a href="http://www.jboss.org/jbossmarshalling">JBoss Marshalling website</a>
- * for more informations
+ * for more information
  *
  */
 @Sharable

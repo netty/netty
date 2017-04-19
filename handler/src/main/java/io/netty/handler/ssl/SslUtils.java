@@ -90,7 +90,7 @@ final class SslUtils {
      *                  otherwise it will throw an {@link IllegalArgumentException}.
      * @return length
      *                  The length of the encrypted packet that is included in the buffer or
-     *                  {@link #SslUtils#NOT_ENOUGH_DATA} if not enought data is present in the
+     *                  {@link #SslUtils#NOT_ENOUGH_DATA} if not enough data is present in the
      *                  {@link ByteBuf}. This will return {@link SslUtils#NOT_ENCRYPTED} if
      *                  the given {@link ByteBuf} is not encrypted at all.
      * @throws IllegalArgumentException

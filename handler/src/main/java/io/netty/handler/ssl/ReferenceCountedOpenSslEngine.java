@@ -198,7 +198,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private final ByteBufAllocator alloc;
     private final OpenSslEngineMap engineMap;
     private final OpenSslApplicationProtocolNegotiator apn;
-    private final boolean rejectRemoteInitiatedRenegation;
+    private final boolean rejectRemoteInitiatedRenegotiation;
     private final OpenSslSession session;
     private final Certificate[] localCerts;
     private final ByteBuffer[] singleSrcBuffer = new ByteBuffer[1];
@@ -228,7 +228,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         session = new OpenSslSession(context.sessionContext());
         clientMode = context.isClient();
         engineMap = context.engineMap;
-        rejectRemoteInitiatedRenegation = context.getRejectRemoteInitiatedRenegotiation();
+        rejectRemoteInitiatedRenegotiation = context.getRejectRemoteInitiatedRenegotiation();
         localCerts = context.keyCertChain;
         keyMaterialManager = context.keyMaterialManager();
         enableOcsp = context.enableOcsp;
@@ -929,7 +929,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
             } finally {
                 SSL.bioClearByteBuffer(networkBIO);
-                rejectRemoteInitiatedRenegation();
+                rejectRemoteInitiatedRenegotiation();
             }
 
             // Check to see if we received a close_notify message from the peer.
@@ -965,12 +965,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         closeInbound();
     }
 
-    private void rejectRemoteInitiatedRenegation() throws SSLHandshakeException {
-        if (rejectRemoteInitiatedRenegation && SSL.getHandshakeCount(ssl) > 1) {
+    private void rejectRemoteInitiatedRenegotiation() throws SSLHandshakeException {
+        if (rejectRemoteInitiatedRenegotiation && SSL.getHandshakeCount(ssl) > 1) {
             // TODO: In future versions me may also want to send a fatal_alert to the client and so notify it
             // that the renegotiation failed.
             shutdown();
-            throw new SSLHandshakeException("remote-initiated renegotation not allowed");
+            throw new SSLHandshakeException("remote-initiated renegotiation not allowed");
         }
     }
 
@@ -1202,7 +1202,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     @Override
     public final String[] getEnabledProtocols() {
         List<String> enabled = new ArrayList<String>(6);
-        // Seems like there is no way to explict disable SSLv2Hello in openssl so it is always enabled
+        // Seems like there is no way to explicit disable SSLv2Hello in openssl so it is always enabled
         enabled.add(OpenSsl.PROTOCOL_SSL_V2_HELLO);
 
         int opts;

@@ -184,7 +184,7 @@ public class HAProxyMessageDecoderTest {
 
     @Test
     public void testTransportProtocolAndAddressFamily() {
-        final byte unkown = HAProxyProxiedProtocol.UNKNOWN.byteValue();
+        final byte unknown = HAProxyProxiedProtocol.UNKNOWN.byteValue();
         final byte tcp4 = HAProxyProxiedProtocol.TCP4.byteValue();
         final byte tcp6 = HAProxyProxiedProtocol.TCP6.byteValue();
         final byte udp4 = HAProxyProxiedProtocol.UDP4.byteValue();
@@ -192,7 +192,7 @@ public class HAProxyMessageDecoderTest {
         final byte unix_stream = HAProxyProxiedProtocol.UNIX_STREAM.byteValue();
         final byte unix_dgram = HAProxyProxiedProtocol.UNIX_DGRAM.byteValue();
 
-        assertEquals(TransportProtocol.UNSPEC, TransportProtocol.valueOf(unkown));
+        assertEquals(TransportProtocol.UNSPEC, TransportProtocol.valueOf(unknown));
         assertEquals(TransportProtocol.STREAM, TransportProtocol.valueOf(tcp4));
         assertEquals(TransportProtocol.STREAM, TransportProtocol.valueOf(tcp6));
         assertEquals(TransportProtocol.STREAM, TransportProtocol.valueOf(unix_stream));
@@ -200,7 +200,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(TransportProtocol.DGRAM, TransportProtocol.valueOf(udp6));
         assertEquals(TransportProtocol.DGRAM, TransportProtocol.valueOf(unix_dgram));
 
-        assertEquals(AddressFamily.AF_UNSPEC, AddressFamily.valueOf(unkown));
+        assertEquals(AddressFamily.AF_UNSPEC, AddressFamily.valueOf(unknown));
         assertEquals(AddressFamily.AF_IPv4, AddressFamily.valueOf(tcp4));
         assertEquals(AddressFamily.AF_IPv4, AddressFamily.valueOf(udp4));
         assertEquals(AddressFamily.AF_IPv6, AddressFamily.valueOf(tcp6));

@@ -113,7 +113,7 @@ public final class HttpUploadClient {
 
         try {
             Bootstrap b = new Bootstrap();
-            b.group(group).channel(NioSocketChannel.class).handler(new HttpUploadClientIntializer(sslCtx));
+            b.group(group).channel(NioSocketChannel.class).handler(new HttpUploadClientInitializer(sslCtx));
 
             // Simple Get form: no factory used (not usable)
             List<Entry<String, String>> headers = formget(b, host, port, get, uriSimple);

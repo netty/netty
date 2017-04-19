@@ -328,14 +328,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     /**
-     * Default number of heap areanas - System Property: io.netty.allocator.numHeapArenas - default 2 * cores
+     * Default number of heap arenas - System Property: io.netty.allocator.numHeapArenas - default 2 * cores
      */
     public static int defaultNumHeapArena() {
         return DEFAULT_NUM_HEAP_ARENA;
     }
 
     /**
-     * Default numer of direct arenas - System Property: io.netty.allocator.numDirectArenas - default 2 * cores
+     * Default number of direct arenas - System Property: io.netty.allocator.numDirectArenas - default 2 * cores
      */
     public static int defaultNumDirectArena() {
         return DEFAULT_NUM_DIRECT_ARENA;
@@ -377,7 +377,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     /**
-     * Return {@code true} if direct memory cache aligment is supported, {@code false} otherwise.
+     * Return {@code true} if direct memory cache alignment is supported, {@code false} otherwise.
      */
     public static boolean isDirectMemoryCacheAlignmentSupported() {
         return PlatformDependent.hasUnsafe();

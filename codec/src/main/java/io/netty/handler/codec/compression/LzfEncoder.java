@@ -73,7 +73,7 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
 
     /**
      * Creates a new LZF encoder with specified total length of encoded chunk. You can configure it to encode
-     * your data flow more efficient if you know the avarage size of messages that you send.
+     * your data flow more efficient if you know the average size of messages that you send.
      *
      * @param totalLength
      *        Expected total length of content to compress; only matters for outgoing messages that is smaller

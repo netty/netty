@@ -892,7 +892,7 @@ public class LocalChannelTest {
     static class TestHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            logger.info(String.format("Received mesage: %s", msg));
+            logger.info(String.format("Received message: %s", msg));
             ReferenceCountUtil.safeRelease(msg);
         }
     }

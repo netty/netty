@@ -54,7 +54,7 @@ public final class HttpUtil {
     }
 
     /**
-     * Determine if a uri is in asteric-form according to
+     * Determine if a uri is in asterisk-form according to
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     public static boolean isAsteriskForm(URI uri) {
@@ -217,7 +217,7 @@ public final class HttpUtil {
      * specified message is not a web socket message, {@code -1} is returned.
      */
     private static int getWebSocketContentLength(HttpMessage message) {
-        // WebSockset messages have constant content-lengths.
+        // WebSocket messages have constant content-lengths.
         HttpHeaders h = message.headers();
         if (message instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) message;

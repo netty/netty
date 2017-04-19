@@ -27,7 +27,7 @@ import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
 import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
 
 public class DefaultSpdyHeaders extends DefaultHeaders<CharSequence, CharSequence, SpdyHeaders> implements SpdyHeaders {
-    private static final NameValidator<CharSequence> SpydNameValidator = new NameValidator<CharSequence>() {
+    private static final NameValidator<CharSequence> SpdyNameValidator = new NameValidator<CharSequence>() {
         @Override
         public void validateName(CharSequence name) {
             SpdyCodecUtil.validateHeaderName(name);
@@ -42,7 +42,7 @@ public class DefaultSpdyHeaders extends DefaultHeaders<CharSequence, CharSequenc
     public DefaultSpdyHeaders(boolean validate) {
         super(CASE_INSENSITIVE_HASHER,
                 validate ? HeaderValueConverterAndValidator.INSTANCE : CharSequenceValueConverter.INSTANCE,
-                validate ? SpydNameValidator : NameValidator.NOT_NULL);
+                validate ? SpdyNameValidator : NameValidator.NOT_NULL);
     }
 
     @Override

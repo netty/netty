@@ -72,7 +72,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslContext.class);
     /**
-     * To make it easier for users to replace JDK implemention with OpenSsl version we also use
+     * To make it easier for users to replace JDK implementation with OpenSsl version we also use
      * {@code jdk.tls.rejectClientInitiatedRenegotiation} to allow disabling client initiated renegotiation.
      * Java8+ uses this system property as well.
      * <p>

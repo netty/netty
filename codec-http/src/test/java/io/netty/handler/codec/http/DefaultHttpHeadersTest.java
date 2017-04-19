@@ -43,7 +43,7 @@ public class DefaultHttpHeadersTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void emtpyHeaderNameNotAllowed() {
+    public void emptyHeaderNameNotAllowed() {
         new DefaultHttpHeaders().add(StringUtil.EMPTY_STRING, "foo");
     }
 

@@ -23,11 +23,11 @@ import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
-public class HttpUploadClientIntializer extends ChannelInitializer<SocketChannel> {
+public class HttpUploadClientInitializer extends ChannelInitializer<SocketChannel> {
 
     private final SslContext sslCtx;
 
-    public HttpUploadClientIntializer(SslContext sslCtx) {
+    public HttpUploadClientInitializer(SslContext sslCtx) {
         this.sslCtx = sslCtx;
     }
 
