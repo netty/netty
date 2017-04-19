@@ -134,7 +134,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
     /**
      * Creates a new instance.
      *
-     * @param fingerprints a list of SHA1 fingerprints in heaxdecimal form
+     * @param fingerprints a list of SHA1 fingerprints in hexadecimal form
      */
     public FingerprintTrustManagerFactory(Iterable<String> fingerprints) {
         this(toFingerprintArray(fingerprints));
@@ -143,7 +143,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
     /**
      * Creates a new instance.
      *
-     * @param fingerprints a list of SHA1 fingerprints in heaxdecimal form
+     * @param fingerprints a list of SHA1 fingerprints in hexadecimal form
      */
     public FingerprintTrustManagerFactory(String... fingerprints) {
         this(toFingerprintArray(Arrays.asList(fingerprints)));

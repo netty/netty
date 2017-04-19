@@ -100,9 +100,9 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
-     * Sets the cache for authoritive NS servers
+     * Sets the cache for authoritative NS servers
      *
-     * @param authoritativeDnsServerCache the authoritive NS servers cache
+     * @param authoritativeDnsServerCache the authoritative NS servers cache
      * @return {@code this}
      */
     public DnsNameResolverBuilder authoritativeDnsServerCache(DnsCache authoritativeDnsServerCache) {

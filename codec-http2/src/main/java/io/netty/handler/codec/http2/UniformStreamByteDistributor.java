@@ -161,7 +161,7 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
             }
             // In addition to only enqueuing state when they have frames we enforce the following restrictions:
             // 1. If the window has gone negative. We never want to queue a state. However we also don't want to
-            //    Immediately remove the item if it is already queued because removal from dequeue is O(n). So
+            //    Immediately remove the item if it is already queued because removal from deque is O(n). So
             //    we allow it to stay queued and rely on the distribution loop to remove this state.
             // 2. If the window is zero we only want to queue if we are not writing. If we are writing that means
             //    we gave the state a chance to write zero length frames. We wait until updateStreamableBytes is

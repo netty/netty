@@ -700,7 +700,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
         Integer key = channel.hashCode();
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel == null) {
-            // in case write occurs before handlerAdded is raized for this handler
+            // in case write occurs before handlerAdded is raised for this handler
             // imply a synchronized only if needed
             perChannel = getOrSetPerChannel(ctx);
         }

@@ -132,7 +132,7 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @Test
-    public void inflightFrameAfterStreamResetShouldNotMakeConnectionUnsuable() throws Exception {
+    public void inflightFrameAfterStreamResetShouldNotMakeConnectionUnusable() throws Exception {
         bootstrapEnv(1, 1, 2, 1);
         final CountDownLatch latch = new CountDownLatch(1);
         doAnswer(new Answer<Void>() {

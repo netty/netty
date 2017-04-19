@@ -337,7 +337,7 @@
         <version>3.0.0-alpha-5</version>
       </dependency>
 
-      <!-- Our own Tomcat Native fork - completely optional, used for acclerating SSL with OpenSSL. -->
+      <!-- Our own Tomcat Native fork - completely optional, used for accelerating SSL with OpenSSL. -->
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>${tcnative.artifactId}</artifactId>

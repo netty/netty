@@ -114,7 +114,7 @@ public class DataCompressionHttp2Test {
     }
 
     @After
-    public void cleaup() throws IOException {
+    public void cleanup() throws IOException {
         serverOut.close();
     }
 

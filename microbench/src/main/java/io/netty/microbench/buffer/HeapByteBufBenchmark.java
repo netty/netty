@@ -30,7 +30,7 @@ public class HeapByteBufBenchmark extends AbstractMicrobenchmark {
     private ByteBuf buffer;
 
     private static ByteBuf newBuffer(String classname) throws Exception {
-        // Using reflection to workound package-private implementations.
+        // Using reflection to workaround package-private implementations.
         Class<?> clazz = Class.forName(classname);
         Constructor<?> constructor = clazz.getDeclaredConstructor(ByteBufAllocator.class, int.class, int.class);
         constructor.setAccessible(true);

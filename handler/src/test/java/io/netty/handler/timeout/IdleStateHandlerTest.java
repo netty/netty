@@ -209,14 +209,14 @@ public class IdleStateHandlerTest {
 
         long writerIdleTime = 0L;
         long allIdleTime = 0L;
-        IdleStateEvent expeced = null;
+        IdleStateEvent expected;
 
         if (writer) {
             writerIdleTime = 5L;
-            expeced = IdleStateEvent.FIRST_WRITER_IDLE_STATE_EVENT;
+            expected = IdleStateEvent.FIRST_WRITER_IDLE_STATE_EVENT;
         } else {
             allIdleTime = 5L;
-            expeced = IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT;
+            expected = IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT;
         }
 
         TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
@@ -240,7 +240,7 @@ public class IdleStateHandlerTest {
             // Establish a baseline. We're not consuming anything and let it idle once.
             idleStateHandler.tickRun();
             assertEquals(1, events.size());
-            assertSame(expeced, events.get(0));
+            assertSame(expected, events.get(0));
             events.clear();
 
             // Our ticker should be at second 5

@@ -206,7 +206,7 @@ public interface ChannelConfig {
     /**
      * @deprecated  Auto close will be removed in a future release.
      *
-     * Sets whether the {@link Channel} should be closed automatically and immediately on write faillure.
+     * Sets whether the {@link Channel} should be closed automatically and immediately on write failure.
      * The default is {@code false}.
      */
     @Deprecated

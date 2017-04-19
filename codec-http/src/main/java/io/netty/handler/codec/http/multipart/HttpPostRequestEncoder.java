@@ -506,7 +506,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
          *      add multipart delimiter, multipart body header and Data to multipart list
          *      reset currentFileUpload, duringMixedMode
          * if FileUpload: take care of multiple file for one field => mixed mode
-         *      if (duringMixeMode)
+         *      if (duringMixedMode)
          *          if (currentFileUpload.name == data.name)
          *              add mixedmultipart delimiter, mixedmultipart body header and Data to multipart list
          *          else

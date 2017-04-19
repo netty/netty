@@ -672,8 +672,8 @@ abstract class DnsNameResolverContext<T> {
         }
     }
 
-    private DnsServerAddressStream getNameServers(String hostame) {
-        DnsServerAddressStream stream = getNameServersFromCache(hostame);
+    private DnsServerAddressStream getNameServers(String hostname) {
+        DnsServerAddressStream stream = getNameServersFromCache(hostname);
         return stream == null ? nameServerAddrs : stream;
     }
 

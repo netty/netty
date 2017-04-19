@@ -93,7 +93,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     private int bodyListHttpDataRank;
 
     /**
-     * If multipart, this is the boundary for the flobal multipart
+     * If multipart, this is the boundary for the global multipart
      */
     private String multipartDataBoundary;
 
@@ -983,7 +983,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *
      * @return the String from one line
      * @throws NotEnoughDataDecoderException
-     *             Need more chunks and reset the readerInder to the previous
+     *             Need more chunks and reset the {@code readerIndex} to the previous
      *             value
      */
     private String readLineStandard() {
@@ -1023,7 +1023,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *
      * @return the String from one line
      * @throws NotEnoughDataDecoderException
-     *             Need more chunks and reset the readerInder to the previous
+     *             Need more chunks and reset the {@code readerIndex} to the previous
      *             value
      */
     private String readLine() {
@@ -1080,7 +1080,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * @return the String from one line as the delimiter searched (opening or
      *         closing)
      * @throws NotEnoughDataDecoderException
-     *             Need more chunks and reset the readerInder to the previous
+     *             Need more chunks and reset the {@code readerIndex} to the previous
      *             value
      */
     private String readDelimiterStandard(String delimiter) {
@@ -1400,7 +1400,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      * FileUpload. If the delimiter is found, the FileUpload is completed.
      *
      * @throws NotEnoughDataDecoderException
-     *             Need more chunks but do not reset the readerInder since some
+     *             Need more chunks but do not reset the {@code readerIndex} since some
      *             values will be already added to the FileOutput
      * @throws ErrorDataDecoderException
      *             write IO error occurs with the FileUpload

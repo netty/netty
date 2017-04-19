@@ -65,8 +65,8 @@ public class WebSocketClientExtensionHandler extends ChannelDuplexHandler {
             HttpRequest request = (HttpRequest) msg;
             String headerValue = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
-            for (WebSocketClientExtensionHandshaker extentionHandshaker : extensionHandshakers) {
-                WebSocketExtensionData extensionData = extentionHandshaker.newRequestData();
+            for (WebSocketClientExtensionHandshaker extensionHandshaker : extensionHandshakers) {
+                WebSocketExtensionData extensionData = extensionHandshaker.newRequestData();
                 headerValue = WebSocketExtensionUtil.appendExtension(headerValue,
                         extensionData.name(), extensionData.parameters());
             }
@@ -109,7 +109,7 @@ public class WebSocketClientExtensionHandler extends ChannelDuplexHandler {
                             validExtensions.add(validExtension);
                         } else {
                             throw new CodecException(
-                                    "invalid WebSocket Extension handhshake for \"" + extensionsHeader + "\"");
+                                    "invalid WebSocket Extension handshake for \"" + extensionsHeader + '"');
                         }
                     }
 

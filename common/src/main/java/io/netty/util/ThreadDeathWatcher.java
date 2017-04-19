@@ -45,7 +45,7 @@ public final class ThreadDeathWatcher {
     static final ThreadFactory threadFactory;
 
     // Use a MPMC queue as we may end up checking isEmpty() from multiple threads which may not be allowed to do
-    // concurrently depending on the implemenation of it in a MPSC queue.
+    // concurrently depending on the implementation of it in a MPSC queue.
     private static final Queue<Entry> pendingEntries = new ConcurrentLinkedQueue<Entry>();
     private static final Watcher watcher = new Watcher();
     private static final AtomicBoolean started = new AtomicBoolean();

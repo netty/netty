@@ -110,7 +110,7 @@ final class DnsQueryContextManager {
                 if (a4.isLoopbackAddress()) {
                     map.put(new InetSocketAddress(NetUtil.LOCALHOST6, port), newContexts);
                 } else {
-                    map.put(new InetSocketAddress(toCompatAddress(a4), port), newContexts);
+                    map.put(new InetSocketAddress(toCompactAddress(a4), port), newContexts);
                 }
             } else if (a instanceof Inet6Address) {
                 // Also add the mapping for the IPv4 address if this IPv6 address is compatible.
@@ -126,7 +126,7 @@ final class DnsQueryContextManager {
         }
     }
 
-    private static Inet6Address toCompatAddress(Inet4Address a4) {
+    private static Inet6Address toCompactAddress(Inet4Address a4) {
         byte[] b4 = a4.getAddress();
         byte[] b6 = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, b4[0], b4[1], b4[2], b4[3] };
         try {

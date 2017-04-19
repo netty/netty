@@ -35,7 +35,7 @@ public final class RtspHeaderNames {
      */
     public static final AsciiString ACCEPT_ENCODING = HttpHeaderNames.ACCEPT_ENCODING;
     /**
-     * {@code "accept-lanugage"}
+     * {@code "accept-language"}
      */
     public static final AsciiString ACCEPT_LANGUAGE = HttpHeaderNames.ACCEPT_LANGUAGE;
     /**

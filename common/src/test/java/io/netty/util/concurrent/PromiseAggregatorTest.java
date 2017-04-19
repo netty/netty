@@ -19,7 +19,6 @@ package io.netty.util.concurrent;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.verify;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -48,7 +47,7 @@ public class PromiseAggregatorTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testSucessfulNoPending() throws Exception {
+    public void testSuccessfulNoPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
                 new PromiseAggregator<Void, Future<Void>>(p);

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http;
 
 import io.netty.handler.codec.http.HttpHeadersTestUtils.HeaderValue;
-import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -25,7 +24,6 @@ import java.util.Collections;
 import static io.netty.util.AsciiString.contentEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class CombinedHttpHeadersTest {
@@ -169,7 +167,7 @@ public class CombinedHttpHeadersTest {
     }
 
     @Test
-    public void addIterableCsvEmtpy() {
+    public void addIterableCsvEmpty() {
         final CombinedHttpHeaders headers = newCombinedHttpHeaders();
         headers.add(HEADER_NAME, Collections.<CharSequence>emptyList());
         assertEquals(Arrays.asList(""), headers.getAll(HEADER_NAME));

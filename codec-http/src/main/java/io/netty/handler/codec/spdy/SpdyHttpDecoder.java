@@ -179,7 +179,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 try {
                     FullHttpRequest httpRequestWithEntity = createHttpRequest(spdySynStreamFrame, ctx.alloc());
 
-                    // Set the Stream-ID, Associated-To-Stream-ID, iand Priority as headers
+                    // Set the Stream-ID, Associated-To-Stream-ID, and Priority as headers
                     httpRequestWithEntity.headers().setInt(Names.STREAM_ID, streamId);
                     httpRequestWithEntity.headers().setInt(Names.ASSOCIATED_TO_STREAM_ID, associatedToStreamId);
                     httpRequestWithEntity.headers().setInt(Names.PRIORITY, spdySynStreamFrame.priority());

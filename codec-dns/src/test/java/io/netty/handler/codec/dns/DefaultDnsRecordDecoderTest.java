@@ -93,7 +93,7 @@ public class DefaultDnsRecordDecoderTest {
     public void testDecodeMessageCompression() throws Exception {
         // See https://www.ietf.org/rfc/rfc1035 [4.1.4. Message compression]
         DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
-        byte[] rfcExample = new byte[] { 1, 'F', 3, 'I', 'S', 'I', 4, 'A', 'R', 'P', 'A',
+        byte[] rfcExample = { 1, 'F', 3, 'I', 'S', 'I', 4, 'A', 'R', 'P', 'A',
                 0, 3, 'F', 'O', 'O',
                 (byte) 0xC0, 0, // this is 20 in the example
                 (byte) 0xC0, 6, // this is 26 in the example
@@ -103,7 +103,7 @@ public class DefaultDnsRecordDecoderTest {
         DefaultDnsRawRecord rawUncompressedIndexedRecord = null;
         ByteBuf buffer = Unpooled.wrappedBuffer(rfcExample);
         try {
-            // First lets test that our utility funciton can correctly handle index references and decompression.
+            // First lets test that our utility function can correctly handle index references and decompression.
             String plainName = DefaultDnsRecordDecoder.decodeName(buffer.duplicate());
             assertEquals("F.ISI.ARPA.", plainName);
             String uncompressedPlainName = DefaultDnsRecordDecoder.decodeName(buffer.duplicate().setIndex(16, 20));

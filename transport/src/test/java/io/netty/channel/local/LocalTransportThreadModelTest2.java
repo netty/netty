@@ -39,14 +39,14 @@ public class LocalTransportThreadModelTest2 {
     @Test(timeout = 15000)
     public void testSocketReuse() throws InterruptedException {
         ServerBootstrap serverBootstrap = new ServerBootstrap();
-        LocalHander serverHandler = new LocalHander("SERVER");
+        LocalHandler serverHandler = new LocalHandler("SERVER");
         serverBootstrap
                 .group(new DefaultEventLoopGroup(), new DefaultEventLoopGroup())
                 .channel(LocalServerChannel.class)
                 .childHandler(serverHandler);
 
         Bootstrap clientBootstrap = new Bootstrap();
-        LocalHander clientHandler = new LocalHander("CLIENT");
+        LocalHandler clientHandler = new LocalHandler("CLIENT");
         clientBootstrap
                 .group(new DefaultEventLoopGroup())
                 .channel(LocalChannel.class)
@@ -70,7 +70,7 @@ public class LocalTransportThreadModelTest2 {
                 clientHandler.count.get());
     }
 
-    public void close(final Channel localChannel, final LocalHander localRegistrationHandler) {
+    public void close(final Channel localChannel, final LocalHandler localRegistrationHandler) {
         // we want to make sure we actually shutdown IN the event loop
         if (localChannel.eventLoop().inEventLoop()) {
             // Wait until all messages are flushed before closing the channel.
@@ -94,14 +94,14 @@ public class LocalTransportThreadModelTest2 {
     }
 
     @Sharable
-    static class LocalHander extends ChannelInboundHandlerAdapter {
+    static class LocalHandler extends ChannelInboundHandlerAdapter {
         private final String name;
 
         public volatile ChannelFuture lastWriteFuture;
 
         public final AtomicInteger count = new AtomicInteger(0);
 
-        LocalHander(String name) {
+        LocalHandler(String name) {
             this.name = name;
         }
 

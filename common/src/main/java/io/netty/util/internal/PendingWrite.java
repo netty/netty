@@ -59,7 +59,7 @@ public final class PendingWrite {
     }
 
     /**
-     * Fails the underlying {@link Promise} with the given cause and reycle this instance.
+     * Fails the underlying {@link Promise} with the given cause and recycle this instance.
      */
     public boolean failAndRecycle(Throwable cause) {
         ReferenceCountUtil.release(msg);
@@ -70,7 +70,7 @@ public final class PendingWrite {
     }
 
     /**
-     * Mark the underlying {@link Promise} successed and reycle this instance.
+     * Mark the underlying {@link Promise} successfully and recycle this instance.
      */
     public boolean successAndRecycle() {
         if (promise != null) {

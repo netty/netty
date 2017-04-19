@@ -304,7 +304,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
-    public void dataReadAfterGoAwaySentOnUknownStreamShouldIgnore() throws Exception {
+    public void dataReadAfterGoAwaySentOnUnknownStreamShouldIgnore() throws Exception {
         // Throw an exception when checking stream state.
         when(connection.stream(STREAM_ID)).thenReturn(null);
         mockGoAwaySent();
@@ -403,7 +403,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(remote, never()).createStream(anyInt(), anyBoolean());
         verify(stream, never()).open(anyBoolean());
 
-        // Verify that the event was absorbed and not propagated to the oberver.
+        // Verify that the event was absorbed and not propagated to the observer.
         verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyBoolean());
         verify(remote, never()).createStream(anyInt(), anyBoolean());
         verify(stream, never()).open(anyBoolean());
@@ -417,7 +417,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(remote, never()).createStream(anyInt(), anyBoolean());
         verify(stream, never()).open(anyBoolean());
 
-        // Verify that the event was absorbed and not propagated to the oberver.
+        // Verify that the event was absorbed and not propagated to the observer.
         verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyBoolean());
         verify(remote, never()).createStream(anyInt(), anyBoolean());
         verify(stream, never()).open(anyBoolean());
@@ -614,7 +614,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
-    public void pingReadWithAckShouldNotifylistener() throws Exception {
+    public void pingReadWithAckShouldNotifyListener() throws Exception {
         decode().onPingAckRead(ctx, emptyPingBuf());
         verify(listener).onPingAckRead(eq(ctx), eq(emptyPingBuf()));
     }
@@ -627,7 +627,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
-    public void settingsReadWithAckShouldNotifylistener() throws Exception {
+    public void settingsReadWithAckShouldNotifyListener() throws Exception {
         decode().onSettingsAckRead(ctx);
         // Take into account the time this was called during setup().
         verify(listener, times(2)).onSettingsAckRead(eq(ctx));
@@ -661,10 +661,10 @@ public class DefaultHttp2ConnectionDecoderTest {
      * Calls the decode method on the handler and gets back the captured internal listener
      */
     private Http2FrameListener decode() throws Exception {
-        ArgumentCaptor<Http2FrameListener> internallistener = ArgumentCaptor.forClass(Http2FrameListener.class);
-        doNothing().when(reader).readFrame(eq(ctx), any(ByteBuf.class), internallistener.capture());
+        ArgumentCaptor<Http2FrameListener> internalListener = ArgumentCaptor.forClass(Http2FrameListener.class);
+        doNothing().when(reader).readFrame(eq(ctx), any(ByteBuf.class), internalListener.capture());
         decoder.decodeFrame(ctx, EMPTY_BUFFER, Collections.emptyList());
-        return internallistener.getValue();
+        return internalListener.getValue();
     }
 
     private void mockFlowControl(final int processedBytes) throws Http2Exception {

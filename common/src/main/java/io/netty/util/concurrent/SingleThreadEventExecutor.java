@@ -368,7 +368,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      *
      * @param taskQueue To poll and execute all tasks.
      *
-     * @return {@code true} if atleast one task was executed.
+     * @return {@code true} if at least one task was executed.
      */
     protected final boolean runAllTasksFrom(Queue<Runnable> taskQueue) {
         Runnable task = pollTaskFrom(taskQueue);

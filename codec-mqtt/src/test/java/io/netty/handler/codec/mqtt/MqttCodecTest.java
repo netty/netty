@@ -356,7 +356,7 @@ public class MqttCodecTest {
         return new MqttUnsubscribeMessage(mqttFixedHeader, mqttMessageIdVariableHeader, mqttUnsubscribePayload);
     }
 
-    // Helper methdos to compare expected and actual
+    // Helper methods to compare expected and actual
     // MQTT messages
 
     private static void validateFixedHeaders(MqttFixedHeader expected, MqttFixedHeader actual) {

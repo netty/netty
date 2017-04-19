@@ -232,7 +232,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
     }
 
-    // Method must be called insided synchronized(this) { ... } block
+    // Method must be called inside synchronized(this) { ... } block
     private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
             q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
