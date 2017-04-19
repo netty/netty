@@ -271,6 +271,7 @@
     <module>codec-redis</module>
     <module>codec-smtp</module>
     <module>codec-socks</module>
+    <module>codec-sockjs</module>
     <module>codec-stomp</module>
     <module>codec-xml</module>
     <module>resolver</module>
@@ -472,6 +473,11 @@
           </exclusion>
         </exclusions>
         <optional>true</optional>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.3.0</version>
       </dependency>
 
       <!-- Metrics providers -->
@@ -1299,6 +1305,11 @@
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>1.2</version>
         </plugin>
       </plugins>
     </pluginManagement>
