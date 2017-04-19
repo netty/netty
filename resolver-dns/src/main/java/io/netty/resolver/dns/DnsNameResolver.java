@@ -78,21 +78,21 @@ public class DnsNameResolver extends InetNameResolver {
     private static final InetAddress LOCALHOST_ADDRESS;
     private static final DnsRecord[] EMPTY_ADDITIONALS = new DnsRecord[0];
     private static final DnsRecordType[] IPV4_ONLY_RESOLVED_RECORD_TYPES =
-            new DnsRecordType[] {DnsRecordType.A};
+            {DnsRecordType.A};
     private static final InternetProtocolFamily[] IPV4_ONLY_RESOLVED_PROTOCOL_FAMILIES =
-            new InternetProtocolFamily[] {InternetProtocolFamily.IPv4};
+            {InternetProtocolFamily.IPv4};
     private static final DnsRecordType[] IPV4_PREFERRED_RESOLVED_RECORD_TYPES =
-            new DnsRecordType[] {DnsRecordType.A, DnsRecordType.AAAA};
+            {DnsRecordType.A, DnsRecordType.AAAA};
     private static final InternetProtocolFamily[] IPV4_PREFERRED_RESOLVED_PROTOCOL_FAMILIES =
-            new InternetProtocolFamily[] {InternetProtocolFamily.IPv4, InternetProtocolFamily.IPv6};
+            {InternetProtocolFamily.IPv4, InternetProtocolFamily.IPv6};
     private static final DnsRecordType[] IPV6_ONLY_RESOLVED_RECORD_TYPES =
-            new DnsRecordType[] {DnsRecordType.AAAA};
+            {DnsRecordType.AAAA};
     private static final InternetProtocolFamily[] IPV6_ONLY_RESOLVED_PROTOCOL_FAMILIES =
-            new InternetProtocolFamily[] {InternetProtocolFamily.IPv6};
+            {InternetProtocolFamily.IPv6};
     private static final DnsRecordType[] IPV6_PREFERRED_RESOLVED_RECORD_TYPES =
-            new DnsRecordType[] {DnsRecordType.AAAA, DnsRecordType.A};
+            {DnsRecordType.AAAA, DnsRecordType.A};
     private static final InternetProtocolFamily[] IPV6_PREFERRED_RESOLVED_PROTOCOL_FAMILIES =
-            new InternetProtocolFamily[] {InternetProtocolFamily.IPv6, InternetProtocolFamily.IPv4};
+            {InternetProtocolFamily.IPv6, InternetProtocolFamily.IPv4};
 
     static final ResolvedAddressTypes DEFAULT_RESOLVE_ADDRESS_TYPES;
     static final String[] DEFAULT_SEARCH_DOMAINS;
@@ -536,8 +536,7 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     private InetAddress loopbackAddress() {
-        return preferredAddressType() == InternetProtocolFamily.IPv4 ?
-                    NetUtil.LOCALHOST4 : NetUtil.LOCALHOST6;
+        return preferredAddressType().localhost();
     }
 
     /**
