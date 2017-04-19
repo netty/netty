@@ -1615,6 +1615,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+
         if (!startTls && engine.getUseClientMode()) {
             // Begin the initial handshake
             handshake(null);
