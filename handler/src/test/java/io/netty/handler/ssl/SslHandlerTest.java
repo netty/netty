@@ -571,13 +571,19 @@ public class SslHandlerTest {
             throws CertificateException, SSLException, ExecutionException, InterruptedException {
         SslProvider[] providers = SslProvider.values();
         for (int i = 0; i < providers.length; ++i) {
-            for (int j = 0; j < providers.length; ++j) {
-                compositeBufSizeEstimationGuaranteesSynchronousWrite(providers[i], providers[j]);
+            SslProvider serverProvider = providers[i];
+            if (isSupported(serverProvider)) {
+                for (int j = 0; j < providers.length; ++j) {
+                    SslProvider clientProvider = providers[j];
+                    if (isSupported(clientProvider)) {
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider);
+                    }
+                }
             }
         }
     }
 
-    private void compositeBufSizeEstimationGuaranteesSynchronousWrite(
+    private static void compositeBufSizeEstimationGuaranteesSynchronousWrite(
             SslProvider serverProvider, SslProvider clientProvider)
             throws CertificateException, SSLException, ExecutionException, InterruptedException {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
@@ -688,6 +694,16 @@ public class SslHandlerTest {
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
             ssc.delete();
+        }
+    }
+
+    private static boolean isSupported(SslProvider provider) {
+        switch (provider) {
+            case OPENSSL:
+            case OPENSSL_REFCNT:
+                return OpenSsl.isAvailable();
+            default:
+                return true;
         }
     }
 }
