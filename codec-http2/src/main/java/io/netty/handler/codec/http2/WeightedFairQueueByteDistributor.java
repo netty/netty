@@ -229,6 +229,10 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
             newParent = new State(parentStreamId);
             stateOnlyRemovalQueue.add(newParent);
             stateOnlyMap.put(parentStreamId, newParent);
+            // Only the stream which was just added will change parents. So we only need an array of size 1.
+            List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1);
+            connectionState.takeChild(newParent, false, events);
+            notifyParentChanged(events);
         }
 
         // if activeCountForTree == 0 then it will not be in its parent's pseudoTimeQueue and thus should not be counted
