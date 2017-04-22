@@ -39,6 +39,18 @@ public class IpSubnetFilterTest {
     }
 
     @Test
+    public void testIpv4SubnetMaskCorrectlyHandlesIpv6() {
+        IpSubnetFilterRule rule = new IpSubnetFilterRule("0.0.0.0", 0, IpFilterRuleType.ACCEPT);
+        Assert.assertFalse(rule.matches(newSockAddress("2001:db8:abcd:0000::1")));
+    }
+
+    @Test
+    public void testIpv6SubnetMaskCorrectlyHandlesIpv4() {
+        IpSubnetFilterRule rule = new IpSubnetFilterRule("::", 0, IpFilterRuleType.ACCEPT);
+        Assert.assertFalse(rule.matches(newSockAddress("91.114.240.43")));
+    }
+
+    @Test
     public void testIp4SubnetFilterRule() throws Exception {
         IpSubnetFilterRule rule = new IpSubnetFilterRule("192.168.56.1", 24, IpFilterRuleType.ACCEPT);
         for (int i = 0; i <= 255; i++) {
