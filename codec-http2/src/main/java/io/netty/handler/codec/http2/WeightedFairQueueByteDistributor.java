@@ -770,7 +770,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
                     .append(" flags ").append(flags)
                     .append(" pseudoTimeQueue.size() ").append(pseudoTimeQueue.size())
                     .append(" stateOnlyQueueIndex ").append(stateOnlyQueueIndex)
-                    .append(" parent ").append(parent).append("} [");
+                    .append(" parent.streamId ").append(parent == null ? -1 : parent.streamId).append("} [");
 
             if (!pseudoTimeQueue.isEmpty()) {
                 for (State s : pseudoTimeQueue) {
