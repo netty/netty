@@ -25,6 +25,8 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
@@ -178,6 +180,11 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
     @Override
     public void updateDependencyTree(int childStreamId, int parentStreamId, short weight, boolean exclusive) {
+        // It is assumed there are all validated at a higher level. For example in the Http2FrameReader.
+        assert weight >= MIN_WEIGHT && weight <= MAX_WEIGHT : "Invalid weight";
+        assert childStreamId != parentStreamId : "A stream cannot depend on itself";
+        assert childStreamId > 0 && parentStreamId >= 0 : "childStreamId must be > 0. parentStreamId must be >= 0.";
+
         streamByteDistributor.updateDependencyTree(childStreamId, parentStreamId, weight, exclusive);
     }
 

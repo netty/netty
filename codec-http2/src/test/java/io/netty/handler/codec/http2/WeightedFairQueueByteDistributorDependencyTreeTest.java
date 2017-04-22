@@ -31,6 +31,17 @@ import static org.mockito.Mockito.doAnswer;
 
 public class WeightedFairQueueByteDistributorDependencyTreeTest extends
                                                 AbstractWeightedFairQueueByteDistributorDependencyTest {
+    private static final int leadersId = 3; // js, css
+    private static final int unblockedId = 5;
+    private static final int backgroundId = 7;
+    private static final int speculativeId = 9;
+    private static final int followersId = 11; // images
+    private static final short leadersWeight = 201;
+    private static final short unblockedWeight = 101;
+    private static final short backgroundWeight = 1;
+    private static final short speculativeWeight = 1;
+    private static final short followersWeight = 1;
+
     @Before
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
@@ -161,17 +172,6 @@ public class WeightedFairQueueByteDistributorDependencyTreeTest extends
         assertTrue(distributor.isChild(3, 5, weight3));
         assertEquals(0, distributor.numChildren(3));
     }
-
-    private static final int leadersId = 3; // js, css
-    private static final int unblockedId = 5;
-    private static final int backgroundId = 7;
-    private static final int speculativeId = 9;
-    private static final int followersId = 11; // images
-    private static final short leadersWeight = 201;
-    private static final short unblockedWeight = 101;
-    private static final short backgroundWeight = 1;
-    private static final short speculativeWeight = 1;
-    private static final short followersWeight = 1;
 
     @Test
     public void fireFoxQoSStreamsRemainAfterDataStreamsAreClosed() throws Http2Exception {

@@ -28,14 +28,14 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -51,12 +51,17 @@ public class WeightedFairQueueByteDistributorTest extends AbstractWeightedFairQu
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
-        connection = new DefaultHttp2Connection(false);
-        distributor = new WeightedFairQueueByteDistributor(connection);
-        distributor.allocationQuantum(ALLOCATION_QUANTUM);
-
         // Assume we always write all the allocated bytes.
         doAnswer(writeAnswer(false)).when(writer).write(any(Http2Stream.class), anyInt());
+
+        setup(-1);
+    }
+
+    private void setup(int maxStateOnlySize) throws Http2Exception {
+        connection = new DefaultHttp2Connection(false);
+        distributor = maxStateOnlySize >= 0 ? new WeightedFairQueueByteDistributor(connection, maxStateOnlySize)
+                                            : new WeightedFairQueueByteDistributor(connection);
+        distributor.allocationQuantum(ALLOCATION_QUANTUM);
 
         connection.local().createStream(STREAM_A, false);
         connection.local().createStream(STREAM_B, false);
@@ -895,6 +900,16 @@ public class WeightedFairQueueByteDistributorTest extends AbstractWeightedFairQu
         assertEquals(400, captureWrites(STREAM_A));
         assertEquals(500, captureWrites(STREAM_B));
         verifyNeverWrite(STREAM_C);
+        assertEquals(700, captureWrites(STREAM_D));
+    }
+
+    @Test
+    public void activeStreamDependentOnNewNonActiveStreamGetsQuantum() throws Http2Exception {
+        setup(0);
+        updateStream(STREAM_D, 700, true);
+        setPriority(STREAM_D, STREAM_E, DEFAULT_PRIORITY_WEIGHT, true);
+
+        assertFalse(write(700));
         assertEquals(700, captureWrites(STREAM_D));
     }
 

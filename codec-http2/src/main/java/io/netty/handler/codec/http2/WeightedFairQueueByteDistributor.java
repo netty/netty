@@ -33,8 +33,6 @@ import java.util.List;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MIN_ALLOCATION_CHUNK;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
@@ -197,14 +195,6 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
 
     @Override
     public void updateDependencyTree(int childStreamId, int parentStreamId, short weight, boolean exclusive) {
-        if (weight < MIN_WEIGHT || weight > MAX_WEIGHT) {
-            throw new IllegalArgumentException(String.format(
-                    "Invalid weight: %d. Must be between %d and %d (inclusive).", weight, MIN_WEIGHT, MAX_WEIGHT));
-        }
-        if (childStreamId == parentStreamId) {
-            throw new IllegalArgumentException("A stream cannot depend on itself");
-        }
-
         State state = state(childStreamId);
         if (state == null) {
             // If there is no State object that means there is no Http2Stream object and we would have to keep the
