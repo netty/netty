@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -29,8 +29,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 public final class Http2CodecBuilder {
     private static final Http2FrameLogger HTTP2_FRAME_LOGGER = new Http2FrameLogger(INFO, Http2Codec.class);
 
-    private Http2StreamChannelBootstrap bootstrap;
-    private boolean server;
+    private final Http2StreamChannelBootstrap bootstrap;
+    private final boolean server;
     private Http2Settings initialSettings;
     private Http2FrameLogger frameLogger;
     private SensitivityDetector headersSensitivityDetector;
