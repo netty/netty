@@ -292,6 +292,7 @@ public class JsonObjectDecoderTest {
         res = ch.readInbound();
         assertEquals("{\"a\":{\"b\":{\"c\":{ \"d\":\"27301\", \"med\":\"d\", \"path\":\"27310\"} }, " +
                 "\"status\":\"OK\" } }", res.toString(CharsetUtil.UTF_8));
+        res.release();
 
         ch.writeInbound(Unpooled.copiedBuffer(part2, CharsetUtil.UTF_8));
         res = ch.readInbound();
@@ -303,6 +304,7 @@ public class JsonObjectDecoderTest {
 
         assertEquals("{\"a\":{\"b\":{\"c\":{\"ory\":[{\"competi\":[{\"event\":[{" + "\"externalI\":{" +
                 "\"external\":[{\"id\":\"O\"} ]}}]}]}]}}}}", res.toString(CharsetUtil.UTF_8));
+        res.release();
 
         assertFalse(ch.finish());
     }
