@@ -137,8 +137,8 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageEncoder} belongs to
      * @param msg           the message to encode to an other one
      * @param out           the {@link List} into which the encoded msg should be added
-     *                      needs to do some kind of aggragation
-     * @throws Exception    is thrown if an error accour
+     *                      needs to do some kind of aggregation
+     * @throws Exception    is thrown if an error occurs
      */
     protected abstract void encode(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception;
 }

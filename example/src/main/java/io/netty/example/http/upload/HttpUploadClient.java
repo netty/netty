@@ -40,10 +40,10 @@ import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.internal.SocketUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.List;
 import java.util.Map.Entry;
@@ -113,7 +113,7 @@ public final class HttpUploadClient {
 
         try {
             Bootstrap b = new Bootstrap();
-            b.group(group).channel(NioSocketChannel.class).handler(new HttpUploadClientIntializer(sslCtx));
+            b.group(group).channel(NioSocketChannel.class).handler(new HttpUploadClientInitializer(sslCtx));
 
             // Simple Get form: no factory used (not usable)
             List<Entry<String, String>> headers = formget(b, host, port, get, uriSimple);
@@ -207,7 +207,7 @@ public final class HttpUploadClient {
             List<Entry<String, String>> headers) throws Exception {
         // XXX /formpost
         // Start the connection attempt.
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+        ChannelFuture future = bootstrap.connect(SocketUtils.socketAddress(host, port));
         // Wait until the connection attempt succeeds or fails.
         Channel channel = future.sync().channel();
 
@@ -267,7 +267,7 @@ public final class HttpUploadClient {
             Iterable<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) throws Exception {
         // XXX /formpostmultipart
         // Start the connection attempt.
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+        ChannelFuture future = bootstrap.connect(SocketUtils.socketAddress(host, port));
         // Wait until the connection attempt succeeds or fails.
         Channel channel = future.sync().channel();
 

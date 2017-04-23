@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.internal.SocketUtils;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.Test;
@@ -45,7 +46,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
         try {
             sb.childHandler(h).childOption(ChannelOption.ALLOW_HALF_CLOSURE, true).bind().sync();
 
-            s.connect(addr, 10000);
+            SocketUtils.connect(s, addr, 10000);
             s.getOutputStream().write(1);
 
             assertEquals(1, (int) h.queue.take());
@@ -82,7 +83,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
         try {
             sb.childHandler(h).bind().sync();
 
-            s.connect(addr, 10000);
+            SocketUtils.connect(s, addr, 10000);
             s.getOutputStream().write(1);
 
             assertEquals(1, (int) h.queue.take());

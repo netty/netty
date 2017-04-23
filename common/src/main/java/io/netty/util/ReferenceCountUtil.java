@@ -157,6 +157,14 @@ public final class ReferenceCountUtil {
     }
 
     /**
+     * Returns reference count of a {@link ReferenceCounted} object. If object is not type of
+     * {@link ReferenceCounted}, {@code -1} is returned.
+     */
+    public static int refCnt(Object msg) {
+        return msg instanceof ReferenceCounted ? ((ReferenceCounted) msg).refCnt() : -1;
+    }
+
+    /**
      * Releases the objects when the thread that called {@link #releaseLater(Object)} has been terminated.
      */
     private static final class ReleasingTask implements Runnable {

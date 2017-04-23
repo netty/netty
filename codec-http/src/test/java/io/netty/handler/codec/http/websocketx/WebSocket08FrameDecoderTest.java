@@ -14,16 +14,16 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelHandlerContext;
 
-import org.easymock.EasyMock;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class WebSocket08FrameDecoderTest {
 
     @Test
     public void channelInactive() throws Exception {
         final WebSocket08FrameDecoder decoder = new WebSocket08FrameDecoder(true, true, 65535, false);
-        final ChannelHandlerContext ctx = EasyMock.createMock(ChannelHandlerContext.class);
+        final ChannelHandlerContext ctx = Mockito.mock(ChannelHandlerContext.class);
         decoder.channelInactive(ctx);
+        Mockito.verify(ctx).fireChannelInactive();
     }
-
 }

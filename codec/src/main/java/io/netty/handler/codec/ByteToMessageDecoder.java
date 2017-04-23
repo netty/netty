@@ -75,12 +75,12 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
-            ByteBuf buffer;
+            final ByteBuf buffer;
             if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes()
-                    || cumulation.refCnt() > 1) {
+                    || cumulation.refCnt() > 1 || cumulation.isReadOnly()) {
                 // Expand cumulation (by replace it) when either there is not more room in the buffer
                 // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
-                // duplicate().retain().
+                // duplicate().retain() or if its read-only.
                 //
                 // See:
                 // - https://github.com/netty/netty/issues/2327
@@ -138,7 +138,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private int numReads;
 
     protected ByteToMessageDecoder() {
-        CodecUtil.ensureNotSharable(this);
+        ensureNotSharable();
     }
 
     /**
@@ -451,7 +451,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in            the {@link ByteBuf} from which to read data
      * @param out           the {@link List} to which decoded messages should be added
-     * @throws Exception    is thrown if an error accour
+     * @throws Exception    is thrown if an error occurs
      */
     protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
 

@@ -478,7 +478,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             if (listeners instanceof DefaultFutureListeners) {
                 notifyListeners0((DefaultFutureListeners) listeners);
             } else {
-                notifyListener0(this, (GenericFutureListener<? extends Future<V>>) listeners);
+                notifyListener0(this, (GenericFutureListener<?>) listeners);
             }
             synchronized (this) {
                 if (this.listeners == null) {
@@ -516,7 +516,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         } else if (listeners instanceof DefaultFutureListeners) {
             ((DefaultFutureListeners) listeners).add(listener);
         } else {
-            listeners = new DefaultFutureListeners((GenericFutureListener<? extends Future<V>>) listeners, listener);
+            listeners = new DefaultFutureListeners((GenericFutureListener<?>) listeners, listener);
         }
     }
 

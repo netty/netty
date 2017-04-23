@@ -1383,6 +1383,13 @@ public abstract class AbstractByteBuf extends ByteBuf {
         checkReadableBytes0(minimumReadableBytes);
     }
 
+    protected final void checkNewCapacity(int newCapacity) {
+        ensureAccessible();
+        if (newCapacity < 0 || newCapacity > maxCapacity()) {
+            throw new IllegalArgumentException("newCapacity: " + newCapacity + " (expected: 0-" + maxCapacity() + ')');
+        }
+    }
+
     private void checkReadableBytes0(int minimumReadableBytes) {
         ensureAccessible();
         if (readerIndex > writerIndex - minimumReadableBytes) {

@@ -223,12 +223,12 @@ abstract class AbstractHttp2StreamChannel extends AbstractChannel {
     protected abstract void doWrite(Object msg) throws Exception;
 
     /**
-     * Process end of batch of {@link #doWrite()}s. May be called from any thread.
+     * Process end of batch of {@link #doWrite(ChannelOutboundBuffer)}s. May be called from any thread.
      */
     protected abstract void doWriteComplete();
 
     /**
-     * The ideal thread for events like {@link #doWrite()} to be processed on. May be used for
+     * The ideal thread for events like {@link #doWrite(ChannelOutboundBuffer)} to be processed on. May be used for
      * efficient batching, but not required.
      */
     protected abstract EventExecutor preferredEventExecutor();

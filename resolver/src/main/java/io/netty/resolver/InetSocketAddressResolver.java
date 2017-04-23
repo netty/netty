@@ -19,6 +19,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -28,6 +29,7 @@ import java.util.List;
 /**
  * A {@link AbstractAddressResolver} that resolves {@link InetSocketAddress}.
  */
+@UnstableApi
 public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocketAddress> {
 
     final NameResolver<InetAddress> nameResolver;

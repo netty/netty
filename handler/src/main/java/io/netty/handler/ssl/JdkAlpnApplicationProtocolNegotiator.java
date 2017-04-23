@@ -21,20 +21,8 @@ import javax.net.ssl.SSLEngine;
  * The {@link JdkApplicationProtocolNegotiator} to use if you need ALPN and are using {@link SslProvider#JDK}.
  */
 public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicationProtocolNegotiator {
-    private static final SslEngineWrapperFactory ALPN_WRAPPER = new SslEngineWrapperFactory() {
-        {
-            if (!JdkAlpnSslEngine.isAvailable()) {
-                throw new RuntimeException("ALPN unsupported. Is your classpatch configured correctly?"
-                        + " See http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-starting");
-            }
-        }
-
-        @Override
-        public SSLEngine wrapSslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator,
-                boolean isServer) {
-            return new JdkAlpnSslEngine(engine, applicationNegotiator, isServer);
-        }
-    };
+    private static final boolean AVAILABLE = ConscryptAlpnSslEngine.isAvailable() || JettyAlpnSslEngine.isAvailable();
+    private static final SslEngineWrapperFactory ALPN_WRAPPER = AVAILABLE ? new AlpnWrapper() : new FailureWrapper();
 
     /**
      * Create a new instance.
@@ -116,5 +104,32 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
     public JdkAlpnApplicationProtocolNegotiator(ProtocolSelectorFactory selectorFactory,
             ProtocolSelectionListenerFactory listenerFactory, String... protocols) {
         super(ALPN_WRAPPER, selectorFactory, listenerFactory, protocols);
+    }
+
+    private static final class FailureWrapper implements SslEngineWrapperFactory {
+        @Override
+        public SSLEngine wrapSslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator,
+                                       boolean isServer) {
+            throw new RuntimeException("ALPN unsupported. Is your classpath configured correctly?"
+                    + " For Conscrypt, add the appropriate Conscrypt JAR to classpath and set the security provider."
+                    + " For Jetty-ALPN, see "
+                    + "http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-starting");
+        }
+    }
+
+    private static final class AlpnWrapper implements SslEngineWrapperFactory {
+        @Override
+        public SSLEngine wrapSslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator,
+                                       boolean isServer) {
+            if (ConscryptAlpnSslEngine.isEngineSupported(engine)) {
+                return isServer ? ConscryptAlpnSslEngine.newServerEngine(engine, applicationNegotiator)
+                        : ConscryptAlpnSslEngine.newClientEngine(engine, applicationNegotiator);
+            }
+            if (JettyAlpnSslEngine.isAvailable()) {
+                return isServer ? JettyAlpnSslEngine.newServerEngine(engine, applicationNegotiator)
+                        : JettyAlpnSslEngine.newClientEngine(engine, applicationNegotiator);
+            }
+            throw new RuntimeException("Unable to wrap SSLEngine of type " + engine.getClass().getName());
+        }
     }
 }

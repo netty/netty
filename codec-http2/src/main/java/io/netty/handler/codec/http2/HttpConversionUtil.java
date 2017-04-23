@@ -340,7 +340,6 @@ public final class HttpConversionUtil {
      * The following headers are only used if they can not be found in from the {@code HOST} header or the
      * {@code Request-Line} as defined by <a href="https://tools.ietf.org/html/rfc7230">rfc7230</a>
      * <ul>
-     * <li>{@link ExtensionHeaderNames#AUTHORITY}</li>
      * <li>{@link ExtensionHeaderNames#SCHEME}</li>
      * </ul>
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
@@ -447,16 +446,16 @@ public final class HttpConversionUtil {
         return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
     }
 
-    private static void setHttp2Authority(String autority, Http2Headers out) {
+    private static void setHttp2Authority(String authority, Http2Headers out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
-        if (autority != null) {
-            int endOfUserInfo = autority.indexOf('@');
+        if (authority != null) {
+            int endOfUserInfo = authority.indexOf('@');
             if (endOfUserInfo < 0) {
-                out.authority(new AsciiString(autority));
-            } else if (endOfUserInfo + 1 < autority.length()) {
-                out.authority(new AsciiString(autority.substring(endOfUserInfo + 1)));
+                out.authority(new AsciiString(authority));
+            } else if (endOfUserInfo + 1 < authority.length()) {
+                out.authority(new AsciiString(authority.substring(endOfUserInfo + 1)));
             } else {
-                throw new IllegalArgumentException("autority: " + autority);
+                throw new IllegalArgumentException("authority: " + authority);
             }
         }
     }

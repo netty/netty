@@ -13,24 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.channel.nio;
 
 import java.nio.channels.SelectionKey;
 import java.util.AbstractSet;
+import java.util.Arrays;
 import java.util.Iterator;
 
 final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
 
-    private SelectionKey[] keysA;
-    private int keysASize;
-    private SelectionKey[] keysB;
-    private int keysBSize;
-    private boolean isA = true;
+    SelectionKey[] keys;
+    int size;
 
     SelectedSelectionKeySet() {
-        keysA = new SelectionKey[1024];
-        keysB = keysA.clone();
+        keys = new SelectionKey[1024];
     }
 
     @Override
@@ -39,58 +35,17 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
             return false;
         }
 
-        if (isA) {
-            int size = keysASize;
-            keysA[size ++] = o;
-            keysASize = size;
-            if (size == keysA.length) {
-                doubleCapacityA();
-            }
-        } else {
-            int size = keysBSize;
-            keysB[size ++] = o;
-            keysBSize = size;
-            if (size == keysB.length) {
-                doubleCapacityB();
-            }
+        keys[size++] = o;
+        if (size == keys.length) {
+            increaseCapacity();
         }
 
         return true;
     }
 
-    private void doubleCapacityA() {
-        SelectionKey[] newKeysA = new SelectionKey[keysA.length << 1];
-        System.arraycopy(keysA, 0, newKeysA, 0, keysASize);
-        keysA = newKeysA;
-    }
-
-    private void doubleCapacityB() {
-        SelectionKey[] newKeysB = new SelectionKey[keysB.length << 1];
-        System.arraycopy(keysB, 0, newKeysB, 0, keysBSize);
-        keysB = newKeysB;
-    }
-
-    SelectionKey[] flip() {
-        if (isA) {
-            isA = false;
-            keysA[keysASize] = null;
-            keysBSize = 0;
-            return keysA;
-        } else {
-            isA = true;
-            keysB[keysBSize] = null;
-            keysASize = 0;
-            return keysB;
-        }
-    }
-
     @Override
     public int size() {
-        if (isA) {
-            return keysASize;
-        } else {
-            return keysBSize;
-        }
+        return size;
     }
 
     @Override
@@ -106,5 +61,20 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
     @Override
     public Iterator<SelectionKey> iterator() {
         throw new UnsupportedOperationException();
+    }
+
+    void reset() {
+        reset(0);
+    }
+
+    void reset(int start) {
+        Arrays.fill(keys, start, size, null);
+        size = 0;
+    }
+
+    private void increaseCapacity() {
+        SelectionKey[] newKeys = new SelectionKey[keys.length << 1];
+        System.arraycopy(keys, 0, newKeys, 0, size);
+        keys = newKeys;
     }
 }

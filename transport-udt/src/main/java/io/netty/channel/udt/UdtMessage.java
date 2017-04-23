@@ -22,9 +22,12 @@ import io.netty.channel.udt.nio.NioUdtProvider;
 
 /**
  * The message container that is used for {@link TypeUDT#DATAGRAM} messages.
- * @see {@link NioUdtProvider#MESSAGE_CONNECTOR}
- * @see {@link NioUdtProvider#MESSAGE_RENDEZVOUS}
+ * @see NioUdtProvider#MESSAGE_CONNECTOR
+ * @see NioUdtProvider#MESSAGE_RENDEZVOUS
+ *
+ * @deprecated The UDT transport is no longer maintained and will be removed.
  */
+@Deprecated
 public final class UdtMessage extends DefaultByteBufHolder {
 
     public UdtMessage(final ByteBuf data) {

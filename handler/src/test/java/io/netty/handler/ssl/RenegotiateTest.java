@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class RenegotiateTest {
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testRenegotiateServer() throws Throwable {
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
         final CountDownLatch latch = new CountDownLatch(2);
@@ -47,6 +47,7 @@ public abstract class RenegotiateTest {
         try {
             final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
                     .sslProvider(serverSslProvider()).build();
+            initSslServerContext(context);
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new ChannelInitializer<Channel>() {
@@ -134,4 +135,7 @@ public abstract class RenegotiateTest {
     }
 
     protected abstract SslProvider serverSslProvider();
+
+    protected void initSslServerContext(SslContext context) {
+    }
 }

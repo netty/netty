@@ -52,7 +52,7 @@ public class ChannelOutboundBufferTest {
         assertEquals(0, buffer.nioBufferCount());
 
         ByteBuf buf = copiedBuffer("buf1", CharsetUtil.US_ASCII);
-        ByteBuffer nioBuf = buf.internalNioBuffer(0, buf.readableBytes());
+        ByteBuffer nioBuf = buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes());
         buffer.addMessage(buf, buf.readableBytes(), channel.voidPromise());
         assertEquals("Should still be 0 as not flushed yet", 0, buffer.nioBufferCount());
         buffer.addFlush();
@@ -84,7 +84,7 @@ public class ChannelOutboundBufferTest {
         ByteBuffer[] buffers = buffer.nioBuffers();
         assertEquals(64, buffer.nioBufferCount());
         for (int i = 0;  i < buffer.nioBufferCount(); i++) {
-            assertEquals(buffers[i], buf.internalNioBuffer(0, buf.readableBytes()));
+            assertEquals(buffers[i], buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()));
         }
         release(buffer);
         buf.release();
@@ -109,7 +109,7 @@ public class ChannelOutboundBufferTest {
         assertEquals(65, buffer.nioBufferCount());
         for (int i = 0;  i < buffer.nioBufferCount(); i++) {
             if (i < 65) {
-                assertEquals(buffers[i], buf.internalNioBuffer(0, buf.readableBytes()));
+                assertEquals(buffers[i], buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()));
             } else {
                 assertNull(buffers[i]);
             }
@@ -341,7 +341,7 @@ public class ChannelOutboundBufferTest {
         ch.runPendingTasks();
         assertThat(buf.toString(), is("false "));
 
-        // Ensure reducing the totalPendingWriteBytes down to zero does not trigger channelWritabilityChannged()
+        // Ensure reducing the totalPendingWriteBytes down to zero does not trigger channelWritabilityChanged()
         // because of the user-defined writability flag.
         ch.flush();
         assertThat(cob.totalPendingWriteBytes(), is(0L));

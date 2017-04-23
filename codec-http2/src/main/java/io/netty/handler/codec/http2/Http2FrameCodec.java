@@ -133,10 +133,14 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
     // Visible for testing
     Http2FrameCodec(boolean server, Http2FrameWriter frameWriter, Http2FrameLogger frameLogger,
                     Http2Settings initialSettings) {
+        // TODO(scott): configure maxReservedStreams when API is more finalized.
         Http2Connection connection = new DefaultHttp2Connection(server);
         frameWriter = new Http2OutboundFrameLogger(frameWriter, frameLogger);
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
-        Http2FrameReader frameReader = new DefaultHttp2FrameReader();
+        Long maxHeaderListSize = initialSettings.maxHeaderListSize();
+        Http2FrameReader frameReader = new DefaultHttp2FrameReader(maxHeaderListSize == null ?
+                new DefaultHttp2HeadersDecoder(true) :
+                new DefaultHttp2HeadersDecoder(true, maxHeaderListSize));
         Http2FrameReader reader = new Http2InboundFrameLogger(frameReader, frameLogger);
         Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
         decoder.frameListener(new FrameListener());

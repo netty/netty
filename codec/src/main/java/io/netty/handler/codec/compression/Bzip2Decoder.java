@@ -277,7 +277,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                 }
                 // It used to avoid "Bzip2Decoder.decode() did not read anything but decoded a message" exception.
                 // Because previous operation may read only a few bits from Bzip2BitReader.bitBuffer and
-                // don't read incomming ByteBuf.
+                // don't read incoming ByteBuf.
                 if (in.readerIndex() == oldReaderIndex && in.isReadable()) {
                     reader.refill();
                 }

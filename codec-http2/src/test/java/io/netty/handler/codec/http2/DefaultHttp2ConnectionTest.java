@@ -23,44 +23,33 @@ import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static java.lang.Integer.MAX_VALUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyShort;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isNull;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -100,14 +89,14 @@ public class DefaultHttp2ConnectionTest {
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
-                assertNotNull(client.stream(invocation.getArgumentAt(0, Http2Stream.class).id()));
+                assertNotNull(client.stream(((Http2Stream) invocation.getArgument(0)).id()));
                 return null;
             }
         }).when(clientListener).onStreamClosed(any(Http2Stream.class));
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
-                assertNull(client.stream(invocation.getArgumentAt(0, Http2Stream.class).id()));
+                assertNull(client.stream(((Http2Stream) invocation.getArgument(0)).id()));
                 return null;
             }
         }).when(clientListener).onStreamRemoved(any(Http2Stream.class));
@@ -147,22 +136,6 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test
-    public void removeAllStreamsWithNonActiveStreams() throws InterruptedException, Http2Exception {
-        client.local().createIdleStream(3);
-        client.remote().createIdleStream(2);
-        testRemoveAllStreams();
-    }
-
-    @Test
-    public void removeAllStreamsWithNonActiveAndActiveStreams() throws InterruptedException, Http2Exception {
-        client.local().createIdleStream(3);
-        client.remote().createIdleStream(2);
-        client.local().createStream(5, false);
-        client.remote().createStream(4, true);
-        testRemoveAllStreams();
-    }
-
-    @Test
     public void removeIndividualStreamsWhileCloseDoesNotNPE() throws InterruptedException, Http2Exception {
         final Http2Stream streamA = client.local().createStream(3, false);
         final Http2Stream streamB = client.remote().createStream(2, false);
@@ -194,7 +167,7 @@ public class DefaultHttp2ConnectionTest {
         final CountDownLatch latch = new CountDownLatch(client.numActiveStreams());
         client.forEachActiveStream(new Http2StreamVisitor() {
             @Override
-            public boolean visit(Http2Stream stream) throws Http2Exception {
+            public boolean visit(Http2Stream stream) {
                 client.close(promise).addListener(new FutureListener<Void>() {
                     @Override
                     public void operationComplete(Future<Void> future) throws Exception {
@@ -205,7 +178,7 @@ public class DefaultHttp2ConnectionTest {
                 return true;
             }
         });
-        assertTrue(latch.await(2, TimeUnit.SECONDS));
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 
     @Test
@@ -239,23 +212,7 @@ public class DefaultHttp2ConnectionTest {
                 }
             });
         }
-        assertTrue(latch.await(2, TimeUnit.SECONDS));
-    }
-
-    @Test
-    public void closeWhileIteratingDoesNotNPE() throws Http2Exception {
-        final Http2Stream streamA = client.local().createStream(3, false);
-        final Http2Stream streamB = client.local().createStream(5, false);
-        final Http2Stream streamC = client.local().createStream(7, false);
-        streamB.setPriority(streamA.id(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT, false);
-        client.forEachActiveStream(new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) throws Http2Exception {
-                streamA.close();
-                streamB.setPriority(streamC.id(), Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT, false);
-                return true;
-            }
-        });
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 
     @Test
@@ -428,38 +385,32 @@ public class DefaultHttp2ConnectionTest {
 
     @Test(expected = Http2Exception.class)
     public void createShouldThrowWhenMaxAllowedStreamsOpenExceeded() throws Http2Exception {
-        server.local().maxStreams(0, 0);
+        server.local().maxActiveStreams(0);
         server.local().createStream(2, true);
     }
 
     @Test(expected = Http2Exception.class)
-    public void createShouldThrowWhenMaxAllowedStreamsIdleExceeded() throws Http2Exception {
-        server.local().maxStreams(0, 0);
-        server.local().createIdleStream(2);
+    public void serverCreatePushShouldFailOnRemoteEndpointWhenMaxAllowedStreamsExceeded() throws Http2Exception {
+        server = new DefaultHttp2Connection(true, 0);
+        server.remote().maxActiveStreams(1);
+        Http2Stream requestStream = server.remote().createStream(3, false);
+        server.remote().reservePushStream(2, requestStream);
     }
 
     @Test(expected = Http2Exception.class)
-    public void createShouldThrowWhenMaxAllowedStreamsReservedExceeded() throws Http2Exception {
-        server.local().maxStreams(1, 1);
-        Http2Stream parent = server.local().createStream(2, false);
-        server.local().reservePushStream(4, parent);
+    public void clientCreatePushShouldFailOnRemoteEndpointWhenMaxAllowedStreamsExceeded() throws Http2Exception {
+        client = new DefaultHttp2Connection(false, 0);
+        client.remote().maxActiveStreams(1);
+        Http2Stream requestStream = client.remote().createStream(2, false);
+        client.remote().reservePushStream(4, requestStream);
     }
 
     @Test
-    public void createIdleShouldSucceedWhenMaxAllowedActiveStreamsExceeded() throws Http2Exception {
-        server.local().maxStreams(0, MAX_VALUE);
-        Http2Stream stream = server.local().createIdleStream(2);
-
-        // Opening should fail, however.
-        thrown.expect(Http2Exception.class);
-        thrown.expectMessage("Maximum active streams violated for this endpoint.");
-        stream.open(false);
-    }
-
-    @Test(expected = Http2Exception.class)
-    public void createIdleShouldFailWhenMaxAllowedStreamsExceeded() throws Http2Exception {
-        server.local().maxStreams(0, 0);
-        server.local().createIdleStream(2);
+    public void serverCreatePushShouldSucceedOnLocalEndpointWhenMaxAllowedStreamsExceeded() throws Http2Exception {
+        server = new DefaultHttp2Connection(true, 0);
+        server.local().maxActiveStreams(1);
+        Http2Stream requestStream = server.remote().createStream(3, false);
+        assertNotNull(server.local().reservePushStream(2, requestStream));
     }
 
     @Test(expected = Http2Exception.class)
@@ -519,525 +470,6 @@ public class DefaultHttp2ConnectionTest {
         client.remote().createStream(MAX_VALUE + 1, false);
     }
 
-    @Test
-    public void localStreamCanDependUponIdleStream() throws Http2Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        streamA.setPriority(3, MIN_WEIGHT, true);
-        verifyDependUponIdleStream(streamA, client.stream(3), client.local());
-    }
-
-    @Test
-    public void remoteStreamCanDependUponIdleStream() throws Http2Exception {
-        Http2Stream streamA = client.remote().createStream(2, false);
-        streamA.setPriority(4, MIN_WEIGHT, true);
-        verifyDependUponIdleStream(streamA, client.stream(4), client.remote());
-    }
-
-    @Test
-    public void prioritizeShouldUseDefaults() throws Exception {
-        Http2Stream stream = client.local().createStream(1, false);
-        assertEquals(1, client.connectionStream().numChildren());
-        assertEquals(stream, child(client.connectionStream(), 1));
-        assertEquals(DEFAULT_PRIORITY_WEIGHT, stream.weight());
-        assertEquals(0, stream.parent().id());
-        assertEquals(0, stream.numChildren());
-    }
-
-    @Test
-    public void reprioritizeWithNoChangeShouldDoNothing() throws Exception {
-        Http2Stream stream = client.local().createStream(1, false);
-        stream.setPriority(0, DEFAULT_PRIORITY_WEIGHT, false);
-        assertEquals(1, client.connectionStream().numChildren());
-        assertEquals(stream, child(client.connectionStream(), 1));
-        assertEquals(DEFAULT_PRIORITY_WEIGHT, stream.weight());
-        assertEquals(0, stream.parent().id());
-        assertEquals(0, stream.numChildren());
-    }
-
-    @Test
-    public void insertExclusiveShouldAddNewLevel() throws Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
-
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
-
-        assertEquals(4, client.numActiveStreams());
-
-        // Level 0
-        Http2Stream p = client.connectionStream();
-        assertEquals(1, p.numChildren());
-
-        // Level 1
-        p = child(p, streamA.id());
-        assertNotNull(p);
-        assertEquals(0, p.parent().id());
-        assertEquals(1, p.numChildren());
-
-        // Level 2
-        p = child(p, streamD.id());
-        assertNotNull(p);
-        assertEquals(streamA.id(), p.parent().id());
-        assertEquals(2, p.numChildren());
-
-        // Level 3
-        p = child(p, streamB.id());
-        assertNotNull(p);
-        assertEquals(streamD.id(), p.parent().id());
-        assertEquals(0, p.numChildren());
-        p = child(p.parent(), streamC.id());
-        assertNotNull(p);
-        assertEquals(streamD.id(), p.parent().id());
-        assertEquals(0, p.numChildren());
-    }
-
-    @Test
-    public void existingChildMadeExclusiveShouldNotCreateTreeCycle() throws Http2Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
-
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
-
-        // Stream C is already dependent on Stream A, but now make that an exclusive dependency
-        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
-
-        assertEquals(4, client.numActiveStreams());
-
-        // Level 0
-        Http2Stream p = client.connectionStream();
-        assertEquals(1, p.numChildren());
-
-        // Level 1
-        p = child(p, streamA.id());
-        assertNotNull(p);
-        assertEquals(0, p.parent().id());
-        assertEquals(1, p.numChildren());
-
-        // Level 2
-        p = child(p, streamC.id());
-        assertNotNull(p);
-        assertEquals(streamA.id(), p.parent().id());
-        assertEquals(2, p.numChildren());
-
-        // Level 3
-        p = child(p, streamB.id());
-        assertNotNull(p);
-        assertEquals(streamC.id(), p.parent().id());
-        assertEquals(0, p.numChildren());
-        p = child(p.parent(), streamD.id());
-        assertNotNull(p);
-        assertEquals(streamC.id(), p.parent().id());
-        assertEquals(0, p.numChildren());
-    }
-
-    @Test
-    public void newExclusiveChildShouldUpdateOldParentCorrectly() throws Http2Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
-        Http2Stream streamE = client.local().createStream(9, false);
-        Http2Stream streamF = client.local().createStream(11, false);
-
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamF.setPriority(streamE.id(), DEFAULT_PRIORITY_WEIGHT, false);
-
-        // F is now going to be exclusively dependent on A, after this we should check that stream E
-        // prioritizableForTree is not over decremented.
-        streamF.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
-
-        assertEquals(6, client.numActiveStreams());
-
-        // Level 0
-        Http2Stream p = client.connectionStream();
-        assertEquals(2, p.numChildren());
-
-        // Level 1
-        p = child(p, streamE.id());
-        assertNotNull(p);
-        assertEquals(0, p.parent().id());
-        assertEquals(0, p.numChildren());
-        p = child(p.parent(), streamA.id());
-        assertNotNull(p);
-        assertEquals(0, p.parent().id());
-        assertEquals(1, p.numChildren());
-
-        // Level 2
-        p = child(p, streamF.id());
-        assertNotNull(p);
-        assertEquals(streamA.id(), p.parent().id());
-        assertEquals(2, p.numChildren());
-
-        // Level 3
-        p = child(p, streamB.id());
-        assertNotNull(p);
-        assertEquals(streamF.id(), p.parent().id());
-        assertEquals(0, p.numChildren());
-        p = child(p.parent(), streamC.id());
-        assertNotNull(p);
-        assertEquals(streamF.id(), p.parent().id());
-        assertEquals(1, p.numChildren());
-
-        // Level 4
-        p = child(p, streamD.id());
-        assertNotNull(p);
-        assertEquals(streamC.id(), p.parent().id());
-        assertEquals(0, p.numChildren());
-    }
-
-    @Test
-    public void weightChangeWithNoTreeChangeShouldNotifyListeners() throws Http2Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
-
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
-
-        assertEquals(4, client.numActiveStreams());
-
-        short oldWeight = streamD.weight();
-        short newWeight = (short) (oldWeight + 1);
-        reset(clientListener);
-        streamD.setPriority(streamD.parent().id(), newWeight, false);
-        verify(clientListener).onWeightChanged(eq(streamD), eq(oldWeight));
-        assertEquals(streamD.weight(), newWeight);
-        verify(clientListener, never()).onPriorityTreeParentChanging(any(Http2Stream.class),
-                any(Http2Stream.class));
-        verify(clientListener, never()).onPriorityTreeParentChanged(any(Http2Stream.class),
-                any(Http2Stream.class));
-    }
-
-    @Test
-    public void sameNodeDependentShouldNotStackOverflowNorChangePrioritizableForTree() throws Http2Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
-
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
-
-        boolean[] exclusive = new boolean[] {true, false};
-        short[] weights = new short[] { DEFAULT_PRIORITY_WEIGHT, 100, 200, streamD.weight() };
-
-        assertEquals(4, client.numActiveStreams());
-
-        Http2Stream connectionStream = client.connectionStream();
-
-        // The goal is to call setPriority with the same parent and vary the parameters
-        // we were at one point adding a circular depends to the tree and then throwing
-        // a StackOverflow due to infinite recursive operation.
-        for (int j = 0; j < weights.length; ++j) {
-            for (int i = 0; i < exclusive.length; ++i) {
-                streamD.setPriority(streamA.id(), weights[j], exclusive[i]);
-            }
-        }
-    }
-
-    @Test
-    public void multipleCircularDependencyShouldUpdatePrioritizable() throws Http2Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
-
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
-
-        assertEquals(4, client.numActiveStreams());
-
-        Http2Stream connectionStream = client.connectionStream();
-
-        // Bring B to the root
-        streamA.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, true);
-
-        // Move all streams to be children of B
-        streamC.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
-
-        // Move A back to the root
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, true);
-
-        // Move all streams to be children of A
-        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-    }
-
-    @Test
-    public void removeWithPrioritizableDependentsShouldNotRestructureTree() throws Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
-
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamC.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
-
-        // Default removal policy will cause it to be removed immediately.
-        streamB.close();
-
-        // Level 0
-        Http2Stream p = client.connectionStream();
-        assertEquals(1, p.numChildren());
-
-        // Level 1
-        p = child(p, streamA.id());
-        assertNotNull(p);
-        assertEquals(client.connectionStream().id(), p.parent().id());
-        assertEquals(2, p.numChildren());
-
-        // Level 2
-        p = child(p, streamC.id());
-        assertNotNull(p);
-        assertEquals(streamA.id(), p.parent().id());
-        assertEquals(0, p.numChildren());
-        p = child(p.parent(), streamD.id());
-        assertNotNull(p);
-        assertEquals(streamA.id(), p.parent().id());
-        assertEquals(0, p.numChildren());
-    }
-
-    @Test
-    public void closeWithNoPrioritizableDependentsShouldRestructureTree() throws Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
-        Http2Stream streamE = client.local().createStream(9, false);
-        Http2Stream streamF = client.local().createStream(11, false);
-
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamC.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamE.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamF.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, false);
-
-        // Close internal nodes, leave 1 leaf node open, the only remaining stream is the one that is not closed (E).
-        streamA.close();
-        streamB.close();
-        streamC.close();
-        streamD.close();
-        streamF.close();
-
-        // Level 0
-        Http2Stream p = client.connectionStream();
-        assertEquals(1, p.numChildren());
-
-        // Level 1
-        p = child(p, streamE.id());
-        assertNotNull(p);
-        assertEquals(client.connectionStream().id(), p.parent().id());
-        assertEquals(0, p.numChildren());
-    }
-
-    @Test(expected = Http2Exception.class)
-    public void priorityChangeWithNoPrioritizableDependentsShouldRestructureTree() throws Exception {
-        Http2Stream streamA = client.local().createStream(1, false);
-        Http2Stream streamB = client.local().createStream(3, false);
-        Http2Stream streamC = client.local().createStream(5, false);
-        Http2Stream streamD = client.local().createStream(7, false);
-        Http2Stream streamE = client.local().createStream(9, false);
-        Http2Stream streamF = client.local().createStream(11, false);
-
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamC.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(streamB.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamE.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        streamF.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, false);
-
-        // Leave leaf nodes open (E & F)
-        streamA.close();
-        streamB.close();
-        streamC.close();
-        streamD.close();
-
-        // Attempt to move F to depend on C, however this should throw an exception because C is closed.
-        streamF.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
-    }
-
-    @Test
-    public void circularDependencyShouldRestructureTree() throws Exception {
-        // Using example from http://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-5.3.3
-        // Initialize all the nodes
-        Http2Stream streamA = client.local().createStream(1, false);
-        verifyParentChanged(streamA, null);
-        Http2Stream streamB = client.local().createStream(3, false);
-        verifyParentChanged(streamB, null);
-        Http2Stream streamC = client.local().createStream(5, false);
-        verifyParentChanged(streamC, null);
-        Http2Stream streamD = client.local().createStream(7, false);
-        verifyParentChanged(streamD, null);
-        Http2Stream streamE = client.local().createStream(9, false);
-        verifyParentChanged(streamE, null);
-        Http2Stream streamF = client.local().createStream(11, false);
-        verifyParentChanged(streamF, null);
-
-        // Build the tree
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        verify(clientListener, never()).onWeightChanged(eq(streamB), anyShort());
-        verifyParentChanged(streamB, client.connectionStream());
-        verifyParentChanging(streamB, client.connectionStream());
-
-        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        verify(clientListener, never()).onWeightChanged(eq(streamC), anyShort());
-        verifyParentChanged(streamC, client.connectionStream());
-        verifyParentChanging(streamC, client.connectionStream());
-
-        streamD.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        verify(clientListener, never()).onWeightChanged(eq(streamD), anyShort());
-        verifyParentChanged(streamD, client.connectionStream());
-        verifyParentChanging(streamD, client.connectionStream());
-
-        streamE.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        verify(clientListener, never()).onWeightChanged(eq(streamE), anyShort());
-        verifyParentChanged(streamE, client.connectionStream());
-        verifyParentChanging(streamE, client.connectionStream());
-
-        streamF.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        verify(clientListener, never()).onWeightChanged(eq(streamF), anyShort());
-        verifyParentChanged(streamF, client.connectionStream());
-        verifyParentChanging(streamF, client.connectionStream());
-
-        assertEquals(6, client.numActiveStreams());
-
-        // Non-exclusive re-prioritization of a->d.
-        reset(clientListener);
-        streamA.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        verify(clientListener, never()).onWeightChanged(eq(streamA), anyShort());
-        verifyParentChanging(Arrays.asList(streamD, streamA), Arrays.asList(client.connectionStream(), streamD));
-        verifyParentsChanged(Arrays.asList(streamD, streamA), Arrays.asList(streamC, client.connectionStream()));
-
-        // Level 0
-        Http2Stream p = client.connectionStream();
-        assertEquals(1, p.numChildren());
-
-        // Level 1
-        p = child(p, streamD.id());
-        assertNotNull(p);
-        assertEquals(2, p.numChildren());
-
-        // Level 2
-        p = child(p, streamF.id());
-        assertNotNull(p);
-        assertEquals(0, p.numChildren());
-        p = child(p.parent(), streamA.id());
-        assertNotNull(p);
-        assertEquals(2, p.numChildren());
-
-        // Level 3
-        p = child(p, streamB.id());
-        assertNotNull(p);
-        assertEquals(0, p.numChildren());
-        p = child(p.parent(), streamC.id());
-        assertNotNull(p);
-        assertEquals(1, p.numChildren());
-
-        // Level 4;
-        p = child(p, streamE.id());
-        assertNotNull(p);
-        assertEquals(0, p.numChildren());
-    }
-
-    @Test
-    public void circularDependencyWithExclusiveShouldRestructureTree() throws Exception {
-        // Using example from http://tools.ietf.org/html/draft-ietf-httpbis-http2-16#section-5.3.3
-        // Initialize all the nodes
-        Http2Stream streamA = client.local().createStream(1, false);
-        verifyParentChanged(streamA, null);
-        Http2Stream streamB = client.local().createStream(3, false);
-        verifyParentChanged(streamB, null);
-        Http2Stream streamC = client.local().createStream(5, false);
-        verifyParentChanged(streamC, null);
-        Http2Stream streamD = client.local().createStream(7, false);
-        verifyParentChanged(streamD, null);
-        Http2Stream streamE = client.local().createStream(9, false);
-        verifyParentChanged(streamE, null);
-        Http2Stream streamF = client.local().createStream(11, false);
-        verifyParentChanged(streamF, null);
-
-        // Build the tree
-        streamB.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        verify(clientListener, never()).onWeightChanged(eq(streamB), anyShort());
-        verifyParentChanged(streamB, client.connectionStream());
-        verifyParentChanging(streamB, client.connectionStream());
-
-        streamC.setPriority(streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        verify(clientListener, never()).onWeightChanged(eq(streamC), anyShort());
-        verifyParentChanged(streamC, client.connectionStream());
-        verifyParentChanging(streamC, client.connectionStream());
-
-        streamD.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        verify(clientListener, never()).onWeightChanged(eq(streamD), anyShort());
-        verifyParentChanged(streamD, client.connectionStream());
-        verifyParentChanging(streamD, client.connectionStream());
-
-        streamE.setPriority(streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        verify(clientListener, never()).onWeightChanged(eq(streamE), anyShort());
-        verifyParentChanged(streamE, client.connectionStream());
-        verifyParentChanging(streamE, client.connectionStream());
-
-        streamF.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        verify(clientListener, never()).onWeightChanged(eq(streamF), anyShort());
-        verifyParentChanged(streamF, client.connectionStream());
-        verifyParentChanging(streamF, client.connectionStream());
-
-        assertEquals(6, client.numActiveStreams());
-
-        // Exclusive re-prioritization of a->d.
-        reset(clientListener);
-        streamA.setPriority(streamD.id(), DEFAULT_PRIORITY_WEIGHT, true);
-        verify(clientListener, never()).onWeightChanged(eq(streamA), anyShort());
-        verifyParentChanging(Arrays.asList(streamD, streamA, streamF),
-                             Arrays.asList(client.connectionStream(), streamD, streamA));
-        verifyParentsChanged(Arrays.asList(streamD, streamA, streamF),
-                             Arrays.asList(streamC, client.connectionStream(), streamD));
-
-        // Level 0
-        Http2Stream p = client.connectionStream();
-        assertEquals(1, p.numChildren());
-
-        // Level 1
-        p = child(p, streamD.id());
-        assertNotNull(p);
-        assertEquals(1, p.numChildren());
-
-        // Level 2
-        p = child(p, streamA.id());
-        assertNotNull(p);
-        assertEquals(3, p.numChildren());
-
-        // Level 3
-        p = child(p, streamB.id());
-        assertNotNull(p);
-        assertEquals(0, p.numChildren());
-        p = child(p.parent(), streamF.id());
-        assertNotNull(p);
-        assertEquals(0, p.numChildren());
-        p = child(p.parent(), streamC.id());
-        assertNotNull(p);
-        assertEquals(1, p.numChildren());
-
-        // Level 4;
-        p = child(p, streamE.id());
-        assertNotNull(p);
-        assertEquals(0, p.numChildren());
-    }
-
     /**
      * We force {@link #clientListener} methods to all throw a {@link RuntimeException} and verify the following:
      * <ol>
@@ -1050,7 +482,7 @@ public class DefaultHttp2ConnectionTest {
     @Test
     public void listenerThrowShouldNotPreventOtherListenersFromBeingNotified() throws Http2Exception {
         final boolean[] calledArray = new boolean[128];
-        // The following setup will ensure that clienListener throws exceptions, and marks a value in an array
+        // The following setup will ensure that clientListener throws exceptions, and marks a value in an array
         // such that clientListener2 will verify that is is set or fail the test.
         int methodIndex = 0;
         doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
@@ -1079,21 +511,6 @@ public class DefaultHttp2ConnectionTest {
             .when(clientListener2).onStreamRemoved(any(Http2Stream.class));
 
         doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onPriorityTreeParentChanged(any(Http2Stream.class), any(Http2Stream.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onPriorityTreeParentChanged(any(Http2Stream.class), any(Http2Stream.class));
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onPriorityTreeParentChanging(any(Http2Stream.class), any(Http2Stream.class));
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onPriorityTreeParentChanging(any(Http2Stream.class), any(Http2Stream.class));
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
-            .when(clientListener).onWeightChanged(any(Http2Stream.class), anyShort());
-        doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
-            .when(clientListener2).onWeightChanged(any(Http2Stream.class), anyShort());
-
-        doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
             .when(clientListener).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
         doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
             .when(clientListener2).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
@@ -1108,30 +525,22 @@ public class DefaultHttp2ConnectionTest {
         doAnswer(new ListenerVerifyCallAnswer(calledArray, methodIndex++))
             .when(clientListener2).onStreamAdded(any(Http2Stream.class));
 
-        // Now we add clienListener2 and exercise all listener functionality
+        // Now we add clientListener2 and exercise all listener functionality
         try {
             client.addListener(clientListener2);
-            Http2Stream stream = client.local().createIdleStream(3);
+            Http2Stream stream = client.local().createStream(3, false);
             verify(clientListener).onStreamAdded(any(Http2Stream.class));
             verify(clientListener2).onStreamAdded(any(Http2Stream.class));
-            verify(clientListener, never()).onStreamActive(any(Http2Stream.class));
-            verify(clientListener2, never()).onStreamActive(any(Http2Stream.class));
-
-            stream.open(false);
             verify(clientListener).onStreamActive(any(Http2Stream.class));
             verify(clientListener2).onStreamActive(any(Http2Stream.class));
 
-            stream.setPriority(0, (short) (stream.weight() + 1), true);
-            verify(clientListener).onWeightChanged(any(Http2Stream.class), anyShort());
-            verify(clientListener2).onWeightChanged(any(Http2Stream.class), anyShort());
-            verify(clientListener).onPriorityTreeParentChanged(any(Http2Stream.class),
-                    any(Http2Stream.class));
-            verify(clientListener2).onPriorityTreeParentChanged(any(Http2Stream.class),
-                    any(Http2Stream.class));
-            verify(clientListener).onPriorityTreeParentChanging(any(Http2Stream.class),
-                    any(Http2Stream.class));
-            verify(clientListener2).onPriorityTreeParentChanging(any(Http2Stream.class),
-                    any(Http2Stream.class));
+            Http2Stream reservedStream = client.remote().reservePushStream(2, stream);
+            verify(clientListener, never()).onStreamActive(streamEq(reservedStream));
+            verify(clientListener2, never()).onStreamActive(streamEq(reservedStream));
+
+            reservedStream.open(false);
+            verify(clientListener).onStreamActive(streamEq(reservedStream));
+            verify(clientListener2).onStreamActive(streamEq(reservedStream));
 
             stream.closeLocalSide();
             verify(clientListener).onStreamHalfClosed(any(Http2Stream.class));
@@ -1166,10 +575,11 @@ public class DefaultHttp2ConnectionTest {
                 latch.countDown();
             }
         });
-        assertTrue(latch.await(2, TimeUnit.SECONDS));
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 
-    private void incrementAndGetStreamShouldRespectOverflow(Endpoint<?> endpoint, int streamId) throws Http2Exception {
+    private static void incrementAndGetStreamShouldRespectOverflow(Endpoint<?> endpoint, int streamId)
+            throws Http2Exception {
         assertTrue(streamId > 0);
         try {
             endpoint.createStream(streamId, true);
@@ -1181,7 +591,7 @@ public class DefaultHttp2ConnectionTest {
         endpoint.createStream(streamId, true);
     }
 
-    private void incrementAndGetStreamShouldSucceed(Endpoint<?> endpoint) throws Http2Exception {
+    private static void incrementAndGetStreamShouldSucceed(Endpoint<?> endpoint) throws Http2Exception {
         Http2Stream streamA = endpoint.createStream(endpoint.incrementAndGetNextStreamId(), true);
         Http2Stream streamB = endpoint.createStream(streamA.id() + 2, true);
         Http2Stream streamC = endpoint.createStream(endpoint.incrementAndGetNextStreamId(), true);
@@ -1222,85 +632,8 @@ public class DefaultHttp2ConnectionTest {
         }
     }
 
-    private void verifyParentChanging(List<Http2Stream> expectedArg1, List<Http2Stream> expectedArg2) {
-        assertSame(expectedArg1.size(), expectedArg2.size());
-        ArgumentCaptor<Http2Stream> arg1Captor = ArgumentCaptor.forClass(Http2Stream.class);
-        ArgumentCaptor<Http2Stream> arg2Captor = ArgumentCaptor.forClass(Http2Stream.class);
-        verify(clientListener, times(expectedArg1.size())).onPriorityTreeParentChanging(arg1Captor.capture(),
-                arg2Captor.capture());
-        List<Http2Stream> capturedArg1 = arg1Captor.getAllValues();
-        List<Http2Stream> capturedArg2 = arg2Captor.getAllValues();
-        assertSame(capturedArg1.size(), capturedArg2.size());
-        assertSame(capturedArg1.size(), expectedArg1.size());
-        for (int i = 0; i < capturedArg1.size(); ++i) {
-            assertEquals(expectedArg1.get(i), capturedArg1.get(i));
-            assertEquals(expectedArg2.get(i), capturedArg2.get(i));
-        }
-    }
-
-    private void verifyParentsChanged(List<Http2Stream> expectedArg1, List<Http2Stream> expectedArg2) {
-        assertSame(expectedArg1.size(), expectedArg2.size());
-        ArgumentCaptor<Http2Stream> arg1Captor = ArgumentCaptor.forClass(Http2Stream.class);
-        ArgumentCaptor<Http2Stream> arg2Captor = ArgumentCaptor.forClass(Http2Stream.class);
-        verify(clientListener, times(expectedArg1.size())).onPriorityTreeParentChanged(arg1Captor.capture(),
-                arg2Captor.capture());
-        List<Http2Stream> capturedArg1 = arg1Captor.getAllValues();
-        List<Http2Stream> capturedArg2 = arg2Captor.getAllValues();
-        assertSame(capturedArg1.size(), capturedArg2.size());
-        assertSame(capturedArg1.size(), expectedArg1.size());
-        for (int i = 0; i < capturedArg1.size(); ++i) {
-            assertEquals(expectedArg1.get(i), capturedArg1.get(i));
-            assertEquals(expectedArg2.get(i), capturedArg2.get(i));
-        }
-    }
-
-    private static void verifyDependUponIdleStream(final Http2Stream streamA, Http2Stream streamB, Endpoint<?> endpoint)
-            throws Http2Exception {
-        assertNotNull(streamB);
-        assertEquals(streamB.id(), endpoint.lastStreamCreated());
-        assertEquals(State.IDLE, streamB.state());
-        assertEquals(MIN_WEIGHT, streamA.weight());
-        assertEquals(DEFAULT_PRIORITY_WEIGHT, streamB.weight());
-        assertEquals(streamB, streamA.parent());
-        assertEquals(1, streamB.numChildren());
-        streamB.forEachChild(new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) throws Http2Exception {
-                assertEquals(streamA, stream);
-                return false;
-            }
-        });
-    }
-
     @SuppressWarnings("unchecked")
     private static <T> T streamEq(T stream) {
-        return (T) (stream == null ? isNull(Http2Stream.class) : eq(stream));
-    }
-
-    private void verifyParentChanging(Http2Stream stream, Http2Stream newParent) {
-        verify(clientListener).onPriorityTreeParentChanging(streamEq(stream), streamEq(newParent));
-    }
-
-    private void verifyParentChanged(Http2Stream stream, Http2Stream oldParent) {
-        verify(clientListener).onPriorityTreeParentChanged(streamEq(stream), streamEq(oldParent));
-    }
-    private Http2Stream child(Http2Stream parent, final int id) {
-        try {
-            final AtomicReference<Http2Stream> streamReference = new AtomicReference<Http2Stream>();
-            parent.forEachChild(new Http2StreamVisitor() {
-                @Override
-                public boolean visit(Http2Stream stream) throws Http2Exception {
-                    if (stream.id() == id) {
-                        streamReference.set(stream);
-                        return false;
-                    }
-                    return true;
-                }
-            });
-            return streamReference.get();
-        } catch (Http2Exception e) {
-            PlatformDependent.throwException(e);
-            return null;
-        }
+        return (T) (stream == null ? ArgumentMatchers.<Http2Stream>isNull() : eq(stream));
     }
 }

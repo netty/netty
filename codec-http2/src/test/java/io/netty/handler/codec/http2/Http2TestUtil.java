@@ -23,8 +23,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.http2.internal.hpack.Decoder;
-import io.netty.handler.codec.http2.internal.hpack.Encoder;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -92,7 +90,7 @@ public final class Http2TestUtil {
         return s;
     }
 
-    public static Encoder newTestEncoder() {
+    public static HpackEncoder newTestEncoder() {
         try {
             return newTestEncoder(true, MAX_HEADER_LIST_SIZE, MAX_HEADER_TABLE_SIZE);
         } catch (Http2Exception e) {
@@ -100,20 +98,20 @@ public final class Http2TestUtil {
         }
     }
 
-    public static Encoder newTestEncoder(boolean ignoreMaxHeaderListSize,
-                                         long maxHeaderListSize, long maxHeaderTableSize) throws Http2Exception {
-        Encoder encoder = new Encoder();
+    public static HpackEncoder newTestEncoder(boolean ignoreMaxHeaderListSize,
+                                              long maxHeaderListSize, long maxHeaderTableSize) throws Http2Exception {
+        HpackEncoder hpackEncoder = new HpackEncoder();
         ByteBuf buf = Unpooled.buffer();
         try {
-            encoder.setMaxHeaderTableSize(buf, maxHeaderTableSize);
-            encoder.setMaxHeaderListSize(maxHeaderListSize);
+            hpackEncoder.setMaxHeaderTableSize(buf, maxHeaderTableSize);
+            hpackEncoder.setMaxHeaderListSize(maxHeaderListSize);
         } finally  {
             buf.release();
         }
-        return encoder;
+        return hpackEncoder;
     }
 
-    public static Decoder newTestDecoder() {
+    public static HpackDecoder newTestDecoder() {
         try {
             return newTestDecoder(MAX_HEADER_LIST_SIZE, MAX_HEADER_TABLE_SIZE);
         } catch (Http2Exception e) {
@@ -121,11 +119,10 @@ public final class Http2TestUtil {
         }
     }
 
-    public static Decoder newTestDecoder(long maxHeaderListSize, long maxHeaderTableSize) throws Http2Exception {
-        Decoder decoder = new Decoder();
-        decoder.setMaxHeaderTableSize(maxHeaderTableSize);
-        decoder.setMaxHeaderListSize(maxHeaderListSize);
-        return decoder;
+    public static HpackDecoder newTestDecoder(long maxHeaderListSize, long maxHeaderTableSize) throws Http2Exception {
+        HpackDecoder hpackDecoder = new HpackDecoder(maxHeaderListSize, 32);
+        hpackDecoder.setMaxHeaderTableSize(maxHeaderTableSize);
+        return hpackDecoder;
     }
 
     private Http2TestUtil() {
@@ -214,9 +211,6 @@ public final class Http2TestUtil {
                         int streamDependency, short weight, boolean exclusive, int padding, boolean endStream)
                         throws Http2Exception {
                     Http2Stream stream = getOrCreateStream(streamId, endStream);
-                    if (stream != null) {
-                        stream.setPriority(streamDependency, weight, exclusive);
-                    }
                     listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding,
                             endStream);
                     if (endStream) {
@@ -228,10 +222,6 @@ public final class Http2TestUtil {
                 @Override
                 public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
                         boolean exclusive) throws Http2Exception {
-                    Http2Stream stream = getOrCreateStream(streamId, false);
-                    if (stream != null) {
-                        stream.setPriority(streamDependency, weight, exclusive);
-                    }
                     listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
                     latch.countDown();
                 }

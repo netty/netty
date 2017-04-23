@@ -17,6 +17,9 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.UncheckedBooleanSupplier;
+import io.netty.util.internal.UnstableApi;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -24,13 +27,16 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * not to waste its space.
  */
 public interface RecvByteBufAllocator {
-
     /**
      * Creates a new handle.  The handle provides the actual operations and keeps the internal information which is
      * required for predicting an optimal buffer capacity.
      */
     Handle newHandle();
 
+    /**
+     * @deprecated Use {@link ExtendedHandle}.
+     */
+    @Deprecated
     interface Handle {
         /**
          * Creates a new receive buffer whose capacity is probably large enough to read all inbound data and small
@@ -99,6 +105,16 @@ public interface RecvByteBufAllocator {
          * The read has completed.
          */
         void readComplete();
+    }
+
+    @SuppressWarnings("deprecation")
+    @UnstableApi
+    interface ExtendedHandle extends Handle {
+        /**
+         * Same as {@link Handle#continueReading()} except "more data" is determined by the supplier parameter.
+         * @param maybeMoreDataSupplier A supplier that determines if there maybe more data to read.
+         */
+        boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier);
     }
 
     /**

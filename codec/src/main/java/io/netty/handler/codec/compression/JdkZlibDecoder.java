@@ -372,7 +372,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
         long readCrc = crc.getValue();
         if (crcValue != readCrc) {
             throw new DecompressionException(
-                    "CRC value missmatch. Expected: " + crcValue + ", Got: " + readCrc);
+                    "CRC value mismatch. Expected: " + crcValue + ", Got: " + readCrc);
         }
     }
 

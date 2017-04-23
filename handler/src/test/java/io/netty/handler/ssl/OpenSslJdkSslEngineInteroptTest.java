@@ -16,10 +16,35 @@
 package io.netty.handler.ssl;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
+import javax.net.ssl.SSLException;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static org.junit.Assume.assumeTrue;
 
+@RunWith(Parameterized.class)
 public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
+
+    @Parameterized.Parameters(name = "{index}: bufferType = {0}")
+    public static Collection<Object> data() {
+        List<Object> params = new ArrayList<Object>();
+        for (BufferType type: BufferType.values()) {
+            params.add(type);
+        }
+        return params;
+    }
+
+    public OpenSslJdkSslEngineInteroptTest(BufferType type) {
+        super(type);
+    }
 
     @BeforeClass
     public static void checkOpenSsl() {
@@ -34,5 +59,56 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     @Override
     protected SslProvider sslServerProvider() {
         return SslProvider.JDK;
+    }
+
+    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @Override
+    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() throws Exception {
+    }
+
+    @Ignore /* Does the JDK support a "max certificate chain length"? */
+    @Override
+    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
+    }
+
+    @Override
+    @Test
+    public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth();
+    }
+
+    @Override
+    @Test
+    public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth();
+    }
+
+    @Override
+    @Test
+    public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth();
+    }
+
+    @Override
+    @Test
+    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
+        assumeTrue(OpenSsl.supportsHostnameValidation());
+        super.testClientHostnameValidationSuccess();
+    }
+
+    @Override
+    @Test
+    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
+        assumeTrue(OpenSsl.supportsHostnameValidation());
+        super.testClientHostnameValidationFail();
+    }
+
+    @Override
+    protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
+        // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
+        return super.mySetupMutualAuthServerIsValidServerException(cause) || causedBySSLException(cause);
     }
 }

@@ -134,8 +134,7 @@ final class IovArray implements MessageProcessor {
             // No more room!
             return false;
         }
-        for (int i = 0; i < buffers.length; i++) {
-            ByteBuffer nioBuffer = buffers[i];
+        for (ByteBuffer nioBuffer : buffers) {
             int offset = nioBuffer.position();
             int len = nioBuffer.limit() - nioBuffer.position();
             if (len == 0) {

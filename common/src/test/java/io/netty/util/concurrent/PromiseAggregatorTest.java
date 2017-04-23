@@ -16,9 +16,9 @@
 
 package io.netty.util.concurrent;
 
-import static org.easymock.EasyMock.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,7 +38,7 @@ public class PromiseAggregatorTest {
     @Test
     public void testAddNullFuture() {
         @SuppressWarnings("unchecked")
-        Promise<Void> p = createStrictMock(Promise.class);
+        Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
                 new PromiseAggregator<Void, Future<Void>>(p);
         expectedException.expect(NullPointerException.class);
@@ -47,86 +47,96 @@ public class PromiseAggregatorTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testSucessfulNoPending() throws Exception {
-        Promise<Void> p = createStrictMock(Promise.class);
+    public void testSuccessfulNoPending() throws Exception {
+        Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
                 new PromiseAggregator<Void, Future<Void>>(p);
 
-        Future<Void> future = createStrictMock(Future.class);
-        expect(p.setSuccess(null)).andReturn(p);
-        replay(future, p);
+        Future<Void> future = mock(Future.class);
+        when(p.setSuccess(null)).thenReturn(p);
 
         a.add();
         a.operationComplete(future);
-        verify(future, p);
+        verifyNoMoreInteractions(future);
+        verify(p).setSuccess(null);
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testSuccessfulPending() throws Exception {
-        Promise<Void> p = createStrictMock(Promise.class);
+        Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
                 new PromiseAggregator<Void, Future<Void>>(p);
-        Promise<Void> p1 = createStrictMock(Promise.class);
-        Promise<Void> p2 = createStrictMock(Promise.class);
+        Promise<Void> p1 = mock(Promise.class);
+        Promise<Void> p2 = mock(Promise.class);
 
-        expect(p1.addListener(a)).andReturn(p1);
-        expect(p2.addListener(a)).andReturn(p2);
-        expect(p1.isSuccess()).andReturn(true);
-        expect(p2.isSuccess()).andReturn(true);
-        expect(p.setSuccess(null)).andReturn(p);
-        replay(p1, p2, p);
+        when(p1.addListener(a)).thenReturn(p1);
+        when(p2.addListener(a)).thenReturn(p2);
+        when(p1.isSuccess()).thenReturn(true);
+        when(p2.isSuccess()).thenReturn(true);
+        when(p.setSuccess(null)).thenReturn(p);
 
         assertThat(a.add(p1, null, p2), is(a));
         a.operationComplete(p1);
         a.operationComplete(p2);
 
-        verify(p1, p2, p);
+        verify(p1).addListener(a);
+        verify(p2).addListener(a);
+        verify(p1).isSuccess();
+        verify(p2).isSuccess();
+        verify(p).setSuccess(null);
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testFailedFutureFailPending() throws Exception {
-        Promise<Void> p = createStrictMock(Promise.class);
+        Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
                 new PromiseAggregator<Void, Future<Void>>(p);
-        Promise<Void> p1 = createStrictMock(Promise.class);
-        Promise<Void> p2 = createStrictMock(Promise.class);
-        Throwable t = createStrictMock(Throwable.class);
+        Promise<Void> p1 = mock(Promise.class);
+        Promise<Void> p2 = mock(Promise.class);
+        Throwable t = mock(Throwable.class);
 
-        expect(p1.addListener(a)).andReturn(p1);
-        expect(p2.addListener(a)).andReturn(p2);
-        expect(p1.isSuccess()).andReturn(false);
-        expect(p1.cause()).andReturn(t);
-        expect(p.setFailure(t)).andReturn(p);
-        expect(p2.setFailure(t)).andReturn(p2);
-        replay(p1, p2, p);
+        when(p1.addListener(a)).thenReturn(p1);
+        when(p2.addListener(a)).thenReturn(p2);
+        when(p1.isSuccess()).thenReturn(false);
+        when(p1.cause()).thenReturn(t);
+        when(p.setFailure(t)).thenReturn(p);
+        when(p2.setFailure(t)).thenReturn(p2);
 
         a.add(p1, p2);
         a.operationComplete(p1);
-        verify(p1, p2, p);
+
+        verify(p1).addListener(a);
+        verify(p2).addListener(a);
+        verify(p1).cause();
+        verify(p).setFailure(t);
+        verify(p2).setFailure(t);
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testFailedFutureNoFailPending() throws Exception {
-        Promise<Void> p = createStrictMock(Promise.class);
+        Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
                 new PromiseAggregator<Void, Future<Void>>(p, false);
-        Promise<Void> p1 = createStrictMock(Promise.class);
-        Promise<Void> p2 = createStrictMock(Promise.class);
-        Throwable t = createStrictMock(Throwable.class);
+        Promise<Void> p1 = mock(Promise.class);
+        Promise<Void> p2 = mock(Promise.class);
+        Throwable t = mock(Throwable.class);
 
-        expect(p1.addListener(a)).andReturn(p1);
-        expect(p2.addListener(a)).andReturn(p2);
-        expect(p1.isSuccess()).andReturn(false);
-        expect(p1.cause()).andReturn(t);
-        expect(p.setFailure(t)).andReturn(p);
-        replay(p1, p2, p);
+        when(p1.addListener(a)).thenReturn(p1);
+        when(p2.addListener(a)).thenReturn(p2);
+        when(p1.isSuccess()).thenReturn(false);
+        when(p1.cause()).thenReturn(t);
+        when(p.setFailure(t)).thenReturn(p);
 
         a.add(p1, p2);
         a.operationComplete(p1);
-        verify(p1, p2, p);
-    }
 
+        verify(p1).addListener(a);
+        verify(p2).addListener(a);
+        verify(p1).isSuccess();
+        verify(p1).cause();
+        verify(p).setFailure(t);
+    }
 }

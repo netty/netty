@@ -21,12 +21,12 @@ package io.netty.buffer;
 public interface PoolChunkListMetric extends Iterable<PoolChunkMetric> {
 
     /**
-     * Return the minum usage of the chunk list before which chunks are promoted to the previous list.
+     * Return the minimum usage of the chunk list before which chunks are promoted to the previous list.
      */
     int minUsage();
 
     /**
-     * Return the minum usage of the chunk list after which chunks are promoted to the next list.
+     * Return the maximum usage of the chunk list after which chunks are promoted to the next list.
      */
     int maxUsage();
 }

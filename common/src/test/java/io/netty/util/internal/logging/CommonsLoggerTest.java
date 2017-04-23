@@ -18,204 +18,169 @@ package io.netty.util.internal.logging;
 import org.apache.commons.logging.Log;
 import org.junit.Test;
 
-import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 public class CommonsLoggerTest {
     private static final Exception e = new Exception();
 
     @Test
     public void testIsTraceEnabled() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        expect(mock.isTraceEnabled()).andReturn(true);
-        replay(mock);
+        when(mockLog.isTraceEnabled()).thenReturn(true);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         assertTrue(logger.isTraceEnabled());
-        verify(mock);
+
+        verify(mockLog).isTraceEnabled();
     }
 
     @Test
     public void testIsDebugEnabled() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        expect(mock.isDebugEnabled()).andReturn(true);
-        replay(mock);
+        when(mockLog.isDebugEnabled()).thenReturn(true);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         assertTrue(logger.isDebugEnabled());
-        verify(mock);
+
+        verify(mockLog).isDebugEnabled();
     }
 
     @Test
     public void testIsInfoEnabled() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        expect(mock.isInfoEnabled()).andReturn(true);
-        replay(mock);
+        when(mockLog.isInfoEnabled()).thenReturn(true);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         assertTrue(logger.isInfoEnabled());
-        verify(mock);
+
+        verify(mockLog).isInfoEnabled();
     }
 
     @Test
     public void testIsWarnEnabled() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        expect(mock.isWarnEnabled()).andReturn(true);
-        replay(mock);
+        when(mockLog.isWarnEnabled()).thenReturn(true);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         assertTrue(logger.isWarnEnabled());
-        verify(mock);
+
+        verify(mockLog).isWarnEnabled();
     }
 
     @Test
     public void testIsErrorEnabled() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        expect(mock.isErrorEnabled()).andReturn(true);
-        replay(mock);
+        when(mockLog.isErrorEnabled()).thenReturn(true);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         assertTrue(logger.isErrorEnabled());
-        verify(mock);
+
+        verify(mockLog).isErrorEnabled();
     }
 
     @Test
     public void testTrace() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        mock.trace("a");
-        replay(mock);
-
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         logger.trace("a");
-        verify(mock);
+
+        verify(mockLog).trace("a");
     }
 
     @Test
     public void testTraceWithException() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        mock.trace("a", e);
-        replay(mock);
-
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         logger.trace("a", e);
-        verify(mock);
+
+        verify(mockLog).trace("a", e);
     }
 
     @Test
     public void testDebug() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        mock.debug("a");
-        replay(mock);
-
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         logger.debug("a");
-        verify(mock);
+
+        verify(mockLog).debug("a");
     }
 
     @Test
     public void testDebugWithException() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        mock.debug("a", e);
-        replay(mock);
-
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         logger.debug("a", e);
-        verify(mock);
+
+        verify(mockLog).debug("a", e);
     }
 
     @Test
     public void testInfo() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        mock.info("a");
-        replay(mock);
-
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         logger.info("a");
-        verify(mock);
+
+        verify(mockLog).info("a");
     }
 
     @Test
     public void testInfoWithException() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        mock.info("a", e);
-        replay(mock);
-
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         logger.info("a", e);
-        verify(mock);
+
+        verify(mockLog).info("a", e);
     }
 
     @Test
     public void testWarn() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        mock.warn("a");
-        replay(mock);
-
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         logger.warn("a");
-        verify(mock);
+
+        verify(mockLog).warn("a");
     }
 
     @Test
     public void testWarnWithException() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        mock.warn("a", e);
-        replay(mock);
-
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         logger.warn("a", e);
-        verify(mock);
+
+        verify(mockLog).warn("a", e);
     }
 
     @Test
     public void testError() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        mock.error("a");
-        replay(mock);
-
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         logger.error("a");
-        verify(mock);
+
+        verify(mockLog).error("a");
     }
 
     @Test
     public void testErrorWithException() {
-        Log mock =
-            createStrictMock(Log.class);
+        Log mockLog = mock(Log.class);
 
-        mock.error("a", e);
-        replay(mock);
-
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new CommonsLogger(mockLog, "foo");
         logger.error("a", e);
-        verify(mock);
+
+        verify(mockLog).error("a", e);
     }
 }

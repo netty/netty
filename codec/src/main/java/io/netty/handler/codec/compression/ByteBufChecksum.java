@@ -76,7 +76,7 @@ abstract class ByteBufChecksum implements Checksum {
     }
 
     /**
-     * @see {@link #update(byte[], int, int)}.
+     * @see #update(byte[], int, int)
      */
     public void update(ByteBuf b, int off, int len) {
         if (b.hasArray()) {

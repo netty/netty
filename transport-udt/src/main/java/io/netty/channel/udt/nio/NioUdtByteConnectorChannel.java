@@ -27,17 +27,25 @@ import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.UdtChannelConfig;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 import static java.nio.channels.SelectionKey.OP_CONNECT;
 
 /**
  * Byte Channel Connector for UDT Streams.
+ *
+ * @deprecated The UDT transport is no longer maintained and will be removed.
  */
+@Deprecated
 public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implements UdtChannel {
 
     private static final InternalLogger logger =
@@ -89,7 +97,7 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
 
     @Override
     protected void doBind(final SocketAddress localAddress) throws Exception {
-        javaChannel().bind(localAddress);
+        privilegedBind(javaChannel(), localAddress);
     }
 
     @Override
@@ -99,11 +107,11 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
 
     @Override
     protected boolean doConnect(final SocketAddress remoteAddress,
-            final SocketAddress localAddress) throws Exception {
+                                final SocketAddress localAddress) throws Exception {
         doBind(localAddress != null? localAddress : new InetSocketAddress(0));
         boolean success = false;
         try {
-            final boolean connected = javaChannel().connect(remoteAddress);
+            final boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
             if (!connected) {
                 selectionKey().interestOps(
                         selectionKey().interestOps() | OP_CONNECT);
@@ -186,4 +194,20 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
     public InetSocketAddress remoteAddress() {
         return (InetSocketAddress) super.remoteAddress();
     }
+
+    private static void privilegedBind(final SocketChannelUDT socketChannel, final SocketAddress localAddress)
+            throws IOException {
+        try {
+            AccessController.doPrivileged(new PrivilegedExceptionAction<Void>() {
+                @Override
+                public Void run() throws IOException {
+                    socketChannel.bind(localAddress);
+                    return null;
+                }
+            });
+        } catch (PrivilegedActionException e) {
+            throw (IOException) e.getCause();
+        }
+    }
+
 }

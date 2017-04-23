@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.buffer.Unpooled.directBuffer;
@@ -47,8 +48,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.WINDOW_UPDATE_FRAME_LE
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeaderInternal;
-import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedInt;
-import static io.netty.handler.codec.http2.Http2CodecUtil.writeUnsignedShort;
 import static io.netty.handler.codec.http2.Http2Error.FRAME_SIZE_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2FrameTypes.CONTINUATION;
@@ -87,12 +86,12 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         this(new DefaultHttp2HeadersEncoder());
     }
 
-    public DefaultHttp2FrameWriter(SensitivityDetector headersSensativityDetector) {
-        this(new DefaultHttp2HeadersEncoder(headersSensativityDetector));
+    public DefaultHttp2FrameWriter(SensitivityDetector headersSensitivityDetector) {
+        this(new DefaultHttp2HeadersEncoder(headersSensitivityDetector));
     }
 
-    public DefaultHttp2FrameWriter(SensitivityDetector headersSensativityDetector, boolean ignoreMaxHeaderListSize) {
-        this(new DefaultHttp2HeadersEncoder(headersSensativityDetector, ignoreMaxHeaderListSize));
+    public DefaultHttp2FrameWriter(SensitivityDetector headersSensitivityDetector, boolean ignoreMaxHeaderListSize) {
+        this(new DefaultHttp2HeadersEncoder(headersSensitivityDetector, ignoreMaxHeaderListSize));
     }
 
     public DefaultHttp2FrameWriter(Http2HeadersEncoder headersEncoder) {
@@ -106,8 +105,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     @Override
-    public Http2HeaderTable headerTable() {
-        return headersEncoder.configuration().headerTable();
+    public Http2HeadersEncoder.Configuration headersConfiguration() {
+        return headersEncoder.configuration();
     }
 
     @Override
@@ -210,8 +209,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             ByteBuf buf = ctx.alloc().buffer(PRIORITY_FRAME_LENGTH);
             writeFrameHeaderInternal(buf, PRIORITY_ENTRY_LENGTH, PRIORITY, new Http2Flags(), streamId);
-            long word1 = exclusive ? 0x80000000L | streamDependency : streamDependency;
-            writeUnsignedInt(word1, buf);
+            buf.writeInt(exclusive ? (int) (0x80000000L | streamDependency) : streamDependency);
             // Adjust the weight so that it fits into a single byte on the wire.
             buf.writeByte(weight - 1);
             return ctx.write(buf, promise);
@@ -229,7 +227,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             ByteBuf buf = ctx.alloc().buffer(RST_STREAM_FRAME_LENGTH);
             writeFrameHeaderInternal(buf, INT_FIELD_LENGTH, RST_STREAM, new Http2Flags(), streamId);
-            writeUnsignedInt(errorCode, buf);
+            buf.writeInt((int) errorCode);
             return ctx.write(buf, promise);
         } catch (Throwable t) {
             return promise.setFailure(t);
@@ -245,8 +243,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH + settings.size() * SETTING_ENTRY_LENGTH);
             writeFrameHeaderInternal(buf, payloadLength, SETTINGS, new Http2Flags(), 0);
             for (Http2Settings.PrimitiveEntry<Long> entry : settings.entries()) {
-                writeUnsignedShort(entry.key(), buf);
-                writeUnsignedInt(entry.value(), buf);
+                buf.writeChar(entry.key());
+                buf.writeInt(entry.value().intValue());
             }
             return ctx.write(buf, promise);
         } catch (Throwable t) {
@@ -334,8 +332,12 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             if (!flags.endOfHeaders()) {
                 writeContinuationFrames(ctx, streamId, headerBlock, padding, promiseAggregator);
             }
+        } catch (Http2Exception e) {
+            promiseAggregator.setFailure(e);
         } catch (Throwable t) {
             promiseAggregator.setFailure(t);
+            promiseAggregator.doneAllocatingPromises();
+            PlatformDependent.throwException(t);
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();
@@ -358,7 +360,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             ByteBuf buf = ctx.alloc().buffer(GO_AWAY_FRAME_HEADER_LENGTH);
             writeFrameHeaderInternal(buf, payloadLength, GO_AWAY, new Http2Flags(), 0);
             buf.writeInt(lastStreamId);
-            writeUnsignedInt(errorCode, buf);
+            buf.writeInt((int) errorCode);
             ctx.write(buf, promiseAggregator.newPromise());
 
             releaseData = false;
@@ -446,8 +448,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             writePaddingLength(buf, padding);
 
             if (hasPriority) {
-                long word1 = exclusive ? 0x80000000L | streamDependency : streamDependency;
-                writeUnsignedInt(word1, buf);
+                buf.writeInt(exclusive ? (int) (0x80000000L | streamDependency) : streamDependency);
 
                 // Adjust the weight so that it fits into a single byte on the wire.
                 buf.writeByte(weight - 1);
@@ -465,8 +466,12 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             if (!flags.endOfHeaders()) {
                 writeContinuationFrames(ctx, streamId, headerBlock, padding, promiseAggregator);
             }
+        } catch (Http2Exception e) {
+            promiseAggregator.setFailure(e);
         } catch (Throwable t) {
             promiseAggregator.setFailure(t);
+            promiseAggregator.doneAllocatingPromises();
+            PlatformDependent.throwException(t);
         } finally {
             if (headerBlock != null) {
                 headerBlock.release();

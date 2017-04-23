@@ -17,15 +17,18 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.SocketUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -49,10 +52,45 @@ public class DatagramPacketDecoderTest {
 
     @Test
     public void testDecode() {
-        InetSocketAddress recipient = new InetSocketAddress("127.0.0.1", 10000);
-        InetSocketAddress sender = new InetSocketAddress("127.0.0.1", 20000);
+        InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
+        InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
         ByteBuf content = Unpooled.wrappedBuffer("netty".getBytes(CharsetUtil.UTF_8));
         assertTrue(channel.writeInbound(new DatagramPacket(content, recipient, sender)));
         assertEquals("netty", channel.readInbound());
+    }
+
+    @Test
+    public void testIsNotSharable() {
+        testIsSharable(false);
+    }
+
+    @Test
+    public void testIsSharable() {
+        testIsSharable(true);
+    }
+
+    private static void testIsSharable(boolean sharable) {
+        MessageToMessageDecoder<ByteBuf> wrapped = new TestMessageToMessageDecoder(sharable);
+        DatagramPacketDecoder decoder = new DatagramPacketDecoder(wrapped);
+        assertEquals(wrapped.isSharable(), decoder.isSharable());
+    }
+
+    private static final class TestMessageToMessageDecoder extends MessageToMessageDecoder<ByteBuf> {
+
+        private final boolean sharable;
+
+        TestMessageToMessageDecoder(boolean sharable) {
+            this.sharable = sharable;
+        }
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
+            // NOOP
+        }
+
+        @Override
+        public boolean isSharable() {
+            return sharable;
+        }
     }
 }

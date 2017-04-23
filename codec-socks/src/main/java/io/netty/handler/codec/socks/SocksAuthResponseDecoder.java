@@ -28,10 +28,6 @@ import java.util.List;
  */
 public class SocksAuthResponseDecoder extends ReplayingDecoder<State> {
 
-    private SocksSubnegotiationVersion version;
-    private SocksAuthStatus authStatus;
-    private SocksResponse msg = SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE;
-
     public SocksAuthResponseDecoder() {
         super(State.CHECK_PROTOCOL_VERSION);
     }
@@ -41,19 +37,22 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<State> {
             throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksSubnegotiationVersion.valueOf(byteBuf.readByte());
-                if (version != SocksSubnegotiationVersion.AUTH_PASSWORD) {
+                if (byteBuf.readByte() != SocksSubnegotiationVersion.AUTH_PASSWORD.byteValue()) {
+                    out.add(SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE);
                     break;
                 }
                 checkpoint(State.READ_AUTH_RESPONSE);
             }
             case READ_AUTH_RESPONSE: {
-                authStatus = SocksAuthStatus.valueOf(byteBuf.readByte());
-                msg = new SocksAuthResponse(authStatus);
+                SocksAuthStatus authStatus = SocksAuthStatus.valueOf(byteBuf.readByte());
+                out.add(new SocksAuthResponse(authStatus));
+                break;
+            }
+            default: {
+                throw new Error();
             }
         }
         channelHandlerContext.pipeline().remove(this);
-        out.add(msg);
     }
 
     enum State {

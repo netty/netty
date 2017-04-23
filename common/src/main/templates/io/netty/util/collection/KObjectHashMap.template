@@ -100,6 +100,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
     }
 
     private static <T> T toExternal(T value) {
+        assert value != null : "null is not a legitimate internal value. Concurrent Modification?";
         return value == NULL_VALUE ? null : value;
     }
 
@@ -414,23 +415,23 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
         // entries and move them back if possible, optimizing future lookups.
         // Knuth Section 6.4 Algorithm R, also used by the JDK's IdentityHashMap.
 
-        boolean movedBack = false;
         int nextFree = index;
-        for (int i = probeNext(index); values[i] != null; i = probeNext(i)) {
-            int bucket = hashIndex(keys[i]);
+        int i = probeNext(index);
+        for (V value = values[i]; value != null; value = values[i = probeNext(i)]) {
+            @k@ key = keys[i];
+            int bucket = hashIndex(key);
             if (i < bucket && (bucket <= nextFree || nextFree <= i) ||
                 bucket <= nextFree && nextFree <= i) {
                 // Move the displaced entry "back" to the first available position.
-                keys[nextFree] = keys[i];
-                values[nextFree] = values[i];
-                movedBack = true;
+                keys[nextFree] = key;
+                values[nextFree] = value;
                 // Put the first entry after the displaced entry
                 keys[i] = 0;
                 values[i] = null;
                 nextFree = i;
             }
         }
-        return movedBack;
+        return nextFree != index;
     }
 
     /**
@@ -596,10 +597,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
         private int entryIndex = -1;
 
         private void scanNext() {
-            for (;;) {
-                if (++nextIndex == values.length || values[nextIndex] != null) {
-                    break;
-                }
+            while (++nextIndex != values.length && values[nextIndex] == null) {
             }
         }
 
@@ -608,7 +606,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
             if (nextIndex == -1) {
                 scanNext();
             }
-            return nextIndex < keys.length;
+            return nextIndex != values.length;
         }
 
         @Override
@@ -627,7 +625,7 @@ public class @K@ObjectHashMap<V> implements @K@ObjectMap<V> {
 
         @Override
         public void remove() {
-            if (prevIndex < 0) {
+            if (prevIndex == -1) {
                 throw new IllegalStateException("next must be called before each remove.");
             }
             if (removeAt(prevIndex)) {

@@ -71,7 +71,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * <ol>
  * <li>Request #1 returns the content of {@code /file1.txt}.</li>
  * <li>Contents of {@code /file1.txt} is cached by the browser.</li>
- * <li>Request #2 for {@code /file1.txt} does return the contents of the
+ * <li>Request #2 for {@code /file1.txt} does not return the contents of the
  *     file again. Rather, a 304 Not Modified is returned. This tells the
  *     browser to use the contents stored in its cache.</li>
  * <li>The server knows the file has not been modified because the

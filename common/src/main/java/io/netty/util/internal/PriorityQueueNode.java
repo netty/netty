@@ -16,28 +16,29 @@
 package io.netty.util.internal;
 
 /**
- * Provides methods for {@link PriorityQueue} to maintain internal state. These methods should generally not be used
- * outside the scope of {@link PriorityQueue}.
- * @param <T> The type which will be queued in {@link PriorityQueue}.
+ * Provides methods for {@link DefaultPriorityQueue} to maintain internal state. These methods should generally not be
+ * used outside the scope of {@link DefaultPriorityQueue}.
  */
-public interface PriorityQueueNode<T> extends Comparable<T> {
+public interface PriorityQueueNode {
     /**
-     * This should be used to initialize the storage returned by {@link #priorityQueueIndex()}.
+     * This should be used to initialize the storage returned by {@link #priorityQueueIndex(DefaultPriorityQueue)}.
      */
     int INDEX_NOT_IN_QUEUE = -1;
 
     /**
-     * Get the last value set by {@link #priorityQueueIndex(int)}.
+     * Get the last value set by {@link #priorityQueueIndex(DefaultPriorityQueue, int)} for the value corresponding to
+     * {@code queue}.
      * <p>
      * Throwing exceptions from this method will result in undefined behavior.
      */
-    int priorityQueueIndex();
+    int priorityQueueIndex(DefaultPriorityQueue<?> queue);
 
     /**
-     * Used by {@link PriorityQueue} to maintain state for an element in the queue.
+     * Used by {@link DefaultPriorityQueue} to maintain state for an element in the queue.
      * <p>
      * Throwing exceptions from this method will result in undefined behavior.
-     * @param i The index as used by {@link PriorityQueue}.
+     * @param queue The queue for which the index is being set.
+     * @param i The index as used by {@link DefaultPriorityQueue}.
      */
-    void priorityQueueIndex(int i);
+    void priorityQueueIndex(DefaultPriorityQueue<?> queue, int i);
 }

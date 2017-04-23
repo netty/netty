@@ -18,11 +18,13 @@ package io.netty.example.http2.helloworld.server;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Flags;
 import io.netty.handler.codec.http2.Http2FrameListener;
 import io.netty.handler.codec.http2.Http2Headers;
@@ -47,6 +49,14 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
         super(decoder, encoder, initialSettings);
     }
 
+    private static Http2Headers http1HeadersToHttp2Headers(FullHttpRequest request) {
+        return new DefaultHttp2Headers()
+                .authority(request.headers().get("Host"))
+                .method("GET")
+                .path(request.uri())
+                .scheme("http");
+    }
+
     /**
      * Handles the cleartext HTTP upgrade event. If an upgrade occurred, sends a simple response via HTTP/2
      * on stream 1 (the stream specifically reserved for cleartext HTTP upgrade).
@@ -54,11 +64,9 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof HttpServerUpgradeHandler.UpgradeEvent) {
-            // Write an HTTP/2 response to the upgrade request
-            Http2Headers headers =
-                    new DefaultHttp2Headers().status(OK.codeAsText())
-                    .set(new AsciiString(UPGRADE_RESPONSE_HEADER), new AsciiString("true"));
-            encoder().writeHeaders(ctx, 1, headers, 0, true, ctx.newPromise());
+            HttpServerUpgradeHandler.UpgradeEvent upgradeEvent =
+                    (HttpServerUpgradeHandler.UpgradeEvent) evt;
+            onHeadersRead(ctx, 1, http1HeadersToHttp2Headers(upgradeEvent.upgradeRequest()), 0 , true);
         }
         super.userEventTriggered(ctx, evt);
     }

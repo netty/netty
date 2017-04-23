@@ -25,17 +25,17 @@ import java.net.InetAddress;
  * Internet Protocol (IP) families used byte the {@link DatagramChannel}
  */
 public enum InternetProtocolFamily {
-    IPv4(Inet4Address.class),
-    IPv6(Inet6Address.class);
+    IPv4(Inet4Address.class, 1, NetUtil.LOCALHOST4),
+    IPv6(Inet6Address.class, 2, NetUtil.LOCALHOST6);
 
     private final Class<? extends InetAddress> addressType;
     private final int addressNumber;
     private final InetAddress localHost;
 
-    InternetProtocolFamily(Class<? extends InetAddress> addressType) {
+    InternetProtocolFamily(Class<? extends InetAddress> addressType, int addressNumber, InetAddress localHost) {
         this.addressType = addressType;
-        addressNumber = addressNumber(addressType);
-        localHost = localhost(addressType);
+        this.addressNumber = addressNumber;
+        this.localHost = localHost;
     }
 
     /**
@@ -59,26 +59,6 @@ public enum InternetProtocolFamily {
      */
     public InetAddress localhost() {
         return localHost;
-    }
-
-    private static InetAddress localhost(Class<? extends InetAddress> addressType) {
-        if (addressType.isAssignableFrom(Inet4Address.class)) {
-            return NetUtil.LOCALHOST4;
-        }
-        if (addressType.isAssignableFrom(Inet6Address.class)) {
-            return NetUtil.LOCALHOST6;
-        }
-        throw new Error();
-    }
-
-    private static int addressNumber(Class<? extends InetAddress> addressType) {
-        if (addressType.isAssignableFrom(Inet4Address.class)) {
-            return 1;
-        }
-        if (addressType.isAssignableFrom(Inet6Address.class)) {
-            return 2;
-        }
-        throw new IllegalArgumentException("addressType " + addressType + " not supported");
     }
 
     /**

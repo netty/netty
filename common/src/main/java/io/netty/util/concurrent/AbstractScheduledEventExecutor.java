@@ -75,7 +75,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     /**
-     * @see {@link #pollScheduledTask(long)}
+     * @see #pollScheduledTask(long)
      */
     protected final Runnable pollScheduledTask() {
         return pollScheduledTask(nanoTime());
@@ -131,12 +131,11 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     @Override
-    public  ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+    public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
         ObjectUtil.checkNotNull(command, "command");
         ObjectUtil.checkNotNull(unit, "unit");
         if (delay < 0) {
-            throw new IllegalArgumentException(
-                    String.format("delay: %d (expected: >= 0)", delay));
+            delay = 0;
         }
         return schedule(new ScheduledFutureTask<Void>(
                 this, command, null, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
@@ -147,8 +146,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         ObjectUtil.checkNotNull(callable, "callable");
         ObjectUtil.checkNotNull(unit, "unit");
         if (delay < 0) {
-            throw new IllegalArgumentException(
-                    String.format("delay: %d (expected: >= 0)", delay));
+            delay = 0;
         }
         return schedule(new ScheduledFutureTask<V>(
                 this, callable, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));

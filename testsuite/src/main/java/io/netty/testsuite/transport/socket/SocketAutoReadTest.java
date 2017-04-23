@@ -28,6 +28,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.UncheckedBooleanSupplier;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -48,7 +49,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         testAutoReadOffDuringReadOnlyReadsOneTime(false, sb, cb);
     }
 
-    private void testAutoReadOffDuringReadOnlyReadsOneTime(boolean readOutsideEventLoopThread,
+    private static void testAutoReadOffDuringReadOnlyReadsOneTime(boolean readOutsideEventLoopThread,
                                                            ServerBootstrap sb, Bootstrap cb) throws Throwable {
         Channel serverChannel = null;
         Channel clientChannel = null;
@@ -161,8 +162,8 @@ public class SocketAutoReadTest extends AbstractSocketTest {
      */
     private static final class TestRecvByteBufAllocator implements RecvByteBufAllocator {
         @Override
-        public Handle newHandle() {
-            return new Handle() {
+        public ExtendedHandle newHandle() {
+            return new ExtendedHandle() {
                 private ChannelConfig config;
                 private int attemptedBytesRead;
                 private int lastBytesRead;
@@ -208,6 +209,11 @@ public class SocketAutoReadTest extends AbstractSocketTest {
 
                 @Override
                 public boolean continueReading() {
+                    return config.isAutoRead();
+                }
+
+                @Override
+                public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
                     return config.isAutoRead();
                 }
 

@@ -42,31 +42,31 @@ import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
  */
 public final class Socket extends FileDescriptor {
     private static final ClosedChannelException SHUTDOWN_CLOSED_CHANNEL_EXCEPTION = unknownStackTrace(
-            new ClosedChannelException(), Socket.class, "shutdown(...)");
+            new ClosedChannelException(), Socket.class, "shutdown(..)");
     private static final ClosedChannelException SEND_TO_CLOSED_CHANNEL_EXCEPTION = unknownStackTrace(
-            new ClosedChannelException(), Socket.class, "sendTo(...)");
+            new ClosedChannelException(), Socket.class, "sendTo(..)");
     private static final ClosedChannelException SEND_TO_ADDRESS_CLOSED_CHANNEL_EXCEPTION =
-            unknownStackTrace(new ClosedChannelException(), Socket.class, "sendToAddress(...)");
+            unknownStackTrace(new ClosedChannelException(), Socket.class, "sendToAddress(..)");
     private static final ClosedChannelException SEND_TO_ADDRESSES_CLOSED_CHANNEL_EXCEPTION =
-            unknownStackTrace(new ClosedChannelException(), Socket.class, "sendToAddresses(...)");
+            unknownStackTrace(new ClosedChannelException(), Socket.class, "sendToAddresses(..)");
     private static final Errors.NativeIoException SEND_TO_CONNECTION_RESET_EXCEPTION = unknownStackTrace(
-            Errors.newConnectionResetException("syscall:sendto(...)", Errors.ERRNO_EPIPE_NEGATIVE),
-            Socket.class, "sendTo(...)");
+            Errors.newConnectionResetException("syscall:sendto", Errors.ERRNO_EPIPE_NEGATIVE),
+            Socket.class, "sendTo(..)");
     private static final Errors.NativeIoException SEND_TO_ADDRESS_CONNECTION_RESET_EXCEPTION =
-            unknownStackTrace(Errors.newConnectionResetException("syscall:sendto(...)",
-                    Errors.ERRNO_EPIPE_NEGATIVE), Socket.class, "sendToAddress(...)");
+            unknownStackTrace(Errors.newConnectionResetException("syscall:sendto",
+                    Errors.ERRNO_EPIPE_NEGATIVE), Socket.class, "sendToAddress");
     private static final Errors.NativeIoException CONNECTION_RESET_EXCEPTION_SENDMSG = unknownStackTrace(
-            Errors.newConnectionResetException("syscall:sendmsg(...)",
-            Errors.ERRNO_EPIPE_NEGATIVE), Socket.class, "sendToAddresses(...)");
+            Errors.newConnectionResetException("syscall:sendmsg",
+            Errors.ERRNO_EPIPE_NEGATIVE), Socket.class, "sendToAddresses(..)");
     private static final Errors.NativeIoException CONNECTION_RESET_SHUTDOWN_EXCEPTION =
-            unknownStackTrace(Errors.newConnectionResetException("syscall:shutdown(...)",
-                    Errors.ERRNO_ECONNRESET_NEGATIVE), Socket.class, "shutdown(...)");
+            unknownStackTrace(Errors.newConnectionResetException("syscall:shutdown",
+                    Errors.ERRNO_ECONNRESET_NEGATIVE), Socket.class, "shutdown");
     private static final Errors.NativeConnectException FINISH_CONNECT_REFUSED_EXCEPTION =
-            unknownStackTrace(new Errors.NativeConnectException("syscall:getsockopt(...)",
-                    Errors.ERROR_ECONNREFUSED_NEGATIVE), Socket.class, "finishConnect(...)");
+            unknownStackTrace(new Errors.NativeConnectException("syscall:getsockopt",
+                    Errors.ERROR_ECONNREFUSED_NEGATIVE), Socket.class, "finishConnect(..)");
     private static final Errors.NativeConnectException CONNECT_REFUSED_EXCEPTION =
-            unknownStackTrace(new Errors.NativeConnectException("syscall:connect(...)",
-                    Errors.ERROR_ECONNREFUSED_NEGATIVE), Socket.class, "connect(...)");
+            unknownStackTrace(new Errors.NativeConnectException("syscall:connect",
+                    Errors.ERROR_ECONNREFUSED_NEGATIVE), Socket.class, "connect(..)");
     public Socket(int fd) {
         super(fd);
     }

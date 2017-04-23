@@ -38,6 +38,7 @@ import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequestDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthStatus;
 import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.SocketUtils;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -121,7 +122,7 @@ final class Socks5ProxyServer extends ProxyServer {
 
             Socks5CommandResponse res =
                     new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4);
-            intermediaryDestination = new InetSocketAddress(req.dstAddr(), req.dstPort());
+            intermediaryDestination = SocketUtils.socketAddress(req.dstAddr(), req.dstPort());
 
             ctx.write(res);
 

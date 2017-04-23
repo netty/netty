@@ -17,9 +17,9 @@ package io.netty.handler.ssl;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.apache.tomcat.jni.CertificateRequestedCallback;
-import org.apache.tomcat.jni.SSL;
-import org.apache.tomcat.jni.SSLContext;
+import io.netty.internal.tcnative.CertificateRequestedCallback;
+import io.netty.internal.tcnative.SSL;
+import io.netty.internal.tcnative.SSLContext;
 
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -54,10 +54,10 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                                          KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-                                         long sessionCacheSize, long sessionTimeout)
-            throws SSLException {
+                                         String[] protocols, long sessionCacheSize, long sessionTimeout,
+                                         boolean enableOcsp) throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT, keyCertChain,
-              ClientAuth.NONE, false, true);
+              ClientAuth.NONE, protocols, false, enableOcsp, true);
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
@@ -121,7 +121,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 throw new SSLException("failed to set certificate and key", e);
             }
 
-            SSLContext.setVerify(ctx, SSL.SSL_VERIFY_NONE, VERIFY_DEPTH);
+            SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
 
             try {
                 if (trustCertCollection != null) {

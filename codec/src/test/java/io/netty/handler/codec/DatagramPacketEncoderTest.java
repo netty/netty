@@ -15,16 +15,21 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.SocketUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -46,8 +51,8 @@ public class DatagramPacketEncoderTest {
 
     @Test
     public void testEncode() {
-        InetSocketAddress recipient = new InetSocketAddress("127.0.0.1", 10000);
-        InetSocketAddress sender = new InetSocketAddress("127.0.0.1", 20000);
+        InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
+        InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
         assertTrue(channel.writeOutbound(
                 new DefaultAddressedEnvelope<String, InetSocketAddress>("netty", recipient, sender)));
         DatagramPacket packet = channel.readOutbound();
@@ -62,8 +67,8 @@ public class DatagramPacketEncoderTest {
 
     @Test
     public void testUnmatchedMessageType() {
-        InetSocketAddress recipient = new InetSocketAddress("127.0.0.1", 10000);
-        InetSocketAddress sender = new InetSocketAddress("127.0.0.1", 20000);
+        InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
+        InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
         DefaultAddressedEnvelope<Long, InetSocketAddress> envelope =
                 new DefaultAddressedEnvelope<Long, InetSocketAddress>(1L, recipient, sender);
         assertTrue(channel.writeOutbound(envelope));
@@ -80,5 +85,46 @@ public class DatagramPacketEncoderTest {
         String netty = "netty";
         assertTrue(channel.writeOutbound(netty));
         assertSame(netty, channel.readOutbound());
+    }
+
+    @Test
+    public void testIsNotSharable() {
+        testSharable(false);
+    }
+
+    @Test
+    public void testIsSharable() {
+        testSharable(true);
+    }
+
+    private static void testSharable(boolean sharable) {
+        MessageToMessageEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>> wrapped =
+                new TestMessageToMessageEncoder(sharable);
+
+        DatagramPacketEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>> encoder =
+                new DatagramPacketEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>>(wrapped);
+        assertEquals(wrapped.isSharable(), encoder.isSharable());
+    }
+
+    private static final class TestMessageToMessageEncoder
+            extends MessageToMessageEncoder<AddressedEnvelope<ByteBuf, InetSocketAddress>> {
+
+        private final boolean sharable;
+
+        TestMessageToMessageEncoder(boolean sharable) {
+            this.sharable = sharable;
+        }
+
+        @Override
+        protected void encode(
+                ChannelHandlerContext ctx, AddressedEnvelope<ByteBuf,
+                InetSocketAddress> msg, List<Object> out) {
+            // NOOP
+        }
+
+        @Override
+        public boolean isSharable() {
+            return sharable;
+        }
     }
 }

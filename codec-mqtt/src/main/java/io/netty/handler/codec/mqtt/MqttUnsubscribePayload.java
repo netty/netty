@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Pyaload of the {@link MqttUnsubscribeMessage}
+ * Payload of the {@link MqttUnsubscribeMessage}
  */
 public final class MqttUnsubscribePayload {
 

@@ -117,7 +117,7 @@ public class SslErrorTest {
         this.exception = exception;
     }
 
-    @Test(timeout = 10000L)
+    @Test(timeout = 30000)
     public void testCorrectAlert() throws Exception {
         // As this only works correctly at the moment when OpenSslEngine is used on the server-side there is
         // no need to run it if there is no openssl is available at all.

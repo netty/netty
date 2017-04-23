@@ -18,8 +18,9 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.Test;
 
 import java.net.InetAddress;
@@ -69,12 +70,12 @@ public class DefaultDnsRecordEncoderTest {
 
     @Test
     public void testOptEcsRecordIpv4() throws Exception {
-        testOptEcsRecordIp(InetAddress.getByName("1.2.3.4"));
+        testOptEcsRecordIp(SocketUtils.addressByName("1.2.3.4"));
     }
 
     @Test
     public void testOptEcsRecordIpv6() throws Exception {
-        testOptEcsRecordIp(InetAddress.getByName("::0"));
+        testOptEcsRecordIp(SocketUtils.addressByName("::0"));
     }
 
     private static void testOptEcsRecordIp(InetAddress address) throws Exception {
@@ -142,6 +143,6 @@ public class DefaultDnsRecordEncoderTest {
     }
 
     private static int nextInt(int max) {
-        return ThreadLocalRandom.current().nextInt(0, max);
+        return PlatformDependent.threadLocalRandom().nextInt(max);
     }
 }

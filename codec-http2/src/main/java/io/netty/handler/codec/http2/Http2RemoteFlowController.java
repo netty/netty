@@ -82,6 +82,17 @@ public interface Http2RemoteFlowController extends Http2FlowController {
     void channelWritabilityChanged() throws Http2Exception;
 
     /**
+     * Explicitly update the dependency tree. This method is called independently of stream state changes.
+     * @param childStreamId The stream identifier associated with the child stream.
+     * @param parentStreamId The stream identifier associated with the parent stream. May be {@code 0},
+     *                       to make {@code childStreamId} and immediate child of the connection.
+     * @param weight The weight which is used relative to other child streams for {@code parentStreamId}. This value
+     *               must be between 1 and 256 (inclusive).
+     * @param exclusive If {@code childStreamId} should be the exclusive dependency of {@code parentStreamId}.
+     */
+    void updateDependencyTree(int childStreamId, int parentStreamId, short weight, boolean exclusive);
+
+    /**
      * Implementations of this interface are used to progressively write chunks of the underlying
      * payload to the stream. A payload is considered to be fully written if {@link #write} has
      * been called at least once and it's {@link #size} is now zero.

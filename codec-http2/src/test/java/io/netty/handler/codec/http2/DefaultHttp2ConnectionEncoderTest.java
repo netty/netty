@@ -14,36 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
-import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
-import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
-import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
-import static io.netty.util.CharsetUtil.UTF_8;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyShort;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -68,6 +38,36 @@ import org.mockito.stubbing.Answer;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
+import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
+import static io.netty.util.CharsetUtil.UTF_8;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.anyShort;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
 /**
  * Tests for {@link DefaultHttp2ConnectionEncoder}
  */
@@ -86,9 +86,6 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Mock
     private ChannelPipeline pipeline;
-
-    @Mock
-    private Http2FrameListener listener;
 
     @Mock
     private Http2FrameWriter writer;
@@ -201,7 +198,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         final ByteBuf data = dummyData();
         ChannelPromise p = newPromise();
         encoder.writeData(ctx, STREAM_ID, data, 0, true, p);
-        assertEquals(payloadCaptor.getValue().size(), 8);
+        assertEquals(8, payloadCaptor.getValue().size());
         payloadCaptor.getValue().write(ctx, 8);
         assertEquals(0, payloadCaptor.getValue().size());
         assertEquals("abcdefgh", writtenData.get(0));
@@ -291,7 +288,7 @@ public class DefaultHttp2ConnectionEncoderTest {
                 .then(new Answer<ChannelFuture>() {
                     @Override
                     public ChannelFuture answer(InvocationOnMock invocationOnMock) throws Throwable {
-                        ChannelPromise promise = invocationOnMock.getArgumentAt(8, ChannelPromise.class);
+                        ChannelPromise promise = invocationOnMock.getArgument(8);
                         assertFalse(promise.isVoid());
                         return promise.setFailure(cause);
                     }
@@ -311,7 +308,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(frameSizePolicy.maxFrameSize()).thenReturn(5);
         ChannelPromise p = newPromise();
         encoder.writeData(ctx, STREAM_ID, data, 10, true, p);
-        assertEquals(payloadCaptor.getValue().size(), 10);
+        assertEquals(10, payloadCaptor.getValue().size());
         payloadCaptor.getValue().write(ctx, 10);
         // writer was called 2 times
         assertEquals(1, writtenData.size());
@@ -380,10 +377,9 @@ public class DefaultHttp2ConnectionEncoderTest {
         short weight = 255;
         encoder.writePriority(ctx, STREAM_ID, 0, weight, true, promise);
 
-        // Verify that this created an idle stream with the desired weight.
+        // Verify that this did NOT create a stream object.
         Http2Stream stream = stream(STREAM_ID);
-        assertEquals(IDLE, stream.state());
-        assertEquals(weight, stream.weight());
+        assertNull(stream);
 
         verify(writer).writePriority(eq(ctx), eq(STREAM_ID), eq(0), eq((short) 255), eq(true), eq(promise));
     }
@@ -426,7 +422,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         stream(STREAM_ID);
         ChannelPromise promise = newPromise();
         encoder.writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
-        verify(lifecycleManager).resetStream(eq(ctx), eq(STREAM_ID), anyInt(), eq(promise));
+        verify(lifecycleManager).resetStream(eq(ctx), eq(STREAM_ID), anyLong(), eq(promise));
     }
 
     @Test

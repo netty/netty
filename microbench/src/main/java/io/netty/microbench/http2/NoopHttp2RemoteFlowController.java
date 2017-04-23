@@ -14,12 +14,12 @@
  */
 package io.netty.microbench.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2RemoteFlowController;
 import io.netty.handler.codec.http2.Http2Stream;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
 
 public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowController {
     public static final NoopHttp2RemoteFlowController INSTANCE = new NoopHttp2RemoteFlowController();
@@ -83,5 +83,9 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
 
     @Override
     public void channelWritabilityChanged() throws Http2Exception {
+    }
+
+    @Override
+    public void updateDependencyTree(int childStreamId, int parentStreamId, short weight, boolean exclusive) {
     }
 }

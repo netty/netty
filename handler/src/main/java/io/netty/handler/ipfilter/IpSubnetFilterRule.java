@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ipfilter;
 
+import io.netty.util.internal.SocketUtils;
+
 import java.math.BigInteger;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -32,7 +34,7 @@ public final class IpSubnetFilterRule implements IpFilterRule {
 
     public IpSubnetFilterRule(String ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
         try {
-            filterRule = selectFilterRule(InetAddress.getByName(ipAddress), cidrPrefix, ruleType);
+            filterRule = selectFilterRule(SocketUtils.addressByName(ipAddress), cidrPrefix, ruleType);
         } catch (UnknownHostException e) {
             throw new IllegalArgumentException("ipAddress", e);
         }
@@ -89,9 +91,12 @@ public final class IpSubnetFilterRule implements IpFilterRule {
 
         @Override
         public boolean matches(InetSocketAddress remoteAddress) {
-            int ipAddress = ipToInt((Inet4Address) remoteAddress.getAddress());
-
-            return (ipAddress & subnetMask) == networkAddress;
+            final InetAddress inetAddress = remoteAddress.getAddress();
+            if (inetAddress instanceof Inet4Address) {
+                int ipAddress = ipToInt((Inet4Address) inetAddress);
+                return (ipAddress & subnetMask) == networkAddress;
+            }
+            return false;
         }
 
         @Override
@@ -145,9 +150,12 @@ public final class IpSubnetFilterRule implements IpFilterRule {
 
         @Override
         public boolean matches(InetSocketAddress remoteAddress) {
-            BigInteger ipAddress = ipToInt((Inet6Address) remoteAddress.getAddress());
-
-            return ipAddress.and(subnetMask).equals(networkAddress);
+            final InetAddress inetAddress = remoteAddress.getAddress();
+            if (inetAddress instanceof Inet6Address) {
+                BigInteger ipAddress = ipToInt((Inet6Address) inetAddress);
+                return ipAddress.and(subnetMask).equals(networkAddress);
+            }
+            return false;
         }
 
         @Override

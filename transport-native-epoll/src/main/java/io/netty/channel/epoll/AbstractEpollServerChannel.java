@@ -107,11 +107,11 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
         @Override
         void epollInReady() {
             assert eventLoop().inEventLoop();
-            if (fd().isInputShutdown()) {
+            final ChannelConfig config = config();
+            if (shouldBreakEpollInReady(config)) {
                 clearEpollIn0();
                 return;
             }
-            final ChannelConfig config = config();
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 

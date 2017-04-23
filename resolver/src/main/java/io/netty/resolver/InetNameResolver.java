@@ -17,6 +17,7 @@ package io.netty.resolver;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -24,8 +25,8 @@ import java.net.InetSocketAddress;
 /**
  * A skeletal {@link NameResolver} implementation that resolves {@link InetAddress}.
  */
+@UnstableApi
 public abstract class InetNameResolver extends SimpleNameResolver<InetAddress> {
-
     private volatile AddressResolver<InetSocketAddress> addressResolver;
 
     /**

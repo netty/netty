@@ -92,8 +92,8 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      *            with the websocket specifications. Client applications that communicate with a non-standard server
      *            which doesn't require masking might set this to false to achieve a higher performance.
      * @param allowMaskMismatch
-     *            Allows to loosen the masking requirement on received frames. When this is set to false then also
-     *            frames which are not masked properly according to the standard will still be accepted.
+     *            When set to true, frames which are not masked properly according to the standard will still be
+     *            accepted.
      */
     public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
@@ -151,7 +151,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         headers.add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                .add(HttpHeaderNames.SEC_WEBSOCKET_KEY, key)
-               .add(HttpHeaderNames.HOST, host + ':' + wsPort)
+               .add(HttpHeaderNames.HOST, websocketHostValue(wsURL))
                .add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, websocketOriginValue(host, wsPort));
 
         String expectedSubprotocol = expectedSubprotocol();

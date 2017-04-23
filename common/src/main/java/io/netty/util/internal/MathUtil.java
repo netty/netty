@@ -65,7 +65,21 @@ public final class MathUtil {
     }
 
     /**
-     * Compare to {@code long} values.
+     * Compares two {@code int} values.
+     *
+     * @param  x the first {@code int} to compare
+     * @param  y the second {@code int} to compare
+     * @return the value {@code 0} if {@code x == y};
+     *         {@code -1} if {@code x < y}; and
+     *         {@code 1} if {@code x > y}
+     */
+    public static int compare(final int x, final int y) {
+        // do not subtract for comparison, it could overflow
+        return x < y ? -1 : (x > y ? 1 : 0);
+    }
+
+    /**
+     * Compare two {@code long} values.
      * @param x the first {@code long} to compare.
      * @param y the second {@code long} to compare.
      * @return

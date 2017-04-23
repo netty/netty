@@ -36,9 +36,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -83,21 +83,28 @@ public class Http2CodecTest {
                 .group(group)
                 .handler(new Http2Codec(false, new TestChannelInitializer()));
         clientChannel = cb.connect(serverAddress).sync().channel();
-        assertTrue(serverChannelLatch.await(2, TimeUnit.SECONDS));
+        assertTrue(serverChannelLatch.await(5, SECONDS));
     }
 
     @AfterClass
     public static void shutdown() {
-        group.shutdownGracefully();
+        group.shutdownGracefully(0, 5, SECONDS);
     }
 
     @After
     public void tearDown() throws Exception {
-        clientChannel.close().sync();
-        serverChannel.close().sync();
+        if (clientChannel != null) {
+            clientChannel.close().syncUninterruptibly();
+            clientChannel = null;
+        }
+        if (serverChannel != null) {
+            serverChannel.close().syncUninterruptibly();
+            serverChannel = null;
+        }
+        final Channel serverConnectedChannel = this.serverConnectedChannel;
         if (serverConnectedChannel != null) {
-            serverConnectedChannel.close().sync();
-            serverConnectedChannel = null;
+            serverConnectedChannel.close().syncUninterruptibly();
+            this.serverConnectedChannel = null;
         }
     }
 

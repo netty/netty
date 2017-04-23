@@ -20,11 +20,16 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.7.Final-SNAPSHOT</version>
+    <version>4.1.10.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-handler-proxy</artifactId>
   <packaging>jar</packaging>
+
+  <properties>
+    <!-- Needed for SelfSignedCertificate -->
+    <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
+  </properties>
 
   <name>Netty/Handler/Proxy</name>
 
@@ -49,6 +54,10 @@
       <artifactId>netty-handler</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
     </dependency>
   </dependencies>
 </project>

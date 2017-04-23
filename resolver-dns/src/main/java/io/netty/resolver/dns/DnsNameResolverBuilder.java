@@ -15,44 +15,46 @@
  */
 package io.netty.resolver.dns;
 
-import static io.netty.util.internal.ObjectUtil.intValue;
-
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.resolver.HostsFileEntriesResolver;
+import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.netty.resolver.dns.DnsServerAddressStreamProviders.platformDefault;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.intValue;
 
 /**
  * A {@link DnsNameResolver} builder.
  */
 @UnstableApi
 public final class DnsNameResolverBuilder {
-
     private final EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
-    private DnsServerAddresses nameServerAddresses = DnsServerAddresses.defaultAddresses();
     private DnsCache resolveCache;
+    private DnsCache authoritativeDnsServerCache;
     private Integer minTtl;
     private Integer maxTtl;
     private Integer negativeTtl;
     private long queryTimeoutMillis = 5000;
-    private InternetProtocolFamily[] resolvedAddressTypes = DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
+    private ResolvedAddressTypes resolvedAddressTypes = DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
     private boolean recursionDesired = true;
     private int maxQueriesPerResolve = 16;
     private boolean traceEnabled;
     private int maxPayloadSize = 4096;
     private boolean optResourceEnabled = true;
     private HostsFileEntriesResolver hostsFileEntriesResolver = HostsFileEntriesResolver.DEFAULT;
-    private String[] searchDomains = DnsNameResolver.DEFAULT_SEACH_DOMAINS;
+    private DnsServerAddressStreamProvider dnsServerAddressStreamProvider = platformDefault();
+    private String[] searchDomains = DnsNameResolver.DEFAULT_SEARCH_DOMAINS;
     private int ndots = 1;
+    private boolean decodeIdn = true;
 
     /**
      * Creates a new builder.
@@ -87,17 +89,6 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
-     * Sets the addresses of the DNS server.
-     *
-     * @param nameServerAddresses the DNS server addresses
-     * @return {@code this}
-     */
-    public DnsNameResolverBuilder nameServerAddresses(DnsServerAddresses nameServerAddresses) {
-        this.nameServerAddresses = nameServerAddresses;
-        return this;
-    }
-
-    /**
      * Sets the cache for resolution results.
      *
      * @param resolveCache the DNS resolution results cache
@@ -105,6 +96,17 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder resolveCache(DnsCache resolveCache) {
         this.resolveCache  = resolveCache;
+        return this;
+    }
+
+    /**
+     * Sets the cache for authoritative NS servers
+     *
+     * @param authoritativeDnsServerCache the authoritative NS servers cache
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder authoritativeDnsServerCache(DnsCache authoritativeDnsServerCache) {
+        this.authoritativeDnsServerCache = authoritativeDnsServerCache;
         return this;
     }
 
@@ -149,76 +151,45 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
-     * Sets the list of the protocol families of the address resolved.
-     * Usually, both {@link InternetProtocolFamily#IPv4} and {@link InternetProtocolFamily#IPv6} are specified in
-     * the order of preference.  To enforce the resolve to retrieve the address of a specific protocol family,
-     * specify only a single {@link InternetProtocolFamily}.
-     *
-     * @param resolvedAddressTypes the address types
-     * @return {@code this}
+     * Compute a {@link ResolvedAddressTypes} from some {@link InternetProtocolFamily}s.
+     * An empty input will return the default value, based on "java.net" System properties.
+     * Valid inputs are (), (IPv4), (IPv6), (Ipv4, IPv6) and (IPv6, IPv4).
+     * @param internetProtocolFamilies a valid sequence of {@link InternetProtocolFamily}s
+     * @return a {@link ResolvedAddressTypes}
      */
-    public DnsNameResolverBuilder resolvedAddressTypes(InternetProtocolFamily... resolvedAddressTypes) {
-        checkNotNull(resolvedAddressTypes, "resolvedAddressTypes");
-
-        final List<InternetProtocolFamily> list = new ArrayList<InternetProtocolFamily>(
-                InternetProtocolFamily.values().length);
-
-        for (InternetProtocolFamily f : resolvedAddressTypes) {
-            if (f == null) {
-                break;
-            }
-
-            // Avoid duplicate entries.
-            if (list.contains(f)) {
-                continue;
-            }
-
-            list.add(f);
+    public static ResolvedAddressTypes computeResolvedAddressTypes(InternetProtocolFamily... internetProtocolFamilies) {
+        if (internetProtocolFamilies == null || internetProtocolFamilies.length == 0) {
+            return DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
+        }
+        if (internetProtocolFamilies.length > 2) {
+            throw new IllegalArgumentException("No more than 2 InternetProtocolFamilies");
         }
 
-        if (list.isEmpty()) {
-            throw new IllegalArgumentException("no protocol family specified");
+        switch(internetProtocolFamilies[0]) {
+            case IPv4:
+                return (internetProtocolFamilies.length >= 2
+                        && internetProtocolFamilies[1] == InternetProtocolFamily.IPv6) ?
+                        ResolvedAddressTypes.IPV4_PREFERRED: ResolvedAddressTypes.IPV4_ONLY;
+            case IPv6:
+                return (internetProtocolFamilies.length >= 2
+                        && internetProtocolFamilies[1] == InternetProtocolFamily.IPv4) ?
+                        ResolvedAddressTypes.IPV6_PREFERRED: ResolvedAddressTypes.IPV6_ONLY;
+            default:
+                throw new IllegalArgumentException(
+                        "Couldn't resolve ResolvedAddressTypes from InternetProtocolFamily array");
         }
-
-        this.resolvedAddressTypes = list.toArray(new InternetProtocolFamily[list.size()]);
-
-        return this;
     }
 
     /**
      * Sets the list of the protocol families of the address resolved.
-     * Usually, both {@link InternetProtocolFamily#IPv4} and {@link InternetProtocolFamily#IPv6} are specified in
-     * the order of preference.  To enforce the resolve to retrieve the address of a specific protocol family,
-     * specify only a single {@link InternetProtocolFamily}.
+     * You can use {@link DnsNameResolverBuilder#computeResolvedAddressTypes(InternetProtocolFamily...)}
+     * to get a {@link ResolvedAddressTypes} out of some {@link InternetProtocolFamily}s.
      *
      * @param resolvedAddressTypes the address types
      * @return {@code this}
      */
-    public DnsNameResolverBuilder resolvedAddressTypes(Iterable<InternetProtocolFamily> resolvedAddressTypes) {
-        checkNotNull(resolvedAddressTypes, "resolveAddressTypes");
-
-        final List<InternetProtocolFamily> list = new ArrayList<InternetProtocolFamily>(
-                InternetProtocolFamily.values().length);
-
-        for (InternetProtocolFamily f : resolvedAddressTypes) {
-            if (f == null) {
-                break;
-            }
-
-            // Avoid duplicate entries.
-            if (list.contains(f)) {
-                continue;
-            }
-
-            list.add(f);
-        }
-
-        if (list.isEmpty()) {
-            throw new IllegalArgumentException("no protocol family specified");
-        }
-
-        this.resolvedAddressTypes = list.toArray(new InternetProtocolFamily[list.size()]);
-
+    public DnsNameResolverBuilder resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes) {
+        this.resolvedAddressTypes = resolvedAddressTypes;
         return this;
     }
 
@@ -291,6 +262,17 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
+     * Set the {@link DnsServerAddressStreamProvider} which is used to determine which DNS server is used to resolve
+     * each hostname.
+     * @return {@code this}.
+     */
+    public DnsNameResolverBuilder nameServerProvider(DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
+        this.dnsServerAddressStreamProvider =
+                checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
+        return this;
+    }
+
+    /**
      * Set the list of search domains of the resolver.
      *
      * @param searchDomains the search domains
@@ -330,25 +312,44 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
+    private DnsCache newCache() {
+        return new DefaultDnsCache(intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE), intValue(negativeTtl, 0));
+    }
+
+    /**
+     * Set if domain / host names should be decoded to unicode when received.
+     * See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
+     *
+     * @param decodeIdn if should get decoded
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder decodeIdn(boolean decodeIdn) {
+        this.decodeIdn = decodeIdn;
+        return this;
+    }
+
     /**
      * Returns a new {@link DnsNameResolver} instance.
      *
      * @return a {@link DnsNameResolver}
      */
     public DnsNameResolver build() {
-
         if (resolveCache != null && (minTtl != null || maxTtl != null || negativeTtl != null)) {
             throw new IllegalStateException("resolveCache and TTLs are mutually exclusive");
         }
 
-        DnsCache cache = resolveCache != null ? resolveCache :
-                new DefaultDnsCache(intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE), intValue(negativeTtl, 0));
+        if (authoritativeDnsServerCache != null && (minTtl != null || maxTtl != null || negativeTtl != null)) {
+            throw new IllegalStateException("authoritativeDnsServerCache and TTLs are mutually exclusive");
+        }
 
+        DnsCache resolveCache = this.resolveCache != null ? this.resolveCache : newCache();
+        DnsCache authoritativeDnsServerCache = this.authoritativeDnsServerCache != null ?
+                this.authoritativeDnsServerCache : newCache();
         return new DnsNameResolver(
                 eventLoop,
                 channelFactory,
-                nameServerAddresses,
-                cache,
+                resolveCache,
+                authoritativeDnsServerCache,
                 queryTimeoutMillis,
                 resolvedAddressTypes,
                 recursionDesired,
@@ -357,7 +358,9 @@ public final class DnsNameResolverBuilder {
                 maxPayloadSize,
                 optResourceEnabled,
                 hostsFileEntriesResolver,
+                dnsServerAddressStreamProvider,
                 searchDomains,
-                ndots);
+                ndots,
+                decodeIdn);
     }
 }

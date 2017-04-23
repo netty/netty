@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.7.Final-SNAPSHOT</version>
+    <version>4.1.10.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec</artifactId>
@@ -68,6 +68,11 @@
       <groupId>com.github.jponge</groupId>
       <artifactId>lzma-java</artifactId>
       <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
     </dependency>
 
     <!-- Test dependencies for jboss marshalling encoder/decoder -->

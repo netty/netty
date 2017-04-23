@@ -50,7 +50,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
      * However in future releases ownership should always be transferred and callers of this class should call
      * {@link ReferenceCounted#retain()} if necessary.
      */
-    private boolean releaseOnClose;
+    private final boolean releaseOnClose;
 
     /**
      * Creates a new stream which reads data from the specified {@code buffer}
@@ -92,7 +92,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
      * Creates a new stream which reads data from the specified {@code buffer}
      * starting at the current {@code readerIndex} and ending at
      * {@code readerIndex + length}.
-     * @param buffer The buffer which provides the content for this {@Link InputStream}.
+     * @param buffer The buffer which provides the content for this {@link InputStream}.
      * @param length The length of the buffer to use for this {@link InputStream}.
      * @param releaseOnClose {@code true} means that when {@link #close()} is called then {@link ByteBuf#release()} will
      *                       be called on {@code buffer}.

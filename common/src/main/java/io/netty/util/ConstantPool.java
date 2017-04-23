@@ -31,7 +31,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
 
     private final ConcurrentMap<String, T> constants = PlatformDependent.newConcurrentHashMap();
 
-    private AtomicInteger nextId = new AtomicInteger(1);
+    private final AtomicInteger nextId = new AtomicInteger(1);
 
     /**
      * Shortcut of {@link #valueOf(String) valueOf(firstNameComponent.getName() + "#" + secondNameComponent)}.
@@ -113,7 +113,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
         throw new IllegalArgumentException(String.format("'%s' is already in use", name));
     }
 
-    private String checkNotNullAndNotEmpty(String name) {
+    private static String checkNotNullAndNotEmpty(String name) {
         ObjectUtil.checkNotNull(name, "name");
 
         if (name.isEmpty()) {

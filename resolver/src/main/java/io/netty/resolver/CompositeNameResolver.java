@@ -19,6 +19,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Arrays;
 import java.util.List;
@@ -30,6 +31,7 @@ import static io.netty.util.internal.ObjectUtil.*;
  *
  * In case of a failure, only the last one will be reported.
  */
+@UnstableApi
 public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
 
     private final NameResolver<T>[] resolvers;
@@ -66,7 +68,7 @@ public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
         if (resolverIndex >= resolvers.length) {
             promise.setFailure(lastFailure);
         } else {
-            NameResolver resolver = resolvers[resolverIndex];
+            NameResolver<T> resolver = resolvers[resolverIndex];
             resolver.resolve(inetHost).addListener(new FutureListener<T>() {
                 @Override
                 public void operationComplete(Future<T> future) throws Exception {
@@ -92,7 +94,7 @@ public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
         if (resolverIndex >= resolvers.length) {
             promise.setFailure(lastFailure);
         } else {
-            NameResolver resolver = resolvers[resolverIndex];
+            NameResolver<T> resolver = resolvers[resolverIndex];
             resolver.resolveAll(inetHost).addListener(new FutureListener<List<T>>() {
                 @Override
                 public void operationComplete(Future<List<T>> future) throws Exception {

@@ -16,6 +16,8 @@
 package io.netty.util;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SocketUtils;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -25,6 +27,7 @@ import java.io.FileReader;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -119,12 +122,13 @@ public final class NetUtil {
     /**
      * {@code true} if IPv4 should be used even if the system supports both IPv4 and IPv6.
      */
-    private static final boolean IPV4_PREFERRED = Boolean.getBoolean("java.net.preferIPv4Stack");
+    private static final boolean IPV4_PREFERRED = SystemPropertyUtil.getBoolean("java.net.preferIPv4Stack", false);
 
     /**
      * {@code true} if an IPv6 address should be preferred when a host has both an IPv4 address and an IPv6 address.
      */
-    private static final boolean IPV6_ADDRESSES_PREFERRED = Boolean.getBoolean("java.net.preferIPv6Addresses");
+    private static final boolean IPV6_ADDRESSES_PREFERRED =
+            SystemPropertyUtil.getBoolean("java.net.preferIPv6Addresses", false);
 
     /**
      * The logger being used by this class
@@ -161,11 +165,14 @@ public final class NetUtil {
         // Retrieve the list of available network interfaces.
         List<NetworkInterface> ifaces = new ArrayList<NetworkInterface>();
         try {
-            for (Enumeration<NetworkInterface> i = NetworkInterface.getNetworkInterfaces(); i.hasMoreElements();) {
-                NetworkInterface iface = i.nextElement();
-                // Use the interface with proper INET addresses only.
-                if (iface.getInetAddresses().hasMoreElements()) {
-                    ifaces.add(iface);
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            if (interfaces != null) {
+                while (interfaces.hasMoreElements()) {
+                    NetworkInterface iface = interfaces.nextElement();
+                    // Use the interface with proper INET addresses only.
+                    if (SocketUtils.addressesFromNetworkInterface(iface).hasMoreElements()) {
+                        ifaces.add(iface);
+                    }
                 }
             }
         } catch (SocketException e) {
@@ -178,7 +185,7 @@ public final class NetUtil {
         NetworkInterface loopbackIface = null;
         InetAddress loopbackAddr = null;
         loop: for (NetworkInterface iface: ifaces) {
-            for (Enumeration<InetAddress> i = iface.getInetAddresses(); i.hasMoreElements();) {
+            for (Enumeration<InetAddress> i = SocketUtils.addressesFromNetworkInterface(iface); i.hasMoreElements();) {
                 InetAddress addr = i.nextElement();
                 if (addr.isLoopbackAddress()) {
                     // Found
@@ -194,7 +201,7 @@ public final class NetUtil {
             try {
                 for (NetworkInterface iface: ifaces) {
                     if (iface.isLoopback()) {
-                        Enumeration<InetAddress> i = iface.getInetAddresses();
+                        Enumeration<InetAddress> i = SocketUtils.addressesFromNetworkInterface(iface);
                         if (i.hasMoreElements()) {
                             // Found the one with INET address.
                             loopbackIface = iface;
@@ -931,6 +938,51 @@ public final class NetUtil {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e); // Should never happen
         }
+    }
+
+    /**
+     * Returns the {@link String} representation of an {@link InetSocketAddress}.
+     * <p>
+     * The output does not include Scope ID.
+     * @param addr {@link InetSocketAddress} to be converted to an address string
+     * @return {@code String} containing the text-formatted IP address
+     */
+    public static String toSocketAddressString(InetSocketAddress addr) {
+        String port = String.valueOf(addr.getPort());
+        final StringBuilder sb;
+
+        if (addr.isUnresolved()) {
+            String hostString = PlatformDependent.javaVersion() >= 7 ? addr.getHostString() : addr.getHostName();
+            sb = newSocketAddressStringBuilder(hostString, port, !isValidIpV6Address(hostString));
+        } else {
+            InetAddress address = addr.getAddress();
+            String hostString = toAddressString(address);
+            sb = newSocketAddressStringBuilder(hostString, port, address instanceof Inet4Address);
+        }
+        return sb.append(':').append(port).toString();
+    }
+
+    /**
+     * Returns the {@link String} representation of a host port combo.
+     */
+    public static String toSocketAddressString(String host, int port) {
+        String portStr = String.valueOf(port);
+        return newSocketAddressStringBuilder(
+                host, portStr, !isValidIpV6Address(host)).append(':').append(portStr).toString();
+    }
+
+    private static StringBuilder newSocketAddressStringBuilder(String host, String port, boolean ipv4) {
+        int hostLen = host.length();
+        if (ipv4) {
+            // Need to include enough space for hostString:port.
+            return new StringBuilder(hostLen + 1 + port.length()).append(host);
+        }
+        // Need to include enough space for [hostString]:port.
+        StringBuilder stringBuilder = new StringBuilder(hostLen + 3 + port.length());
+        if (hostLen > 1 && host.charAt(0) == '[' && host.charAt(hostLen - 1) == ']') {
+            return stringBuilder.append(host);
+        }
+        return stringBuilder.append('[').append(host).append(']');
     }
 
     /**

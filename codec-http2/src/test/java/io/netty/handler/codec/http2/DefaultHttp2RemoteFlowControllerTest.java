@@ -15,6 +15,21 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.EventExecutor;
+import junit.framework.AssertionFailedError;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
@@ -24,8 +39,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -38,25 +53,6 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
-import io.netty.util.concurrent.EventExecutor;
-
-import junit.framework.AssertionFailedError;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Tests for {@link DefaultHttp2RemoteFlowController}.
  */
@@ -67,15 +63,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     private static final int STREAM_D = 7;
 
     private DefaultHttp2RemoteFlowController controller;
-
-    @Mock
-    private ByteBuf buffer;
-
-    @Mock
-    private Http2FrameSizePolicy frameWriterSizePolicy;
-
-    @Mock
-    private Configuration frameWriterConfiguration;
 
     @Mock
     private ChannelHandlerContext ctx;
@@ -127,8 +114,8 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         connection.local().createStream(STREAM_B, false);
         Http2Stream streamC = connection.local().createStream(STREAM_C, false);
         Http2Stream streamD = connection.local().createStream(STREAM_D, false);
-        streamC.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
+        controller.updateDependencyTree(streamC.id(), STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
+        controller.updateDependencyTree(streamD.id(), STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
     }
 
     @Test
@@ -952,7 +939,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         return flowControlled;
     }
 
-    private void sendData(int streamId, FakeFlowControlled data) throws Http2Exception {
+    private void sendData(int streamId, FakeFlowControlled data) {
         Http2Stream stream = stream(streamId);
         controller.addFlowControlled(stream, data);
     }
@@ -961,7 +948,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         incrementWindowSize(streamId, -window(streamId));
     }
 
-    private int window(int streamId) throws Http2Exception {
+    private int window(int streamId) {
         return controller.windowSize(stream(streamId));
     }
 

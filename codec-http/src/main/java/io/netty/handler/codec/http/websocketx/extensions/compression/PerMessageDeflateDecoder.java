@@ -49,7 +49,7 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
 
     @Override
     protected int newRsv(WebSocketFrame msg) {
-        return (((WebSocketFrame) msg).rsv() & WebSocketExtension.RSV1) > 0 ?
+        return (msg.rsv() & WebSocketExtension.RSV1) > 0 ?
                 msg.rsv() ^ WebSocketExtension.RSV1 : msg.rsv();
     }
 

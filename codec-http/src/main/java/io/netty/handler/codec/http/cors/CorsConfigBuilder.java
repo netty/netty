@@ -149,6 +149,38 @@ public final class CorsConfigBuilder {
     }
 
     /**
+     * Specifies the headers to be exposed to calling clients.
+     *
+     * During a simple CORS request, only certain response headers are made available by the
+     * browser, for example using:
+     * <pre>
+     * xhr.getResponseHeader(HttpHeaderNames.CONTENT_TYPE);
+     * </pre>
+     *
+     * The headers that are available by default are:
+     * <ul>
+     * <li>Cache-Control</li>
+     * <li>Content-Language</li>
+     * <li>Content-Type</li>
+     * <li>Expires</li>
+     * <li>Last-Modified</li>
+     * <li>Pragma</li>
+     * </ul>
+     *
+     * To expose other headers they need to be specified which is what this method enables by
+     * adding the headers to the CORS 'Access-Control-Expose-Headers' response header.
+     *
+     * @param headers the values to be added to the 'Access-Control-Expose-Headers' response header
+     * @return {@link CorsConfigBuilder} to support method chaining.
+     */
+    public CorsConfigBuilder exposeHeaders(final CharSequence... headers) {
+        for (CharSequence header: headers) {
+            exposeHeaders.add(header.toString());
+        }
+        return this;
+    }
+
+    /**
      * By default cookies are not included in CORS requests, but this method will enable cookies to
      * be added to CORS requests. Calling this method will set the CORS 'Access-Control-Allow-Credentials'
      * response header to true.
@@ -212,6 +244,29 @@ public final class CorsConfigBuilder {
      */
     public CorsConfigBuilder allowedRequestHeaders(final String... headers) {
         requestHeaders.addAll(Arrays.asList(headers));
+        return this;
+    }
+
+    /**
+     * Specifies the if headers that should be returned in the CORS 'Access-Control-Allow-Headers'
+     * response header.
+     *
+     * If a client specifies headers on the request, for example by calling:
+     * <pre>
+     * xhr.setRequestHeader('My-Custom-Header', "SomeValue");
+     * </pre>
+     * the server will receive the above header name in the 'Access-Control-Request-Headers' of the
+     * preflight request. The server will then decide if it allows this header to be sent for the
+     * real request (remember that a preflight is not the real request but a request asking the server
+     * if it allow a request).
+     *
+     * @param headers the headers to be added to the preflight 'Access-Control-Allow-Headers' response header.
+     * @return {@link CorsConfigBuilder} to support method chaining.
+     */
+    public CorsConfigBuilder allowedRequestHeaders(final CharSequence... headers) {
+        for (CharSequence header: headers) {
+            requestHeaders.add(header.toString());
+        }
         return this;
     }
 

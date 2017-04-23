@@ -412,4 +412,9 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     public ByteBuf capacity(int newCapacity) {
         throw new ReadOnlyBufferException();
     }
+
+    @Override
+    public ByteBuf asReadOnly() {
+        return this;
+    }
 }

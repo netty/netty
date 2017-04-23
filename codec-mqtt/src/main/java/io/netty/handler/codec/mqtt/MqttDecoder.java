@@ -35,7 +35,7 @@ import static io.netty.handler.codec.mqtt.MqttCodecUtil.validateFixedHeader;
 /**
  * Decodes Mqtt messages from bytes, following
  * <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html">
- *     the MQTT protocl specification v3.1</a>
+ *     the MQTT protocol specification v3.1</a>
  */
 public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
@@ -55,7 +55,6 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
     private MqttFixedHeader mqttFixedHeader;
     private Object variableHeader;
-    private Object payload;
     private int bytesRemainingInVariablePart;
 
     private final int maxBytesInMessage;
@@ -99,7 +98,6 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                                 mqttFixedHeader.messageType(),
                                 bytesRemainingInVariablePart,
                                 variableHeader);
-                payload = decodedPayload.value;
                 bytesRemainingInVariablePart -= decodedPayload.numberOfBytesConsumed;
                 if (bytesRemainingInVariablePart != 0) {
                     throw new DecoderException(
@@ -107,10 +105,10 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                                     bytesRemainingInVariablePart + " (" + mqttFixedHeader.messageType() + ')');
                 }
                 checkpoint(DecoderState.READ_FIXED_HEADER);
-                MqttMessage message = MqttMessageFactory.newMessage(mqttFixedHeader, variableHeader, payload);
+                MqttMessage message = MqttMessageFactory.newMessage(
+                        mqttFixedHeader, variableHeader, decodedPayload.value);
                 mqttFixedHeader = null;
                 variableHeader = null;
-                payload = null;
                 out.add(message);
                 break;
             } catch (Exception cause) {

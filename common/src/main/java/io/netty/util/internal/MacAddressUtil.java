@@ -52,14 +52,17 @@ public final class MacAddressUtil {
         // Retrieve the list of available network interfaces.
         Map<NetworkInterface, InetAddress> ifaces = new LinkedHashMap<NetworkInterface, InetAddress>();
         try {
-            for (Enumeration<NetworkInterface> i = NetworkInterface.getNetworkInterfaces(); i.hasMoreElements();) {
-                NetworkInterface iface = i.nextElement();
-                // Use the interface with proper INET addresses only.
-                Enumeration<InetAddress> addrs = iface.getInetAddresses();
-                if (addrs.hasMoreElements()) {
-                    InetAddress a = addrs.nextElement();
-                    if (!a.isLoopbackAddress()) {
-                        ifaces.put(iface, a);
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            if (interfaces != null) {
+                while (interfaces.hasMoreElements()) {
+                    NetworkInterface iface = interfaces.nextElement();
+                    // Use the interface with proper INET addresses only.
+                    Enumeration<InetAddress> addrs = SocketUtils.addressesFromNetworkInterface(iface);
+                    if (addrs.hasMoreElements()) {
+                        InetAddress a = addrs.nextElement();
+                        if (!a.isLoopbackAddress()) {
+                            ifaces.put(iface, a);
+                        }
                     }
                 }
             }
@@ -76,7 +79,7 @@ public final class MacAddressUtil {
 
             byte[] macAddr;
             try {
-                macAddr = iface.getHardwareAddress();
+                macAddr = SocketUtils.hardwareAddressFromNetworkInterface(iface);
             } catch (SocketException e) {
                 logger.debug("Failed to get the hardware address of a network interface: {}", iface, e);
                 continue;
@@ -135,7 +138,7 @@ public final class MacAddressUtil {
         byte[] bestMacAddr = MacAddressUtil.bestAvailableMac();
         if (bestMacAddr == null) {
             bestMacAddr = new byte[EUI64_MAC_ADDRESS_LENGTH];
-            ThreadLocalRandom.current().nextBytes(bestMacAddr);
+            PlatformDependent.threadLocalRandom().nextBytes(bestMacAddr);
             logger.warn(
                     "Failed to find a usable hardware address from the network interfaces; using random bytes: {}",
                     MacAddressUtil.formatAddress(bestMacAddr));
@@ -184,7 +187,7 @@ public final class MacAddressUtil {
 
     private static void validateMacSeparator(char separator) {
         if (separator != ':' && separator != '-') {
-            throw new IllegalArgumentException("unsupported seperator: " + separator + " (expected: [:-])");
+            throw new IllegalArgumentException("unsupported separator: " + separator + " (expected: [:-])");
         }
     }
 
@@ -203,7 +206,8 @@ public final class MacAddressUtil {
     /**
      * @return positive - current is better, 0 - cannot tell from MAC addr, negative - candidate is better.
      */
-    private static int compareAddresses(byte[] current, byte[] candidate) {
+    // visible for testing
+    static int compareAddresses(byte[] current, byte[] candidate) {
         if (candidate == null || candidate.length < EUI48_MAC_ADDRESS_LENGTH) {
             return 1;
         }
@@ -227,20 +231,23 @@ public final class MacAddressUtil {
         }
 
         // Prefer globally unique address.
-        if (current.length == 0 || (current[0] & 2) == 0) {
-            if ((candidate[0] & 2) == 0) {
+        if ((candidate[0] & 2) == 0) {
+            if (current.length != 0 && (current[0] & 2) == 0) {
                 // Both current and candidate are globally unique addresses.
                 return 0;
             } else {
+                // Only candidate is globally unique.
+                return -1;
+            }
+        } else {
+            if (current.length != 0 && (current[0] & 2) == 0) {
                 // Only current is globally unique.
                 return 1;
+            } else {
+                // Both current and candidate are non-unique.
+                return 0;
             }
-        } else if ((candidate[0] & 2) == 0) {
-            // Only candidate is globally unique.
-            return -1;
         }
-        // Both current and candidate are non-unique.
-        return 0;
     }
 
     /**

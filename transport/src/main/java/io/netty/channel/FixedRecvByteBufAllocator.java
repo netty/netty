@@ -48,6 +48,7 @@ public class FixedRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllo
         this.bufferSize = bufferSize;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public Handle newHandle() {
         return new HandleImpl(bufferSize);

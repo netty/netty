@@ -29,7 +29,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 public class HttpResponseEncoderTest {
-    private static final long INTEGER_OVERLFLOW = (long) Integer.MAX_VALUE + 1;
+    private static final long INTEGER_OVERFLOW = (long) Integer.MAX_VALUE + 1;
     private static final FileRegion FILE_REGION = new DummyLongFileRegion();
 
     @Test
@@ -83,7 +83,7 @@ public class HttpResponseEncoderTest {
 
         @Override
         public long count() {
-            return INTEGER_OVERLFLOW;
+            return INTEGER_OVERFLOW;
         }
 
         @Override

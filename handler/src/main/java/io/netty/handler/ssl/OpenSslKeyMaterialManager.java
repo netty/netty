@@ -16,8 +16,8 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
-import org.apache.tomcat.jni.CertificateRequestedCallback;
-import org.apache.tomcat.jni.SSL;
+import io.netty.internal.tcnative.CertificateRequestedCallback;
+import io.netty.internal.tcnative.SSL;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.X509KeyManager;

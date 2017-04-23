@@ -19,8 +19,6 @@ import java.util.List;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import org.easymock.EasyMock;
-import org.easymock.IArgumentMatcher;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -31,6 +29,9 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import org.mockito.ArgumentMatcher;
+
+import static org.mockito.Mockito.argThat;
 
 public final class WebSocketExtensionTestUtil {
 
@@ -64,12 +65,7 @@ public final class WebSocketExtensionTestUtil {
         return res;
     }
 
-    public static WebSocketExtensionData webSocketExtensionDataEqual(String name) {
-        EasyMock.reportMatcher(new WebSocketExtensionDataMatcher(name));
-        return null;
-    }
-
-    public static class WebSocketExtensionDataMatcher implements IArgumentMatcher {
+    static final class WebSocketExtensionDataMatcher implements ArgumentMatcher<WebSocketExtensionData> {
 
         private final String name;
 
@@ -78,15 +74,13 @@ public final class WebSocketExtensionTestUtil {
         }
 
         @Override
-        public void appendTo(StringBuffer buf) {
-            buf.append("WebSocketExtensionData with name=" + name);
+        public boolean matches(WebSocketExtensionData data) {
+            return data != null && name.equals(data.name());
         }
+    }
 
-        @Override
-        public boolean matches(Object o) {
-            return o instanceof WebSocketExtensionData &&
-                    name.equals(((WebSocketExtensionData) o).name());
-        }
+    static WebSocketExtensionData webSocketExtensionDataMatcher(String text) {
+        return argThat(new WebSocketExtensionDataMatcher(text));
     }
 
     private WebSocketExtensionTestUtil() {
@@ -124,5 +118,4 @@ public final class WebSocketExtensionTestUtil {
             // unused
         }
     }
-
 }

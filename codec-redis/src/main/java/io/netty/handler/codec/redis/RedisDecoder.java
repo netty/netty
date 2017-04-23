@@ -53,7 +53,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
     }
 
     /**
-     * Creates a new instance with default {@code maxInlineMessageLength} and {@code messageaPool}.
+     * Creates a new instance with default {@code maxInlineMessageLength} and {@code messagePool}.
      */
     public RedisDecoder() {
         // 1024 * 64 is max inline length of current Redis server implementation.

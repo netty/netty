@@ -21,7 +21,10 @@ import io.netty.channel.udt.UdtChannel;
 
 /**
  * Message Channel Acceptor for UDT Datagrams.
+ *
+ * @deprecated The UDT transport is no longer maintained and will be removed.
  */
+@Deprecated
 public class NioUdtMessageAcceptorChannel extends NioUdtAcceptorChannel {
 
     public NioUdtMessageAcceptorChannel() {

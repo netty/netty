@@ -52,7 +52,7 @@ public class JdkSslContext extends SslContext {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkSslContext.class);
 
     static final String PROTOCOL = "TLS";
-    static final String[] PROTOCOLS;
+    static final String[] DEFAULT_PROTOCOLS;
     static final List<String> DEFAULT_CIPHERS;
     static final Set<String> SUPPORTED_CIPHERS;
 
@@ -80,9 +80,9 @@ public class JdkSslContext extends SslContext {
                 "TLSv1.2", "TLSv1.1", "TLSv1");
 
         if (!protocols.isEmpty()) {
-            PROTOCOLS = protocols.toArray(new String[protocols.size()]);
+            DEFAULT_PROTOCOLS = protocols.toArray(new String[protocols.size()]);
         } else {
-            PROTOCOLS = engine.getEnabledProtocols();
+            DEFAULT_PROTOCOLS = engine.getEnabledProtocols();
         }
 
         // Choose the sensible default list of cipher suites.
@@ -120,7 +120,7 @@ public class JdkSslContext extends SslContext {
         DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
 
         if (logger.isDebugEnabled()) {
-            logger.debug("Default protocols (JDK): {} ", Arrays.asList(PROTOCOLS));
+            logger.debug("Default protocols (JDK): {} ", Arrays.asList(DEFAULT_PROTOCOLS));
             logger.debug("Default cipher suites (JDK): {}", DEFAULT_CIPHERS);
         }
     }
@@ -133,6 +133,7 @@ public class JdkSslContext extends SslContext {
         }
     }
 
+    private final String[] protocols;
     private final String[] cipherSuites;
     private final List<String> unmodifiableCipherSuites;
     private final JdkApplicationProtocolNegotiator apn;
@@ -150,7 +151,7 @@ public class JdkSslContext extends SslContext {
     public JdkSslContext(SSLContext sslContext, boolean isClient,
                          ClientAuth clientAuth) {
         this(sslContext, isClient, null, IdentityCipherSuiteFilter.INSTANCE,
-                JdkDefaultApplicationProtocolNegotiator.INSTANCE, clientAuth, false);
+                JdkDefaultApplicationProtocolNegotiator.INSTANCE, clientAuth, null, false);
     }
 
     /**
@@ -158,7 +159,7 @@ public class JdkSslContext extends SslContext {
      *
      * @param sslContext the {@link SSLContext} to use.
      * @param isClient {@code true} if this context should create {@link SSLEngine}s for client-side usage.
-     * @param ciphers the ciphers to use or {@code null} if the standart should be used.
+     * @param ciphers the ciphers to use or {@code null} if the standard should be used.
      * @param cipherFilter the filter to use.
      * @param apn the {@link ApplicationProtocolConfig} to use.
      * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.
@@ -166,16 +167,17 @@ public class JdkSslContext extends SslContext {
     public JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers,
                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                          ClientAuth clientAuth) {
-        this(sslContext, isClient, ciphers, cipherFilter, toNegotiator(apn, !isClient), clientAuth, false);
+        this(sslContext, isClient, ciphers, cipherFilter, toNegotiator(apn, !isClient), clientAuth, null, false);
     }
 
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                  JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, boolean startTls) {
+                  JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls) {
         super(startTls);
         this.apn = checkNotNull(apn, "apn");
         this.clientAuth = checkNotNull(clientAuth, "clientAuth");
         cipherSuites = checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
                 ciphers, DEFAULT_CIPHERS, SUPPORTED_CIPHERS);
+        this.protocols = protocols == null ? DEFAULT_PROTOCOLS : protocols;
         unmodifiableCipherSuites = Collections.unmodifiableList(Arrays.asList(cipherSuites));
         this.sslContext = checkNotNull(sslContext, "sslContext");
         this.isClient = isClient;
@@ -232,7 +234,7 @@ public class JdkSslContext extends SslContext {
 
     private SSLEngine configureAndWrapEngine(SSLEngine engine) {
         engine.setEnabledCipherSuites(cipherSuites);
-        engine.setEnabledProtocols(PROTOCOLS);
+        engine.setEnabledProtocols(protocols);
         engine.setUseClientMode(isClient());
         if (isServer()) {
             switch (clientAuth) {

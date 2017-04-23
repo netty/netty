@@ -74,7 +74,16 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
      * @param maxCapacity the maximum capacity of the underlying direct buffer
      */
     protected UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
-        this(alloc, initialBuffer, maxCapacity, true);
+        // We never try to free the buffer if it was provided by the end-user as we not know if this is an duplicate or
+        // an slice. This is done to prevent an IllegalArgumentException when using Java9 as Unsafe.invokeCleaner(...)
+        // will check if the given buffer is either an duplicate or slice and in this case throw an
+        // IllegalArgumentException.
+        //
+        // See http://hg.openjdk.java.net/jdk9/hs-demo/jdk/file/0d2ab72ba600/src/jdk.unsupported/share/classes/
+        // sun/misc/Unsafe.java#l1250
+        //
+        // We also call slice() explicitly here to preserve behaviour with previous netty releases.
+        this(alloc, initialBuffer.slice(), maxCapacity, false);
     }
 
     UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity, boolean doFree) {
@@ -100,7 +109,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
         this.alloc = alloc;
         doNotFree = !doFree;
-        setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN), false);
+        setByteBuffer(initialBuffer.order(ByteOrder.BIG_ENDIAN), false);
         writerIndex(initialCapacity);
     }
 
@@ -147,10 +156,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     @Override
     public ByteBuf capacity(int newCapacity) {
-        ensureAccessible();
-        if (newCapacity < 0 || newCapacity > maxCapacity()) {
-            throw new IllegalArgumentException("newCapacity: " + newCapacity);
-        }
+        checkNewCapacity(newCapacity);
 
         int readerIndex = readerIndex();
         int writerIndex = writerIndex();

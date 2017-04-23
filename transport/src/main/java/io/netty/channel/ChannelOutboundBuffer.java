@@ -24,7 +24,6 @@ import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -665,15 +664,15 @@ public final class ChannelOutboundBuffer {
     }
 
     private static void safeSuccess(ChannelPromise promise) {
-        if (!(promise instanceof VoidChannelPromise)) {
-            PromiseNotificationUtil.trySuccess(promise, null, logger);
-        }
+        // Only log if the given promise is not of type VoidChannelPromise as trySuccess(...) is expected to return
+        // false.
+        PromiseNotificationUtil.trySuccess(promise, null, promise instanceof VoidChannelPromise ? null : logger);
     }
 
     private static void safeFail(ChannelPromise promise, Throwable cause) {
-        if (!(promise instanceof VoidChannelPromise)) {
-            PromiseNotificationUtil.tryFailure(promise, cause, logger);
-        }
+        // Only log if the given promise is not of type VoidChannelPromise as tryFailure(...) is expected to return
+        // false.
+        PromiseNotificationUtil.tryFailure(promise, cause, promise instanceof VoidChannelPromise ? null : logger);
     }
 
     @Deprecated
@@ -755,7 +754,7 @@ public final class ChannelOutboundBuffer {
     static final class Entry {
         private static final Recycler<Entry> RECYCLER = new Recycler<Entry>() {
             @Override
-            protected Entry newObject(Handle handle) {
+            protected Entry newObject(Handle<Entry> handle) {
                 return new Entry(handle);
             }
         };

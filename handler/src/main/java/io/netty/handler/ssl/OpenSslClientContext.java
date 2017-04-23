@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import org.apache.tomcat.jni.SSL;
+import io.netty.internal.tcnative.SSL;
 
 import java.io.File;
 import java.security.PrivateKey;
@@ -175,17 +175,18 @@ public final class OpenSslClientContext extends OpenSslContext {
             throws SSLException {
         this(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
-                keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, null, sessionCacheSize,
+                sessionTimeout, false);
     }
 
     OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                          X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                                 KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
-                                CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-                                long sessionCacheSize, long sessionTimeout)
+                                CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
+                                long sessionCacheSize, long sessionTimeout, boolean enableOcsp)
             throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT, keyCertChain,
-                ClientAuth.NONE, false);
+                ClientAuth.NONE, protocols, false, enableOcsp);
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,

@@ -19,7 +19,7 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
 
-final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
+class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
 
     UnpooledUnsafeNoCleanerDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(alloc, initialCapacity, maxCapacity);
@@ -30,6 +30,10 @@ final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByt
         return PlatformDependent.allocateDirectNoCleaner(initialCapacity);
     }
 
+    ByteBuffer reallocateDirect(ByteBuffer oldBuffer, int initialCapacity) {
+        return PlatformDependent.reallocateDirectNoCleaner(oldBuffer, initialCapacity);
+    }
+
     @Override
     protected void freeDirect(ByteBuffer buffer) {
         PlatformDependent.freeDirectNoCleaner(buffer);
@@ -37,10 +41,7 @@ final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByt
 
     @Override
     public ByteBuf capacity(int newCapacity) {
-        ensureAccessible();
-        if (newCapacity < 0 || newCapacity > maxCapacity()) {
-            throw new IllegalArgumentException("newCapacity: " + newCapacity);
-        }
+        checkNewCapacity(newCapacity);
 
         int readerIndex = readerIndex();
         int writerIndex = writerIndex();
@@ -48,7 +49,7 @@ final class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByt
 
         if (newCapacity > oldCapacity) {
             ByteBuffer oldBuffer = buffer;
-            ByteBuffer newBuffer = PlatformDependent.reallocateDirectNoCleaner(oldBuffer, newCapacity);
+            ByteBuffer newBuffer = reallocateDirect(oldBuffer, newCapacity);
             setByteBuffer(newBuffer, false);
         } else if (newCapacity < oldCapacity) {
             ByteBuffer oldBuffer = buffer;

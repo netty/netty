@@ -430,7 +430,7 @@ public class EmbeddedChannelTest {
 
       // There was no #flushInbound() call so nobody should have called
       // #channelReadComplete()
-      assertEquals(flushCount.get(), 0);
+      assertEquals(0, flushCount.get());
     }
 
     @Test

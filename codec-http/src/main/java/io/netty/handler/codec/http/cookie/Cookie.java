@@ -22,6 +22,11 @@ package io.netty.handler.codec.http.cookie;
 public interface Cookie extends Comparable<Cookie> {
 
     /**
+     * Constant for undefined MaxAge attribute value.
+     */
+    long UNDEFINED_MAX_AGE = Long.MIN_VALUE;
+
+    /**
      * Returns the name of this {@link Cookie}.
      *
      * @return The name of this {@link Cookie}
@@ -87,7 +92,7 @@ public interface Cookie extends Comparable<Cookie> {
     void setPath(String path);
 
     /**
-     * Returns the maximum age of this {@link Cookie} in seconds or {@link Long#MIN_VALUE} if unspecified
+     * Returns the maximum age of this {@link Cookie} in seconds or {@link Cookie#UNDEFINED_MAX_AGE} if unspecified
      *
      * @return The maximum age of this {@link Cookie}
      */
@@ -97,7 +102,7 @@ public interface Cookie extends Comparable<Cookie> {
      * Sets the maximum age of this {@link Cookie} in seconds.
      * If an age of {@code 0} is specified, this {@link Cookie} will be
      * automatically removed by browser because it will expire immediately.
-     * If {@link Long#MIN_VALUE} is specified, this {@link Cookie} will be removed when the
+     * If {@link Cookie#UNDEFINED_MAX_AGE} is specified, this {@link Cookie} will be removed when the
      * browser is closed.
      *
      * @param maxAge The maximum age of this {@link Cookie} in seconds

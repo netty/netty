@@ -14,246 +14,32 @@
  */
 package io.netty.microbench.channel;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.concurrent.EventExecutor;
 
-import java.net.SocketAddress;
-
-public abstract class EmbeddedChannelWriteReleaseHandlerContext implements ChannelHandlerContext {
-    private static final String HANDLER_NAME = "microbench-delegator-ctx";
-    private final EventLoop eventLoop;
-    private final Channel channel;
-    private final ByteBufAllocator alloc;
-    private final ChannelHandler handler;
-    private SocketAddress localAddress;
-
-    public EmbeddedChannelWriteReleaseHandlerContext(ByteBufAllocator alloc, ChannelHandler handler) {
+public abstract class EmbeddedChannelWriteReleaseHandlerContext extends EmbeddedChannelHandlerContext {
+    protected EmbeddedChannelWriteReleaseHandlerContext(ByteBufAllocator alloc, ChannelHandler handler) {
         this(alloc, handler, new EmbeddedChannel());
     }
 
-    public EmbeddedChannelWriteReleaseHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
+    protected EmbeddedChannelWriteReleaseHandlerContext(ByteBufAllocator alloc, ChannelHandler handler,
             EmbeddedChannel channel) {
-        this.alloc = checkNotNull(alloc, "alloc");
-        this.channel = checkNotNull(channel, "channel");
-        this.handler = checkNotNull(handler, "handler");
-        eventLoop = checkNotNull(channel.eventLoop(), "eventLoop");
+        super(alloc, handler, channel);
     }
 
     protected abstract void handleException(Throwable t);
 
     @Override
-    public <T> Attribute<T> attr(AttributeKey<T> key) {
-        return null;
-    }
-
-    @Override
-    public <T> boolean hasAttr(AttributeKey<T> key) {
-        return false;
-    }
-
-    @Override
-    public Channel channel() {
-        return channel;
-    }
-
-    @Override
-    public EventExecutor executor() {
-        return eventLoop;
-    }
-
-    @Override
-    public String name() {
-        return HANDLER_NAME;
-    }
-
-    @Override
-    public ChannelHandler handler() {
-        return handler;
-    }
-
-    @Override
-    public boolean isRemoved() {
-        return false;
-    }
-
-    @Override
-    public ChannelHandlerContext fireChannelRegistered() {
-        return this;
-    }
-
-    @Override
-    public ChannelHandlerContext fireChannelUnregistered() {
-        return this;
-    }
-
-    @Override
-    public ChannelHandlerContext fireChannelActive() {
-        return this;
-    }
-
-    @Override
-    public ChannelHandlerContext fireChannelInactive() {
-        return this;
-    }
-
-    @Override
-    public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-        try {
-            handler().exceptionCaught(this, cause);
-        } catch (Exception e) {
-            handleException(e);
-        }
-        return null;
-    }
-
-    @Override
-    public ChannelHandlerContext fireUserEventTriggered(Object event) {
-        return this;
-    }
-
-    @Override
-    public ChannelHandlerContext fireChannelRead(Object msg) {
-        return this;
-    }
-
-    @Override
-    public ChannelHandlerContext fireChannelReadComplete() {
-        return this;
-    }
-
-    @Override
-    public ChannelHandlerContext fireChannelWritabilityChanged() {
-        return this;
-    }
-
-    @Override
-    public ChannelFuture bind(SocketAddress localAddress) {
-        return bind(localAddress, newPromise());
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, newPromise());
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return connect(remoteAddress, localAddress, newPromise());
-    }
-
-    @Override
-    public ChannelFuture disconnect() {
-        return disconnect(newPromise());
-    }
-
-    @Override
-    public ChannelFuture close() {
-        return close(newPromise());
-    }
-
-    @Override
-    public ChannelFuture deregister() {
-        return deregister(newPromise());
-    }
-
-    @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        try {
-            channel().bind(localAddress, promise);
-            this.localAddress = localAddress;
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-        try {
-            channel().connect(remoteAddress, localAddress, promise);
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) {
-        try {
-            channel().connect(remoteAddress, localAddress, promise);
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
-    }
-
-    @Override
-    public ChannelFuture disconnect(ChannelPromise promise) {
-        try {
-            channel().disconnect(promise);
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
-    }
-
-    @Override
-    public ChannelFuture close(ChannelPromise promise) {
-        try {
-            channel().close(promise);
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
-    }
-
-    @Override
-    public ChannelFuture deregister(ChannelPromise promise) {
-        try {
-            channel().deregister(promise);
-        } catch (Exception e) {
-            promise.setFailure(e);
-            handleException(e);
-        }
-        return promise;
-    }
-
-    @Override
-    public ChannelHandlerContext read() {
-        try {
-            channel().read();
-        } catch (Exception e) {
-            handleException(e);
-        }
-        return this;
-    }
-
-    @Override
-    public ChannelFuture write(Object msg) {
+    public final ChannelFuture write(Object msg) {
         return write(msg, newPromise());
     }
 
     @Override
-    public ChannelFuture write(Object msg, ChannelPromise promise) {
+    public final ChannelFuture write(Object msg, ChannelPromise promise) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
@@ -269,53 +55,23 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext implements Chann
     }
 
     @Override
-    public ChannelHandlerContext flush() {
-        channel().flush();
-        return this;
+    public final ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+        try {
+            if (msg instanceof ReferenceCounted) {
+                ((ReferenceCounted) msg).release();
+                promise.setSuccess();
+            } else {
+                channel().writeAndFlush(msg, promise);
+            }
+        } catch (Exception e) {
+            promise.setFailure(e);
+            handleException(e);
+        }
+        return promise;
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return channel().writeAndFlush(msg, promise);
-    }
-
-    @Override
-    public ChannelFuture writeAndFlush(Object msg) {
+    public final ChannelFuture writeAndFlush(Object msg) {
         return writeAndFlush(msg, newPromise());
-    }
-
-    @Override
-    public ChannelPipeline pipeline() {
-        return channel().pipeline();
-    }
-
-    @Override
-    public ByteBufAllocator alloc() {
-        return alloc;
-    }
-
-    @Override
-    public ChannelPromise newPromise() {
-        return channel().newPromise();
-    }
-
-    @Override
-    public ChannelProgressivePromise newProgressivePromise() {
-        return channel().newProgressivePromise();
-    }
-
-    @Override
-    public ChannelFuture newSucceededFuture() {
-        return channel().newSucceededFuture();
-    }
-
-    @Override
-    public ChannelFuture newFailedFuture(Throwable cause) {
-        return channel().newFailedFuture(cause);
-    }
-
-    @Override
-    public ChannelPromise voidPromise() {
-        return channel().voidPromise();
     }
 }

@@ -21,7 +21,7 @@ package io.netty.buffer;
 public class PooledBigEndianHeapByteBufTest extends AbstractPooledByteBufTest {
 
     @Override
-    protected ByteBuf alloc(int length) {
-        return PooledByteBufAllocator.DEFAULT.heapBuffer(length);
+    protected ByteBuf alloc(int length, int maxCapacity) {
+        return PooledByteBufAllocator.DEFAULT.heapBuffer(length, maxCapacity);
     }
 }

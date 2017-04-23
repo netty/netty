@@ -17,16 +17,13 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.internal.UnstableApi;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.reflect.Method;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
+
+import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.defaultAddressArray;
 
 /**
  * Provides an infinite sequence of DNS server addresses to {@link DnsNameResolver}.
@@ -34,66 +31,21 @@ import java.util.List;
 @UnstableApi
 @SuppressWarnings("IteratorNextCanNotThrowNoSuchElementException")
 public abstract class DnsServerAddresses {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsServerAddresses.class);
-
-    private static final List<InetSocketAddress> DEFAULT_NAME_SERVER_LIST;
-    private static final InetSocketAddress[] DEFAULT_NAME_SERVER_ARRAY;
-    private static final DnsServerAddresses DEFAULT_NAME_SERVERS;
-
-    static {
-        final int DNS_PORT = 53;
-        final List<InetSocketAddress> defaultNameServers = new ArrayList<InetSocketAddress>(2);
-        try {
-            Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
-            Method open = configClass.getMethod("open");
-            Method nameservers = configClass.getMethod("nameservers");
-            Object instance = open.invoke(null);
-
-            @SuppressWarnings("unchecked")
-            final List<String> list = (List<String>) nameservers.invoke(instance);
-            for (String a: list) {
-                if (a != null) {
-                    defaultNameServers.add(new InetSocketAddress(InetAddress.getByName(a), DNS_PORT));
-                }
-            }
-        } catch (Exception ignore) {
-            // Failed to get the system name server list.
-            // Will add the default name servers afterwards.
-        }
-
-        if (!defaultNameServers.isEmpty()) {
-            if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "Default DNS servers: {} (sun.net.dns.ResolverConfiguration)", defaultNameServers);
-            }
-        } else {
-            Collections.addAll(
-                    defaultNameServers,
-                    new InetSocketAddress("8.8.8.8", DNS_PORT),
-                    new InetSocketAddress("8.8.4.4", DNS_PORT));
-
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "Default DNS servers: {} (Google Public DNS as a fallback)", defaultNameServers);
-            }
-        }
-
-        DEFAULT_NAME_SERVER_LIST = Collections.unmodifiableList(defaultNameServers);
-        DEFAULT_NAME_SERVER_ARRAY = defaultNameServers.toArray(new InetSocketAddress[defaultNameServers.size()]);
-        DEFAULT_NAME_SERVERS = sequential(DEFAULT_NAME_SERVER_ARRAY);
-    }
-
     /**
+     * @deprecated Use {@link DefaultDnsServerAddressStreamProvider#defaultAddressList()}.
+     * <p>
      * Returns the list of the system DNS server addresses. If it failed to retrieve the list of the system DNS server
      * addresses from the environment, it will return {@code "8.8.8.8"} and {@code "8.8.4.4"}, the addresses of the
      * Google public DNS servers.
      */
+    @Deprecated
     public static List<InetSocketAddress> defaultAddressList() {
-        return DEFAULT_NAME_SERVER_LIST;
+        return DefaultDnsServerAddressStreamProvider.defaultAddressList();
     }
 
     /**
+     * @deprecated Use {@link DefaultDnsServerAddressStreamProvider#defaultAddresses()}.
+     * <p>
      * Returns the {@link DnsServerAddresses} that yields the system DNS server addresses sequentially. If it failed to
      * retrieve the list of the system DNS server addresses from the environment, it will use {@code "8.8.8.8"} and
      * {@code "8.8.4.4"}, the addresses of the Google public DNS servers.
@@ -104,8 +56,9 @@ public abstract class DnsServerAddresses {
      * </pre>
      * </p>
      */
+    @Deprecated
     public static DnsServerAddresses defaultAddresses() {
-        return DEFAULT_NAME_SERVERS;
+        return DefaultDnsServerAddressStreamProvider.defaultAddresses();
     }
 
     /**
@@ -254,7 +207,7 @@ public abstract class DnsServerAddresses {
         }
 
         if (list.isEmpty()) {
-            return DEFAULT_NAME_SERVER_ARRAY;
+            return defaultAddressArray();
         }
 
         return list.toArray(new InetSocketAddress[list.size()]);

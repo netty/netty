@@ -127,7 +127,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      *
      * @param ctx The context to fire the event on
      * @param msg The message to send
-     * @param release {@code true} to release if present in {@link #messageMap}. {@code false} otherwise.
+     * @param release {@code true} to call release on the value if it is present. {@code false} to not call release.
      * @param stream the stream of the message which is being fired
      */
     protected void fireChannelRead(ChannelHandlerContext ctx, FullHttpMessage msg, boolean release,

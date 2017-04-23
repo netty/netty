@@ -25,8 +25,8 @@ import static org.junit.Assert.*;
 public class BigEndianHeapByteBufTest extends AbstractByteBufTest {
 
     @Override
-    protected ByteBuf newBuffer(int length) {
-        ByteBuf buffer = Unpooled.buffer(length);
+    protected ByteBuf newBuffer(int length, int maxCapacity) {
+        ByteBuf buffer = Unpooled.buffer(length, maxCapacity);
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }

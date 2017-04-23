@@ -33,35 +33,35 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public class FileDescriptor {
     private static final ClosedChannelException WRITE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), FileDescriptor.class, "write(...)");
+            new ClosedChannelException(), FileDescriptor.class, "write(..)");
     private static final ClosedChannelException WRITE_ADDRESS_CLOSED_CHANNEL_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(new ClosedChannelException(), FileDescriptor.class, "writeAddress(...)");
+            ThrowableUtil.unknownStackTrace(new ClosedChannelException(), FileDescriptor.class, "writeAddress(..)");
     private static final ClosedChannelException WRITEV_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), FileDescriptor.class, "writev(...)");
+            new ClosedChannelException(), FileDescriptor.class, "writev(..)");
     private static final ClosedChannelException WRITEV_ADDRESSES_CLOSED_CHANNEL_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(new ClosedChannelException(), FileDescriptor.class, "writevAddresses(...)");
+            ThrowableUtil.unknownStackTrace(new ClosedChannelException(), FileDescriptor.class, "writevAddresses(..)");
     private static final ClosedChannelException READ_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), FileDescriptor.class, "read(...)");
+            new ClosedChannelException(), FileDescriptor.class, "read(..)");
     private static final ClosedChannelException READ_ADDRESS_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), FileDescriptor.class, "readAddress(...)");
+            new ClosedChannelException(), FileDescriptor.class, "readAddress(..)");
     private static final Errors.NativeIoException WRITE_CONNECTION_RESET_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            Errors.newConnectionResetException("syscall:write(...)", Errors.ERRNO_EPIPE_NEGATIVE),
-            FileDescriptor.class, "write(...)");
+            Errors.newConnectionResetException("syscall:write", Errors.ERRNO_EPIPE_NEGATIVE),
+            FileDescriptor.class, "write(..)");
     private static final Errors.NativeIoException WRITE_ADDRESS_CONNECTION_RESET_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:write(...)",
-                    Errors.ERRNO_EPIPE_NEGATIVE), FileDescriptor.class, "writeAddress(...)");
+            ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:write",
+                    Errors.ERRNO_EPIPE_NEGATIVE), FileDescriptor.class, "writeAddress(..)");
     private static final Errors.NativeIoException WRITEV_CONNECTION_RESET_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            Errors.newConnectionResetException("syscall:writev(...)", Errors.ERRNO_EPIPE_NEGATIVE),
-            FileDescriptor.class, "writev(...)");
+            Errors.newConnectionResetException("syscall:writev", Errors.ERRNO_EPIPE_NEGATIVE),
+            FileDescriptor.class, "writev(..)");
     private static final Errors.NativeIoException WRITEV_ADDRESSES_CONNECTION_RESET_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:writev(...)",
-                    Errors.ERRNO_EPIPE_NEGATIVE), FileDescriptor.class, "writeAddresses(...)");
+            ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:writev",
+                    Errors.ERRNO_EPIPE_NEGATIVE), FileDescriptor.class, "writeAddresses(..)");
     private static final Errors.NativeIoException READ_CONNECTION_RESET_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            Errors.newConnectionResetException("syscall:read(...)", Errors.ERRNO_ECONNRESET_NEGATIVE),
-            FileDescriptor.class, "read(...)");
+            Errors.newConnectionResetException("syscall:read", Errors.ERRNO_ECONNRESET_NEGATIVE),
+            FileDescriptor.class, "read(..)");
     private static final Errors.NativeIoException READ_ADDRESS_CONNECTION_RESET_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:read(...)",
-                    Errors.ERRNO_ECONNRESET_NEGATIVE), FileDescriptor.class, "readAddress(...)");
+            ThrowableUtil.unknownStackTrace(Errors.newConnectionResetException("syscall:read",
+                    Errors.ERRNO_ECONNRESET_NEGATIVE), FileDescriptor.class, "readAddress(..)");
 
     private static final AtomicIntegerFieldUpdater<FileDescriptor> stateUpdater =
             AtomicIntegerFieldUpdater.newUpdater(FileDescriptor.class, "state");

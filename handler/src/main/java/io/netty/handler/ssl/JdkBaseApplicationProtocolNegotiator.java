@@ -41,7 +41,7 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
      * @param listenerFactory How the peer being notified of the selected protocol should behave.
      * @param protocols The order of iteration determines the preference of support for protocols.
      */
-    protected JdkBaseApplicationProtocolNegotiator(SslEngineWrapperFactory wrapperFactory,
+    JdkBaseApplicationProtocolNegotiator(SslEngineWrapperFactory wrapperFactory,
             ProtocolSelectorFactory selectorFactory, ProtocolSelectionListenerFactory listenerFactory,
             Iterable<String> protocols) {
         this(wrapperFactory, selectorFactory, listenerFactory, toList(protocols));
@@ -54,7 +54,7 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
      * @param listenerFactory How the peer being notified of the selected protocol should behave.
      * @param protocols The order of iteration determines the preference of support for protocols.
      */
-    protected JdkBaseApplicationProtocolNegotiator(SslEngineWrapperFactory wrapperFactory,
+    JdkBaseApplicationProtocolNegotiator(SslEngineWrapperFactory wrapperFactory,
             ProtocolSelectorFactory selectorFactory, ProtocolSelectionListenerFactory listenerFactory,
             String... protocols) {
         this(wrapperFactory, selectorFactory, listenerFactory, toList(protocols));
@@ -126,25 +126,25 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
         }
     };
 
-    protected static class NoFailProtocolSelector implements ProtocolSelector {
-        private final JdkSslEngine jettyWrapper;
+    static class NoFailProtocolSelector implements ProtocolSelector {
+        private final JdkSslEngine engineWrapper;
         private final Set<String> supportedProtocols;
 
-        public NoFailProtocolSelector(JdkSslEngine jettyWrapper, Set<String> supportedProtocols) {
-            this.jettyWrapper = jettyWrapper;
+        NoFailProtocolSelector(JdkSslEngine engineWrapper, Set<String> supportedProtocols) {
+            this.engineWrapper = engineWrapper;
             this.supportedProtocols = supportedProtocols;
         }
 
         @Override
         public void unsupported() {
-            jettyWrapper.getSession().setApplicationProtocol(null);
+            engineWrapper.getSession().setApplicationProtocol(null);
         }
 
         @Override
         public String select(List<String> protocols) throws Exception {
             for (String p : supportedProtocols) {
                 if (protocols.contains(p)) {
-                    jettyWrapper.getSession().setApplicationProtocol(p);
+                    engineWrapper.getSession().setApplicationProtocol(p);
                     return p;
                 }
             }
@@ -152,14 +152,14 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
         }
 
         public String noSelectMatchFound() throws Exception {
-            jettyWrapper.getSession().setApplicationProtocol(null);
+            engineWrapper.getSession().setApplicationProtocol(null);
             return null;
         }
     }
 
-    protected static final class FailProtocolSelector extends NoFailProtocolSelector {
-        public FailProtocolSelector(JdkSslEngine jettyWrapper, Set<String> supportedProtocols) {
-            super(jettyWrapper, supportedProtocols);
+    private static final class FailProtocolSelector extends NoFailProtocolSelector {
+        FailProtocolSelector(JdkSslEngine engineWrapper, Set<String> supportedProtocols) {
+            super(engineWrapper, supportedProtocols);
         }
 
         @Override
@@ -168,40 +168,41 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
         }
     }
 
-    protected static class NoFailProtocolSelectionListener implements ProtocolSelectionListener {
-        private final JdkSslEngine jettyWrapper;
+    private static class NoFailProtocolSelectionListener implements ProtocolSelectionListener {
+        private final JdkSslEngine engineWrapper;
         private final List<String> supportedProtocols;
 
-        public NoFailProtocolSelectionListener(JdkSslEngine jettyWrapper, List<String> supportedProtocols) {
-            this.jettyWrapper = jettyWrapper;
+        NoFailProtocolSelectionListener(JdkSslEngine engineWrapper, List<String> supportedProtocols) {
+            this.engineWrapper = engineWrapper;
             this.supportedProtocols = supportedProtocols;
         }
 
         @Override
         public void unsupported() {
-            jettyWrapper.getSession().setApplicationProtocol(null);
+            engineWrapper.getSession().setApplicationProtocol(null);
         }
 
         @Override
         public void selected(String protocol) throws Exception {
             if (supportedProtocols.contains(protocol)) {
-                jettyWrapper.getSession().setApplicationProtocol(protocol);
+                engineWrapper.getSession().setApplicationProtocol(protocol);
             } else {
                 noSelectedMatchFound(protocol);
             }
         }
 
-        public void noSelectedMatchFound(String protocol) throws Exception {
+        protected void noSelectedMatchFound(String protocol) throws Exception {
+            // Will never be called.
         }
     }
 
-    protected static final class FailProtocolSelectionListener extends NoFailProtocolSelectionListener {
-        public FailProtocolSelectionListener(JdkSslEngine jettyWrapper, List<String> supportedProtocols) {
-            super(jettyWrapper, supportedProtocols);
+    private static final class FailProtocolSelectionListener extends NoFailProtocolSelectionListener {
+        FailProtocolSelectionListener(JdkSslEngine engineWrapper, List<String> supportedProtocols) {
+            super(engineWrapper, supportedProtocols);
         }
 
         @Override
-        public void noSelectedMatchFound(String protocol) throws Exception {
+        protected void noSelectedMatchFound(String protocol) throws Exception {
             throw new SSLHandshakeException("No compatible protocols found");
         }
     }

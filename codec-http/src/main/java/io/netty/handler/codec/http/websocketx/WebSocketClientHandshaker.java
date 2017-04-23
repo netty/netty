@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpScheme;
+import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ThrowableUtil;
 
@@ -383,7 +384,7 @@ public abstract class WebSocketClientHandshaker {
     }
 
     /**
-     * Verfiy the {@link FullHttpResponse} and throws a {@link WebSocketHandshakeException} if something is wrong.
+     * Verify the {@link FullHttpResponse} and throws a {@link WebSocketHandshakeException} if something is wrong.
      */
     protected abstract void verify(FullHttpResponse response);
 
@@ -448,9 +449,32 @@ public abstract class WebSocketClientHandshaker {
         // check if the URI contained a port if not set the correct one depending on the schema.
         // See https://github.com/netty/netty/pull/1558
         if (wsPort == -1) {
-            return "wss".equals(wsURL.getScheme()) ? HttpScheme.HTTPS.port() : HttpScheme.HTTP.port();
+            return WebSocketScheme.WSS.name().contentEquals(wsURL.getScheme())
+                    ? WebSocketScheme.WSS.port() : WebSocketScheme.WS.port();
         }
         return wsPort;
+    }
+
+    static CharSequence websocketHostValue(URI wsURL) {
+        int port = wsURL.getPort();
+        if (port == -1) {
+            return wsURL.getHost();
+        }
+        String host = wsURL.getHost();
+        if (port == HttpScheme.HTTP.port()) {
+            return HttpScheme.HTTP.name().contentEquals(wsURL.getScheme())
+                    || WebSocketScheme.WS.name().contentEquals(wsURL.getScheme()) ?
+                    host : NetUtil.toSocketAddressString(host, port);
+        }
+        if (port == HttpScheme.HTTPS.port()) {
+            return HttpScheme.HTTPS.name().contentEquals(wsURL.getScheme())
+                    || WebSocketScheme.WSS.name().contentEquals(wsURL.getScheme()) ?
+                    host : NetUtil.toSocketAddressString(host, port);
+        }
+
+        // if the port is not standard (80/443) its needed to add the port to the header.
+        // See http://tools.ietf.org/html/rfc6454#section-6.2
+        return NetUtil.toSocketAddressString(host, port);
     }
 
     static CharSequence websocketOriginValue(String host, int wsPort) {
@@ -459,7 +483,7 @@ public abstract class WebSocketClientHandshaker {
         if (wsPort != HttpScheme.HTTP.port() && wsPort != HttpScheme.HTTPS.port()) {
             // if the port is not standard (80/443) its needed to add the port to the header.
             // See http://tools.ietf.org/html/rfc6454#section-6.2
-            return originValue + ':' + wsPort;
+            return NetUtil.toSocketAddressString(originValue, wsPort);
         }
         return originValue;
     }

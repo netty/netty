@@ -123,7 +123,6 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         if (frame instanceof BinaryWebSocketFrame) {
             // Echo the frame
             ctx.write(frame.retain());
-            return;
         }
     }
 

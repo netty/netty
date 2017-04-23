@@ -23,7 +23,7 @@ import java.io.Serializable;
  * <p>
  * The identifier is generated from various sources listed in the following:
  * <ul>
- * <li>MAC address (EUI-48 or EUI-64) or the network adapter, preferrably a globally unique one,</li>
+ * <li>MAC address (EUI-48 or EUI-64) or the network adapter, preferably a globally unique one,</li>
  * <li>the current process ID,</li>
  * <li>{@link System#currentTimeMillis()},</li>
  * <li>{@link System#nanoTime()},</li>

@@ -267,8 +267,7 @@ public final class NativeLibraryLoader {
                 try {
                     // Invoke the helper to load the native library, if succeed, then the native
                     // library belong to the specified ClassLoader.
-                    Method method = helper.getMethod("loadLibrary",
-                            new Class<?>[] { String.class, boolean.class });
+                    Method method = helper.getMethod("loadLibrary", String.class, boolean.class);
                     method.setAccessible(true);
                     return method.invoke(null, name, absolute);
                 } catch (Exception e) {

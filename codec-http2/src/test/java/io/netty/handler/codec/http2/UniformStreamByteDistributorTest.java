@@ -14,25 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.UniformStreamByteDistributor.DEFAULT_MIN_ALLOCATION_CHUNK;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.same;
-import static org.mockito.Mockito.atMost;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -42,11 +23,30 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MIN_ALLOCATION_CHUNK;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.same;
+import static org.mockito.Mockito.atMost;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+
 /**
  * Tests for {@link UniformStreamByteDistributor}.
  */
 public class UniformStreamByteDistributorTest {
-    private static int CHUNK_SIZE = DEFAULT_MIN_ALLOCATION_CHUNK;
+    private static final int CHUNK_SIZE = DEFAULT_MIN_ALLOCATION_CHUNK;
 
     private static final int STREAM_A = 1;
     private static final int STREAM_B = 3;
@@ -73,16 +73,16 @@ public class UniformStreamByteDistributorTest {
         connection.local().createStream(STREAM_B, false);
         Http2Stream streamC = connection.local().createStream(STREAM_C, false);
         Http2Stream streamD = connection.local().createStream(STREAM_D, false);
-        streamC.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
-        streamD.setPriority(STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
+        setPriority(streamC.id(), STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
+        setPriority(streamD.id(), STREAM_A, DEFAULT_PRIORITY_WEIGHT, false);
     }
 
     private Answer<Void> writeAnswer() {
         return new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
-                Http2Stream stream = in.getArgumentAt(0, Http2Stream.class);
-                int numBytes = in.getArgumentAt(1, Integer.class);
+                Http2Stream stream = in.getArgument(0);
+                int numBytes = in.getArgument(1);
                 int streamableBytes = distributor.streamableBytes0(stream) - numBytes;
                 updateStream(stream.id(), streamableBytes, streamableBytes > 0);
                 return null;
@@ -258,8 +258,8 @@ public class UniformStreamByteDistributorTest {
         });
     }
 
-    private void setPriority(int streamId, int parent, int weight, boolean exclusive) throws Http2Exception {
-        stream(streamId).setPriority(parent, (short) weight, exclusive);
+    private void setPriority(int streamId, int parent, int weight, boolean exclusive) {
+        distributor.updateDependencyTree(streamId, parent, (short) weight, exclusive);
     }
 
     private boolean write(int numBytes) throws Http2Exception {

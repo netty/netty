@@ -564,7 +564,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #get(CharSequence, String)} instead.
      *
-     * @see {@link #getHeader(HttpMessage, CharSequence, String)}
+     * @see #getHeader(HttpMessage, CharSequence, String)
      */
     @Deprecated
     public static String getHeader(HttpMessage message, String name, String defaultValue) {
@@ -589,7 +589,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #set(CharSequence, Object)} instead.
      *
-     * @see {@link #setHeader(HttpMessage, CharSequence, Object)}
+     * @see #setHeader(HttpMessage, CharSequence, Object)
      */
     @Deprecated
     public static void setHeader(HttpMessage message, String name, Object value) {
@@ -614,7 +614,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #set(CharSequence, Iterable)} instead.
      *
-     * @see {@link #setHeader(HttpMessage, CharSequence, Iterable)}
+     * @see #setHeader(HttpMessage, CharSequence, Iterable)
      */
     @Deprecated
     public static void setHeader(HttpMessage message, String name, Iterable<?> values) {
@@ -645,7 +645,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #add(CharSequence, Object)} instead.
      *
-     * @see {@link #addHeader(HttpMessage, CharSequence, Object)}
+     * @see #addHeader(HttpMessage, CharSequence, Object)
      */
     @Deprecated
     public static void addHeader(HttpMessage message, String name, Object value) {
@@ -669,7 +669,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #remove(CharSequence)} instead.
      *
-     * @see {@link #removeHeader(HttpMessage, CharSequence)}
+     * @see #removeHeader(HttpMessage, CharSequence)
      */
     @Deprecated
     public static void removeHeader(HttpMessage message, String name) {
@@ -699,7 +699,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #getInt(CharSequence)} instead.
      *
-     * @see {@link #getIntHeader(HttpMessage, CharSequence)}
+     * @see #getIntHeader(HttpMessage, CharSequence)
      */
     @Deprecated
     public static int getIntHeader(HttpMessage message, String name) {
@@ -729,7 +729,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #getInt(CharSequence, int)} instead.
      *
-     * @see {@link #getIntHeader(HttpMessage, CharSequence, int)}
+     * @see #getIntHeader(HttpMessage, CharSequence, int)
      */
     @Deprecated
     public static int getIntHeader(HttpMessage message, String name, int defaultValue) {
@@ -754,7 +754,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #setInt(CharSequence, int)} instead.
      *
-     * @see {@link #setIntHeader(HttpMessage, CharSequence, int)}
+     * @see #setIntHeader(HttpMessage, CharSequence, int)
      */
     @Deprecated
     public static void setIntHeader(HttpMessage message, String name, int value) {
@@ -775,7 +775,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #set(CharSequence, Iterable)} instead.
      *
-     * @see {@link #setIntHeader(HttpMessage, CharSequence, Iterable)}
+     * @see #setIntHeader(HttpMessage, CharSequence, Iterable)
      */
     @Deprecated
     public static void setIntHeader(HttpMessage message, String name, Iterable<Integer> values) {
@@ -796,7 +796,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #add(CharSequence, Iterable)} instead.
      *
-     * @see {@link #addIntHeader(HttpMessage, CharSequence, int)}
+     * @see #addIntHeader(HttpMessage, CharSequence, int)
      */
     @Deprecated
     public static void addIntHeader(HttpMessage message, String name, int value) {
@@ -816,7 +816,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #getTimeMillis(CharSequence)} instead.
      *
-     * @see {@link #getDateHeader(HttpMessage, CharSequence)}
+     * @see #getDateHeader(HttpMessage, CharSequence)
      */
     @Deprecated
     public static Date getDateHeader(HttpMessage message, String name) throws ParseException {
@@ -850,7 +850,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #getTimeMillis(CharSequence, long)} instead.
      *
-     * @see {@link #getDateHeader(HttpMessage, CharSequence, Date)}
+     * @see #getDateHeader(HttpMessage, CharSequence, Date)
      */
     @Deprecated
     public static Date getDateHeader(HttpMessage message, String name, Date defaultValue) {
@@ -877,7 +877,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #set(CharSequence, Object)} instead.
      *
-     * @see {@link #setDateHeader(HttpMessage, CharSequence, Date)}
+     * @see #setDateHeader(HttpMessage, CharSequence, Date)
      */
     @Deprecated
     public static void setDateHeader(HttpMessage message, String name, Date value) {
@@ -904,7 +904,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #set(CharSequence, Iterable)} instead.
      *
-     * @see {@link #setDateHeader(HttpMessage, CharSequence, Iterable)}
+     * @see #setDateHeader(HttpMessage, CharSequence, Iterable)
      */
     @Deprecated
     public static void setDateHeader(HttpMessage message, String name, Iterable<Date> values) {
@@ -927,7 +927,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #add(CharSequence, Object)} instead.
      *
-     * @see {@link #addDateHeader(HttpMessage, CharSequence, Date)}
+     * @see #addDateHeader(HttpMessage, CharSequence, Date)
      */
     @Deprecated
     public static void addDateHeader(HttpMessage message, String name, Date value) {
@@ -1014,7 +1014,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * @deprecated Use {@link #set(CharSequence, Object)} instead.
      *
-     * @see {@link #setHost(HttpMessage, CharSequence)}
+     * @see #setHost(HttpMessage, CharSequence)
      */
     @Deprecated
     public static void setHost(HttpMessage message, String value) {
@@ -1298,7 +1298,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public abstract List<Map.Entry<String, String>> entries();
 
     /**
-     * @see {@link #contains(CharSequence)}
+     * @see #contains(CharSequence)
      */
     public abstract boolean contains(String name);
 
@@ -1573,7 +1573,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * Returns {@code true} if a header with the {@code name} and {@code value} exists, {@code false} otherwise.
-     * This also handles multiple values that are seperated with a {@code ,}.
+     * This also handles multiple values that are separated with a {@code ,}.
      * <p>
      * If {@code ignoreCase} is {@code true} then a case insensitive compare is done on the value.
      * @param name the name of the header to find

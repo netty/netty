@@ -16,7 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.handler.ssl.ReferenceCountedOpenSslServerContext.ServerContext;
-import org.apache.tomcat.jni.SSL;
+import io.netty.internal.tcnative.SSL;
 
 import java.io.File;
 import java.security.PrivateKey;
@@ -323,16 +323,18 @@ public final class OpenSslServerContext extends OpenSslContext {
         this(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, ciphers, cipherFilter,
-                apn, sessionCacheSize, sessionTimeout, ClientAuth.NONE, false);
+                apn, sessionCacheSize, sessionTimeout, ClientAuth.NONE, null, false, false);
     }
 
     OpenSslServerContext(
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, boolean startTls) throws SSLException {
+            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
+            boolean enableOcsp) throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
-                cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, startTls);
+                cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
+                enableOcsp);
     }
 
     @SuppressWarnings("deprecation")
@@ -340,9 +342,10 @@ public final class OpenSslServerContext extends OpenSslContext {
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
-            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, boolean startTls) throws SSLException {
+            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
+            boolean enableOcsp) throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, keyCertChain,
-                clientAuth, startTls);
+                clientAuth, protocols, startTls, enableOcsp);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {

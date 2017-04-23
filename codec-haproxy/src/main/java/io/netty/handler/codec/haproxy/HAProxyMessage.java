@@ -204,12 +204,12 @@ public final class HAProxyMessage {
                 addressLen = 16;
             } else {
                 throw new HAProxyProtocolException(
-                    "unable to parse address information (unkown address family: " + addressFamily + ')');
+                    "unable to parse address information (unknown address family: " + addressFamily + ')');
             }
 
             // Per spec, the src address begins at the 17th byte
-            srcAddress = ipBytestoString(header, addressLen);
-            dstAddress = ipBytestoString(header, addressLen);
+            srcAddress = ipBytesToString(header, addressLen);
+            dstAddress = ipBytesToString(header, addressLen);
             srcPort = header.readUnsignedShort();
             dstPort = header.readUnsignedShort();
         }
@@ -274,7 +274,7 @@ public final class HAProxyMessage {
      * @param addressLen number of bytes to read (4 bytes for IPv4, 16 bytes for IPv6)
      * @return           string representation of the ip address
      */
-    private static String ipBytestoString(ByteBuf header, int addressLen) {
+    private static String ipBytesToString(ByteBuf header, int addressLen) {
         StringBuilder sb = new StringBuilder();
         if (addressLen == 4) {
             sb.append(header.readByte() & 0xff);

@@ -25,14 +25,14 @@ import java.nio.ByteOrder;
 public class BigEndianDirectByteBufTest extends AbstractByteBufTest {
 
     @Override
-    protected ByteBuf newBuffer(int length) {
-        ByteBuf buffer = newDirectBuffer(length);
+    protected ByteBuf newBuffer(int length, int maxCapacity) {
+        ByteBuf buffer = newDirectBuffer(length, maxCapacity);
         assertSame(ByteOrder.BIG_ENDIAN, buffer.order());
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }
 
-    protected ByteBuf newDirectBuffer(int length) {
-        return new UnpooledDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, length, Integer.MAX_VALUE);
+    protected ByteBuf newDirectBuffer(int length, int maxCapacity) {
+        return new UnpooledDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, length, maxCapacity);
     }
 }

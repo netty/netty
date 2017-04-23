@@ -175,6 +175,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         this.initial = initial;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public Handle newHandle() {
         return new HandleImpl(minIndex, maxIndex, initial);

@@ -20,6 +20,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.TypeParameterMatcher;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.SocketAddress;
 import java.nio.channels.UnsupportedAddressTypeException;
@@ -31,6 +32,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * A skeletal {@link AddressResolver} implementation.
  */
+@UnstableApi
 public abstract class AbstractAddressResolver<T extends SocketAddress> implements AddressResolver<T> {
 
     private final EventExecutor executor;

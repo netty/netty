@@ -23,7 +23,7 @@ public class RiverCompatibleMarshallingDecoderTest extends AbstractCompatibleMar
 
     @Override
     protected MarshallerFactory createMarshallerFactory() {
-        return Marshalling.getProvidedMarshallerFactory("river");
+        return Marshalling.getProvidedMarshallerFactory(RIVER_FACTORY);
     }
 
     @Override

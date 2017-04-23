@@ -369,27 +369,36 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
 
         @Override
         protected void doWrite(Object msg) {
-            if (!(msg instanceof Http2StreamFrame)) {
-                ReferenceCountUtil.release(msg);
-                throw new IllegalArgumentException("Message must be an Http2StreamFrame: " + msg);
-            }
-            Http2StreamFrame frame = (Http2StreamFrame) msg;
-            ChannelPromise promise = ctx.newPromise();
-            if (isStreamIdValid(frame.streamId())) {
-                ReferenceCountUtil.release(frame);
-                throw new IllegalArgumentException("Stream id must not be set on the frame. Was: " + frame.streamId());
-            }
-            if (!isStreamIdValid(streamId())) {
-                if (!(frame instanceof Http2HeadersFrame)) {
-                    throw new IllegalArgumentException("The first frame must be a headers frame. Was: " + frame.name());
+
+            if (msg instanceof Http2StreamFrame) {
+                Http2StreamFrame frame = (Http2StreamFrame) msg;
+                ChannelPromise promise = ctx.newPromise();
+                if (isStreamIdValid(frame.streamId())) {
+                    ReferenceCountUtil.release(frame);
+                    throw new IllegalArgumentException("Stream id must not be set on the frame. Was: "
+                        + frame.streamId());
                 }
-                frame = new ChannelCarryingHeadersFrame((Http2HeadersFrame) frame, this);
-                // Handle errors on stream creation
+                if (!isStreamIdValid(streamId())) {
+                    if (!(frame instanceof Http2HeadersFrame)) {
+                        ReferenceCountUtil.release(frame);
+                        throw new IllegalArgumentException("The first frame must be a headers frame. Was: "
+                            + frame.name());
+                    }
+                    frame = new ChannelCarryingHeadersFrame((Http2HeadersFrame) frame, this);
+                    // Handle errors on stream creation
+                    promise.addListener(this);
+                } else {
+                    frame.streamId(streamId());
+                }
+                writeFromStreamChannel(frame, promise, false);
+            } else if (msg instanceof Http2GoAwayFrame) {
+                ChannelPromise promise = ctx.newPromise();
                 promise.addListener(this);
+                writeFromStreamChannel(msg, promise, false);
             } else {
-                frame.streamId(streamId());
+                ReferenceCountUtil.release(msg);
+                throw new IllegalArgumentException("Message must be an Http2GoAwayFrame or Http2StreamFrame: " + msg);
             }
-            writeFromStreamChannel(frame, promise, false);
         }
 
         @Override

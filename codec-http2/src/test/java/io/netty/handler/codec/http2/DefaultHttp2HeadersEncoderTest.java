@@ -52,7 +52,7 @@ public class DefaultHttp2HeadersEncoderTest {
     @Test(expected = StreamException.class)
     public void headersExceedMaxSetSizeShouldFail() throws Http2Exception {
         Http2Headers headers = headers();
-        encoder.headerTable().maxHeaderListSize(2);
+        encoder.maxHeaderListSize(2);
         encoder.encodeHeaders(3 /* randomly chosen */, headers, Unpooled.buffer());
     }
 

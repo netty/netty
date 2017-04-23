@@ -191,7 +191,10 @@ final class DnsQueryContext {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<DnsResponse, InetSocketAddress> castResponse =
                     (AddressedEnvelope<DnsResponse, InetSocketAddress>) envelope.retain();
-            promise.setSuccess(castResponse);
+            if (!promise.trySuccess(castResponse)) {
+                // We failed to notify the promise as it was failed before, thus we need to release the envelope
+                envelope.release();
+            }
         }
     }
 

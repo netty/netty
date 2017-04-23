@@ -17,12 +17,14 @@
 package io.netty.resolver;
 
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 
 /**
  * A {@link AddressResolverGroup} of {@link DefaultNameResolver}s.
  */
+@UnstableApi
 public final class DefaultAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
 
     public static final DefaultAddressResolverGroup INSTANCE = new DefaultAddressResolverGroup();

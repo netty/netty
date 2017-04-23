@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.7.Final-SNAPSHOT</version>
+  <version>4.1.10.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -72,14 +72,18 @@
     <profile>
       <id>java9</id>
       <properties>
+        <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--add-modules java.xml.bind --add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9>
+        <argLine.java9>--add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java9 supports alpn out of the box -->
-        <argLine.alpnAgent></argLine.alpnAgent>
+        <argLine.alpnAgent />
         <!-- This is needed as earlier ASM versions not support java9 -->
         <!-- https://issues.apache.org/jira/browse/MSHADE-242 -->
         <!-- https://github.com/netty/netty/issues/6100 -->
         <asm.version>6.0_ALPHA</asm.version>
+        <!-- Skip as maven plugin not works with Java9 yet --> 
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
       </properties>
       <activation>
         <jdk>9</jdk>
@@ -168,11 +172,6 @@
                 </goals>
                 <configuration>
                   <rules>
-                    <requireJavaVersion>
-                      <!-- Enforce JDK 1.7 (and not 1.8+) for compilation. -->
-                      <!-- See: https://github.com/netty/netty/issues/3548 -->
-                      <version>[1.7.0, 1.8.0)</version>
-                    </requireJavaVersion>
                     <requireProperty>
                       <regexMessage>
                         Release process must be performed on linux-x86_64.
@@ -217,11 +216,14 @@
   </profiles>
 
   <properties>
+    <maven.compiler.source>1.6</maven.compiler.source>
+    <maven.compiler.target>1.6</maven.compiler.target>
+    <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>22</netty.build.version>
     <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
-    <jetty.alpnAgent.version>2.0.4</jetty.alpnAgent.version>
+    <jetty.alpnAgent.version>2.0.6</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.common>
       -server
@@ -238,22 +240,30 @@
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
-    <argLine.java9></argLine.java9> <!-- Overridden when 'java9' profile is active -->
+    <argLine.java9 /> <!-- Overridden when 'java9' profile is active -->
     <argLine.javaProperties>-D_</argLine.javaProperties>
     <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>1.1.33.Fork23</tcnative.version>
+    <tcnative.version>2.0.1.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
+    <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
+    <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
+    <conscrypt.version>1.0.0.RC7</conscrypt.version>
+    <conscrypt.classifier></conscrypt.classifier>
     <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
     <asm.version>5.1</asm.version>
+    <testJavaHome>${env.JAVA_HOME}</testJavaHome>
+    <skipOsgiTestsuite>false</skipOsgiTestsuite>
+    <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
   </properties>
 
   <modules>
+    <module>dev-tools</module>
     <module>common</module>
     <module>buffer</module>
     <module>codec</module>
@@ -278,14 +288,22 @@
     <module>handler-proxy</module>
     <module>example</module>
     <module>testsuite</module>
+    <module>testsuite-autobahn</module>
     <module>testsuite-osgi</module>
     <module>microbench</module>
     <module>all</module>
+    <module>bom</module>
     <module>tarball</module>
   </modules>
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>netty-dev-tools</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
       <!-- Byte code generator - completely optional -->
       <dependency>
         <groupId>org.javassist</groupId>
@@ -330,12 +348,22 @@
         <version>3.0.0-alpha-5</version>
       </dependency>
 
-      <!-- Our own Tomcat Native fork - completely optional, used for acclerating SSL with OpenSSL. -->
+      <!-- Our own Tomcat Native fork - completely optional, used for accelerating SSL with OpenSSL. -->
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>${tcnative.artifactId}</artifactId>
         <version>${tcnative.version}</version>
         <classifier>${tcnative.classifier}</classifier>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
+      <!-- Conscrypt - needed for running tests, used for acclerating SSL with OpenSSL. -->
+      <dependency>
+        <groupId>${conscrypt.groupId}</groupId>
+        <artifactId>${conscrypt.artifactId}</artifactId>
+        <classifier>${conscrypt.classifier}</classifier>
+        <version>${conscrypt.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -348,6 +376,18 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcpkix-jdk15on</artifactId>
+        <version>1.54</version>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
+      <!-- 
+        Completely optional and only needed for OCSP stapling to construct and
+        parse OCSP requests and responses.
+      -->
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk15on</artifactId>
         <version>1.54</version>
         <scope>compile</scope>
         <optional>true</optional>
@@ -384,7 +424,7 @@
       <dependency>
         <groupId>org.jctools</groupId>
         <artifactId>jctools-core</artifactId>
-        <version>1.2.1</version>
+        <version>2.0.1</version>
       </dependency>
 
       <dependency>
@@ -472,33 +512,9 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.easymock</groupId>
-        <artifactId>easymock</artifactId>
-        <version>3.4</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.easymock</groupId>
-        <artifactId>easymockclassextension</artifactId>
-        <version>3.2</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jmock</groupId>
-        <artifactId>jmock-junit4</artifactId>
-        <version>2.8.2</version>
-        <scope>test</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>junit</groupId>
-            <artifactId>junit-dep</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>1.10.19</version>
+        <version>2.7.2</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -596,26 +612,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.easymock</groupId>
-      <artifactId>easymock</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.easymock</groupId>
-      <artifactId>easymockclassextension</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jmock</groupId>
-      <artifactId>jmock-junit4</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <scope>test</scope>
@@ -643,9 +639,9 @@
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <!-- Enforce JDK 1.7+ for compilation. -->
+                  <!-- Enforce JDK 1.8+ for compilation. -->
                   <!-- This is needed because of java.util.zip.Deflater and NIO UDP multicast. -->
-                  <version>[1.7.0,)</version>
+                  <version>[1.8.0,)</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
                   <version>[3.1.1,)</version>
@@ -664,12 +660,12 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.5.1</version>
+        <version>3.6.0</version>
         <configuration>
-          <compilerVersion>1.7</compilerVersion>
+          <compilerVersion>1.8</compilerVersion>
           <fork>true</fork>
-          <source>1.6</source>
-          <target>1.6</target>
+          <source>${maven.compiler.source}</source>
+          <target>${maven.compiler.target}</target>
           <debug>true</debug>
           <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
@@ -742,6 +738,9 @@
             <ignore>javax.net.ssl.SSLEngine</ignore>
             <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>
             <ignore>javax.net.ssl.SSLParameters</ignore>
+            <ignore>javax.net.ssl.SNIServerName</ignore>
+            <ignore>javax.net.ssl.SNIHostName</ignore>
+            <ignore>javax.net.ssl.SNIMatcher</ignore>
             <ignore>java.security.AlgorithmConstraints</ignore>
             <ignore>java.security.cert.CertificateRevokedException</ignore>
             <ignore>java.security.cert.CertPathValidatorException</ignore>
@@ -749,6 +748,7 @@
             <ignore>java.security.cert.CertPathValidatorException$BasicReason</ignore>
 
             <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
+            <ignore>java.util.concurrent.ThreadLocalRandom</ignore>
 
             <!-- Compression -->
             <ignore>java.util.zip.CRC32</ignore>
@@ -757,6 +757,12 @@
             <!-- JDK 9 -->
             <ignore>java.nio.ByteBuffer</ignore>
             <ignore>java.nio.CharBuffer</ignore>
+
+            <!-- JDK 8 -->
+            <ignore>java.util.concurrent.atomic.LongAdder</ignore>
+
+            <!-- Resolver -->
+            <ignore>java.net.InetAddress</ignore>
           </ignores>
         </configuration>
         <executions>
@@ -862,6 +868,7 @@
               <value>io.netty.build.junit.TimedOutTestsListener</value>
             </property>
           </properties>
+          <jvm>${testJavaHome}/bin/java</jvm>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
@@ -1089,6 +1096,16 @@
           </dependency>
         </dependencies>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+        <version>1.5</version>
+      </plugin>
+      <plugin>
+        <groupId>de.thetaphi</groupId>
+        <artifactId>forbiddenapis</artifactId>
+        <version>2.2</version>
+      </plugin>
     </plugins>
 
     <pluginManagement>
@@ -1303,6 +1320,83 @@
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-remote-resources-plugin</artifactId>
+          <version>1.5</version>
+          <configuration>
+            <resourceBundles>
+              <resourceBundle>io.netty:netty-dev-tools:${project.version}</resourceBundle>
+            </resourceBundles>
+            <outputDirectory>${netty.dev.tools.directory}</outputDirectory>
+            <!-- don't include netty-dev-tools in artifacts -->
+            <attachToMain>false</attachToMain>
+            <attachToTest>false</attachToTest>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>process</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>de.thetaphi</groupId>
+          <artifactId>forbiddenapis</artifactId>
+          <version>2.2</version>
+          <executions>
+            <execution>
+              <id>check-forbidden-apis</id>
+              <configuration>
+                <targetVersion>${maven.compiler.target}</targetVersion>
+                <!-- allow undocumented classes like sun.misc.Unsafe: -->
+                <internalRuntimeForbidden>false</internalRuntimeForbidden>
+                <!-- if the used Java version is too new, don't fail, just do nothing: -->
+                <failOnUnsupportedJava>false</failOnUnsupportedJava>
+                <bundledSignatures>
+                  <!-- This will automatically choose the right signatures based on 'targetVersion': -->
+                  <!-- enabling these should be done in the future -->
+                  <!-- bundledSignature>jdk-unsafe</bundledSignature -->
+                  <!-- bundledSignature>jdk-deprecated</bundledSignature -->
+                  <!-- bundledSignature>jdk-system-out</bundledSignature -->
+                </bundledSignatures>
+                <signaturesFiles>
+                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
+                </signaturesFiles>
+                <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
+              </configuration>
+              <phase>compile</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>check-forbidden-test-apis</id>
+              <configuration>
+                <targetVersion>${maven.compiler.target}</targetVersion>
+                <!-- allow undocumented classes like sun.misc.Unsafe: -->
+                <internalRuntimeForbidden>true</internalRuntimeForbidden>
+                <!-- if the used Java version is too new, don't fail, just do nothing: -->
+                <failOnUnsupportedJava>false</failOnUnsupportedJava>
+                <bundledSignatures>
+                  <!-- This will automatically choose the right signatures based on 'targetVersion': -->
+                  <!-- enabling these should be done in the future -->
+                  <!-- bundledSignature>jdk-unsafe</bundledSignature -->
+                  <!-- bundledSignature>jdk-deprecated</bundledSignature -->
+                </bundledSignatures>
+                <signaturesFiles>
+                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
+                </signaturesFiles>
+                <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
+              </configuration>
+              <phase>test-compile</phase>
+              <goals>
+                <goal>testCheck</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
       </plugins>
     </pluginManagement>

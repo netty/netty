@@ -20,12 +20,12 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.DefaultDnsOptEcsRecord;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.concurrent.Future;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -46,7 +46,8 @@ public class DnsNameResolverClientSubnetTest {
                     Collections.<DnsRecord>singleton(
                             // Suggest max payload size of 1024
                             // 157.88.0.0 / 24
-                            new DefaultDnsOptEcsRecord(1024, 24, InetAddress.getByName("157.88.0.0").getAddress())));
+                            new DefaultDnsOptEcsRecord(1024, 24,
+                                                       SocketUtils.addressByName("157.88.0.0").getAddress())));
             for (InetAddress address: future.syncUninterruptibly().getNow()) {
                 System.err.println(address);
             }
@@ -59,7 +60,8 @@ public class DnsNameResolverClientSubnetTest {
     private static DnsNameResolverBuilder newResolver(EventLoopGroup group) {
         return new DnsNameResolverBuilder(group.next())
                 .channelType(NioDatagramChannel.class)
-                .nameServerAddresses(DnsServerAddresses.singleton(new InetSocketAddress("8.8.8.8", 53)))
+                .nameServerProvider(
+                        new SingletonDnsServerAddressStreamProvider(SocketUtils.socketAddress("8.8.8.8", 53)))
                 .maxQueriesPerResolve(1)
                 .optResourceEnabled(false);
     }

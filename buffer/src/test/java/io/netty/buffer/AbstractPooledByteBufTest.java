@@ -19,11 +19,11 @@ import static org.junit.Assert.*;
 
 public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
 
-    protected abstract ByteBuf alloc(int length);
+    protected abstract ByteBuf alloc(int length, int maxCapacity);
 
     @Override
-    protected ByteBuf newBuffer(int length) {
-        ByteBuf buffer = alloc(length);
+    protected ByteBuf newBuffer(int length, int maxCapacity) {
+        ByteBuf buffer = alloc(length, maxCapacity);
 
         // Testing if the writerIndex and readerIndex are correct when allocate and also after we reset the mark.
         assertEquals(0, buffer.writerIndex());

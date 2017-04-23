@@ -18,13 +18,18 @@ package io.netty.handler.ssl;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+import io.netty.util.internal.UnstableApi;
+
+import java.security.Provider;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
+
 import java.io.File;
 import java.io.InputStream;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import javax.net.ssl.SSLEngine;
 
 /**
  * Builder for configuring a new SslContext for creation.
@@ -125,6 +130,7 @@ public final class SslContextBuilder {
 
     private final boolean forServer;
     private SslProvider provider;
+    private Provider sslContextProvider;
     private X509Certificate[] trustCertCollection;
     private TrustManagerFactory trustManagerFactory;
     private X509Certificate[] keyCertChain;
@@ -137,7 +143,9 @@ public final class SslContextBuilder {
     private long sessionCacheSize;
     private long sessionTimeout;
     private ClientAuth clientAuth = ClientAuth.NONE;
+    private String[] protocols;
     private boolean startTls;
+    private boolean enableOcsp;
 
     private SslContextBuilder(boolean forServer) {
         this.forServer = forServer;
@@ -148,6 +156,15 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder sslProvider(SslProvider provider) {
         this.provider = provider;
+        return this;
+    }
+
+    /**
+     * The SSLContext {@link Provider} to use. {@code null} uses the default one. This is only
+     * used with {@link SslProvider#JDK}.
+     */
+    public SslContextBuilder sslContextProvider(Provider sslContextProvider) {
+        this.sslContextProvider = sslContextProvider;
         return this;
     }
 
@@ -186,9 +203,7 @@ public final class SslContextBuilder {
     }
 
     /**
-     * Trusted manager for verifying the remote endpoint's certificate. Using a {@link
-     * TrustManagerFactory} is only supported for {@link SslProvider#JDK}; for other providers,
-     * you must use {@link #trustManager(File)}. {@code null} uses the system default.
+     * Trusted manager for verifying the remote endpoint's certificate. {@code null} uses the system default.
      */
     public SslContextBuilder trustManager(TrustManagerFactory trustManagerFactory) {
         trustCertCollection = null;
@@ -315,9 +330,11 @@ public final class SslContextBuilder {
 
     /**
      * Identifying manager for this host. {@code keyManagerFactory} may be {@code null} for
-     * client contexts, which disables mutual authentication. Using a {@code KeyManagerFactory}
-     * is only supported for {@link SslProvider#JDK}; for other providers, you must use {@link
-     * #keyManager(File, File)} or {@link #keyManager(File, File, String)}.
+     * client contexts, which disables mutual authentication. Using a {@link KeyManagerFactory}
+     * is only supported for {@link SslProvider#JDK} or {@link SslProvider#OPENSSL} / {@link SslProvider#OPENSSL_REFCNT}
+     * if the used openssl version is 1.0.1+. You can check if your openssl version supports using a
+     * {@link KeyManagerFactory} by calling {@link OpenSsl#supportsKeyManagerFactory()}. If this is not the case
+     * you must use {@link #keyManager(File, File)} or {@link #keyManager(File, File, String)}.
      */
     public SslContextBuilder keyManager(KeyManagerFactory keyManagerFactory) {
         if (forServer) {
@@ -340,8 +357,8 @@ public final class SslContextBuilder {
 
     /**
      * The cipher suites to enable, in the order of preference. {@code cipherFilter} will be
-     * applied to the ciphers before use if provider is {@link SslProvider#JDK}. If {@code
-     * ciphers} is {@code null}, then the default cipher suites will be used.
+     * applied to the ciphers before use. If {@code ciphers} is {@code null}, then the default
+     * cipher suites will be used.
      */
     public SslContextBuilder ciphers(Iterable<String> ciphers, CipherSuiteFilter cipherFilter) {
         checkNotNull(cipherFilter, "cipherFilter");
@@ -385,10 +402,32 @@ public final class SslContextBuilder {
     }
 
     /**
+     * The TLS protocol versions to enable.
+     * @param protocols The protocols to enable, or {@code null} to enable the default protocols.
+     * @see SSLEngine#setEnabledCipherSuites(String[])
+     */
+    public SslContextBuilder protocols(String... protocols) {
+        this.protocols = protocols == null ? null : protocols.clone();
+        return this;
+    }
+
+    /**
      * {@code true} if the first write request shouldn't be encrypted.
      */
     public SslContextBuilder startTls(boolean startTls) {
         this.startTls = startTls;
+        return this;
+    }
+
+    /**
+     * Enables OCSP stapling. Please note that not all {@link SslProvider} implementations support OCSP
+     * stapling and an exception will be thrown upon {@link #build()}.
+     *
+     * @see OpenSsl#isOcspSupported()
+     */
+    @UnstableApi
+    public SslContextBuilder enableOcsp(boolean enableOcsp) {
+        this.enableOcsp = enableOcsp;
         return this;
     }
 
@@ -399,13 +438,14 @@ public final class SslContextBuilder {
      */
     public SslContext build() throws SSLException {
         if (forServer) {
-            return SslContext.newServerContextInternal(provider, trustCertCollection,
+            return SslContext.newServerContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, startTls);
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
+                enableOcsp);
         } else {
-            return SslContext.newClientContextInternal(provider, trustCertCollection,
+            return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp);
         }
     }
 }

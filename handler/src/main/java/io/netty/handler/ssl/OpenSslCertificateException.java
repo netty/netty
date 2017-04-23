@@ -15,13 +15,13 @@
  */
 package io.netty.handler.ssl;
 
-import org.apache.tomcat.jni.CertificateVerifier;
+import io.netty.internal.tcnative.CertificateVerifier;
 
 import java.security.cert.CertificateException;
 
 /**
  * A special {@link CertificateException} which allows to specify which error code is included in the
- * SSL Record. This only work when {@link SslProvider#OPENSSL} is used.
+ * SSL Record. This only work when {@link SslProvider#OPENSSL} or {@link SslProvider#OPENSSL_REFCNT} is used.
  */
 public final class OpenSslCertificateException extends CertificateException {
     private static final long serialVersionUID = 5542675253797129798L;
@@ -63,17 +63,16 @@ public final class OpenSslCertificateException extends CertificateException {
     }
 
     /**
-     * Return the <a href="https://www.openssl.org/docs/manmaster/apps/verify.html">error code</a> to use.
+     * Return the <a href="https://www.openssl.org/docs/man1.0.2/apps/verify.html">error code</a> to use.
      */
     public int errorCode() {
         return errorCode;
     }
 
     private static int checkErrorCode(int errorCode) {
-        if (errorCode < CertificateVerifier.X509_V_OK || errorCode > CertificateVerifier.X509_V_ERR_DANE_NO_MATCH) {
-            throw new IllegalArgumentException("errorCode must be " + CertificateVerifier.X509_V_OK + " => "
-                    + CertificateVerifier.X509_V_ERR_DANE_NO_MATCH +
-                    ". See https://www.openssl.org/docs/manmaster/apps/verify.html .");
+        if (!CertificateVerifier.isValid(errorCode)) {
+            throw new IllegalArgumentException("errorCode '" + errorCode +
+                    "' invalid, see https://www.openssl.org/docs/man1.0.2/apps/verify.html.");
         }
         return errorCode;
     }

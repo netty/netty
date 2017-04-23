@@ -33,19 +33,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.core.StringContains.containsString;
 
 public class SearchDomainTest {
 
     private DnsNameResolverBuilder newResolver() {
         return new DnsNameResolverBuilder(group.next())
             .channelType(NioDatagramChannel.class)
-            .nameServerAddresses(DnsServerAddresses.singleton(dnsServer.localAddress()))
+            .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()))
             .maxQueriesPerResolve(1)
             .optResourceEnabled(false);
     }

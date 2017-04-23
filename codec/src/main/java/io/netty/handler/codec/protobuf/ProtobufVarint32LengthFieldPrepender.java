@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import java.io.IOException;
-
+import com.google.protobuf.CodedOutputStream;
+import com.google.protobuf.nano.CodedOutputByteBufferNano;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,7 +24,7 @@ import io.netty.handler.codec.MessageToByteEncoder;
 
 /**
  * An encoder that prepends the the Google Protocol Buffers
- * <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html#varints">Base
+ * <a href="https://developers.google.com/protocol-buffers/docs/encoding?csw=1#varints">Base
  * 128 Varints</a> integer length field. For example:
  * <pre>
  * BEFORE ENCODE (300 bytes)       AFTER ENCODE (302 bytes)
@@ -34,7 +34,8 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * +---------------+               +--------+---------------+
  * </pre> *
  *
- * @see {@link CodedOutputStream} or (@link CodedOutputByteBufferNano)
+ * @see CodedOutputStream
+ * @see CodedOutputByteBufferNano
  */
 @Sharable
 public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
@@ -53,9 +54,8 @@ public class ProtobufVarint32LengthFieldPrepender extends MessageToByteEncoder<B
      * Writes protobuf varint32 to (@link ByteBuf).
      * @param out to be written to
      * @param value to be written
-     * @throws IOException
      */
-    static void writeRawVarint32(ByteBuf out, int value) throws IOException {
+    static void writeRawVarint32(ByteBuf out, int value) {
         while (true) {
             if ((value & ~0x7F) == 0) {
                 out.writeByte(value);

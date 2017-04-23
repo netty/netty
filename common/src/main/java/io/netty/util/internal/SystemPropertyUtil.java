@@ -20,7 +20,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.regex.Pattern;
 
 /**
  * A collection of utility methods to retrieve and parse the values of the Java system properties.
@@ -76,7 +75,7 @@ public final class SystemPropertyUtil {
                     }
                 });
             }
-        } catch (Exception e) {
+        } catch (SecurityException e) {
             logger.warn("Unable to retrieve a system property '{}'; default values will be used.", key, e);
         }
 
@@ -123,8 +122,6 @@ public final class SystemPropertyUtil {
         return def;
     }
 
-    private static final Pattern INTEGER_PATTERN = Pattern.compile("-?[0-9]+");
-
     /**
      * Returns the value of the Java system property with the specified
      * {@code key}, while falling back to the specified default value if
@@ -140,13 +137,11 @@ public final class SystemPropertyUtil {
             return def;
         }
 
-        value = value.trim().toLowerCase();
-        if (INTEGER_PATTERN.matcher(value).matches()) {
-            try {
-                return Integer.parseInt(value);
-            } catch (Exception e) {
-                // Ignore
-            }
+        value = value.trim();
+        try {
+            return Integer.parseInt(value);
+        } catch (Exception e) {
+            // Ignore
         }
 
         logger.warn(
@@ -172,13 +167,11 @@ public final class SystemPropertyUtil {
             return def;
         }
 
-        value = value.trim().toLowerCase();
-        if (INTEGER_PATTERN.matcher(value).matches()) {
-            try {
-                return Long.parseLong(value);
-            } catch (Exception e) {
-                // Ignore
-            }
+        value = value.trim();
+        try {
+            return Long.parseLong(value);
+        } catch (Exception e) {
+            // Ignore
         }
 
         logger.warn(

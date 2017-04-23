@@ -36,7 +36,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -48,19 +48,19 @@ import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
+import static io.netty.util.CharsetUtil.US_ASCII;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -78,6 +78,7 @@ public class Http2ConnectionHandlerTest {
 
     private Http2ConnectionHandler handler;
     private ChannelPromise promise;
+    private ChannelPromise voidPromise;
 
     @Mock
     private Http2Connection connection;
@@ -127,13 +128,15 @@ public class Http2ConnectionHandlerTest {
     @Mock
     private Http2FrameWriter frameWriter;
 
+    private String goAwayDebugCap;
+
     @SuppressWarnings("unchecked")
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
         promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
-
+        voidPromise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
         Throwable fakeException = new RuntimeException("Fake exception");
         when(encoder.connection()).thenReturn(connection);
         when(decoder.connection()).thenReturn(connection);
@@ -143,12 +146,13 @@ public class Http2ConnectionHandlerTest {
         doAnswer(new Answer<ChannelFuture>() {
             @Override
             public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
-                ByteBuf buf = invocation.getArgumentAt(3, ByteBuf.class);
+                ByteBuf buf = invocation.getArgument(3);
+                goAwayDebugCap = buf.toString(UTF_8);
                 buf.release();
                 return future;
             }
         }).when(frameWriter).writeGoAway(
-                any(ChannelHandlerContext.class), anyInt(), anyInt(), any(ByteBuf.class), any(ChannelPromise.class));
+                any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class), any(ChannelPromise.class));
         doAnswer(new Answer<ChannelFuture>() {
             @Override
             public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
@@ -170,7 +174,7 @@ public class Http2ConnectionHandlerTest {
         doAnswer(new Answer<Http2Stream>() {
             @Override
             public Http2Stream answer(InvocationOnMock in) throws Throwable {
-                Http2StreamVisitor visitor = in.getArgumentAt(0, Http2StreamVisitor.class);
+                Http2StreamVisitor visitor = in.getArgument(0);
                 if (!visitor.visit(stream)) {
                     return stream;
                 }
@@ -186,12 +190,13 @@ public class Http2ConnectionHandlerTest {
         when(ctx.channel()).thenReturn(channel);
         when(ctx.newSucceededFuture()).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
+        when(ctx.voidPromise()).thenReturn(voidPromise);
         when(ctx.write(any())).thenReturn(future);
         when(ctx.executor()).thenReturn(executor);
         doAnswer(new Answer() {
             @Override
             public Object answer(InvocationOnMock in) throws Throwable {
-                Object msg = in.getArgumentAt(0, Object.class);
+                Object msg = in.getArgument(0);
                 ReferenceCountUtil.release(msg);
                 return null;
             }
@@ -243,6 +248,18 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
+    public void serverReceivingHttp1ClientPrefaceStringShouldIncludePreface() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        handler = newHandler();
+        handler.channelRead(ctx, copiedBuffer("GET /path HTTP/1.1", US_ASCII));
+        ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
+        verify(frameWriter).writeGoAway(eq(ctx), eq(0), eq(PROTOCOL_ERROR.code()),
+            captor.capture(), eq(promise));
+        assertEquals(0, captor.getValue().refCnt());
+        assertTrue(goAwayDebugCap.contains("/path"));
+    }
+
+    @Test
     public void serverReceivingClientPrefaceStringFollowedByNonSettingsShouldHandleException()
             throws Exception {
         when(connection.isServer()).thenReturn(true);
@@ -264,7 +281,7 @@ public class Http2ConnectionHandlerTest {
         ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(connectionPrefaceBuf()));
         handler.channelRead(ctx, prefacePlusSome);
         verify(decoder, atLeastOnce()).decodeFrame(any(ChannelHandlerContext.class),
-                any(ByteBuf.class), Matchers.<List<Object>>any());
+                any(ByteBuf.class), ArgumentMatchers.<List<Object>>any());
     }
 
     @Test
@@ -276,7 +293,7 @@ public class Http2ConnectionHandlerTest {
         ByteBuf preface = connectionPrefaceBuf();
         handler.channelRead(ctx, preface);
         verify(decoder, never()).decodeFrame(any(ChannelHandlerContext.class),
-                any(ByteBuf.class), Matchers.<List<Object>>any());
+                any(ByteBuf.class), ArgumentMatchers.<List<Object>>any());
 
         // Now remove and add the handler...this is setting up the test condition.
         handler.handlerRemoved(ctx);
@@ -285,7 +302,7 @@ public class Http2ConnectionHandlerTest {
         // Now verify we can continue as normal, reading connection preface plus more.
         ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(connectionPrefaceBuf()));
         handler.channelRead(ctx, prefacePlusSome);
-        verify(decoder, atLeastOnce()).decodeFrame(eq(ctx), any(ByteBuf.class), Matchers.<List<Object>>any());
+        verify(decoder, atLeastOnce()).decodeFrame(eq(ctx), any(ByteBuf.class), ArgumentMatchers.<List<Object>>any());
     }
 
     @SuppressWarnings("unchecked")
@@ -312,7 +329,7 @@ public class Http2ConnectionHandlerTest {
     public void serverShouldSend431OnHeaderSizeErrorWhenDecodingInitialHeaders() throws Exception {
         int padding = 0;
         handler = newHandler();
-        Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, Http2Error.PROTOCOL_ERROR,
+        Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, PROTOCOL_ERROR,
                 "Header size exceeded max allowed size 8196", true);
 
         when(stream.id()).thenReturn(STREAM_ID);
@@ -320,7 +337,7 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-                eq(Http2Error.PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+                eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
 
         handler.exceptionCaught(ctx, e);
 
@@ -329,14 +346,14 @@ public class Http2ConnectionHandlerTest {
                 captor.capture(), eq(padding), eq(true), eq(promise));
         Http2Headers headers = captor.getValue();
         assertEquals(HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.codeAsText(), headers.status());
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, Http2Error.PROTOCOL_ERROR.code(), promise);
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test
     public void serverShouldNeverSend431HeaderSizeErrorWhenEncoding() throws Exception {
         int padding = 0;
         handler = newHandler();
-        Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, Http2Error.PROTOCOL_ERROR,
+        Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, PROTOCOL_ERROR,
             "Header size exceeded max allowed size 8196", false);
 
         when(stream.id()).thenReturn(STREAM_ID);
@@ -344,20 +361,20 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-            eq(Http2Error.PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+            eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
 
         handler.exceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
             any(Http2Headers.class), eq(padding), eq(true), eq(promise));
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, Http2Error.PROTOCOL_ERROR.code(), promise);
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test
     public void clientShouldNeverSend431WhenHeadersAreTooLarge() throws Exception {
         int padding = 0;
         handler = newHandler();
-        Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, Http2Error.PROTOCOL_ERROR,
+        Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, PROTOCOL_ERROR,
                 "Header size exceeded max allowed size 8196", true);
 
         when(stream.id()).thenReturn(STREAM_ID);
@@ -365,20 +382,20 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-                eq(Http2Error.PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+                eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
 
         handler.exceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
                 any(Http2Headers.class), eq(padding), eq(true), eq(promise));
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, Http2Error.PROTOCOL_ERROR.code(), promise);
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test
     public void serverShouldNeverSend431IfHeadersAlreadySent() throws Exception {
         int padding = 0;
         handler = newHandler();
-        Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, Http2Error.PROTOCOL_ERROR,
+        Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, PROTOCOL_ERROR,
             "Header size exceeded max allowed size 8196", true);
 
         when(stream.id()).thenReturn(STREAM_ID);
@@ -386,20 +403,20 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(true);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-            eq(Http2Error.PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+            eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
         handler.exceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
             any(Http2Headers.class), eq(padding), eq(true), eq(promise));
 
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, Http2Error.PROTOCOL_ERROR.code(), promise);
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test
     public void serverShouldCreateStreamIfNeededBeforeSending431() throws Exception {
         int padding = 0;
         handler = newHandler();
-        Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, Http2Error.PROTOCOL_ERROR,
+        Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, PROTOCOL_ERROR,
             "Header size exceeded max allowed size 8196", true);
 
         when(connection.stream(STREAM_ID)).thenReturn(null);
@@ -417,7 +434,7 @@ public class Http2ConnectionHandlerTest {
         verify(encoder).writeHeaders(eq(ctx), eq(STREAM_ID),
             any(Http2Headers.class), eq(padding), eq(true), eq(promise));
 
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, Http2Error.PROTOCOL_ERROR.code(), promise);
+        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test
@@ -446,6 +463,7 @@ public class Http2ConnectionHandlerTest {
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
                 anyLong(), any(ChannelPromise.class))).thenReturn(future);
         when(stream.state()).thenReturn(CLOSED);
+        when(stream.isHeadersSent()).thenReturn(true);
         // The stream is "closed" but is still known about by the connection (connection().stream(..)
         // will return the stream). We should still write a RST_STREAM frame in this scenario.
         handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise);
@@ -505,7 +523,7 @@ public class Http2ConnectionHandlerTest {
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
-                invocation.getArgumentAt(0, GenericFutureListener.class).operationComplete(future);
+                ((GenericFutureListener) invocation.getArgument(0)).operationComplete(future);
                 return null;
             }
         }).when(future).addListener(any(GenericFutureListener.class));
@@ -567,7 +585,7 @@ public class Http2ConnectionHandlerTest {
         doAnswer(new Answer<ChannelFuture>() {
             @Override
             public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
-                ChannelPromise promise = invocation.getArgumentAt(4, ChannelPromise.class);
+                ChannelPromise promise = invocation.getArgument(4);
                 assertFalse(promise.isVoid());
                 // This is what DefaultHttp2FrameWriter does... I hate mocking :-(.
                 SimpleChannelPromiseAggregator aggregatedPromise =
@@ -577,7 +595,7 @@ public class Http2ConnectionHandlerTest {
                 return aggregatedPromise.setFailure(cause);
             }
         }).when(frameWriter).writeGoAway(
-                any(ChannelHandlerContext.class), anyInt(), anyInt(), any(ByteBuf.class), any(ChannelPromise.class));
+                any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class), any(ChannelPromise.class));
         handler.goAway(ctx, STREAM_ID, errorCode, data, newVoidPromise(channel));
         verify(pipeline).fireExceptionCaught(cause);
     }
@@ -602,7 +620,7 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
-    public void writeRstStreamForUnkownStreamUsingVoidPromise() throws Exception {
+    public void writeRstStreamForUnknownStreamUsingVoidPromise() throws Exception {
         writeRstStreamUsingVoidPromise(NON_EXISTANT_STREAM_ID);
     }
 
@@ -619,7 +637,7 @@ public class Http2ConnectionHandlerTest {
                 .then(new Answer<ChannelFuture>() {
                     @Override
                     public ChannelFuture answer(InvocationOnMock invocationOnMock) throws Throwable {
-                        ChannelPromise promise = invocationOnMock.getArgumentAt(3, ChannelPromise.class);
+                        ChannelPromise promise = invocationOnMock.getArgument(3);
                         assertFalse(promise.isVoid());
                         return promise.setFailure(cause);
                     }

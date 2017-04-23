@@ -19,6 +19,7 @@ package io.netty.resolver;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -31,6 +32,7 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * Creates and manages {@link NameResolver}s so that each {@link EventExecutor} has its own resolver instance.
  */
+@UnstableApi
 public abstract class AddressResolverGroup<T extends SocketAddress> implements Closeable {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AddressResolverGroup.class);

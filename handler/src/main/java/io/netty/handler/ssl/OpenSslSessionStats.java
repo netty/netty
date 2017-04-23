@@ -16,12 +16,12 @@
 
 package io.netty.handler.ssl;
 
-import org.apache.tomcat.jni.SSLContext;
+import io.netty.internal.tcnative.SSLContext;
 
 /**
  * Stats exposed by an OpenSSL session context.
  *
- * @see <a href="https://www.openssl.org/docs/ssl/SSL_CTX_sess_number.html"><code>SSL_CTX_sess_number</code></a>
+ * @see <a href="https://www.openssl.org/docs/manmaster/man3/SSL_CTX_sess_number.html">SSL_CTX_sess_number</a>
  */
 public final class OpenSslSessionStats {
 

@@ -504,6 +504,49 @@ public class DefaultChannelPipelineTest {
         assertTrue(future.isCancelled());
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testWrongPromiseChannel() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel()).sync();
+
+        ChannelPipeline pipeline2 = new LocalChannel().pipeline();
+        group.register(pipeline2.channel()).sync();
+
+        try {
+            ChannelPromise promise2 = pipeline2.channel().newPromise();
+            pipeline.close(promise2);
+        } finally {
+            pipeline.close();
+            pipeline2.close();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testUnexpectedVoidChannelPromise() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel()).sync();
+
+        try {
+            ChannelPromise promise = new VoidChannelPromise(pipeline.channel(), false);
+            pipeline.close(promise);
+        } finally {
+            pipeline.close();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testUnexpectedVoidChannelPromiseCloseFuture() throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        group.register(pipeline.channel()).sync();
+
+        try {
+            ChannelPromise promise = (ChannelPromise) pipeline.channel().closeFuture();
+            pipeline.close(promise);
+        } finally {
+            pipeline.close();
+        }
+    }
+
     @Test
     public void testCancelDeregister() throws Exception {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
@@ -728,7 +771,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test(timeout = 3000)
-    public void testHandlerAddedExceptionFromChildHandlerIsPropegated() {
+    public void testHandlerAddedExceptionFromChildHandlerIsPropagated() {
         final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
         try {
             final Promise<Void> promise = group1.next().newPromise();
@@ -752,7 +795,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test(timeout = 3000)
-    public void testHandlerRemovedExceptionFromChildHandlerIsPropegated() {
+    public void testHandlerRemovedExceptionFromChildHandlerIsPropagated() {
         final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
         try {
             final Promise<Void> promise = group1.next().newPromise();
@@ -1028,6 +1071,35 @@ public class DefaultChannelPipelineTest {
         assertNotNull(executor2);
         assertNotSame(executor1, executor2);
         group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
+    }
+
+    @Test(timeout = 3000)
+    public void testVoidPromiseNotify() throws Throwable {
+        ChannelPipeline pipeline1 = new LocalChannel().pipeline();
+
+        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(1);
+        EventLoop eventLoop1 = defaultGroup.next();
+        final Promise<Throwable> promise = eventLoop1.newPromise();
+        final Exception exception = new IllegalArgumentException();
+        try {
+            eventLoop1.register(pipeline1.channel()).syncUninterruptibly();
+            pipeline1.addLast(new ChannelDuplexHandler() {
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                    throw exception;
+                }
+
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                    promise.setSuccess(cause);
+                }
+            });
+            pipeline1.write("test", pipeline1.voidPromise());
+            assertSame(exception, promise.syncUninterruptibly().getNow());
+        } finally {
+            pipeline1.channel().close().syncUninterruptibly();
+            defaultGroup.shutdownGracefully();
+        }
     }
 
     private static final class TestTask implements Runnable {

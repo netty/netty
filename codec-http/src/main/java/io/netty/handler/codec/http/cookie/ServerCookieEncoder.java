@@ -134,7 +134,7 @@ public final class ServerCookieEncoder extends CookieEncoder {
      * @param nameToLastIndex A map from cookie name to index of last cookie instance.
      * @return The encoded list with all but the last instance of a named cookie.
      */
-    private List<String> dedup(List<String> encoded, Map<String, Integer> nameToLastIndex) {
+    private static List<String> dedup(List<String> encoded, Map<String, Integer> nameToLastIndex) {
         boolean[] isLastInstance = new boolean[encoded.size()];
         for (int idx : nameToLastIndex.values()) {
             isLastInstance[idx] = true;

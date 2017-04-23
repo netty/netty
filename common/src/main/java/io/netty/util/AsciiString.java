@@ -37,7 +37,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * A string which has been encoded into a character encoding whose character always takes a single byte, similarly to
  * ASCII. It internally keeps its content in a byte array unlike {@link String}, which uses a character array, for
  * reduced memory footprint and faster data transfer from/to byte-based data structures such as a byte array and
- * {@link ByteBuffer}. It is often used in conjunction with {@link Headers} that require a {@link CharSequence}.
+ * {@link ByteBuffer}. It is often used in conjunction with {@code Headers} that require a {@link CharSequence}.
  * <p>
  * This class was designed to provide an immutable array of bytes, and caches some internal state based upon the value
  * of this array. However underlying access to this byte array is provided via not copying the array on construction or
@@ -1144,7 +1144,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
 
     /**
      * Translates the entire byte string to a {@link String}.
-     * @see {@link #toString(int)}
+     * @see #toString(int)
      */
     @Override
     public String toString() {
@@ -1157,7 +1157,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
 
     /**
      * Translates the entire byte string to a {@link String} using the {@code charset} encoding.
-     * @see {@link #toString(int, int)}
+     * @see #toString(int, int)
      */
     public String toString(int start) {
         return toString(start, length());

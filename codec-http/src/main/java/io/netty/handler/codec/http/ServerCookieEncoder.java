@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+
 import java.util.Collection;
 import java.util.List;
 

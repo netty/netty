@@ -51,7 +51,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
     private final boolean autoRelease;
 
     /**
-     * @see {@link #SimpleChannelInboundHandler(boolean)} with {@code true} as boolean parameter.
+     * see {@link #SimpleChannelInboundHandler(boolean)} with {@code true} as boolean parameter.
      */
     protected SimpleChannelInboundHandler() {
         this(true);
@@ -69,7 +69,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
     }
 
     /**
-     * @see {@link #SimpleChannelInboundHandler(Class, boolean)} with {@code true} as boolean value.
+     * see {@link #SimpleChannelInboundHandler(Class, boolean)} with {@code true} as boolean value.
      */
     protected SimpleChannelInboundHandler(Class<? extends I> inboundMessageType) {
         this(inboundMessageType, true);

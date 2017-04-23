@@ -20,7 +20,8 @@ import org.junit.Test;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
-import java.net.InetAddress;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -31,6 +32,7 @@ public class HostsFileParserTest {
     public void testParse() throws IOException {
         String hostsString = new StringBuilder()
                 .append("127.0.0.1 host1").append("\n") // single hostname, separated with blanks
+                .append("::1 host1").append("\n") // same as above, but IPv6
                 .append("\n") // empty line
                 .append("192.168.0.1\thost2").append("\n") // single hostname, separated with tabs
                 .append("#comment").append("\n") // comment at the beginning of the line
@@ -42,16 +44,20 @@ public class HostsFileParserTest {
                 .append("192.168.0.6  host7").append("\n") // should be ignored since we have the uppercase host already
                 .toString();
 
-        Map<String, InetAddress> entries = HostsFileParser.parse(new BufferedReader(new StringReader(hostsString)));
+        HostsFileEntries entries = HostsFileParser.parse(new BufferedReader(new StringReader(hostsString)));
+        Map<String, Inet4Address> inet4Entries = entries.inet4Entries();
+        Map<String, Inet6Address> inet6Entries = entries.inet6Entries();
 
-        assertEquals("Expected 7 entries", 7, entries.size());
-        assertEquals("127.0.0.1", entries.get("host1").getHostAddress());
-        assertEquals("192.168.0.1", entries.get("host2").getHostAddress());
-        assertEquals("192.168.0.2", entries.get("host3").getHostAddress());
-        assertEquals("192.168.0.3", entries.get("host4").getHostAddress());
-        assertEquals("192.168.0.3", entries.get("host5").getHostAddress());
-        assertEquals("192.168.0.3", entries.get("host6").getHostAddress());
-        assertNotNull("uppercase host doesn't resolve", entries.get("host7"));
-        assertEquals("192.168.0.5", entries.get("host7").getHostAddress());
+        assertEquals("Expected 7 IPv4 entries", 7, inet4Entries.size());
+        assertEquals("Expected 1 IPv6 entries", 1, inet6Entries.size());
+        assertEquals("127.0.0.1", inet4Entries.get("host1").getHostAddress());
+        assertEquals("192.168.0.1", inet4Entries.get("host2").getHostAddress());
+        assertEquals("192.168.0.2", inet4Entries.get("host3").getHostAddress());
+        assertEquals("192.168.0.3", inet4Entries.get("host4").getHostAddress());
+        assertEquals("192.168.0.3", inet4Entries.get("host5").getHostAddress());
+        assertEquals("192.168.0.3", inet4Entries.get("host6").getHostAddress());
+        assertNotNull("uppercase host doesn't resolve", inet4Entries.get("host7"));
+        assertEquals("192.168.0.5", inet4Entries.get("host7").getHostAddress());
+        assertEquals("0:0:0:0:0:0:0:1", inet6Entries.get("host1").getHostAddress());
     }
 }

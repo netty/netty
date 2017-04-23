@@ -43,7 +43,7 @@ final class CipherSuiteConverter {
      * C - bulk cipher
      * D - HMAC algorithm
      *
-     * This regular expression assumees that:
+     * This regular expression assumes that:
      *
      * 1) A is always TLS or SSL, and
      * 2) D is always a single word.
@@ -194,7 +194,7 @@ final class CipherSuiteConverter {
         String handshakeAlgo = toOpenSslHandshakeAlgo(m.group(1));
         String bulkCipher = toOpenSslBulkCipher(m.group(2));
         String hmacAlgo = toOpenSslHmacAlgo(m.group(3));
-        if (handshakeAlgo.length() == 0) {
+        if (handshakeAlgo.isEmpty()) {
             return bulkCipher + '-' + hmacAlgo;
         } else {
             return handshakeAlgo + '-' + bulkCipher + '-' + hmacAlgo;
@@ -214,7 +214,7 @@ final class CipherSuiteConverter {
         }
 
         if (export) {
-            if (handshakeAlgo.length() == 0) {
+            if (handshakeAlgo.isEmpty()) {
                 handshakeAlgo = "EXP";
             } else {
                 handshakeAlgo = "EXP-" + handshakeAlgo;
@@ -276,6 +276,11 @@ final class CipherSuiteConverter {
         Map<String, String> p2j = o2j.get(openSslCipherSuite);
         if (p2j == null) {
             p2j = cacheFromOpenSsl(openSslCipherSuite);
+            // This may happen if this method is queried when OpenSSL doesn't yet have a cipher setup. It will return
+            // "(NONE)" in this case.
+            if (p2j == null) {
+                return null;
+            }
         }
 
         String javaCipherSuite = p2j.get(protocol);
@@ -341,7 +346,7 @@ final class CipherSuiteConverter {
     }
 
     private static String toJavaHandshakeAlgo(String handshakeAlgo, boolean export) {
-        if (handshakeAlgo.length() == 0) {
+        if (handshakeAlgo.isEmpty()) {
             handshakeAlgo = "RSA";
         } else if ("ADH".equals(handshakeAlgo)) {
             handshakeAlgo = "DH_anon";

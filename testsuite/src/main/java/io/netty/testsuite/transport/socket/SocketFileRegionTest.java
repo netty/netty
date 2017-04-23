@@ -26,7 +26,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.io.File;
@@ -45,7 +45,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     static final byte[] data = new byte[1048576 * 10];
 
     static {
-        ThreadLocalRandom.current().nextBytes(data);
+        PlatformDependent.threadLocalRandom().nextBytes(data);
     }
 
     @Test
@@ -104,7 +104,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         file.deleteOnExit();
 
         final FileOutputStream out = new FileOutputStream(file);
-        final Random random = ThreadLocalRandom.current();
+        final Random random = PlatformDependent.threadLocalRandom();
 
         // Prepend random data which will not be transferred, so that we can test non-zero start offset
         final int startOffset = random.nextInt(8192);
@@ -265,7 +265,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         @Override
         @Deprecated
         public long transfered() {
-            return region.transfered();
+            return region.transferred();
         }
 
         @Override

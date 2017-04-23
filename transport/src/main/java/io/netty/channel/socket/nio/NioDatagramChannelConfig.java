@@ -19,6 +19,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SocketUtils;
 
 import java.lang.reflect.Method;
 import java.net.InetAddress;
@@ -132,7 +133,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
         if (inf == null) {
             return null;
         } else {
-            Enumeration<InetAddress> addresses = inf.getInetAddresses();
+            Enumeration<InetAddress> addresses = SocketUtils.addressesFromNetworkInterface(inf);
             if (addresses.hasMoreElements()) {
                 return addresses.nextElement();
             }

@@ -25,11 +25,66 @@ public class PoolArenaTest {
 
     @Test
     public void testNormalizeCapacity() throws Exception {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 0, 0, 9, 999999);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 0, 0, 9, 999999, 0);
         int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
         int[] expectedResult = {0, 16, 512, 1024, 1024, 2048};
         for (int i = 0; i < reqCapacities.length; i ++) {
             Assert.assertEquals(expectedResult[i], arena.normalizeCapacity(reqCapacities[i]));
         }
+    }
+
+    @Test
+    public void testNormalizeAlignedCapacity() throws Exception {
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, 0, 0, 9, 999999, 64);
+        int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
+        int[] expectedResult = {0, 64, 512, 1024, 1024, 2048};
+        for (int i = 0; i < reqCapacities.length; i ++) {
+            Assert.assertEquals(expectedResult[i], arena.normalizeCapacity(reqCapacities[i]));
+        }
+    }
+
+    @Test
+    public final void testAllocationCounter() {
+        final PooledByteBufAllocator allocator = new PooledByteBufAllocator(
+                true,   // preferDirect
+                0,      // nHeapArena
+                1,      // nDirectArena
+                8192,   // pageSize
+                11,     // maxOrder
+                0,      // tinyCacheSize
+                0,      // smallCacheSize
+                0,      // normalCacheSize
+                true    // useCacheForAllThreads
+                );
+
+        // create tiny buffer
+        final ByteBuf b1 = allocator.directBuffer(24);
+        // create small buffer
+        final ByteBuf b2 = allocator.directBuffer(800);
+        // create normal buffer
+        final ByteBuf b3 = allocator.directBuffer(8192 * 2);
+
+        Assert.assertNotNull(b1);
+        Assert.assertNotNull(b2);
+        Assert.assertNotNull(b3);
+
+        // then release buffer to deallocated memory while threadlocal cache has been disabled
+        // allocations counter value must equals deallocations counter value
+        Assert.assertTrue(b1.release());
+        Assert.assertTrue(b2.release());
+        Assert.assertTrue(b3.release());
+
+        Assert.assertTrue(allocator.directArenas().size() >= 1);
+        final PoolArenaMetric metric = allocator.directArenas().get(0);
+
+        Assert.assertEquals(3, metric.numDeallocations());
+        Assert.assertEquals(3, metric.numAllocations());
+
+        Assert.assertEquals(1, metric.numTinyDeallocations());
+        Assert.assertEquals(1, metric.numTinyAllocations());
+        Assert.assertEquals(1, metric.numSmallDeallocations());
+        Assert.assertEquals(1, metric.numSmallAllocations());
+        Assert.assertEquals(1, metric.numNormalDeallocations());
+        Assert.assertEquals(1, metric.numNormalAllocations());
     }
 }

@@ -25,8 +25,8 @@ import static org.junit.Assert.*;
 public class PooledBigEndianDirectByteBufTest extends AbstractPooledByteBufTest {
 
     @Override
-    protected ByteBuf alloc(int length) {
-        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(length);
+    protected ByteBuf alloc(int length, int maxCapacity) {
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(length, maxCapacity);
         assertSame(ByteOrder.BIG_ENDIAN, buffer.order());
         return buffer;
     }

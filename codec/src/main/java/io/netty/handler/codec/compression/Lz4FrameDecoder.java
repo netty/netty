@@ -31,7 +31,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.*;
 /**
  * Uncompresses a {@link ByteBuf} encoded with the LZ4 format.
  *
- * See original <a href="http://code.google.com/p/lz4/">LZ4 website</a>
+ * See original <a href="https://github.com/Cyan4973/lz4">LZ4 Github project</a>
  * and <a href="http://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
  * for full description.
  *
@@ -121,7 +121,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
      *                           uncompressed data, and if the checksums do not match, a suitable
      *                           {@link DecompressionException} will be thrown. In this case encoder will use
      *                           xxhash hashing for Java, based on Yann Collet's work available at
-     *                           <a href="http://code.google.com/p/xxhash/">Google Code</a>.
+     *                           <a href="https://github.com/Cyan4973/xxHash">Github</a>.
      */
     public Lz4FrameDecoder(LZ4Factory factory, boolean validateChecksums) {
         this(factory, validateChecksums ?

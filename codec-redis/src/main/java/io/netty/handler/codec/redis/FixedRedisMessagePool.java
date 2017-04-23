@@ -71,13 +71,13 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
     public static final FixedRedisMessagePool INSTANCE = new FixedRedisMessagePool();
 
     // internal caches.
-    private Map<ByteBuf, SimpleStringRedisMessage> byteBufToSimpleStrings;
-    private Map<String, SimpleStringRedisMessage> stringToSimpleStrings;
-    private Map<ByteBuf, ErrorRedisMessage> byteBufToErrors;
-    private Map<String, ErrorRedisMessage> stringToErrors;
-    private Map<ByteBuf, IntegerRedisMessage> byteBufToIntegers;
-    private LongObjectMap<IntegerRedisMessage> longToIntegers;
-    private LongObjectMap<byte[]> longToByteBufs;
+    private final Map<ByteBuf, SimpleStringRedisMessage> byteBufToSimpleStrings;
+    private final Map<String, SimpleStringRedisMessage> stringToSimpleStrings;
+    private final Map<ByteBuf, ErrorRedisMessage> byteBufToErrors;
+    private final Map<String, ErrorRedisMessage> stringToErrors;
+    private final Map<ByteBuf, IntegerRedisMessage> byteBufToIntegers;
+    private final LongObjectMap<IntegerRedisMessage> longToIntegers;
+    private final LongObjectMap<byte[]> longToByteBufs;
 
     /**
      * Creates a {@link FixedRedisMessagePool} instance.

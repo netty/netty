@@ -22,6 +22,7 @@ import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
 
 import java.nio.ByteBuffer;
+import javax.net.ssl.SSLHandshakeException;
 
 /**
  * Constants for SSL packets.
@@ -49,6 +50,11 @@ final class SslUtils {
     static final int SSL_CONTENT_TYPE_APPLICATION_DATA = 23;
 
     /**
+     * HeartBeat Extension
+     */
+    static final int SSL_CONTENT_TYPE_EXTENSION_HEARTBEAT = 24;
+
+    /**
      * the length of the ssl record header (in bytes)
      */
     static final int SSL_RECORD_HEADER_LENGTH = 5;
@@ -64,6 +70,17 @@ final class SslUtils {
     static final int NOT_ENCRYPTED = -2;
 
     /**
+     * Converts the given exception to a {@link SSLHandshakeException}, if it isn't already.
+     */
+    static SSLHandshakeException toSSLHandshakeException(Throwable e) {
+        if (e instanceof SSLHandshakeException) {
+            return (SSLHandshakeException) e;
+        }
+
+        return (SSLHandshakeException) new SSLHandshakeException(e.getMessage()).initCause(e);
+    }
+
+    /**
      * Return how much bytes can be read out of the encrypted data. Be aware that this method will not increase
      * the readerIndex of the given {@link ByteBuf}.
      *
@@ -73,7 +90,7 @@ final class SslUtils {
      *                  otherwise it will throw an {@link IllegalArgumentException}.
      * @return length
      *                  The length of the encrypted packet that is included in the buffer or
-     *                  {@link #SslUtils#NOT_ENOUGH_DATA} if not enought data is present in the
+     *                  {@link #SslUtils#NOT_ENOUGH_DATA} if not enough data is present in the
      *                  {@link ByteBuf}. This will return {@link SslUtils#NOT_ENCRYPTED} if
      *                  the given {@link ByteBuf} is not encrypted at all.
      * @throws IllegalArgumentException
@@ -90,6 +107,7 @@ final class SslUtils {
             case SSL_CONTENT_TYPE_ALERT:
             case SSL_CONTENT_TYPE_HANDSHAKE:
             case SSL_CONTENT_TYPE_APPLICATION_DATA:
+            case SSL_CONTENT_TYPE_EXTENSION_HEARTBEAT:
                 tls = true;
                 break;
             default:
@@ -176,6 +194,7 @@ final class SslUtils {
             case SSL_CONTENT_TYPE_ALERT:
             case SSL_CONTENT_TYPE_HANDSHAKE:
             case SSL_CONTENT_TYPE_APPLICATION_DATA:
+            case SSL_CONTENT_TYPE_EXTENSION_HEARTBEAT:
                 tls = true;
                 break;
             default:

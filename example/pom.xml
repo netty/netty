@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.7.Final-SNAPSHOT</version>
+    <version>4.1.10.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-example</artifactId>
@@ -90,6 +90,11 @@
       <classifier>${tcnative.classifier}</classifier>
     </dependency>
     <dependency>
+      <groupId>${conscrypt.groupId}</groupId>
+      <artifactId>${conscrypt.artifactId}</artifactId>
+      <classifier>${conscrypt.classifier}</classifier>
+    </dependency>
+    <dependency>
       <groupId>org.eclipse.jetty.npn</groupId>
       <artifactId>npn-api</artifactId>
     </dependency>
@@ -123,6 +128,16 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <scope>runtime</scope>
+    </dependency>
+    
+    <!-- Needed for OCSP -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
     </dependency>
   </dependencies>
 

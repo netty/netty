@@ -43,7 +43,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     private final boolean direct;
 
     FixedCompositeByteBuf(ByteBufAllocator allocator, ByteBuf... buffers) {
-        super(Integer.MAX_VALUE);
+        super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
         if (buffers.length == 0) {
             this.buffers = EMPTY;
             order = ByteOrder.BIG_ENDIAN;

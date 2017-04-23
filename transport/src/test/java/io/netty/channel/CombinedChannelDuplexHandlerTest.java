@@ -76,7 +76,7 @@ public class CombinedChannelDuplexHandlerTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testOutboundHandlerImplementsInbboundHandler() {
+    public void testOutboundHandlerImplementsInboundHandler() {
         new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
                 new ChannelInboundHandlerAdapter(), new ChannelDuplexHandler());
     }
@@ -386,5 +386,15 @@ public class CombinedChannelDuplexHandlerTest {
         pipeline.deregister(promise);
         promise.syncUninterruptibly();
         ch.finish();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testNotSharable() {
+        new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>() {
+            @Override
+            public boolean isSharable() {
+                return true;
+            }
+        };
     }
 }

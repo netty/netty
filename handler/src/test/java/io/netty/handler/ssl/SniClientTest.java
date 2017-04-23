@@ -29,33 +29,90 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.Mapping;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
+import java.nio.channels.ClosedChannelException;
+
 public class SniClientTest {
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testSniClientJdkSslServerJdkSsl() throws Exception {
         testSniClient(SslProvider.JDK, SslProvider.JDK);
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testSniClientOpenSslServerOpenSsl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
         testSniClient(SslProvider.OPENSSL, SslProvider.OPENSSL);
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testSniClientJdkSslServerOpenSsl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
         testSniClient(SslProvider.JDK, SslProvider.OPENSSL);
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 30000)
     public void testSniClientOpenSslServerJdkSsl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
         testSniClient(SslProvider.OPENSSL, SslProvider.JDK);
+    }
+
+    @Test(timeout = 30000)
+    public void testSniSNIMatcherMatchesClientJdkSslServerJdkSsl() throws Exception {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
+        SniClientJava8TestUtil.testSniClient(SslProvider.JDK, SslProvider.JDK, true);
+    }
+
+    @Test(timeout = 30000, expected = ClosedChannelException.class)
+    public void testSniSNIMatcherDoesNotMatchClientJdkSslServerJdkSsl() throws Exception {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
+        SniClientJava8TestUtil.testSniClient(SslProvider.JDK, SslProvider.JDK, false);
+    }
+
+    @Test(timeout = 30000)
+    public void testSniSNIMatcherMatchesClientOpenSslServerOpenSsl() throws Exception {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        SniClientJava8TestUtil.testSniClient(SslProvider.OPENSSL, SslProvider.OPENSSL, true);
+    }
+
+    @Test(timeout = 30000, expected = ClosedChannelException.class)
+    public void testSniSNIMatcherDoesNotMatchClientOpenSslServerOpenSsl() throws Exception {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        SniClientJava8TestUtil.testSniClient(SslProvider.OPENSSL, SslProvider.OPENSSL, false);
+    }
+
+    @Test(timeout = 30000)
+    public void testSniSNIMatcherMatchesClientJdkSslServerOpenSsl() throws Exception {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        SniClientJava8TestUtil.testSniClient(SslProvider.JDK, SslProvider.OPENSSL, true);
+    }
+
+    @Test(timeout = 30000, expected = ClosedChannelException.class)
+    public void testSniSNIMatcherDoesNotMatchClientJdkSslServerOpenSsl() throws Exception {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        SniClientJava8TestUtil.testSniClient(SslProvider.JDK, SslProvider.OPENSSL, false);
+    }
+
+    @Test(timeout = 30000)
+    public void testSniSNIMatcherMatchesClientOpenSslServerJdkSsl() throws Exception {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        SniClientJava8TestUtil.testSniClient(SslProvider.OPENSSL, SslProvider.JDK, true);
+    }
+
+    @Test(timeout = 30000, expected = ClosedChannelException.class)
+    public void testSniSNIMatcherDoesNotMatchClientOpenSslServerJdkSsl() throws Exception {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        SniClientJava8TestUtil.testSniClient(SslProvider.OPENSSL, SslProvider.JDK, false);
     }
 
     private static void testSniClient(SslProvider sslClientProvider, SslProvider sslServerProvider) throws Exception {

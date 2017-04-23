@@ -39,10 +39,10 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
 
                 @Override
                 protected void onRemoval(NativeDatagramPacketArray value) throws Exception {
-                    NativeDatagramPacket[] array = value.packets;
+                    NativeDatagramPacket[] packetsArray = value.packets;
                     // Release all packets
-                    for (int i = 0; i < array.length; i++) {
-                        array[i].release();
+                    for (NativeDatagramPacket datagramPacket : packetsArray) {
+                        datagramPacket.release();
                     }
                 }
             };

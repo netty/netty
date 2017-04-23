@@ -18,6 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.internal.SocketUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,7 +33,7 @@ public class DnsQueryTest {
 
     @Test
     public void writeQueryTest() throws Exception {
-        InetSocketAddress addr = new InetSocketAddress("8.8.8.8", 53);
+        InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsQueryEncoder());
         List<DnsQuery> queries = new ArrayList<DnsQuery>(5);
         queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(

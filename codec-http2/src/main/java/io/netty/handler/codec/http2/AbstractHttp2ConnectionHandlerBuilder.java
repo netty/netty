@@ -19,7 +19,10 @@ package io.netty.handler.codec.http2;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.internal.UnstableApi;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_STREAMS;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -76,13 +79,14 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private static final SensitivityDetector DEFAULT_HEADER_SENSITIVITY_DETECTOR = Http2HeadersEncoder.NEVER_SENSITIVE;
 
     // The properties that can always be set.
-    private Http2Settings initialSettings = new Http2Settings();
+    private Http2Settings initialSettings = new Http2Settings().maxHeaderListSize(DEFAULT_HEADER_LIST_SIZE);
     private Http2FrameListener frameListener;
     private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
 
     // The property that will prohibit connection() and codec() if set by server(),
     // because this property is used only when this builder creates a Http2Connection.
     private Boolean isServer;
+    private Integer maxReservedStreams;
 
     // The property that will prohibit server() and codec() if set by connection().
     private Http2Connection connection;
@@ -170,6 +174,29 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Get the maximum number of streams which can be in the reserved state at any given time.
+     * <p>
+     * By default this value will be ignored on the server for local endpoint. This is because the RFC provides
+     * no way to explicitly communicate a limit to how many states can be in the reserved state, and instead relies
+     * on the peer to send RST_STREAM frames when they will be rejected.
+     */
+    protected int maxReservedStreams() {
+        return maxReservedStreams != null ? maxReservedStreams : DEFAULT_MAX_RESERVED_STREAMS;
+    }
+
+    /**
+     * Set the maximum number of streams which can be in the reserved state at any given time.
+     */
+    protected B maxReservedStreams(int maxReservedStreams) {
+        enforceConstraint("server", "connection", connection);
+        enforceConstraint("server", "codec", decoder);
+        enforceConstraint("server", "codec", encoder);
+
+        this.maxReservedStreams = checkPositiveOrZero(maxReservedStreams, "maxReservedStreams");
+        return self();
+    }
+
+    /**
      * Returns the {@link Http2Connection} to use.
      *
      * @return {@link Http2Connection} if set, or {@code null} if not set.
@@ -182,6 +209,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * Sets the {@link Http2Connection} to use.
      */
     protected B connection(Http2Connection connection) {
+        enforceConstraint("connection", "maxReservedStreams", maxReservedStreams);
         enforceConstraint("connection", "server", isServer);
         enforceConstraint("connection", "codec", decoder);
         enforceConstraint("connection", "codec", encoder);
@@ -214,6 +242,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B codec(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
         enforceConstraint("codec", "server", isServer);
+        enforceConstraint("codec", "maxReservedStreams", maxReservedStreams);
         enforceConstraint("codec", "connection", connection);
         enforceConstraint("codec", "frameLogger", frameLogger);
         enforceConstraint("codec", "validateHeaders", validateHeaders);
@@ -327,14 +356,17 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
         Http2Connection connection = this.connection;
         if (connection == null) {
-            connection = new DefaultHttp2Connection(isServer());
+            connection = new DefaultHttp2Connection(isServer(), maxReservedStreams());
         }
 
         return buildFromConnection(connection);
     }
 
     private T buildFromConnection(Http2Connection connection) {
-        Http2FrameReader reader = new DefaultHttp2FrameReader(isValidateHeaders());
+        Long maxHeaderListSize = initialSettings.maxHeaderListSize();
+        Http2FrameReader reader = new DefaultHttp2FrameReader(maxHeaderListSize == null ?
+                new DefaultHttp2HeadersDecoder(isValidateHeaders()) :
+                new DefaultHttp2HeadersDecoder(isValidateHeaders(), maxHeaderListSize));
         Http2FrameWriter writer = encoderIgnoreMaxHeaderListSize == null ?
                 new DefaultHttp2FrameWriter(headerSensitivityDetector()) :
                 new DefaultHttp2FrameWriter(headerSensitivityDetector(), encoderIgnoreMaxHeaderListSize);
@@ -401,9 +433,9 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         return (B) this;
     }
 
-    private void enforceNonCodecConstraints(String rejectee) {
-        enforceConstraint(rejectee, "server/connection", decoder);
-        enforceConstraint(rejectee, "server/connection", encoder);
+    private void enforceNonCodecConstraints(String rejected) {
+        enforceConstraint(rejected, "server/connection", decoder);
+        enforceConstraint(rejected, "server/connection", encoder);
     }
 
     private static void enforceConstraint(String methodName, String rejectorName, Object value) {

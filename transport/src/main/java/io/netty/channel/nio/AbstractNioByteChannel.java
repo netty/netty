@@ -27,6 +27,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -59,6 +60,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      */
     protected abstract ChannelFuture shutdownInput();
 
+    protected boolean isInputShutdown0() {
+        return false;
+    }
+
     @Override
     protected AbstractNioUnsafe newUnsafe() {
         return new NioByteUnsafe();
@@ -72,15 +77,15 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected class NioByteUnsafe extends AbstractNioUnsafe {
 
         private void closeOnRead(ChannelPipeline pipeline) {
-            if (isOpen()) {
+            if (!isInputShutdown0()) {
                 if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
                     shutdownInput();
-                    SelectionKey key = selectionKey();
-                    key.interestOps(key.interestOps() & ~readInterestOp);
                     pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());
                 }
+            } else {
+                pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
             }
         }
 

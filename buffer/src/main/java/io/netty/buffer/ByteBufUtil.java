@@ -159,6 +159,22 @@ public final class ByteBufUtil {
     }
 
     /**
+     * Returns the reader index of needle in haystack, or -1 if needle is not in haystack.
+     */
+    public static int indexOf(ByteBuf needle, ByteBuf haystack) {
+        // TODO: maybe use Boyer Moore for efficiency.
+        int attempts = haystack.readableBytes() - needle.readableBytes() + 1;
+        for (int i = 0; i < attempts; i++) {
+            if (equals(needle, needle.readerIndex(),
+                       haystack, haystack.readerIndex() + i,
+                       needle.readableBytes())) {
+                return haystack.readerIndex() + i;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * Returns {@code true} if and only if the two specified buffers are
      * identical to each other for {@code length} bytes starting at {@code aStartIndex}
      * index for the {@code a} buffer and {@code bStartIndex} index for the {@code b} buffer.
@@ -246,7 +262,7 @@ public final class ByteBufUtil {
             }
             if (res != 0) {
                 // Ensure we not overflow when cast
-                return (int) Math.min(Integer.MAX_VALUE, res);
+                return (int) Math.min(Integer.MAX_VALUE, Math.max(Integer.MIN_VALUE, res));
             }
             aIndex += uintCountIncrement;
             bIndex += uintCountIncrement;
@@ -572,7 +588,7 @@ public final class ByteBufUtil {
             dst = alloc.buffer(length);
         }
         try {
-            final ByteBuffer dstBuf = dst.internalNioBuffer(0, length);
+            final ByteBuffer dstBuf = dst.internalNioBuffer(dst.readerIndex(), length);
             final int pos = dstBuf.position();
             CoderResult cr = encoder.encode(src, dstBuf, true);
             if (!cr.isUnderflow()) {
@@ -619,7 +635,7 @@ public final class ByteBufUtil {
             try {
                 buffer.writeBytes(src, readerIndex, len);
                 // Use internalNioBuffer(...) to reduce object creation.
-                decodeString(decoder, buffer.internalNioBuffer(0, len), dst);
+                decodeString(decoder, buffer.internalNioBuffer(buffer.readerIndex(), len), dst);
             } finally {
                 // Release the temporary buffer again.
                 buffer.release();
@@ -1071,7 +1087,7 @@ public final class ByteBufUtil {
                     ByteBuf heapBuffer =  buf.alloc().heapBuffer(length);
                     try {
                         heapBuffer.writeBytes(buf, index, length);
-                        decoder.decode(heapBuffer.internalNioBuffer(0, length));
+                        decoder.decode(heapBuffer.internalNioBuffer(heapBuffer.readerIndex(), length));
                     } finally {
                         heapBuffer.release();
                     }

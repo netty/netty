@@ -17,12 +17,14 @@
 package io.netty.resolver;
 
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.SocketAddress;
 
 /**
  * A {@link AddressResolverGroup} of {@link NoopAddressResolver}s.
  */
+@UnstableApi
 public final class NoopAddressResolverGroup extends AddressResolverGroup<SocketAddress> {
 
     public static final NoopAddressResolverGroup INSTANCE = new NoopAddressResolverGroup();
