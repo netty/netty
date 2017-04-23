@@ -83,6 +83,7 @@
         <asm.version>6.0_ALPHA</asm.version>
         <!-- Skip as maven plugin not works with Java9 yet --> 
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
       </properties>
       <activation>
         <jdk>9</jdk>
