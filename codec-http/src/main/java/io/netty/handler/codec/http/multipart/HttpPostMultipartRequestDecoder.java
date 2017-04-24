@@ -735,12 +735,12 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                     }
                 } else {
                     for (int i = 1; i < contents.length; i++) {
-                        if (contents[i].toLowerCase().startsWith(HttpHeaders.Values.CHARSET)) {
+                        final String charsetHeader = HttpHeaders.Values.CHARSET;
+                        if (contents[i].regionMatches(true, 0, charsetHeader, 0, charsetHeader.length())) {
                             String values = StringUtil.substringAfter(contents[i], '=');
                             Attribute attribute;
                             try {
-                                attribute = factory.createAttribute(request, HttpHeaders.Values.CHARSET,
-                                        cleanString(values));
+                                attribute = factory.createAttribute(request, charsetHeader, cleanString(values));
                             } catch (NullPointerException e) {
                                 throw new ErrorDataDecoderException(e);
                             } catch (IllegalArgumentException e) {
