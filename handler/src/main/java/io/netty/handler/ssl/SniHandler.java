@@ -30,10 +30,13 @@ import io.netty.handler.codec.DecoderException;
 import io.netty.util.AsyncMapping;
 import io.netty.util.CharsetUtil;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.FixedSupplier;
 import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.Supplier;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -56,7 +59,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
             InternalLoggerFactory.getInstance(SniHandler.class);
     private static final Selection EMPTY_SELECTION = new Selection(null, null);
 
-    protected final AsyncMapping<String, SslContext> mapping;
+    protected final SslContextMapping mapping;
 
     private boolean handshakeFailed;
     private boolean suppressRead;
@@ -70,7 +73,7 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * @param mapping the mapping of domain name to {@link SslContext}
      */
     public SniHandler(Mapping<? super String, ? extends SslContext> mapping) {
-        this(new AsyncMappingAdapter(mapping));
+        this(new MappingAdapter(mapping));
     }
 
     /**
@@ -89,9 +92,18 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *
      * @param mapping the mapping of domain name to {@link SslContext}
      */
-    @SuppressWarnings("unchecked")
     public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping) {
-        this.mapping = (AsyncMapping<String, SslContext>) ObjectUtil.checkNotNull(mapping, "mapping");
+        this(new AsyncMappingAdapter(mapping));
+    }
+
+    /**
+     * Creates a SNI detection handler with configured {@link SslContext}
+     * maintained by {@link SslContextMapping}
+     *
+     * @param mapping the mapping of domain name to {@link SslContext}
+     */
+    public SniHandler(SslContextMapping mapping) {
+        this.mapping = ObjectUtil.checkNotNull(mapping, "mapping");
     }
 
     /**
@@ -102,10 +114,19 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     /**
+     * @return the selected {@link Supplier} for {@link SslContext}
+     */
+    protected Supplier<? extends SslContext> sslContextSupplier() {
+        return selection.supplier;
+    }
+
+    /**
+     * @see #sslContextSupplier()
      * @return the selected {@link SslContext}
      */
     public SslContext sslContext() {
-        return selection.context;
+        Supplier<? extends SslContext> supplier = sslContextSupplier();
+        return supplier != null ? supplier.get() : null;
     }
 
     @Override
@@ -277,23 +298,23 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void select(final ChannelHandlerContext ctx, final String hostname) throws Exception {
-        Future<SslContext> future = lookup(ctx, hostname);
+        Future<?> future = lookup(ctx, hostname);
         if (future.isDone()) {
             if (future.isSuccess()) {
-                onSslContext(ctx, hostname, future.getNow());
+                onSslContextOrSupplier(ctx, hostname, future.getNow());
             } else {
                 throw new DecoderException("failed to get the SslContext for " + hostname, future.cause());
             }
         } else {
             suppressRead = true;
-            future.addListener(new FutureListener<SslContext>() {
+            future.addListener(new FutureListener<Object>() {
                 @Override
-                public void operationComplete(Future<SslContext> future) throws Exception {
+                public void operationComplete(Future<Object> future) throws Exception {
                     try {
                         suppressRead = false;
                         if (future.isSuccess()) {
                             try {
-                                onSslContext(ctx, hostname, future.getNow());
+                                onSslContextOrSupplier(ctx, hostname, future.getNow());
                             } catch (Throwable cause) {
                                 ctx.fireExceptionCaught(new DecoderException(cause));
                             }
@@ -313,28 +334,55 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     /**
-     * The default implementation will simply call {@link AsyncMapping#map(Object, Promise)} but
-     * users can override this method to implement custom behavior.
+     * The default implementation will simply call {@link SslContextMapping#map(String, Promise)} but users can
+     * override this method to implement custom behavior.
      *
-     * @see AsyncMapping#map(Object, Promise)
+     * NOTE: This method returns a {@code Future<?>} to accommodate the old and new way of doing things without
+     * braking the API. Users who override this method are advised to change their return value from
+     * {@code Future<SslContext>} to {@code Future<Supplier<? extends SslContext>>}.
+     *
+     * @see SslContextMapping#map(String, Promise)
+     * @deprecated the return value will at some point change from {@code Future<SslContext>} to
+     *   {@code Future<Supplier<? extends SslContext>>}.
      */
-    protected Future<SslContext> lookup(ChannelHandlerContext ctx, String hostname) throws Exception {
-        return mapping.map(hostname, ctx.executor().<SslContext>newPromise());
+    @Deprecated
+    protected Future<?> lookup(ChannelHandlerContext ctx, String hostname) throws Exception {
+        Promise<Supplier<? extends SslContext>> promise = ctx.executor().newPromise();
+        return mapping.map(hostname, promise);
     }
 
     /**
-     * Called upon successful completion of the {@link AsyncMapping}'s {@link Future}.
+     * Called upon successful completion of the {@link SslContextMapping}'s {@link Future}.
      *
      * @see #select(ChannelHandlerContext, String)
      */
-    private void onSslContext(ChannelHandlerContext ctx, String hostname, SslContext sslContext) {
-        selection = new Selection(sslContext, hostname);
+    @SuppressWarnings("unchecked")
+    private void onSslContextOrSupplier(ChannelHandlerContext ctx, String hostname, Object value) {
+        // NOTE: See JavaDoc of #lookup(...) to see why this if-else is necessary.
+        final Supplier<? extends SslContext> supplier;
+        if (value instanceof Supplier<?>) {
+            supplier = (Supplier<? extends SslContext>) value;
+        } else {
+            // If the user returned something other than a SslContext or Supplier<SslContext>
+            // in the Future<?> then let it blow up with a ClassCastException
+            supplier = new FixedSupplier<SslContext>((SslContext) value);
+        }
+
+        selection = new Selection(supplier, hostname);
         try {
-            replaceHandler(ctx, hostname, sslContext);
+            replaceHandler(ctx, hostname, supplier);
         } catch (Throwable cause) {
             selection = EMPTY_SELECTION;
             PlatformDependent.throwException(cause);
         }
+    }
+
+    /**
+     * @see #replaceHandler(ChannelHandlerContext, String, SslContext)
+     */
+    protected void replaceHandler(ChannelHandlerContext ctx, String hostname,
+            Supplier<? extends SslContext> supplier) throws Exception {
+        replaceHandler(ctx, hostname, supplier.get());
     }
 
     /**
@@ -407,31 +455,73 @@ public class SniHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ctx.flush();
     }
 
-    private static final class AsyncMappingAdapter implements AsyncMapping<String, SslContext> {
+    private static final class AsyncMappingAdapter implements SslContextMapping {
+        private final AsyncMapping<String, SslContext> mapping;
+
+        @SuppressWarnings("unchecked")
+        AsyncMappingAdapter(AsyncMapping<? super String, ? extends SslContext> mapping) {
+            this.mapping = (AsyncMapping<String, SslContext>) ObjectUtil.checkNotNull(mapping, "mapping");
+        }
+
+        @Override
+        public Future<Supplier<? extends SslContext>> map(String input,
+                                                          final Promise<Supplier<? extends SslContext>> promise) {
+
+            Future<SslContext> future = mapping.map(input,
+                    ImmediateEventExecutor.INSTANCE.<SslContext>newPromise());
+
+            if (future.isDone()) {
+                onOperationComplete(future, promise);
+            } else {
+                future.addListener(new FutureListener<SslContext>() {
+                    @Override
+                    public void operationComplete(Future<SslContext> future) {
+                        onOperationComplete(future, promise);
+                    }
+                });
+            }
+
+            return promise;
+        }
+
+        private static void onOperationComplete(Future<? extends SslContext> future,
+                                                Promise<Supplier<? extends SslContext>> promise) {
+            if (future.isSuccess()) {
+                promise.setSuccess(new FixedSupplier<SslContext>(future.getNow()));
+            } else {
+                promise.setFailure(future.cause());
+            }
+        }
+    }
+
+    private static final class MappingAdapter implements SslContextMapping {
         private final Mapping<? super String, ? extends SslContext> mapping;
 
-        private AsyncMappingAdapter(Mapping<? super String, ? extends SslContext> mapping) {
+        MappingAdapter(Mapping<? super String, ? extends SslContext> mapping) {
             this.mapping = ObjectUtil.checkNotNull(mapping, "mapping");
         }
 
         @Override
-        public Future<SslContext> map(String input, Promise<SslContext> promise) {
-            final SslContext context;
+        public Future<Supplier<? extends SslContext>> map(String input,
+                                                          Promise<Supplier<? extends SslContext>> promise) {
+
+            final Supplier<SslContext> supplier;
             try {
-                context = mapping.map(input);
+                SslContext sslContent = mapping.map(input);
+                supplier = new FixedSupplier<SslContext>(sslContent);
             } catch (Throwable cause) {
                 return promise.setFailure(cause);
             }
-            return promise.setSuccess(context);
+            return promise.setSuccess(supplier);
         }
     }
 
     private static final class Selection {
-        final SslContext context;
+        final Supplier<? extends SslContext> supplier;
         final String hostname;
 
-        Selection(SslContext context, String hostname) {
-            this.context = context;
+        Selection(Supplier<? extends SslContext> supplier, String hostname) {
+            this.supplier = supplier;
             this.hostname = hostname;
         }
     }
