@@ -283,11 +283,9 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
 
     private void setConnectSuccess() {
         finished = true;
-        if (connectTimeoutFuture != null) {
-            connectTimeoutFuture.cancel(false);
-        }
+        cancelConnectTimeoutFuture();
 
-        if (connectPromise.trySuccess(ctx.channel())) {
+        if (!connectPromise.isDone()) {
             boolean removedCodec = true;
 
             removedCodec &= safeRemoveEncoder();
@@ -303,13 +301,12 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
                 if (flushedPrematurely) {
                     ctx.flush();
                 }
+                connectPromise.trySuccess(ctx.channel());
             } else {
                 // We are at inconsistent state because we failed to remove all codec handlers.
                 Exception cause = new ProxyConnectException(
                         "failed to remove all codec handlers added by the proxy handler; bug?");
-                failPendingWrites(cause);
-                ctx.fireExceptionCaught(cause);
-                ctx.close();
+                failPendingWritesAndClose(cause);
             }
         }
     }
@@ -338,22 +335,32 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
 
     private void setConnectFailure(Throwable cause) {
         finished = true;
-        if (connectTimeoutFuture != null) {
-            connectTimeoutFuture.cancel(false);
-        }
+        cancelConnectTimeoutFuture();
 
-        if (!(cause instanceof ProxyConnectException)) {
-            cause = new ProxyConnectException(
-                    exceptionMessage(cause.toString()), cause);
-        }
+        if (!connectPromise.isDone()) {
 
-        if (connectPromise.tryFailure(cause)) {
+            if (!(cause instanceof ProxyConnectException)) {
+                cause = new ProxyConnectException(
+                        exceptionMessage(cause.toString()), cause);
+            }
+
             safeRemoveDecoder();
             safeRemoveEncoder();
+            failPendingWritesAndClose(cause);
+        }
+    }
 
-            failPendingWrites(cause);
-            ctx.fireExceptionCaught(cause);
-            ctx.close();
+    private void failPendingWritesAndClose(Throwable cause) {
+        failPendingWrites(cause);
+        connectPromise.tryFailure(cause);
+        ctx.fireExceptionCaught(cause);
+        ctx.close();
+    }
+
+    private void cancelConnectTimeoutFuture() {
+        if (connectTimeoutFuture != null) {
+            connectTimeoutFuture.cancel(false);
+            connectTimeoutFuture = null;
         }
     }
 
