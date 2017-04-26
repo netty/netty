@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -32,6 +32,10 @@ import io.netty.handler.logging.LoggingHandler;
 public final class UptimeServer {
     private static final int PORT = Integer.parseInt(System.getProperty("port", "8080"));
     private static final UptimeServerHandler handler = new UptimeServerHandler();
+
+    private UptimeServer() {
+        throw new IllegalAccessError("Should not be instantiated");
+    }
 
     public static void main(String[] args) throws Exception {
 
