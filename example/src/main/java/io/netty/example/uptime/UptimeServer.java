@@ -34,7 +34,6 @@ public final class UptimeServer {
     private static final UptimeServerHandler handler = new UptimeServerHandler();
 
     private UptimeServer() {
-        throw new IllegalAccessError("Should not be instantiated");
     }
 
     public static void main(String[] args) throws Exception {
