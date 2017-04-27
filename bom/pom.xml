@@ -15,136 +15,176 @@
   ~ under the License.
   -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.1.10.Final-SNAPSHOT</version>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+    <relativePath />
   </parent>
 
+  <groupId>io.netty</groupId>
   <artifactId>netty-bom</artifactId>
+  <version>4.1.10.Final-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Netty/BOM</name>
+  <description>Netty (Bill of Materials)</description>
+  <url>http://netty.io/</url>
+
+  <organization>
+    <name>The Netty Project</name>
+    <url>http://netty.io/</url>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
+  <inceptionYear>2008</inceptionYear>
+
+  <scm>
+    <url>https://github.com/netty/netty</url>
+    <connection>scm:git:git://github.com/netty/netty.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <developers>
+    <developer>
+      <id>netty.io</id>
+      <name>The Netty Project Contributors</name>
+      <email>netty@googlegroups.com</email>
+      <url>http://netty.io/</url>
+      <organization>The Netty Project</organization>
+      <organizationUrl>http://netty.io/</organizationUrl>
+    </developer>
+  </developers>
 
   <dependencyManagement>
     <dependencies>
       <!-- All release modules -->
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-buffer</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-dns</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-haproxy</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-http</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-http2</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-memcache</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-mqtt</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-redis</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-smtp</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-socks</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-stomp</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-codec-xml</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-common</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-handler</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-handler-proxy</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-resolver</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-resolver-dns</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-transport</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-transport-rxtx</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-transport-sctp</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-transport-udt</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>io.netty</groupId>
         <artifactId>netty-example</artifactId>
-        <version>${project.version}</version>
+        <version>4.1.10.Final-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-all</artifactId>
+        <version>4.1.10.Final-SNAPSHOT</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
