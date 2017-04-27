@@ -502,6 +502,15 @@ public final class NetUtil {
                         } else {
                             return false;
                         }
+
+                        // a special case ::1:2:3:4:5:d.d.d.d allows 7 colons with an
+                        // IPv4 ending, otherwise 7 :'s is bad
+                        if ((numberOfColons != 6 && !doubleColon) ||
+                            (numberOfColons == 7 && (ipAddress.charAt(startOffset) != ':' ||
+                                ipAddress.charAt(1 + startOffset) != ':'))) {
+                            return false;
+                        }
+
                         for (; j >= startOffset; --j) {
                             tmpChar = ipAddress.charAt(j);
                             if (tmpChar != '0' && tmpChar != ':') {
@@ -509,10 +518,8 @@ public final class NetUtil {
                             }
                         }
                     }
+
                     if (!isValidIp4Word(word.toString())) {
-                        return false;
-                    }
-                    if (numberOfColons != 6 && !doubleColon) {
                         return false;
                     }
                     word.delete(0, word.length());
@@ -612,9 +619,10 @@ public final class NetUtil {
     }
 
     private static boolean isValidIPv4Mapped(byte[] bytes, int currentIndex, int compressBegin, int compressLength) {
-        return currentIndex <= 12 && currentIndex >= 2 &&
-                isValidIPv4MappedSeparators(bytes[currentIndex - 1], bytes[currentIndex - 2],
-                (compressBegin + compressLength) >= 14) && PlatformDependent.isZero(bytes, 0, currentIndex - 3);
+        final boolean mustBeZero = compressBegin + compressLength >= 14;
+        return currentIndex <= 12 && currentIndex >= 2 && (!mustBeZero || compressBegin < 12) &&
+                isValidIPv4MappedSeparators(bytes[currentIndex - 1], bytes[currentIndex - 2], mustBeZero) &&
+                PlatformDependent.isZero(bytes, 0, currentIndex - 3);
     }
 
     /**
