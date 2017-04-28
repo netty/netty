@@ -75,13 +75,13 @@ public final class Http2Codec extends ChannelDuplexHandler {
      * @param initialSettings non default initial settings to send to peer
      */
     public Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap, Http2FrameLogger frameLogger,
-                      Http2Settings initialSettings) {
+                Http2Settings initialSettings) {
         this(server, bootstrap, new DefaultHttp2FrameWriter(), frameLogger, initialSettings);
     }
 
     // Visible for testing
     Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap, Http2FrameWriter frameWriter,
-               Http2FrameLogger frameLogger, Http2Settings initialSettings) {
+                Http2FrameLogger frameLogger, Http2Settings initialSettings) {
         frameCodec = new Http2FrameCodec(server, frameWriter, frameLogger, initialSettings);
         multiplexCodec = new Http2MultiplexCodec(server, bootstrap);
     }
