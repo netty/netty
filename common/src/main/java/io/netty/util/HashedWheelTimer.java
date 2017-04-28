@@ -16,7 +16,6 @@
 package io.netty.util;
 
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -405,14 +404,14 @@ public class HashedWheelTimer implements Timer {
         if (unit == null) {
             throw new NullPointerException("unit");
         }
-        if (shouldLimitTimeouts()) {
-            long pendingTimeoutsCount = pendingTimeouts.incrementAndGet();
-            if (pendingTimeoutsCount > maxPendingTimeouts) {
-                pendingTimeouts.decrementAndGet();
-                throw new RejectedExecutionException("Number of pending timeouts ("
-                    + pendingTimeoutsCount + ") is greater than or equal to maximum allowed pending "
-                    + "timeouts (" + maxPendingTimeouts + ")");
-            }
+
+        long pendingTimeoutsCount = pendingTimeouts.incrementAndGet();
+
+        if (maxPendingTimeouts > 0 && pendingTimeoutsCount > maxPendingTimeouts) {
+            pendingTimeouts.decrementAndGet();
+            throw new RejectedExecutionException("Number of pending timeouts ("
+                + pendingTimeoutsCount + ") is greater than or equal to maximum allowed pending "
+                + "timeouts (" + maxPendingTimeouts + ")");
         }
 
         start();
@@ -425,8 +424,11 @@ public class HashedWheelTimer implements Timer {
         return timeout;
     }
 
-    private boolean shouldLimitTimeouts() {
-        return maxPendingTimeouts > 0;
+    /**
+     * Returns the number of pending timeouts of this {@link Timer}.
+     */
+    public long pendingTimeouts() {
+        return pendingTimeouts.get();
     }
 
     private static void reportTooManyInstances() {
@@ -629,7 +631,7 @@ public class HashedWheelTimer implements Timer {
             HashedWheelBucket bucket = this.bucket;
             if (bucket != null) {
                 bucket.remove(this);
-            } else if (timer.shouldLimitTimeouts()) {
+            } else {
                 timer.pendingTimeouts.decrementAndGet();
             }
         }
@@ -774,9 +776,7 @@ public class HashedWheelTimer implements Timer {
             timeout.prev = null;
             timeout.next = null;
             timeout.bucket = null;
-            if (timeout.timer.shouldLimitTimeouts()) {
-                timeout.timer.pendingTimeouts.decrementAndGet();
-            }
+            timeout.timer.pendingTimeouts.decrementAndGet();
             return next;
         }
 
