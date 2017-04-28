@@ -74,6 +74,7 @@
       <groupId>${conscrypt.groupId}</groupId>
       <artifactId>${conscrypt.artifactId}</artifactId>
       <classifier>${conscrypt.classifier}</classifier>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
