@@ -213,6 +213,23 @@ public class HashedWheelTimerTest {
         timer.stop();
     }
 
+    @Test()
+    public void reportPendingTimeouts() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final HashedWheelTimer timer = new HashedWheelTimer();
+        final Timeout t1 = timer.newTimeout(createNoOpTimerTask(), 100, TimeUnit.MINUTES);
+        final Timeout t2 = timer.newTimeout(createNoOpTimerTask(), 100, TimeUnit.MINUTES);
+        timer.newTimeout(createCountDownLatchTimerTask(latch), 90, TimeUnit.MILLISECONDS);
+
+        assertEquals(3, timer.pendingTimeouts());
+        t1.cancel();
+        t2.cancel();
+        latch.await();
+
+        assertEquals(0, timer.pendingTimeouts());
+        timer.stop();
+    }
+
     private static TimerTask createNoOpTimerTask() {
         return new TimerTask() {
             @Override
