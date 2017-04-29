@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.10.Final-SNAPSHOT</version>
+  <version>4.1.10.Final</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -53,7 +53,7 @@
     <url>https://github.com/netty/netty</url>
     <connection>scm:git:git://github.com/netty/netty.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>netty-4.1.10.Final</tag>
   </scm>
 
   <developers>
@@ -177,7 +177,7 @@
                         Release process must be performed on linux-x86_64.
                       </regexMessage>
                       <property>os.detected.classifier</property>
-                      <regex>^linux-x86_64-fedora$</regex>
+                      <regex>^linux-x86_64$</regex>
                     </requireProperty>
                     <requireFilesContent>
                       <message>
@@ -251,7 +251,7 @@
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
     <conscrypt.version>1.0.0.RC7</conscrypt.version>
-    <conscrypt.classifier></conscrypt.classifier>
+    <conscrypt.classifier />
     <epoll.classifier>${os.detected.name}-${os.detected.arch}</epoll.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
