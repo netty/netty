@@ -178,6 +178,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                     HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
             ctx.channel().writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
         } else {
+            ctx.fireExceptionCaught(cause);
             ctx.close();
         }
     }
