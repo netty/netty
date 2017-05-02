@@ -107,14 +107,8 @@ public class DefaultThreadFactory implements ThreadFactory {
     public Thread newThread(Runnable r) {
         Thread t = newThread(new DefaultRunnableDecorator(r), prefix + nextId.incrementAndGet());
         try {
-            if (t.isDaemon()) {
-                if (!daemon) {
-                    t.setDaemon(false);
-                }
-            } else {
-                if (daemon) {
-                    t.setDaemon(true);
-                }
+            if (t.isDaemon() != daemon) {
+                t.setDaemon(daemon);
             }
 
             if (t.getPriority() != priority) {
