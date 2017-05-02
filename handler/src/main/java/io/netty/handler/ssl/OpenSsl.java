@@ -388,7 +388,7 @@ public final class OpenSsl {
         // finally the default library.
         libNames.add("netty-tcnative");
 
-        NativeLibraryLoader.loadFirstAvailable(SSL.class.getClassLoader(),
+        NativeLibraryLoader.loadFirstAvailable(OpenSsl.class.getClassLoader(),
             libNames.toArray(new String[libNames.size()]));
     }
 
