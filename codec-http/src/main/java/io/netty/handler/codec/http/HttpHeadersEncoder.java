@@ -26,7 +26,7 @@ final class HttpHeadersEncoder {
     private HttpHeadersEncoder() {
     }
 
-    public static void encoderHeader(CharSequence name, CharSequence value, ByteBuf buf) throws Exception {
+    static void encoderHeader(CharSequence name, CharSequence value, ByteBuf buf) throws Exception {
         final int nameLen = name.length();
         final int valueLen = value.length();
         final int entryLen = nameLen + valueLen + 4;
