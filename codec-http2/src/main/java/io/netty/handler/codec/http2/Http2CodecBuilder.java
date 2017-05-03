@@ -55,7 +55,7 @@ public final class Http2CodecBuilder {
     public Http2CodecBuilder(boolean server, Http2StreamChannelBootstrap bootstrap) {
         this.bootstrap = checkNotNull(bootstrap, "bootstrap");
         this.server = server;
-        this.initialSettings = new Http2Settings();
+        this.initialSettings = Http2Settings.defaultSettings();
         this.frameLogger = HTTP2_FRAME_LOGGER;
         this.headersSensitivityDetector = null;
     }
