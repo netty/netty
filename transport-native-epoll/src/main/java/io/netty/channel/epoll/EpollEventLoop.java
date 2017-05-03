@@ -27,6 +27,7 @@ import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -45,6 +46,13 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
     private static final AtomicIntegerFieldUpdater<EpollEventLoop> WAKEN_UP_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(EpollEventLoop.class, "wakenUp");
+
+    // Just to make it easier to switch between NIO and EPOLL.
+    private static final long MAX_SELECT_TIMEOUT =
+            SystemPropertyUtil.getLong("io.netty.maxSelectTimeout", Long.MAX_VALUE);
+
+    private static final long MAX_EPOLL_WAIT_TIMEOUT =
+            SystemPropertyUtil.getLong("io.netty.maxEpollWaitTimeout", MAX_SELECT_TIMEOUT);
 
     private final FileDescriptor epollFd;
     private final FileDescriptor eventFd;
@@ -201,7 +209,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         long currentTimeNanos = System.nanoTime();
         long selectDeadLineNanos = currentTimeNanos + delayNanos(currentTimeNanos);
         for (;;) {
-            long timeoutMillis = (selectDeadLineNanos - currentTimeNanos + 500000L) / 1000000L;
+            long timeoutMillis = Math.min(MAX_EPOLL_WAIT_TIMEOUT,
+                    (selectDeadLineNanos - currentTimeNanos + 500000L) / 1000000L);
             if (timeoutMillis <= 0) {
                 if (selectCnt == 0) {
                     int ready = Native.epollWait(epollFd.intValue(), events, 0);
