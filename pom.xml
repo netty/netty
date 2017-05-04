@@ -869,7 +869,7 @@
           </includes>
           <excludes>
             <exclude>**/Abstract*</exclude>
-            <exclude>**/TestUtil*</exclude>
+            <exclude>**/*TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
           <systemPropertyVariables>

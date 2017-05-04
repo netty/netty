@@ -16,15 +16,18 @@
 package io.netty.handler.ssl;
 
 import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLParameters;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
-final class Java8SslParametersUtils {
+final class Java8SslUtils {
 
-    private Java8SslParametersUtils() { }
+    private Java8SslUtils() { }
 
     static List<String> getSniHostNames(SSLParameters sslParameters) {
         List<SNIServerName> names = sslParameters.getServerNames();
@@ -58,5 +61,27 @@ final class Java8SslParametersUtils {
 
     static void setUseCipherSuitesOrder(SSLParameters sslParameters, boolean useOrder) {
         sslParameters.setUseCipherSuitesOrder(useOrder);
+    }
+
+    @SuppressWarnings("unchecked")
+    static void setSNIMatchers(SSLParameters sslParameters, Collection<?> matchers) {
+        sslParameters.setSNIMatchers((Collection<SNIMatcher>) matchers);
+    }
+
+    @SuppressWarnings("unchecked")
+    static boolean checkSniHostnameMatch(Collection<?> matchers, String hostname) {
+        if (matchers != null && !matchers.isEmpty()) {
+            SNIHostName name = new SNIHostName(hostname);
+            Iterator<SNIMatcher> matcherIt = (Iterator<SNIMatcher>) matchers.iterator();
+            while (matcherIt.hasNext()) {
+                SNIMatcher matcher = matcherIt.next();
+                // type 0 is for hostname
+                if (matcher.getType() == 0 && matcher.matches(name)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
     }
 }
