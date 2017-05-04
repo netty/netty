@@ -62,6 +62,7 @@ public final class Http2Codec extends ChannelDuplexHandler {
      *
      * @param server {@code true} this is a server
      * @param bootstrap bootstrap used to instantiate child channels for remotely-created streams.
+     * @param frameLogger handler used to log all frames
      */
     public Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap, Http2FrameLogger frameLogger) {
         this(server, bootstrap, new DefaultHttp2FrameWriter(), frameLogger, new Http2Settings());
@@ -72,6 +73,7 @@ public final class Http2Codec extends ChannelDuplexHandler {
      *
      * @param server {@code true} this is a server
      * @param bootstrap bootstrap used to instantiate child channels for remotely-created streams.
+     * @param frameLogger handler used to log all frames
      * @param initialSettings non default initial settings to send to peer
      */
     public Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap, Http2FrameLogger frameLogger,
@@ -79,8 +81,16 @@ public final class Http2Codec extends ChannelDuplexHandler {
         this(server, bootstrap, new DefaultHttp2FrameWriter(), frameLogger, initialSettings);
     }
 
-    // Visible for testing
-    Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap, Http2FrameWriter frameWriter,
+    /**
+     * Construct a new handler whose child channels run in a different event loop.
+     *
+     * @param server {@code true} this is a server
+     * @param bootstrap bootstrap used to instantiate child channels for remotely-created streams.
+     * @param frameWriter the HTTP/2 frame writer
+     * @param frameLogger handler used to log all frames
+     * @param initialSettings non default initial settings to send to peer
+     */
+    public Http2Codec(boolean server, Http2StreamChannelBootstrap bootstrap, Http2FrameWriter frameWriter,
                Http2FrameLogger frameLogger, Http2Settings initialSettings) {
         frameCodec = new Http2FrameCodec(server, frameWriter, frameLogger, initialSettings);
         multiplexCodec = new Http2MultiplexCodec(server, bootstrap);
