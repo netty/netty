@@ -165,7 +165,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     public StringBuilder stringBuilder() {
         StringBuilder builder = stringBuilder;
-        if (builder == null || builder.capacity() > STRING_BUILDER_MAX_CAPACITY /* ensure memory overhead */ ) {
+        if (builder == null || builder.capacity() > STRING_BUILDER_MAX_CAPACITY) {
             stringBuilder = builder = new StringBuilder(512);
         } else {
             builder.setLength(0);
