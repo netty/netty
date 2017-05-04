@@ -61,7 +61,7 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
     @Override
     protected Provider clientSslContextProvider() {
-        return Java8SslUtils.conscryptProvider();
+        return Java8SslTestUtils.conscryptProvider();
     }
 
     @Ignore /* Does the JDK support a "max certificate chain length"? */

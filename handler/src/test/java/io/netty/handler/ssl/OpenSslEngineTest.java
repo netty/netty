@@ -598,7 +598,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine engine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
         try {
             SSLParameters parameters = new SSLParameters();
-            Java8SslUtils.setSNIMatcher(parameters);
+            Java8SslTestUtils.setSNIMatcher(parameters);
             engine.setSSLParameters(parameters);
         } finally {
             cleanupServerSslEngine(engine);
