@@ -24,9 +24,9 @@ import javax.net.ssl.SSLParameters;
 import java.security.Provider;
 import java.util.Collections;
 
-final class Java8SslUtils {
+final class Java8SslTestUtils {
 
-    private Java8SslUtils() { }
+    private Java8SslTestUtils() { }
 
     static void setSNIMatcher(SSLParameters parameters) {
         SNIMatcher matcher = new SNIMatcher(0) {

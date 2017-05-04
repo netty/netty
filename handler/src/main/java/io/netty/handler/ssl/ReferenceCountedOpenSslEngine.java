@@ -43,8 +43,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import javax.net.ssl.SNIHostName;
-import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -190,8 +188,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private Object algorithmConstraints;
     private List<String> sniHostNames;
 
-    // Mark as volatile as accessed by checkSniHostnameMatch(...)
-    private volatile Collection<SNIMatcher> matchers;
+    // Mark as volatile as accessed by checkSniHostnameMatch(...) and also not specify the SNIMatcher type to allow us
+    // using it with java7.
+    private volatile Collection<?> matchers;
 
     // SSL Engine status variables
     private boolean isInboundDone;
@@ -1594,14 +1593,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             Java7SslParametersUtils.setAlgorithmConstraints(sslParameters, algorithmConstraints);
             if (version >= 8) {
                 if (sniHostNames != null) {
-                    Java8SslParametersUtils.setSniHostNames(sslParameters, sniHostNames);
+                    Java8SslUtils.setSniHostNames(sslParameters, sniHostNames);
                 }
                 if (!isDestroyed()) {
-                    Java8SslParametersUtils.setUseCipherSuitesOrder(
+                    Java8SslUtils.setUseCipherSuitesOrder(
                             sslParameters, (SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
                 }
 
-                sslParameters.setSNIMatchers(matchers);
+                Java8SslUtils.setSNIMatchers(sslParameters, matchers);
             }
         }
         return sslParameters;
@@ -1618,13 +1617,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (version >= 8) {
                 if (!isDestroyed()) {
                     if (clientMode) {
-                        final List<String> sniHostNames = Java8SslParametersUtils.getSniHostNames(sslParameters);
+                        final List<String> sniHostNames = Java8SslUtils.getSniHostNames(sslParameters);
                         for (String name: sniHostNames) {
                             SSL.setTlsExtHostName(ssl, name);
                         }
                         this.sniHostNames = sniHostNames;
                     }
-                    if (Java8SslParametersUtils.getUseCipherSuitesOrder(sslParameters)) {
+                    if (Java8SslUtils.getUseCipherSuitesOrder(sslParameters)) {
                         SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
                     } else {
                         SSL.clearOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
@@ -1660,18 +1659,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     final boolean checkSniHostnameMatch(String hostname) {
-        Collection<SNIMatcher> matchers = this.matchers;
-        if (matchers != null && !matchers.isEmpty()) {
-            SNIHostName name = new SNIHostName(hostname);
-            for (SNIMatcher matcher: matchers) {
-                // type 0 is for hostname
-                if (matcher.getType() == 0 && matcher.matches(name)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        return true;
+        return Java8SslUtils.checkSniHostnameMatch(matchers, hostname);
     }
 
     private final class OpenSslSession implements SSLSession, ApplicationProtocolAccessor {
