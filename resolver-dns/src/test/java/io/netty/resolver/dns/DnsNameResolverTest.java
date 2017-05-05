@@ -827,6 +827,11 @@ public class DnsNameResolverTest {
             }
         };
 
+        // Java7 will strip of the "." so we need to adjust the expected dnsname. Both are valid in terms of the RFC
+        // so its ok.
+        String expectedDnsName = PlatformDependent.javaVersion() == 7 ?
+                "dns4.some.record.netty.io" : "dns4.some.record.netty.io.";
+
         try {
             resolver.resolveAll(hostname).syncUninterruptibly();
 
@@ -837,7 +842,8 @@ public class DnsNameResolverTest {
             QueryWrittenEvent writtenEvent1 = (QueryWrittenEvent) observer.events.poll();
             assertEquals(dnsServer.localAddress(), writtenEvent1.dnsServerAddress);
             QueryRedirectedEvent redirectedEvent = (QueryRedirectedEvent) observer.events.poll();
-            assertEquals("dns4.some.record.netty.io.", redirectedEvent.nameServers.get(0).getHostName());
+
+            assertEquals(expectedDnsName, redirectedEvent.nameServers.get(0).getHostName());
             assertEquals(dnsServerAuthority.localAddress(), redirectedEvent.nameServers.get(0));
             QueryWrittenEvent writtenEvent2 = (QueryWrittenEvent) observer.events.poll();
             assertEquals(dnsServerAuthority.localAddress(), writtenEvent2.dnsServerAddress);
@@ -859,7 +865,7 @@ public class DnsNameResolverTest {
                 assertTrue(lifecycleObserverFactory.observers.isEmpty());
                 assertEquals(2, observer.events.size());
                 writtenEvent1 = (QueryWrittenEvent) observer.events.poll();
-                assertEquals("dns4.some.record.netty.io.", writtenEvent1.dnsServerAddress.getHostName());
+                assertEquals(expectedDnsName, writtenEvent1.dnsServerAddress.getHostName());
                 assertEquals(dnsServerAuthority.localAddress(), writtenEvent1.dnsServerAddress);
                 succeededEvent = (QuerySucceededEvent) observer.events.poll();
 
@@ -870,7 +876,7 @@ public class DnsNameResolverTest {
                 assertTrue(lifecycleObserverFactory.observers.isEmpty());
                 assertEquals(2, observer.events.size());
                 writtenEvent1 = (QueryWrittenEvent) observer.events.poll();
-                assertEquals("dns4.some.record.netty.io.", writtenEvent1.dnsServerAddress.getHostName());
+                assertEquals(expectedDnsName, writtenEvent1.dnsServerAddress.getHostName());
                 assertEquals(dnsServerAuthority.localAddress(), writtenEvent1.dnsServerAddress);
                 succeededEvent = (QuerySucceededEvent) observer.events.poll();
 
