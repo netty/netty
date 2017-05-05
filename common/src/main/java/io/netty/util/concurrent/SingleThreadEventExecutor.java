@@ -547,37 +547,18 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             throw new NullPointerException("unit");
         }
 
-        if (isShuttingDown()) {
-            return terminationFuture();
-        }
-
-        boolean inEventLoop = inEventLoop();
-        boolean wakeup;
         int oldState;
         for (;;) {
-            if (isShuttingDown()) {
-                return terminationFuture();
-            }
-            int newState;
-            wakeup = true;
             oldState = STATE_UPDATER.get(this);
-            if (inEventLoop) {
-                newState = ST_SHUTTING_DOWN;
-            } else {
-                switch (oldState) {
-                    case ST_NOT_STARTED:
-                    case ST_STARTED:
-                        newState = ST_SHUTTING_DOWN;
-                        break;
-                    default:
-                        newState = oldState;
-                        wakeup = false;
-                }
+            if (oldState >= ST_SHUTTING_DOWN) {
+              return terminationFuture();
             }
-            if (STATE_UPDATER.compareAndSet(this, oldState, newState)) {
+
+            if (STATE_UPDATER.compareAndSet(this, oldState, ST_SHUTTING_DOWN)) {
                 break;
             }
         }
+
         gracefulShutdownQuietPeriod = unit.toNanos(quietPeriod);
         gracefulShutdownTimeout = unit.toNanos(timeout);
 
@@ -585,10 +566,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             doStartThread();
         }
 
-        if (wakeup) {
-            wakeup(inEventLoop);
-        }
-
+        wakeup(inEventLoop());
         return terminationFuture();
     }
 
@@ -604,31 +582,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             return;
         }
 
-        boolean inEventLoop = inEventLoop();
-        boolean wakeup;
         int oldState;
         for (;;) {
-            if (isShuttingDown()) {
+            oldState = STATE_UPDATER.get(this);
+            if (oldState >= ST_SHUTTING_DOWN) {
                 return;
             }
-            int newState;
-            wakeup = true;
-            oldState = STATE_UPDATER.get(this);
-            if (inEventLoop) {
-                newState = ST_SHUTDOWN;
-            } else {
-                switch (oldState) {
-                    case ST_NOT_STARTED:
-                    case ST_STARTED:
-                    case ST_SHUTTING_DOWN:
-                        newState = ST_SHUTDOWN;
-                        break;
-                    default:
-                        newState = oldState;
-                        wakeup = false;
-                }
-            }
-            if (STATE_UPDATER.compareAndSet(this, oldState, newState)) {
+
+            if (STATE_UPDATER.compareAndSet(this, oldState, ST_SHUTDOWN)) {
                 break;
             }
         }
@@ -637,9 +598,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             doStartThread();
         }
 
-        if (wakeup) {
-            wakeup(inEventLoop);
-        }
+        wakeup(inEventLoop());
     }
 
     @Override
