@@ -695,6 +695,13 @@
 
             <!-- JDK 8 -->
             <ignore>java.util.concurrent.atomic.LongAdder</ignore>
+
+            <!-- NoexecVolumeDetector -->
+            <ignore>java.nio.file.attribute.PosixFilePermission</ignore>
+            <ignore>java.nio.file.Files</ignore>
+            <ignore>java.nio.file.LinkOption</ignore>
+            <ignore>java.nio.file.Path</ignore>
+            <ignore>java.io.File</ignore>
           </ignores>
         </configuration>
         <executions>
