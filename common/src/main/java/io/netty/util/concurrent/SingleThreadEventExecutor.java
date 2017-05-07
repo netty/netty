@@ -466,7 +466,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop || STATE_UPDATER.get(this) == ST_SHUTTING_DOWN) {
+        if (!inEventLoop || state == ST_SHUTTING_DOWN) {
             // Use offer as we actually only need this to unblock the thread and if offer fails we do not care as there
             // is already something in the queue.
             taskQueue.offer(WAKEUP_TASK);
@@ -560,7 +560,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
             int newState;
             wakeup = true;
-            oldState = STATE_UPDATER.get(this);
+            oldState = state;
             if (inEventLoop) {
                 newState = ST_SHUTTING_DOWN;
             } else {
@@ -613,7 +613,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
             int newState;
             wakeup = true;
-            oldState = STATE_UPDATER.get(this);
+            oldState = state;
             if (inEventLoop) {
                 newState = ST_SHUTDOWN;
             } else {
@@ -644,17 +644,17 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     @Override
     public boolean isShuttingDown() {
-        return STATE_UPDATER.get(this) >= ST_SHUTTING_DOWN;
+        return state >= ST_SHUTTING_DOWN;
     }
 
     @Override
     public boolean isShutdown() {
-        return STATE_UPDATER.get(this) >= ST_SHUTDOWN;
+        return state >= ST_SHUTDOWN;
     }
 
     @Override
     public boolean isTerminated() {
-        return STATE_UPDATER.get(this) == ST_TERMINATED;
+        return state == ST_TERMINATED;
     }
 
     /**
@@ -835,7 +835,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
 
     private void startThread() {
-        if (STATE_UPDATER.get(this) == ST_NOT_STARTED) {
+        if (state == ST_NOT_STARTED) {
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
                 doStartThread();
             }
@@ -861,7 +861,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     logger.warn("Unexpected exception from an event executor: ", t);
                 } finally {
                     for (;;) {
-                        int oldState = STATE_UPDATER.get(SingleThreadEventExecutor.this);
+                        int oldState = state;
                         if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
                                 SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
                             break;
