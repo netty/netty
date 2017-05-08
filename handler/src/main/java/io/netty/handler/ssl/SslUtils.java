@@ -17,11 +17,13 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import javax.net.ssl.SSLHandshakeException;
 
 /**
@@ -120,7 +122,7 @@ final class SslUtils {
             int majorVersion = buffer.getUnsignedByte(offset + 1);
             if (majorVersion == 3) {
                 // SSLv3 or TLS
-                packetLength = buffer.getUnsignedShort(offset + 3) + SSL_RECORD_HEADER_LENGTH;
+                packetLength = unsignedShortBE(buffer, offset + 3) + SSL_RECORD_HEADER_LENGTH;
                 if (packetLength <= SSL_RECORD_HEADER_LENGTH) {
                     // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
@@ -137,11 +139,8 @@ final class SslUtils {
             int majorVersion = buffer.getUnsignedByte(offset + headerLength + 1);
             if (majorVersion == 2 || majorVersion == 3) {
                 // SSLv2
-                if (headerLength == 2) {
-                    packetLength = (buffer.getShort(offset) & 0x7FFF) + 2;
-                } else {
-                    packetLength = (buffer.getShort(offset) & 0x3FFF) + 3;
-                }
+                packetLength = headerLength == 2 ?
+                        (shortBE(buffer, offset) & 0x7FFF) + 2 : (shortBE(buffer, offset) & 0x3FFF) + 3;
                 if (packetLength <= headerLength) {
                     return NOT_ENOUGH_DATA;
                 }
@@ -152,12 +151,33 @@ final class SslUtils {
         return packetLength;
     }
 
+    // Reads a big-endian unsigned short integer from the buffer
+    @SuppressWarnings("deprecation")
+    private static int unsignedShortBE(ByteBuf buffer, int offset) {
+        return buffer.order() == ByteOrder.BIG_ENDIAN ?
+                buffer.getUnsignedShort(offset) : buffer.getUnsignedShortLE(offset);
+    }
+
+    // Reads a big-endian short integer from the buffer
+    @SuppressWarnings("deprecation")
+    private static short shortBE(ByteBuf buffer, int offset) {
+        return buffer.order() == ByteOrder.BIG_ENDIAN ?
+                buffer.getShort(offset) : buffer.getShortLE(offset);
+    }
+
     private static short unsignedByte(byte b) {
         return (short) (b & 0xFF);
     }
 
-    private static int unsignedShort(short s) {
-        return s & 0xFFFF;
+    // Reads a big-endian unsigned short integer from the buffer
+    private static int unsignedShortBE(ByteBuffer buffer, int offset) {
+        return shortBE(buffer, offset) & 0xFFFF;
+    }
+
+    // Reads a big-endian short integer from the buffer
+    private static short shortBE(ByteBuffer buffer, int offset) {
+        return buffer.order() == ByteOrder.BIG_ENDIAN ?
+                buffer.getShort(offset) : ByteBufUtil.swapShort(buffer.getShort(offset));
     }
 
     static int getEncryptedPacketLength(ByteBuffer[] buffers, int offset) {
@@ -207,7 +227,7 @@ final class SslUtils {
             int majorVersion = unsignedByte(buffer.get(pos + 1));
             if (majorVersion == 3) {
                 // SSLv3 or TLS
-                packetLength = unsignedShort(buffer.getShort(pos + 3)) + SSL_RECORD_HEADER_LENGTH;
+                packetLength = unsignedShortBE(buffer, pos + 3) + SSL_RECORD_HEADER_LENGTH;
                 if (packetLength <= SSL_RECORD_HEADER_LENGTH) {
                     // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
@@ -224,11 +244,8 @@ final class SslUtils {
             int majorVersion = unsignedByte(buffer.get(pos + headerLength + 1));
             if (majorVersion == 2 || majorVersion == 3) {
                 // SSLv2
-                if (headerLength == 2) {
-                    packetLength = (buffer.getShort(pos) & 0x7FFF) + 2;
-                } else {
-                    packetLength = (buffer.getShort(pos) & 0x3FFF) + 3;
-                }
+                packetLength = headerLength == 2 ?
+                        (shortBE(buffer, pos) & 0x7FFF) + 2 : (shortBE(buffer, pos) & 0x3FFF) + 3;
                 if (packetLength <= headerLength) {
                     return NOT_ENOUGH_DATA;
                 }
