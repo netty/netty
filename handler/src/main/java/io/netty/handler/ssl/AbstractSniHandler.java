@@ -29,7 +29,6 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.net.IDN;
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.Locale;
@@ -186,11 +185,10 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                                             }
 
                                             final String hostname = in.toString(offset, serverNameLength,
-                                                                                CharsetUtil.UTF_8);
+                                                                                CharsetUtil.US_ASCII);
 
                                             try {
-                                                select(ctx, IDN.toASCII(hostname,
-                                                                        IDN.ALLOW_UNASSIGNED).toLowerCase(Locale.US));
+                                                select(ctx, hostname.toLowerCase(Locale.US));
                                             } catch (Throwable t) {
                                                 PlatformDependent.throwException(t);
                                             }
