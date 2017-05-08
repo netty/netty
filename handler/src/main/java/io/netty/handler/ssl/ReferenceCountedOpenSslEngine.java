@@ -610,9 +610,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                 }
 
-                if (dst.remaining() < calculateOutNetBufSize(srcsLen, endOffset - offset)) {
-                    // Can not hold the maximum packet so we need to tell the caller to use a bigger destination
-                    // buffer.
+                // we will only produce a single TLS packet, and we don't aggregate src buffers,
+                // so we always fix the number of buffers to 1 when checking if the dst buffer is large enough.
+                if (dst.remaining() < calculateOutNetBufSize(srcsLen, 1)) {
                     return new SSLEngineResult(BUFFER_OVERFLOW, getHandshakeStatus(), 0, 0);
                 }
 
@@ -638,9 +638,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         bytesProduced += bioLengthBefore - pendingNow;
                         bioLengthBefore = pendingNow;
 
-                        if (bytesConsumed == MAX_PLAINTEXT_LENGTH || bytesProduced == dst.remaining()) {
-                            return newResultMayFinishHandshake(status, bytesConsumed, bytesProduced);
-                        }
+                        return newResultMayFinishHandshake(status, bytesConsumed, bytesProduced);
                     } else {
                         int sslError = SSL.getError(ssl, bytesWritten);
                         if (sslError == SSL.SSL_ERROR_ZERO_RETURN) {
