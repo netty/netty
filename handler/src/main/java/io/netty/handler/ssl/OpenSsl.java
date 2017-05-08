@@ -122,6 +122,7 @@ public final class OpenSsl {
                 final long sslCtx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
                 long privateKeyBio = 0;
                 long certBio = 0;
+                SelfSignedCertificate cert = null;
                 try {
                     SSLContext.setCipherSuite(sslCtx, "ALL");
                     final long ssl = SSL.newSSL(sslCtx, true);
@@ -140,7 +141,7 @@ public final class OpenSsl {
                             logger.debug("Hostname Verification not supported.");
                         }
                         try {
-                            SelfSignedCertificate cert = new SelfSignedCertificate();
+                            cert = new SelfSignedCertificate();
                             certBio = ReferenceCountedOpenSslContext.toBIO(cert.cert());
                             SSL.setCertificateChainBio(ssl, certBio, false);
                             supportsKeyManagerFactory = true;
@@ -165,6 +166,9 @@ public final class OpenSsl {
                         }
                         if (certBio != 0) {
                             SSL.freeBIO(certBio);
+                        }
+                        if (cert != null) {
+                            cert.delete();
                         }
                     }
                 } finally {
