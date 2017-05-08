@@ -469,6 +469,13 @@ public final class StringUtil {
     }
 
     /**
+     * Determine if a string is {@code null} or {@link string is blank} returns {@code true}.
+     */
+    public static boolean isNullOrBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    /**
      * Find the index of the first non-white space character in {@code s} starting at {@code offset}.
      *
      * @param seq    The string to search.
