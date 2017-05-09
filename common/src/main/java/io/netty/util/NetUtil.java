@@ -366,7 +366,6 @@ public final class NetUtil {
     }
 
     public static boolean isValidIpV6Address(String ipAddress) {
-        int length = ipAddress.length();
         boolean doubleColon = false;
         int numberOfColons = 0;
         int numberOfPeriods = 0;
@@ -417,9 +416,9 @@ public final class NetUtil {
                         char tmpChar = ipAddress.charAt(j);
                         if (isValidIPv4MappedChar(tmpChar)) {
                             if (j - beginColonIndex != 4 ||
-                                !isValidIPv4MappedChar(ipAddress.charAt(j - 1)) ||
-                                !isValidIPv4MappedChar(ipAddress.charAt(j - 2)) ||
-                                !isValidIPv4MappedChar(ipAddress.charAt(j - 3))) {
+                                    !isValidIPv4MappedChar(ipAddress.charAt(j - 1)) ||
+                                    !isValidIPv4MappedChar(ipAddress.charAt(j - 2)) ||
+                                    !isValidIPv4MappedChar(ipAddress.charAt(j - 3))) {
                                 return false;
                             }
                             j -= 5;
@@ -431,9 +430,9 @@ public final class NetUtil {
 
                         // a special case ::1:2:3:4:5:d.d.d.d allows 7 colons with an
                         // IPv4 ending, otherwise 7 :'s is bad
-                        if ((numberOfColons != 6 && !doubleColon) ||
-                            (numberOfColons == 7 && (ipAddress.charAt(startOffset) != ':' ||
-                                ipAddress.charAt(1 + startOffset) != ':'))) {
+                        if ((numberOfColons != 6 && !doubleColon) || numberOfColons > 7 ||
+                                (numberOfColons == 7 && (ipAddress.charAt(startOffset) != ':' ||
+                                        ipAddress.charAt(1 + startOffset) != ':'))) {
                             return false;
                         }
 
@@ -450,38 +449,39 @@ public final class NetUtil {
                     }
                     word.delete(0, word.length());
                     break;
-            case ':':
-                // FIX "IP6 mechanism syntax #ip6-bad1"
-                // An IPV6 address cannot start with a single ":".
-                // Either it can starti with "::" or with a number.
-                if (i == startOffset && (ipAddress.length() <= i || ipAddress.charAt(i + 1) != ':')) {
-                    return false;
-                }
-                // END FIX "IP6 mechanism syntax #ip6-bad1"
-                numberOfColons ++;
-                if (numberOfColons > 7) {
-                    return false;
-                }
-                if (numberOfPeriods > 0) {
-                    return false;
-                }
-                if (prevChar == ':') {
-                    if (doubleColon) {
+
+                case ':':
+                    // FIX "IP6 mechanism syntax #ip6-bad1"
+                    // An IPV6 address cannot start with a single ":".
+                    // Either it can starti with "::" or with a number.
+                    if (i == startOffset && (endOffset <= i || ipAddress.charAt(i + 1) != ':')) {
                         return false;
                     }
-                    doubleColon = true;
-                }
-                word.delete(0, word.length());
-                break;
+                    // END FIX "IP6 mechanism syntax #ip6-bad1"
+                    numberOfColons ++;
+                    if (numberOfColons > 8) {
+                        return false;
+                    }
+                    if (numberOfPeriods > 0) {
+                        return false;
+                    }
+                    if (prevChar == ':') {
+                        if (doubleColon) {
+                            return false;
+                        }
+                        doubleColon = true;
+                    }
+                    word.delete(0, word.length());
+                    break;
 
-            default:
-                if (word != null && word.length() > 3) {
-                    return false;
-                }
-                if (!isValidHexChar(c)) {
-                    return false;
-                }
-                word.append(c);
+                default:
+                    if (word != null && word.length() > 3) {
+                        return false;
+                    }
+                    if (!isValidHexChar(c)) {
+                        return false;
+                    }
+                    word.append(c);
             }
         }
 
@@ -498,11 +498,15 @@ public final class NetUtil {
                 return false;
             }
 
-            // If we have an empty word at the end, it means we ended in either
-            // a : or a .
-            // If we did not end in :: then this is invalid
-            if (word.length() == 0 && ipAddress.charAt(length - 1 - startOffset) == ':' &&
-                ipAddress.charAt(length - 2 - startOffset) != ':') {
+            if (word.length() == 0) {
+                // If we have an empty word at the end, it means we ended in either
+                // a : or a .
+                // If we did not end in :: then this is invalid
+                if (ipAddress.charAt(endOffset - 1) == ':' &&
+                        ipAddress.charAt(endOffset - 2) != ':') {
+                    return false;
+                }
+            } else if (numberOfColons == 8 && ipAddress.charAt(startOffset) != ':') {
                 return false;
             }
         }
@@ -792,7 +796,9 @@ public final class NetUtil {
                         (ipv6Separators == IPV6_MAX_SEPARATORS &&
                           (compressBegin <= 2 && ip.charAt(0) != ':' ||
                            compressBegin >= 14 && ip.charAt(tmp) != ':'))) ||
-                    currentIndex + 1 >= bytes.length) {
+                    currentIndex + 1 >= bytes.length ||
+                    begin < 0 && ip.charAt(tmp - 1) != ':' ||
+                    compressBegin > 2 && ip.charAt(0) == ':') {
                 return null;
             }
             if (begin >= 0 && i - begin <= IPV6_MAX_CHAR_BETWEEN_SEPARATOR) {
