@@ -52,7 +52,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
         assertTrue(data.parameters().containsKey(CLIENT_MAX_WINDOW));
         assertTrue(data.parameters().containsKey(SERVER_MAX_WINDOW));
-        assertTrue(data.parameters().get(SERVER_MAX_WINDOW).equals("10"));
+        assertEquals("10", data.parameters().get(SERVER_MAX_WINDOW));
         assertTrue(data.parameters().containsKey(CLIENT_MAX_WINDOW));
         assertTrue(data.parameters().containsKey(SERVER_MAX_WINDOW));
     }
