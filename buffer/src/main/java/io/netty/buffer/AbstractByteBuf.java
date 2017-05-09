@@ -295,15 +295,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
             return 0;
         }
 
+        final int maxCapacity = maxCapacity();
+        final int writerIndex = writerIndex();
         if (minWritableBytes > maxCapacity - writerIndex) {
-            if (force) {
-                if (capacity() == maxCapacity()) {
-                    return 1;
-                }
-
-                capacity(maxCapacity());
-                return 3;
+            if (!force || capacity() == maxCapacity) {
+                return 1;
             }
+
+            capacity(maxCapacity);
+            return 3;
         }
 
         // Normalize the current capacity to the power of 2.

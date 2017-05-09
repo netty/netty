@@ -2471,6 +2471,23 @@ public abstract class AbstractByteBufTest {
         buffer.release();
     }
 
+    @Test
+    public void ensureWritableWithForceDoesNotThrow() {
+        ensureWritableDoesNotThrow(true);
+    }
+
+    @Test
+    public void ensureWritableWithOutForceDoesNotThrow() {
+        ensureWritableDoesNotThrow(false);
+    }
+
+    private void ensureWritableDoesNotThrow(boolean force) {
+        final ByteBuf buffer = newBuffer(8);
+        buffer.writerIndex(buffer.capacity());
+        buffer.ensureWritable(8, force);
+        buffer.release();
+    }
+
     // See:
     // - https://github.com/netty/netty/issues/2587
     // - https://github.com/netty/netty/issues/2580
