@@ -50,8 +50,8 @@ public class WebSocketServerCompressionHandlerTest {
 
         Assert.assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         Assert.assertTrue(exts.get(0).parameters().isEmpty());
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateDecoder.class) != null);
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateEncoder.class) != null);
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateDecoder.class));
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateEncoder.class));
     }
 
     @Test
@@ -71,8 +71,8 @@ public class WebSocketServerCompressionHandlerTest {
 
         Assert.assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         Assert.assertEquals("10", exts.get(0).parameters().get(CLIENT_MAX_WINDOW));
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateDecoder.class) != null);
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateEncoder.class) != null);
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateDecoder.class));
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateEncoder.class));
     }
 
     @Test
@@ -92,8 +92,8 @@ public class WebSocketServerCompressionHandlerTest {
 
         Assert.assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         Assert.assertTrue(exts.get(0).parameters().isEmpty());
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateDecoder.class) != null);
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateEncoder.class) != null);
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateDecoder.class));
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateEncoder.class));
     }
 
     @Test
@@ -113,8 +113,8 @@ public class WebSocketServerCompressionHandlerTest {
 
         Assert.assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         Assert.assertEquals("10", exts.get(0).parameters().get(SERVER_MAX_WINDOW));
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateDecoder.class) != null);
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateEncoder.class) != null);
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateDecoder.class));
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateEncoder.class));
     }
 
     @Test
@@ -131,8 +131,8 @@ public class WebSocketServerCompressionHandlerTest {
         HttpResponse res2 = ch.readOutbound();
 
         Assert.assertFalse(res2.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateDecoder.class) == null);
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateEncoder.class) == null);
+        Assert.assertNull(ch.pipeline().get(PerMessageDeflateDecoder.class));
+        Assert.assertNull(ch.pipeline().get(PerMessageDeflateEncoder.class));
     }
 
     @Test
@@ -148,8 +148,8 @@ public class WebSocketServerCompressionHandlerTest {
         HttpResponse res2 = ch.readOutbound();
 
         Assert.assertFalse(res2.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateDecoder.class) == null);
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateEncoder.class) == null);
+        Assert.assertNull(ch.pipeline().get(PerMessageDeflateDecoder.class));
+        Assert.assertNull(ch.pipeline().get(PerMessageDeflateEncoder.class));
     }
 
     @Test
@@ -168,8 +168,8 @@ public class WebSocketServerCompressionHandlerTest {
 
         Assert.assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         Assert.assertTrue(exts.get(0).parameters().isEmpty());
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateDecoder.class) != null);
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateEncoder.class) != null);
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateDecoder.class));
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateEncoder.class));
     }
 
     @Test
@@ -190,8 +190,8 @@ public class WebSocketServerCompressionHandlerTest {
 
         Assert.assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
         Assert.assertTrue(exts.get(0).parameters().isEmpty());
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateDecoder.class) != null);
-        Assert.assertTrue(ch.pipeline().get(PerMessageDeflateEncoder.class) != null);
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateDecoder.class));
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateEncoder.class));
     }
 
 }

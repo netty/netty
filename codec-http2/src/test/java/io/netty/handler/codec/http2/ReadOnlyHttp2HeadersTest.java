@@ -22,9 +22,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import static io.netty.handler.codec.http2.DefaultHttp2HeadersTest.verifyPseudoHeadersFirst;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class ReadOnlyHttp2HeadersTest {
     @Test(expected = IllegalArgumentException.class)
@@ -148,8 +146,8 @@ public class ReadOnlyHttp2HeadersTest {
         assertTrue(AsciiString.contentEqualsIgnoreCase("value1", headers.get("Name1")));
         assertTrue(AsciiString.contentEqualsIgnoreCase("/foo",
                    headers.get(Http2Headers.PseudoHeaderName.PATH.value())));
-        assertEquals(null, headers.get(Http2Headers.PseudoHeaderName.STATUS.value()));
-        assertEquals(null, headers.get("a missing header"));
+        assertNull(headers.get(Http2Headers.PseudoHeaderName.STATUS.value()));
+        assertNull(headers.get("a missing header"));
     }
 
     private void testIteratorReadOnly(Http2Headers headers) {
