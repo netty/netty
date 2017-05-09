@@ -583,13 +583,21 @@ public class SslHandlerTest {
                     SslProvider clientProvider = providers[j];
                     if (isSupported(clientProvider)) {
                         compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                true, true);
+                                true, true, true);
                         compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                true, false);
+                                true, true, false);
                         compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                false, true);
+                                true, false, true);
                         compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                false, false);
+                                true, false, false);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                false, true, true);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                false, true, false);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                false, false, true);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                false, false, false);
                     }
                 }
             }
@@ -598,6 +606,7 @@ public class SslHandlerTest {
 
     private static void compositeBufSizeEstimationGuaranteesSynchronousWrite(
             SslProvider serverProvider, SslProvider clientProvider,
+            final boolean serverDisableWrapSize,
             final boolean letHandlerCreateServerEngine, final boolean letHandlerCreateClientEngine)
             throws CertificateException, SSLException, ExecutionException, InterruptedException {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
@@ -630,11 +639,13 @@ public class SslHandlerTest {
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            if (letHandlerCreateServerEngine) {
-                                ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
-                            } else {
-                                ch.pipeline().addLast(new SslHandler(sslServerCtx.newEngine(ch.alloc())));
+                            final SslHandler handler = letHandlerCreateServerEngine
+                                                              ? sslServerCtx.newHandler(ch.alloc())
+                                                              : new SslHandler(sslServerCtx.newEngine(ch.alloc()));
+                            if (serverDisableWrapSize) {
+                                handler.setWrapDataSize(-1);
                             }
+                            ch.pipeline().addLast(handler);
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
