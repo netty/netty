@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.AbstractCoalescingBufferQueue;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
@@ -31,7 +32,6 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
-import io.netty.channel.PendingWriteQueue;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.ReferenceCounted;
@@ -43,6 +43,7 @@ import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -66,6 +67,14 @@ import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
+import javax.net.ssl.SSLEngineResult.Status;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSession;
+
+import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
 
 /**
@@ -179,6 +188,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             new SSLException("handshake timed out"), SslHandler.class, "handshake(...)");
     private static final ClosedChannelException CHANNEL_CLOSED = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), SslHandler.class, "channelInactive(...)");
+
+    /**
+     * <a href="https://tools.ietf.org/html/rfc5246#section-6.2">2^14</a> which is the maximum sized plaintext chunk
+     * allowed by the TLS RFC.
+     */
+    private static final int MAX_PLAINTEXT_LENGTH = 16 * 1024;
 
     private enum SslEngineType {
         TCNATIVE(true, COMPOSITE_CUMULATOR) {
@@ -344,8 +359,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private boolean sentFirstMessage;
     private boolean flushedBeforeHandshake;
     private boolean readDuringHandshake;
-    private PendingWriteQueue pendingUnencryptedWrites;
-
+    private final SslHandlerCoalescingBufferQueue pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(16);
     private Promise<Channel> handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslClosePromise = new LazyChannelPromise();
 
@@ -443,6 +457,31 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     "handshakeTimeoutMillis: " + handshakeTimeoutMillis + " (expected: >= 0)");
         }
         this.handshakeTimeoutMillis = handshakeTimeoutMillis;
+    }
+
+    /**
+     * Sets the number of bytes to pass to each {@link SSLEngine#wrap(ByteBuffer[], int, int, ByteBuffer)} call.
+     * <p>
+     * This value will partition data which is passed to write
+     * {@link #write(ChannelHandlerContext, Object, ChannelPromise)}. The partitioning will work as follows:
+     * <ul>
+     * <li>If {@code wrapDataSize <= 0} then we will write each data chunk as is.</li>
+     * <li>If {@code wrapDataSize > data size} then we will attempt to aggregate multiple data chunks together.</li>
+     * <li>If {@code wrapDataSize > data size}  Else if {@code wrapDataSize <= data size} then we will divide the data
+     * into chunks of {@code wrapDataSize} when writing.</li>
+     * </ul>
+     * <p>
+     * If the {@link SSLEngine} doesn't support a gather wrap operation (e.g. {@link SslProvider#OPENSSL}) then
+     * aggregating data before wrapping can help reduce the ratio between TLS overhead vs data payload which will lead
+     * to better goodput. Writing fixed chunks of data can also help target the underlying transport's (e.g. TCP)
+     * frame size. Under lossy/congested network conditions this may help the peer get full TLS packets earlier and
+     * be able to do work sooner, as opposed to waiting for the all the pieces of the TLS packet to arrive.
+     * @param wrapDataSize the number of bytes which will be passed to each
+     *      {@link SSLEngine#wrap(ByteBuffer[], int, int, ByteBuffer)} call.
+     */
+    @UnstableApi
+    public final void setWrapDataSize(int wrapDataSize) {
+        pendingUnencryptedWrites.wrapDataSize = wrapDataSize;
     }
 
     /**
@@ -610,7 +649,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
         if (!pendingUnencryptedWrites.isEmpty()) {
             // Check if queue is not empty first because create a new ChannelException is expensive
-            pendingUnencryptedWrites.removeAndFailAll(new ChannelException("Pending write on removal of SslHandler"));
+            pendingUnencryptedWrites.releaseAndFailAll(ctx,
+                    new ChannelException("Pending write on removal of SslHandler"));
         }
         if (engine instanceof ReferenceCounted) {
             ((ReferenceCounted) engine).release();
@@ -660,7 +700,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             promise.setFailure(new UnsupportedMessageTypeException(msg, ByteBuf.class));
             return;
         }
-        pendingUnencryptedWrites.add(msg, promise);
+        pendingUnencryptedWrites.add((ByteBuf) msg, promise);
     }
 
     @Override
@@ -669,7 +709,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // created with startTLS flag turned on.
         if (startTls && !sentFirstMessage) {
             sentFirstMessage = true;
-            pendingUnencryptedWrites.removeAndWriteAll();
+            pendingUnencryptedWrites.writeAndRemoveAll(ctx);
             forceFlush(ctx);
             return;
         }
@@ -709,15 +749,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ByteBufAllocator alloc = ctx.alloc();
         boolean needUnwrap = false;
         try {
+            final int wrapDataSize = pendingUnencryptedWrites.wrapDataSize;
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
             while (!ctx.isRemoved()) {
-                Object msg = pendingUnencryptedWrites.current();
-                if (msg == null) {
+                promise = ctx.newPromise();
+                ByteBuf buf = wrapDataSize > 0 ?
+                        pendingUnencryptedWrites.remove(alloc, wrapDataSize, promise) :
+                        pendingUnencryptedWrites.removeFirst(promise);
+                if (buf == null) {
                     break;
                 }
 
-                ByteBuf buf = (ByteBuf) msg;
                 if (out == null) {
                     out = allocateOutNetBuf(ctx, buf.readableBytes(), buf.nioBufferCount());
                 }
@@ -725,15 +768,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 SSLEngineResult result = wrap(alloc, engine, buf, out);
 
                 if (result.getStatus() == Status.CLOSED) {
+                    buf.release();
+                    promise.tryFailure(SSLENGINE_CLOSED);
+                    promise = null;
                     // SSLEngine has been closed already.
                     // Any further write attempts should be denied.
-                    pendingUnencryptedWrites.removeAndFailAll(SSLENGINE_CLOSED);
+                    pendingUnencryptedWrites.releaseAndFailAll(ctx, SSLENGINE_CLOSED);
                     return;
                 } else {
-                    if (!buf.isReadable()) {
-                        promise = pendingUnencryptedWrites.remove();
+                    if (buf.isReadable()) {
+                        pendingUnencryptedWrites.addFirst(buf);
                     } else {
-                        promise = null;
+                        buf.release();
                     }
 
                     switch (result.getHandshakeStatus()) {
@@ -1424,7 +1470,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             notifyHandshakeFailure(cause);
         } finally {
             // Ensure we remove and fail all pending writes in all cases and so release memory quickly.
-            pendingUnencryptedWrites.removeAndFailAll(cause);
+            pendingUnencryptedWrites.releaseAndFailAll(ctx, cause);
         }
     }
 
@@ -1485,7 +1531,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     @Override
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
-        pendingUnencryptedWrites = new PendingWriteQueue(ctx);
 
         if (ctx.channel().isActive() && engine.getUseClientMode()) {
             // Begin the initial handshake.
@@ -1738,6 +1783,73 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx, int pendingBytes, int numComponents) {
         return allocate(ctx, engineType.calculateWrapBufferCapacity(this, pendingBytes, numComponents));
+    }
+
+    /**
+     * Each call to SSL_write will introduce about ~100 bytes of overhead. This coalescing queue attempts to increase
+     * goodput by aggregating the plaintext in chunks of {@link #wrapDataSize}. If many small chunks are written
+     * this can increase goodput, decrease the amount of calls to SSL_write, and decrease overall encryption operations.
+     */
+    private static final class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQueue {
+        volatile int wrapDataSize = MAX_PLAINTEXT_LENGTH;
+
+        SslHandlerCoalescingBufferQueue(int initSize) {
+            super(initSize);
+        }
+
+        @Override
+        protected ByteBuf compose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
+            final int wrapDataSize = this.wrapDataSize;
+            if (cumulation instanceof CompositeByteBuf) {
+                CompositeByteBuf composite = (CompositeByteBuf) cumulation;
+                int numComponents = composite.numComponents();
+                if (numComponents == 0 ||
+                        !attemptCopyToCumulation(composite.internalComponent(numComponents - 1), next, wrapDataSize)) {
+                    composite.addComponent(true, next);
+                }
+                return composite;
+            }
+            if (attemptCopyToCumulation(cumulation, next, wrapDataSize)) {
+                return cumulation;
+            }
+            CompositeByteBuf composite = alloc.compositeDirectBuffer(size() + 2);
+            composite.addComponent(true, cumulation);
+            composite.addComponent(true, next);
+            return composite;
+        }
+
+        @Override
+        protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first) {
+            if (first instanceof CompositeByteBuf) {
+                CompositeByteBuf composite = (CompositeByteBuf) first;
+                first = allocator.directBuffer(composite.readableBytes());
+                first.writeBytes(composite);
+                composite.release();
+            }
+            return first;
+        }
+
+        @Override
+        protected ByteBuf removeEmptyValue() {
+            return null;
+        }
+
+        private static boolean attemptCopyToCumulation(ByteBuf cumulation, ByteBuf next, int wrapDataSize) {
+            final int inReadableBytes = next.readableBytes();
+            final int cumulationCapacity = cumulation.capacity();
+            if (wrapDataSize - cumulation.readableBytes() >= inReadableBytes &&
+                    // Avoid using the same buffer if next's data would make cumulation exceed the wrapDataSize.
+                    // Only copy if there is enough space available and the capacity is large enough, and attempt to
+                    // resize if the capacity is small.
+                    (cumulation.isWritable(inReadableBytes) && cumulationCapacity >= wrapDataSize ||
+                            cumulationCapacity < wrapDataSize &&
+                                    ensureWritableSuccess(cumulation.ensureWritable(inReadableBytes, false)))) {
+                cumulation.writeBytes(next);
+                next.release();
+                return true;
+            }
+            return false;
+        }
     }
 
     private final class LazyChannelPromise extends DefaultPromise<Channel> {
