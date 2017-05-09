@@ -122,9 +122,9 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         // test
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
         assertTrue(data.parameters().containsKey(CLIENT_MAX_WINDOW));
-        assertTrue(data.parameters().get(CLIENT_MAX_WINDOW).equals("10"));
+        assertEquals("10", data.parameters().get(CLIENT_MAX_WINDOW));
         assertTrue(data.parameters().containsKey(SERVER_MAX_WINDOW));
-        assertTrue(data.parameters().get(SERVER_MAX_WINDOW).equals("12"));
+        assertEquals("12", data.parameters().get(SERVER_MAX_WINDOW));
         assertTrue(data.parameters().containsKey(CLIENT_MAX_WINDOW));
         assertTrue(data.parameters().containsKey(SERVER_MAX_WINDOW));
 
@@ -150,7 +150,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
         assertEquals(2, data.parameters().size());
         assertTrue(data.parameters().containsKey(SERVER_MAX_WINDOW));
-        assertTrue(data.parameters().get(SERVER_MAX_WINDOW).equals("12"));
+        assertEquals("12", data.parameters().get(SERVER_MAX_WINDOW));
         assertTrue(data.parameters().containsKey(SERVER_NO_CONTEXT));
 
         // initialize
