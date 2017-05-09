@@ -121,7 +121,6 @@ public final class OpenSsl {
             boolean supportsHostNameValidation = false;
             try {
                 final long sslCtx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
-                long privateKeyBio = 0;
                 long certBio = 0;
                 SelfSignedCertificate cert = null;
                 try {
@@ -162,9 +161,6 @@ public final class OpenSsl {
                         }
                     } finally {
                         SSL.freeSSL(ssl);
-                        if (privateKeyBio != 0) {
-                            SSL.freeBIO(privateKeyBio);
-                        }
                         if (certBio != 0) {
                             SSL.freeBIO(certBio);
                         }
@@ -191,12 +187,9 @@ public final class OpenSsl {
 
             final Set<String> availableCipherSuites = new LinkedHashSet<String>(
                     AVAILABLE_OPENSSL_CIPHER_SUITES.size() + AVAILABLE_JAVA_CIPHER_SUITES.size());
-            for (String cipher: AVAILABLE_OPENSSL_CIPHER_SUITES) {
-                availableCipherSuites.add(cipher);
-            }
-            for (String cipher: AVAILABLE_JAVA_CIPHER_SUITES) {
-                availableCipherSuites.add(cipher);
-            }
+            availableCipherSuites.addAll(AVAILABLE_OPENSSL_CIPHER_SUITES);
+            availableCipherSuites.addAll(AVAILABLE_JAVA_CIPHER_SUITES);
+
             AVAILABLE_CIPHER_SUITES = availableCipherSuites;
             SUPPORTS_KEYMANAGER_FACTORY = supportsKeyManagerFactory;
             SUPPORTS_HOSTNAME_VALIDATION = supportsHostNameValidation;
@@ -296,10 +289,7 @@ public final class OpenSsl {
      * returns {@code false}.
      */
     public static int version() {
-        if (isAvailable()) {
-            return SSL.version();
-        }
-        return -1;
+        return isAvailable() ? SSL.version() : -1;
     }
 
     /**
@@ -307,10 +297,7 @@ public final class OpenSsl {
      * returns {@code false}.
      */
     public static String versionString() {
-        if (isAvailable()) {
-            return SSL.versionString();
-        }
-        return null;
+        return isAvailable() ? SSL.versionString() : null;
     }
 
     /**
