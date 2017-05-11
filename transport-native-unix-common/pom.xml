@@ -54,6 +54,62 @@
         <exe.compiler>clang</exe.compiler>
         <jni.platform>darwin</jni.platform>
       </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <!-- Build the additional JAR that contains the native library. -->
+              <execution>
+                <id>native-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <copy todir="${nativeJarWorkdir}">
+                      <zipfileset src="${defaultJarFile}" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- invoke the make file to build a static library -->
+              <execution>
+                <id>build-native-lib</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
+                      <env key="CC" value="${exe.compiler}"/>
+                      <env key="AR" value="${exe.archiver}"/>
+                      <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
+                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
+                      <env key="JNI_PLATFORM" value="${jni.platform}"/>
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable"/>
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
+                      <env key="LIB_NAME" value="${nativeLibName}"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <id>linux</id>
@@ -65,6 +121,62 @@
       <properties>
         <jni.platform>linux</jni.platform>
       </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <!-- Build the additional JAR that contains the native library. -->
+              <execution>
+                <id>native-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <copy todir="${nativeJarWorkdir}">
+                      <zipfileset src="${defaultJarFile}" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- invoke the make file to build a static library -->
+              <execution>
+                <id>build-native-lib</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
+                      <env key="CC" value="${exe.compiler}"/>
+                      <env key="AR" value="${exe.archiver}"/>
+                      <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
+                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
+                      <env key="JNI_PLATFORM" value="${jni.platform}"/>
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable"/>
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
+                      <env key="LIB_NAME" value="${nativeLibName}"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <id>freebsd</id>
@@ -79,6 +191,62 @@
         <exe.make>gmake</exe.make>
         <jni.platform>freebsd</jni.platform>
       </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <!-- Build the additional JAR that contains the native library. -->
+              <execution>
+                <id>native-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <copy todir="${nativeJarWorkdir}">
+                      <zipfileset src="${defaultJarFile}" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- invoke the make file to build a static library -->
+              <execution>
+                <id>build-native-lib</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
+                      <env key="CC" value="${exe.compiler}"/>
+                      <env key="AR" value="${exe.archiver}"/>
+                      <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
+                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
+                      <env key="JNI_PLATFORM" value="${jni.platform}"/>
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable"/>
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
+                      <env key="LIB_NAME" value="${nativeLibName}"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <id>openbsd</id>
@@ -93,6 +261,62 @@
         <exe.make>gmake</exe.make>
         <jni.platform>openbsd</jni.platform>
       </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <!-- Build the additional JAR that contains the native library. -->
+              <execution>
+                <id>native-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <copy todir="${nativeJarWorkdir}">
+                      <zipfileset src="${defaultJarFile}" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- invoke the make file to build a static library -->
+              <execution>
+                <id>build-native-lib</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
+                      <env key="CC" value="${exe.compiler}"/>
+                      <env key="AR" value="${exe.archiver}"/>
+                      <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
+                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
+                      <env key="JNI_PLATFORM" value="${jni.platform}"/>
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable"/>
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
+                      <env key="LIB_NAME" value="${nativeLibName}"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 
@@ -108,61 +332,4 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <!-- Build the additional JAR that contains the native library. -->
-          <execution>
-            <id>native-jar</id>
-            <phase>package</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <copy todir="${nativeJarWorkdir}">
-                  <zipfileset src="${defaultJarFile}" />
-                </copy>
-                <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                  <zipfileset dir="${nativeLibOnlyDir}" />
-                  <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
-                </copy>
-                <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
-                  <zipfileset dir="${nativeIncludeDir}" />
-                  <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
-                </copy>
-                <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
-                <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
-              </target>
-            </configuration>
-          </execution>
-          <!-- invoke the make file to build a static library -->
-          <execution>
-            <id>build-native-lib</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                  <env key="CC" value="${exe.compiler}"/>
-                  <env key="AR" value="${exe.archiver}"/>
-                  <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
-                  <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
-                  <env key="JNI_PLATFORM" value="${jni.platform}"/>
-                  <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable"/>
-                  <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
-                  <env key="LIB_NAME" value="${nativeLibName}"/>
-                </exec>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 </project>

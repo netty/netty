@@ -139,81 +139,6 @@
       </properties>
     </profile>
     <profile>
-      <id>linux</id>
-      <activation>
-        <os>
-          <family>linux</family>
-        </os>
-      </activation>
-      <modules>
-        <module>transport-native-unix-common-tests</module>
-        <module>transport-native-unix-common</module>
-        <module>transport-native-epoll</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>mac</id>
-      <activation>
-        <os>
-          <family>mac</family>
-        </os>
-      </activation>
-      <modules>
-        <module>transport-native-unix-common-tests</module>
-        <module>transport-native-unix-common</module>
-        <module>transport-native-kqueue</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>freebsd</id>
-      <activation>
-        <os>
-          <family>unix</family>
-          <name>freebsd</name>
-        </os>
-      </activation>
-      <modules>
-        <module>transport-native-unix-common-tests</module>
-        <module>transport-native-unix-common</module>
-        <module>transport-native-kqueue</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>openbsd</id>
-      <activation>
-        <os>
-          <family>unix</family>
-          <name>openbsd</name>
-        </os>
-      </activation>
-      <modules>
-        <module>transport-native-unix-common-tests</module>
-        <module>transport-native-unix-common</module>
-        <module>transport-native-kqueue</module>
-      </modules>
-    </profile>
-    <!-- The uber artifacts depend on artifacts built from different platforms and will fail if these artifacts are not
-         available. Typically we only build the uber jars as part of the release process so the build sequencing
-         is controlled and can be sequenced correctly. For example we may do the following:
-
-         <from a linux machine>
-         $ mvn release
-         <after this completes log onto a MacOS machine, note fail-at-end, and -D to activate multiple profiles>
-         $ mvn release -fae -Duber
-      -->
-    <profile>
-      <id>uber</id>
-      <activation>
-        <property>
-          <name>uber</name>
-        </property>
-      </activation>
-      <modules>
-        <module>all</module>
-        <module>tarball</module>
-      </modules>
-    </profile>
-    <profile>
       <!--
       This profile exists because either ALPN or NPN can exits on the class path at once, but not both.
       The JDK version is typically used to distinguish which should be used but there is some overlap
@@ -280,6 +205,7 @@
   </properties>
 
   <modules>
+    <module>all</module>
     <module>dev-tools</module>
     <module>common</module>
     <module>buffer</module>
@@ -297,7 +223,12 @@
     <module>codec-xml</module>
     <module>resolver</module>
     <module>resolver-dns</module>
+    <module>tarball</module>
     <module>transport</module>
+    <module>transport-native-unix-common-tests</module>
+    <module>transport-native-unix-common</module>
+    <module>transport-native-epoll</module>
+    <module>transport-native-kqueue</module>
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
     <module>transport-udt</module>
@@ -988,13 +919,16 @@
           <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
         </configuration>
       </plugin>
+      <!-- After artifacts were deployed from linux and macos we need to execute the following for this module:
+           mvn -Psonatype-oss-release,full,uber clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId=${netty-id} -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging
+      -->
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
         <!-- Downgrade to 2.4.1 if release fails -->
         <version>2.5.3</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P restricted-release,sonatype-oss-release</arguments>
+          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
