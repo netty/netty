@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.11.Final-SNAPSHOT</version>
+    <version>4.1.11.Final</version>
   </parent>
   <artifactId>netty-transport-native-unix-common</artifactId>
 
@@ -94,14 +94,14 @@
                 <configuration>
                   <target>
                     <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                      <env key="CC" value="${exe.compiler}"/>
-                      <env key="AR" value="${exe.archiver}"/>
-                      <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
-                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
-                      <env key="JNI_PLATFORM" value="${jni.platform}"/>
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable"/>
-                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
-                      <env key="LIB_NAME" value="${nativeLibName}"/>
+                      <env key="CC" value="${exe.compiler}" />
+                      <env key="AR" value="${exe.archiver}" />
+                      <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
+                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
+                      <env key="JNI_PLATFORM" value="${jni.platform}" />
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable" />
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
+                      <env key="LIB_NAME" value="${nativeLibName}" />
                     </exec>
                   </target>
                 </configuration>
@@ -161,14 +161,14 @@
                 <configuration>
                   <target>
                     <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                      <env key="CC" value="${exe.compiler}"/>
-                      <env key="AR" value="${exe.archiver}"/>
-                      <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
-                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
-                      <env key="JNI_PLATFORM" value="${jni.platform}"/>
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable"/>
-                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
-                      <env key="LIB_NAME" value="${nativeLibName}"/>
+                      <env key="CC" value="${exe.compiler}" />
+                      <env key="AR" value="${exe.archiver}" />
+                      <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
+                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
+                      <env key="JNI_PLATFORM" value="${jni.platform}" />
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable" />
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
+                      <env key="LIB_NAME" value="${nativeLibName}" />
                     </exec>
                   </target>
                 </configuration>
@@ -231,14 +231,14 @@
                 <configuration>
                   <target>
                     <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                      <env key="CC" value="${exe.compiler}"/>
-                      <env key="AR" value="${exe.archiver}"/>
-                      <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
-                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
-                      <env key="JNI_PLATFORM" value="${jni.platform}"/>
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable"/>
-                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
-                      <env key="LIB_NAME" value="${nativeLibName}"/>
+                      <env key="CC" value="${exe.compiler}" />
+                      <env key="AR" value="${exe.archiver}" />
+                      <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
+                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
+                      <env key="JNI_PLATFORM" value="${jni.platform}" />
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable" />
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
+                      <env key="LIB_NAME" value="${nativeLibName}" />
                     </exec>
                   </target>
                 </configuration>
@@ -301,14 +301,14 @@
                 <configuration>
                   <target>
                     <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
-                      <env key="CC" value="${exe.compiler}"/>
-                      <env key="AR" value="${exe.archiver}"/>
-                      <env key="LIB_DIR" value="${nativeLibOnlyDir}"/>
-                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}"/>
-                      <env key="JNI_PLATFORM" value="${jni.platform}"/>
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable"/>
-                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt"/>
-                      <env key="LIB_NAME" value="${nativeLibName}"/>
+                      <env key="CC" value="${exe.compiler}" />
+                      <env key="AR" value="${exe.archiver}" />
+                      <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
+                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
+                      <env key="JNI_PLATFORM" value="${jni.platform}" />
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable" />
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
+                      <env key="LIB_NAME" value="${nativeLibName}" />
                     </exec>
                   </target>
                 </configuration>
