@@ -94,13 +94,40 @@
   </build>
 
   <profiles>
+    <!-- If the uber profile is used it will automatically fetch the missing native jar from maven and add it to the all jar as well. -->
+    <profile>
+      <id>uber</id>
+      <repositories>
+        <repository>
+          <id>staged-releases</id>
+          <name>Staged Releases</name>
+          <url>https://oss.sonatype.org/service/local/repositories/${stagingRepositoryId}/content/</url>
+        </repository>
+      </repositories>
+
+      <dependencies>
+        <!-- Depend on all our native jars -->
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${project.version}</version>
+          <classifier>linux-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-kqueue</artifactId>
+          <version>${project.version}</version>
+          <classifier>osx-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+      </dependencies>
+    </profile>
+
     <profile>
       <id>full</id>
-      <activation>
-        <property>
-          <name>uber</name>
-        </property>
-      </activation>
       <build>
         <plugins>
           <plugin>
