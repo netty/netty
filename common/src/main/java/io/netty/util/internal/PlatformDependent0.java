@@ -41,6 +41,8 @@ final class PlatformDependent0 {
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
     private static final boolean IS_EXPLICIT_NO_UNSAFE = explicitNoUnsafe0();
     private static final Method ALLOCATE_ARRAY_METHOD;
+    private static final int JAVA_VERSION = javaVersion0();
+    private static final boolean IS_ANDROID = isAndroid0();
 
     private static final Object INTERNAL_UNSAFE;
     static final Unsafe UNSAFE;
@@ -285,60 +287,63 @@ final class PlatformDependent0 {
 
             UNALIGNED = unaligned;
 
-            Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    try {
-                        // Java9 has jdk.internal.misc.Unsafe and not all methods are propagated to
-                        // sun.misc.Unsafe
-                        Class<?> internalUnsafeClass = getClassLoader(PlatformDependent0.class)
-                                .loadClass("jdk.internal.misc.Unsafe");
-                        Method method = internalUnsafeClass.getDeclaredMethod("getUnsafe");
-                        return method.invoke(null);
-                    } catch (Throwable e) {
-                        return e;
-                    }
-                }
-            });
-
-            if (!(maybeException instanceof Throwable)) {
-                internalUnsafe = maybeException;
-                final Object finalInternalUnsafe = internalUnsafe;
-                maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            if (javaVersion() >= 9) {
+                Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                     @Override
                     public Object run() {
                         try {
-                            return finalInternalUnsafe.getClass().getDeclaredMethod(
-                                    "allocateUninitializedArray", Class.class, int.class);
-                        } catch (NoSuchMethodException e) {
-                            return e;
-                        } catch (SecurityException e) {
+                            // Java9 has jdk.internal.misc.Unsafe and not all methods are propagated to
+                            // sun.misc.Unsafe
+                            Class<?> internalUnsafeClass = getClassLoader(PlatformDependent0.class)
+                                    .loadClass("jdk.internal.misc.Unsafe");
+                            Method method = internalUnsafeClass.getDeclaredMethod("getUnsafe");
+                            return method.invoke(null);
+                        } catch (Throwable e) {
                             return e;
                         }
                     }
                 });
+                if (!(maybeException instanceof Throwable)) {
+                    internalUnsafe = maybeException;
+                    final Object finalInternalUnsafe = internalUnsafe;
+                    maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                        @Override
+                        public Object run() {
+                            try {
+                                return finalInternalUnsafe.getClass().getDeclaredMethod(
+                                        "allocateUninitializedArray", Class.class, int.class);
+                            } catch (NoSuchMethodException e) {
+                                return e;
+                            } catch (SecurityException e) {
+                                return e;
+                            }
+                        }
+                    });
 
-                if (maybeException instanceof Method) {
-                    try {
-                        Method m = (Method) maybeException;
-                        byte[] bytes = (byte[]) m.invoke(finalInternalUnsafe, byte.class, 8);
-                        assert bytes.length == 8;
-                        allocateArrayMethod = m;
-                    } catch (IllegalAccessException e) {
-                        maybeException = e;
-                    } catch (InvocationTargetException e) {
-                        maybeException = e;
+                    if (maybeException instanceof Method) {
+                        try {
+                            Method m = (Method) maybeException;
+                            byte[] bytes = (byte[]) m.invoke(finalInternalUnsafe, byte.class, 8);
+                            assert bytes.length == 8;
+                            allocateArrayMethod = m;
+                        } catch (IllegalAccessException e) {
+                            maybeException = e;
+                        } catch (InvocationTargetException e) {
+                            maybeException = e;
+                        }
                     }
                 }
+
+                if (maybeException instanceof Throwable) {
+                    logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable",
+                            (Throwable) maybeException);
+                } else {
+                    logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): available");
+                }
+            } else {
+                logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable prior to Java9");
             }
             ALLOCATE_ARRAY_METHOD = allocateArrayMethod;
-
-            if (maybeException instanceof Throwable) {
-                logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable",
-                        (Throwable) maybeException);
-            } else {
-                logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): available");
-            }
         }
 
         INTERNAL_UNSAFE = internalUnsafe;
@@ -754,6 +759,65 @@ final class PlatformDependent0 {
 
     static long reallocateMemory(long address, long newSize) {
         return UNSAFE.reallocateMemory(address, newSize);
+    }
+
+    static boolean isAndroid() {
+        return IS_ANDROID;
+    }
+
+    private static boolean isAndroid0() {
+        boolean android;
+        try {
+            Class.forName("android.app.Application", false, getSystemClassLoader());
+            android = true;
+        } catch (Throwable ignored) {
+            // Failed to load the class uniquely available in Android.
+            android = false;
+        }
+
+        if (android) {
+            logger.debug("Platform: Android");
+        }
+        return android;
+    }
+
+    static int javaVersion() {
+        return JAVA_VERSION;
+    }
+
+    private static int javaVersion0() {
+        final int majorVersion;
+
+        if (isAndroid0()) {
+            majorVersion = 6;
+        } else {
+            majorVersion = majorVersionFromJavaSpecificationVersion();
+        }
+
+        logger.debug("Java version: {}", majorVersion);
+
+        return majorVersion;
+    }
+
+    // Package-private for testing only
+    static int majorVersionFromJavaSpecificationVersion() {
+        return majorVersion(SystemPropertyUtil.get("java.specification.version", "1.6"));
+    }
+
+    // Package-private for testing only
+    static int majorVersion(final String javaSpecVersion) {
+        final String[] components = javaSpecVersion.split("\\.");
+        final int[] version = new int[components.length];
+        for (int i = 0; i < components.length; i++) {
+            version[i] = Integer.parseInt(components[i]);
+        }
+
+        if (version[0] == 1) {
+            assert version[1] >= 6;
+            return version[1];
+        } else {
+            return version[0];
+        }
     }
 
     private PlatformDependent0() {

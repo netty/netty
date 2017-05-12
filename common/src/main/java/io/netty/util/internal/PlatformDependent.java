@@ -67,11 +67,8 @@ public final class PlatformDependent {
     private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
             "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
 
-    private static final boolean IS_ANDROID = isAndroid0();
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean MAYBE_SUPER_USER;
-
-    private static final int JAVA_VERSION = javaVersion0();
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
@@ -197,7 +194,7 @@ public final class PlatformDependent {
      * Returns {@code true} if and only if the current platform is Android
      */
     public static boolean isAndroid() {
-        return IS_ANDROID;
+        return PlatformDependent0.isAndroid();
     }
 
     /**
@@ -219,7 +216,7 @@ public final class PlatformDependent {
      * Return the version of Java under which this library is used.
      */
     public static int javaVersion() {
-        return JAVA_VERSION;
+        return PlatformDependent0.javaVersion();
     }
 
     /**
@@ -913,22 +910,6 @@ public final class PlatformDependent {
         return RANDOM_PROVIDER.current();
     }
 
-    private static boolean isAndroid0() {
-        boolean android;
-        try {
-            Class.forName("android.app.Application", false, getSystemClassLoader());
-            android = true;
-        } catch (Throwable ignored) {
-            // Failed to load the class uniquely available in Android.
-            android = false;
-        }
-
-        if (android) {
-            logger.debug("Platform: Android");
-        }
-        return android;
-    }
-
     private static boolean isWindows0() {
         boolean windows = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).contains("win");
         if (windows) {
@@ -944,39 +925,6 @@ public final class PlatformDependent {
         }
         // Check for root and toor as some BSDs have a toor user that is basically the same as root.
         return "root".equals(username) || "toor".equals(username);
-    }
-
-    private static int javaVersion0() {
-        final int majorVersion;
-
-        if (isAndroid()) {
-            majorVersion = 6;
-        } else {
-            majorVersion = majorVersionFromJavaSpecificationVersion();
-        }
-
-        logger.debug("Java version: {}", majorVersion);
-
-        return majorVersion;
-    }
-
-    static int majorVersionFromJavaSpecificationVersion() {
-        return majorVersion(SystemPropertyUtil.get("java.specification.version", "1.6"));
-    }
-
-    static int majorVersion(final String javaSpecVersion) {
-        final String[] components = javaSpecVersion.split("\\.");
-        final int[] version = new int[components.length];
-        for (int i = 0; i < components.length; i++) {
-            version[i] = Integer.parseInt(components[i]);
-        }
-
-        if (version[0] == 1) {
-            assert version[1] >= 6;
-            return version[1];
-        } else {
-            return version[0];
-        }
     }
 
     private static boolean hasUnsafe0() {
