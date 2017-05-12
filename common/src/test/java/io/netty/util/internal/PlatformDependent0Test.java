@@ -19,6 +19,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.security.Permission;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
@@ -53,5 +54,41 @@ public class PlatformDependent0Test {
         ByteBuffer buffer = PlatformDependent0.newDirectBuffer(address, capacity);
         assertEquals(address, PlatformDependent0.directBufferAddress(buffer));
         assertEquals(capacity, buffer.capacity());
+    }
+
+    @Test
+    public void testMajorVersionFromJavaSpecificationVersion() {
+        final SecurityManager current = System.getSecurityManager();
+
+        try {
+            System.setSecurityManager(new SecurityManager() {
+                @Override
+                public void checkPropertyAccess(String key) {
+                    if (key.equals("java.specification.version")) {
+                        // deny
+                        throw new SecurityException(key);
+                    }
+                }
+
+                // so we can restore the security manager
+                @Override
+                public void checkPermission(Permission perm) {
+                }
+            });
+
+            assertEquals(6, PlatformDependent0.majorVersionFromJavaSpecificationVersion());
+        } finally {
+            System.setSecurityManager(current);
+        }
+    }
+
+    @Test
+    public void testMajorVersion() {
+        assertEquals(6, PlatformDependent0.majorVersion("1.6"));
+        assertEquals(7, PlatformDependent0.majorVersion("1.7"));
+        assertEquals(8, PlatformDependent0.majorVersion("1.8"));
+        assertEquals(8, PlatformDependent0.majorVersion("8"));
+        assertEquals(9, PlatformDependent0.majorVersion("1.9")); // early version of JDK 9 before Project Verona
+        assertEquals(9, PlatformDependent0.majorVersion("9"));
     }
 }
