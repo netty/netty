@@ -919,8 +919,8 @@
           <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
         </configuration>
       </plugin>
-      <!-- After artifacts were deployed from linux and macos we need to execute the following for this module:
-           mvn -Psonatype-oss-release,full,uber clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId=${netty-id} -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging
+      <!-- After artifacts were deployed from linux and macos we need to execute the following on macOS (in the root of the project).
+           mvn -Psonatype-oss-release,full,uber-staging -pl transport-native-kqueue,transport-native-unix-common,all,tarball clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId=${netty-id} -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging
       -->
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
