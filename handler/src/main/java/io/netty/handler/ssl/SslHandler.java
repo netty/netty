@@ -796,9 +796,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         runDelegatedTasks();
                         break;
                     case NEED_UNWRAP:
-                        if (!inUnwrap) {
-                            unwrapNonAppData(ctx);
+                        if (inUnwrap) {
+                            // If we asked for a wrap, the engine requested an unwrap, and we are in unwrap there is
+                            // no use in trying to call wrap again because we have already attempted (or will after we
+                            // return) to feed more data to the engine.
+                            return;
                         }
+
+                        unwrapNonAppData(ctx);
                         break;
                     case NEED_WRAP:
                         break;
