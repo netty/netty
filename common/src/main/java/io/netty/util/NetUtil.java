@@ -39,7 +39,6 @@ import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.StringTokenizer;
 
 /**
  * A class that holds a number of network-related constants.
@@ -106,11 +105,6 @@ public final class NetUtil {
      * Maximum number of separators that must be present in an IPv6 string
      */
     private static final int IPV6_MAX_SEPARATORS = 8;
-
-    /**
-     * Number of bytes needed to represent and IPV4 value
-     */
-    private static final int IPV4_BYTE_COUNT = 4;
 
     /**
      * Maximum amount of value adding characters in between IPV4 separators
@@ -369,17 +363,7 @@ public final class NetUtil {
     public static byte[] createByteArrayFromIpAddressString(String ipAddressString) {
 
         if (isValidIpV4Address(ipAddressString)) {
-            StringTokenizer tokenizer = new StringTokenizer(ipAddressString, ".");
-            String token;
-            int tempInt;
-            byte[] byteAddress = new byte[IPV4_BYTE_COUNT];
-            for (int i = 0; i < IPV4_BYTE_COUNT; i ++) {
-                token = tokenizer.nextToken();
-                tempInt = Integer.parseInt(token);
-                byteAddress[i] = (byte) tempInt;
-            }
-
-            return byteAddress;
+            return validIpV4ToBytes(ipAddressString);
         }
 
         if (isValidIpV6Address(ipAddressString)) {
@@ -397,46 +381,52 @@ public final class NetUtil {
         return null;
     }
 
+    /**
+     * Convert ASCII hexadecimal character to the {@code int} value.
+     * Unlike {@link Character#digit(char, int)}, returns {@code 0} if character is not a HEX-represented.
+     */
     private static int getIntValue(char c) {
-        switch (c) {
-            case '0':
-                return 0;
-            case '1':
-                return 1;
-            case '2':
-                return 2;
-            case '3':
-                return 3;
-            case '4':
-                return 4;
-            case '5':
-                return 5;
-            case '6':
-                return 6;
-            case '7':
-                return 7;
-            case '8':
-                return 8;
-            case '9':
-                return 9;
+        if (c >= '0' && c <= '9') {
+            return c - '0';
         }
-
-        c = Character.toLowerCase(c);
-        switch (c) {
-            case 'a':
-                return 10;
-            case 'b':
-                return 11;
-            case 'c':
-                return 12;
-            case 'd':
-                return 13;
-            case 'e':
-                return 14;
-            case 'f':
-                return 15;
+        if (c >= 'A' && c <= 'F') {
+            // 0xA - a start value in sequence 'A'..'F'
+            return c - 'A' + 0xA;
+        }
+        if (c >= 'a' && c <= 'f') {
+            // 0xA - a start value in sequence 'a'..'f'
+            return c - 'a' + 0xA;
         }
         return 0;
+    }
+
+    private static int decimalDigit(String str, int pos) {
+        return str.charAt(pos) - '0';
+    }
+
+    private static byte ipv4WordToByte(String ip, int from, int toExclusive) {
+        int ret = decimalDigit(ip, from);
+        from++;
+        if (from == toExclusive) {
+            return (byte) ret;
+        }
+        ret = ret * 10 + decimalDigit(ip, from);
+        from++;
+        if (from == toExclusive) {
+            return (byte) ret;
+        }
+        return (byte) (ret * 10 + decimalDigit(ip, from));
+    }
+
+    // visible for tests
+    static byte[] validIpV4ToBytes(String ip) {
+        int i;
+        return new byte[] {
+                ipv4WordToByte(ip, 0, i = ip.indexOf('.', 1)),
+                ipv4WordToByte(ip, i + 1, i = ip.indexOf('.', i + 2)),
+                ipv4WordToByte(ip, i + 1, i = ip.indexOf('.', i + 2)),
+                ipv4WordToByte(ip, i + 1, ip.length())
+        };
     }
 
     /**
@@ -489,167 +479,139 @@ public final class NetUtil {
         }
     }
 
-    public static boolean isValidIpV6Address(String ipAddress) {
-        boolean doubleColon = false;
-        int numberOfColons = 0;
-        int numberOfPeriods = 0;
-        StringBuilder word = new StringBuilder();
-        char c = 0;
-        char prevChar;
-        int startOffset = 0; // offset for [] ip addresses
-        int endOffset = ipAddress.length();
-
-        if (endOffset < 2) {
+    public static boolean isValidIpV6Address(String ip) {
+        int end = ip.length();
+        if (end < 2) {
             return false;
         }
 
-        // Strip []
-        if (ipAddress.charAt(0) == '[') {
-            if (ipAddress.charAt(endOffset - 1) != ']') {
-                return false; // must have a close ]
-            }
-
-            startOffset = 1;
-            endOffset --;
-        }
-
-        // Strip the interface name/index after the percent sign.
-        int percentIdx = ipAddress.indexOf('%', startOffset);
-        if (percentIdx >= 0) {
-            endOffset = percentIdx;
-        }
-
-        for (int i = startOffset; i < endOffset; i ++) {
-            prevChar = c;
-            c = ipAddress.charAt(i);
-            switch (c) {
-                // case for the last 32-bits represented as IPv4 x:x:x:x:x:x:d.d.d.d
-                case '.':
-                    numberOfPeriods ++;
-                    if (numberOfPeriods > 3) {
-                        return false;
-                    } else if (numberOfPeriods == 1) {
-                        // Verify this address is of the correct structure to contain an IPv4 address.
-                        // It must be IPv4-Mapped or IPv4-Compatible
-                        // (see https://tools.ietf.org/html/rfc4291#section-2.5.5).
-                        int j = i - word.length() - 2; // index of character before the previous ':'.
-                        final int beginColonIndex = ipAddress.lastIndexOf(':', j);
-                        if (beginColonIndex == -1) {
-                            return false;
-                        }
-                        char tmpChar = ipAddress.charAt(j);
-                        if (isValidIPv4MappedChar(tmpChar)) {
-                            if (j - beginColonIndex != 4 ||
-                                !isValidIPv4MappedChar(ipAddress.charAt(j - 1)) ||
-                                !isValidIPv4MappedChar(ipAddress.charAt(j - 2)) ||
-                                !isValidIPv4MappedChar(ipAddress.charAt(j - 3))) {
-                                return false;
-                            }
-                            j -= 5;
-                        } else if (tmpChar == '0' || tmpChar == ':') {
-                            --j;
-                        } else {
-                            return false;
-                        }
-
-                        // a special case ::1:2:3:4:5:d.d.d.d allows 7 colons with an
-                        // IPv4 ending, otherwise 7 :'s is bad
-                        if ((numberOfColons != 6 && !doubleColon) || numberOfColons > 7 ||
-                            (numberOfColons == 7 && (ipAddress.charAt(startOffset) != ':' ||
-                                ipAddress.charAt(1 + startOffset) != ':'))) {
-                            return false;
-                        }
-
-                        for (; j >= startOffset; --j) {
-                            tmpChar = ipAddress.charAt(j);
-                            if (tmpChar != '0' && tmpChar != ':') {
-                                return false;
-                            }
-                        }
-                    }
-
-                    if (!isValidIp4Word(word.toString())) {
-                        return false;
-                    }
-                    word.delete(0, word.length());
-                    break;
-
-                case ':':
-                    // FIX "IP6 mechanism syntax #ip6-bad1"
-                    // An IPV6 address cannot start with a single ":".
-                    // Either it can starti with "::" or with a number.
-                    if (i == startOffset && (endOffset <= i || ipAddress.charAt(i + 1) != ':')) {
-                        return false;
-                    }
-                    // END FIX "IP6 mechanism syntax #ip6-bad1"
-                    numberOfColons ++;
-                    if (numberOfColons > 8) {
-                        return false;
-                    }
-                    if (numberOfPeriods > 0) {
-                        return false;
-                    }
-                    if (prevChar == ':') {
-                        if (doubleColon) {
-                            return false;
-                        }
-                        doubleColon = true;
-                    }
-                    word.delete(0, word.length());
-                    break;
-
-                default:
-                    if (word != null && word.length() > 3) {
-                        return false;
-                    }
-                    if (!isValidHexChar(c)) {
-                        return false;
-                    }
-                    word.append(c);
-            }
-        }
-
-        // Check if we have an IPv4 ending
-        if (numberOfPeriods > 0) {
-            // There is a test case with 7 colons and valid ipv4 this should resolve it
-            if (numberOfPeriods != 3 || !(isValidIp4Word(word.toString()) && (numberOfColons < 7 || doubleColon))) {
+        // strip "[]"
+        int start;
+        char c = ip.charAt(0);
+        if (c == '[') {
+            end--;
+            if (ip.charAt(end) != ']') {
+                // must have a close ]
                 return false;
             }
+            start = 1;
+            c = ip.charAt(1);
         } else {
-            // If we're at then end and we haven't had 7 colons then there is a
-            // problem unless we encountered a doubleColon
-            if (numberOfColons != 7 && !doubleColon) {
+            start = 0;
+        }
+
+        int colons;
+        int compressBegin;
+        if (c == ':') {
+            // an IPv6 address can start with "::" or with a number
+            if (ip.charAt(start + 1) != ':') {
+                return false;
+            }
+            colons = 2;
+            compressBegin = start;
+            start += 2;
+        } else {
+            colons = 0;
+            compressBegin = -1;
+        }
+
+        int wordLen = 0;
+        loop:
+        for (int i = start; i < end; i++) {
+            c = ip.charAt(i);
+            if (isValidHexChar(c)) {
+                if (wordLen < 4) {
+                    wordLen++;
+                    continue;
+                }
                 return false;
             }
 
-            if (word.length() == 0) {
-                // If we have an empty word at the end, it means we ended in either
-                // a : or a .
-                // If we did not end in :: then this is invalid
-                if (ipAddress.charAt(endOffset - 1) == ':' &&
-                    ipAddress.charAt(endOffset - 2) != ':') {
+            switch (c) {
+            case ':':
+                if (colons > 7) {
                     return false;
                 }
-            } else if (numberOfColons == 8 && ipAddress.charAt(startOffset) != ':') {
+                if (ip.charAt(i - 1) == ':') {
+                    if (compressBegin >= 0) {
+                        return false;
+                    }
+                    compressBegin = i - 1;
+                } else {
+                    wordLen = 0;
+                }
+                colons++;
+                break;
+            case '.':
+                // case for the last 32-bits represented as IPv4 x:x:x:x:x:x:d.d.d.d
+
+                // check a normal case (6 single colons)
+                if (compressBegin < 0 && colons != 6 ||
+                    // a special case ::1:2:3:4:5:d.d.d.d allows 7 colons with an
+                    // IPv4 ending, otherwise 7 :'s is bad
+                    (colons == 7 && compressBegin >= start || colons > 7)) {
+                    return false;
+                }
+
+                // Verify this address is of the correct structure to contain an IPv4 address.
+                // It must be IPv4-Mapped or IPv4-Compatible
+                // (see https://tools.ietf.org/html/rfc4291#section-2.5.5).
+                int ipv4Start = i - wordLen;
+                int j = ipv4Start - 2; // index of character before the previous ':'.
+                if (isValidIPv4MappedChar(ip.charAt(j))) {
+                    if (!isValidIPv4MappedChar(ip.charAt(j - 1)) ||
+                        !isValidIPv4MappedChar(ip.charAt(j - 2)) ||
+                        !isValidIPv4MappedChar(ip.charAt(j - 3))) {
+                        return false;
+                    }
+                    j -= 5;
+                }
+
+                for (; j >= start; --j) {
+                    char tmpChar = ip.charAt(j);
+                    if (tmpChar != '0' && tmpChar != ':') {
+                        return false;
+                    }
+                }
+
+                // 7 - is minimum IPv4 address length
+                int ipv4End = ip.indexOf('%', ipv4Start + 7);
+                if (ipv4End < 0) {
+                    ipv4End = end;
+                }
+                return isValidIpV4Address(ip, ipv4Start, ipv4End);
+            case '%':
+                // strip the interface name/index after the percent sign
+                end = i;
+                break loop;
+            default:
                 return false;
             }
         }
 
-        return true;
+        // normal case without compression
+        if (compressBegin < 0) {
+            return colons == 7 && wordLen > 0;
+        }
+
+        return compressBegin + 2 == end ||
+               // 8 colons is valid only if compression in start or end
+               wordLen > 0 && (colons < 8 || compressBegin <= start);
     }
 
-    private static boolean isValidIp4Word(String word) {
-        char c;
-        if (word.length() < 1 || word.length() > 3) {
+    private static boolean isValidIpV4Word(CharSequence word, int from, int toExclusive) {
+        int len = toExclusive - from;
+        char c0, c1, c2;
+        if (len < 1 || len > 3 || (c0 = word.charAt(from)) < '0') {
             return false;
         }
-        for (int i = 0; i < word.length(); i ++) {
-            c = word.charAt(i);
-            if (!(c >= '0' && c <= '9')) {
-                return false;
-            }
+        if (len == 3) {
+            return (c1 = word.charAt(from + 1)) >= '0' &&
+                   (c2 = word.charAt(from + 2)) >= '0' &&
+                   (c0 <= '1' && c1 <= '9' && c2 <= '9' ||
+                    c0 == '2' && c1 <= '5' && (c2 <= '5' || c1 < '5' && c2 <= '9'));
         }
-        return Integer.parseInt(word) <= 255;
+        return c0 <= '9' && (len == 1 || isValidNumericChar(word.charAt(from + 1)));
     }
 
     private static boolean isValidHexChar(char c) {
@@ -684,46 +646,19 @@ public final class NetUtil {
      * @return true, if the string represents an IPV4 address in dotted
      *         notation, false otherwise
      */
-    public static boolean isValidIpV4Address(String value) {
+    public static boolean isValidIpV4Address(String ip) {
+        return isValidIpV4Address(ip, 0, ip.length());
+    }
 
-        int periods = 0;
+    @SuppressWarnings("DuplicateBooleanBranch")
+    private static boolean isValidIpV4Address(String ip, int from, int toExcluded) {
+        int len = toExcluded - from;
         int i;
-        int length = value.length();
-
-        if (length > 15) {
-            return false;
-        }
-        char c;
-        StringBuilder word = new StringBuilder();
-        for (i = 0; i < length; i ++) {
-            c = value.charAt(i);
-            if (c == '.') {
-                periods ++;
-                if (periods > 3) {
-                    return false;
-                }
-                if (word.length() == 0) {
-                    return false;
-                }
-                if (Integer.parseInt(word.toString()) > 255) {
-                    return false;
-                }
-                word.delete(0, word.length());
-            } else if (!Character.isDigit(c)) {
-                return false;
-            } else {
-                if (word.length() > 2) {
-                    return false;
-                }
-                word.append(c);
-            }
-        }
-
-        if (word.length() == 0 || Integer.parseInt(word.toString()) > 255) {
-            return false;
-        }
-
-        return periods == 3;
+        return len <= 15 && len >= 7 &&
+               (i = ip.indexOf('.', from + 1)) > 0 && isValidIpV4Word(ip, from, i) &&
+               (i = ip.indexOf('.', from = i + 2)) > 0 && isValidIpV4Word(ip, from - 1, i) &&
+               (i = ip.indexOf('.', from = i + 2)) > 0 && isValidIpV4Word(ip, from - 1, i) &&
+               isValidIpV4Word(ip, i + 1, toExcluded);
     }
 
     /**
@@ -1074,7 +1009,7 @@ public final class NetUtil {
 
         // Find longest run of 0s, tie goes to first found instance
         int currentStart = -1;
-        int currentLength = 0;
+        int currentLength;
         int shortestStart = -1;
         int shortestLength = 0;
         for (i = 0; i < words.length; ++i) {

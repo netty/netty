@@ -32,7 +32,7 @@
     <!-- Skip tests by default; run only if -DskipTests=false is specified -->
     <skipTests>true</skipTests>
     <epoll.arch>x86_64</epoll.arch>
-    <jmh.version>1.17.4</jmh.version>
+    <jmh.version>1.19</jmh.version>
   </properties>
 
   <profiles>
