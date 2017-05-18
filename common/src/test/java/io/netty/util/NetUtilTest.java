@@ -47,12 +47,13 @@ public class NetUtilTest {
     }
 
     private static final Map<String, String> validIpV4Hosts = new TestMap(
-            "192.168.1.0",    "c0a80100",
-            "10.255.255.254", "0afffffe",
-            "172.18.5.4",     "ac120504",
-            "0.0.0.0",        "00000000",
-            "127.0.0.1",      "7f000001",
-            "1.2.3.4",        "01020304");
+            "192.168.1.0",     "c0a80100",
+            "10.255.255.254",  "0afffffe",
+            "172.18.5.4",      "ac120504",
+            "0.0.0.0",         "00000000",
+            "127.0.0.1",       "7f000001",
+            "255.255.255.255", "ffffffff",
+            "1.2.3.4",         "01020304");
 
     private static final Map<String, String> invalidIpV4Hosts = new TestMap(
             "1.256.3.4",     null,
@@ -69,6 +70,20 @@ public class NetUtilTest {
             "19a.0.1.1",     null,
             "a.0.1.1",       null,
             ".0.1.1",        null,
+            "127.0.0",       null,
+            "192.0.1.256",   null,
+            "0.0.200.259",   null,
+            "1.1.-1.1",      null,
+            "1.1. 1.1",      null,
+            "1.1.1.1 ",      null,
+            "1.1.+1.1",      null,
+            "0.0x1.0.255",   null,
+            "0.01x.0.255",   null,
+            "0.x01.0.255",   null,
+            "0.-.0.0",       null,
+            "0..0.0",        null,
+            "0.A.0.0",       null,
+            "0.1111.0.0",    null,
             "...",           null);
 
     private static final Map<String, String> validIpV6Hosts = new TestMap(
@@ -687,6 +702,7 @@ public class NetUtilTest {
     public void testBytesToIpAddress() throws UnknownHostException {
         for (Entry<String, String> e : validIpV4Hosts.entrySet()) {
             assertEquals(e.getKey(), bytesToIpAddress(createByteArrayFromIpAddressString(e.getKey())));
+            assertEquals(e.getKey(), bytesToIpAddress(validIpV4ToBytes(e.getKey())));
         }
         for (Entry<byte[], String> testEntry : ipv6ToAddressStrings.entrySet()) {
             assertEquals(testEntry.getValue(), bytesToIpAddress(testEntry.getKey()));
