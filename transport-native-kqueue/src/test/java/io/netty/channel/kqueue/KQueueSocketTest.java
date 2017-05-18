@@ -17,7 +17,6 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.PeerCredentials;
-import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.tests.SocketTest;
 import io.netty.channel.unix.tests.UnixTestUtils;
 import org.junit.BeforeClass;
@@ -27,11 +26,12 @@ import java.io.IOException;
 
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 public class KQueueSocketTest extends SocketTest<BsdSocket> {
     @BeforeClass
     public static void loadJNI() {
-        KQueue.isAvailable();
+        assumeTrue(KQueue.isAvailable());
     }
 
     @Test
