@@ -16,22 +16,27 @@
 package io.netty.channel.unix;
 
 import io.netty.channel.epoll.Epoll;
-import java.io.File;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 public class SocketTest {
-
-    static {
-        Epoll.ensureAvailability();
-    }
-
     private Socket socket;
+
+    @BeforeClass
+    public static void beforeClass() {
+        assumeTrue(Epoll.isAvailable());
+    }
 
     @Before
     public void setup() {
