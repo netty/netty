@@ -31,7 +31,8 @@
   <properties>
     <!-- Skip tests by default; run only if -DskipTests=false is specified -->
     <skipTests>true</skipTests>
-    <jmh.version>1.17.4</jmh.version>
+    <epoll.arch>x86_64</epoll.arch>
+    <jmh.version>1.19</jmh.version>
   </properties>
 
   <dependencies>
