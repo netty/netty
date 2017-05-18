@@ -88,4 +88,11 @@ public abstract class SocketTest<T extends Socket> {
         socket.close();
         socket.close();
     }
+
+    @Test
+    public void testTrafficClass() throws IOException {
+        final int value = 0x1;
+        socket.setTrafficClass(value);
+        assertEquals(value, socket.getTrafficClass());
+    }
 }
