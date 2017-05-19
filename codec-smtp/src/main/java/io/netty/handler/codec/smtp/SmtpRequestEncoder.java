@@ -47,13 +47,17 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
     @Override
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
         if (msg instanceof SmtpRequest) {
+            final SmtpRequest req = (SmtpRequest) msg;
             if (contentExpected) {
-                throw new IllegalStateException("SmtpContent expected");
+                if (req.command().equals(SmtpCommand.RSET)) {
+                    contentExpected = false;
+                } else {
+                    throw new IllegalStateException("SmtpContent expected");
+                }
             }
             boolean release = true;
             final ByteBuf buffer = ctx.alloc().buffer();
             try {
-                final SmtpRequest req = (SmtpRequest) msg;
                 req.command().encode(buffer);
                 writeParameters(req.parameters(), buffer);
                 buffer.writeBytes(CRLF);
