@@ -41,6 +41,10 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
         super(null, newSocketDomain(), false);
     }
 
+    public KQueueDomainSocketChannel(int fd) {
+        this(null, new BsdSocket(fd));
+    }
+
     KQueueDomainSocketChannel(Channel parent, BsdSocket fd) {
         super(parent, fd, true);
     }

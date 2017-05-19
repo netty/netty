@@ -36,6 +36,21 @@ public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel
         config = new KQueueServerSocketChannelConfig(this);
     }
 
+    public KQueueServerSocketChannel(int fd) {
+        // Must call this constructor to ensure this object's local address is configured correctly.
+        // The local address can only be obtained from a Socket object.
+        this(new BsdSocket(fd));
+    }
+
+    KQueueServerSocketChannel(BsdSocket fd) {
+        super(fd);
+        config = new KQueueServerSocketChannelConfig(this);
+
+        // As we create an KQueueServerSocketChannel from a FileDescriptor we should try to obtain the remote and local
+        // address from it. This is needed as the FileDescriptor may be bound already.
+        local = fd.localAddress();
+    }
+
     KQueueServerSocketChannel(BsdSocket fd, boolean active) {
         super(fd, active);
         config = new KQueueServerSocketChannelConfig(this);
