@@ -181,7 +181,10 @@ public final class NativeLibraryLoader {
     /**
      * Load the given library with the specified {@link ClassLoader}
      */
-    public static void load(String name, ClassLoader loader) {
+    public static void load(String originalName, ClassLoader loader) {
+        // Adjust expected name to support shading of native libraries.
+        String name = SystemPropertyUtil.get("io.netty.packagePrefix", "").replace('.', '-') + originalName;
+
         String libname = System.mapLibraryName(name);
         String path = NATIVE_RESOURCE_HOME + libname;
 
