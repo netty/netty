@@ -42,6 +42,15 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
         config = new KQueueSocketChannelConfig(this);
     }
 
+    public KQueueSocketChannel(int fd) {
+        super(new BsdSocket(fd));
+        // As we create an EpollSocketChannel from a FileDescriptor we should try to obtain the remote and local
+        // address from it. This is needed as the FileDescriptor may be bound/connected already.
+        remote = socket.remoteAddress();
+        local = socket.localAddress();
+        config = new KQueueSocketChannelConfig(this);
+    }
+
     KQueueSocketChannel(Channel parent, BsdSocket fd, InetSocketAddress remote) {
         super(parent, fd, true);
         config = new KQueueSocketChannelConfig(this);

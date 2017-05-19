@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
@@ -66,6 +67,14 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         socket = checkNotNull(fd, "fd");
         this.active = active;
         this.writeFilterEnabled = writeFilterEnabled;
+    }
+
+    static boolean isSoErrorZero(BsdSocket fd) {
+        try {
+            return fd.getSoError() == 0;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override

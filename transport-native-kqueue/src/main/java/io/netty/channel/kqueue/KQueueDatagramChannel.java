@@ -68,6 +68,10 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
         config = new KQueueDatagramChannelConfig(this);
     }
 
+    public KQueueDatagramChannel(int fd) {
+        this(new BsdSocket(fd), true);
+    }
+
     KQueueDatagramChannel(BsdSocket socket, boolean active) {
         super(null, socket, active);
         config = new KQueueDatagramChannelConfig(this);
