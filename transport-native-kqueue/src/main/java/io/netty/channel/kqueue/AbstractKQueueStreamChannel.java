@@ -68,6 +68,10 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         super(parent, fd, active, true);
     }
 
+    AbstractKQueueStreamChannel(BsdSocket fd) {
+        this(null, fd, isSoErrorZero(fd));
+    }
+
     @Override
     protected AbstractKQueueUnsafe newUnsafe() {
         return new KQueueStreamUnsafe();

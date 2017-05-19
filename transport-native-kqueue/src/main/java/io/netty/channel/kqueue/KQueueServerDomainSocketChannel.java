@@ -40,6 +40,10 @@ public final class KQueueServerDomainSocketChannel extends AbstractKQueueServerC
         super(newSocketDomain(), false);
     }
 
+    public KQueueServerDomainSocketChannel(int fd) {
+        this(new BsdSocket(fd), false);
+    }
+
     KQueueServerDomainSocketChannel(BsdSocket socket, boolean active) {
         super(socket, active);
     }

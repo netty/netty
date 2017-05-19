@@ -32,6 +32,10 @@ import java.net.SocketAddress;
 public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
+    AbstractKQueueServerChannel(BsdSocket fd) {
+        this(fd, isSoErrorZero(fd));
+    }
+
     AbstractKQueueServerChannel(BsdSocket fd, boolean active) {
         super(null, fd, active);
     }
