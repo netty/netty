@@ -339,21 +339,21 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         int numberOfBytesConsumed = decodedClientId.numberOfBytesConsumed;
 
         Result<String> decodedWillTopic = null;
-        Result<String> decodedWillMessage = null;
+        Result<byte[]> decodedWillMessage = null;
         if (mqttConnectVariableHeader.isWillFlag()) {
             decodedWillTopic = decodeString(buffer, 0, 32767);
             numberOfBytesConsumed += decodedWillTopic.numberOfBytesConsumed;
-            decodedWillMessage = decodeAsciiString(buffer);
+            decodedWillMessage = decodeBytes(buffer, 0, 65536);
             numberOfBytesConsumed += decodedWillMessage.numberOfBytesConsumed;
         }
         Result<String> decodedUserName = null;
-        Result<String> decodedPassword = null;
+        Result<byte[]> decodedPassword = null;
         if (mqttConnectVariableHeader.hasUserName()) {
             decodedUserName = decodeString(buffer);
             numberOfBytesConsumed += decodedUserName.numberOfBytesConsumed;
         }
         if (mqttConnectVariableHeader.hasPassword()) {
-            decodedPassword = decodeString(buffer);
+            decodedPassword = decodeBytes(buffer, 0, 65536);
             numberOfBytesConsumed += decodedPassword.numberOfBytesConsumed;
         }
 
@@ -428,6 +428,22 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             }
         }
         return new Result<String>(s, result.numberOfBytesConsumed);
+    }
+
+    private static Result<byte[]> decodeBytes(ByteBuf buffer, int minBytes, int maxBytes) {
+        final Result<Integer> decodedSize = decodeMsbLsb(buffer);
+        int size = decodedSize.value;
+        int numberOfBytesConsumed = decodedSize.numberOfBytesConsumed;
+        if (size < minBytes || size > maxBytes) {
+            buffer.skipBytes(size);
+            numberOfBytesConsumed += size;
+            return new Result<byte[]>(null, numberOfBytesConsumed);
+        }
+        byte[] b = new byte[size];
+        buffer.getBytes(buffer.readerIndex(), b);
+        buffer.skipBytes(size);
+        numberOfBytesConsumed += size;
+        return new Result<byte[]>(b, numberOfBytesConsumed);
     }
 
     private static Result<String> decodeString(ByteBuf buffer, int minBytes, int maxBytes) {
