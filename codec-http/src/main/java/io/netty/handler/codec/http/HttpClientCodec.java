@@ -122,6 +122,17 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
     }
 
     /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpClientCodec(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
+            boolean validateHeaders, int initialBufferSize) {
+        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize),
+             new Encoder());
+        this.failOnMissingResponse = failOnMissingResponse;
+    }
+
+    /**
      * Prepares to upgrade to another protocol from HTTP. Disables the {@link Encoder}.
      */
     @Override
