@@ -101,7 +101,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // The FD will be closed, which will take of deleting from kqueue.
         readFilterEnabled = writeFilterEnabled = false;
         try {
-            ((KQueueEventLoop) eventLoop()).remove(this);
+            if (isRegistered()) {
+                ((KQueueEventLoop) eventLoop()).remove(this);
+            }
         } finally {
             socket.close();
         }

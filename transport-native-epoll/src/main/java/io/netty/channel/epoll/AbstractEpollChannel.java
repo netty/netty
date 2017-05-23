@@ -114,7 +114,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         // socket which has not even been connected yet. This has been observed to block during unit tests.
         inputClosedSeenErrorOnRead = true;
         try {
-            doDeregister();
+            if (isRegistered()) {
+                doDeregister();
+            }
         } finally {
             socket.close();
         }
