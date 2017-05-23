@@ -62,7 +62,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private Map<EventExecutorGroup, EventExecutor> childExecutors;
     private MessageSizeEstimator.Handle estimatorHandle;
     private boolean firstRegistration = true;
-    private boolean destroyed;
 
     /**
      * This is the head of a linked list that is processed by {@link #callHandlerAddedForAllHandlers()} and so process
@@ -128,12 +127,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return channel;
     }
 
-    private void checkDestroyed(ChannelHandler handler) {
-        if (destroyed) {
-            throw new ChannelPipelineException("Channel already closed, can not add handler " + handler);
-        }
-    }
-
     @Override
     public final ChannelPipeline addFirst(String name, ChannelHandler handler) {
         return addFirst(null, name, handler);
@@ -143,7 +136,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
-            checkDestroyed(handler);
             checkMultiplicity(handler);
             name = filterName(name, handler);
 
@@ -193,7 +185,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
-            checkDestroyed(handler);
             checkMultiplicity(handler);
 
             newCtx = newContext(group, filterName(name, handler), handler);
@@ -244,7 +235,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         final AbstractChannelHandlerContext newCtx;
         final AbstractChannelHandlerContext ctx;
         synchronized (this) {
-            checkDestroyed(handler);
             checkMultiplicity(handler);
             name = filterName(name, handler);
             ctx = getContextOrDie(baseName);
@@ -305,7 +295,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         final AbstractChannelHandlerContext ctx;
 
         synchronized (this) {
-            checkDestroyed(handler);
             checkMultiplicity(handler);
             name = filterName(name, handler);
             ctx = getContextOrDie(baseName);
@@ -516,7 +505,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
-            checkDestroyed(newHandler);
             checkMultiplicity(newHandler);
             boolean sameName = ctx.name().equals(newName);
             if (!sameName) {
@@ -835,7 +823,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      * See: https://github.com/netty/netty/issues/3156
      */
     private synchronized void destroy() {
-        destroyed = true;
         destroyUp(head.next, false);
     }
 
