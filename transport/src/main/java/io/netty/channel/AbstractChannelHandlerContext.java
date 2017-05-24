@@ -73,6 +73,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     // child executor.
     final EventExecutor executor;
     private ChannelFuture succeededFuture;
+    // Read from channel config when channel is active. Since the config of a channel is assigned after
+    // a pipeline is instantiated, the config isn't available in the constructor for all contexts.
+    private boolean wakeupOnWrite;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
@@ -189,6 +192,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelActive() {
+        wakeupOnWrite = pipeline.channel().config().getOption(ChannelOption.WAKEUP_ON_WRITE);
         invokeChannelActive(findContextInbound());
         return this;
     }
@@ -820,8 +824,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             if (flush) {
                 task = WriteAndFlushTask.newInstance(next, m, promise);
             }  else {
-                boolean wakeup = Boolean.TRUE.equals(channel().config().getOption(ChannelOption.WAKEUP_ON_WRITE));
-                task = wakeup ? WakeupWriteTask.newInstance(next, m, promise) :
+                task = wakeupOnWrite ? WakeupWriteTask.newInstance(next, m, promise) :
                         WriteTask.newInstance(next, m, promise);
             }
             safeExecute(executor, task, promise, m);

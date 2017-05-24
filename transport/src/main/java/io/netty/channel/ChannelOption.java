@@ -95,6 +95,10 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     public static final ChannelOption<WriteBufferWaterMark> WRITE_BUFFER_WATER_MARK =
             valueOf("WRITE_BUFFER_WATER_MARK");
 
+    /**
+     * Wakes up the eventloop on every write, if required, instead of waking up only on flush.
+     * Default value is {@code false}.
+     */
     public static final ChannelOption<Boolean> WAKEUP_ON_WRITE = valueOf("WAKEUP_ON_WRITE");
 
     public static final ChannelOption<Boolean> ALLOW_HALF_CLOSURE = valueOf("ALLOW_HALF_CLOSURE");
