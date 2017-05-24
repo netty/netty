@@ -106,7 +106,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected void doClose() throws Exception {
         active = false;
         try {
-            doDeregister();
+            if (isRegistered()) {
+                doDeregister();
+            }
         } finally {
             fileDescriptor.close();
         }
