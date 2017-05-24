@@ -1120,7 +1120,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         readIfNeeded(ctx);
 
         firedChannelRead = false;
-        ctx.fireChannelReadComplete();
+        // The super class has a buffer which accumulates data and will discard bytes upon read complete.
+        // We need to call super.channelReadComplete(ctx) to prevent memory for accumulating.
+        // See https://github.com/netty/netty/issues/5928
+        super.channelReadComplete(ctx);
     }
 
     private void readIfNeeded(ChannelHandlerContext ctx) {
