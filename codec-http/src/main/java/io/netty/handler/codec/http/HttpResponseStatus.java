@@ -120,6 +120,11 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus TEMPORARY_REDIRECT = newStatus(307, "Temporary Redirect");
 
     /**
+     * 308 Permanent Redirect (RFC7538)
+     */
+    public static final HttpResponseStatus PERMANENT_REDIRECT = newStatus(308, "Permanent Redirect");
+
+    /**
      * 400 Bad Request
      */
     public static final HttpResponseStatus BAD_REQUEST = newStatus(400, "Bad Request");
@@ -359,6 +364,8 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return USE_PROXY;
         case 307:
             return TEMPORARY_REDIRECT;
+        case 308:
+            return PERMANENT_REDIRECT;
         case 400:
             return BAD_REQUEST;
         case 401:
