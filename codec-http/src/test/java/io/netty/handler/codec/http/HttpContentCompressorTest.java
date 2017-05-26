@@ -388,6 +388,28 @@ public class HttpContentCompressorTest {
         assertTrue(ch.finishAndReleaseAll());
     }
 
+    @Test
+    public void testCustomEncoding() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        assertTrue(ch.writeInbound(newRequest()));
+
+        FullHttpResponse res = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
+        int len = res.content().readableBytes();
+        res.headers().set(Names.CONTENT_LENGTH, len);
+        res.headers().set(Names.CONTENT_ENCODING, "ascii");
+        assertTrue(ch.writeOutbound(res));
+
+        FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
+        assertEquals(String.valueOf(len), response.headers().get(Names.CONTENT_LENGTH));
+        assertEquals("ascii", response.headers().get(Names.CONTENT_ENCODING));
+        assertEquals("Hello, World", response.content().toString(CharsetUtil.US_ASCII));
+        response.release();
+
+        assertTrue(ch.finishAndReleaseAll());
+    }
+
     private static FullHttpRequest newRequest() {
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
         req.headers().set(Names.ACCEPT_ENCODING, "gzip");
