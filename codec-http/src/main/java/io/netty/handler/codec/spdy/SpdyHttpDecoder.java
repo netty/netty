@@ -184,7 +184,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                     httpRequestWithEntity.headers().setInt(Names.ASSOCIATED_TO_STREAM_ID, associatedToStreamId);
                     httpRequestWithEntity.headers().setInt(Names.PRIORITY, spdySynStreamFrame.priority());
 
-                    out.add(httpRequestWithEntity);
+                    putMessage(streamId, httpRequestWithEntity);
 
                 } catch (Throwable ignored) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
