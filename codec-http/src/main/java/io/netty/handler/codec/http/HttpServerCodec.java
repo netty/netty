@@ -112,7 +112,7 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     private final class HttpServerResponseEncoder extends HttpResponseEncoder {
 
         @Override
-        boolean isContentAlwaysEmpty(@SuppressWarnings("unused") HttpResponse msg) {
+        protected boolean isContentAlwaysEmpty(@SuppressWarnings("unused") HttpResponse msg) {
             return HttpMethod.HEAD.equals(queue.poll());
         }
     }
