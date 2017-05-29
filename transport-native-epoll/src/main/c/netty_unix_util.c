@@ -42,6 +42,18 @@ char* netty_unix_util_rstrstr(char* s1rbegin, const char* s1rend, const char* s2
     return NULL;
 }
 
+char* netty_unix_util_strstr_last(const char* haystack, const char* needle) {
+    char* prevptr = NULL;
+    char* ptr = (char*) haystack;
+
+    while ((ptr = strstr(ptr, needle)) != NULL) {
+        // Just store the ptr and continue searching.
+        prevptr = ptr;
+        ++ptr;
+    }
+    return prevptr;
+}
+
 jint netty_unix_util_register_natives(JNIEnv* env, const char* packagePrefix, const char* className, const JNINativeMethod* methods, jint numMethods) {
     char* nettyClassName = netty_unix_util_prepend(packagePrefix, className);
     jclass nativeCls = (*env)->FindClass(env, nettyClassName);

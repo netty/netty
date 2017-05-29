@@ -28,6 +28,8 @@ char* netty_unix_util_prepend(const char* prefix, const char* str);
 
 char* netty_unix_util_rstrstr(char* s1rbegin, const char* s1rend, const char* s2);
 
+char* netty_unix_util_strstr_last(const char* haystack, const char* needle);
+
 /**
  * Return type is as defined in http://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/functions.html#wp5833.
  */

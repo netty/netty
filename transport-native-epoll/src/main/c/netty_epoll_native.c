@@ -967,7 +967,7 @@ static void netty_epoll_native_JNI_OnUnLoad(JNIEnv* env) {
  * The expected format of the library name is "lib<>netty-transport-native-epoll" where the <> portion is what we will return.
  */
 static char* parsePackagePrefix(const char* libraryPathName, jint* status) {
-    char* packageNameEnd = strstr(libraryPathName, "netty-transport-native-epoll");
+    char* packageNameEnd = netty_unix_util_strstr_last(libraryPathName, "netty-transport-native-epoll");
     if (packageNameEnd == NULL) {
         *status = JNI_ERR;
         return NULL;
