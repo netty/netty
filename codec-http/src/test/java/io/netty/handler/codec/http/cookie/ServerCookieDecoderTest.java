@@ -34,6 +34,26 @@ public class ServerCookieDecoderTest {
     }
 
     @Test
+    public void testDecodingSingleCookieWithSemicolon() {
+        String cookieString = "myCookie=myValue;";
+        Set<Cookie> cookies = ServerCookieDecoder.STRICT.decode(cookieString);
+        assertEquals(1, cookies.size());
+        Cookie cookie = cookies.iterator().next();
+        assertNotNull(cookie);
+        assertEquals("myValue", cookie.value());
+    }
+
+    @Test
+    public void testDecodingSingleCookieWithStartNewLine() {
+        String cookieString = "\t\nmyCookie=myValue";
+        Set<Cookie> cookies = ServerCookieDecoder.STRICT.decode(cookieString);
+        assertEquals(1, cookies.size());
+        Cookie cookie = cookies.iterator().next();
+        assertNotNull(cookie);
+        assertEquals("myValue", cookie.value());
+    }
+
+    @Test
     public void testDecodingMultipleCookies() {
         String c1 = "myCookie=myValue;";
         String c2 = "myCookie2=myValue2;";
