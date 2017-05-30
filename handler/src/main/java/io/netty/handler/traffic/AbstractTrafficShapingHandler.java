@@ -506,20 +506,22 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
     /**
      * Method overridden in GTSH to take into account specific timer for the channel.
+     * @param ctx
      * @param wait the wait delay computed in ms
      * @param now the relative now time in ms
      * @return the wait to use according to the context
      */
-    long checkWaitReadTime(final ChannelHandlerContext ctx, long wait, final long now) {
+    protected long checkWaitReadTime(final ChannelHandlerContext ctx, long wait, final long now) {
         // no change by default
         return wait;
     }
 
     /**
      * Method overridden in GTSH to take into account specific timer for the channel.
+     * @param ctx
      * @param now the relative now time in ms
      */
-    void informReadOperation(final ChannelHandlerContext ctx, final long now) {
+    protected void informReadOperation(final ChannelHandlerContext ctx, final long now) {
         // default noop
     }
 
