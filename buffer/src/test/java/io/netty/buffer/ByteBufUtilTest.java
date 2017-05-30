@@ -23,12 +23,32 @@ import java.nio.charset.Charset;
 import java.util.Random;
 
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class ByteBufUtilTest {
+    @Test
+    public void decodeHexEvenLength() {
+        decodeHex(256);
+    }
+
+    @Test
+    public void decodeHexOddLength() {
+        decodeHex(257);
+    }
+
+    private static void decodeHex(int len) {
+        byte[] b = new byte[len];
+        Random rand = new Random();
+        rand.nextBytes(b);
+        String hexDump = ByteBufUtil.hexDump(b);
+        byte[] decodedBytes = ByteBufUtil.decodeHexDump(hexDump);
+        assertArrayEquals(b, decodedBytes);
+    }
+
     @Test
     public void equalsBufferSubsections() {
         byte[] b1 = new byte[128];
