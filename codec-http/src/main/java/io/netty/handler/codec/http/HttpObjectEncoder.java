@@ -200,7 +200,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
      * a content without having an actual content, e.g the response to an HEAD or CONNECT request.
      *
      * @param msg the message to test
-     * @return true to signal the message has no content
+     * @return {@code true} to signal the message has no content
      */
     protected boolean isContentAlwaysEmpty(@SuppressWarnings("unused") H msg) {
         return false;
