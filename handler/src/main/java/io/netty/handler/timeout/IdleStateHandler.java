@@ -25,6 +25,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 
 import java.util.concurrent.ScheduledFuture;
@@ -33,6 +34,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * Triggers an {@link IdleStateEvent} when a {@link Channel} has not performed
  * read, write, or both operation for a while.
+ * Notice, that {@link IdleStateEvent} will be triggered for write operations only in the case when
+ * {@link DefaultChannelPromise} is used (i.e. {@link ChannelHandlerContext#write(Object)} or
+ * {@link ChannelHandlerContext#writeAndFlush(Object)}). IllegalArgumentException will be thrown otherwise.
  *
  * <h3>Supported idle states</h3>
  * <table border="1">
