@@ -438,6 +438,13 @@ public class HashedWheelTimer implements Timer {
                 "so that only a few instances are created.");
     }
 
+    private static void reportTooManyInstances() {
+        String resourceType = simpleClassName(HashedWheelTimer.class);
+        logger.error("You are creating too many " + resourceType + " instances. " +
+                resourceType + " is a shared resource that must be reused across the JVM," +
+                "so that only a few instances are created.");
+    }
+
     private final class Worker implements Runnable {
         private final Set<Timeout> unprocessedTimeouts = new HashSet<Timeout>();
 
