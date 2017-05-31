@@ -34,7 +34,7 @@ import java.util.Set;
 final class OpenSslX509Certificate extends X509Certificate {
 
     private final byte[] bytes;
-    private X509Certificate wrapped;
+    private volatile X509Certificate wrapped;
 
     public OpenSslX509Certificate(byte[] bytes) {
         this.bytes = bytes;
