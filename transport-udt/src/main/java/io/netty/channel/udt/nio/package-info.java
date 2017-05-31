@@ -20,5 +20,6 @@
  *
  * @deprecated The UDT transport is no longer maintained.
  */
+@Deprecated
 package io.netty.channel.udt.nio;
 
