@@ -56,7 +56,6 @@ public final class ServerCookieDecoder extends CookieDecoder {
         super(strict);
     }
 
-
     private ServerCookieDecoder(ServerCookieDecoderBuilder builder) {
         super(builder.strict, builder.cookieErrorHandler);
     }

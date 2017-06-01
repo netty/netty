@@ -86,7 +86,8 @@ public class ServerCookieDecoderTest {
         c = it.next();
         assertEquals("__utmz", c.name());
         assertEquals("48461872.1258140131.1.1.utmcsr=overstock.com|" +
-                        "utmccn=(referral)|utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance/clearance/32/dept.html",
+                        "utmccn=(referral)|utmcmd=referral|utmcct=/Home-Garden" +
+                        "/Furniture/Clearance/clearance/32/dept.html",
                 c.value());
 
         c = it.next();
