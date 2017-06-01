@@ -56,6 +56,11 @@ public final class ServerCookieDecoder extends CookieDecoder {
         super(strict);
     }
 
+
+    private ServerCookieDecoder(ServerCookieDecoderBuilder builder) {
+        super(builder.strict, builder.cookieErrorHandler);
+    }
+
     /**
      * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.
      *
@@ -151,5 +156,24 @@ public final class ServerCookieDecoder extends CookieDecoder {
         }
 
         return cookies;
+    }
+
+    public static class ServerCookieDecoderBuilder {
+        private boolean strict;
+        private CookieErrorHandler cookieErrorHandler;
+
+        public ServerCookieDecoderBuilder strict(boolean strict) {
+            this.strict = strict;
+            return this;
+        }
+
+        public ServerCookieDecoderBuilder cookieErrorHandler(CookieErrorHandler cookieErrorHandler) {
+            this.cookieErrorHandler = cookieErrorHandler;
+            return this;
+        }
+
+        public ServerCookieDecoder build() {
+            return new ServerCookieDecoder(this);
+        }
     }
 }

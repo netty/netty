@@ -32,27 +32,39 @@ public abstract class CookieDecoder {
     private final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
 
     private final boolean strict;
+    private final CookieErrorHandler cookieErrorHandler;
 
     protected CookieDecoder(boolean strict) {
         this.strict = strict;
+        cookieErrorHandler = new CookieErrorHandler() {
+            @Override
+            public void handle(String message, Object... arguments) {
+                logger.debug(String.format(message, arguments));
+            }
+        };
+    }
+
+    protected CookieDecoder(boolean strict, CookieErrorHandler cookieErrorHandler) {
+        this.strict = strict;
+        this.cookieErrorHandler = cookieErrorHandler;
     }
 
     protected DefaultCookie initCookie(String header, int nameBegin, int nameEnd, int valueBegin, int valueEnd) {
         if (nameBegin == -1 || nameBegin == nameEnd) {
-            logger.debug("Skipping cookie with null name");
+            cookieErrorHandler.handle("Skipping cookie with null name");
             return null;
         }
 
         if (valueBegin == -1) {
-            logger.debug("Skipping cookie with null value");
+            cookieErrorHandler.handle("Skipping cookie with null value");
             return null;
         }
 
         CharSequence wrappedValue = CharBuffer.wrap(header, valueBegin, valueEnd);
         CharSequence unwrappedValue = unwrapValue(wrappedValue);
         if (unwrappedValue == null) {
-            logger.debug("Skipping cookie because starting quotes are not properly balanced in '{}'",
-                    wrappedValue);
+            cookieErrorHandler.handle("Skipping cookie because starting quotes are not properly balanced" +
+                    " in '%s'", wrappedValue);
             return null;
         }
 
@@ -60,10 +72,8 @@ public abstract class CookieDecoder {
 
         int invalidOctetPos;
         if (strict && (invalidOctetPos = firstInvalidCookieNameOctet(name)) >= 0) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Skipping cookie because name '{}' contains invalid char '{}'",
-                        name, name.charAt(invalidOctetPos));
-            }
+            cookieErrorHandler.handle("Skipping cookie because name '%s' contains invalid char '%s'",
+                    name, name.charAt(invalidOctetPos));
             return null;
         }
 
@@ -71,7 +81,7 @@ public abstract class CookieDecoder {
 
         if (strict && (invalidOctetPos = firstInvalidCookieValueOctet(unwrappedValue)) >= 0) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Skipping cookie because value '{}' contains invalid char '{}'",
+                cookieErrorHandler.handle("Skipping cookie because value '%s' contains invalid char '%s'",
                         unwrappedValue, unwrappedValue.charAt(invalidOctetPos));
             }
             return null;
@@ -80,5 +90,9 @@ public abstract class CookieDecoder {
         DefaultCookie cookie = new DefaultCookie(name, unwrappedValue.toString());
         cookie.setWrap(wrap);
         return cookie;
+    }
+
+    public interface CookieErrorHandler {
+       void handle(String message, Object... arguments);
     }
 }
