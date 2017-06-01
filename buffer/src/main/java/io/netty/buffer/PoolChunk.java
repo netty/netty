@@ -482,4 +482,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
     void destroy() {
         arena.destroyChunk(this);
     }
+
+    void destroy() {
+        arena.destroyChunk(this);
+    }
 }
