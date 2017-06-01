@@ -571,8 +571,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     bytesProduced = bioLengthBefore - SSL.bioLengthByteBuffer(networkBIO);
 
                     if (bytesProduced > 0) {
-                        // It's important we call this before wrapStatus() as wrapStatus() may shutdown the engine.
+                        // If we have filled up the dst buffer and we have not finished the handshake we should try to
+                        // wrap again. Otherwise we should only try to wrap again if there is still data pending in
+                        // SSL buffers.
                         return newResult(mayFinishHandshake(status != FINISHED ?
+                                         bytesProduced == bioLengthBefore ? NEED_WRAP :
                                          getHandshakeStatus(SSL.bioLengthNonApplication(networkBIO)) : FINISHED),
                                          0, bytesProduced);
                     }
@@ -648,8 +651,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                                 bytesProduced += bioLengthBefore - SSL.bioLengthByteBuffer(networkBIO);
 
+                                // If we have filled up the dst buffer and we have not finished the handshake we should
+                                // try to wrap again. Otherwise we should only try to wrap again if there is still data
+                                // pending in SSL buffers.
                                 SSLEngineResult.HandshakeStatus hs = mayFinishHandshake(
-                                        status != FINISHED ? getHandshakeStatus(SSL.bioLengthNonApplication(networkBIO))
+                                        status != FINISHED ? bytesProduced == dst.remaining() ? NEED_WRAP
+                                                : getHandshakeStatus(SSL.bioLengthNonApplication(networkBIO))
                                                 : FINISHED);
                                 return newResult(hs, bytesConsumed, bytesProduced);
                             }
