@@ -194,4 +194,13 @@ public final class Native {
     private Native() {
         // utility
     }
+
+    private static void loadNativeLibrary() {
+        String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
+        if (!name.startsWith("linux")) {
+            throw new IllegalStateException("Only supported on Linux");
+        }
+        NativeLibraryLoader.load(SystemPropertyUtil.get("io.netty.packagePrefix", "").replace('.', '-') +
+            "netty-transport-native-epoll", PlatformDependent.getClassLoader(Native.class));
+    }
 }
