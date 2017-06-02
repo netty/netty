@@ -155,13 +155,40 @@ public class HttpContentEncoderTest {
     }
 
     @Test
+    public void testFullContentWithContentLength() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
+        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+
+        FullHttpResponse fullRes = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.wrappedBuffer(new byte[42]));
+        fullRes.headers().set(Names.CONTENT_LENGTH, 42);
+        ch.writeOutbound(fullRes);
+
+        HttpResponse res = (HttpResponse) ch.readOutbound();
+        assertThat(res, is(not(instanceOf(HttpContent.class))));
+        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is(nullValue()));
+        assertThat(res.headers().get(Names.CONTENT_LENGTH), is("2"));
+        assertThat(res.headers().get(Names.CONTENT_ENCODING), is("test"));
+
+        HttpContent c = (HttpContent) ch.readOutbound();
+        assertThat(c.content().readableBytes(), is(2));
+        assertThat(c.content().toString(CharsetUtil.US_ASCII), is("42"));
+        c.release();
+
+        LastHttpContent last = (LastHttpContent) ch.readOutbound();
+        assertThat(last.content().readableBytes(), is(0));
+        last.release();
+
+        assertThat(ch.readOutbound(), is(nullValue()));
+    }
+
+    @Test
     public void testFullContent() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         FullHttpResponse res = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.wrappedBuffer(new byte[42]));
-        res.headers().set(Names.CONTENT_LENGTH, 42);
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);

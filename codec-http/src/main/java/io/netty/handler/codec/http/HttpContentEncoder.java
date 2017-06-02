@@ -74,9 +74,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out)
             throws Exception {
-        CharSequence acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
+        CharSequence acceptedEncoding = msg.headers().get(Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
-            acceptedEncoding = HttpHeaders.Values.IDENTITY;
+            acceptedEncoding = Values.IDENTITY;
         }
 
         HttpMethod meth = msg.getMethod();
@@ -166,18 +166,21 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 // so that the message looks like a decoded message.
                 res.headers().set(Names.CONTENT_ENCODING, result.targetContentEncoding());
 
-                // Make the response chunked to simplify content transformation.
-                res.headers().remove(Names.CONTENT_LENGTH);
-                res.headers().set(Names.TRANSFER_ENCODING, Values.CHUNKED);
-
                 // Output the rewritten response.
                 if (isFull) {
                     // Convert full message into unfull one.
                     HttpResponse newRes = new DefaultHttpResponse(res.getProtocolVersion(), res.getStatus());
                     newRes.headers().set(res.headers());
                     out.add(newRes);
-                    // Fall through to encode the content of the full response.
+
+                    ensureContent(res);
+                    encodeFullResponse(newRes, (HttpContent) res, out);
+                    break;
                 } else {
+                    // Make the response chunked to simplify content transformation.
+                    res.headers().remove(Names.CONTENT_LENGTH);
+                    res.headers().set(Names.TRANSFER_ENCODING, Values.CHUNKED);
+
                     out.add(res);
                     state = State.AWAIT_CONTENT;
                     if (!(msg instanceof HttpContent)) {
@@ -204,6 +207,25 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 }
                 break;
             }
+        }
+    }
+
+    private void encodeFullResponse(HttpResponse newRes, HttpContent content, List<Object> out) {
+        int existingMessages = out.size();
+        encodeContent(content, out);
+
+        if (HttpHeaders.isContentLengthSet(newRes)) {
+            // adjust the content-length header
+            int messageSize = 0;
+            for (int i = existingMessages; i < out.size(); i++) {
+                Object item = out.get(i);
+                if (item instanceof HttpContent) {
+                    messageSize += ((HttpContent) item).content().readableBytes();
+                }
+            }
+            HttpHeaders.setContentLength(newRes, messageSize);
+        } else {
+            newRes.headers().set(Names.TRANSFER_ENCODING, Values.CHUNKED);
         }
     }
 
