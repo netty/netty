@@ -198,14 +198,51 @@ public class HttpContentCompressorTest {
     }
 
     @Test
+    public void testFullContentWithContentLength() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        ch.writeInbound(newRequest());
+
+        FullHttpResponse fullRes = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
+        fullRes.headers().set(HttpHeaderNames.CONTENT_LENGTH, fullRes.content().readableBytes());
+        ch.writeOutbound(fullRes);
+
+        HttpResponse res = ch.readOutbound();
+        assertThat(res, is(not(instanceOf(HttpContent.class))));
+
+        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is(nullValue()));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
+
+        long contentLengthHeaderValue = HttpUtil.getContentLength(res);
+        long observedLength = 0;
+
+        HttpContent c = ch.readOutbound();
+        observedLength += c.content().readableBytes();
+        assertThat(ByteBufUtil.hexDump(c.content()), is("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff"));
+        c.release();
+
+        c = ch.readOutbound();
+        observedLength += c.content().readableBytes();
+        assertThat(ByteBufUtil.hexDump(c.content()), is("0300c6865b260c000000"));
+        c.release();
+
+        LastHttpContent last = ch.readOutbound();
+        assertThat(last.content().readableBytes(), is(0));
+        last.release();
+
+        assertThat(ch.readOutbound(), is(nullValue()));
+        assertEquals(contentLengthHeaderValue, observedLength);
+    }
+
+    @Test
     public void testFullContent() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
-        res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes());
+            HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+            Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
