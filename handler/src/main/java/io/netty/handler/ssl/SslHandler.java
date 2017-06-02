@@ -837,7 +837,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable)}.
      * @return {@code true} if this method ends on {@link SSLEngineResult.HandshakeStatus#NOT_HANDSHAKING}.
      */
-    private void wrapNonAppData(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
+    private boolean wrapNonAppData(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
         ByteBuf out = null;
         ByteBufAllocator alloc = ctx.alloc();
         try {
@@ -863,7 +863,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 switch (result.getHandshakeStatus()) {
                     case FINISHED:
                         setHandshakeSuccess();
-                        break;
+                        return false;
                     case NEED_TASK:
                         runDelegatedTasks();
                         break;
@@ -872,7 +872,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             // If we asked for a wrap, the engine requested an unwrap, and we are in unwrap there is
                             // no use in trying to call wrap again because we have already attempted (or will after we
                             // return) to feed more data to the engine.
-                            return;
+                            return false;
                         }
 
                         unwrapNonAppData(ctx);
@@ -886,7 +886,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         if (!inUnwrap) {
                             unwrapNonAppData(ctx);
                         }
-                        break;
+                        return true;
                     default:
                         throw new IllegalStateException("Unknown handshake status: " + result.getHandshakeStatus());
                 }
@@ -906,6 +906,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 out.release();
             }
         }
+        return false;
     }
 
     private SSLEngineResult wrap(ByteBufAllocator alloc, SSLEngine engine, ByteBuf in, ByteBuf out)
@@ -1210,7 +1211,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         try {
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
-            while (!ctx.isRemoved()) {
+            unwrapLoop: while (!ctx.isRemoved()) {
                 final SSLEngineResult result = engineType.unwrap(this, packet, offset, length, decodeOut);
                 final Status status = result.getStatus();
                 final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
@@ -1260,7 +1261,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     case NEED_UNWRAP:
                         break;
                     case NEED_WRAP:
-                        wrapNonAppData(ctx, true);
+                        // If the wrap operation transitions the status to NOT_HANDSHAKING and there is no more data to
+                        // unwrap then the next call to unwrap will not produce any data. We can avoid the potentially
+                        // costly unwrap operation and break out of the loop.
+                        if (wrapNonAppData(ctx, true) && length == 0) {
+                            break unwrapLoop;
+                        }
                         break;
                     case NEED_TASK:
                         runDelegatedTasks();
@@ -1293,7 +1299,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             flushedBeforeHandshake = false;
                             wrapLater = true;
                         }
-
+                        // If we are not handshaking and there is no more data to unwrap then the next call to unwrap
+                        // will not produce any data. We can avoid the potentially costly unwrap operation and break
+                        // out of the loop.
+                        if (length == 0) {
+                            break unwrapLoop;
+                        }
                         break;
                     default:
                         throw new IllegalStateException("unknown handshake status: " + handshakeStatus);
