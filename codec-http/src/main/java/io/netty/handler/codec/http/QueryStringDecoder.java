@@ -33,6 +33,7 @@ import java.util.Map;
 
 import static io.netty.util.internal.ObjectUtil.*;
 import static io.netty.util.internal.StringUtil.*;
+import static io.netty.buffer.ByteBufUtil.decodeHexByte;
 
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.
@@ -330,7 +331,10 @@ public class QueryStringDecoder {
 
             byteBuf.clear();
             do {
-                byteBuf.put(decodeHexByte(s, i, toExcluded));
+                if (i + 3 > toExcluded) {
+                    throw new IllegalArgumentException("unterminated escape sequence at index " + i + " of: " + s);
+                }
+                byteBuf.put(decodeHexByte(s, i + 1));
                 i += 3;
             } while (i < toExcluded && s.charAt(i) == '%');
             i--;
@@ -352,39 +356,6 @@ public class QueryStringDecoder {
             strBuf.append(charBuf.flip());
         }
         return strBuf.toString();
-    }
-
-    private static byte decodeHexByte(String s, int pos, int len) {
-        if (pos + 2 >= len) {
-            throw new IllegalArgumentException("unterminated escape sequence at index " + pos + " of: " + s);
-        }
-        int hi = decodeHexNibble(s.charAt(pos + 1));
-        int lo = decodeHexNibble(s.charAt(pos + 2));
-        if (hi == -1 || lo == -1) {
-            throw new IllegalArgumentException(
-                    "invalid escape sequence '" + s.substring(pos, pos + 3) + "' at index " + pos + " of: " + s);
-        }
-        return (byte) ((hi << 4) + lo);
-    }
-
-    /**
-     * Helper to decode half of a hexadecimal number from a string.
-     * @param c The ASCII character of the hexadecimal number to decode.
-     * Must be in the range {@code [0-9a-fA-F]}.
-     * @return The hexadecimal value represented in the ASCII character
-     * given, or {@code -1} if the character is invalid.
-     */
-    private static int decodeHexNibble(final char c) {
-        if ('0' <= c && c <= '9') {
-            return c - '0';
-        }
-        if ('a' <= c && c <= 'f') {
-            return c - 'a' + 0xA;
-        }
-        if ('A' <= c && c <= 'F') {
-            return c - 'A' + 0xA;
-        }
-        return -1;
     }
 
     private static int findPathEndIndex(String uri) {

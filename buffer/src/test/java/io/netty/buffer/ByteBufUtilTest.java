@@ -19,13 +19,47 @@ import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.Random;
 
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class ByteBufUtilTest {
+    @Test
+    public void decodeRandomHexBytesWithEvenLength() {
+        decodeRandomHexBytes(256);
+    }
+
+    @Test
+    public void decodeRandomHexBytesWithOddLength() {
+        decodeRandomHexBytes(257);
+    }
+
+    private static void decodeRandomHexBytes(int len) {
+        byte[] b = new byte[len];
+        Random rand = new Random();
+        rand.nextBytes(b);
+        String hexDump = ByteBufUtil.hexDump(b);
+        for (int i = 0; i <= len; i++) {  // going over sub-strings of various lengths including empty byte[].
+            byte[] b2 = Arrays.copyOfRange(b, i, b.length);
+            byte[] decodedBytes = ByteBufUtil.decodeHexDump(hexDump, i * 2, (len - i) * 2);
+            assertArrayEquals(b2, decodedBytes);
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void decodeHexDumpWithOddLength() {
+        ByteBufUtil.decodeHexDump("abc");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void decodeHexDumpWithInvalidChar() {
+        ByteBufUtil.decodeHexDump("fg");
+    }
 
     @Test
     public void testWriteUsAscii() {
