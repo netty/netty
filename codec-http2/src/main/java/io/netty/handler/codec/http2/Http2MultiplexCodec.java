@@ -305,6 +305,12 @@ public final class Http2MultiplexCodec extends ChannelDuplexHandler {
         }
         channel.pipeline().addLast(handler);
 
+        // We need to copy parent's channel options into a child's options to make
+        // sure they share same allocator, same receive buffer allocator, etc.
+        //
+        // See https://github.com/netty/netty/issues/6551
+        channel.config().setOptions(parentChannel.config().getOptions());
+
         initOpts(channel, options);
         initAttrs(channel, attrs);
 
