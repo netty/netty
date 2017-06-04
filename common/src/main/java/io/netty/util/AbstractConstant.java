@@ -15,25 +15,32 @@
  */
 package io.netty.util;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Base implementation of {@link Constant}.
  */
 public abstract class AbstractConstant<T extends AbstractConstant<T>> implements Constant<T> {
 
-    private static final AtomicLong uniqueIdGenerator = new AtomicLong();
+    private static final AtomicInteger uniqueIdGenerator = new AtomicInteger();
     private final int id;
     private final String name;
-    private final long uniquifier;
 
     /**
      * Creates a new instance.
      */
+    protected AbstractConstant(String name) {
+        this.id = uniqueIdGenerator.getAndIncrement();
+        this.name = name;
+    }
+
+    /**
+     * @deprecated please use {@link AbstractConstant(String)}
+     */
+    @Deprecated
     protected AbstractConstant(int id, String name) {
         this.id = id;
         this.name = name;
-        this.uniquifier = uniqueIdGenerator.getAndIncrement();
     }
 
     @Override
@@ -76,10 +83,10 @@ public abstract class AbstractConstant<T extends AbstractConstant<T>> implements
             return returnCode;
         }
 
-        if (uniquifier < other.uniquifier) {
+        if (id < other.id) {
             return -1;
         }
-        if (uniquifier > other.uniquifier) {
+        if (id > other.id) {
             return 1;
         }
 
