@@ -24,19 +24,27 @@ import io.netty.util.internal.StringUtil;
 public final class MqttPublishVariableHeader {
 
     private final String topicName;
-    private final int messageId;
+    private final int packetId;
 
-    public MqttPublishVariableHeader(String topicName, int messageId) {
+    public MqttPublishVariableHeader(String topicName, int packetId) {
         this.topicName = topicName;
-        this.messageId = messageId;
+        this.packetId = packetId;
     }
 
     public String topicName() {
         return topicName;
     }
 
+    /**
+     * @deprecated Use {@link #packetId()} instead.
+     */
+    @Deprecated
     public int messageId() {
-        return messageId;
+        return packetId;
+    }
+
+    public int packetId() {
+        return packetId;
     }
 
     @Override
@@ -44,7 +52,7 @@ public final class MqttPublishVariableHeader {
         return new StringBuilder(StringUtil.simpleClassName(this))
             .append('[')
             .append("topicName=").append(topicName)
-            .append(", messageId=").append(messageId)
+            .append(", packetId=").append(packetId)
             .append(']')
             .toString();
     }
