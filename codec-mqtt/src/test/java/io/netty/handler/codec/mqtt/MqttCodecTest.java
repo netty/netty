@@ -28,6 +28,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -395,7 +396,13 @@ public class MqttCodecTest {
                 actual.clientIdentifier());
         assertEquals("MqttConnectPayload UserName mismatch ", expected.userName(), actual.userName());
         assertEquals("MqttConnectPayload Password mismatch ", expected.password(), actual.password());
+        assertTrue(
+                "MqttConnectPayload Password bytes mismatch ",
+                Arrays.equals(expected.passwordInBytes(), actual.passwordInBytes()));
         assertEquals("MqttConnectPayload WillMessage mismatch ", expected.willMessage(), actual.willMessage());
+        assertTrue(
+                "MqttConnectPayload WillMessage bytes mismatch ",
+                Arrays.equals(expected.willMessageInBytes(), actual.willMessageInBytes()));
         assertEquals("MqttConnectPayload WillTopic mismatch ", expected.willTopic(), actual.willTopic());
     }
 

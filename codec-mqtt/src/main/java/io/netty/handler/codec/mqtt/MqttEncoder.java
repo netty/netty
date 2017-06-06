@@ -113,8 +113,8 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         // Will topic and message
         String willTopic = payload.willTopic();
         byte[] willTopicBytes = willTopic != null ? encodeStringUtf8(willTopic) : EmptyArrays.EMPTY_BYTES;
-        String willMessage = payload.willMessage();
-        byte[] willMessageBytes = willMessage != null ? encodeStringUtf8(willMessage) : EmptyArrays.EMPTY_BYTES;
+        byte[] willMessage = payload.willMessageInBytes();
+        byte[] willMessageBytes = willMessage != null ? willMessage : EmptyArrays.EMPTY_BYTES;
         if (variableHeader.isWillFlag()) {
             payloadBufferSize += 2 + willTopicBytes.length;
             payloadBufferSize += 2 + willMessageBytes.length;
@@ -126,8 +126,8 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             payloadBufferSize += 2 + userNameBytes.length;
         }
 
-        String password = payload.password();
-        byte[] passwordBytes = password != null ? encodeStringUtf8(password) : EmptyArrays.EMPTY_BYTES;
+        byte[] password = payload.passwordInBytes();
+        byte[] passwordBytes = password != null ? password : EmptyArrays.EMPTY_BYTES;
         if (variableHeader.hasPassword()) {
             payloadBufferSize += 2 + passwordBytes.length;
         }
