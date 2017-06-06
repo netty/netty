@@ -324,7 +324,7 @@ public class QueryStringDecoder {
         for (int i = firstEscaped; i < toExcluded; i++) {
             char c = s.charAt(i);
             if (c != '%') {
-                strBuf.append(c != '+' || isPath? c : SPACE);
+                strBuf.append(c != '+' || isPath? c : ' ');
                 continue;
             }
 
