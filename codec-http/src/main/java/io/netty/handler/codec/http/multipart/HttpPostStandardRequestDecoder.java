@@ -21,7 +21,6 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
@@ -36,6 +35,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import static io.netty.buffer.Unpooled.*;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * This decoder will decode Body and can handle POST BODY.
@@ -145,18 +145,9 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             errors
      */
     public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
-        }
-        if (request == null) {
-            throw new NullPointerException("request");
-        }
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
-        this.request = request;
-        this.charset = charset;
-        this.factory = factory;
+        this.request = checkNotNull(request, "request");
+        this.charset = checkNotNull(charset, "charset");
+        this.factory = checkNotNull(factory, "factory");
         if (request instanceof HttpContent) {
             // Offer automatically if the given request is als type of HttpContent
             // See #1089
@@ -192,10 +183,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      */
     @Override
     public void setDiscardThreshold(int discardThreshold) {
-        if (discardThreshold < 0) {
-          throw new IllegalArgumentException("discardThreshold must be >= 0");
-        }
-        this.discardThreshold = discardThreshold;
+        this.discardThreshold = checkPositiveOrZero(discardThreshold, "discardThreshold");
     }
 
     /**
@@ -513,13 +501,11 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             errors
      */
     private void parseBodyAttributes() {
-        SeekAheadOptimize sao;
-        try {
-            sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArrayException ignored) {
+        if (!undecodedChunk.hasArray()) {
             parseBodyAttributesStandard();
             return;
         }
+        SeekAheadOptimize sao = new SeekAheadOptimize(undecodedChunk);
         int firstpos = undecodedChunk.readerIndex();
         int currentpos = firstpos;
         int equalpos;
@@ -658,42 +644,6 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
             return QueryStringDecoder.decodeComponent(s, charset);
         } catch (IllegalArgumentException e) {
             throw new ErrorDataDecoderException("Bad string: '" + s + '\'', e);
-        }
-    }
-
-    /**
-     * Skip control Characters
-     */
-    void skipControlCharacters() {
-        SeekAheadOptimize sao;
-        try {
-            sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArrayException ignored) {
-            try {
-                skipControlCharactersStandard();
-            } catch (IndexOutOfBoundsException e) {
-                throw new NotEnoughDataDecoderException(e);
-            }
-            return;
-        }
-
-        while (sao.pos < sao.limit) {
-            char c = (char) (sao.bytes[sao.pos++] & 0xFF);
-            if (!Character.isISOControl(c) && !Character.isWhitespace(c)) {
-                sao.setReadPosition(1);
-                return;
-            }
-        }
-        throw new NotEnoughDataDecoderException("Access out of bounds");
-    }
-
-    void skipControlCharactersStandard() {
-        for (;;) {
-            char c = (char) undecodedChunk.readUnsignedByte();
-            if (!Character.isISOControl(c) && !Character.isWhitespace(c)) {
-                undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
-                break;
-            }
         }
     }
 
