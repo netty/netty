@@ -103,10 +103,6 @@ final class HttpPostBodyUtil {
             this.value = value;
         }
 
-        TransferEncodingMechanism() {
-            value = name();
-        }
-
         public String value() {
             return value;
         }
@@ -121,13 +117,6 @@ final class HttpPostBodyUtil {
     }
 
     /**
-    * Exception when NO Backend Array is found
-    */
-    static class SeekAheadNoBackArrayException extends Exception {
-        private static final long serialVersionUID = -630418804938699495L;
-    }
-
-    /**
     * This class intends to decrease the CPU in seeking ahead some bytes in
     * HttpPostRequestDecoder
     */
@@ -139,9 +128,12 @@ final class HttpPostBodyUtil {
         int limit;
         ByteBuf buffer;
 
-        SeekAheadOptimize(ByteBuf buffer) throws SeekAheadNoBackArrayException {
+        /**
+         * @param buffer buffer with a backing byte array
+         */
+        SeekAheadOptimize(ByteBuf buffer) {
             if (!buffer.hasArray()) {
-                throw new SeekAheadNoBackArrayException();
+                throw new IllegalArgumentException("buffer hasn't backing byte array");
             }
             this.buffer = buffer;
             bytes = buffer.array();
@@ -169,14 +161,6 @@ final class HttpPostBodyUtil {
         int getReadPosition(int index) {
             return index - origPos + readerIndex;
         }
-
-        void clear() {
-            buffer = null;
-            bytes = null;
-            limit = 0;
-            pos = 0;
-            readerIndex = 0;
-        }
     }
 
     /**
@@ -187,20 +171,6 @@ final class HttpPostBodyUtil {
         int result;
         for (result = offset; result < sb.length(); result ++) {
             if (!Character.isWhitespace(sb.charAt(result))) {
-                break;
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Find the first whitespace
-     * @return the rank of the first whitespace
-     */
-    static int findWhitespace(String sb, int offset) {
-        int result;
-        for (result = offset; result < sb.length(); result ++) {
-            if (Character.isWhitespace(sb.charAt(result))) {
                 break;
             }
         }
