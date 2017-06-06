@@ -558,21 +558,25 @@ public class Http2ConnectionHandlerTest {
     public void cannotSendGoAwayFrameWithIncreasingLastStreamIds() throws Exception {
         handler = newHandler();
         ByteBuf data = dummyData();
-        long errorCode = Http2Error.INTERNAL_ERROR.code();
+        try {
+            long errorCode = Http2Error.INTERNAL_ERROR.code();
 
-        handler.goAway(ctx, STREAM_ID, errorCode, data.retain(), promise);
-        verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
-        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data), eq(promise));
-        // The frameWriter is only mocked, so it should not have interacted with the promise.
-        assertFalse(promise.isDone());
+            handler.goAway(ctx, STREAM_ID, errorCode, data.retain(), promise);
+            verify(connection).goAwaySent(eq(STREAM_ID), eq(errorCode), eq(data));
+            verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(errorCode), eq(data), eq(promise));
+            // The frameWriter is only mocked, so it should not have interacted with the promise.
+            assertFalse(promise.isDone());
 
-        when(connection.goAwaySent()).thenReturn(true);
-        when(remote.lastStreamKnownByPeer()).thenReturn(STREAM_ID);
-        handler.goAway(ctx, STREAM_ID + 2, errorCode, data, promise);
-        assertTrue(promise.isDone());
-        assertFalse(promise.isSuccess());
-        assertEquals(0, data.refCnt());
-        verifyNoMoreInteractions(frameWriter);
+            when(connection.goAwaySent()).thenReturn(true);
+            when(remote.lastStreamKnownByPeer()).thenReturn(STREAM_ID);
+            handler.goAway(ctx, STREAM_ID + 2, errorCode, data, promise);
+            assertTrue(promise.isDone());
+            assertFalse(promise.isSuccess());
+            assertEquals(1, data.refCnt());
+            verifyNoMoreInteractions(frameWriter);
+        } finally {
+            data.release();
+        }
     }
 
     @Test
