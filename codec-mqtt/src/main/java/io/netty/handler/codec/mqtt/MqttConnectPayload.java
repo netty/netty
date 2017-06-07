@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec.mqtt;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -25,9 +26,9 @@ public final class MqttConnectPayload {
 
     private final String clientIdentifier;
     private final String willTopic;
-    private final String willMessage;
+    private final byte[] willMessage;
     private final String userName;
-    private final String password;
+    private final byte[] password;
 
     public MqttConnectPayload(
             String clientIdentifier,
@@ -35,6 +36,19 @@ public final class MqttConnectPayload {
             String willMessage,
             String userName,
             String password) {
+        this.clientIdentifier = clientIdentifier;
+        this.willTopic = willTopic;
+        this.willMessage = willMessage.getBytes(CharsetUtil.UTF_8);
+        this.userName = userName;
+        this.password = password.getBytes(CharsetUtil.UTF_8);
+    }
+
+     public MqttConnectPayload(
+            String clientIdentifier,
+            String willTopic,
+            byte[] willMessage,
+            String userName,
+            byte[] password) {
         this.clientIdentifier = clientIdentifier;
         this.willTopic = willTopic;
         this.willMessage = willMessage;
@@ -51,6 +65,10 @@ public final class MqttConnectPayload {
     }
 
     public String willMessage() {
+        return willMessageBytes() != null ? new String(willMessageBytes(), CharsetUtil.UTF_8) : null;
+    }
+
+    public byte[] willMessageBytes() {
         return willMessage;
     }
 
@@ -59,6 +77,10 @@ public final class MqttConnectPayload {
     }
 
     public String password() {
+        return passwordBytes() != null ? new String(passwordBytes(), CharsetUtil.UTF_8) : null;
+    }
+
+    public byte[] passwordBytes() {
         return password;
     }
 
