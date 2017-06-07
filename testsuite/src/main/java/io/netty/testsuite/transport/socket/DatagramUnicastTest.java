@@ -37,7 +37,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
     private static final byte[] BYTES = {0, 1, 2, 3};
     private enum WrapType {
-        NONE, DUP, SLICE,
+        NONE, DUP, SLICE, READ_ONLY
     }
 
     @Test
@@ -189,14 +189,21 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         }
 
         for (int i = 0; i < count; i++) {
-            if (wrapType == WrapType.DUP) {
-                cc.write(new DatagramPacket(buf.retain().duplicate(), addr));
-            } else if (wrapType == WrapType.SLICE) {
-                cc.write(new DatagramPacket(buf.retain().slice(), addr));
-            } else if (wrapType == WrapType.NONE) {
-                cc.write(new DatagramPacket(buf.retain(), addr));
-            } else {
-                throw new Exception("unknown wrap type: " + wrapType);
+            switch (wrapType) {
+                case DUP:
+                    cc.write(new DatagramPacket(buf.retain().duplicate(), addr));
+                    break;
+                case SLICE:
+                    cc.write(new DatagramPacket(buf.retain().slice(), addr));
+                    break;
+                case READ_ONLY:
+                    cc.write(new DatagramPacket(buf.retain().asReadOnly(), addr));
+                    break;
+                case NONE:
+                    cc.write(new DatagramPacket(buf.retain(), addr));
+                    break;
+                default:
+                    throw new Error("unknown wrap type: " + wrapType);
             }
         }
         // release as we used buf.retain() before
