@@ -337,13 +337,6 @@ public abstract class ZlibTest {
         testCompressLarge(ZlibWrapper.ZLIB, ZlibWrapper.ZLIB_OR_NONE);
     }
 
-    @Test
-    public void testZLIB_OR_NONE3() throws Exception {
-        testCompressNone(ZlibWrapper.GZIP, ZlibWrapper.ZLIB_OR_NONE);
-        testCompressSmall(ZlibWrapper.GZIP, ZlibWrapper.ZLIB_OR_NONE);
-        testCompressLarge(ZlibWrapper.GZIP, ZlibWrapper.ZLIB_OR_NONE);
-    }
-
     private static byte[] gzip(byte[] bytes) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         GZIPOutputStream stream = new GZIPOutputStream(out);

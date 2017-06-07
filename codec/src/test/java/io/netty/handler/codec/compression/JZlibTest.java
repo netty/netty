@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.compression;
 
+import org.junit.Test;
+
 public class JZlibTest extends ZlibTest {
 
     @Override

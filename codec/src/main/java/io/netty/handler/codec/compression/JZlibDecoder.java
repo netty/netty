@@ -28,6 +28,8 @@ public class JZlibDecoder extends ZlibDecoder {
     private byte[] dictionary;
     private volatile boolean finished;
 
+    private boolean decideZlibOrNone;
+
     /**
      * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB}).
      *
@@ -47,9 +49,16 @@ public class JZlibDecoder extends ZlibDecoder {
             throw new NullPointerException("wrapper");
         }
 
-        int resultCode = z.init(ZlibUtil.convertWrapperType(wrapper));
-        if (resultCode != JZlib.Z_OK) {
-            ZlibUtil.fail(z, "initialization failure", resultCode);
+        JZlib.WrapperType wrapperType = ZlibUtil.convertWrapperType(wrapper);
+
+        if (wrapperType == JZlib.W_ANY) {
+            // Postpone the decision until decode(...) is called.
+            decideZlibOrNone = true;
+        } else {
+            int resultCode = z.init(wrapperType);
+            if (resultCode != JZlib.Z_OK) {
+                ZlibUtil.fail(z, "initialization failure", resultCode);
+            }
         }
     }
 
@@ -93,6 +102,26 @@ public class JZlibDecoder extends ZlibDecoder {
         final int inputLength = in.readableBytes();
         if (inputLength == 0) {
             return;
+        }
+
+        if (decideZlibOrNone) {
+            // First two bytes are needed to decide if it's a ZLIB stream.
+            if (in.readableBytes() < 2) {
+                return;
+            }
+
+            boolean zlib = ZlibUtil.looksLikeZlib(in.getShort(in.readerIndex()));
+
+            JZlib.WrapperType wrapperType = zlib ? JZlib.W_ZLIB : JZlib.W_NONE;
+
+            try {
+                int resultCode = z.init(wrapperType);
+                if (resultCode != JZlib.Z_OK) {
+                    ZlibUtil.fail(z, "initialization failure", resultCode);
+                }
+            } finally {
+                decideZlibOrNone = false;
+            }
         }
 
         try {

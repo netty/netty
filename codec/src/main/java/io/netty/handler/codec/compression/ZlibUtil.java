@@ -80,6 +80,18 @@ final class ZlibUtil {
         return overhead;
     }
 
+    /*
+     * Returns true if the cmf_flg parameter (think: first two bytes of a zlib stream)
+     * indicates that this is a zlib stream.
+     * <p>
+     * You can lookup the details in the ZLIB RFC:
+     * <a href="http://tools.ietf.org/html/rfc1950#section-2.2">RFC 1950</a>.
+     */
+    static boolean looksLikeZlib(short cmf_flg) {
+        return (cmf_flg & 0x7800) == 0x7800 &&
+                cmf_flg % 31 == 0;
+    }
+
     private ZlibUtil() {
     }
 }

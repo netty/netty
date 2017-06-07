@@ -136,7 +136,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 return;
             }
 
-            boolean nowrap = !looksLikeZlib(in.getShort(in.readerIndex()));
+            boolean nowrap = !ZlibUtil.looksLikeZlib(in.getShort(in.readerIndex()));
             inflater = new Inflater(nowrap);
             decideZlibOrNone = false;
         }
@@ -368,17 +368,5 @@ public class JdkZlibDecoder extends ZlibDecoder {
             throw new DecompressionException(
                     "CRC value mismatch. Expected: " + crcValue + ", Got: " + readCrc);
         }
-    }
-
-    /*
-     * Returns true if the cmf_flg parameter (think: first two bytes of a zlib stream)
-     * indicates that this is a zlib stream.
-     * <p>
-     * You can lookup the details in the ZLIB RFC:
-     * <a href="http://tools.ietf.org/html/rfc1950#section-2.2">RFC 1950</a>.
-     */
-    private static boolean looksLikeZlib(short cmf_flg) {
-        return (cmf_flg & 0x7800) == 0x7800 &&
-                cmf_flg % 31 == 0;
     }
 }
