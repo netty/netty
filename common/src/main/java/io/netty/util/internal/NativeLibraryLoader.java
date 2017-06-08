@@ -27,8 +27,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.attribute.PosixFilePermission;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
@@ -409,17 +407,20 @@ public final class NativeLibraryLoader {
             // the UnixFileStore, though the flag is not exposed via a public API.  To find out if library is being
             // loaded off a volume with noexec, confirm or add executalbe permissions, then check File#canExecute().
 
-            Set<PosixFilePermission> existingFilePermissions = Files.getPosixFilePermissions(file.toPath());
-            Set<PosixFilePermission> executePermissions = EnumSet.of(PosixFilePermission.OWNER_EXECUTE,
-                                                                     PosixFilePermission.GROUP_EXECUTE,
-                                                                     PosixFilePermission.OTHERS_EXECUTE);
+            // Note: We use FQCN to not break when netty is used in java6
+            Set<java.nio.file.attribute.PosixFilePermission> existingFilePermissions =
+                    java.nio.file.Files.getPosixFilePermissions(file.toPath());
+            Set<java.nio.file.attribute.PosixFilePermission> executePermissions =
+                    EnumSet.of(java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE,
+                            java.nio.file.attribute.PosixFilePermission.GROUP_EXECUTE,
+                            java.nio.file.attribute.PosixFilePermission.OTHERS_EXECUTE);
             if (existingFilePermissions.containsAll(executePermissions)) {
                 return false;
             }
 
-            Set<PosixFilePermission> newPermissions = EnumSet.copyOf(existingFilePermissions);
+            Set<java.nio.file.attribute.PosixFilePermission> newPermissions = EnumSet.copyOf(existingFilePermissions);
             newPermissions.addAll(executePermissions);
-            Files.setPosixFilePermissions(file.toPath(), newPermissions);
+            java.nio.file.Files.setPosixFilePermissions(file.toPath(), newPermissions);
             return file.canExecute();
         }
 
