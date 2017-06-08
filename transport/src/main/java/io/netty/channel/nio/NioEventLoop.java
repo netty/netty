@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * {@link Selector} and so does the multi-plexing of these in the event loop.
  *
  */
-public final class NioEventLoop extends SingleThreadEventLoop {
+public class NioEventLoop extends SingleThreadEventLoop {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
 
