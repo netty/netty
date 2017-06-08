@@ -39,7 +39,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicLong;
@@ -899,7 +898,7 @@ public final class PlatformDependent {
         if (javaVersion() < 7) {
             return new LinkedBlockingDeque<C>();
         } else {
-            return new ConcurrentLinkedDeque<C>();
+            return new java.util.concurrent.ConcurrentLinkedDeque<C>();
         }
     }
 
