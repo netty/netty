@@ -1073,38 +1073,6 @@ public class DefaultChannelPipelineTest {
         group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
     }
 
-    @Test
-    public void testHandlerAfterClose() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel();
-        channel.close().syncUninterruptibly();
-
-        assertFalse(channel.isActive());
-
-        final AtomicBoolean addedHandler = new AtomicBoolean();
-        final AtomicBoolean removedHandler = new AtomicBoolean();
-
-        ChannelPipeline pipeline = channel.pipeline();
-        try {
-            pipeline.addLast(new ChannelHandlerAdapter() {
-                @Override
-                public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                    addedHandler.set(true);
-                }
-
-                @Override
-                public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-                    removedHandler.set(true);
-                }
-            });
-            fail();
-        } catch (ChannelPipelineException e) {
-            // expected
-        }
-
-        assertFalse(addedHandler.get());
-        assertFalse(removedHandler.get());
-    }
-
     @Test(timeout = 3000)
     public void testVoidPromiseNotify() throws Throwable {
         ChannelPipeline pipeline1 = new LocalChannel().pipeline();
