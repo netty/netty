@@ -359,7 +359,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
         @Override
         public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
                               boolean endOfStream) {
-            Http2DataFrame dataFrame = new DefaultHttp2DataFrame(data.retain(), endOfStream, padding);
+            Http2DataFrame dataFrame = new DefaultHttp2DataFrame(data, endOfStream, padding);
             dataFrame.streamId(streamId);
             ctx.fireChannelRead(dataFrame);
 
