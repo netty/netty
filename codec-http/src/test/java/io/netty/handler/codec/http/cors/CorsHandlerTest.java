@@ -88,6 +88,15 @@ public class CorsHandlerTest {
     }
 
     @Test
+    public void simpleRequestWithNullOrigin() {
+        final HttpResponse response = simpleRequest(forOrigin("http://test.com").allowNullOrigin()
+                .allowCredentials()
+                .build(), "null");
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), is("null"));
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS), is(equalTo("true")));
+    }
+
+    @Test
     public void simpleRequestWithOrigin() {
         final String origin = "http://localhost:8888";
         final HttpResponse response = simpleRequest(forOrigin(origin).build(), origin);
