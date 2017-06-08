@@ -40,11 +40,6 @@ public final class KeyManagerConfiguration {
     private String keyPassword;
 
     /**
-     * Creates a new instance.
-     */
-    public KeyManagerConfiguration() { }
-
-    /**
      * Sets the private key for this host.
      *
      * @param key a PKCS#8 private key
