@@ -35,15 +35,6 @@ import static io.netty.handler.codec.mqtt.MqttCodecUtil.*;
 @ChannelHandler.Sharable
 public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
-    public static final MqttEncoder INSTANCE = new MqttEncoder();
-
-    private MqttEncoder() { }
-
-    @Override
-    protected void encode(ChannelHandlerContext ctx, MqttMessage msg, List<Object> out) throws Exception {
-        out.add(doEncode(ctx.alloc(), msg));
-    }
-
     /**
      * This is the main encoding method.
      * It's only visible for testing.
@@ -387,5 +378,10 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
     private static byte[] encodeStringUtf8(String s) {
       return s.getBytes(CharsetUtil.UTF_8);
+    }
+
+    @Override
+    protected void encode(ChannelHandlerContext ctx, MqttMessage msg, List<Object> out) throws Exception {
+        out.add(doEncode(ctx.alloc(), msg));
     }
 }
