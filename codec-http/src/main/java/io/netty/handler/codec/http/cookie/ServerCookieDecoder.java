@@ -87,10 +87,17 @@ public final class ServerCookieDecoder extends CookieDecoder {
                     break loop;
                 }
                 char c = header.charAt(i);
-                if (c == '\t' || c == '\n' || c == 0x0b || c == '\f'
-                        || c == '\r' || c == ' ' || c == ',' || c == ';') {
-                    i++;
-                    continue;
+                switch (c) {
+                    case '\t':
+                    case '\n':
+                    case 0x0b:
+                    case '\f':
+                    case '\r':
+                    case ' ':
+                    case ',':
+                    case ';':
+                        i++;
+                        continue;
                 }
                 break;
             }
