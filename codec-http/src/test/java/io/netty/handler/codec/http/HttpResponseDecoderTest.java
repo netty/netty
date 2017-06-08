@@ -69,9 +69,9 @@ public class HttpResponseDecoderTest {
         assertNull(res.decoderResult().cause());
         assertTrue(res.decoderResult().isSuccess());
 
-        assertNull(ch.readInbound());
         assertTrue(ch.finish());
         assertThat(ch.readInbound(), instanceOf(LastHttpContent.class));
+        assertNull(ch.readInbound());
     }
 
     /**
@@ -204,7 +204,6 @@ public class HttpResponseDecoderTest {
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), is(HttpResponseStatus.OK));
-        assertThat(ch.readInbound(), is(nullValue()));
 
         // Close the connection without sending anything.
         assertTrue(ch.finish());
@@ -223,7 +222,8 @@ public class HttpResponseDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
 
         // Write the partial response.
-        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n12345678", CharsetUtil.US_ASCII));
+        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: identity\r\n\r\n12345678",
+                CharsetUtil.US_ASCII));
 
         // Read the response headers.
         HttpResponse res = ch.readInbound();
@@ -306,7 +306,6 @@ public class HttpResponseDecoderTest {
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), is(HttpResponseStatus.OK));
-        assertThat(ch.readInbound(), is(nullValue()));
 
         assertThat(ch.finish(), is(true));
 
@@ -318,9 +317,30 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void testLastResponseWithZeroContentLengthHeader() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 404 Not found\r\n" +
+                "Content-Length: 0\r\n\r\n" , CharsetUtil.US_ASCII));
+
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.NOT_FOUND));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH), is("0"));
+
+        assertThat(ch.finish(), is(true));
+
+        LastHttpContent lastContent = ch.readInbound();
+        assertThat(lastContent.content().isReadable(), is(false));
+        lastContent.release();
+
+        assertThat(ch.readInbound(), is(nullValue()));
+    }
+
+    @Test
     public void testLastResponseWithoutContentLengthHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
-        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
+        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: identity\r\n\r\n" , CharsetUtil.US_ASCII));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -342,10 +362,30 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void testTemporaryRedirectResponse() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 302 Found\r\nlocation: /tmp\r\n\r\n", CharsetUtil.US_ASCII));
+
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.FOUND));
+
+        assertThat(ch.finish(), is(true));
+
+        LastHttpContent lastContent = ch.readInbound();
+        assertThat(lastContent.content().isReadable(), is(false));
+        lastContent.release();
+
+        assertThat(ch.readInbound(), is(nullValue()));
+    }
+
+    @Test
     public void testLastResponseWithHeaderRemoveTrailingSpaces() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer(
-                "HTTP/1.1 200 OK\r\nX-Header: h2=h2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT       \r\n\r\n",
+                "HTTP/1.1 200 OK\r\n" +
+                        "Transfer-Encoding: identity\r\n" +
+                        "X-Header: h2=h2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT       \r\n\r\n",
                 CharsetUtil.US_ASCII));
 
         HttpResponse res = ch.readInbound();

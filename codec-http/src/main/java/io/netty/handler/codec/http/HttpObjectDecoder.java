@@ -480,6 +480,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             case 204: case 205: case 304:
                 return true;
             }
+        } else { // assume it is HttpRequest, what else ?
+            if (((HttpRequest) msg).method().equals(HttpMethod.HEAD)) {
+                return true;
+            }
         }
         return false;
     }
@@ -604,7 +608,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         State nextState;
 
-        if (isContentAlwaysEmpty(message)) {
+        if (isContentAlwaysEmpty(message) || HttpUtil.hasEmptyContent(message)) {
             HttpUtil.setTransferEncodingChunked(message, false);
             nextState = State.SKIP_CONTROL_CHARS;
         } else if (HttpUtil.isTransferEncodingChunked(message)) {

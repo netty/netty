@@ -322,6 +322,17 @@ public final class HttpUtil {
     }
 
     /**
+     * Checks to see if {@link HttpMessage} has empty content.
+     *
+     * @param message The message to check
+     * @return True if headers indicate empty content
+     */
+    public static boolean hasEmptyContent(HttpMessage message) {
+        return !message.headers().contains(HttpHeaderNames.TRANSFER_ENCODING)
+                && getContentLength(message, 0) == 0;
+    }
+
+    /**
      * Set the {@link HttpHeaderNames#TRANSFER_ENCODING} to either include {@link HttpHeaderValues#CHUNKED} if
      * {@code chunked} is {@code true}, or remove {@link HttpHeaderValues#CHUNKED} if {@code chunked} is {@code false}.
      * @param m The message which contains the headers to modify.
