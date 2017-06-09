@@ -75,6 +75,10 @@ final class LinuxSocket extends Socket {
         setIpFreeBind(intValue(), enabled ? 1 : 0);
     }
 
+    void setIpTransparent(boolean enabled) throws IOException {
+        setIpTransparent(intValue(), enabled ? 1 : 0);
+    }
+
     void getTcpInfo(EpollTcpInfo info) throws IOException {
         getTcpInfo(intValue(), info.info);
     }
@@ -120,6 +124,10 @@ final class LinuxSocket extends Socket {
         return isIpFreeBind(intValue()) != 0;
     }
 
+    boolean isIpTransparent() throws IOException {
+        return isIpTransparent(intValue()) != 0;
+    }
+
     PeerCredentials getPeerCredentials() throws IOException {
         return getPeerCredentials(intValue());
     }
@@ -145,6 +153,7 @@ final class LinuxSocket extends Socket {
     private static native int getTcpKeepCnt(int fd) throws IOException;
     private static native int getTcpUserTimeout(int fd) throws IOException;
     private static native int isIpFreeBind(int fd) throws IOException;
+    private static native int isIpTransparent(int fd) throws IOException;
     private static native void getTcpInfo(int fd, int[] array) throws IOException;
     private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
 
@@ -158,5 +167,6 @@ final class LinuxSocket extends Socket {
     private static native void setTcpKeepCnt(int fd, int probes) throws IOException;
     private static native void setTcpUserTimeout(int fd, int milliseconds)throws IOException;
     private static native void setIpFreeBind(int fd, int freeBind) throws IOException;
+    private static native void setIpTransparent(int fd, int transparent) throws IOException;
     private static native void setTcpMd5Sig(int fd, byte[] address, int scopeId, byte[] key) throws IOException;
 }
