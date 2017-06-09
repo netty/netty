@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -47,13 +48,13 @@ public class UnixChannelUtilTest {
     private static void testIsBufferCopyNeededForWrite(ByteBufAllocator alloc) {
         ByteBuf byteBuf = alloc.directBuffer();
         assertFalse(isBufferCopyNeededForWrite(byteBuf));
-        assertTrue(isBufferCopyNeededForWrite(byteBuf.asReadOnly()));
+        assertTrue(isBufferCopyNeededForWrite(Unpooled.unmodifiableBuffer(byteBuf)));
 
         assertTrue(byteBuf.release());
 
         byteBuf = alloc.heapBuffer();
         assertTrue(isBufferCopyNeededForWrite(byteBuf));
-        assertTrue(isBufferCopyNeededForWrite(byteBuf.asReadOnly()));
+        assertTrue(isBufferCopyNeededForWrite(Unpooled.unmodifiableBuffer(byteBuf)));
         assertTrue(byteBuf.release());
 
         assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, 2, 0, false);
