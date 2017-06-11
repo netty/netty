@@ -230,16 +230,13 @@ final class HpackHuffmanDecoder {
         }
 
         private void append(int i) {
-            try {
-                bytes[index] = (byte) i;
-            } catch (IndexOutOfBoundsException ignore) {
+            if (bytes.length == index) {
                 // Always just expand by INITIAL_SIZE
                 byte[] newBytes = new byte[bytes.length + initialCapacity];
                 System.arraycopy(bytes, 0, newBytes, 0, bytes.length);
                 bytes = newBytes;
-                bytes[index] = (byte) i;
             }
-            index++;
+            bytes[index++] = (byte) i;
         }
     }
 }
