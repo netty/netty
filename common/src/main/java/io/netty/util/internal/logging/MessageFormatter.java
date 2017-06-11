@@ -39,6 +39,7 @@
  */
 package io.netty.util.internal.logging;
 
+import java.lang.reflect.Array;
 import java.text.MessageFormat;
 import java.util.HashSet;
 import java.util.Set;
@@ -232,22 +233,27 @@ final class MessageFormatter {
                 // Prevent String instantiation for some number types
                 if (objClass == Long.class) {
                     sbuf.append(((Long) o).longValue());
-                } else if (objClass == Integer.class || objClass == Short.class || objClass == Byte.class) {
-                    sbuf.append(((Number) o).intValue());
-                } else if (objClass == Double.class) {
-                    sbuf.append(((Double) o).doubleValue());
-                } else if (objClass == Float.class) {
-                    sbuf.append(((Float) o).floatValue());
-                } else {
-                    safeObjectAppend(sbuf, o);
+                    return;
                 }
-            } else {
-                safeObjectAppend(sbuf, o);
+                if (objClass == Integer.class || objClass == Short.class || objClass == Byte.class) {
+                    sbuf.append(((Number) o).intValue());
+                    return;
+                }
+                if (objClass == Double.class) {
+                    sbuf.append(((Double) o).doubleValue());
+                    return;
+                }
+                if (objClass == Float.class) {
+                    sbuf.append(((Float) o).floatValue());
+                    return;
+                }
             }
-        } else {
-            // check for primitive array types because they
-            // unfortunately cannot be cast to Object[]
-            sbuf.append('[');
+            safeObjectAppend(sbuf, o);
+            return;
+        }
+
+        sbuf.append('[');
+        if (Array.getLength(o) > 0) {
             if (objClass == boolean[].class) {
                 booleanArrayAppend(sbuf, (boolean[]) o);
             } else if (objClass == byte[].class) {
@@ -267,8 +273,8 @@ final class MessageFormatter {
             } else {
                 objectArrayAppend(sbuf, (Object[]) o, seenSet);
             }
-            sbuf.append(']');
         }
+        sbuf.append(']');
     }
 
     private static void safeObjectAppend(StringBuilder sbuf, Object o) {
@@ -285,9 +291,6 @@ final class MessageFormatter {
     }
 
     private static void objectArrayAppend(StringBuilder sbuf, Object[] a, Set<Object[]> seenSet) {
-        if (a.length == 0) {
-            return;
-        }
         if (seenSet == null) {
             seenSet = new HashSet<Object[]>(a.length);
         }
@@ -305,9 +308,6 @@ final class MessageFormatter {
     }
 
     private static void booleanArrayAppend(StringBuilder sbuf, boolean[] a) {
-        if (a.length == 0) {
-            return;
-        }
         sbuf.append(a[0]);
         for (int i = 1; i < a.length; i++) {
             sbuf.append(", ");
@@ -316,9 +316,6 @@ final class MessageFormatter {
     }
 
     private static void byteArrayAppend(StringBuilder sbuf, byte[] a) {
-        if (a.length == 0) {
-            return;
-        }
         sbuf.append(a[0]);
         for (int i = 1; i < a.length; i++) {
             sbuf.append(", ");
@@ -327,9 +324,6 @@ final class MessageFormatter {
     }
 
     private static void charArrayAppend(StringBuilder sbuf, char[] a) {
-        if (a.length == 0) {
-            return;
-        }
         sbuf.append(a[0]);
         for (int i = 1; i < a.length; i++) {
             sbuf.append(", ");
@@ -338,9 +332,6 @@ final class MessageFormatter {
     }
 
     private static void shortArrayAppend(StringBuilder sbuf, short[] a) {
-        if (a.length == 0) {
-            return;
-        }
         sbuf.append(a[0]);
         for (int i = 1; i < a.length; i++) {
             sbuf.append(", ");
@@ -349,9 +340,6 @@ final class MessageFormatter {
     }
 
     private static void intArrayAppend(StringBuilder sbuf, int[] a) {
-        if (a.length == 0) {
-            return;
-        }
         sbuf.append(a[0]);
         for (int i = 1; i < a.length; i++) {
             sbuf.append(", ");
@@ -360,9 +348,6 @@ final class MessageFormatter {
     }
 
     private static void longArrayAppend(StringBuilder sbuf, long[] a) {
-        if (a.length == 0) {
-            return;
-        }
         sbuf.append(a[0]);
         for (int i = 1; i < a.length; i++) {
             sbuf.append(", ");
@@ -371,9 +356,6 @@ final class MessageFormatter {
     }
 
     private static void floatArrayAppend(StringBuilder sbuf, float[] a) {
-        if (a.length == 0) {
-            return;
-        }
         sbuf.append(a[0]);
         for (int i = 1; i < a.length; i++) {
             sbuf.append(", ");
@@ -382,9 +364,6 @@ final class MessageFormatter {
     }
 
     private static void doubleArrayAppend(StringBuilder sbuf, double[] a) {
-        if (a.length == 0) {
-            return;
-        }
         sbuf.append(a[0]);
         for (int i = 1; i < a.length; i++) {
             sbuf.append(", ");
