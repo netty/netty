@@ -68,12 +68,12 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
 
     @Override
     public AppendableCharSequence append(char c) {
-        try {
-            chars[pos++] = c;
-        } catch (IndexOutOfBoundsException e) {
-            expand();
-            chars[pos - 1] = c;
+        if (pos == chars.length) {
+            char[] old = chars;
+            chars = new char[old.length << 1];
+            System.arraycopy(old, 0, chars, 0, old.length);
         }
+        chars[pos++] = c;
         return this;
     }
 
@@ -137,17 +137,6 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
      */
     public String subStringUnsafe(int start, int end) {
         return new String(chars, start, end - start);
-    }
-
-    private void expand() {
-        char[] old = chars;
-        // double it
-        int len = old.length << 1;
-        if (len < 0) {
-            throw new IllegalStateException();
-        }
-        chars = new char[len];
-        System.arraycopy(old, 0, chars, 0, old.length);
     }
 
     private static char[] expand(char[] array, int neededSpace, int size) {
