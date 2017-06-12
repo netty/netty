@@ -43,9 +43,6 @@ public class SimpleChannelPool implements ChannelPool {
     private static final AttributeKey<SimpleChannelPool> POOL_KEY = AttributeKey.newInstance("channelPool");
     private static final IllegalStateException FULL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new IllegalStateException("ChannelPool full"), SimpleChannelPool.class, "releaseAndOffer(...)");
-    private static final IllegalStateException UNHEALTHY_NON_OFFERED_TO_POOL = ThrowableUtil.unknownStackTrace(
-            new IllegalStateException("Channel is unhealthy not offering it back to pool"),
-            SimpleChannelPool.class, "releaseAndOffer(...)");
 
     private final Deque<Channel> deque = PlatformDependent.newConcurrentDeque();
     private final ChannelPoolHandler handler;
@@ -325,9 +322,9 @@ public class SimpleChannelPool implements ChannelPool {
             throws Exception {
         if (future.getNow()) { //channel turns out to be healthy, offering and releasing it.
             releaseAndOffer(channel, promise);
-        } else { //channel ont healthy, just releasing it.
+        } else { //channel not healthy, just releasing it.
             handler.channelReleased(channel);
-            closeAndFail(channel, UNHEALTHY_NON_OFFERED_TO_POOL, promise);
+            promise.setSuccess(null);
         }
     }
 
