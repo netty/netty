@@ -118,6 +118,7 @@ public final class Http2CodecUtil {
     public static final int SMALLEST_MAX_CONCURRENT_STREAMS = 100;
     static final int DEFAULT_MAX_RESERVED_STREAMS = SMALLEST_MAX_CONCURRENT_STREAMS;
     static final int DEFAULT_MIN_ALLOCATION_CHUNK = 1024;
+    static final int DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY = 32;
 
     /**
      * Calculate the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
