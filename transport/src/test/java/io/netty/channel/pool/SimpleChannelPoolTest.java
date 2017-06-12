@@ -39,9 +39,6 @@ import static org.junit.Assert.*;
 public class SimpleChannelPoolTest {
     private static final String LOCAL_ADDR_ID = "test.id";
 
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
-
     @Test
     public void testAcquire() throws Exception {
         EventLoopGroup group = new LocalEventLoopGroup();
@@ -184,15 +181,15 @@ public class SimpleChannelPoolTest {
         //first check that when returned healthy then it actually offered back to the pool.
         assertSame(channel1, channel2);
 
-        expectedException.expect(IllegalStateException.class);
         channel1.close().syncUninterruptibly();
-        try {
-            pool.release(channel1).syncUninterruptibly();
-        } finally {
-            sc.close().syncUninterruptibly();
-            channel2.close().syncUninterruptibly();
-            group.shutdownGracefully();
-        }
+
+        pool.release(channel1).syncUninterruptibly();
+        Channel channel3 = pool.acquire().syncUninterruptibly().getNow();
+        //channel1 was not healthy anymore so it should not get acquired anymore.
+        assertNotSame(channel1, channel3);
+        sc.close().syncUninterruptibly();
+        channel3.close().syncUninterruptibly();
+        group.shutdownGracefully();
     }
 
     /**
