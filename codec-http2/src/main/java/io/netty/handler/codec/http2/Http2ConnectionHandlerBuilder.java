@@ -88,6 +88,11 @@ public final class Http2ConnectionHandlerBuilder
     }
 
     @Override
+    public Http2ConnectionHandlerBuilder initialHuffmanDecodeCapacity(int initialHuffmanDecodeCapacity) {
+        return super.initialHuffmanDecodeCapacity(initialHuffmanDecodeCapacity);
+    }
+
+    @Override
     public Http2ConnectionHandler build() {
         return super.build();
     }
