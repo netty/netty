@@ -378,6 +378,18 @@ public class StringUtilTest {
     }
 
     @Test
+    public void escapeCsvGarbageFree() {
+        // 'StringUtil#escapeCsv()' should return same string object if string didn't changing.
+        assertSame("1", StringUtil.escapeCsv("1", true));
+        assertSame(" 123 ", StringUtil.escapeCsv(" 123 ", false));
+        assertSame("\" 123 \"", StringUtil.escapeCsv("\" 123 \"", true));
+        assertSame("\"\"", StringUtil.escapeCsv("\"\"", true));
+        assertSame("123 \"\"", StringUtil.escapeCsv("123 \"\"", true));
+        assertSame("123\"\"321", StringUtil.escapeCsv("123\"\"321", true));
+        assertSame("\"123\"\"321\"", StringUtil.escapeCsv("\"123\"\"321\"", true));
+    }
+
+    @Test
     public void testUnescapeCsv() {
         assertEquals("", unescapeCsv(""));
         assertEquals("\"", unescapeCsv("\"\"\"\""));
