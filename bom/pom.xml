@@ -188,8 +188,8 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty-transport-unix-common</artifactId>
-        <version>4.1.12.Final-SNAPSHOT</version>
+        <artifactId>netty-transport-native-unix-common</artifactId>
+        <version>4.1.13.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
