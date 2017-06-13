@@ -228,7 +228,7 @@ public final class StringUtil {
      * with anonymous classes.
      */
     public static String simpleClassName(Class<?> clazz) {
-        String className = ObjectUtil.checkNotNull(clazz, "clazz").getName();
+        String className = checkNotNull(clazz, "clazz").getName();
         final int lastDotIdx = className.lastIndexOf(PACKAGE_SEPARATOR_CHAR);
         if (lastDotIdx > -1) {
             return className.substring(lastDotIdx + 1);
@@ -260,67 +260,80 @@ public final class StringUtil {
      */
     public static CharSequence escapeCsv(CharSequence value, boolean trimWhiteSpace) {
         int length = checkNotNull(value, "value").length();
-        if (length == 0) {
-            return value;
-        }
-
-        int start = 0;
-        int last = length - 1;
-        boolean trimmed = false;
+        int start;
+        int last;
         if (trimWhiteSpace) {
             start = indexOfFirstNonOwsChar(value, length);
-            if (start == length) {
-                return EMPTY_STRING;
-            }
             last = indexOfLastNonOwsChar(value, start, length);
-            trimmed = start > 0 || last < length - 1;
-            if (trimmed) {
-                length = last - start + 1;
+        } else {
+            start = 0;
+            last = length - 1;
+        }
+        if (start > last) {
+            return EMPTY_STRING;
+        }
+
+        int firstUnescapedSpecial = -1;
+        boolean quoted = false;
+        if (isDoubleQuote(value.charAt(start))) {
+            quoted = isDoubleQuote(value.charAt(last)) && last > start;
+            if (quoted) {
+                start++;
+                last--;
+            } else {
+                firstUnescapedSpecial = start;
             }
         }
 
-        StringBuilder result = new StringBuilder(length + CSV_NUMBER_ESCAPE_CHARACTERS);
-        boolean quoted = isDoubleQuote(value.charAt(start)) && isDoubleQuote(value.charAt(last)) && length != 1;
-        boolean foundSpecialCharacter = false;
-        boolean escapedDoubleQuote = false;
-        for (int i = start; i <= last; i++) {
-            char current = value.charAt(i);
-            switch (current) {
-                case DOUBLE_QUOTE:
-                    if (i == start || i == last) {
-                        if (!quoted) {
-                            result.append(DOUBLE_QUOTE);
-                        } else {
-                            continue;
+        if (firstUnescapedSpecial < 0) {
+            if (quoted) {
+                for (int i = start; i <= last; i++) {
+                    if (isDoubleQuote(value.charAt(i))) {
+                        if (i == last || !isDoubleQuote(value.charAt(i + 1))) {
+                            firstUnescapedSpecial = i;
+                            break;
                         }
-                    } else {
-                        boolean isNextCharDoubleQuote = isDoubleQuote(value.charAt(i + 1));
-                        if (!isDoubleQuote(value.charAt(i - 1)) &&
-                                (!isNextCharDoubleQuote || i + 1 == last)) {
-                            result.append(DOUBLE_QUOTE);
-                            escapedDoubleQuote = true;
-                        }
+                        i++;
+                    }
+                }
+            } else {
+                for (int i = start; i <= last; i++) {
+                    char c = value.charAt(i);
+                    if (c == LINE_FEED || c == CARRIAGE_RETURN || c == COMMA) {
+                        firstUnescapedSpecial = i;
                         break;
                     }
-                case LINE_FEED:
-                case CARRIAGE_RETURN:
-                case COMMA:
-                    foundSpecialCharacter = true;
+                    if (isDoubleQuote(c)) {
+                        if (i == last || !isDoubleQuote(value.charAt(i + 1))) {
+                            firstUnescapedSpecial = i;
+                            break;
+                        }
+                        i++;
+                    }
+                }
             }
-            result.append(current);
+
+            if (firstUnescapedSpecial < 0) {
+                // Special characters is not found or all of them already escaped.
+                // In the most cases returns a same string. New string will be instantiated (via StringBuilder)
+                // only if it really needed. It's important to prevent GC extra load.
+                return quoted? value.subSequence(start - 1, last + 2) : value.subSequence(start, last + 1);
+            }
         }
 
-        if (escapedDoubleQuote || foundSpecialCharacter && !quoted) {
-            return quote(result);
+        StringBuilder result = new StringBuilder(last - start + 1 + CSV_NUMBER_ESCAPE_CHARACTERS);
+        result.append(DOUBLE_QUOTE).append(value, start, firstUnescapedSpecial);
+        for (int i = firstUnescapedSpecial; i <= last; i++) {
+            char c = value.charAt(i);
+            if (isDoubleQuote(c)) {
+                result.append(DOUBLE_QUOTE);
+                if (i < last && isDoubleQuote(value.charAt(i + 1))) {
+                    i++;
+                }
+            }
+            result.append(c);
         }
-        if (trimmed) {
-            return quoted ? quote(result) : result;
-        }
-        return value;
-    }
-
-    private static StringBuilder quote(StringBuilder builder) {
-        return builder.insert(0, DOUBLE_QUOTE).append(DOUBLE_QUOTE);
+        return result.append(DOUBLE_QUOTE);
     }
 
     /**
