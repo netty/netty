@@ -195,6 +195,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @param dnsServerAddressStreamProvider The {@link DnsServerAddressStreamProvider} used to determine the name
      *                                       servers for each hostname lookup.
      * @param searchDomains the list of search domain
+     *                      (can be null, if so, will try to default to the underlying platform ones)
      * @param ndots the ndots value
      * @param decodeIdn {@code true} if domain / host names should be decoded to unicode when received.
      *                        See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
@@ -232,7 +233,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.authoritativeDnsServerCache = checkNotNull(authoritativeDnsServerCache, "authoritativeDnsServerCache");
         this.dnsQueryLifecycleObserverFactory =
                 checkNotNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
-        this.searchDomains = checkNotNull(searchDomains, "searchDomains").clone();
+        this.searchDomains = searchDomains != null ? searchDomains.clone() : DEFAULT_SEARCH_DOMAINS;
         this.ndots = checkPositiveOrZero(ndots, "ndots");
         this.decodeIdn = decodeIdn;
 
