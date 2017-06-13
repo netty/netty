@@ -231,6 +231,9 @@ public class MessageFormatterTest {
         // double[]
         result = MessageFormatter.arrayFormat("{}{}", new Object[] { "a", new double[] { 1, 2 } }).getMessage();
         assertEquals("a[1.0, 2.0]", result);
+
+        // zero length
+        assertEquals("[]", MessageFormatter.format("{}", new Object["".length()]).getMessage());
     }
 
     @Test
