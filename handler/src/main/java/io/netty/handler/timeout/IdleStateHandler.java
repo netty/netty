@@ -21,11 +21,12 @@ import io.netty.channel.Channel.Unsafe;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.concurrent.EventExecutor;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +34,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * Triggers an {@link IdleStateEvent} when a {@link Channel} has not performed
  * read, write, or both operation for a while.
+ *
+ * The {@link IdleStateHandler} should be placed as first {@link ChannelHandler}
+ * into the {@link ChannelPipeline} (before any decoder / encoder).
  *
  * <h3>Supported idle states</h3>
  * <table border="1">
