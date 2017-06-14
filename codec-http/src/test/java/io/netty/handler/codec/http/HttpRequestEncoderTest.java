@@ -35,6 +35,7 @@ public class HttpRequestEncoderTest {
                 HttpMethod.GET, "http://localhost"));
         String req = buffer.toString(Charset.forName("US-ASCII"));
         assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
+        buffer.release();
     }
 
     @Test
@@ -45,6 +46,18 @@ public class HttpRequestEncoderTest {
                 "http://localhost:9999?p1=v1"));
         String req = buffer.toString(Charset.forName("US-ASCII"));
         assertEquals("GET http://localhost:9999/?p1=v1 HTTP/1.1\r\n", req);
+        buffer.release();
+    }
+
+    @Test
+    public void testUriWithEmptyPath() throws Exception {
+        HttpRequestEncoder encoder = new HttpRequestEncoder();
+        ByteBuf buffer = Unpooled.buffer(64);
+        encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "http://localhost:9999/?p1=v1"));
+        String req = buffer.toString(Charset.forName("US-ASCII"));
+        assertEquals("GET http://localhost:9999/?p1=v1 HTTP/1.1\r\n", req);
+        buffer.release();
     }
 
     @Test
@@ -55,6 +68,7 @@ public class HttpRequestEncoderTest {
                 HttpMethod.GET, "http://localhost/"));
         String req = buffer.toString(Charset.forName("US-ASCII"));
         assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
+        buffer.release();
     }
 
     @Test
@@ -65,6 +79,7 @@ public class HttpRequestEncoderTest {
                 HttpMethod.GET, "/"));
         String req = buffer.toString(Charset.forName("US-ASCII"));
         assertEquals("GET / HTTP/1.1\r\n", req);
+        buffer.release();
     }
 
     @Test
@@ -75,6 +90,7 @@ public class HttpRequestEncoderTest {
                 HttpMethod.GET, ""));
         String req = buffer.toString(Charset.forName("US-ASCII"));
         assertEquals("GET / HTTP/1.1\r\n", req);
+        buffer.release();
     }
 
     @Test
@@ -85,5 +101,6 @@ public class HttpRequestEncoderTest {
                 HttpMethod.GET, "/?url=http://example.com"));
         String req = buffer.toString(Charset.forName("US-ASCII"));
         assertEquals("GET /?url=http://example.com HTTP/1.1\r\n", req);
+        buffer.release();
     }
 }
