@@ -574,12 +574,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             do {
                 char firstChar = line.charAt(0);
                 if (name != null && (firstChar == ' ' || firstChar == '\t')) {
+                    //please do not make one line from below code
+                    //as it breaks +XX:OptimizeStringConcat optimization
                     String trimmedLine = line.toString().trim();
-                    StringBuilder buf = new StringBuilder(value.length() + trimmedLine.length() + 1);
-                    buf.append(value)
-                       .append(' ')
-                       .append(trimmedLine);
-                    value = buf.toString();
+                    String valueStr = String.valueOf(value);
+                    value = valueStr + ' ' + trimmedLine;
                 } else {
                     if (name != null) {
                         headers.add(name, value);
@@ -641,14 +640,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     List<String> current = trailer.trailingHeaders().getAll(lastHeader);
                     if (!current.isEmpty()) {
                         int lastPos = current.size() - 1;
+                        //please do not make one line from below code
+                        //as it breaks +XX:OptimizeStringConcat optimization
                         String lineTrimmed = line.toString().trim();
-                        CharSequence currentLastPos = current.get(lastPos);
-                        StringBuilder b = new StringBuilder(currentLastPos.length() + lineTrimmed.length());
-                        b.append(currentLastPos)
-                         .append(lineTrimmed);
-                        current.set(lastPos, b.toString());
-                    } else {
-                        // Content-Length, Transfer-Encoding, or Trailer
+                        String currentLastPos = current.get(lastPos);
+                        current.set(lastPos, currentLastPos + lineTrimmed);
                     }
                 } else {
                     splitHeader(line);
