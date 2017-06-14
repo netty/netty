@@ -46,6 +46,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -106,11 +109,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     protected static final int VERIFY_DEPTH = 10;
 
     /**
-     * The OpenSSL SSL_CTX object
+     * The OpenSSL SSL_CTX object.
+     *
+     * <strong>{@link #ctxLock} must be hold while using ctx!</strong>
      */
-    protected volatile long ctx;
-    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
-    private volatile int aprPoolDestroyed;
+    protected long ctx;
     private final List<String> unmodifiableCiphers;
     private final long sessionCacheSize;
     private final long sessionTimeout;
@@ -144,6 +147,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final String[] protocols;
     final boolean enableOcsp;
     final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
+    final ReadWriteLock ctxLock = new ReentrantReadWriteLock();
+
     private volatile boolean rejectRemoteInitiatedRenegotiation;
     private volatile int bioNonApplicationBufferSize = DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE;
 
@@ -273,92 +278,90 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
-            synchronized (ReferenceCountedOpenSslContext.class) {
-                try {
-                    ctx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, mode);
-                } catch (Exception e) {
-                    throw new SSLException("failed to create an SSL_CTX", e);
-                }
+            try {
+                ctx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, mode);
+            } catch (Exception e) {
+                throw new SSLException("failed to create an SSL_CTX", e);
+            }
 
-                SSLContext.setOptions(ctx, SSLContext.getOptions(ctx) |
-                        SSL.SSL_OP_NO_SSLv2 |
-                        SSL.SSL_OP_NO_SSLv3 |
-                        SSL.SSL_OP_CIPHER_SERVER_PREFERENCE |
+            SSLContext.setOptions(ctx, SSLContext.getOptions(ctx) |
+                    SSL.SSL_OP_NO_SSLv2 |
+                    SSL.SSL_OP_NO_SSLv3 |
+                    SSL.SSL_OP_CIPHER_SERVER_PREFERENCE |
 
-                // We do not support compression at the moment so we should explicitly disable it.
-                        SSL.SSL_OP_NO_COMPRESSION |
+                    // We do not support compression at the moment so we should explicitly disable it.
+                    SSL.SSL_OP_NO_COMPRESSION |
 
-                // Disable ticket support by default to be more inline with SSLEngineImpl of the JDK.
-                // This also let SSLSession.getId() work the same way for the JDK implementation and the OpenSSLEngine.
-                // If tickets are supported SSLSession.getId() will only return an ID on the server-side if it could
-                // make use of tickets.
-                        SSL.SSL_OP_NO_TICKET);
+                    // Disable ticket support by default to be more inline with SSLEngineImpl of the JDK.
+                    // This also let SSLSession.getId() work the same way for the JDK implementation and the
+                    // OpenSSLEngine. If tickets are supported SSLSession.getId() will only return an ID on the
+                    // server-side if it could make use of tickets.
+                    SSL.SSL_OP_NO_TICKET);
 
-                // We need to enable SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER as the memory address may change between
-                // calling OpenSSLEngine.wrap(...).
-                // See https://github.com/netty/netty-tcnative/issues/100
-                SSLContext.setMode(ctx, SSLContext.getMode(ctx) | SSL.SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+            // We need to enable SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER as the memory address may change between
+            // calling OpenSSLEngine.wrap(...).
+            // See https://github.com/netty/netty-tcnative/issues/100
+            SSLContext.setMode(ctx, SSLContext.getMode(ctx) | SSL.SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
-                if (DH_KEY_LENGTH != null) {
-                    SSLContext.setTmpDHLength(ctx, DH_KEY_LENGTH);
-                }
+            if (DH_KEY_LENGTH != null) {
+                SSLContext.setTmpDHLength(ctx, DH_KEY_LENGTH);
+            }
 
                 /* List the ciphers that are permitted to negotiate. */
-                try {
-                    SSLContext.setCipherSuite(ctx, CipherSuiteConverter.toOpenSsl(unmodifiableCiphers));
-                } catch (SSLException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new SSLException("failed to set cipher suite: " + unmodifiableCiphers, e);
-                }
+            try {
+                SSLContext.setCipherSuite(ctx, CipherSuiteConverter.toOpenSsl(unmodifiableCiphers));
+            } catch (SSLException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new SSLException("failed to set cipher suite: " + unmodifiableCiphers, e);
+            }
 
-                List<String> nextProtoList = apn.protocols();
+            List<String> nextProtoList = apn.protocols();
                 /* Set next protocols for next protocol negotiation extension, if specified */
-                if (!nextProtoList.isEmpty()) {
-                    String[] appProtocols = nextProtoList.toArray(new String[nextProtoList.size()]);
-                    int selectorBehavior = opensslSelectorFailureBehavior(apn.selectorFailureBehavior());
+            if (!nextProtoList.isEmpty()) {
+                String[] appProtocols = nextProtoList.toArray(new String[nextProtoList.size()]);
+                int selectorBehavior = opensslSelectorFailureBehavior(apn.selectorFailureBehavior());
 
-                    switch (apn.protocol()) {
-                        case NPN:
-                            SSLContext.setNpnProtos(ctx, appProtocols, selectorBehavior);
-                            break;
-                        case ALPN:
-                            SSLContext.setAlpnProtos(ctx, appProtocols, selectorBehavior);
-                            break;
-                        case NPN_AND_ALPN:
-                            SSLContext.setNpnProtos(ctx, appProtocols, selectorBehavior);
-                            SSLContext.setAlpnProtos(ctx, appProtocols, selectorBehavior);
-                            break;
-                        default:
-                            throw new Error();
-                    }
+                switch (apn.protocol()) {
+                    case NPN:
+                        SSLContext.setNpnProtos(ctx, appProtocols, selectorBehavior);
+                        break;
+                    case ALPN:
+                        SSLContext.setAlpnProtos(ctx, appProtocols, selectorBehavior);
+                        break;
+                    case NPN_AND_ALPN:
+                        SSLContext.setNpnProtos(ctx, appProtocols, selectorBehavior);
+                        SSLContext.setAlpnProtos(ctx, appProtocols, selectorBehavior);
+                        break;
+                    default:
+                        throw new Error();
                 }
+            }
 
-                /* Set session cache size, if specified */
-                if (sessionCacheSize > 0) {
-                    this.sessionCacheSize = sessionCacheSize;
-                    SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
-                } else {
-                    // Get the default session cache size using SSLContext.setSessionCacheSize()
-                    this.sessionCacheSize = sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
-                    // Revert the session cache size to the default value.
-                    SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
-                }
+            /* Set session cache size, if specified */
+            if (sessionCacheSize > 0) {
+                this.sessionCacheSize = sessionCacheSize;
+                SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
+            } else {
+                // Get the default session cache size using SSLContext.setSessionCacheSize()
+                this.sessionCacheSize = sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
+                // Revert the session cache size to the default value.
+                SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
+            }
 
-                /* Set session timeout, if specified */
-                if (sessionTimeout > 0) {
-                    this.sessionTimeout = sessionTimeout;
-                    SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
-                } else {
-                    // Get the default session timeout using SSLContext.setSessionCacheTimeout()
-                    this.sessionTimeout = sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
-                    // Revert the session timeout to the default value.
-                    SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
-                }
+            /* Set session timeout, if specified */
+            if (sessionTimeout > 0) {
+                this.sessionTimeout = sessionTimeout;
+                SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
+            } else {
+                // Get the default session timeout using SSLContext.setSessionCacheTimeout()
+                this.sessionTimeout = sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
+                // Revert the session timeout to the default value.
+                SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
+            }
 
-                if (enableOcsp) {
-                    SSLContext.enableOcsp(ctx, isClient());
-                }
+            if (enableOcsp) {
+                SSLContext.enableOcsp(ctx, isClient());
             }
             success = true;
         } finally {
@@ -428,11 +431,17 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * Be aware that it is freed as soon as the {@link #finalize()}  method is called.
      * At this point {@code 0} will be returned.
      *
-     * @deprecated use {@link #sslCtxPointer()}
+     * @deprecated this method is considered unsafe as the returned pointer may be released later. Dont use it!
      */
     @Deprecated
     public final long context() {
-        return ctx;
+        Lock readerLock = ctxLock.readLock();
+        readerLock.lock();
+        try {
+            return ctx;
+        } finally {
+            readerLock.unlock();
+        }
     }
 
     /**
@@ -491,18 +500,29 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     /**
      * Returns the pointer to the {@code SSL_CTX} object for this {@link ReferenceCountedOpenSslContext}.
-     * Be aware that it is freed as soon as the {@link #release()}  method is called.
+     * Be aware that it is freed as soon as the {@link #release()} method is called.
      * At this point {@code 0} will be returned.
+     *
+     * @deprecated this method is considered unsafe as the returned pointer may be released later. Dont use it!
      */
+    @Deprecated
     public final long sslCtxPointer() {
-        return ctx;
+        Lock readerLock = ctxLock.readLock();
+        readerLock.lock();
+        try {
+            return ctx;
+        } finally {
+            readerLock.unlock();
+        }
     }
 
     // IMPORTANT: This method must only be called from either the constructor or the finalizer as a user MUST never
     //            get access to an OpenSslSessionContext after this method was called to prevent the user from
     //            producing a segfault.
-    final void destroy() {
-        synchronized (ReferenceCountedOpenSslContext.class) {
+    private void destroy() {
+        Lock writerLock = ctxLock.writeLock();
+        writerLock.lock();
+        try {
             if (ctx != 0) {
                 if (enableOcsp) {
                     SSLContext.disableOcsp(ctx);
@@ -511,6 +531,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 SSLContext.free(ctx);
                 ctx = 0;
             }
+        } finally {
+            writerLock.unlock();
         }
     }
 
