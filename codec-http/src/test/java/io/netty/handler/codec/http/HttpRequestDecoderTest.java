@@ -170,13 +170,36 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testEmptyHeaderValue() {
+    public void testMultiLineHeader() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         String crlf = "\r\n";
         String request =  "GET /some/path HTTP/1.1" + crlf +
                 "Host: localhost" + crlf +
+                "MyTestHeader: part1" + crlf +
+                "              newLinePart2" + crlf +
+                "MyTestHeader2: part21" + crlf +
+                "\t            newLinePart22"
+                + crlf + crlf;
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(request, CharsetUtil.US_ASCII)));
+        HttpRequest req = (HttpRequest) channel.readInbound();
+        assertEquals("part1 newLinePart2", req.headers().get("MyTestHeader"));
+        assertEquals("part21 newLinePart22", req.headers().get("MyTestHeader2"));
+
+        LastHttpContent c = (LastHttpContent) channel.readInbound();
+        c.release();
+
+        assertFalse(channel.finish());
+        assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void testEmptyHeaderValue() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String crlf = "\r\n";
+        String request = "GET /some/path HTTP/1.1" + crlf +
+                "Host: localhost" + crlf +
                 "EmptyHeader:" + crlf + crlf;
-        channel.writeInbound(Unpooled.wrappedBuffer(request.getBytes(CharsetUtil.US_ASCII)));
+        channel.writeInbound(Unpooled.copiedBuffer(request, CharsetUtil.US_ASCII));
         HttpRequest req = (HttpRequest) channel.readInbound();
         assertEquals("", req.headers().get("EmptyHeader"));
     }
