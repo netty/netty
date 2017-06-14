@@ -1167,14 +1167,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        // Discard bytes of the cumulation buffer if needed.
-        discardSomeReadBytes();
-
         flushIfNeeded(ctx);
-        readIfNeeded(ctx);
-
+        boolean readData = firedChannelRead;
         firedChannelRead = false;
-        ctx.fireChannelReadComplete();
+        // if readData is false channelReadComplete(....) will take care of calling read.
+        if (readData && !handshakePromise.isDone() && !ctx.channel().config().isAutoRead()) {
+            // If handshake is not finished yet, we need more data.
+            ctx.read();
+        }
+        channelReadComplete(ctx, readData);
     }
 
     private void readIfNeeded(ChannelHandlerContext ctx) {
