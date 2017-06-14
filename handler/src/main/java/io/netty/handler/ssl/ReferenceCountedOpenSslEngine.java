@@ -43,6 +43,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import java.util.concurrent.locks.Lock;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -234,7 +236,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         localCerts = context.keyCertChain;
         keyMaterialManager = context.keyMaterialManager();
         enableOcsp = context.enableOcsp;
-        ssl = SSL.newSSL(context.ctx, !context.isClient());
+
+        Lock readerLock = context.ctxLock.readLock();
+        readerLock.lock();
+        try {
+            ssl = SSL.newSSL(context.ctx, !context.isClient());
+        } finally {
+            readerLock.unlock();
+        }
         try {
             networkBIO = SSL.bioNewByteBuffer(ssl, context.getBioNonApplicationBufferSize());
 
