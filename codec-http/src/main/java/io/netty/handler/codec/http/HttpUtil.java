@@ -532,6 +532,20 @@ public final class HttpUtil {
         }
     }
 
+    public static boolean mustNotContainContentLength(HttpMessage msg) {
+        // RFC7230 Section 3.3.2
+        // https://tools.ietf.org/html/rfc7230#section-3.3.2
+        //
+        // A server MUST NOT send a Content-Length header field in any response with
+        // a status code of 1xx (Informational) or 204 (No Content).
+        if (msg instanceof HttpResponse) {
+            HttpResponseStatus status = ((HttpResponse) msg).status();
+            return HttpStatusClass.valueOf(status.code()) == HttpStatusClass.INFORMATIONAL ||
+                    status == HttpResponseStatus.NO_CONTENT;
+        }
+        return false;
+    }
+
     private static byte c2b(char c) {
         return c > 255 ? (byte) '?' : (byte) c;
     }
