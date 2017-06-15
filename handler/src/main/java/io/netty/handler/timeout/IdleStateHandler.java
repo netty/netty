@@ -25,7 +25,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.concurrent.EventExecutor;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -300,9 +299,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         // Allow writing with void promise if handler is only configured for read timeout events.
         if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
-            ChannelPromise unvoid = promise.unvoid();
-            unvoid.addListener(writeListener);
-            ctx.write(msg, unvoid);
+            ctx.write(msg, promise.unvoid()).addListener(writeListener);
         } else {
             ctx.write(msg, promise);
         }
