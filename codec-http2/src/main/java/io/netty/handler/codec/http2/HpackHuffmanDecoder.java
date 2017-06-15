@@ -231,8 +231,11 @@ final class HpackHuffmanDecoder {
 
         private void append(int i) {
             if (bytes.length == index) {
-                // Always just expand by INITIAL_SIZE
-                byte[] newBytes = new byte[bytes.length + initialCapacity];
+                // Choose an expanding strategy depending on how big the buffer already is.
+                // 1024 was choosen as a good guess and we may be able to investigate more if there are better choices.
+                // See also https://github.com/netty/netty/issues/6846
+                final int newLength = bytes.length >= 1024 ? bytes.length + initialCapacity : bytes.length << 1;
+                byte[] newBytes = new byte[newLength];
                 System.arraycopy(bytes, 0, newBytes, 0, bytes.length);
                 bytes = newBytes;
             }
