@@ -15,30 +15,46 @@
  */
 package io.netty.handler.codec.compression;
 
-import java.io.InputStream;
-import java.util.zip.Checksum;
-
-import io.netty.util.internal.PlatformDependent;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.EncoderException;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.xxhash.XXHashFactory;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.io.InputStream;
+import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.Checksum;
+
 import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.when;
 
 public class Lz4FrameEncoderTest extends AbstractEncoderTest {
@@ -220,5 +236,73 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         Assert.assertTrue(channel.finish());
         Assert.assertTrue(channel.releaseOutbound());
         Assert.assertFalse(channel.releaseInbound());
+    }
+
+    @Test(timeout = 3000)
+    public void writingAfterClosedChannelDoesNotNPE() throws InterruptedException {
+        EventLoopGroup group = new NioEventLoopGroup(2);
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicReference<Throwable> writeFailCauseRef = new AtomicReference<Throwable>();
+        try {
+            ServerBootstrap sb = new ServerBootstrap();
+            sb.group(group);
+            sb.channel(NioServerSocketChannel.class);
+            sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                }
+            });
+
+            Bootstrap bs = new Bootstrap();
+            bs.group(group);
+            bs.channel(NioSocketChannel.class);
+            bs.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addLast(new Lz4FrameEncoder());
+                }
+            });
+
+            serverChannel = sb.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+            clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+
+            final Channel finalClientChannel = clientChannel;
+            clientChannel.eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    finalClientChannel.close();
+                    final int size = 27;
+                    ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(size, size);
+                    finalClientChannel.writeAndFlush(buf.writerIndex(buf.writerIndex() + size))
+                            .addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            try {
+                                writeFailCauseRef.set(future.cause());
+                            } finally {
+                                latch.countDown();
+                            }
+                        }
+                    });
+                }
+            });
+            latch.await();
+            Throwable writeFailCause = writeFailCauseRef.get();
+            assertNotNull(writeFailCause);
+            Throwable writeFailCauseCause = writeFailCause.getCause();
+            if (writeFailCauseCause != null) {
+                assertThat(writeFailCauseCause, is(not(instanceOf(NullPointerException.class))));
+            }
+        } finally {
+            if (serverChannel != null) {
+                serverChannel.close();
+            }
+            if (clientChannel != null) {
+                clientChannel.close();
+            }
+            group.shutdownGracefully();
+        }
     }
 }
