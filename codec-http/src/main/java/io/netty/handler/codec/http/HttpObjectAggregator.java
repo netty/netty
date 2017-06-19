@@ -151,7 +151,11 @@ public class HttpObjectAggregator
 
     @Override
     protected boolean isContentLengthInvalid(HttpMessage start, int maxContentLength) {
-        return getContentLength(start, -1L) > maxContentLength;
+        try {
+            return getContentLength(start, -1L) > maxContentLength;
+        } catch (final NumberFormatException e) {
+            return false;
+        }
     }
 
     @Override
