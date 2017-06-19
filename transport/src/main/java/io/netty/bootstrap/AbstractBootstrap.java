@@ -17,6 +17,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactoriesRegistry;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -208,6 +209,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * call the super method in that case.
      */
     public B validate() {
+        ensureChannelFactory();
         if (group == null) {
             throw new IllegalStateException("group not set");
         }
@@ -215,6 +217,12 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             throw new IllegalStateException("channel or channelFactory not set");
         }
         return self();
+    }
+
+    private void ensureChannelFactory() {
+        if (channelFactory == null) {
+            channelFactory = ChannelFactoriesRegistry.getFactoryForEventLoopGroup(group.getClass(), isServerSide());
+        }
     }
 
     /**
@@ -279,6 +287,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
+        ensureChannelFactory();
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
@@ -315,6 +324,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     final ChannelFuture initAndRegister() {
+        ensureChannelFactory();
         Channel channel = null;
         try {
             channel = channelFactory.newChannel();
@@ -499,4 +509,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return GlobalEventExecutor.INSTANCE;
         }
     }
+
+    protected abstract boolean isServerSide();
 }

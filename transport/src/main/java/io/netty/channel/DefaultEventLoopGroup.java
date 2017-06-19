@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalServerChannel;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
@@ -22,6 +24,12 @@ import java.util.concurrent.ThreadFactory;
  * {@link MultithreadEventLoopGroup} which must be used for the local transport.
  */
 public class DefaultEventLoopGroup extends MultithreadEventLoopGroup {
+
+    static {
+        ChannelFactoriesRegistry.registerFactoryForEventLoopGroup(DefaultEventLoopGroup.class,
+            new ReflectiveChannelFactory(LocalChannel.class),
+            new ReflectiveChannelFactory(LocalServerChannel.class));
+    }
 
     /**
      * Create a new instance with the default number of threads.

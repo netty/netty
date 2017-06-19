@@ -318,4 +318,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     public final ServerBootstrapConfig config() {
         return config;
     }
+
+    @Override
+    protected boolean isServerSide() {
+        return true;
+    }
+
 }

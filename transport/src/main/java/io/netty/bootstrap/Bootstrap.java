@@ -315,4 +315,9 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     final AddressResolverGroup<?> resolver() {
         return resolver;
     }
+
+    @Override
+    protected boolean isServerSide() {
+        return false;
+    }
 }

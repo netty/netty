@@ -15,10 +15,12 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.ChannelFactoriesRegistry;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
@@ -36,6 +38,10 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     {
         // Ensure JNI is initialized by the time this class is loaded.
         Epoll.ensureAvailability();
+
+        ChannelFactoriesRegistry.registerFactoryForEventLoopGroup(EpollEventLoopGroup.class,
+            new ReflectiveChannelFactory(EpollSocketChannel.class),
+            new ReflectiveChannelFactory(EpollServerSocketChannel.class));
     }
 
     /**
