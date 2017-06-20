@@ -315,7 +315,9 @@ static jstring netty_epoll_native_kernelVersion(JNIEnv* env, jclass clazz) {
 }
 
 static jboolean netty_epoll_native_isSupportingSendmmsg(JNIEnv* env, jclass clazz) {
-    if (sendmmsg) {
+    // Use & to avoid warnings with -Wtautological-pointer-compare when sendmmsg is
+    // not weakly defined.
+    if (&sendmmsg != NULL) {
         return JNI_TRUE;
     }
     return JNI_FALSE;
