@@ -47,7 +47,8 @@ public class UnixChannelUtilTest {
     private static void testIsBufferCopyNeededForWrite(ByteBufAllocator alloc) {
         ByteBuf byteBuf = alloc.directBuffer();
         assertFalse(isBufferCopyNeededForWrite(byteBuf));
-        assertTrue(isBufferCopyNeededForWrite(byteBuf.asReadOnly()));
+        // no need copy byteBuf for direct readOnly buf
+        assertFalse(isBufferCopyNeededForWrite(byteBuf.asReadOnly()));
 
         assertTrue(byteBuf.release());
 
@@ -56,6 +57,7 @@ public class UnixChannelUtilTest {
         assertTrue(isBufferCopyNeededForWrite(byteBuf.asReadOnly()));
         assertTrue(byteBuf.release());
 
+        // no need copy byteBuf for composited direct byteBuf which components number less than IOV_MAX
         assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, 2, 0, false);
         assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, IOV_MAX + 1, 0, true);
         assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, 0, 2, true);

@@ -46,4 +46,8 @@
       <scope>compile</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <testSourceDirectory>src/main/java/io/netty/channel/unix/tests</testSourceDirectory>
+  </build>
 </project>

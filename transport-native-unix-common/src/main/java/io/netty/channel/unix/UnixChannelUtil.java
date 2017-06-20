@@ -27,8 +27,10 @@ public final class UnixChannelUtil {
     /**
      * Checks if the specified buffer has memory address or is composed of n(n <= IOV_MAX) NIO direct buffers.
      * (We check this because otherwise we need to make it a new direct buffer.)
+     *
+     * no need copy for byteBuf has memoryAddress or composited direct byteBuf which components number less than IOV_MAX
      */
     public static boolean isBufferCopyNeededForWrite(ByteBuf byteBuf) {
-        return !byteBuf.hasMemoryAddress() || !byteBuf.isDirect() || byteBuf.nioBufferCount() > IOV_MAX;
+        return !(byteBuf.hasMemoryAddress() || (byteBuf.isDirect() && byteBuf.nioBufferCount() <= IOV_MAX));
     }
 }
