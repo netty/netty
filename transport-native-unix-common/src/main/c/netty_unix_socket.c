@@ -581,7 +581,7 @@ static jint netty_unix_socket_connectDomainSocket(JNIEnv* env, jclass clazz, jin
 static jint netty_unix_socket_recvFd(JNIEnv* env, jclass clazz, jint fd) {
     int socketFd;
     struct msghdr descriptorMessage = { 0 };
-    struct iovec iov[1] = { 0 };
+    struct iovec iov[1] = { { 0 } };
     char control[CMSG_SPACE(sizeof(int))] = { 0 };
     char iovecData[1];
 
@@ -629,7 +629,7 @@ static jint netty_unix_socket_recvFd(JNIEnv* env, jclass clazz, jint fd) {
 
 static jint netty_unix_socket_sendFd(JNIEnv* env, jclass clazz, jint socketFd, jint fd) {
     struct msghdr descriptorMessage = { 0 };
-    struct iovec iov[1] = { 0 };
+    struct iovec iov[1] = { { 0 } };
     char control[CMSG_SPACE(sizeof(int))] = { 0 };
     char iovecData[1];
 
