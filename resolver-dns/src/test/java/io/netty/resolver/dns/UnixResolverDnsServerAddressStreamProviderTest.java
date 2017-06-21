@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 
+import static io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider.DEFAULT_NDOTS;
+import static io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider.parseEtcResolverFirstNdots;
 import static org.junit.Assert.assertEquals;
 
 public class UnixResolverDnsServerAddressStreamProviderTest {
@@ -75,6 +77,26 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
         DnsServerAddressStream stream = p.nameServerAddressStream("myhost.dc1.linecorp.local");
         assertHostNameEquals("127.0.0.4", stream.next());
         assertHostNameEquals("127.0.0.5", stream.next());
+    }
+
+    @Test
+    public void ndotsIsParsedIfPresent() throws IOException {
+        File f = buildFile("search localdomain\n" +
+                           "nameserver 127.0.0.11\n" +
+                           "options ndots:0\n");
+        assertEquals(0, parseEtcResolverFirstNdots(f));
+
+        f = buildFile("search localdomain\n" +
+                      "nameserver 127.0.0.11\n" +
+                      "options ndots:123 foo:goo\n");
+        assertEquals(123, parseEtcResolverFirstNdots(f));
+    }
+
+    @Test
+    public void defaultValueReturnedIfNdotsNotPresent() throws IOException {
+        File f = buildFile("search localdomain\n" +
+                           "nameserver 127.0.0.11\n");
+        assertEquals(DEFAULT_NDOTS, parseEtcResolverFirstNdots(f));
     }
 
     private File buildFile(String contents) throws IOException {

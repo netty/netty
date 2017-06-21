@@ -64,9 +64,9 @@ import java.util.Iterator;
 import java.util.List;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
+import static io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider.parseEtcResolverFirstNdots;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * A DNS-based {@link InetNameResolver}.
@@ -97,6 +97,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     static final ResolvedAddressTypes DEFAULT_RESOLVE_ADDRESS_TYPES;
     static final String[] DEFAULT_SEARCH_DOMAINS;
+    private static final int DEFAULT_NDOTS;
 
     static {
         if (NetUtil.isIpV4StackPreferred()) {
@@ -129,6 +130,14 @@ public class DnsNameResolver extends InetNameResolver {
             searchDomains = EmptyArrays.EMPTY_STRINGS;
         }
         DEFAULT_SEARCH_DOMAINS = searchDomains;
+
+        int ndots;
+        try {
+            ndots = parseEtcResolverFirstNdots();
+        } catch (Exception ignore) {
+            ndots = UnixResolverDnsServerAddressStreamProvider.DEFAULT_NDOTS;
+        }
+        DEFAULT_NDOTS = ndots;
     }
 
     private static final DatagramDnsResponseDecoder DECODER = new DatagramDnsResponseDecoder();
@@ -234,7 +243,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.dnsQueryLifecycleObserverFactory =
                 checkNotNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
         this.searchDomains = searchDomains != null ? searchDomains.clone() : DEFAULT_SEARCH_DOMAINS;
-        this.ndots = checkPositiveOrZero(ndots, "ndots");
+        this.ndots = ndots >= 0 ? ndots : DEFAULT_NDOTS;
         this.decodeIdn = decodeIdn;
 
         switch (this.resolvedAddressTypes) {

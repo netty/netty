@@ -55,7 +55,7 @@ public final class DnsNameResolverBuilder {
     private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory =
             NoopDnsQueryLifecycleObserverFactory.INSTANCE;
     private String[] searchDomains;
-    private int ndots = 1;
+    private int ndots = -1;
     private boolean decodeIdn = true;
 
     /**
