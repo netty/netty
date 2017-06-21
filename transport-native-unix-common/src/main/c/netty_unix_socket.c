@@ -26,6 +26,7 @@
 #include <netinet/tcp.h>
 
 #include "netty_unix_errors.h"
+#include "netty_unix_jni.h"
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
 
@@ -974,7 +975,7 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     free(mem);
 
     socketType = socket_type(env);
-    return JNI_VERSION_1_6;
+    return NETTY_JNI_VERSION;
 }
 
 void netty_unix_socket_JNI_OnUnLoad(JNIEnv* env) {

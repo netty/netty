@@ -26,11 +26,13 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <linux/tcp.h> // TCP_NOTSENT_LOWAT is a linux specific define
-#include "netty_unix_filedescriptor.h"
-#include "netty_unix_socket.h"
-#include "netty_unix_errors.h"
-#include "netty_unix_util.h"
+
 #include "netty_epoll_linuxsocket.h"
+#include "netty_unix_errors.h"
+#include "netty_unix_filedescriptor.h"
+#include "netty_unix_jni.h"
+#include "netty_unix_socket.h"
+#include "netty_unix_util.h"
 
 // TCP_FASTOPEN is defined in linux 3.7. We define this here so older kernels can compile.
 #ifndef TCP_FASTOPEN
@@ -349,7 +351,7 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
         return JNI_ERR;
     }
 
-    return JNI_VERSION_1_6;
+    return NETTY_JNI_VERSION;
 }
 
 void netty_epoll_linuxsocket_JNI_OnUnLoad(JNIEnv* env) {

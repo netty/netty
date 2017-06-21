@@ -389,7 +389,7 @@ public final class OpenSsl {
         String os = normalizeOs(SystemPropertyUtil.get("os.name", ""));
         String arch = normalizeArch(SystemPropertyUtil.get("os.arch", ""));
 
-        Set<String> libNames = new LinkedHashSet<String>(3);
+        Set<String> libNames = new LinkedHashSet<String>(4);
         // First, try loading the platform-specific library. Platform-specific
         // libraries will be available if using a tcnative uber jar.
         libNames.add("netty-tcnative-" + os + '-' + arch);
@@ -399,6 +399,8 @@ public final class OpenSsl {
         }
         // finally the default library.
         libNames.add("netty-tcnative");
+        // in Java 8, statically compiled JNI code is namespaced
+        libNames.add("netty_tcnative");
 
         NativeLibraryLoader.loadFirstAvailable(SSL.class.getClassLoader(),
             libNames.toArray(new String[libNames.size()]));

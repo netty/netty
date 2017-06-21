@@ -100,7 +100,11 @@ final class Native {
         if (!name.startsWith("mac") && !name.contains("bsd") && !name.startsWith("darwin")) {
             throw new IllegalStateException("Only supported on BSD");
         }
-        NativeLibraryLoader.load("netty-transport-native-kqueue", PlatformDependent.getClassLoader(Native.class));
+        String []libraryNames = new String[] {
+            "netty-transport-native-kqueue",
+            "netty_transport_native_kqueue"
+        };
+        NativeLibraryLoader.loadFirstAvailable(PlatformDependent.getClassLoader(Native.class), libraryNames);
     }
 
     private Native() {

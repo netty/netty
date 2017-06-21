@@ -25,13 +25,16 @@
 #include <sys/event.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#include "netty_unix_filedescriptor.h"
-#include "netty_unix_socket.h"
-#include "netty_unix_errors.h"
-#include "netty_unix_util.h"
-#include "netty_unix_limits.h"
+
 #include "netty_kqueue_bsdsocket.h"
 #include "netty_kqueue_eventarray.h"
+#include "netty_unix_errors.h"
+#include "netty_unix_filedescriptor.h"
+#include "netty_unix_jni.h"
+#include "netty_unix_limits.h"
+#include "netty_unix_socket.h"
+#include "netty_unix_util.h"
+
 
 clockid_t waitClockId = 0; // initialized by netty_unix_util_initialize_wait_clock
 
@@ -255,7 +258,7 @@ static jint netty_kqueue_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefi
       return JNI_ERR;
     }
 
-    return JNI_VERSION_1_6;
+    return NETTY_JNI_VERSION;
 }
 
 static void netty_kqueue_native_JNI_OnUnLoad(JNIEnv* env) {
@@ -267,12 +270,15 @@ static void netty_kqueue_native_JNI_OnUnLoad(JNIEnv* env) {
     netty_kqueue_eventarray_JNI_OnUnLoad(env);
 }
 
-jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+// Invoked by the JVM when statically linked
+jint JNI_OnLoad_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
     JNIEnv* env;
-    if ((*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_6) != JNI_OK) {
+    if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
         return JNI_ERR;
     }
 
+    char* packagePrefix = NULL;
+#ifndef NETTY_NOT_DYNAMIC
     Dl_info dlinfo;
     jint status = 0;
     // We need to use an address of a function that is uniquely part of this library, so choose a static
@@ -281,12 +287,12 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         fprintf(stderr, "FATAL: transport-native-kqueue JNI call to dladdr failed!\n");
         return JNI_ERR;
     }
-    char* packagePrefix = netty_unix_util_parse_package_prefix(dlinfo.dli_fname, "netty-transport-native-kqueue", &status);
+    packagePrefix = netty_unix_util_parse_package_prefix(dlinfo.dli_fname, "netty-transport-native-kqueue", &status);
     if (status == JNI_ERR) {
         fprintf(stderr, "FATAL: transport-native-kqueue JNI encountered unexpected dlinfo.dli_fname: %s\n", dlinfo.dli_fname);
         return JNI_ERR;
     }
-
+#endif /* NETTY_NOT_DYNAMIC */
     jint ret = netty_kqueue_native_JNI_OnLoad(env, packagePrefix);
 
     if (packagePrefix != NULL) {
@@ -297,11 +303,20 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     return ret;
 }
 
-void JNI_OnUnload(JavaVM* vm, void* reserved) {
+jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+    return JNI_OnLoad_netty_transport_native_kqueue(vm, reserved);
+}
+
+// Invoked by the JVM when statically linked
+void JNI_OnUnload_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
     JNIEnv* env;
-    if ((*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_6) != JNI_OK) {
+    if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
         // Something is wrong but nothing we can do about this :(
         return;
     }
     netty_kqueue_native_JNI_OnUnLoad(env);
+}
+
+void JNI_OnUnload(JavaVM* vm, void* reserved) {
+    return JNI_OnUnload_netty_transport_native_kqueue(vm, reserved);
 }
