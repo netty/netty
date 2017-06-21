@@ -361,7 +361,7 @@ public final class HttpConversionUtil {
             }
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;
-            out.status(new AsciiString(Integer.toString(response.status().code())));
+            out.status(response.status().codeAsText());
         }
 
         // Add the HTTP headers which have not been consumed above
