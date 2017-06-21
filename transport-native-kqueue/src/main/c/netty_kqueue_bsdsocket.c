@@ -24,11 +24,13 @@
 #include <sys/ucred.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include "netty_unix_filedescriptor.h"
-#include "netty_unix_socket.h"
-#include "netty_unix_errors.h"
-#include "netty_unix_util.h"
+
 #include "netty_kqueue_bsdsocket.h"
+#include "netty_unix_errors.h"
+#include "netty_unix_filedescriptor.h"
+#include "netty_unix_jni.h"
+#include "netty_unix_socket.h"
+#include "netty_unix_util.h"
 
 // Those are initialized in the init(...) method and cached for performance reasons
 static jclass stringCls = NULL;
@@ -288,7 +290,7 @@ jint netty_kqueue_bsdsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
         return JNI_ERR;
     }
 
-    return JNI_VERSION_1_6;
+    return NETTY_JNI_VERSION;
 }
 
 void netty_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env) {
