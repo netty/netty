@@ -45,10 +45,15 @@ import static io.netty.util.internal.StringUtil.indexOfNonWhiteSpace;
 public final class UnixResolverDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(UnixResolverDnsServerAddressStreamProvider.class);
+    private static final String ETC_RESOLV_CONF_FILE = "/etc/resolv.conf";
+    private static final String ETC_RESOLVER_DIR = "/etc/resolver";
     private static final String NAMESERVER_ROW_LABEL = "nameserver";
     private static final String SORTLIST_ROW_LABEL = "sortlist";
+    private static final String OPTIONS_ROW_LABEL = "options";
     private static final String DOMAIN_ROW_LABEL = "domain";
     private static final String PORT_ROW_LABEL = "port";
+    private static final String NDOTS_LABEL = "ndots:";
+    static final int DEFAULT_NDOTS = 1;
     private final DnsServerAddresses defaultNameServerAddresses;
     private final Map<String, DnsServerAddresses> domainToNameServerStreamMap;
 
@@ -59,11 +64,11 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
     static DnsServerAddressStreamProvider parseSilently() {
         try {
             UnixResolverDnsServerAddressStreamProvider nameServerCache =
-                    new UnixResolverDnsServerAddressStreamProvider("/etc/resolv.conf", "/etc/resolver");
+                    new UnixResolverDnsServerAddressStreamProvider(ETC_RESOLV_CONF_FILE, ETC_RESOLVER_DIR);
             return nameServerCache.mayOverrideNameServers() ? nameServerCache
                                                             : DefaultDnsServerAddressStreamProvider.INSTANCE;
         } catch (Exception e) {
-            logger.debug("failed to parse /etc/resolv.conf and/or /etc/resolver", e);
+            logger.debug("failed to parse {} and/or {}", ETC_RESOLV_CONF_FILE, ETC_RESOLVER_DIR, e);
             return DefaultDnsServerAddressStreamProvider.INSTANCE;
         }
     }
@@ -234,5 +239,51 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
             logger.debug("Domain name {} already maps to addresses {} so new addresses {} will be discarded",
                     domainName, existingAddresses, addresses);
         }
+    }
+
+    /**
+     * Parse a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and return the
+     * value corresponding to the first ndots in an options configuration.
+     * @return the value corresponding to the first ndots in an options configuration, or {@link #DEFAULT_NDOTS} if not
+     * found.
+     * @throws IOException If a failure occurs parsing the file.
+     */
+    static int parseEtcResolverFirstNdots() throws IOException {
+        return parseEtcResolverFirstNdots(new File(ETC_RESOLV_CONF_FILE));
+    }
+
+    /**
+     * Parse a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and return the
+     * value corresponding to the first ndots in an options configuration.
+     * @param etcResolvConf a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a>.
+     * @return the value corresponding to the first ndots in an options configuration, or {@link #DEFAULT_NDOTS} if not
+     * found.
+     * @throws IOException If a failure occurs parsing the file.
+     */
+    static int parseEtcResolverFirstNdots(File etcResolvConf) throws IOException {
+        FileReader fr = new FileReader(etcResolvConf);
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(fr);
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.startsWith(OPTIONS_ROW_LABEL)) {
+                    int i = line.indexOf(NDOTS_LABEL);
+                    if (i >= 0) {
+                        i += NDOTS_LABEL.length();
+                        final int j = line.indexOf(' ', i);
+                        return Integer.parseInt(line.substring(i, j < 0 ? line.length() : j));
+                    }
+                    break;
+                }
+            }
+        } finally {
+            if (br == null) {
+                fr.close();
+            } else {
+                br.close();
+            }
+        }
+        return DEFAULT_NDOTS;
     }
 }
