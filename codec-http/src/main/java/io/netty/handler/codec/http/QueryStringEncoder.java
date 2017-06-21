@@ -23,9 +23,6 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * Creates an URL-encoded URI from a path string and key-value parameter pairs.
@@ -40,10 +37,9 @@ import java.util.regex.Pattern;
  */
 public class QueryStringEncoder {
 
-    private static final Pattern PATTERN = Pattern.compile("+", Pattern.LITERAL);
-    private final Charset charset;
-    private final String uri;
-    private final List<Param> params = new ArrayList<Param>();
+    private final String charsetName;
+    private final StringBuilder uriBuilder;
+    private boolean hasParams;
 
     /**
      * Creates a new encoder that encodes a URI that starts with the specified
@@ -58,8 +54,8 @@ public class QueryStringEncoder {
      * path string in the specified charset.
      */
     public QueryStringEncoder(String uri, Charset charset) {
-        this.uri = ObjectUtil.checkNotNull(uri, "uri");
-        this.charset = ObjectUtil.checkNotNull(charset, "charset");
+        uriBuilder = new StringBuilder(uri);
+        charsetName = charset.name();
     }
 
     /**
@@ -67,7 +63,17 @@ public class QueryStringEncoder {
      */
     public void addParam(String name, String value) {
         ObjectUtil.checkNotNull(name, "name");
-        params.add(new Param(name, value));
+        if (hasParams) {
+            uriBuilder.append('&');
+        } else {
+            uriBuilder.append('?');
+            hasParams = true;
+        }
+        appendComponent(name, charsetName, uriBuilder);
+        if (value != null) {
+            uriBuilder.append('=');
+            appendComponent(value, charsetName, uriBuilder);
+        }
     }
 
     /**
@@ -86,42 +92,31 @@ public class QueryStringEncoder {
      */
     @Override
     public String toString() {
-        if (params.isEmpty()) {
-            return uri;
-        } else {
-            StringBuilder sb = new StringBuilder(uri).append('?');
-            for (int i = 0; i < params.size(); i++) {
-                Param param = params.get(i);
-                sb.append(encodeComponent(param.name, charset));
-                if (param.value != null) {
-                    sb.append('=');
-                    sb.append(encodeComponent(param.value, charset));
-                }
-                if (i != params.size() - 1) {
-                    sb.append('&');
-                }
-            }
-            return sb.toString();
-        }
+        return uriBuilder.toString();
     }
 
-    private static String encodeComponent(String s, Charset charset) {
-        // TODO: Optimize me.
+    private static void appendComponent(String s, String charset, StringBuilder sb) {
         try {
-            return PATTERN.matcher(URLEncoder.encode(s, charset.name())).replaceAll("%20");
+            s = URLEncoder.encode(s, charset);
         } catch (UnsupportedEncodingException ignored) {
-            throw new UnsupportedCharsetException(charset.name());
+            throw new UnsupportedCharsetException(charset);
         }
-    }
-
-    private static final class Param {
-
-        final String name;
-        final String value;
-
-        Param(String name, String value) {
-            this.value = value;
-            this.name = name;
+        // replace all '+' with "%20"
+        int idx = s.indexOf('+');
+        if (idx == -1) {
+            sb.append(s);
+            return;
+        }
+        sb.append(s, 0, idx).append("%20");
+        int size = s.length();
+        idx++;
+        for (; idx < size; idx++) {
+            char c = s.charAt(idx);
+            if (c != '+') {
+                sb.append(c);
+            } else {
+                sb.append("%20");
+            }
         }
     }
 }
