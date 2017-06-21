@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include "netty_unix_jni.h"
 #include "netty_unix_limits.h"
 #include "netty_unix_util.h"
 
@@ -75,7 +76,7 @@ jint netty_unix_limits_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
         return JNI_ERR;
     }
 
-    return JNI_VERSION_1_6;
+    return NETTY_JNI_VERSION;
 }
 
 void netty_unix_limits_JNI_OnUnLoad(JNIEnv* env) { }

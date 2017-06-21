@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <jni.h>
 #include "netty_unix_errors.h"
+#include "netty_unix_jni.h"
 #include "netty_unix_util.h"
 
 static jclass runtimeExceptionClass = NULL;
@@ -206,7 +207,7 @@ jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
         return JNI_ERR;
     }
 
-    return JNI_VERSION_1_6;
+    return NETTY_JNI_VERSION;
 }
 
 void netty_unix_errors_JNI_OnUnLoad(JNIEnv* env) {
