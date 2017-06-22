@@ -280,8 +280,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                         if (wakenUp == 1) {
                             Native.eventFdWrite(eventFd.intValue(), 1L);
                         }
-                    default:
                         // fallthrough
+                    default:
                 }
 
                 final int ioRatio = this.ioRatio;
