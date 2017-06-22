@@ -91,7 +91,6 @@ abstract class DnsNameResolverContext<T> {
     private final DnsNameResolver parent;
     private final DnsServerAddressStream nameServerAddrs;
     private final String hostname;
-    protected String pristineHostname;
     private final DnsCache resolveCache;
     private final boolean traceEnabled;
     private final int maxAllowedQueries;
@@ -102,6 +101,7 @@ abstract class DnsNameResolverContext<T> {
             Collections.newSetFromMap(
                     new IdentityHashMap<Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>, Boolean>());
 
+    private String pristineHostname;
     private List<DnsCacheEntry> resolvedEntries;
     private StringBuilder trace;
     private int allowedQueries;
@@ -124,46 +124,44 @@ abstract class DnsNameResolverContext<T> {
         allowedQueries = maxAllowedQueries;
     }
 
-    void resolve(Promise<T> promise) {
-        boolean directSearch = parent.searchDomains().length == 0 || StringUtil.endsWith(hostname, '.');
-        if (directSearch) {
+    void resolve(final Promise<T> promise) {
+        if (parent.searchDomains().length == 0 || parent.ndots() == 0 || StringUtil.endsWith(hostname, '.')) {
             internalResolve(promise);
         } else {
-            final Promise<T> original = promise;
-            promise = parent.executor().newPromise();
-            promise.addListener(new FutureListener<T>() {
-                int count;
+            int dots = 0;
+            for (int idx = hostname.length() - 1; idx >= 0; idx--) {
+                if (hostname.charAt(idx) == '.' && ++dots >= parent.ndots()) {
+                    internalResolve(promise);
+                    return;
+                }
+            }
+
+            doSearchDomainQuery(0, new FutureListener<T>() {
+                private int count = 1;
                 @Override
                 public void operationComplete(Future<T> future) throws Exception {
                     if (future.isSuccess()) {
-                        original.trySuccess(future.getNow());
+                        promise.trySuccess(future.getNow());
                     } else if (count < parent.searchDomains().length) {
-                        String searchDomain = parent.searchDomains()[count++];
-                        Promise<T> nextPromise = parent.executor().newPromise();
-                        String nextHostname = hostname + '.' + searchDomain;
-                        DnsNameResolverContext<T> nextContext = newResolverContext(parent,
-                            nextHostname, additionals, resolveCache, nameServerAddrs);
-                        nextContext.pristineHostname = hostname;
-                        nextContext.internalResolve(nextPromise);
-                        nextPromise.addListener(this);
+                        doSearchDomainQuery(count++, this);
                     } else {
-                        original.tryFailure(future.cause());
+                        promise.tryFailure(future.cause());
                     }
                 }
             });
-            if (parent.ndots() == 0) {
-                internalResolve(promise);
-            } else {
-                int dots = 0;
-                for (int idx = hostname.length() - 1; idx >= 0; idx--) {
-                    if (hostname.charAt(idx) == '.' && ++dots >= parent.ndots()) {
-                        internalResolve(promise);
-                        return;
-                    }
-                }
-                promise.tryFailure(new UnknownHostException(hostname));
-            }
         }
+    }
+
+    private void doSearchDomainQuery(int count, FutureListener<T> listener) {
+        DnsNameResolverContext<T> nextContext = newResolverContext(parent,
+                                                                   hostname + '.' + parent.searchDomains()[count],
+                                                                   additionals,
+                                                                   resolveCache,
+                                                                   nameServerAddrs);
+        nextContext.pristineHostname = hostname;
+        Promise<T> nextPromise = parent.executor().newPromise();
+        nextContext.internalResolve(nextPromise);
+        nextPromise.addListener(listener);
     }
 
     private void internalResolve(Promise<T> promise) {
