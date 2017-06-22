@@ -15,6 +15,7 @@
  */
 package io.netty.util;
 
+import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
 import java.net.Inet6Address;
@@ -772,7 +773,7 @@ public class NetUtilTest {
 
         StringBuilder buf = new StringBuilder(value.length << 1);
         for (byte b: value) {
-            String hex = Integer.toHexString(b & 0xFF);
+            String hex = StringUtil.byteToHexString(b);
             if (hex.length() == 1) {
                 buf.append('0');
             }
@@ -782,15 +783,6 @@ public class NetUtilTest {
     }
 
     private static byte[] unhex(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        byte[] buf = new byte[value.length() >>> 1];
-        for (int i = 0; i < buf.length; i ++) {
-            buf[i] = (byte) Integer.parseInt(value.substring(i << 1, i + 1 << 1), 16);
-        }
-
-        return buf;
+        return value != null ? StringUtil.decodeHexDump(value) : null;
     }
 }

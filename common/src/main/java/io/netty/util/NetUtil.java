@@ -17,6 +17,7 @@ package io.netty.util;
 
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -379,25 +380,6 @@ public final class NetUtil {
             return getIPv6ByName(ipAddressString, true);
         }
         return null;
-    }
-
-    /**
-     * Convert ASCII hexadecimal character to the {@code int} value.
-     * Unlike {@link Character#digit(char, int)}, returns {@code 0} if character is not a HEX-represented.
-     */
-    private static int getIntValue(char c) {
-        if (c >= '0' && c <= '9') {
-            return c - '0';
-        }
-        if (c >= 'A' && c <= 'F') {
-            // 0xA - a start value in sequence 'A'..'F'
-            return c - 'A' + 0xA;
-        }
-        if (c >= 'a' && c <= 'f') {
-            // 0xA - a start value in sequence 'a'..'f'
-            return c - 'a' + 0xA;
-        }
-        return 0;
     }
 
     private static int decimalDigit(String str, int pos) {
@@ -808,7 +790,7 @@ public final class NetUtil {
                 // at most 4 consecutive bytes we can use bit shifting to accomplish this.
                 // The most significant byte will be encountered first, and reside in the right most
                 // position of the following integer
-                value += getIntValue(c) << ((i - begin) << 2);
+                value += StringUtil.decodeHexNibble(c) << ((i - begin) << 2);
                 break;
             }
         }
