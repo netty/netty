@@ -135,13 +135,13 @@ public final class MacAddressUtil {
      * address.
      */
     public static byte[] defaultMachineId() {
-        byte[] bestMacAddr = MacAddressUtil.bestAvailableMac();
+        byte[] bestMacAddr = bestAvailableMac();
         if (bestMacAddr == null) {
             bestMacAddr = new byte[EUI64_MAC_ADDRESS_LENGTH];
             PlatformDependent.threadLocalRandom().nextBytes(bestMacAddr);
             logger.warn(
                     "Failed to find a usable hardware address from the network interfaces; using random bytes: {}",
-                    MacAddressUtil.formatAddress(bestMacAddr));
+                    formatAddress(bestMacAddr));
         }
         return bestMacAddr;
     }
@@ -173,14 +173,14 @@ public final class MacAddressUtil {
         int j = 0;
         for (int i = 0; i < end; ++i, j += 3) {
             final int sIndex = j + 2;
-            machineId[i] = (byte) Integer.parseInt(value.substring(j, sIndex), 16);
+            machineId[i] = StringUtil.decodeHexByte(value, j);
             if (value.charAt(sIndex) != separator) {
                 throw new IllegalArgumentException("expected separator '" + separator + " but got '" +
                         value.charAt(sIndex) + "' at index: " + sIndex);
             }
         }
 
-        machineId[end] = (byte) Integer.parseInt(value.substring(j, value.length()), 16);
+        machineId[end] = StringUtil.decodeHexByte(value, j);
 
         return machineId;
     }

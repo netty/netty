@@ -33,7 +33,6 @@ import java.util.Map;
 
 import static io.netty.util.internal.ObjectUtil.*;
 import static io.netty.util.internal.StringUtil.*;
-import static io.netty.buffer.ByteBufUtil.decodeHexByte;
 
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.

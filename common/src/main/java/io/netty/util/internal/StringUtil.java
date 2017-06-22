@@ -213,6 +213,69 @@ public final class StringUtil {
     }
 
     /**
+     * Helper to decode half of a hexadecimal number from a string.
+     * @param c The ASCII character of the hexadecimal number to decode.
+     * Must be in the range {@code [0-9a-fA-F]}.
+     * @return The hexadecimal value represented in the ASCII character
+     * given, or {@code -1} if the character is invalid.
+     */
+    public static int decodeHexNibble(final char c) {
+        // Character.digit() is not used here, as it addresses a larger
+        // set of characters (both ASCII and full-width latin letters).
+        if (c >= '0' && c <= '9') {
+            return c - '0';
+        }
+        if (c >= 'A' && c <= 'F') {
+            return c - 'A' + 0xA;
+        }
+        if (c >= 'a' && c <= 'f') {
+            return c - 'a' + 0xA;
+        }
+        return -1;
+    }
+
+    /**
+     * Decode a 2-digit hex byte from within a string.
+     */
+    public static byte decodeHexByte(CharSequence s, int pos) {
+        int hi = decodeHexNibble(s.charAt(pos));
+        int lo = decodeHexNibble(s.charAt(pos + 1));
+        if (hi == -1 || lo == -1) {
+            throw new IllegalArgumentException(String.format(
+                    "invalid hex byte '%s' at index %d of '%s'", s.subSequence(pos, pos + 2), pos, s));
+        }
+        return (byte) ((hi << 4) + lo);
+    }
+
+    /**
+     * Decodes part of a string with <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     *
+     * @param hexDump a {@link CharSequence} which contains the hex dump
+     * @param fromIndex start of hex dump in {@code hexDump}
+     * @param length hex string length
+     */
+    public static byte[] decodeHexDump(CharSequence hexDump, int fromIndex, int length) {
+        if (length < 0 || (length & 1) != 0) {
+            throw new IllegalArgumentException("length: " + length);
+        }
+        if (length == 0) {
+            return EmptyArrays.EMPTY_BYTES;
+        }
+        byte[] bytes = new byte[length >>> 1];
+        for (int i = 0; i < length; i += 2) {
+            bytes[i >>> 1] = decodeHexByte(hexDump, fromIndex + i);
+        }
+        return bytes;
+    }
+
+    /**
+     * Decodes a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     */
+    public static byte[] decodeHexDump(CharSequence hexDump) {
+        return decodeHexDump(hexDump, 0, hexDump.length());
+    }
+
+    /**
      * The shortcut to {@link #simpleClassName(Class) simpleClassName(o.getClass())}.
      */
     public static String simpleClassName(Object o) {

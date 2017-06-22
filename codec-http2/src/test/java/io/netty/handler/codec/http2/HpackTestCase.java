@@ -41,8 +41,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.StringUtil;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
@@ -71,11 +71,11 @@ final class HpackTestCase {
     private HpackTestCase() {
     }
 
-    static HpackTestCase load(InputStream is) throws IOException {
+    static HpackTestCase load(InputStream is) {
         InputStreamReader r = new InputStreamReader(is);
         HpackTestCase hpackTestCase = GSON.fromJson(r, HpackTestCase.class);
         for (HeaderBlock headerBlock : hpackTestCase.headerBlocks) {
-            headerBlock.encodedBytes = HpackHex.decodeHex(headerBlock.getEncodedStr().toCharArray());
+            headerBlock.encodedBytes = StringUtil.decodeHexDump(headerBlock.getEncodedStr());
         }
         return hpackTestCase;
     }
@@ -92,7 +92,7 @@ final class HpackTestCase {
             if (!Arrays.equals(actual, headerBlock.encodedBytes)) {
                 throw new AssertionError(
                         "\nEXPECTED:\n" + headerBlock.getEncodedStr() +
-                                "\nACTUAL:\n" + HpackHex.encodeHexString(actual));
+                                "\nACTUAL:\n" + StringUtil.toHexString(actual));
             }
 
             List<HpackHeaderField> actualDynamicTable = new ArrayList<HpackHeaderField>();
