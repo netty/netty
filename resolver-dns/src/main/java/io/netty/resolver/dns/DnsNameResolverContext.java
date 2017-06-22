@@ -101,7 +101,6 @@ abstract class DnsNameResolverContext<T> {
             Collections.newSetFromMap(
                     new IdentityHashMap<Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>, Boolean>());
 
-    private String pristineHostname;
     private List<DnsCacheEntry> resolvedEntries;
     private StringBuilder trace;
     private int allowedQueries;
@@ -145,10 +144,22 @@ abstract class DnsNameResolverContext<T> {
                     } else if (count < parent.searchDomains().length) {
                         doSearchDomainQuery(count++, this);
                     } else {
-                        promise.tryFailure(future.cause());
+                        promise.tryFailure(new SearchDomainUnknownHostException(future.cause(), hostname));
                     }
                 }
             });
+        }
+    }
+
+    private static final class SearchDomainUnknownHostException extends UnknownHostException {
+        SearchDomainUnknownHostException(Throwable cause, String originalHostname) {
+            super("Search domain query failed. Original hostname: '" + originalHostname + "' " + cause.getMessage());
+            setStackTrace(cause.getStackTrace());
+        }
+
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
         }
     }
 
@@ -158,7 +169,6 @@ abstract class DnsNameResolverContext<T> {
                                                                    additionals,
                                                                    resolveCache,
                                                                    nameServerAddrs);
-        nextContext.pristineHostname = hostname;
         Promise<T> nextPromise = parent.executor().newPromise();
         nextContext.internalResolve(nextPromise);
         nextPromise.addListener(listener);
@@ -661,13 +671,7 @@ abstract class DnsNameResolverContext<T> {
         final int tries = maxAllowedQueries - allowedQueries;
         final StringBuilder buf = new StringBuilder(64);
 
-        buf.append("failed to resolve '");
-        if (pristineHostname != null) {
-          buf.append(pristineHostname);
-        } else {
-          buf.append(hostname);
-        }
-        buf.append('\'');
+        buf.append("failed to resolve '").append(hostname).append('\'');
         if (tries > 1) {
             if (tries < maxAllowedQueries) {
                 buf.append(" after ")
