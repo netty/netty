@@ -92,7 +92,6 @@ abstract class DnsNameResolverContext<T> {
     private final DnsServerAddressStream nameServerAddrs;
     private final String hostname;
     private final DnsCache resolveCache;
-    private final boolean traceEnabled;
     private final int maxAllowedQueries;
     private final InternetProtocolFamily[] resolvedInternetProtocolFamilies;
     private final DnsRecord[] additionals;
@@ -103,15 +102,14 @@ abstract class DnsNameResolverContext<T> {
 
     private String pristineHostname;
     private List<DnsCacheEntry> resolvedEntries;
-    private StringBuilder trace;
     private int allowedQueries;
     private boolean triedCNAME;
 
-    protected DnsNameResolverContext(DnsNameResolver parent,
-                                     String hostname,
-                                     DnsRecord[] additionals,
-                                     DnsCache resolveCache,
-                                     DnsServerAddressStream nameServerAddrs) {
+    DnsNameResolverContext(DnsNameResolver parent,
+                           String hostname,
+                           DnsRecord[] additionals,
+                           DnsCache resolveCache,
+                           DnsServerAddressStream nameServerAddrs) {
         this.parent = parent;
         this.hostname = hostname;
         this.additionals = additionals;
@@ -120,7 +118,6 @@ abstract class DnsNameResolverContext<T> {
         this.nameServerAddrs = ObjectUtil.checkNotNull(nameServerAddrs, "nameServerAddrs");
         maxAllowedQueries = parent.maxQueriesPerResolve();
         resolvedInternetProtocolFamilies = parent.resolvedInternetProtocolFamiliesUnsafe();
-        traceEnabled = parent.isTraceEnabled();
         allowedQueries = maxAllowedQueries;
     }
 
@@ -300,11 +297,7 @@ abstract class DnsNameResolverContext<T> {
                         onResponse(nameServerAddrStream, question, future.getNow(), queryLifecycleObserver, promise);
                     } else {
                         // Server did not respond or I/O error occurred; try again.
-                        Throwable cause = future.cause();
-                        queryLifecycleObserver.queryFailed(cause);
-                        if (traceEnabled) {
-                            addTrace(cause);
-                        }
+                        queryLifecycleObserver.queryFailed(future.cause());
                         query(nameServerAddrStream, question, promise);
                     }
                 } finally {
@@ -336,12 +329,6 @@ abstract class DnsNameResolverContext<T> {
                     queryLifecycleObserver.queryFailed(UNRECOGNIZED_TYPE_QUERY_FAILED_EXCEPTION);
                 }
                 return;
-            }
-
-            if (traceEnabled) {
-                addTrace(envelope.sender(),
-                         "response code: " + code + " with " + res.count(DnsSection.ANSWER) + " answer(s) and " +
-                         res.count(DnsSection.AUTHORITY) + " authority resource(s)");
             }
 
             // Retry with the next server if the server did not tell us that the domain does not exist.
@@ -398,12 +385,7 @@ abstract class DnsNameResolverContext<T> {
                     addNameServerToCache(authoritativeNameServer, resolved, r.timeToLive());
                 }
 
-                if (nameServers.isEmpty()) {
-                    if (traceEnabled) {
-                        addTrace(envelope.sender(),
-                                 "no matching authoritative name server found in the ADDITIONALS section");
-                    }
-                } else {
+                if (!nameServers.isEmpty()) {
                     query(parent.uncachedRedirectDnsServerStream(nameServers), question,
                           queryLifecycleObserver.queryRedirected(unmodifiableList(nameServers)), promise);
                     return true;
@@ -489,15 +471,11 @@ abstract class DnsNameResolverContext<T> {
             return;
         }
 
-        if (traceEnabled) {
-            addTrace(envelope.sender(), "no matching " + qType + " record found");
-        }
-
         if (cnames.isEmpty()) {
             queryLifecycleObserver.queryFailed(NO_MATCHING_RECORD_QUERY_FAILED_EXCEPTION);
         } else {
             // We asked for A/AAAA but we got only CNAME.
-            onResponseCNAME(question, envelope, cnames, false, queryLifecycleObserver, promise);
+            onResponseCNAME(question, envelope, cnames, queryLifecycleObserver, promise);
         }
     }
 
@@ -526,12 +504,12 @@ abstract class DnsNameResolverContext<T> {
     private void onResponseCNAME(DnsQuestion question, AddressedEnvelope<DnsResponse, InetSocketAddress> envelope,
                                  final DnsQueryLifecycleObserver queryLifecycleObserver,
                                  Promise<T> promise) {
-        onResponseCNAME(question, envelope, buildAliasMap(envelope.content()), true, queryLifecycleObserver, promise);
+        onResponseCNAME(question, envelope, buildAliasMap(envelope.content()), queryLifecycleObserver, promise);
     }
 
     private void onResponseCNAME(
             DnsQuestion question, AddressedEnvelope<DnsResponse, InetSocketAddress> response,
-            Map<String, String> cnames, boolean trace, final DnsQueryLifecycleObserver queryLifecycleObserver,
+            Map<String, String> cnames, final DnsQueryLifecycleObserver queryLifecycleObserver,
             Promise<T> promise) {
 
         // Resolve the host name in the question into the real host name.
@@ -554,9 +532,6 @@ abstract class DnsNameResolverContext<T> {
             followCname(response.sender(), name, resolved, queryLifecycleObserver, promise);
         } else {
             queryLifecycleObserver.queryFailed(CNAME_NOT_FOUND_QUERY_FAILED_EXCEPTION);
-            if (trace && traceEnabled) {
-                addTrace(response.sender(), "no matching CNAME record found");
-            }
         }
     }
 
@@ -679,10 +654,6 @@ abstract class DnsNameResolverContext<T> {
                 .append(' ');
             }
         }
-        if (trace != null) {
-            buf.append(':')
-               .append(trace);
-        }
         final UnknownHostException cause = new UnknownHostException(buf.toString());
 
         resolveCache.cache(hostname, additionals, cause, parent.ch.eventLoop());
@@ -716,21 +687,6 @@ abstract class DnsNameResolverContext<T> {
     private void followCname(InetSocketAddress nameServerAddr, String name, String cname,
                              final DnsQueryLifecycleObserver queryLifecycleObserver,
                              Promise<T> promise) {
-
-        if (traceEnabled) {
-            if (trace == null) {
-                trace = new StringBuilder(128);
-            }
-
-            trace.append(StringUtil.NEWLINE);
-            trace.append("\tfrom ");
-            trace.append(nameServerAddr);
-            trace.append(": ");
-            trace.append(name);
-            trace.append(" CNAME ");
-            trace.append(cname);
-        }
-
         // Use the same server for both CNAME queries
         DnsServerAddressStream stream = DnsServerAddresses.singleton(getNameServers(cname).next()).stream();
 
@@ -774,37 +730,8 @@ abstract class DnsNameResolverContext<T> {
             return new DefaultDnsQuestion(hostname, type);
         } catch (IllegalArgumentException e) {
             // java.net.IDN.toASCII(...) may throw an IllegalArgumentException if it fails to parse the hostname
-            if (traceEnabled) {
-                addTrace(e);
-            }
             return null;
         }
-    }
-
-    private void addTrace(InetSocketAddress nameServerAddr, String msg) {
-        assert traceEnabled;
-
-        if (trace == null) {
-            trace = new StringBuilder(128);
-        }
-
-        trace.append(StringUtil.NEWLINE);
-        trace.append("\tfrom ");
-        trace.append(nameServerAddr);
-        trace.append(": ");
-        trace.append(msg);
-    }
-
-    private void addTrace(Throwable cause) {
-        assert traceEnabled;
-
-        if (trace == null) {
-            trace = new StringBuilder(128);
-        }
-
-        trace.append(StringUtil.NEWLINE);
-        trace.append("Caused by: ");
-        trace.append(cause);
     }
 
     /**
