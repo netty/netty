@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertEquals;
@@ -273,10 +274,8 @@ public class SearchDomainTest {
     }
 
     @Test
-    public void testExceptionMsgNoSearchDomain() throws Exception {
-        Set<String> domains = new HashSet<String>();
-
-        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(domains);
+    public void testExceptionMsgContainsSearchDomain() throws Exception {
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.<String>emptySet());
         dnsServer = new TestDnsServer(store);
         dnsServer.start();
 
@@ -286,8 +285,25 @@ public class SearchDomainTest {
         assertTrue(fut.await(10, TimeUnit.SECONDS));
         assertFalse(fut.isSuccess());
         final Throwable cause = fut.cause();
-        assertEquals(UnknownHostException.class, cause.getClass());
+        assertThat(cause, instanceOf(UnknownHostException.class));
         assertThat("search domain is included in UnknownHostException", cause.getMessage(),
-            not(containsString("foo.com")));
+            containsString("foo.com"));
+    }
+
+    @Test
+    public void testExceptionMsgDoesNotContainSearchDomainIfNdotsNotHighEnough() throws Exception {
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.<String>emptySet());
+        dnsServer = new TestDnsServer(store);
+        dnsServer.start();
+
+        resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).ndots(1).build();
+
+        Future<InetAddress> fut = resolver.resolve("unknown.hostname");
+        assertTrue(fut.await(10, TimeUnit.SECONDS));
+        assertFalse(fut.isSuccess());
+        final Throwable cause = fut.cause();
+        assertThat(cause, instanceOf(UnknownHostException.class));
+        assertThat("search domain is included in UnknownHostException", cause.getMessage(),
+                not(containsString("foo.com")));
     }
 }
