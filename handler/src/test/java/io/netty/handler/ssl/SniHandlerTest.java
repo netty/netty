@@ -20,7 +20,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
@@ -29,8 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import javax.xml.bind.DatatypeConverter;
 
 import org.junit.Test;
 
@@ -47,10 +44,10 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.DecoderException;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.StringUtil;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -113,7 +110,7 @@ public class SniHandlerTest {
     }
 
     @Parameterized.Parameters(name = "{index}: sslProvider={0}")
-    public static Iterable<? extends Object> data() {
+    public static Iterable<?> data() {
         List<SslProvider> params = new ArrayList<SslProvider>(3);
         if (OpenSsl.isAvailable()) {
             params.add(SslProvider.OPENSSL);
@@ -148,38 +145,28 @@ public class SniHandlerTest {
             SniHandler handler = new SniHandler(mapping);
             EmbeddedChannel ch = new EmbeddedChannel(handler);
 
-            // hex dump of a client hello packet, which contains hostname "CHAT4。LEANCLOUD。CN"
-            String tlsHandshakeMessageHex1 = "16030100";
-            // part 2
-            String tlsHandshakeMessageHex = "bd010000b90303a74225676d1814ba57faff3b366" +
-                    "3656ed05ee9dbb2a4dbb1bb1c32d2ea5fc39e0000000100008c0000001700150000164348" +
-                    "415434E380824C45414E434C4F5544E38082434E000b000403000102000a00340032000e0" +
-                    "00d0019000b000c00180009000a0016001700080006000700140015000400050012001300" +
-                    "0100020003000f0010001100230000000d0020001e0601060206030501050205030401040" +
-                    "20403030103020303020102020203000f00010133740000";
-
             try {
-                // Push the handshake message.
-                // Decode should fail because SNI error
-                ch.writeInbound(Unpooled.wrappedBuffer(DatatypeConverter.parseHexBinary(tlsHandshakeMessageHex1)));
-                ch.writeInbound(Unpooled.wrappedBuffer(DatatypeConverter.parseHexBinary(tlsHandshakeMessageHex)));
-                fail();
-            } catch (DecoderException e) {
-                // expected
-            }
+                // hex dump of a client hello packet, which contains hostname "CHAT4.LEANCLOUD.CN"
+                String tlsHandshakeMessageHex1 = "16030100";
+                // part 2
+                String tlsHandshakeMessageHex = "c6010000c20303bb0855d66532c05a0ef784f7c384feeafa68b3" +
+                        "b655ac7288650d5eed4aa3fb52000038c02cc030009fcca9cca8ccaac02b" +
+                        "c02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d" +
+                        "009c003d003c0035002f00ff010000610000001700150000124348415434" +
+                        "2e4c45414e434c4f55442e434e000b000403000102000a000a0008001d00" +
+                        "170019001800230000000d0020001e060106020603050105020503040104" +
+                        "0204030301030203030201020202030016000000170000";
 
-            // This should produce an alert
-            assertTrue(ch.finish());
+                ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex1)));
+                ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex)));
 
-            assertThat(handler.hostname(), is("chat4.leancloud.cn"));
-            assertThat(handler.sslContext(), is(leanContext));
+                // This should produce an alert
+                assertTrue(ch.finish());
 
-            for (;;) {
-                Object msg = ch.readOutbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
+                assertThat(handler.hostname(), is("chat4.leancloud.cn"));
+                assertThat(handler.sslContext(), is(leanContext));
+            } finally {
+                ch.finishAndReleaseAll();
             }
         } finally {
             releaseAll(leanContext, leanContext2, nettyContext);
