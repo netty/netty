@@ -21,7 +21,6 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
@@ -32,7 +31,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLEngine;
-import javax.xml.bind.DatatypeConverter;
 
 import org.junit.Test;
 
@@ -64,6 +62,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -125,7 +124,7 @@ public class SniHandlerTest {
     }
 
     @Parameterized.Parameters(name = "{index}: sslProvider={0}")
-    public static Iterable<? extends Object> data() {
+    public static Iterable<?> data() {
         List<SslProvider> params = new ArrayList<SslProvider>(3);
         if (OpenSsl.isAvailable()) {
             params.add(SslProvider.OPENSSL);
@@ -172,8 +171,8 @@ public class SniHandlerTest {
                         "170019001800230000000d0020001e060106020603050105020503040104" +
                         "0204030301030203030201020202030016000000170000";
 
-                ch.writeInbound(Unpooled.wrappedBuffer(DatatypeConverter.parseHexBinary(tlsHandshakeMessageHex1)));
-                ch.writeInbound(Unpooled.wrappedBuffer(DatatypeConverter.parseHexBinary(tlsHandshakeMessageHex)));
+                ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex1)));
+                ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex)));
 
                 // This should produce an alert
                 assertTrue(ch.finish());
@@ -221,8 +220,8 @@ public class SniHandlerTest {
                 // Push the handshake message.
                 // Decode should fail because of the badly encoded "HostName" string in the SNI extension
                 // that isn't ASCII as per RFC 6066 - https://tools.ietf.org/html/rfc6066#page-6
-                ch.writeInbound(Unpooled.wrappedBuffer(DatatypeConverter.parseHexBinary(tlsHandshakeMessageHex1)));
-                ch.writeInbound(Unpooled.wrappedBuffer(DatatypeConverter.parseHexBinary(tlsHandshakeMessageHex)));
+                ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex1)));
+                ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex)));
             } finally {
                 ch.finishAndReleaseAll();
             }
