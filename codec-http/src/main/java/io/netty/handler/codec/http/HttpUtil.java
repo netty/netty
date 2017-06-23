@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
@@ -353,7 +352,7 @@ public final class HttpUtil {
      * Fetch charset from message's Content-Type header.
      *
      * @param message entity to fetch Content-Type header from
-     * @return the charset from message's Content-Type header or {@link io.netty.util.CharsetUtil#ISO_8859_1}
+     * @return the charset from message's Content-Type header or {@link CharsetUtil#ISO_8859_1}
      * if charset is not presented or unparsable
      */
     public static Charset getCharset(HttpMessage message) {
@@ -364,7 +363,7 @@ public final class HttpUtil {
      * Fetch charset from Content-Type header value.
      *
      * @param contentTypeValue Content-Type header value to parse
-     * @return the charset from message's Content-Type header or {@link io.netty.util.CharsetUtil#ISO_8859_1}
+     * @return the charset from message's Content-Type header or {@link CharsetUtil#ISO_8859_1}
      * if charset is not presented or unparsable
      */
     public static Charset getCharset(CharSequence contentTypeValue) {
@@ -379,7 +378,7 @@ public final class HttpUtil {
      * Fetch charset from message's Content-Type header.
      *
      * @param message entity to fetch Content-Type header from
-     * @param defaultCharset result to use in case of empty, incorrect or doesn't conain required part header value
+     * @param defaultCharset result to use in case of empty, incorrect or doesn't contain required part header value
      * @return the charset from message's Content-Type header or {@code defaultCharset}
      * if charset is not presented or unparsable
      */
@@ -406,7 +405,7 @@ public final class HttpUtil {
             if (charsetCharSequence != null) {
                 try {
                     return Charset.forName(charsetCharSequence.toString());
-                } catch (UnsupportedCharsetException unsupportedException) {
+                } catch (UnsupportedCharsetException ignored) {
                     return defaultCharset;
                 }
             } else {
@@ -519,16 +518,5 @@ public final class HttpUtil {
         } else {
             return contentTypeValue.length() > 0 ? contentTypeValue : null;
         }
-    }
-
-    static void encodeAscii0(CharSequence seq, ByteBuf buf) {
-        int length = seq.length();
-        for (int i = 0 ; i < length; i++) {
-            buf.writeByte(c2b(seq.charAt(i)));
-        }
-    }
-
-    private static byte c2b(char c) {
-        return c > 255 ? (byte) '?' : (byte) c;
     }
 }

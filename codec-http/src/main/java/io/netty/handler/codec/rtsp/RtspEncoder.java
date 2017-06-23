@@ -19,9 +19,9 @@ import static io.netty.handler.codec.http.HttpConstants.CR;
 import static io.netty.handler.codec.http.HttpConstants.LF;
 import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObjectEncoder;
 import io.netty.handler.codec.http.HttpRequest;
@@ -50,22 +50,19 @@ public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
            throws Exception {
         if (message instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) message;
-            HttpHeaders.encodeAscii(request.method().toString(), buf);
+            ByteBufUtil.copy(request.method().asciiName(), buf);
             buf.writeByte(SP);
-            buf.writeBytes(request.uri().getBytes(CharsetUtil.UTF_8));
+            buf.writeCharSequence(request.uri(), CharsetUtil.UTF_8);
             buf.writeByte(SP);
-            HttpHeaders.encodeAscii(request.protocolVersion().toString(), buf);
+            buf.writeCharSequence(request.protocolVersion().toString(), CharsetUtil.US_ASCII);
             buf.writeBytes(CRLF);
         } else if (message instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) message;
-            HttpHeaders.encodeAscii(response.protocolVersion().toString(),
-                                    buf);
+            buf.writeCharSequence(response.protocolVersion().toString(), CharsetUtil.US_ASCII);
             buf.writeByte(SP);
-            buf.writeBytes(String.valueOf(response.status().code())
-                                 .getBytes(CharsetUtil.US_ASCII));
+            ByteBufUtil.copy(response.status().codeAsText(), buf);
             buf.writeByte(SP);
-            HttpHeaders.encodeAscii(String.valueOf(response.status().reasonPhrase()),
-                                    buf);
+            buf.writeCharSequence(response.status().reasonPhrase(), CharsetUtil.US_ASCII);
             buf.writeBytes(CRLF);
         } else {
             throw new UnsupportedMessageTypeException("Unsupported type "

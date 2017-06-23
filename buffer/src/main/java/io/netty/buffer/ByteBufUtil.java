@@ -571,7 +571,7 @@ public final class ByteBufUtil {
         // We can use the _set methods as these not need to do any index checks and reference checks.
         // This is possible as we called ensureWritable(...) before.
         for (int i = 0; i < len; i++) {
-            buffer._setByte(writerIndex++, (byte) seq.charAt(i));
+            buffer._setByte(writerIndex++, AsciiString.c2b(seq.charAt(i)));
         }
         return len;
     }
@@ -737,6 +737,15 @@ public final class ByteBufUtil {
         byte[] v = new byte[length];
         buf.getBytes(start, v);
         return v;
+    }
+
+    /**
+     * Copies the all content of {@code src} to a {@link ByteBuf} using {@link ByteBuf#writeBytes(byte[], int, int)}.
+     * @param src The source of the data to copy.
+     * @param dst the destination byte array.
+     */
+    public static void copy(AsciiString src, ByteBuf dst) {
+        copy(src, 0, dst, src.length());
     }
 
     /**
