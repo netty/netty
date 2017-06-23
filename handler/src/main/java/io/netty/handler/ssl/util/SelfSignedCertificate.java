@@ -156,7 +156,8 @@ public final class SelfSignedCertificate {
                 logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t2);
                 throw new CertificateException(
                         "No provider succeeded to generate a self-signed certificate. " +
-                                "See debug log for the root cause.");
+                                "See debug log for the root cause.", t2);
+                // TODO: consider using Java 7 addSuppressed to append t
             }
         }
 
