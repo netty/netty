@@ -37,6 +37,7 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
@@ -393,6 +394,25 @@ public class EmbeddedChannelTest {
         assertTrue(channel.finish());
         assertSame(msg, channel.readOutbound());
         assertNull(channel.readOutbound());
+    }
+
+    @Test(timeout = 5000)
+    public void testChannelInactiveFired() throws InterruptedException {
+        final AtomicBoolean inactive = new AtomicBoolean();
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                ctx.close();
+            }
+
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                inactive.set(true);
+            }
+        });
+        channel.pipeline().fireExceptionCaught(new IllegalStateException());
+
+        assertTrue(inactive.get());
     }
 
     private static void release(ByteBuf... buffers) {

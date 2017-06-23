@@ -530,7 +530,12 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected AbstractUnsafe newUnsafe() {
-        return new DefaultUnsafe();
+        return new EmbeddedUnsafe();
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return ((EmbeddedUnsafe) super.unsafe()).wrapped;
     }
 
     @Override
@@ -547,7 +552,92 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private class DefaultUnsafe extends AbstractUnsafe {
+    private final class EmbeddedUnsafe extends AbstractUnsafe {
+
+        // Delegates to the EmbeddedUnsafe instance but ensures runPendingTasks() is called after each operation
+        // that may change the state of the Channel and may schedule tasks for later execution.
+        final Unsafe wrapped = new Unsafe() {
+            @Override
+            public SocketAddress localAddress() {
+                return EmbeddedUnsafe.this.localAddress();
+            }
+
+            @Override
+            public SocketAddress remoteAddress() {
+                return EmbeddedUnsafe.this.remoteAddress();
+            }
+
+            @Override
+            public void register(EventLoop eventLoop, ChannelPromise promise) {
+                EmbeddedUnsafe.this.register(eventLoop, promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void bind(SocketAddress localAddress, ChannelPromise promise) {
+                EmbeddedUnsafe.this.bind(localAddress, promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+                EmbeddedUnsafe.this.connect(remoteAddress, localAddress, promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void disconnect(ChannelPromise promise) {
+                EmbeddedUnsafe.this.disconnect(promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void close(ChannelPromise promise) {
+                EmbeddedUnsafe.this.close(promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void closeForcibly() {
+                EmbeddedUnsafe.this.closeForcibly();
+                runPendingTasks();
+            }
+
+            @Override
+            public void deregister(ChannelPromise promise) {
+                EmbeddedUnsafe.this.deregister(promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void beginRead() {
+                EmbeddedUnsafe.this.beginRead();
+                runPendingTasks();
+            }
+
+            @Override
+            public void write(Object msg, ChannelPromise promise) {
+                EmbeddedUnsafe.this.write(msg, promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void flush() {
+                EmbeddedUnsafe.this.flush();
+                runPendingTasks();
+            }
+
+            @Override
+            public ChannelPromise voidPromise() {
+                return EmbeddedUnsafe.this.voidPromise();
+            }
+
+            @Override
+            public ChannelOutboundBuffer outboundBuffer() {
+                return EmbeddedUnsafe.this.outboundBuffer();
+            }
+        };
+
         @Override
         public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
             safeSetSuccess(promise);
@@ -555,7 +645,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
-        public EmbeddedChannelPipeline(EmbeddedChannel channel) {
+        EmbeddedChannelPipeline(EmbeddedChannel channel) {
             super(channel);
         }
 
