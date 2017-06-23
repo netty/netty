@@ -1149,14 +1149,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         return AsciiString.contentEqualsIgnoreCase(name1, name2);
     }
 
-    static void encode(HttpHeaders headers, ByteBuf buf) throws Exception {
-        Iterator<Entry<CharSequence, CharSequence>> iter = headers.iteratorCharSequence();
-        while (iter.hasNext()) {
-            Entry<CharSequence, CharSequence> header = iter.next();
-            HttpHeadersEncoder.encoderHeader(header.getKey(), header.getValue(), buf);
-        }
-    }
-
+    @Deprecated
     public static void encodeAscii(CharSequence seq, ByteBuf buf) {
         if (seq instanceof AsciiString) {
             ByteBufUtil.copy((AsciiString) seq, 0, buf, seq.length());

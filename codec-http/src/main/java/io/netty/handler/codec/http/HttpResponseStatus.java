@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
@@ -676,7 +677,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     void encode(ByteBuf buf) {
         if (bytes == null) {
-            buf.writeCharSequence(codeAsText, CharsetUtil.US_ASCII);
+            ByteBufUtil.copy(codeAsText, buf);
             buf.writeByte(SP);
             buf.writeCharSequence(reasonPhrase, CharsetUtil.US_ASCII);
         } else {

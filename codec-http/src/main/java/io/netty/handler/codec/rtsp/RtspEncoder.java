@@ -19,6 +19,7 @@ import static io.netty.handler.codec.http.HttpConstants.CR;
 import static io.netty.handler.codec.http.HttpConstants.LF;
 import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMessage;
@@ -49,7 +50,7 @@ public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
            throws Exception {
         if (message instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) message;
-            buf.writeCharSequence(request.method().toString(), CharsetUtil.US_ASCII);
+            ByteBufUtil.copy(request.method().asciiName(), buf);
             buf.writeByte(SP);
             buf.writeCharSequence(request.uri(), CharsetUtil.UTF_8);
             buf.writeByte(SP);
@@ -59,7 +60,7 @@ public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
             HttpResponse response = (HttpResponse) message;
             buf.writeCharSequence(response.protocolVersion().toString(), CharsetUtil.US_ASCII);
             buf.writeByte(SP);
-            buf.writeCharSequence(response.status().codeAsText(), CharsetUtil.US_ASCII);
+            ByteBufUtil.copy(response.status().codeAsText(), buf);
             buf.writeByte(SP);
             buf.writeCharSequence(response.status().reasonPhrase(), CharsetUtil.US_ASCII);
             buf.writeBytes(CRLF);

@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
 
 public final class AsciiHeadersEncoder {
 
@@ -86,7 +87,7 @@ public final class AsciiHeadersEncoder {
         final int entryLen = nameLen + valueLen + 4;
         int offset = buf.writerIndex();
         buf.ensureWritable(entryLen);
-        writeAscii(buf, offset, name, nameLen);
+        writeAscii(buf, offset, name);
         offset += nameLen;
 
         switch (separatorType) {
@@ -101,7 +102,7 @@ public final class AsciiHeadersEncoder {
                 throw new Error();
         }
 
-        writeAscii(buf, offset, value, valueLen);
+        writeAscii(buf, offset, value);
         offset += valueLen;
 
         switch (newlineType) {
@@ -119,25 +120,11 @@ public final class AsciiHeadersEncoder {
         buf.writerIndex(offset);
     }
 
-    private static void writeAscii(ByteBuf buf, int offset, CharSequence value, int valueLen) {
+    private static void writeAscii(ByteBuf buf, int offset, CharSequence value) {
         if (value instanceof AsciiString) {
-            writeAsciiString(buf, offset, (AsciiString) value, valueLen);
+            ByteBufUtil.copy((AsciiString) value, 0, buf, offset, value.length());
         } else {
-            writeCharSequence(buf, offset, value, valueLen);
+            buf.setCharSequence(offset, value, CharsetUtil.US_ASCII);
         }
-    }
-
-    private static void writeAsciiString(ByteBuf buf, int offset, AsciiString value, int valueLen) {
-        ByteBufUtil.copy(value, 0, buf, offset, valueLen);
-    }
-
-    private static void writeCharSequence(ByteBuf buf, int offset, CharSequence value, int valueLen) {
-        for (int i = 0; i < valueLen; i ++) {
-            buf.setByte(offset ++, c2b(value.charAt(i)));
-        }
-    }
-
-    private static int c2b(char ch) {
-        return ch < 256? (byte) ch : '?';
     }
 }
