@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socks.SocksCmdResponseDecoder.State;
+import io.netty.util.NetUtil;
 
 import java.util.List;
 
@@ -54,7 +55,7 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<State> {
             case READ_CMD_ADDRESS: {
                 switch (addressType) {
                     case IPv4: {
-                        String host = SocksCommonUtils.intToIp(byteBuf.readInt());
+                        String host = NetUtil.intToIpAddress(byteBuf.readInt());
                         int port = byteBuf.readUnsignedShort();
                         out.add(new SocksCmdResponse(cmdStatus, addressType, host, port));
                         break;
