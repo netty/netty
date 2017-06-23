@@ -393,7 +393,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
             checkIndex0(index, ByteBufUtil.utf8MaxBytes(sequence));
             return ByteBufUtil.writeUtf8(this, idx(index), sequence, sequence.length());
         }
-        if (charset.equals(CharsetUtil.US_ASCII)) {
+        if (charset.equals(CharsetUtil.US_ASCII) || charset.equals(CharsetUtil.ISO_8859_1)) {
             int len = sequence.length();
             checkIndex0(index, len);
             return ByteBufUtil.writeAscii(this, idx(index), sequence, len);

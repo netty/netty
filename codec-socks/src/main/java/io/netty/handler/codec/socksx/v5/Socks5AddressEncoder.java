@@ -41,9 +41,8 @@ public interface Socks5AddressEncoder {
                 }
             } else if (typeVal == Socks5AddressType.DOMAIN.byteValue()) {
                 if (addrValue != null) {
-                    byte[] bndAddr = addrValue.getBytes(CharsetUtil.US_ASCII);
-                    out.writeByte(bndAddr.length);
-                    out.writeBytes(bndAddr);
+                    out.writeByte(addrValue.length());
+                    out.writeCharSequence(addrValue, CharsetUtil.US_ASCII);
                 } else {
                     out.writeByte(1);
                     out.writeByte(0);
