@@ -249,8 +249,8 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                         if (wakenUp == 1) {
                             wakeup();
                         }
-                    default:
                         // fallthrough
+                    default:
                 }
 
                 final int ioRatio = this.ioRatio;
