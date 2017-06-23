@@ -71,7 +71,7 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
             }
         }
 
-        buf.writeBytes(uri.getBytes(CharsetUtil.UTF_8));
+        buf.writeCharSequence(uri, CharsetUtil.UTF_8);
 
         buf.writeByte(SP);
         request.protocolVersion().encode(buf);

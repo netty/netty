@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
 
 import java.text.ParseException;
 import java.util.Calendar;
@@ -1160,7 +1161,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         if (seq instanceof AsciiString) {
             ByteBufUtil.copy((AsciiString) seq, 0, buf, seq.length());
         } else {
-            HttpUtil.encodeAscii0(seq, buf);
+            buf.writeCharSequence(seq, CharsetUtil.US_ASCII);
         }
     }
 

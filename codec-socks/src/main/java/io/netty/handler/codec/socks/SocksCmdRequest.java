@@ -123,7 +123,7 @@ public final class SocksCmdRequest extends SocksRequest {
 
             case DOMAIN: {
                 byteBuf.writeByte(host.length());
-                byteBuf.writeBytes(host.getBytes(CharsetUtil.US_ASCII));
+                byteBuf.writeCharSequence(host, CharsetUtil.US_ASCII);
                 byteBuf.writeShort(port);
                 break;
             }
