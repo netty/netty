@@ -29,11 +29,6 @@
     Tests for the static library which contains common unix utilities.
   </description>
 
-  <properties>
-    <!-- Don't deploy this artifact to Maven Central -->
-    <maven.deploy.skip>true</maven.deploy.skip>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>io.netty</groupId>
