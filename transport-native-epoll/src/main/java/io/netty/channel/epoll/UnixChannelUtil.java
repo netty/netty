@@ -27,6 +27,10 @@ public final class UnixChannelUtil {
      * (We check this because otherwise we need to make it a new direct buffer.)
      */
     public static boolean isBufferCopyNeededForWrite(ByteBuf byteBuf) {
-        return !byteBuf.hasMemoryAddress() || !byteBuf.isDirect() || byteBuf.nioBufferCount() > Native.IOV_MAX;
+        return isBufferCopyNeededForWrite(byteBuf, Native.IOV_MAX);
+    }
+
+    static boolean isBufferCopyNeededForWrite(ByteBuf byteBuf, int iovMax) {
+        return !byteBuf.hasMemoryAddress() && (!byteBuf.isDirect() || byteBuf.nioBufferCount() > iovMax);
     }
 }
