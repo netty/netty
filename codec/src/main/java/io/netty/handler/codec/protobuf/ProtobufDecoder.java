@@ -89,10 +89,6 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
         this(prototype, null);
     }
 
-    public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry) {
-        this(prototype, (ExtensionRegistryLite) extensionRegistry);
-    }
-
     public ProtobufDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry) {
         if (prototype == null) {
             throw new NullPointerException("prototype");
