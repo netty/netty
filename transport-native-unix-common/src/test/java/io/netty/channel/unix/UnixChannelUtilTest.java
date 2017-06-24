@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package io.netty.channel.unix.tests;
+package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -27,13 +27,15 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import static io.netty.channel.unix.Limits.IOV_MAX;
 import static io.netty.channel.unix.UnixChannelUtil.isBufferCopyNeededForWrite;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class UnixChannelUtilTest {
+
+    private static final int IOV_MAX = 1024;
+
     @Test
     public void testPooledAllocatorIsBufferCopyNeededForWrite() {
         testIsBufferCopyNeededForWrite(PooledByteBufAllocator.DEFAULT);
@@ -46,16 +48,16 @@ public class UnixChannelUtilTest {
 
     private static void testIsBufferCopyNeededForWrite(ByteBufAllocator alloc) {
         ByteBuf byteBuf = alloc.directBuffer();
-        assertFalse(isBufferCopyNeededForWrite(byteBuf));
-        assertFalse(isBufferCopyNeededForWrite(byteBuf.asReadOnly()));
+        assertFalse(isBufferCopyNeededForWrite(byteBuf, IOV_MAX));
+        assertFalse(isBufferCopyNeededForWrite(byteBuf.asReadOnly(), IOV_MAX));
         assertTrue(byteBuf.release());
 
         byteBuf = alloc.heapBuffer();
-        assertTrue(isBufferCopyNeededForWrite(byteBuf));
-        assertTrue(isBufferCopyNeededForWrite(byteBuf.asReadOnly()));
+        assertTrue(isBufferCopyNeededForWrite(byteBuf, IOV_MAX));
+        assertTrue(isBufferCopyNeededForWrite(byteBuf.asReadOnly(), IOV_MAX));
         assertTrue(byteBuf.release());
 
-        assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, 2, 0, true);
+        assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, 2, 0, false);
         assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, IOV_MAX + 1, 0, true);
         assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, 0, 2, true);
         assertCompositeByteBufIsBufferCopyNeededForWrite(alloc, 1, 1, true);
@@ -80,7 +82,7 @@ public class UnixChannelUtilTest {
             comp.addComponent(byteBuf);
         }
 
-        assertEquals(byteBufs.toString(), expected, isBufferCopyNeededForWrite(comp));
+        assertEquals(byteBufs.toString(), expected, isBufferCopyNeededForWrite(comp, IOV_MAX));
         assertTrue(comp.release());
     }
 }
