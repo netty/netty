@@ -147,7 +147,7 @@ public final class HttpHeaderNames {
     /**
      * {@code "content-security-policy"}
      */
-    public static final CharSequence CONTENT_SECURITY_POLICY = new AsciiString("content-security-policy");
+    public static final AsciiString CONTENT_SECURITY_POLICY = new AsciiString("content-security-policy");
     /**
      * {@code "content-type"}
      */
@@ -353,7 +353,7 @@ public final class HttpHeaderNames {
     /**
      * {@code "x-frame-options"}
      */
-    public static final CharSequence X_FRAME_OPTIONS = new AsciiString("x-frame-options");
+    public static final AsciiString X_FRAME_OPTIONS = new AsciiString("x-frame-options");
 
     private HttpHeaderNames() { }
 }
