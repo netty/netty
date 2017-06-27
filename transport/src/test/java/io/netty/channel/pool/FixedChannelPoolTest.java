@@ -298,12 +298,15 @@ public class FixedChannelPoolTest {
                 // NOOP
             }
         }).syncUninterruptibly();
-        pool.release(channel).syncUninterruptibly();
-
-        // Since the pool is closed.. the release channel should have been closed
+        try {
+            pool.release(channel).syncUninterruptibly();
+            fail();
+        } catch (IllegalStateException e) {
+            assertSame(FixedChannelPool.POOL_CLOSED_ON_RELEASE_EXCEPTION, e);
+        }
+        // Since the pool is closed, the Channel should have been closed as well.
         channel.closeFuture().syncUninterruptibly();
         assertFalse("Unexpected open channel", channel.isOpen());
-
         sc.close().syncUninterruptibly();
     }
 
