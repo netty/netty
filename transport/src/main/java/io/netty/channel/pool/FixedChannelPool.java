@@ -258,6 +258,8 @@ public class FixedChannelPool extends SimpleChannelPool {
                 assert executor.inEventLoop();
 
                 if (closed) {
+                    // Since the pool is closed, we have no choice but to close the channel
+                    channel.close();
                     promise.setFailure(new IllegalStateException("FixedChannelPooled was closed"));
                     return;
                 }
@@ -366,6 +368,10 @@ public class FixedChannelPool extends SimpleChannelPool {
             assert executor.inEventLoop();
 
             if (closed) {
+                if (future.isSuccess()) {
+                    // Since the pool is closed, we have no choice but to close the channel
+                    future.getNow().close();
+                }
                 originalPromise.setFailure(new IllegalStateException("FixedChannelPooled was closed"));
                 return;
             }
