@@ -217,13 +217,14 @@ public class HttpObjectAggregator
 
     @Override
     protected void finishAggregation(FullHttpMessage aggregated) throws Exception {
-        // Set the 'Content-Length' header. If one isn't already set.
+        // Set the 'Content-Length' header if it's allowed and one isn't already set.
         // This is important as HEAD responses will use a 'Content-Length' header which
         // does not match the actual body, but the number of bytes that would be
         // transmitted if a GET would have been used.
         //
-        // See rfc2616 14.13 Content-Length
-        if (!HttpUtil.isContentLengthSet(aggregated)) {
+        // See RFC7230 3.3.2. Content-Length
+        // https://tools.ietf.org/html/rfc7230#section-3.3.2
+        if (!(HttpUtil.mustNotContainContentLength(aggregated) || HttpUtil.isContentLengthSet(aggregated))) {
             aggregated.headers().set(
                     CONTENT_LENGTH,
                     String.valueOf(aggregated.content().readableBytes()));

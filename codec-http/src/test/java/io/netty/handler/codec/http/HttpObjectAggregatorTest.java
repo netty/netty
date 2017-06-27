@@ -28,6 +28,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
@@ -499,5 +500,48 @@ public class HttpObjectAggregatorTest {
         assertEquals(replacedRep.decoderResult(), aggregatedRep.decoderResult());
         aggregatedRep.release();
         replacedRep.release();
+    }
+
+    @Test
+    public void testAggregateResponseWithoutContentLength() {
+        final List<HttpResponseStatus> statusesWithoutContentLength = new ArrayList<HttpResponseStatus>();
+        statusesWithoutContentLength.add(HttpResponseStatus.CONTINUE);
+        statusesWithoutContentLength.add(HttpResponseStatus.SWITCHING_PROTOCOLS);
+        statusesWithoutContentLength.add(HttpResponseStatus.PROCESSING);
+        statusesWithoutContentLength.add(HttpResponseStatus.NO_CONTENT);
+
+        for (final HttpResponseStatus status : statusesWithoutContentLength) {
+            testAggregateResponseContentLength(status, false);
+        }
+    }
+
+    @Test
+    public void testAggregateResponseWithContentLength() {
+        final List<HttpResponseStatus> statusesWithContentLength = new ArrayList<HttpResponseStatus>();
+        statusesWithContentLength.add(HttpResponseStatus.OK);
+        statusesWithContentLength.add(HttpResponseStatus.NOT_MODIFIED);
+        statusesWithContentLength.add(HttpResponseStatus.BAD_REQUEST);
+        statusesWithContentLength.add(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+
+        for (final HttpResponseStatus status : statusesWithContentLength) {
+            testAggregateResponseContentLength(status, true);
+        }
+    }
+
+    private void testAggregateResponseContentLength(HttpResponseStatus status, boolean canContainContentLength) {
+        EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(1024 * 1024));
+
+        HttpResponse rep = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+        HttpContent lastChunk = LastHttpContent.EMPTY_LAST_CONTENT;
+        assertFalse(embedder.writeInbound(rep));
+        assertTrue(embedder.writeInbound(lastChunk));
+
+        FullHttpResponse aggregatedRep = embedder.readInbound();
+        assertEquals(canContainContentLength, HttpUtil.isContentLengthSet(aggregatedRep));
+        if (canContainContentLength) {
+            assertEquals(0, HttpUtil.getContentLength(aggregatedRep, -1));
+        }
+
+        aggregatedRep.release();
     }
 }

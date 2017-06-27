@@ -255,4 +255,30 @@ public class HttpUtilTest {
         ReferenceCountUtil.release(message);
     }
 
+    @Test
+    public void testMustNotContainContentLength() {
+        // test all status codes that can't contain Content-Length header field
+        final List<HttpResponseStatus> statusesWithoutContentLength = new ArrayList<HttpResponseStatus>();
+        statusesWithoutContentLength.add(HttpResponseStatus.CONTINUE);
+        statusesWithoutContentLength.add(HttpResponseStatus.SWITCHING_PROTOCOLS);
+        statusesWithoutContentLength.add(HttpResponseStatus.PROCESSING);
+        statusesWithoutContentLength.add(HttpResponseStatus.NO_CONTENT);
+
+        for (final HttpResponseStatus status : statusesWithoutContentLength) {
+            HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+            assertTrue(HttpUtil.mustNotContainContentLength(response));
+        }
+
+        // test some basic responses that can contain Content-Length header field
+        final List<HttpResponseStatus> statusesWithContentLength = new ArrayList<HttpResponseStatus>();
+        statusesWithContentLength.add(HttpResponseStatus.OK);
+        statusesWithContentLength.add(HttpResponseStatus.NOT_MODIFIED);
+        statusesWithContentLength.add(HttpResponseStatus.BAD_REQUEST);
+        statusesWithContentLength.add(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+
+        for (final HttpResponseStatus status : statusesWithContentLength) {
+            HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+            assertFalse(HttpUtil.mustNotContainContentLength(response));
+        }
+    }
 }
