@@ -17,7 +17,10 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
+
+import java.util.Locale;
 
 /**
  * If KQueue is available the JNI resources will be loaded when this class loads.
@@ -46,8 +49,29 @@ public final class KQueue {
         if (cause != null) {
             UNAVAILABILITY_CAUSE = cause;
         } else {
-            UNAVAILABILITY_CAUSE = PlatformDependent.hasUnsafe() ? null :
+            cause = PlatformDependent.hasUnsafe() ? null :
                     new IllegalStateException("sun.misc.Unsafe not available");
+            if (cause == null) {
+                if (SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).contains("mac")) {
+                    String version = SystemPropertyUtil.get("os.version", "");
+                    String[] versionParts = SystemPropertyUtil.get("os.version", "")
+                            .toLowerCase(Locale.US).split("\\.");
+                    if (versionParts.length < 2) {
+                        cause = new IllegalStateException("MacOS version " + version + " not supported");
+                    } else {
+                        try {
+                            int majorVersion = Integer.parseInt(versionParts[0]);
+                            int minorVersion = Integer.parseInt(versionParts[1]);
+                            if (majorVersion < 10 || (majorVersion == 10 && minorVersion < 12)) {
+                                cause = new IllegalStateException("MacOS version " + version + " not supported");
+                            }
+                        } catch (NumberFormatException e) {
+                            cause = new IllegalStateException("MacOS version " + version + " not supported", e);
+                        }
+                    }
+                }
+            }
+            UNAVAILABILITY_CAUSE = cause;
         }
     }
 
