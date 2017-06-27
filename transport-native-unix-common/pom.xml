@@ -102,6 +102,10 @@
                       <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable" />
                       <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
+                      <!-- support for __attribute__((weak_import)) by the linker was added in 10.2 so ensure we
+                           explicitly set the target platform. Otherwise we may get fatal link errors due to weakly linked
+                           methods which are not expected to be present on MacOS (e.g. accept4). -->
+                      <env key="MACOSX_DEPLOYMENT_TARGET" value="10.2" />
                     </exec>
                   </target>
                 </configuration>
