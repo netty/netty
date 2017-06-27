@@ -102,6 +102,8 @@
                       <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable" />
                       <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
+                      <!-- weak_import was added in 10.2 so ensure we explicitly set the artifact -->
+                      <env key="MACOSX_DEPLOYMENT_TARGET" value="10.2" />
                     </exec>
                   </target>
                 </configuration>
