@@ -50,12 +50,16 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static io.netty.util.CharsetUtil.UTF_8;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -67,9 +71,9 @@ import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyShort;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -497,6 +501,71 @@ public class Http2ConnectionRoundtripTest {
         verify(serverListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
                 any(ByteBuf.class));
         verify(serverListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
+        verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+        verify(clientListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
+    }
+
+    @Test
+    public void headersWriteForPeerStreamWhichWasResetShouldNotGoAway() throws Exception {
+        bootstrapEnv(1, 1, 1, 0);
+
+        final CountDownLatch serverGotRstLatch = new CountDownLatch(1);
+        final CountDownLatch serverWriteHeadersLatch = new CountDownLatch(1);
+        final AtomicReference<Throwable> serverWriteHeadersCauseRef = new AtomicReference<Throwable>();
+
+        final Http2Headers headers = dummyHeaders();
+        final int streamId = 3;
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), streamId, headers, CONNECTION_STREAM_ID,
+                        DEFAULT_PRIORITY_WEIGHT, false, 0, false, newPromise());
+                http2Client.encoder().writeRstStream(ctx(), streamId, Http2Error.CANCEL.code(), newPromise());
+                http2Client.flush(ctx());
+            }
+        });
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                if (streamId == (Integer) invocationOnMock.getArgument(1)) {
+                    serverGotRstLatch.countDown();
+                }
+                return null;
+            }
+        }).when(serverListener).onRstStreamRead(any(ChannelHandlerContext.class), eq(streamId), anyLong());
+
+        assertTrue(serverSettingsAckLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+        assertTrue(serverGotRstLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+
+        verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(streamId), eq(headers), anyInt(),
+                anyShort(), anyBoolean(), anyInt(), eq(false));
+
+        // Now have the server attempt to send a headers frame simulating some asynchronous work.
+        runInChannel(serverConnectedChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writeHeaders(serverCtx(), streamId, headers, 0, true, serverNewPromise())
+                        .addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                serverWriteHeadersCauseRef.set(future.cause());
+                                serverWriteHeadersLatch.countDown();
+                            }
+                        });
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        assertTrue(serverWriteHeadersLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+        Throwable serverWriteHeadersCause = serverWriteHeadersCauseRef.get();
+        assertNotNull(serverWriteHeadersCause);
+        assertThat(serverWriteHeadersCauseRef.get(), not(instanceOf(Http2Exception.class)));
+
+        // Server should receive a RST_STREAM for stream 3.
+        verify(serverListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
         verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
                 any(ByteBuf.class));
         verify(clientListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());

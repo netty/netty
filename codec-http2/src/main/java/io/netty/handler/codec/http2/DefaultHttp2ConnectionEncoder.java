@@ -126,8 +126,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                     // Allowed sending DATA frames in these states.
                     break;
                 default:
-                    throw new IllegalStateException(String.format(
-                            "Stream %d in unexpected state: %s", stream.id(), stream.state()));
+                    throw new IllegalStateException("Stream " + stream.id() + " in unexpected state " + stream.state());
             }
         } catch (Throwable e) {
             data.release();
@@ -153,7 +152,15 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         try {
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
-                stream = connection.local().createStream(streamId, endOfStream);
+                try {
+                    stream = connection.local().createStream(streamId, endOfStream);
+                } catch (Http2Exception cause) {
+                    if (connection.remote().mayHaveCreatedStream(streamId)) {
+                        promise.tryFailure(new IllegalStateException("Stream no longer exists: " + streamId, cause));
+                        return promise;
+                    }
+                    throw cause;
+                }
             } else {
                 switch (stream.state()) {
                     case RESERVED_LOCAL:
@@ -164,8 +171,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                         // Allowed sending headers in these states.
                         break;
                     default:
-                        throw new IllegalStateException(String.format(
-                                "Stream %d in unexpected state: %s", stream.id(), stream.state()));
+                        throw new IllegalStateException("Stream " + stream.id() + " in unexpected state " +
+                                                        stream.state());
                 }
             }
 
