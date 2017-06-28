@@ -363,7 +363,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         final List<CharSequence> protocols = new ArrayList<CharSequence>(4);
         for (int i = 0; i < header.length(); ++i) {
             char c = header.charAt(i);
-            if (Character.isWhitespace(c)) {
+            if (c == ' ') {
                 // Don't include any whitespace.
                 continue;
             }

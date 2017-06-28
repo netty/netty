@@ -681,7 +681,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         hex = hex.trim();
         for (int i = 0; i < hex.length(); i ++) {
             char c = hex.charAt(i);
-            if (c == ';' || Character.isWhitespace(c) || Character.isISOControl(c)) {
+            if (c == ';' || c == ' ' || Character.isISOControl(c)) {
                 hex = hex.substring(0, i);
                 break;
             }
@@ -724,7 +724,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         nameStart = findNonWhitespace(sb, 0);
         for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
             char ch = sb.charAt(nameEnd);
-            if (ch == ':' || Character.isWhitespace(ch)) {
+            if (ch == ':' || ch == ' ') {
                 break;
             }
         }
@@ -748,7 +748,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private static int findNonWhitespace(AppendableCharSequence sb, int offset) {
         for (int result = offset; result < sb.length(); ++result) {
-            if (!Character.isWhitespace(sb.charAtUnsafe(result))) {
+            if (sb.charAtUnsafe(result) != ' ') {
                 return result;
             }
         }
@@ -757,7 +757,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private static int findWhitespace(AppendableCharSequence sb, int offset) {
         for (int result = offset; result < sb.length(); ++result) {
-            if (Character.isWhitespace(sb.charAtUnsafe(result))) {
+            if (sb.charAtUnsafe(result) == ' ') {
                 return result;
             }
         }
@@ -766,7 +766,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private static int findEndOfString(AppendableCharSequence sb) {
         for (int result = sb.length() - 1; result > 0; --result) {
-            if (!Character.isWhitespace(sb.charAtUnsafe(result))) {
+            if (sb.charAtUnsafe(result) != ' ') {
                 return result + 1;
             }
         }

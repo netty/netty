@@ -127,7 +127,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
 
         for (int i = 0; i < name.length(); i ++) {
             char c = name.charAt(i);
-            if (Character.isISOControl(c) || Character.isWhitespace(c)) {
+            if (Character.isISOControl(c) || c == ' ') {
                 throw new IllegalArgumentException("invalid character in name");
             }
         }
