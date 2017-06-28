@@ -21,6 +21,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
 
 import java.nio.channels.ClosedChannelException;
@@ -41,7 +42,12 @@ public class FixedChannelPool extends SimpleChannelPool {
     private static final TimeoutException TIMEOUT_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new TimeoutException("Acquire operation took longer then configured maximum time"),
             FixedChannelPool.class, "<init>(...)");
-
+    static final IllegalStateException POOL_CLOSED_ON_RELEASE_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new IllegalStateException("FixedChannelPooled was closed"),
+            FixedChannelPool.class, "release(...)");
+    static final IllegalStateException POOL_CLOSED_ON_ACQUIRE_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new IllegalStateException("FixedChannelPooled was closed"),
+            FixedChannelPool.class, "acquire0(...)");
     public enum AcquireTimeoutAction {
         /**
          * Create a new connection when the timeout is detected.
@@ -215,7 +221,7 @@ public class FixedChannelPool extends SimpleChannelPool {
         assert executor.inEventLoop();
 
         if (closed) {
-            promise.setFailure(new IllegalStateException("FixedChannelPooled was closed"));
+            promise.setFailure(POOL_CLOSED_ON_ACQUIRE_EXCEPTION);
             return;
         }
         if (acquiredChannelCount < maxConnections) {
@@ -250,6 +256,7 @@ public class FixedChannelPool extends SimpleChannelPool {
 
     @Override
     public Future<Void> release(final Channel channel, final Promise<Void> promise) {
+        ObjectUtil.checkNotNull(promise, "promise");
         final Promise<Void> p = executor.newPromise();
         super.release(channel, p.addListener(new FutureListener<Void>() {
 
@@ -258,7 +265,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                 assert executor.inEventLoop();
 
                 if (closed) {
-                    promise.setFailure(new IllegalStateException("FixedChannelPooled was closed"));
+                    promise.setFailure(POOL_CLOSED_ON_RELEASE_EXCEPTION);
                     return;
                 }
 
@@ -275,7 +282,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                 }
             }
         }));
-        return p;
+        return promise;
     }
 
     private void decrementAndRunTaskQueue() {
@@ -366,7 +373,7 @@ public class FixedChannelPool extends SimpleChannelPool {
             assert executor.inEventLoop();
 
             if (closed) {
-                originalPromise.setFailure(new IllegalStateException("FixedChannelPooled was closed"));
+                originalPromise.setFailure(POOL_CLOSED_ON_ACQUIRE_EXCEPTION);
                 return;
             }
 

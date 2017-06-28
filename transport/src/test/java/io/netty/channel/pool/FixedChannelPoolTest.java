@@ -298,7 +298,12 @@ public class FixedChannelPoolTest {
                 // NOOP
             }
         }).syncUninterruptibly();
-        pool.release(channel).syncUninterruptibly();
+        try {
+            pool.release(channel).syncUninterruptibly();
+            fail();
+        } catch (IllegalStateException e) {
+            assertSame(FixedChannelPool.POOL_CLOSED_ON_RELEASE_EXCEPTION, e);
+        }
         sc.close().syncUninterruptibly();
         channel.close().syncUninterruptibly();
     }
