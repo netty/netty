@@ -15,9 +15,11 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.ChannelFactoriesRegistry;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
@@ -33,6 +35,10 @@ public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
     {
         // Ensure JNI is initialized by the time this class is loaded by this time!
         KQueue.ensureAvailability();
+
+         ChannelFactoriesRegistry.registerFactoryForEventLoopGroup(KQueueEventLoopGroup.class,
+            new ReflectiveChannelFactory(KQueueSocketChannel.class),
+            new ReflectiveChannelFactory(KQueueServerSocketChannel.class));
     }
     /**
      * Create a new instance using the default number of threads and the default {@link ThreadFactory}.
