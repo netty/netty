@@ -129,7 +129,7 @@ final class HttpPostBodyUtil {
     static int findNonWhitespace(String sb, int offset) {
         int result;
         for (result = offset; result < sb.length(); result ++) {
-            if (!Character.isWhitespace(sb.charAt(result))) {
+            if (sb.charAt(result) != ' ') {
                 break;
             }
         }
@@ -143,7 +143,7 @@ final class HttpPostBodyUtil {
     static int findEndOfString(String sb) {
         int result;
         for (result = sb.length(); result > 0; result --) {
-            if (!Character.isWhitespace(sb.charAt(result - 1))) {
+            if (sb.charAt(result - 1) != ' ') {
                 break;
             }
         }

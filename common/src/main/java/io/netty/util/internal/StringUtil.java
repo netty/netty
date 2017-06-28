@@ -553,7 +553,7 @@ public final class StringUtil {
      */
     public static int indexOfNonWhiteSpace(CharSequence seq, int offset) {
         for (; offset < seq.length(); ++offset) {
-            if (!Character.isWhitespace(seq.charAt(offset))) {
+            if (seq.charAt(offset) != ' ') {
                 return offset;
             }
         }

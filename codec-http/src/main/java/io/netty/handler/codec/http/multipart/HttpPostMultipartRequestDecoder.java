@@ -589,7 +589,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         SeekAheadOptimize sao = new SeekAheadOptimize(undecodedChunk);
         while (sao.pos < sao.limit) {
             char c = (char) (sao.bytes[sao.pos++] & 0xFF);
-            if (!Character.isISOControl(c) && !Character.isWhitespace(c)) {
+            if (!Character.isISOControl(c) && c != ' ') {
                 sao.setReadPosition(1);
                 return;
             }
@@ -600,7 +600,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     private static void skipControlCharactersStandard(ByteBuf undecodedChunk) {
         for (;;) {
             char c = (char) undecodedChunk.readUnsignedByte();
-            if (!Character.isISOControl(c) && !Character.isWhitespace(c)) {
+            if (!Character.isISOControl(c) && c != ' ') {
                 undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
                 break;
             }
@@ -1783,7 +1783,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         nameStart = HttpPostBodyUtil.findNonWhitespace(sb, 0);
         for (nameEnd = nameStart; nameEnd < sb.length(); nameEnd++) {
             char ch = sb.charAt(nameEnd);
-            if (ch == ':' || Character.isWhitespace(ch)) {
+            if (ch == ':' || ch == ' ') {
                 break;
             }
         }
