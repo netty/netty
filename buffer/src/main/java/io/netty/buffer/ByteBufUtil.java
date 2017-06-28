@@ -444,13 +444,11 @@ public final class ByteBufUtil {
      * This method returns the actual number of bytes written.
      */
     public static int writeUtf8(ByteBuf buf, CharSequence seq) {
-        final int len = seq.length();
-        buf.ensureWritable(utf8MaxBytes(seq));
-
         for (;;) {
             if (buf instanceof AbstractByteBuf) {
                 AbstractByteBuf byteBuf = (AbstractByteBuf) buf;
-                int written = writeUtf8(byteBuf, byteBuf.writerIndex, seq, len);
+                byteBuf.ensureWritable(utf8MaxBytes(seq));
+                int written = writeUtf8(byteBuf, byteBuf.writerIndex, seq, seq.length());
                 byteBuf.writerIndex += written;
                 return written;
             } else if (buf instanceof WrappedByteBuf) {
@@ -543,14 +541,14 @@ public final class ByteBufUtil {
     public static int writeAscii(ByteBuf buf, CharSequence seq) {
         // ASCII uses 1 byte per char
         final int len = seq.length();
-        buf.ensureWritable(len);
         if (seq instanceof AsciiString) {
             AsciiString asciiString = (AsciiString) seq;
-            buf.writeBytes(asciiString.array(), asciiString.arrayOffset(), asciiString.length());
+            buf.writeBytes(asciiString.array(), asciiString.arrayOffset(), len);
         } else {
             for (;;) {
                 if (buf instanceof AbstractByteBuf) {
                     AbstractByteBuf byteBuf = (AbstractByteBuf) buf;
+                    byteBuf.ensureWritable(len);
                     int written = writeAscii(byteBuf, byteBuf.writerIndex, seq, len);
                     byteBuf.writerIndex += written;
                     return written;
