@@ -32,6 +32,9 @@ static void netty_kqueue_eventarray_evSet(JNIEnv* env, jclass clzz, jlong kevent
     if (jniSelfPtr == 0) {
         jniSelfPtr = (jlong) (*env)->NewGlobalRef(env, channel);
         (*env)->SetLongField(env, channel, kqueueJniPtrFieldId, jniSelfPtr);
+    } else if ((flags & EV_DELETE) != 0) {
+        // If the event is deleted, make sure it no longer has a reference to the jniSelfPtr because it shouldn't be used after this point.
+        jniSelfPtr = 0;
     }
     EV_SET((struct kevent*) keventAddress, ident, filter, flags, fflags, 0, (jobject) jniSelfPtr);
 }

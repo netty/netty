@@ -98,11 +98,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
         // socket which has not even been connected yet. This has been observed to block during unit tests.
         inputClosedSeenErrorOnRead = true;
-        // The FD will be closed, which will take of deleting from kqueue.
-        readFilterEnabled = writeFilterEnabled = false;
         try {
             if (isRegistered()) {
-                ((KQueueEventLoop) eventLoop()).remove(this);
+                // The FD will be closed, which should take care of deleting any associated events from kqueue, but
+                // since we rely upon jniSelfRef to be consistent we make sure that we clear this reference out for all]
+                // events which are pending in kqueue to avoid referencing a deleted pointer at a later time.
+                doDeregister();
             }
         } finally {
             socket.close();
