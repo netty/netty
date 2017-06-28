@@ -17,7 +17,10 @@ package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
 import org.junit.Test;
+
+import java.net.IDN;
 
 import static org.junit.Assert.*;
 
@@ -106,6 +109,51 @@ public class SocksCmdResponseTest {
                 0x50
         };
         assertByteBufEquals(expected, buffer);
+    }
+
+    @Test
+    public void testHostNotEncodedForUnknown() {
+        String asciiHost = "xn--e1aybc.xn--p1ai";
+        short port = 10000;
+
+        SocksCmdResponse rs = new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.UNKNOWN, asciiHost, port);
+        assertEquals(asciiHost, rs.host());
+
+        ByteBuf buffer = Unpooled.buffer(16);
+        rs.encodeAsByteBuf(buffer);
+
+        buffer.resetReaderIndex();
+        assertEquals(SocksProtocolVersion.SOCKS5.byteValue(), buffer.readByte());
+        assertEquals(SocksCmdStatus.SUCCESS.byteValue(), buffer.readByte());
+        assertEquals((byte) 0x00, buffer.readByte());
+        assertEquals(SocksAddressType.UNKNOWN.byteValue(), buffer.readByte());
+        assertFalse(buffer.isReadable());
+
+        buffer.release();
+    }
+
+    @Test
+    public void testIDNEncodeToAsciiForDomain() {
+        String host = "тест.рф";
+        String asciiHost = IDN.toASCII(host);
+        short port = 10000;
+
+        SocksCmdResponse rs = new SocksCmdResponse(SocksCmdStatus.SUCCESS, SocksAddressType.DOMAIN, host, port);
+        assertEquals(host, rs.host());
+
+        ByteBuf buffer = Unpooled.buffer(24);
+        rs.encodeAsByteBuf(buffer);
+
+        buffer.resetReaderIndex();
+        assertEquals(SocksProtocolVersion.SOCKS5.byteValue(), buffer.readByte());
+        assertEquals(SocksCmdStatus.SUCCESS.byteValue(), buffer.readByte());
+        assertEquals((byte) 0x00, buffer.readByte());
+        assertEquals(SocksAddressType.DOMAIN.byteValue(), buffer.readByte());
+        assertEquals((byte) asciiHost.length(), buffer.readUnsignedByte());
+        assertEquals(asciiHost, buffer.readCharSequence(asciiHost.length(), CharsetUtil.US_ASCII));
+        assertEquals(port, buffer.readUnsignedShort());
+
+        buffer.release();
     }
 
     /**

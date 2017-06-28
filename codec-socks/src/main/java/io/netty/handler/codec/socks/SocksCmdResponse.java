@@ -75,10 +75,11 @@ public final class SocksCmdResponse extends SocksResponse {
                     }
                     break;
                 case DOMAIN:
-                    if (IDN.toASCII(host).length() > 255) {
-                        throw new IllegalArgumentException(host + " IDN: " +
-                                IDN.toASCII(host) + " exceeds 255 char limit");
+                    String asciiHost = IDN.toASCII(host);
+                    if (asciiHost.length() > 255) {
+                        throw new IllegalArgumentException(host + " IDN: " + asciiHost + " exceeds 255 char limit");
                     }
+                    host = asciiHost;
                     break;
                 case IPv6:
                     if (!NetUtil.isValidIpV6Address(host)) {
@@ -88,7 +89,6 @@ public final class SocksCmdResponse extends SocksResponse {
                 case UNKNOWN:
                     break;
             }
-            host = IDN.toASCII(host);
         }
         if (port < 0 || port > 65535) {
             throw new IllegalArgumentException(port + " is not in bounds 0 <= x <= 65535");
@@ -126,11 +126,7 @@ public final class SocksCmdResponse extends SocksResponse {
      *         or null when there was no host specified during response construction
      */
     public String host() {
-        if (host != null) {
-            return IDN.toUnicode(host);
-        } else {
-            return null;
-        }
+        return host != null && addressType == SocksAddressType.DOMAIN ? IDN.toUnicode(host) : host;
     }
 
     /**
