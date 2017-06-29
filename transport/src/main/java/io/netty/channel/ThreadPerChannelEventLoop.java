@@ -93,5 +93,4 @@ public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
         parent.activeChildren.remove(this);
         parent.idleChildren.add(this);
     }
-
 }

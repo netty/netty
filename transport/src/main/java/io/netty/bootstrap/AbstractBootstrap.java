@@ -510,5 +510,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
     }
 
-    protected abstract boolean isServerSide();
+    protected boolean isServerSide() {
+        return false;
+    }
 }

@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFactoriesRegistry;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -950,6 +950,7 @@ public class LocalChannelTest {
         }
     }
 
+<<<<<<< HEAD
     private static void writeAndFlushReadOnSuccess(final ChannelHandlerContext ctx, Object msg) {
         ctx.writeAndFlush(msg).addListener(new ChannelFutureListener() {
             @Override
@@ -1008,7 +1009,24 @@ public class LocalChannelTest {
                             writeAndFlushReadOnSuccess(ctx, msg);
                         }
                     }
-                });
+                })
+    }
+
+    @Test
+    public void testUseChannelFactoriesRegistry() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+
+        cb.group(group1)
+          .handler(new TestHandler());
+
+        sb.group(group2)
+          .childHandler(new ChannelInitializer<LocalChannel>() {
+              @Override
+              public void initChannel(LocalChannel ch) throws Exception {
+                  ch.pipeline().addLast(new TestHandler());
+              }
+          });
 
         Channel sc = null;
         Channel cc = null;
@@ -1203,4 +1221,34 @@ public class LocalChannelTest {
             ctx.close();
         }
     }
+=======
+
+            final CountDownLatch latch = new CountDownLatch(1);
+            // Connect to the server
+            cc = cb.connect(sc.localAddress()).sync().channel();
+            final Channel ccCpy = cc;
+            cc.eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    // Send a message event up the pipeline.
+                    ccCpy.pipeline().fireChannelRead("Hello, World");
+                    latch.countDown();
+                }
+            });
+            assertTrue(latch.await(5, SECONDS));
+
+            // Close the channel
+            closeChannel(cc);
+            closeChannel(sc);
+            sc.closeFuture().sync();
+
+            assertNull(String.format(
+                    "Expected null, got channel '%s' for local address '%s'",
+                    LocalChannelRegistry.get(TEST_ADDRESS), TEST_ADDRESS), LocalChannelRegistry.get(TEST_ADDRESS));
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+>>>>>>> address review comments and add test case
 }
