@@ -825,7 +825,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return unsafeVoidPromise;
         }
 
-        @Deprecated
         protected final boolean ensureOpen(ChannelPromise promise) {
             if (isOpen()) {
                 return true;
