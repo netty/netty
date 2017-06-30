@@ -15,14 +15,19 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import javax.net.ssl.SSLEngine;
+
 
 /**
  * The {@link JdkApplicationProtocolNegotiator} to use if you need ALPN and are using {@link SslProvider#JDK}.
  */
 public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicationProtocolNegotiator {
-    private static final boolean AVAILABLE = ConscryptAlpnSslEngine.isAvailable() || JettyAlpnSslEngine.isAvailable();
-    private static final SslEngineWrapperFactory ALPN_WRAPPER = AVAILABLE ? new AlpnWrapper() : new FailureWrapper();
+    private static final SslEngineWrapperFactory ALPN_WRAPPER = new AlpnWrapper();
 
     /**
      * Create a new instance.
@@ -106,28 +111,94 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
         super(ALPN_WRAPPER, selectorFactory, listenerFactory, protocols);
     }
 
-    private static final class FailureWrapper implements SslEngineWrapperFactory {
-        @Override
-        public SSLEngine wrapSslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator,
-                                       boolean isServer) {
-            throw new RuntimeException("ALPN unsupported. Is your classpath configured correctly?"
-                    + " For Conscrypt, add the appropriate Conscrypt JAR to classpath and set the security provider."
-                    + " For Jetty-ALPN, see "
-                    + "http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-starting");
-        }
-    }
-
     private static final class AlpnWrapper implements SslEngineWrapperFactory {
+      private final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
+
+      private final Method conscryptIsEngineSupported;
+      private final Method conscryptNewServerEngine;
+      private final Method conscryptNewClientEngine;
+
+      private final Method jettyNewServerEngine;
+      private final Method jettyNewClientEngine;
+
+      private AlpnWrapper() {
+          Exception cause = null;
+          Method conscryptIsEngineSupported = null;
+          Method conscryptNewServerEngine = null;
+          Method conscryptNewClientEngine = null;
+          boolean conscryptAvailable = false;
+          try {
+              Class<?> clz = Class.forName("io.netty.handler.ssl.ConscryptAlpnSslEngine");
+              Method isAvailable = clz.getDeclaredMethod("isAvailable");
+              if ((Boolean) isAvailable.invoke(null)) {
+                  conscryptIsEngineSupported = clz.getDeclaredMethod("isEngineSupported", SSLEngine.class);
+                  conscryptNewServerEngine = clz.getDeclaredMethod(
+                          "newServerEngine", SSLEngine.class, JdkApplicationProtocolNegotiator.class);
+                  conscryptNewClientEngine = clz.getDeclaredMethod(
+                          "newClientEngine", SSLEngine.class, JdkApplicationProtocolNegotiator.class);
+                  conscryptAvailable = true;
+              }
+          } catch (Exception e) {
+              cause = e;
+          }
+          this.conscryptIsEngineSupported = conscryptIsEngineSupported;
+          this.conscryptNewServerEngine = conscryptNewServerEngine;
+          this.conscryptNewClientEngine = conscryptNewClientEngine;
+          if (!conscryptAvailable) {
+              logger.debug("Unable to load Conscrypt ALPN", cause);
+          }
+
+          cause = null;
+          Method jettyNewServerEngine = null;
+          Method jettyNewClientEngine = null;
+          boolean jettyAvailable = false;
+          try {
+              Class<?> clz = Class.forName("io.netty.handler.ssl.JettyAlpnSslEngine");
+              Method isAvailable = clz.getDeclaredMethod("isAvailable");
+              if ((Boolean) isAvailable.invoke(null)) {
+                  jettyNewServerEngine = clz.getDeclaredMethod(
+                          "newServerEngine", SSLEngine.class, JdkApplicationProtocolNegotiator.class);
+                  jettyNewClientEngine = clz.getDeclaredMethod(
+                          "newClientEngine", SSLEngine.class, JdkApplicationProtocolNegotiator.class);
+                  jettyAvailable = true;
+              }
+          } catch (Exception e) {
+              cause = e;
+          }
+          if (!jettyAvailable) {
+              logger.debug("Unable to load Jetty ALPN", cause);
+          }
+          if (!conscryptAvailable && !jettyAvailable) {
+              logger.info("Unable to load Conscrypt ALPN or Jetty ALPN");
+          }
+          this.jettyNewServerEngine = jettyNewServerEngine;
+          this.jettyNewClientEngine = jettyNewClientEngine;
+      }
+
         @Override
         public SSLEngine wrapSslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator,
                                        boolean isServer) {
-            if (ConscryptAlpnSslEngine.isEngineSupported(engine)) {
-                return isServer ? ConscryptAlpnSslEngine.newServerEngine(engine, applicationNegotiator)
-                        : ConscryptAlpnSslEngine.newClientEngine(engine, applicationNegotiator);
+            if (conscryptIsEngineSupported == null && jettyNewServerEngine == null) {
+                throw new RuntimeException("ALPN unsupported. Is your classpath configured correctly?"
+                        + " For Conscrypt, add the appropriate Conscrypt JAR to classpath and set the security"
+                        + " provider. For Jetty-ALPN, see "
+                        + "http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-starting");
             }
-            if (JettyAlpnSslEngine.isAvailable()) {
-                return isServer ? JettyAlpnSslEngine.newServerEngine(engine, applicationNegotiator)
-                        : JettyAlpnSslEngine.newClientEngine(engine, applicationNegotiator);
+            try {
+                if (conscryptIsEngineSupported != null && (Boolean) conscryptIsEngineSupported.invoke(null, engine)) {
+                    return (SSLEngine) (isServer
+                            ? conscryptNewServerEngine.invoke(null, engine, applicationNegotiator)
+                            : conscryptNewClientEngine.invoke(null, engine, applicationNegotiator));
+                }
+                if (jettyNewServerEngine != null) {
+                    return (SSLEngine) (isServer
+                            ? jettyNewServerEngine.invoke(null, engine, applicationNegotiator)
+                            : jettyNewClientEngine.invoke(null, engine, applicationNegotiator));
+                }
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e);
             }
             throw new RuntimeException("Unable to wrap SSLEngine of type " + engine.getClass().getName());
         }
