@@ -363,7 +363,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
             dataFrame.streamId(streamId);
             ctx.fireChannelRead(dataFrame);
 
-            // We return the bytes in bytesConsumed() once the stream channel consumed the bytes.
+            // We return the bytes in consumeBytes() once the stream channel consumed the bytes.
             return 0;
         }
     }
