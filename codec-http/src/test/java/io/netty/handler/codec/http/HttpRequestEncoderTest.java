@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 
 import static org.junit.Assert.*;
@@ -27,80 +29,97 @@ import static org.junit.Assert.*;
  */
 public class HttpRequestEncoderTest {
 
+    @SuppressWarnings("deprecation")
+    private static ByteBuf[] getBuffers() {
+        return new ByteBuf[]{
+                Unpooled.buffer(128).order(ByteOrder.BIG_ENDIAN),
+                Unpooled.buffer(128).order(ByteOrder.LITTLE_ENDIAN),
+                Unpooled.wrappedBuffer(ByteBuffer.allocate(128).order(ByteOrder.BIG_ENDIAN)).resetWriterIndex(),
+                Unpooled.wrappedBuffer(ByteBuffer.allocate(128).order(ByteOrder.LITTLE_ENDIAN)).resetWriterIndex()
+        };
+    }
+
     @Test
     public void testUriWithoutPath() throws Exception {
-        HttpRequestEncoder encoder = new HttpRequestEncoder();
-        ByteBuf buffer = Unpooled.buffer(64);
-        encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, "http://localhost"));
-        String req = buffer.toString(Charset.forName("US-ASCII"));
-        assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
-        buffer.release();
+        for (ByteBuf buffer : getBuffers()) {
+            HttpRequestEncoder encoder = new HttpRequestEncoder();
+            encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                    HttpMethod.GET, "http://localhost"));
+            String req = buffer.toString(Charset.forName("US-ASCII"));
+            assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
+            buffer.release();
+        }
     }
 
     @Test
     public void testUriWithoutPath2() throws Exception {
-        HttpRequestEncoder encoder = new HttpRequestEncoder();
-        ByteBuf buffer = Unpooled.buffer(64);
-        encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "http://localhost:9999?p1=v1"));
-        String req = buffer.toString(Charset.forName("US-ASCII"));
-        assertEquals("GET http://localhost:9999/?p1=v1 HTTP/1.1\r\n", req);
-        buffer.release();
+        for (ByteBuf buffer : getBuffers()) {
+            HttpRequestEncoder encoder = new HttpRequestEncoder();
+            encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                    "http://localhost:9999?p1=v1"));
+            String req = buffer.toString(Charset.forName("US-ASCII"));
+            assertEquals("GET http://localhost:9999/?p1=v1 HTTP/1.1\r\n", req);
+            buffer.release();
+        }
     }
 
     @Test
     public void testUriWithEmptyPath() throws Exception {
-        HttpRequestEncoder encoder = new HttpRequestEncoder();
-        ByteBuf buffer = Unpooled.buffer(64);
-        encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "http://localhost:9999/?p1=v1"));
-        String req = buffer.toString(Charset.forName("US-ASCII"));
-        assertEquals("GET http://localhost:9999/?p1=v1 HTTP/1.1\r\n", req);
-        buffer.release();
+        for (ByteBuf buffer : getBuffers()) {
+            HttpRequestEncoder encoder = new HttpRequestEncoder();
+            encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                    "http://localhost:9999/?p1=v1"));
+            String req = buffer.toString(Charset.forName("US-ASCII"));
+            assertEquals("GET http://localhost:9999/?p1=v1 HTTP/1.1\r\n", req);
+            buffer.release();
+        }
     }
 
     @Test
     public void testUriWithPath() throws Exception {
-        HttpRequestEncoder encoder = new HttpRequestEncoder();
-        ByteBuf buffer = Unpooled.buffer(64);
-        encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, "http://localhost/"));
-        String req = buffer.toString(Charset.forName("US-ASCII"));
-        assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
-        buffer.release();
+        for (ByteBuf buffer : getBuffers()) {
+            HttpRequestEncoder encoder = new HttpRequestEncoder();
+            encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                    HttpMethod.GET, "http://localhost/"));
+            String req = buffer.toString(Charset.forName("US-ASCII"));
+            assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
+            buffer.release();
+        }
     }
 
     @Test
     public void testAbsPath() throws Exception {
-        HttpRequestEncoder encoder = new HttpRequestEncoder();
-        ByteBuf buffer = Unpooled.buffer(64);
-        encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, "/"));
-        String req = buffer.toString(Charset.forName("US-ASCII"));
-        assertEquals("GET / HTTP/1.1\r\n", req);
-        buffer.release();
+        for (ByteBuf buffer : getBuffers()) {
+            HttpRequestEncoder encoder = new HttpRequestEncoder();
+            encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                    HttpMethod.GET, "/"));
+            String req = buffer.toString(Charset.forName("US-ASCII"));
+            assertEquals("GET / HTTP/1.1\r\n", req);
+            buffer.release();
+        }
     }
 
     @Test
     public void testEmptyAbsPath() throws Exception {
-        HttpRequestEncoder encoder = new HttpRequestEncoder();
-        ByteBuf buffer = Unpooled.buffer(64);
-        encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, ""));
-        String req = buffer.toString(Charset.forName("US-ASCII"));
-        assertEquals("GET / HTTP/1.1\r\n", req);
-        buffer.release();
+        for (ByteBuf buffer : getBuffers()) {
+            HttpRequestEncoder encoder = new HttpRequestEncoder();
+            encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                    HttpMethod.GET, ""));
+            String req = buffer.toString(Charset.forName("US-ASCII"));
+            assertEquals("GET / HTTP/1.1\r\n", req);
+            buffer.release();
+        }
     }
 
     @Test
     public void testQueryStringPath() throws Exception {
-        HttpRequestEncoder encoder = new HttpRequestEncoder();
-        ByteBuf buffer = Unpooled.buffer(64);
-        encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.GET, "/?url=http://example.com"));
-        String req = buffer.toString(Charset.forName("US-ASCII"));
-        assertEquals("GET /?url=http://example.com HTTP/1.1\r\n", req);
-        buffer.release();
+        for (ByteBuf buffer : getBuffers()) {
+            HttpRequestEncoder encoder = new HttpRequestEncoder();
+            encoder.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                    HttpMethod.GET, "/?url=http://example.com"));
+            String req = buffer.toString(Charset.forName("US-ASCII"));
+            assertEquals("GET /?url=http://example.com HTTP/1.1\r\n", req);
+            buffer.release();
+        }
     }
 }

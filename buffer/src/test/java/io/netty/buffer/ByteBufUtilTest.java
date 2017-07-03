@@ -19,6 +19,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Random;
@@ -127,6 +128,66 @@ public class ByteBufUtilTest {
         System.arraycopy(b1, iB1, b2, iB2, length - 1);
         assertFalse(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2,
                 -1));
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void writeShortBE() {
+        int expected = 0x1234;
+
+        ByteBuf buf = Unpooled.buffer(2).order(ByteOrder.BIG_ENDIAN);
+        ByteBufUtil.writeShortBE(buf, expected);
+        assertEquals(expected, buf.readShort());
+        buf.resetReaderIndex();
+        assertEquals(ByteBufUtil.swapShort((short) expected), buf.readShortLE());
+        buf.release();
+
+        buf = Unpooled.buffer(2).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBufUtil.writeShortBE(buf, expected);
+        assertEquals((short) expected, buf.readShortLE());
+        buf.resetReaderIndex();
+        assertEquals(ByteBufUtil.swapShort((short) expected), buf.readShort());
+        buf.release();
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void setShortBE() {
+        int shortValue = 0x1234;
+
+        ByteBuf buf = Unpooled.wrappedBuffer(new byte[2]).order(ByteOrder.BIG_ENDIAN);
+        ByteBufUtil.setShortBE(buf, 0, shortValue);
+        assertEquals(shortValue, buf.readShort());
+        buf.resetReaderIndex();
+        assertEquals(ByteBufUtil.swapShort((short) shortValue), buf.readShortLE());
+        buf.release();
+
+        buf = Unpooled.wrappedBuffer(new byte[2]).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBufUtil.setShortBE(buf, 0, shortValue);
+        assertEquals((short) shortValue, buf.readShortLE());
+        buf.resetReaderIndex();
+        assertEquals(ByteBufUtil.swapShort((short) shortValue), buf.readShort());
+        buf.release();
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void writeMediumBE() {
+        int mediumValue = 0x123456;
+
+        ByteBuf buf = Unpooled.buffer(4).order(ByteOrder.BIG_ENDIAN);
+        ByteBufUtil.writeMediumBE(buf, mediumValue);
+        assertEquals(mediumValue, buf.readMedium());
+        buf.resetReaderIndex();
+        assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMediumLE());
+        buf.release();
+
+        buf = Unpooled.buffer(4).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBufUtil.writeMediumBE(buf, mediumValue);
+        assertEquals(mediumValue, buf.readMediumLE());
+        buf.resetReaderIndex();
+        assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMedium());
+        buf.release();
     }
 
     @Test

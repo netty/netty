@@ -27,7 +27,7 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
-import static io.netty.handler.codec.http.HttpConstants.SP;
+import static io.netty.handler.codec.http.HttpConstants.*;
 
 @State(Scope.Benchmark)
 @Warmup(iterations = 10)
@@ -62,7 +62,8 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
         }
     }
 
-    private class OldHttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
+    private static class OldHttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
+        private static final byte[] CRLF = {CR, LF};
         private static final char SLASH = '/';
         private static final char QUESTION_MARK = '?';
 
