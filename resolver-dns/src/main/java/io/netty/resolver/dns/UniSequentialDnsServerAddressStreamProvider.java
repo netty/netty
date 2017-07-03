@@ -15,20 +15,20 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.UnstableApi;
-
-import java.net.InetSocketAddress;
+import io.netty.util.internal.ObjectUtil;
 
 /**
- * A {@link DnsServerAddressStreamProvider} which always uses a single DNS server for resolution.
+ * A {@link DnsServerAddressStreamProvider} which is backed by a single {@link DnsServerAddresses}.
  */
-@UnstableApi
-public final class SingletonDnsServerAddressStreamProvider extends UniSequentialDnsServerAddressStreamProvider {
-    /**
-     * Create a new instance.
-     * @param address The singleton address to use for every DNS resolution.
-     */
-    public SingletonDnsServerAddressStreamProvider(final InetSocketAddress address) {
-        super(DnsServerAddresses.singleton(address));
+abstract class UniSequentialDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
+    private final DnsServerAddresses addresses;
+
+    UniSequentialDnsServerAddressStreamProvider(DnsServerAddresses addresses) {
+        this.addresses = ObjectUtil.checkNotNull(addresses, "addresses");
+    }
+
+    @Override
+    public final DnsServerAddressStream nameServerAddressStream(String hostname) {
+        return addresses.stream();
     }
 }

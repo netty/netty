@@ -21,12 +21,21 @@ import java.net.InetSocketAddress;
 final class SingletonDnsServerAddresses extends DnsServerAddresses {
 
     private final InetSocketAddress address;
-    private final String strVal;
 
     private final DnsServerAddressStream stream = new DnsServerAddressStream() {
         @Override
         public InetSocketAddress next() {
             return address;
+        }
+
+        @Override
+        public int size() {
+            return 1;
+        }
+
+        @Override
+        public DnsServerAddressStream duplicate() {
+            return this;
         }
 
         @Override
@@ -37,7 +46,6 @@ final class SingletonDnsServerAddresses extends DnsServerAddresses {
 
     SingletonDnsServerAddresses(InetSocketAddress address) {
         this.address = address;
-        strVal = new StringBuilder(32).append("singleton(").append(address).append(')').toString();
     }
 
     @Override
@@ -47,6 +55,6 @@ final class SingletonDnsServerAddresses extends DnsServerAddresses {
 
     @Override
     public String toString() {
-        return strVal;
+        return "singleton(" + address + ")";
     }
 }
