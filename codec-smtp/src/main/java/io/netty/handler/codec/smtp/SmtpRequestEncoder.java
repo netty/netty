@@ -31,11 +31,10 @@ import java.util.RandomAccess;
  */
 @UnstableApi
 public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
-    private static final byte[] CRLF = {'\r', '\n'};
-    private static final byte[] DOT_CRLF = {'.', '\r', '\n'};
+    private static final int CRLF_SHORT = ('\r' << 8) | '\n';
     private static final byte SP = ' ';
     private static final ByteBuf DOT_CRLF_BUFFER = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(3).writeBytes(DOT_CRLF));
+            Unpooled.directBuffer(3).writeByte('.').writeByte('\r').writeByte('\n'));
 
     private boolean contentExpected;
 
@@ -60,7 +59,7 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
             try {
                 req.command().encode(buffer);
                 writeParameters(req.parameters(), buffer);
-                buffer.writeBytes(CRLF);
+                ByteBufUtil.writeShortBE(buffer, CRLF_SHORT);
                 out.add(buffer);
                 release = false;
                 if (req.command().isContentExpected()) {
