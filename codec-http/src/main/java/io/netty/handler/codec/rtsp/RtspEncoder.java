@@ -15,9 +15,6 @@
  */
 package io.netty.handler.codec.rtsp;
 
-import static io.netty.handler.codec.http.HttpConstants.CR;
-import static io.netty.handler.codec.http.HttpConstants.LF;
-import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -29,15 +26,14 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 
+import static io.netty.handler.codec.http.HttpConstants.*;
+
 /**
  * Encodes an RTSP message represented in {@link HttpMessage} or an {@link HttpContent} into
  * a {@link ByteBuf}.
  */
 public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
-    /**
-     * Constant for CRLF.
-     */
-    private static final byte[] CRLF = {CR, LF};
+    private static final int CRLF_SHORT = (CR << 8) | LF;
 
     @Override
     public boolean acceptOutboundMessage(final Object msg)
@@ -55,7 +51,7 @@ public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
             buf.writeCharSequence(request.uri(), CharsetUtil.UTF_8);
             buf.writeByte(SP);
             buf.writeCharSequence(request.protocolVersion().toString(), CharsetUtil.US_ASCII);
-            buf.writeBytes(CRLF);
+            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
         } else if (message instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) message;
             buf.writeCharSequence(response.protocolVersion().toString(), CharsetUtil.US_ASCII);
@@ -63,7 +59,7 @@ public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
             ByteBufUtil.copy(response.status().codeAsText(), buf);
             buf.writeByte(SP);
             buf.writeCharSequence(response.status().reasonPhrase(), CharsetUtil.US_ASCII);
-            buf.writeBytes(CRLF);
+            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
         } else {
             throw new UnsupportedMessageTypeException("Unsupported type "
                                 + StringUtil.simpleClassName(message));

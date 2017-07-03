@@ -388,6 +388,30 @@ public final class ByteBufUtil {
     }
 
     /**
+     * Writes a big-endian 16-bit short integer to the buffer.
+     */
+    @SuppressWarnings("deprecation")
+    public static ByteBuf writeShortBE(ByteBuf buf, int shortValue) {
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeShort(shortValue) : buf.writeShortLE(shortValue);
+    }
+
+    /**
+     * Sets a big-endian 16-bit short integer to the buffer.
+     */
+    @SuppressWarnings("deprecation")
+    public static ByteBuf setShortBE(ByteBuf buf, int index, int shortValue) {
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.setShort(index, shortValue) : buf.setShortLE(index, shortValue);
+    }
+
+    /**
+     * Writes a big-endian 24-bit medium integer to the buffer.
+     */
+    @SuppressWarnings("deprecation")
+    public static ByteBuf writeMediumBE(ByteBuf buf, int mediumValue) {
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeMedium(mediumValue) : buf.writeMediumLE(mediumValue);
+    }
+
+    /**
      * Read the given amount of bytes into a new {@link ByteBuf} that is allocated from the {@link ByteBufAllocator}.
      */
     public static ByteBuf readBytes(ByteBufAllocator alloc, ByteBuf buffer, int length) {
