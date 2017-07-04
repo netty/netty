@@ -31,8 +31,12 @@ import io.netty.channel.udt.UdtMessage;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.List;
 
 import static java.nio.channels.SelectionKey.*;
@@ -98,7 +102,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
 
     @Override
     protected void doBind(final SocketAddress localAddress) throws Exception {
-        SocketUtils.bind(javaChannel(), localAddress);
+        privilegedBind(javaChannel(), localAddress);
     }
 
     @Override
@@ -232,5 +236,20 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
     @Override
     public InetSocketAddress remoteAddress() {
         return (InetSocketAddress) super.remoteAddress();
+    }
+
+    private static void privilegedBind(final SocketChannelUDT socketChannel, final SocketAddress localAddress)
+            throws IOException {
+        try {
+            AccessController.doPrivileged(new PrivilegedExceptionAction<Void>() {
+                @Override
+                public Void run() throws IOException {
+                    socketChannel.bind(localAddress);
+                    return null;
+                }
+            });
+        } catch (PrivilegedActionException e) {
+            throw (IOException) e.getCause();
+        }
     }
 }
