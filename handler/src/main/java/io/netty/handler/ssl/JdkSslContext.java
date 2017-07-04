@@ -89,7 +89,20 @@ public class JdkSslContext extends SslContext {
         final String[] supportedCiphers = engine.getSupportedCipherSuites();
         SUPPORTED_CIPHERS = new HashSet<String>(supportedCiphers.length);
         for (i = 0; i < supportedCiphers.length; ++i) {
-            SUPPORTED_CIPHERS.add(supportedCiphers[i]);
+            String supportedCipher = supportedCiphers[i];
+            SUPPORTED_CIPHERS.add(supportedCipher);
+            // IBM's J9 JVM utilizes a custom naming scheme for ciphers and only returns ciphers with the "SSL_"
+            // prefix instead of the "TLS_" prefix (as defined in the JSSE cipher suite names [1]). According to IBM's
+            // documentation [2] the "SSL_" prefix is "interchangeable" with the "TLS_" prefix.
+            // See the IBM forum discussion [3] and issue on IBM's JVM [4] for more details.
+            //[1] http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#ciphersuites
+            //[2] https://www.ibm.com/support/knowledgecenter/en/SSYKE2_8.0.0/com.ibm.java.security.component.80.doc/
+            // security-component/jsse2Docs/ciphersuites.html
+            //[3] https://www.ibm.com/developerworks/community/forums/html/topic?id=9b5a56a9-fa46-4031-b33b-df91e28d77c2
+            //[4] https://www.ibm.com/developerworks/rfe/execute?use_case=viewRfe&CR_ID=71770
+            if (supportedCipher.startsWith("SSL_")) {
+                SUPPORTED_CIPHERS.add("TLS_" + supportedCipher.substring("SSL_".length()));
+            }
         }
         List<String> ciphers = new ArrayList<String>();
         addIfSupported(
