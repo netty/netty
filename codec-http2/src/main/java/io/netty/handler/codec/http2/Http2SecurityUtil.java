@@ -49,27 +49,20 @@ public final class Http2SecurityUtil {
      */
     private static final List<String> CIPHERS_JAVA_MOZILLA_MODERN_SECURITY = Collections.unmodifiableList(Arrays
             .asList(
-            /* Java 8 */
             /* openssl = ECDHE-ECDSA-AES256-GCM-SHA384 */
             "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
-            "SSL_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
             /* openssl = ECDHE-RSA-AES256-GCM-SHA384 */
             "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-            "SSL_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
             /* openssl = ECDHE-ECDSA-CHACHA20-POLY1305 */
             "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
-            "SSL_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
             /* openssl = ECDHE-RSA-CHACHA20-POLY1305 */
             "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
-            "SSL_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
             /* openssl = ECDHE-ECDSA-AES128-GCM-SHA256 */
             "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-            "SSL_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
 
             /* REQUIRED BY HTTP/2 SPEC */
             /* openssl = ECDHE-RSA-AES128-GCM-SHA256 */
-            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-            "SSL_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
             /* REQUIRED BY HTTP/2 SPEC */
             ));
 
