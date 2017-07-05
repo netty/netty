@@ -99,6 +99,18 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
         assertEquals(DEFAULT_NDOTS, parseEtcResolverFirstNdots(f));
     }
 
+    @Test
+    public void emptyEtcResolverDirectoryDoesNotThrow() throws IOException {
+        File f = buildFile("domain linecorp.local\n" +
+                           "nameserver 127.0.0.2\n" +
+                           "nameserver 127.0.0.3\n");
+        UnixResolverDnsServerAddressStreamProvider p =
+                new UnixResolverDnsServerAddressStreamProvider(f, folder.newFolder().listFiles());
+
+        DnsServerAddressStream stream = p.nameServerAddressStream("somehost");
+        assertHostNameEquals("127.0.0.2", stream.next());
+    }
+
     private File buildFile(String contents) throws IOException {
         File f = folder.newFile();
         OutputStream out = new FileOutputStream(f);

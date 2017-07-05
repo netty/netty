@@ -87,11 +87,9 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
      * @throws IOException If an error occurs while parsing the input files.
      */
     public UnixResolverDnsServerAddressStreamProvider(File etcResolvConf, File... etcResolverFiles) throws IOException {
-        if (etcResolverFiles != null && etcResolverFiles.length == 0) {
-            throw new IllegalArgumentException("etcResolverFiles must either be null or non-empty");
-        }
         Map<String, DnsServerAddresses> etcResolvConfMap = parse(checkNotNull(etcResolvConf, "etcResolvConf"));
-        domainToNameServerStreamMap = etcResolverFiles != null ? parse(etcResolverFiles) : etcResolvConfMap;
+        final boolean useEtcResolverFiles = etcResolverFiles != null && etcResolverFiles.length != 0;
+        domainToNameServerStreamMap = useEtcResolverFiles ? parse(etcResolverFiles) : etcResolvConfMap;
 
         DnsServerAddresses defaultNameServerAddresses = etcResolvConfMap.get(etcResolvConf.getName());
         if (defaultNameServerAddresses == null) {
@@ -104,7 +102,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
             this.defaultNameServerAddresses = defaultNameServerAddresses;
         }
 
-        if (etcResolverFiles != null) {
+        if (useEtcResolverFiles) {
             domainToNameServerStreamMap.putAll(etcResolvConfMap);
         }
     }
