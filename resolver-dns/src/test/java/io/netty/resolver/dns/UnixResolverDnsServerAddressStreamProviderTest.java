@@ -111,6 +111,6 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
     }
 
     private static void assertHostNameEquals(String expectedHostname, InetSocketAddress next) {
-        assertEquals("unexpected hostname: " + next, expectedHostname, next.getHostName());
+        assertEquals("unexpected hostname: " + next, expectedHostname, next.getHostString());
     }
 }
