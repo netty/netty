@@ -27,9 +27,14 @@ final class ShuffledDnsServerAddressStream implements DnsServerAddressStream {
     private int i;
 
     ShuffledDnsServerAddressStream(InetSocketAddress[] addresses) {
-        this.addresses = addresses.clone();
+        this.addresses = addresses;
 
         shuffle();
+    }
+
+    private ShuffledDnsServerAddressStream(InetSocketAddress[] addresses, int startIdx) {
+        this.addresses = addresses;
+        i = startIdx;
     }
 
     private void shuffle() {
@@ -55,6 +60,16 @@ final class ShuffledDnsServerAddressStream implements DnsServerAddressStream {
             shuffle();
         }
         return next;
+    }
+
+    @Override
+    public int size() {
+        return addresses.length;
+    }
+
+    @Override
+    public ShuffledDnsServerAddressStream duplicate() {
+        return new ShuffledDnsServerAddressStream(addresses, i);
     }
 
     @Override
