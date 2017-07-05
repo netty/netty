@@ -693,7 +693,8 @@ public class SslHandlerTest {
 
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) {
-                                    donePromise.tryFailure(new IllegalStateException("client closed"));
+                                    donePromise.tryFailure(new IllegalStateException("client closed. bytesSeen: " +
+                                                                                     bytesSeen));
                                 }
                             });
                         }
