@@ -436,7 +436,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     final class EpollDatagramChannelUnsafe extends AbstractEpollUnsafe {
 
         private RecvByteBufAllocator.Handle allocHandle;
-        private final List<Object> readBuf = new ArrayList<Object>();
 
         @Override
         public void connect(SocketAddress remote, SocketAddress local, ChannelPromise channelPromise) {
@@ -526,7 +525,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         allocHandle.record(readBytes);
                         readPending = false;
 
-                        readBuf.add(new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
+                        readPending = false;
+                        pipeline.fireChannelRead(
+                                new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
+
                         data = null;
                     } catch (Throwable t) {
                         // We do not break from the loop here and remember the last exception,
@@ -545,12 +547,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     }
                 } while (++ messages < maxMessagesPerRead || isRdHup());
 
-                int size = readBuf.size();
-                for (int i = 0; i < size; i ++) {
-                    pipeline.fireChannelRead(readBuf.get(i));
-                }
-
-                readBuf.clear();
                 pipeline.fireChannelReadComplete();
 
                 if (exception != null) {
