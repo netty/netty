@@ -15,6 +15,10 @@
  */
 package io.netty.handler.ssl;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 import javax.net.ssl.SSLEngine;
 
 /**
@@ -22,17 +26,37 @@ import javax.net.ssl.SSLEngine;
  */
 public final class JdkNpnApplicationProtocolNegotiator extends JdkBaseApplicationProtocolNegotiator {
     private static final SslEngineWrapperFactory NPN_WRAPPER = new SslEngineWrapperFactory() {
-        {
-            if (!JettyNpnSslEngine.isAvailable()) {
-                throw new RuntimeException("NPN unsupported. Is your classpath configured correctly?"
-                        + " See https://wiki.eclipse.org/Jetty/Feature/NPN");
+
+        private final Constructor<SSLEngine> ctor = init();
+
+        private Constructor<SSLEngine> init() {
+            Exception cause = null;
+            try {
+                Class<?> clz = Class.forName("io.netty.handler.ssl.JettyNpnSslEngine");
+                Method method = clz.getMethod("isAvailable");
+                if ((Boolean) method.invoke(null)) {
+                    return (Constructor<SSLEngine>) clz.getConstructor(
+                        SSLEngine.class, JdkApplicationProtocolNegotiator.class, boolean.class);
+                }
+            } catch (Exception e) {
+              cause = e;
             }
+            throw new RuntimeException("NPN unsupported. Is your classpath configured correctly?"
+                    + " See https://wiki.eclipse.org/Jetty/Feature/NPN", cause);
         }
 
         @Override
         public SSLEngine wrapSslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator,
                 boolean isServer) {
-            return new JettyNpnSslEngine(engine, applicationNegotiator, isServer);
+            try {
+              return ctor.newInstance(engine, applicationNegotiator, isServer);
+            } catch (IllegalAccessException e) {
+              throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+              throw new RuntimeException(e);
+            } catch (InstantiationException e) {
+              throw new RuntimeException(e);
+            }
         }
     };
 
