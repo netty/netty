@@ -28,6 +28,8 @@ import static io.netty.handler.codec.http.HttpConstants.SP;
 public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     private static final char SLASH = '/';
     private static final char QUESTION_MARK = '?';
+    private static final int SLASH_AND_SPACE_SHORT = (SLASH << 8) | SP;
+    private static final int SPACE_SLASH_AND_SPACE_MEDIUM = (SP << 16) | SLASH_AND_SPACE_SHORT;
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
@@ -37,37 +39,42 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
         ByteBufUtil.copy(request.method().asciiName(), buf);
-        buf.writeByte(SP);
 
-        // Add / as absolute path if no is present.
-        // See http://tools.ietf.org/html/rfc2616#section-5.1.2
         String uri = request.uri();
 
         if (uri.isEmpty()) {
-            uri += SLASH;
+            // Add " / " as absolute path if uri is not present.
+            // See http://tools.ietf.org/html/rfc2616#section-5.1.2
+            ByteBufUtil.writeMediumBE(buf, SPACE_SLASH_AND_SPACE_MEDIUM);
         } else {
+            CharSequence uriCharSequence = uri;
+            boolean needSlash = false;
             int start = uri.indexOf("://");
             if (start != -1 && uri.charAt(0) != SLASH) {
-                int startIndex = start + 3;
+                start += 3;
                 // Correctly handle query params.
                 // See https://github.com/netty/netty/issues/2732
-                int index = uri.indexOf(QUESTION_MARK, startIndex);
+                int index = uri.indexOf(QUESTION_MARK, start);
                 if (index == -1) {
-                    if (uri.lastIndexOf(SLASH) <= startIndex) {
-                        uri += SLASH;
+                    if (uri.lastIndexOf(SLASH) <= start) {
+                        needSlash = true;
                     }
                 } else {
-                    if (uri.lastIndexOf(SLASH, index) <= startIndex) {
-                        uri = new StringBuilder(uri).insert(index, SLASH).toString();
+                    if (uri.lastIndexOf(SLASH, index) <= start) {
+                        uriCharSequence = new StringBuilder(uri).insert(index, SLASH);
                     }
                 }
             }
+            buf.writeByte(SP).writeCharSequence(uriCharSequence, CharsetUtil.UTF_8);
+            if (needSlash) {
+                // write "/ " after uri
+                ByteBufUtil.writeShortBE(buf, SLASH_AND_SPACE_SHORT);
+            } else {
+                buf.writeByte(SP);
+            }
         }
 
-        buf.writeCharSequence(uri, CharsetUtil.UTF_8);
-
-        buf.writeByte(SP);
         request.protocolVersion().encode(buf);
-        buf.writeBytes(CRLF);
+        ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
     }
 }

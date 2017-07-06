@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 
 import static io.netty.handler.codec.http.HttpConstants.*;
 
@@ -35,6 +36,6 @@ public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
         response.protocolVersion().encode(buf);
         buf.writeByte(SP);
         response.status().encode(buf);
-        buf.writeBytes(CRLF);
+        ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
     }
 }
