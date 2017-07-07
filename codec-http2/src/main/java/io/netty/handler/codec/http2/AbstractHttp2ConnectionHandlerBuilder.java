@@ -432,7 +432,11 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         }
 
         // Setup post build options
-        handler.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
+        if (gracefulShutdownIndefiniteWait) {
+            handler.gracefulShutdownIndefiniteWait();
+        } else {
+            handler.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
+        }
         if (handler.decoder().frameListener() == null) {
             handler.decoder().frameListener(frameListener);
         }
