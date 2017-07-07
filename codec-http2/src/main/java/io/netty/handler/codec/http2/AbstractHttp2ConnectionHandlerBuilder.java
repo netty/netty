@@ -160,7 +160,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Sets the graceful shutdown timeout to be infinite.
+     * Sets the graceful shutdown timeout to be indefinite.
      */
     protected B gracefulShutdownIndefiniteWait() {
         gracefulShutdownIndefiniteWait = true;
