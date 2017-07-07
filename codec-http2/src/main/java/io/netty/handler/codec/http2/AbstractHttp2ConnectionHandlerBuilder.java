@@ -85,6 +85,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Http2Settings initialSettings = Http2Settings.defaultSettings();
     private Http2FrameListener frameListener;
     private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
+    private boolean gracefulShutdownIndefiniteWait;
 
     // The property that will prohibit connection() and codec() if set by server(),
     // because this property is used only when this builder creates a Http2Connection.
@@ -142,17 +143,27 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Returns the graceful shutdown timeout of the {@link Http2Connection} in milliseconds.
+     * Returns the graceful shutdown timeout of the {@link Http2Connection} in milliseconds. Returns -1 if the
+     * timeout is indefinite.
      */
     protected long gracefulShutdownTimeoutMillis() {
-        return gracefulShutdownTimeoutMillis;
+        return gracefulShutdownIndefiniteWait ? -1 : gracefulShutdownTimeoutMillis;
     }
 
     /**
      * Sets the graceful shutdown timeout of the {@link Http2Connection} in milliseconds.
      */
     protected B gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
+        gracefulShutdownIndefiniteWait = false;
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
+        return self();
+    }
+
+    /**
+     * Sets the graceful shutdown timeout to be infinite.
+     */
+    protected B gracefulShutdownIndefiniteWait() {
+        gracefulShutdownIndefiniteWait = true;
         return self();
     }
 
