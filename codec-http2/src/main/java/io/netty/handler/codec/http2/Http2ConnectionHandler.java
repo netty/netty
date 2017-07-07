@@ -92,7 +92,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     /**
      * Get the amount of time (in milliseconds) this endpoint will wait for all streams to be closed before closing
-     * the connection during the graceful shutdown process.
+     * the connection during the graceful shutdown process. Returns -1 if this connection is configured to wait
+     * indefinitely for all streams to close.
      */
     public long gracefulShutdownTimeoutMillis() {
         return gracefulShutdownTimeoutMillis;
@@ -105,9 +106,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * streams to be closed before closing the connection during the graceful shutdown process.
      */
     public void gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
-        if (gracefulShutdownTimeoutMillis < 0) {
+        if (gracefulShutdownTimeoutMillis < -1) {
             throw new IllegalArgumentException("gracefulShutdownTimeoutMillis: " + gracefulShutdownTimeoutMillis +
-                                               " (expected: >= 0)");
+                                               " (expected: -1 for indefinite or >= 0)");
         }
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
     }
@@ -454,8 +455,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             future.addListener(new ClosingChannelFutureListener(ctx, promise));
         } else {
             // If there are active streams we should wait until they are all closed before closing the connection.
-            closeListener = new ClosingChannelFutureListener(ctx, promise,
-                                                             gracefulShutdownTimeoutMillis, MILLISECONDS);
+            if (gracefulShutdownTimeoutMillis < 0) {
+                closeListener = new ClosingChannelFutureListener(ctx, promise);
+            } else {
+                closeListener = new ClosingChannelFutureListener(ctx, promise,
+                                                                 gracefulShutdownTimeoutMillis, MILLISECONDS);
+            }
         }
     }
 
