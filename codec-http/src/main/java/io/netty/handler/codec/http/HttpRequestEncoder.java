@@ -56,11 +56,11 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
                 // See https://github.com/netty/netty/issues/2732
                 int index = uri.indexOf(QUESTION_MARK, start);
                 if (index == -1) {
-                    if (uri.lastIndexOf(SLASH) <= start) {
+                    if (uri.lastIndexOf(SLASH) < start) {
                         needSlash = true;
                     }
                 } else {
-                    if (uri.lastIndexOf(SLASH, index) <= start) {
+                    if (uri.lastIndexOf(SLASH, index) < start) {
                         uriCharSequence = new StringBuilder(uri).insert(index, SLASH);
                     }
                 }
