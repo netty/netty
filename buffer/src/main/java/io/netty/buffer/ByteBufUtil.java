@@ -146,6 +146,17 @@ public final class ByteBufUtil {
     }
 
     /**
+     * Used to determine if the return value of {@link ByteBuf#ensureWritable(int, boolean)} means that there is
+     * adequate space and a write operation will succeed.
+     * @param ensureWritableResult The return value from {@link ByteBuf#ensureWritable(int, boolean)}.
+     * @return {@code true} if {@code ensureWritableResult} means that there is adequate space and a write operation
+     * will succeed.
+     */
+    public static boolean ensureWritableSuccess(int ensureWritableResult) {
+        return ensureWritableResult == 0 || ensureWritableResult == 2;
+    }
+
+    /**
      * Calculates the hash code of the specified buffer.  This method is
      * useful when implementing a new buffer type.
      */
