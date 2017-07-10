@@ -40,8 +40,11 @@ public final class Http2Codec extends ChannelDuplexHandler {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        ctx.pipeline().addBefore(ctx.executor(), ctx.name(), null, frameCodec);
-        ctx.pipeline().addBefore(ctx.executor(), ctx.name(), null, multiplexCodec);
+        // We use addAfter(...) because if we would use addBefore(...) we could end up with an incorrect
+        // order of handlers in the pipeline when replace(...) is used with the Http2Codec.
+        // See https://github.com/netty/netty/issues/6881.
+        ctx.pipeline().addAfter(ctx.executor(), ctx.name(), null, multiplexCodec);
+        ctx.pipeline().addAfter(ctx.executor(), ctx.name(), null, frameCodec);
 
         ctx.pipeline().remove(this);
     }

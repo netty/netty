@@ -17,8 +17,10 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
@@ -35,7 +37,6 @@ import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -56,8 +57,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
     private List<Object> userEvents;
 
-    @Before
-    public void setUp() {
+    private void setUpServerChannel() {
         frameListener = mock(Http2FrameListener.class);
 
         http2ConnectionHandler = new Http2ConnectionHandlerBuilder().frameListener(frameListener).build();
@@ -91,6 +91,8 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
     @Test
     public void priorKnowledge() throws Exception {
+        setUpServerChannel();
+
         channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
 
         ByteBuf settingsFrame = settingsFrameBuf();
@@ -109,6 +111,8 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
     @Test
     public void upgrade() throws Exception {
+        setUpServerChannel();
+
         String upgradeString = "GET / HTTP/1.1\r\n" +
                                "Host: example.com\r\n" +
                                "Connection: Upgrade, HTTP2-Settings\r\n" +
@@ -138,6 +142,8 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
     @Test
     public void priorKnowledgeInFragments() throws Exception {
+        setUpServerChannel();
+
         ByteBuf connectionPreface = Http2CodecUtil.connectionPrefaceBuf();
         assertFalse(channel.writeInbound(connectionPreface.readBytes(5), connectionPreface));
 
@@ -156,6 +162,8 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
     @Test
     public void downgrade() throws Exception {
+        setUpServerChannel();
+
         String requestString = "GET / HTTP/1.1\r\n" +
                          "Host: example.com\r\n\r\n";
         ByteBuf inbound = Unpooled.buffer().writeBytes(requestString.getBytes(CharsetUtil.US_ASCII));
@@ -173,6 +181,45 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         ((LastHttpContent) channel.readInbound()).release();
 
         assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void usedHttp2Codec() throws Exception {
+        final Http2Codec http2Codec = new Http2CodecBuilder(true, new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+            }
+        }).build();
+        UpgradeCodecFactory upgradeCodecFactory = new UpgradeCodecFactory() {
+            @Override
+            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+                return new Http2ServerUpgradeCodec(http2Codec);
+            }
+        };
+        http2ConnectionHandler = http2Codec.frameCodec().connectionHandler();
+
+        userEvents = new ArrayList<Object>();
+
+        HttpServerCodec httpServerCodec = new HttpServerCodec();
+        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, upgradeCodecFactory);
+
+        CleartextHttp2ServerUpgradeHandler handler = new CleartextHttp2ServerUpgradeHandler(
+                httpServerCodec, upgradeHandler, http2Codec);
+        channel = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                userEvents.add(evt);
+            }
+        });
+
+        assertFalse(channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf()));
+
+        ByteBuf settingsFrame = settingsFrameBuf();
+
+        assertFalse(channel.writeInbound(settingsFrame));
+
+        assertEquals(1, userEvents.size());
+        assertTrue(userEvents.get(0) instanceof PriorKnowledgeUpgradeEvent);
     }
 
     private static ByteBuf settingsFrameBuf() {
