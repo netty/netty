@@ -52,11 +52,11 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
                 // See https://github.com/netty/netty/issues/2732
                 int index = uri.indexOf(QUESTION_MARK, startIndex);
                 if (index == -1) {
-                    if (uri.lastIndexOf(SLASH) <= startIndex) {
+                    if (uri.lastIndexOf(SLASH) < startIndex) {
                         uri += SLASH;
                     }
                 } else {
-                    if (uri.lastIndexOf(SLASH, index) <= startIndex) {
+                    if (uri.lastIndexOf(SLASH, index) < startIndex) {
                         uri = new StringBuilder(uri).insert(index, SLASH).toString();
                     }
                 }
