@@ -200,4 +200,28 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
             wrappedBuffer.release();
         }
     }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testWriteUsAsciiCharSequenceExpand() {
+        super.testWriteUsAsciiCharSequenceExpand();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testWriteUtf8CharSequenceExpand() {
+        super.testWriteUtf8CharSequenceExpand();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testWriteIso88591CharSequenceExpand() {
+        super.testWriteIso88591CharSequenceExpand();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    @Override
+    public void testWriteUtf16CharSequenceExpand() {
+        super.testWriteUtf16CharSequenceExpand();
+    }
 }

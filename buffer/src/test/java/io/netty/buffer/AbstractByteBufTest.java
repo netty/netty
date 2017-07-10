@@ -36,6 +36,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
@@ -3173,6 +3174,66 @@ public abstract class AbstractByteBufTest {
         assertEquals(1, buf.refCnt());
         assertTrue(buf.slice().release());
         assertEquals(0, buf.refCnt());
+    }
+
+    @Test
+    public void testWriteUsAsciiCharSequenceExpand() {
+        testWriteCharSequenceExpand(CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testWriteUtf8CharSequenceExpand() {
+        testWriteCharSequenceExpand(CharsetUtil.UTF_8);
+    }
+
+    @Test
+    public void testWriteIso88591CharSequenceExpand() {
+        testWriteCharSequenceExpand(CharsetUtil.ISO_8859_1);
+    }
+    @Test
+    public void testWriteUtf16CharSequenceExpand() {
+        testWriteCharSequenceExpand(CharsetUtil.UTF_16);
+    }
+
+    private void testWriteCharSequenceExpand(Charset charset) {
+        ByteBuf buf = newBuffer(1);
+        try {
+            int writerIndex = buf.capacity() - 1;
+            buf.writerIndex(writerIndex);
+            int written = buf.writeCharSequence("AB", charset);
+            assertEquals(writerIndex, buf.writerIndex() - written);
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetUsAsciiCharSequenceNoExpand() {
+        testSetCharSequenceNoExpand(CharsetUtil.US_ASCII);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetUtf8CharSequenceNoExpand() {
+        testSetCharSequenceNoExpand(CharsetUtil.UTF_8);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetIso88591CharSequenceNoExpand() {
+        testSetCharSequenceNoExpand(CharsetUtil.ISO_8859_1);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetUtf16CharSequenceNoExpand() {
+        testSetCharSequenceNoExpand(CharsetUtil.UTF_16);
+    }
+
+    private void testSetCharSequenceNoExpand(Charset charset) {
+        ByteBuf buf = newBuffer(1);
+        try {
+            buf.setCharSequence(0, "AB", charset);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = IndexOutOfBoundsException.class)
