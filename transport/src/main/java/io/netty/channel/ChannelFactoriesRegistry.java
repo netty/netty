@@ -15,8 +15,9 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * This class provides a default mapping between {@link EventLoopGroup} implementations and {@link ChannelFactory}
@@ -24,22 +25,51 @@ import java.util.concurrent.ConcurrentMap;
  */
 public abstract class ChannelFactoriesRegistry {
 
-    private static ConcurrentMap<Class<? extends EventLoopGroup>, ChannelFactory> clientSideFactories
-        = new ConcurrentHashMap<Class<? extends EventLoopGroup>, ChannelFactory>();
+    private static final class ChannelFactoryDefaults {
+        private final Class<? extends EventLoopGroup> eventLoopGroupType;
+        private final ChannelFactory clientSideFactory;
+        private final ChannelFactory serverSideFactory;
 
-    private static ConcurrentMap<Class<? extends EventLoopGroup>, ChannelFactory> serverSideFactories
-        = new ConcurrentHashMap<Class<? extends EventLoopGroup>, ChannelFactory>();
+        public ChannelFactoryDefaults(Class<? extends EventLoopGroup> eventLoopGroupType,
+            ChannelFactory clientSideFactory, ChannelFactory serverSideFactory) {
+            this.eventLoopGroupType = eventLoopGroupType;
+            this.clientSideFactory = clientSideFactory;
+            this.serverSideFactory = serverSideFactory;
+        }
+
+        private boolean matchesClass(Class<? extends EventLoopGroup> clazz) {
+            return eventLoopGroupType.isAssignableFrom(clazz);
+        }
+    }
+
+    private static final List<ChannelFactoryDefaults> DEFAULT_CHANNEL_FACTORIES
+        = new ArrayList<ChannelFactoryDefaults>();
 
     private ChannelFactoriesRegistry() { }
 
     public static void registerFactoryForEventLoopGroup(Class<? extends EventLoopGroup> groupClass,
         ChannelFactory factoryForClients, ChannelFactory factoryForServers) {
-        clientSideFactories.put(groupClass, factoryForClients);
-        serverSideFactories.put(groupClass, factoryForServers);
+        synchronized (DEFAULT_CHANNEL_FACTORIES) {
+            for (Iterator<ChannelFactoryDefaults> it = DEFAULT_CHANNEL_FACTORIES.iterator(); it.hasNext();) {
+                ChannelFactoryDefaults channelFactoryDefaults = it.next();
+                if (channelFactoryDefaults.matchesClass(groupClass)) {
+                    it.remove();
+                }
+            }
+            DEFAULT_CHANNEL_FACTORIES.add(new ChannelFactoryDefaults(groupClass, factoryForClients, factoryForServers));
+        }
     }
 
     public static ChannelFactory getFactoryForEventLoopGroup(Class<? extends EventLoopGroup> groupClass,
         boolean serverSide) {
-        return serverSide ? serverSideFactories.get(groupClass) : clientSideFactories.get(groupClass);
+        synchronized (DEFAULT_CHANNEL_FACTORIES) {
+            for (ChannelFactoryDefaults channelFactoryDefaults : DEFAULT_CHANNEL_FACTORIES) {
+                if (channelFactoryDefaults.matchesClass(groupClass)) {
+                    return serverSide ?
+                        channelFactoryDefaults.serverSideFactory : channelFactoryDefaults.clientSideFactory;
+                }
+            }
+            return null;
+        }
     }
 }
