@@ -130,14 +130,40 @@ public interface Http2Stream {
     <V> V removeProperty(Http2Connection.PropertyKey key);
 
     /**
-     * Indicates that headers has been sent to the remote on this stream.
+     * Indicates that headers have been sent to the remote endpoint on this stream. The first call to this method would
+     * be for the initial headers (see {@link #isHeadersSent()}} and the second call would indicate the trailers
+     * (see {@link #isTrailersReceived()}).
+     * @param isInformational {@code true} if the headers contain an informational status code (for responses only).
      */
-    Http2Stream headersSent();
+    Http2Stream headersSent(boolean isInformational);
 
     /**
-     * Indicates whether or not headers was sent to the remote endpoint.
+     * Indicates whether or not headers were sent to the remote endpoint.
      */
     boolean isHeadersSent();
+
+    /**
+     * Indicates whether or not trailers were sent to the remote endpoint.
+     */
+    boolean isTrailersSent();
+
+    /**
+     * Indicates that headers have been received. The first call to this method would be for the initial headers
+     * (see {@link #isHeadersReceived()}} and the second call would indicate the trailers
+     * (see {@link #isTrailersReceived()}).
+     * @param isInformational {@code true} if the headers contain an informational status code (for responses only).
+     */
+    Http2Stream headersReceived(boolean isInformational);
+
+    /**
+     * Indicates whether or not the initial headers have been received.
+     */
+    boolean isHeadersReceived();
+
+    /**
+     * Indicates whether or not the trailers have been received.
+     */
+    boolean isTrailersReceived();
 
     /**
      * Indicates that a push promise was sent to the remote endpoint.

@@ -21,10 +21,12 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
 
+import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
@@ -145,6 +147,15 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         return writeHeaders(ctx, streamId, headers, 0, DEFAULT_PRIORITY_WEIGHT, false, padding, endStream, promise);
     }
 
+    private static boolean validateHeadersSentState(Http2Stream stream, Http2Headers headers, boolean isServer,
+                                                    boolean endOfStream) {
+        boolean isInformational = isServer && HttpStatusClass.valueOf(headers.status()) == INFORMATIONAL;
+        if ((isInformational || !endOfStream) && stream.isHeadersSent() || stream.isTrailersSent()) {
+            throw new IllegalStateException("Stream " + stream.id() + " sent too many headers EOS: " + endOfStream);
+        }
+        return isInformational;
+    }
+
     @Override
     public ChannelFuture writeHeaders(final ChannelHandlerContext ctx, final int streamId,
             final Http2Headers headers, final int streamDependency, final short weight,
@@ -180,6 +191,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // for this stream.
             Http2RemoteFlowController flowController = flowController();
             if (!endOfStream || !flowController.hasFlowControlled(stream)) {
+                boolean isInformational = validateHeadersSentState(stream, headers, connection.isServer(), endOfStream);
                 if (endOfStream) {
                     final Http2Stream finalStream = stream;
                     final ChannelFutureListener closeStreamLocalListener = new ChannelFutureListener() {
@@ -190,6 +202,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                     };
                     promise = promise.unvoid().addListener(closeStreamLocalListener);
                 }
+
                 ChannelFuture future = frameWriter.writeHeaders(ctx, streamId, headers, streamDependency,
                                                                 weight, exclusive, padding, endOfStream, promise);
                 // Writing headers may fail during the encode state if they violate HPACK limits.
@@ -197,7 +210,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 if (failureCause == null) {
                     // Synchronously set the headersSent flag to ensure that we do not subsequently write
                     // other headers containing pseudo-header fields.
-                    stream.headersSent();
+                    stream.headersSent(isInformational);
                 } else {
                     lifecycleManager.onError(ctx, failureCause);
                 }
@@ -451,6 +464,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         @Override
         public void write(ChannelHandlerContext ctx, int allowedBytes) {
+            boolean isInformational = validateHeadersSentState(stream, headers, connection.isServer(), endOfStream);
             if (promise.isVoid()) {
                 promise = ctx.newPromise();
             }
@@ -461,7 +475,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // Writing headers may fail during the encode state if they violate HPACK limits.
             Throwable failureCause = f.cause();
             if (failureCause == null) {
-                stream.headersSent();
+                stream.headersSent(isInformational);
             } else {
                 lifecycleManager.onError(ctx, failureCause);
             }
