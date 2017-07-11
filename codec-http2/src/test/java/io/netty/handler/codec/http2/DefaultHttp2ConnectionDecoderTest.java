@@ -21,6 +21,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,10 +51,10 @@ import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyShort;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -67,6 +68,8 @@ public class DefaultHttp2ConnectionDecoderTest {
     private static final int STREAM_ID = 3;
     private static final int PUSH_STREAM_ID = 2;
     private static final int STREAM_DEPENDENCY_ID = 5;
+    private static final int STATE_RECV_HEADERS = 1;
+    private static final int STATE_RECV_TRAILERS = 1 << 1;
 
     private Http2ConnectionDecoder decoder;
     private ChannelPromise promise;
@@ -122,11 +125,49 @@ public class DefaultHttp2ConnectionDecoderTest {
 
         promise = new DefaultChannelPromise(channel);
 
+        final AtomicInteger headersReceivedState = new AtomicInteger();
         when(channel.isActive()).thenReturn(true);
         when(stream.id()).thenReturn(STREAM_ID);
         when(stream.state()).thenReturn(OPEN);
         when(stream.open(anyBoolean())).thenReturn(stream);
         when(pushStream.id()).thenReturn(PUSH_STREAM_ID);
+        doAnswer(new Answer<Boolean>() {
+            @Override
+            public Boolean answer(InvocationOnMock in) throws Throwable {
+                return (headersReceivedState.get() & STATE_RECV_HEADERS) != 0;
+            }
+        }).when(stream).isHeadersReceived();
+        doAnswer(new Answer<Boolean>() {
+            @Override
+            public Boolean answer(InvocationOnMock in) throws Throwable {
+                return (headersReceivedState.get() & STATE_RECV_TRAILERS) != 0;
+            }
+        }).when(stream).isTrailersReceived();
+        doAnswer(new Answer<Http2Stream>() {
+            @Override
+            public Http2Stream answer(InvocationOnMock in) throws Throwable {
+                boolean isInformational = in.getArgument(0);
+                if (isInformational) {
+                    return stream;
+                }
+                for (;;) {
+                    int current = headersReceivedState.get();
+                    int next = current;
+                    if ((current & STATE_RECV_HEADERS) != 0) {
+                        if ((current & STATE_RECV_TRAILERS) != 0) {
+                            throw new IllegalStateException("already sent headers!");
+                        }
+                        next |= STATE_RECV_TRAILERS;
+                    } else {
+                        next |= STATE_RECV_HEADERS;
+                    }
+                    if (headersReceivedState.compareAndSet(current, next)) {
+                        break;
+                    }
+                }
+                return stream;
+            }
+        }).when(stream).headersReceived(anyBoolean());
         doAnswer(new Answer<Http2Stream>() {
             @Override
             public Http2Stream answer(InvocationOnMock in) throws Throwable {
@@ -452,7 +493,65 @@ public class DefaultHttp2ConnectionDecoderTest {
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
     }
 
+    @Test(expected = Http2Exception.class)
+    public void trailersDoNotEndStreamThrows() throws Exception {
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+        // Trailers must end the stream!
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void tooManyHeadersEOSThrows() throws Exception {
+        tooManyHeaderThrows(true);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void tooManyHeadersNoEOSThrows() throws Exception {
+        tooManyHeaderThrows(false);
+    }
+
+    private void tooManyHeaderThrows(boolean eos) throws Exception {
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+        // We already received the trailers!
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, eos);
+    }
+
+    private static Http2Headers informationalHeaders() {
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.status(HttpResponseStatus.CONTINUE.codeAsText());
+        return headers;
+    }
+
     @Test
+    public void infoHeadersAndTrailersAllowed() throws Exception {
+        infoHeadersAndTrailersAllowed(true, 1);
+    }
+
+    @Test
+    public void multipleInfoHeadersAndTrailersAllowed() throws Exception {
+        infoHeadersAndTrailersAllowed(true, 10);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void infoHeadersAndTrailersNoEOSThrows() throws Exception {
+        infoHeadersAndTrailersAllowed(false, 1);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void multipleInfoHeadersAndTrailersNoEOSThrows() throws Exception {
+        infoHeadersAndTrailersAllowed(false, 10);
+    }
+
+    private void infoHeadersAndTrailersAllowed(boolean eos, int infoHeaderCount) throws Exception {
+        for (int i = 0; i < infoHeaderCount; ++i) {
+            decode().onHeadersRead(ctx, STREAM_ID, informationalHeaders(), 0, false);
+        }
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, eos);
+    }
+
+    @Test()
     public void headersReadForPromisedStreamShouldCloseStream() throws Exception {
         when(stream.state()).thenReturn(RESERVED_REMOTE);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);

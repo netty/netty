@@ -16,6 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -23,6 +24,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.List;
 
+import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -282,6 +284,14 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 return;
             }
 
+            boolean isInformational = !connection.isServer() &&
+                    HttpStatusClass.valueOf(headers.status()) == INFORMATIONAL;
+            if ((isInformational || !endOfStream) && stream.isHeadersReceived() || stream.isTrailersReceived()) {
+                throw streamError(streamId, PROTOCOL_ERROR,
+                                  "Stream %d received too many headers EOS: %s state: %s",
+                                  streamId, endOfStream, stream.state());
+            }
+
             switch (stream.state()) {
                 case RESERVED_REMOTE:
                     stream.open(endOfStream);
@@ -305,6 +315,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                             stream.state());
             }
 
+            stream.headersReceived(isInformational);
             encoder.flowController().updateDependencyTree(streamId, streamDependency, weight, exclusive);
 
             listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endOfStream);

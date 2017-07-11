@@ -361,49 +361,6 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     @Test
-    public void clientRequestMultipleHeaders() throws Exception {
-        boostrapEnv(1, 1, 1);
-        // writeHeaders will implicitly add an END_HEADERS tag each time and so this test does not follow the HTTP
-        // message flow. We currently accept this message flow and just add the second headers to the trailing headers.
-        final String text = "";
-        final ByteBuf content = Unpooled.copiedBuffer(text.getBytes());
-        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "/some/path/resource2", content, true);
-        try {
-            HttpHeaders httpHeaders = request.headers();
-            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
-            httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, text.length());
-            httpHeaders.setShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), (short) 16);
-            HttpHeaders trailingHeaders = request.trailingHeaders();
-            trailingHeaders.set(of("FoO"), of("goo"));
-            trailingHeaders.set(of("foO2"), of("goo2"));
-            trailingHeaders.add(of("fOo2"), of("goo3"));
-            final Http2Headers http2Headers = new DefaultHttp2Headers().method(new AsciiString("GET")).path(
-                    new AsciiString("/some/path/resource2"));
-            final Http2Headers http2Headers2 = new DefaultHttp2Headers()
-                    .set(new AsciiString("foo"), new AsciiString("goo"))
-                    .set(new AsciiString("foo2"), new AsciiString("goo2"))
-                    .add(new AsciiString("foo2"), new AsciiString("goo3"));
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() throws Http2Exception {
-                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers, 0, false, newPromiseClient());
-                    clientHandler.encoder().writeHeaders(ctxClient(), 3, http2Headers2, 0, false, newPromiseClient());
-                    clientHandler.encoder().writeData(ctxClient(), 3, content.retain(), 0, true, newPromiseClient());
-                    clientChannel.flush();
-                }
-            });
-            awaitRequests();
-            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
-            verify(serverListener).messageReceived(requestCaptor.capture());
-            capturedRequests = requestCaptor.getAllValues();
-            assertEquals(request, capturedRequests.get(0));
-        } finally {
-            request.release();
-        }
-    }
-
-    @Test
     public void clientRequestTrailingHeaders() throws Exception {
         boostrapEnv(1, 1, 1);
         final String text = "some data";

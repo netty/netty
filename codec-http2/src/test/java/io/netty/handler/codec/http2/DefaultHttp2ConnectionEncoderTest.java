@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import junit.framework.AssertionFailedError;
@@ -59,11 +60,12 @@ import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyShort;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -343,10 +345,207 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
+    public void trailersDoNotEndStreamThrows() {
+        writeAllFlowControlledFrames();
+        final int streamId = 6;
+        ChannelPromise promise = newPromise();
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise);
+
+        ChannelPromise promise2 = newPromise();
+        ChannelFuture future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise2);
+        assertTrue(future.isDone());
+        assertFalse(future.isSuccess());
+
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise));
+    }
+
+    @Test
+    public void trailersDoNotEndStreamWithDataThrows() {
+        writeAllFlowControlledFrames();
+        final int streamId = 6;
+        ChannelPromise promise = newPromise();
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise);
+
+        Http2Stream stream = connection.stream(streamId);
+        when(remoteFlow.hasFlowControlled(eq(stream))).thenReturn(true);
+
+        ChannelPromise promise2 = newPromise();
+        ChannelFuture future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise2);
+        assertTrue(future.isDone());
+        assertFalse(future.isSuccess());
+
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise));
+    }
+
+    @Test
+    public void tooManyHeadersNoEOSThrows() {
+        tooManyHeadersThrows(false);
+    }
+
+    @Test
+    public void tooManyHeadersEOSThrows() {
+        tooManyHeadersThrows(true);
+    }
+
+    private void tooManyHeadersThrows(boolean eos) {
+        writeAllFlowControlledFrames();
+        final int streamId = 6;
+        ChannelPromise promise = newPromise();
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise);
+        ChannelPromise promise2 = newPromise();
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true, promise2);
+
+        ChannelPromise promise3 = newPromise();
+        ChannelFuture future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
+        assertTrue(future.isDone());
+        assertFalse(future.isSuccess());
+
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise));
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise2));
+    }
+
+    @Test
+    public void infoHeadersAndTrailersAllowed() throws Exception {
+        infoHeadersAndTrailers(true, 1);
+    }
+
+    @Test
+    public void multipleInfoHeadersAndTrailersAllowed() throws Exception {
+        infoHeadersAndTrailers(true, 10);
+    }
+
+    @Test
+    public void infoHeadersAndTrailersNoEOSThrows() throws Exception {
+        infoHeadersAndTrailers(false, 1);
+    }
+
+    @Test
+    public void multipleInfoHeadersAndTrailersNoEOSThrows() throws Exception {
+        infoHeadersAndTrailers(false, 10);
+    }
+
+    private void infoHeadersAndTrailers(boolean eos, int infoHeaderCount) {
+        writeAllFlowControlledFrames();
+        final int streamId = 6;
+        Http2Headers infoHeaders = informationalHeaders();
+        for (int i = 0; i < infoHeaderCount; ++i) {
+            encoder.writeHeaders(ctx, streamId, infoHeaders, 0, false, newPromise());
+        }
+        ChannelPromise promise2 = newPromise();
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise2);
+
+        ChannelPromise promise3 = newPromise();
+        ChannelFuture future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
+        assertTrue(future.isDone());
+        assertEquals(eos, future.isSuccess());
+
+        verify(writer, times(infoHeaderCount)).writeHeaders(eq(ctx), eq(streamId), eq(infoHeaders), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), any(ChannelPromise.class));
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise2));
+        if (eos) {
+            verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                    eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise3));
+        }
+    }
+
+    private static Http2Headers informationalHeaders() {
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.status(HttpResponseStatus.CONTINUE.codeAsText());
+        return headers;
+    }
+
+    @Test
+    public void tooManyHeadersWithDataNoEOSThrows() {
+        tooManyHeadersWithDataThrows(false);
+    }
+
+    @Test
+    public void tooManyHeadersWithDataEOSThrows() {
+        tooManyHeadersWithDataThrows(true);
+    }
+
+    private void tooManyHeadersWithDataThrows(boolean eos) {
+        writeAllFlowControlledFrames();
+        final int streamId = 6;
+        ChannelPromise promise = newPromise();
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise);
+
+        Http2Stream stream = connection.stream(streamId);
+        when(remoteFlow.hasFlowControlled(eq(stream))).thenReturn(true);
+
+        ChannelPromise promise2 = newPromise();
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true, promise2);
+
+        ChannelPromise promise3 = newPromise();
+        ChannelFuture future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
+        assertTrue(future.isDone());
+        assertFalse(future.isSuccess());
+
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise));
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise2));
+    }
+
+    @Test
+    public void infoHeadersAndTrailersWithDataAllowed() {
+        infoHeadersAndTrailersWithData(true, 1);
+    }
+
+    @Test
+    public void multipleInfoHeadersAndTrailersWithDataAllowed() {
+        infoHeadersAndTrailersWithData(true, 10);
+    }
+
+    @Test
+    public void infoHeadersAndTrailersWithDataNoEOSThrows() {
+        infoHeadersAndTrailersWithData(false, 1);
+    }
+
+    @Test
+    public void multipleInfoHeadersAndTrailersWithDataNoEOSThrows() {
+        infoHeadersAndTrailersWithData(false, 10);
+    }
+
+    private void infoHeadersAndTrailersWithData(boolean eos, int infoHeaderCount) {
+        writeAllFlowControlledFrames();
+        final int streamId = 6;
+        Http2Headers infoHeaders = informationalHeaders();
+        for (int i = 0; i < infoHeaderCount; ++i) {
+            encoder.writeHeaders(ctx, streamId, infoHeaders, 0, false, newPromise());
+        }
+
+        Http2Stream stream = connection.stream(streamId);
+        when(remoteFlow.hasFlowControlled(eq(stream))).thenReturn(true);
+
+        ChannelPromise promise2 = newPromise();
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise2);
+
+        ChannelPromise promise3 = newPromise();
+        ChannelFuture future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
+        assertTrue(future.isDone());
+        assertEquals(eos, future.isSuccess());
+
+        verify(writer, times(infoHeaderCount)).writeHeaders(eq(ctx), eq(streamId), eq(infoHeaders), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), any(ChannelPromise.class));
+        verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false), eq(promise2));
+        if (eos) {
+            verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                    eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise3));
+        }
+    }
+
+    @Test
     public void pushPromiseWriteAfterGoAwayReceivedShouldFail() throws Exception {
         createStream(STREAM_ID, false);
         goAwayReceived(0);
-        ChannelFuture future =  encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0,
+        ChannelFuture future = encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0,
                 newPromise());
         assertTrue(future.isDone());
         assertFalse(future.isSuccess());
