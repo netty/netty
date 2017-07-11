@@ -93,6 +93,66 @@ public class ChannelFactoriesRegistryTest {
     }
 
     @Test
+    public void testLocalChannelWithGroupSubClass() throws Exception {
+        final LocalAddress TEST_ADDRESS = new LocalAddress("test.id");
+
+        EventLoopGroup group1 = new DefaultEventLoopGroup(2) {
+        };
+        EventLoopGroup group2 = new DefaultEventLoopGroup(2) {
+        };
+        try {
+            Bootstrap cb = new Bootstrap();
+            ServerBootstrap sb = new ServerBootstrap();
+
+            cb.group(group1)
+                .handler(new TestHandler());
+
+            sb.group(group2)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new TestHandler());
+                    }
+                });
+
+            Channel sc = null;
+            Channel cc = null;
+            try {
+                // Start server
+                sc = sb.bind(TEST_ADDRESS).sync().channel();
+
+                final CountDownLatch latch = new CountDownLatch(1);
+                // Connect to the server
+                cc = cb.connect(sc.localAddress()).sync().channel();
+                final Channel ccCpy = cc;
+                cc.eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Send a message event up the pipeline.
+                        ccCpy.pipeline().fireChannelRead("Hello, World");
+                        latch.countDown();
+                    }
+                });
+                assertTrue(latch.await(5, SECONDS));
+
+                // Close the channel
+                closeChannel(cc);
+                closeChannel(sc);
+                sc.closeFuture().sync();
+            } finally {
+                closeChannel(cc);
+                closeChannel(sc);
+            }
+        } finally {
+            Future<?> group1Future = group1.shutdownGracefully(0, 0, SECONDS);
+            Future<?> group2Future = group2.shutdownGracefully(0, 0, SECONDS);
+
+            group1Future.await();
+            group2Future.await();
+        }
+    }
+
+    @Test
     public void testNioChannel() throws Exception {
 
         EventLoopGroup group1 = new NioEventLoopGroup(2);
