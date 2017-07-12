@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -31,7 +31,7 @@ public abstract class ChannelFactoriesRegistry {
         private final ChannelFactory serverSideFactory;
 
         public ChannelFactoryDefaults(Class<? extends EventLoopGroup> eventLoopGroupType,
-            ChannelFactory clientSideFactory, ChannelFactory serverSideFactory) {
+                                      ChannelFactory clientSideFactory, ChannelFactory serverSideFactory) {
             this.eventLoopGroupType = eventLoopGroupType;
             this.clientSideFactory = clientSideFactory;
             this.serverSideFactory = serverSideFactory;
@@ -48,7 +48,8 @@ public abstract class ChannelFactoriesRegistry {
     private ChannelFactoriesRegistry() { }
 
     public static void registerFactoryForEventLoopGroup(Class<? extends EventLoopGroup> groupClass,
-        ChannelFactory factoryForClients, ChannelFactory factoryForServers) {
+                                                        ChannelFactory factoryForClients,
+                                                        ChannelFactory factoryForServers) {
         synchronized (DEFAULT_CHANNEL_FACTORIES) {
             for (Iterator<ChannelFactoryDefaults> it = DEFAULT_CHANNEL_FACTORIES.iterator(); it.hasNext();) {
                 ChannelFactoryDefaults channelFactoryDefaults = it.next();
@@ -61,7 +62,7 @@ public abstract class ChannelFactoriesRegistry {
     }
 
     public static ChannelFactory getFactoryForEventLoopGroup(Class<? extends EventLoopGroup> groupClass,
-        boolean serverSide) {
+                                                             boolean serverSide) {
         synchronized (DEFAULT_CHANNEL_FACTORIES) {
             for (ChannelFactoryDefaults channelFactoryDefaults : DEFAULT_CHANNEL_FACTORIES) {
                 if (channelFactoryDefaults.matchesClass(groupClass)) {
