@@ -18,23 +18,30 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.internal.tcnative.Buffer;
+import io.netty.internal.tcnative.Library;
+import io.netty.internal.tcnative.SSL;
+import io.netty.internal.tcnative.SSLContext;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.internal.tcnative.Buffer;
-import io.netty.internal.tcnative.Library;
-import io.netty.internal.tcnative.SSL;
-import io.netty.internal.tcnative.SSLContext;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+
+import static io.netty.handler.ssl.SslUtils.DEFAULT_CIPHER_SUITES;
+import static io.netty.handler.ssl.SslUtils.addIfSupported;
+import static io.netty.handler.ssl.SslUtils.useFallbackCiphersIfDefaultIsEmpty;
 
 /**
  * Tells if <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
@@ -47,6 +54,7 @@ public final class OpenSsl {
     private static final String UNKNOWN = "unknown";
     private static final Throwable UNAVAILABILITY_CAUSE;
 
+    static final List<String> DEFAULT_CIPHERS;
     static final Set<String> AVAILABLE_CIPHER_SUITES;
     private static final Set<String> AVAILABLE_OPENSSL_CIPHER_SUITES;
     private static final Set<String> AVAILABLE_JAVA_CIPHER_SUITES;
@@ -115,6 +123,7 @@ public final class OpenSsl {
         if (cause == null) {
             logger.debug("netty-tcnative using native library: {}", SSL.versionString());
 
+            final List<String> defaultCiphers = new ArrayList<String>();
             final Set<String> availableOpenSslCipherSuites = new LinkedHashSet<String>(128);
             boolean supportsKeyManagerFactory = false;
             boolean useKeyManagerFactory = false;
@@ -134,6 +143,7 @@ public final class OpenSsl {
                             }
                             availableOpenSslCipherSuites.add(c);
                         }
+
                         try {
                             SSL.setHostNameValidation(ssl, 0, "netty.io");
                             supportsHostNameValidation = true;
@@ -175,7 +185,6 @@ public final class OpenSsl {
                 logger.warn("Failed to get the list of available OpenSSL cipher suites.", e);
             }
             AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.unmodifiableSet(availableOpenSslCipherSuites);
-
             final Set<String> availableJavaCipherSuites = new LinkedHashSet<String>(
                     AVAILABLE_OPENSSL_CIPHER_SUITES.size() * 2);
             for (String cipher: AVAILABLE_OPENSSL_CIPHER_SUITES) {
@@ -183,6 +192,11 @@ public final class OpenSsl {
                 availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "TLS"));
                 availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "SSL"));
             }
+
+            useFallbackCiphersIfDefaultIsEmpty(defaultCiphers, availableJavaCipherSuites);
+            DEFAULT_CIPHERS = Collections.unmodifiableList(defaultCiphers);
+            addIfSupported(availableJavaCipherSuites, defaultCiphers, DEFAULT_CIPHER_SUITES);
+
             AVAILABLE_JAVA_CIPHER_SUITES = Collections.unmodifiableSet(availableJavaCipherSuites);
 
             final Set<String> availableCipherSuites = new LinkedHashSet<String>(
@@ -216,7 +230,13 @@ public final class OpenSsl {
 
             SUPPORTED_PROTOCOLS_SET = Collections.unmodifiableSet(protocols);
             SUPPORTS_OCSP = doesSupportOcsp();
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("Supported protocols (OpenSSL): {} ", Arrays.asList(SUPPORTED_PROTOCOLS_SET));
+                logger.debug("Default cipher suites (OpenSSL): {}", DEFAULT_CIPHERS);
+            }
         } else {
+            DEFAULT_CIPHERS = Collections.emptyList();
             AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_JAVA_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_CIPHER_SUITES = Collections.emptySet();
