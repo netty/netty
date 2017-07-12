@@ -17,7 +17,6 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactoriesRegistry;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -209,10 +208,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * call the super method in that case.
      */
     public B validate() {
-        ensureChannelFactory();
         if (group == null) {
             throw new IllegalStateException("group not set");
         }
+        ensureChannelFactory();
         if (channelFactory == null) {
             throw new IllegalStateException("channel or channelFactory not set");
         }
@@ -221,7 +220,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     private void ensureChannelFactory() {
         if (channelFactory == null) {
-            channelFactory = ChannelFactoriesRegistry.getFactoryForEventLoopGroup(group.getClass(), isServerSide());
+            channelFactory = getDefaultChannelFactory();
         }
     }
 
@@ -510,7 +509,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
     }
 
-    protected boolean isServerSide() {
-        return false;
+    protected io.netty.channel.ChannelFactory getDefaultChannelFactory() {
+        return null;
     }
 }

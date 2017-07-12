@@ -17,6 +17,8 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFactoriesRegistry;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -320,8 +322,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     }
 
     @Override
-    protected boolean isServerSide() {
-        return true;
+    protected ChannelFactory getDefaultChannelFactory() {
+        return ChannelFactoriesRegistry.getFactoryForEventLoopGroup(group.getClass(), true);
     }
-
 }

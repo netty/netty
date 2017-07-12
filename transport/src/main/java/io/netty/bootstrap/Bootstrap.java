@@ -16,6 +16,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactoriesRegistry;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
@@ -317,7 +318,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     }
 
     @Override
-    protected boolean isServerSide() {
-        return false;
+    protected io.netty.channel.ChannelFactory getDefaultChannelFactory() {
+        return ChannelFactoriesRegistry.getFactoryForEventLoopGroup(group.getClass(), false);
     }
 }
