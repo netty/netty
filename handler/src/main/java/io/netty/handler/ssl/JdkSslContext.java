@@ -20,11 +20,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import javax.crypto.NoSuchPaddingException;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLSessionContext;
 import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -42,7 +37,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import javax.crypto.NoSuchPaddingException;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSessionContext;
+
+import static io.netty.handler.ssl.SslUtils.DEFAULT_CIPHER_SUITES;
+import static io.netty.handler.ssl.SslUtils.addIfSupported;
+import static io.netty.handler.ssl.SslUtils.useFallbackCiphersIfDefaultIsEmpty;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * An {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -52,9 +56,9 @@ public class JdkSslContext extends SslContext {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkSslContext.class);
 
     static final String PROTOCOL = "TLS";
-    static final String[] DEFAULT_PROTOCOLS;
-    static final List<String> DEFAULT_CIPHERS;
-    static final Set<String> SUPPORTED_CIPHERS;
+    private static final String[] DEFAULT_PROTOCOLS;
+    private static final List<String> DEFAULT_CIPHERS;
+    private static final Set<String> SUPPORTED_CIPHERS;
 
     static {
         SSLContext context;
@@ -105,44 +109,13 @@ public class JdkSslContext extends SslContext {
             }
         }
         List<String> ciphers = new ArrayList<String>();
-        addIfSupported(
-                SUPPORTED_CIPHERS, ciphers,
-                // XXX: Make sure to sync this list with OpenSslEngineFactory.
-                // GCM (Galois/Counter Mode) requires JDK 8.
-                "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
-                "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
-                // AES256 requires JCE unlimited strength jurisdiction policy files.
-                "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
-                // GCM (Galois/Counter Mode) requires JDK 8.
-                "TLS_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_RSA_WITH_AES_128_CBC_SHA",
-                // AES256 requires JCE unlimited strength jurisdiction policy files.
-                "TLS_RSA_WITH_AES_256_CBC_SHA");
-
-        if (ciphers.isEmpty()) {
-            // Use the default from JDK as fallback.
-            for (String cipher : engine.getEnabledCipherSuites()) {
-                if (cipher.contains("_RC4_")) {
-                    continue;
-                }
-                ciphers.add(cipher);
-            }
-        }
+        addIfSupported(SUPPORTED_CIPHERS, ciphers, DEFAULT_CIPHER_SUITES);
+        useFallbackCiphersIfDefaultIsEmpty(ciphers, engine.getEnabledCipherSuites());
         DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
 
         if (logger.isDebugEnabled()) {
             logger.debug("Default protocols (JDK): {} ", Arrays.asList(DEFAULT_PROTOCOLS));
             logger.debug("Default cipher suites (JDK): {}", DEFAULT_CIPHERS);
-        }
-    }
-
-    private static void addIfSupported(Set<String> supported, List<String> enabled, String... names) {
-        for (String n: names) {
-            if (supported.contains(n)) {
-                enabled.add(n);
-            }
         }
     }
 
