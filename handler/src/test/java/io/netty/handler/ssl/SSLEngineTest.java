@@ -57,13 +57,15 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.security.KeyStore;
+import java.security.Provider;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
-import java.security.Provider;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -1677,6 +1679,36 @@ public abstract class SSLEngineTest {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
             cert.delete();
+        }
+    }
+
+    @Test
+    public void testHandshakeCompletesWithNonContiguousProtocolsTLSv1_2CipherOnly() throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
+        // due to no shared/supported cipher.
+        final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .ciphers(Arrays.asList(sharedCipher))
+                .protocols(OpenSsl.PROTOCOL_TLS_V1_2, OpenSsl.PROTOCOL_TLS_V1)
+                .sslProvider(sslClientProvider())
+                .build();
+
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .ciphers(Arrays.asList(sharedCipher))
+                .protocols(OpenSsl.PROTOCOL_TLS_V1_2, OpenSsl.PROTOCOL_TLS_V1)
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            handshake(clientEngine, serverEngine);
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
         }
     }
 
