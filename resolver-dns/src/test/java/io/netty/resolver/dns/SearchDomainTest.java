@@ -48,7 +48,8 @@ public class SearchDomainTest {
             .channelType(NioDatagramChannel.class)
             .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()))
             .maxQueriesPerResolve(1)
-            .optResourceEnabled(false);
+            .optResourceEnabled(false)
+            .ndots(1);
     }
 
     private TestDnsServer dnsServer;

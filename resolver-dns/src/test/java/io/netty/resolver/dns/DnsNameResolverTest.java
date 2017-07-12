@@ -298,7 +298,8 @@ public class DnsNameResolverTest {
                 .channelType(NioDatagramChannel.class)
                 .maxQueriesPerResolve(1)
                 .decodeIdn(decodeToUnicode)
-                .optResourceEnabled(false);
+                .optResourceEnabled(false)
+                .ndots(1);
 
         if (dnsServerAddressStreamProvider == null) {
             builder.nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()));
@@ -821,7 +822,8 @@ public class DnsNameResolverTest {
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                     .channelType(NioDatagramChannel.class)
                     .queryTimeoutMillis(1000) // We expect timeouts if startDnsServer1 is false
-                    .optResourceEnabled(false);
+                    .optResourceEnabled(false)
+                    .ndots(1);
 
             builder.nameServerProvider(new SequentialDnsServerAddressStreamProvider(dnsServer1Address,
                     dnsServer2.localAddress()));
@@ -867,7 +869,8 @@ public class DnsNameResolverTest {
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV6_PREFERRED)
                     .dnsQueryLifecycleObserverFactory(lifecycleObserverFactory)
                     .channelType(NioDatagramChannel.class)
-                    .optResourceEnabled(false);
+                    .optResourceEnabled(false)
+                    .ndots(1);
 
             builder.nameServerProvider(new SequentialDnsServerAddressStreamProvider(dnsServer1.localAddress(),
                     dnsServer2.localAddress()));

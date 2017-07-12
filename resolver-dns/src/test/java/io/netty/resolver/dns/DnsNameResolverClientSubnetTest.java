@@ -63,6 +63,7 @@ public class DnsNameResolverClientSubnetTest {
                 .nameServerProvider(
                         new SingletonDnsServerAddressStreamProvider(SocketUtils.socketAddress("8.8.8.8", 53)))
                 .maxQueriesPerResolve(1)
-                .optResourceEnabled(false);
+                .optResourceEnabled(false)
+                .ndots(1);
     }
 }
