@@ -24,7 +24,12 @@ import io.netty.handler.codec.base64.Base64Dialect;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.List;
+import java.util.Set;
+
 import javax.net.ssl.SSLHandshakeException;
+
+import static java.util.Arrays.asList;
 
 /**
  * Constants for SSL packets.
@@ -70,6 +75,47 @@ final class SslUtils {
      * data is not encrypted
      */
     static final int NOT_ENCRYPTED = -2;
+
+    static final String[] DEFAULT_CIPHER_SUITES = new String[] {
+        // GCM (Galois/Counter Mode) requires JDK 8.
+        "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+        // AES256 requires JCE unlimited strength jurisdiction policy files.
+        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+        // GCM (Galois/Counter Mode) requires JDK 8.
+        "TLS_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_RSA_WITH_AES_128_CBC_SHA",
+        // AES256 requires JCE unlimited strength jurisdiction policy files.
+        "TLS_RSA_WITH_AES_256_CBC_SHA"
+    };
+
+    /**
+     * Add elements from {@code names} into {@code enabled} if they are in {@code supported}.
+     */
+    static void addIfSupported(Set<String> supported, List<String> enabled, String... names) {
+        for (String n: names) {
+            if (supported.contains(n)) {
+                enabled.add(n);
+            }
+        }
+    }
+
+    static void useFallbackCiphersIfDefaultIsEmpty(List<String> defaultCiphers, Iterable<String> fallbackCiphers) {
+        if (defaultCiphers.isEmpty()) {
+            for (String cipher : fallbackCiphers) {
+                if (cipher.startsWith("SSL_") || cipher.contains("_RC4_")) {
+                    continue;
+                }
+                defaultCiphers.add(cipher);
+            }
+        }
+    }
+
+    static void useFallbackCiphersIfDefaultIsEmpty(List<String> defaultCiphers, String... fallbackCiphers) {
+        useFallbackCiphersIfDefaultIsEmpty(defaultCiphers, asList(fallbackCiphers));
+    }
 
     /**
      * Converts the given exception to a {@link SSLHandshakeException}, if it isn't already.
