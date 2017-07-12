@@ -230,41 +230,45 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         this.jdkCompatibilityMode = jdkCompatibilityMode;
         Lock readerLock = context.ctxLock.readLock();
         readerLock.lock();
+        final long finalSsl;
         try {
-            ssl = SSL.newSSL(context.ctx, !context.isClient());
+            finalSsl = SSL.newSSL(context.ctx, !context.isClient());
         } finally {
             readerLock.unlock();
         }
-        try {
-            networkBIO = SSL.bioNewByteBuffer(ssl, context.getBioNonApplicationBufferSize());
+        synchronized (this) {
+            ssl = finalSsl;
+            try {
+                networkBIO = SSL.bioNewByteBuffer(ssl, context.getBioNonApplicationBufferSize());
 
-            // Set the client auth mode, this needs to be done via setClientAuth(...) method so we actually call the
-            // needed JNI methods.
-            setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
+                // Set the client auth mode, this needs to be done via setClientAuth(...) method so we actually call the
+                // needed JNI methods.
+                setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
 
-            if (context.protocols != null) {
-                setEnabledProtocols(context.protocols);
+                if (context.protocols != null) {
+                    setEnabledProtocols(context.protocols);
+                }
+
+                // Use SNI if peerHost was specified
+                // See https://github.com/netty/netty/issues/4746
+                if (clientMode && peerHost != null) {
+                    SSL.setTlsExtHostName(ssl, peerHost);
+                }
+
+                if (enableOcsp) {
+                    SSL.enableOcsp(ssl);
+                }
+
+                if (!jdkCompatibilityMode) {
+                    SSL.setMode(ssl, SSL.getMode(ssl) | SSL.SSL_MODE_ENABLE_PARTIAL_WRITE);
+                }
+
+                // setMode may impact the overhead.
+                calculateMaxWrapOverhead();
+            } catch (Throwable cause) {
+                SSL.freeSSL(ssl);
+                PlatformDependent.throwException(cause);
             }
-
-            // Use SNI if peerHost was specified
-            // See https://github.com/netty/netty/issues/4746
-            if (clientMode && peerHost != null) {
-                SSL.setTlsExtHostName(ssl, peerHost);
-            }
-
-            if (enableOcsp) {
-                SSL.enableOcsp(ssl);
-            }
-
-            if (!jdkCompatibilityMode) {
-                SSL.setMode(ssl, SSL.getMode(ssl) | SSL.SSL_MODE_ENABLE_PARTIAL_WRITE);
-            }
-
-            // setMode may impact the overhead.
-            calculateMaxWrapOverhead();
-        } catch (Throwable cause) {
-            SSL.freeSSL(ssl);
-            PlatformDependent.throwException(cause);
         }
     }
 
