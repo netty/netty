@@ -235,7 +235,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         } finally {
             readerLock.unlock();
         }
-        ssl = SSL.newSSL(context.ctx, !context.isClient());
         try {
             networkBIO = SSL.bioNewByteBuffer(ssl, context.getBioNonApplicationBufferSize());
 
