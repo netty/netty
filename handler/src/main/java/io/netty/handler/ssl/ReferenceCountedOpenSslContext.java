@@ -45,10 +45,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -59,6 +59,8 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
 
+import static io.netty.handler.ssl.OpenSsl.DEFAULT_CIPHERS;
+import static io.netty.handler.ssl.OpenSsl.availableJavaCipherSuites;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
@@ -100,7 +102,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 }
             });
 
-    private static final List<String> DEFAULT_CIPHERS;
     private static final Integer DH_KEY_LENGTH;
     private static final ResourceLeakDetector<ReferenceCountedOpenSslContext> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ReferenceCountedOpenSslContext.class);
@@ -176,24 +177,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             };
 
     static {
-        List<String> ciphers = new ArrayList<String>();
-        // XXX: Make sure to sync this list with JdkSslEngineFactory.
-        Collections.addAll(
-                ciphers,
-                "ECDHE-ECDSA-AES256-GCM-SHA384",
-                "ECDHE-ECDSA-AES128-GCM-SHA256",
-                "ECDHE-RSA-AES128-GCM-SHA256",
-                "ECDHE-RSA-AES128-SHA",
-                "ECDHE-RSA-AES256-SHA",
-                "AES128-GCM-SHA256",
-                "AES128-SHA",
-                "AES256-SHA");
-        DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("Default cipher suite (OpenSSL): " + ciphers);
-        }
-
         Integer dhLen = null;
 
         try {
@@ -271,7 +254,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
 
         unmodifiableCiphers = Arrays.asList(checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
-                convertedCiphers, DEFAULT_CIPHERS, OpenSsl.availableOpenSslCipherSuites()));
+                convertedCiphers, DEFAULT_CIPHERS, availableJavaCipherSuites()));
 
         this.apn = checkNotNull(apn, "apn");
 
