@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.StringUtil;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
@@ -193,12 +194,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
                 throw new IllegalArgumentException("malformed fingerprint: " + f + " (expected: SHA1)");
             }
 
-            byte[] farr = new byte[SHA1_BYTE_LEN];
-            for (int i = 0; i < farr.length; i ++) {
-                int strIdx = i << 1;
-                farr[i] = (byte) Integer.parseInt(f.substring(strIdx, strIdx + 2), 16);
-            }
-            list.add(farr);
+            list.add(StringUtil.decodeHexDump(f));
         }
 
         return list.toArray(new byte[list.size()][]);

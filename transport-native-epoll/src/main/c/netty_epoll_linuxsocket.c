@@ -26,11 +26,13 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <linux/tcp.h> // TCP_NOTSENT_LOWAT is a linux specific define
-#include "netty_unix_filedescriptor.h"
-#include "netty_unix_socket.h"
-#include "netty_unix_errors.h"
-#include "netty_unix_util.h"
+
 #include "netty_epoll_linuxsocket.h"
+#include "netty_unix_errors.h"
+#include "netty_unix_filedescriptor.h"
+#include "netty_unix_jni.h"
+#include "netty_unix_socket.h"
+#include "netty_unix_util.h"
 
 // TCP_FASTOPEN is defined in linux 3.7. We define this here so older kernels can compile.
 #ifndef TCP_FASTOPEN
@@ -84,6 +86,10 @@ static void netty_epoll_linuxsocket_setTcpUserTimeout(JNIEnv* env, jclass clazz,
 
 static void netty_epoll_linuxsocket_setIpFreeBind(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_FREEBIND, &optval, sizeof(optval));
+}
+
+static void netty_epoll_linuxsocket_setIpTransparent(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty_unix_socket_setOption(env, fd, SOL_IP, IP_TRANSPARENT, &optval, sizeof(optval));
 }
 
 static void netty_epoll_linuxsocket_setTcpMd5Sig(JNIEnv* env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jbyteArray key) {
@@ -159,6 +165,14 @@ static jint netty_epoll_linuxsocket_getTcpUserTimeout(JNIEnv* env, jclass clazz,
 static jint netty_epoll_linuxsocket_isIpFreeBind(JNIEnv* env, jclass clazz, jint fd) {
      int optval;
      if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_FREEBIND, &optval, sizeof(optval)) == -1) {
+         return -1;
+     }
+     return optval;
+}
+
+static jint netty_epoll_linuxsocket_isIpTransparent(JNIEnv* env, jclass clazz, jint fd) {
+     int optval;
+     if (netty_unix_socket_getOption(env, fd, SOL_IP, IP_TRANSPARENT, &optval, sizeof(optval)) == -1) {
          return -1;
      }
      return optval;
@@ -265,11 +279,13 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setTcpKeepCnt", "(II)V", (void *) netty_epoll_linuxsocket_setTcpKeepCnt },
   { "setTcpUserTimeout", "(II)V", (void *) netty_epoll_linuxsocket_setTcpUserTimeout },
   { "setIpFreeBind", "(II)V", (void *) netty_epoll_linuxsocket_setIpFreeBind },
+  { "setIpTransparent", "(II)V", (void *) netty_epoll_linuxsocket_setIpTransparent },
   { "getTcpKeepIdle", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepIdle },
   { "getTcpKeepIntvl", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepIntvl },
   { "getTcpKeepCnt", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepCnt },
   { "getTcpUserTimeout", "(I)I", (void *) netty_epoll_linuxsocket_getTcpUserTimeout },
   { "isIpFreeBind", "(I)I", (void *) netty_epoll_linuxsocket_isIpFreeBind },
+  { "isIpTransparent", "(I)I", (void *) netty_epoll_linuxsocket_isIpTransparent },
   { "getTcpInfo", "(I[I)V", (void *) netty_epoll_linuxsocket_getTcpInfo },
   { "setTcpMd5Sig", "(I[BI[B)V", (void *) netty_epoll_linuxsocket_setTcpMd5Sig }
 };
@@ -335,7 +351,7 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
         return JNI_ERR;
     }
 
-    return JNI_VERSION_1_6;
+    return NETTY_JNI_VERSION;
 }
 
 void netty_epoll_linuxsocket_JNI_OnUnLoad(JNIEnv* env) {

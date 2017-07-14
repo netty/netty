@@ -75,10 +75,11 @@ public final class SocksCmdResponse extends SocksResponse {
                     }
                     break;
                 case DOMAIN:
-                    if (IDN.toASCII(host).length() > 255) {
-                        throw new IllegalArgumentException(host + " IDN: " +
-                                IDN.toASCII(host) + " exceeds 255 char limit");
+                    String asciiHost = IDN.toASCII(host);
+                    if (asciiHost.length() > 255) {
+                        throw new IllegalArgumentException(host + " IDN: " + asciiHost + " exceeds 255 char limit");
                     }
+                    host = asciiHost;
                     break;
                 case IPv6:
                     if (!NetUtil.isValidIpV6Address(host)) {
@@ -88,7 +89,6 @@ public final class SocksCmdResponse extends SocksResponse {
                 case UNKNOWN:
                     break;
             }
-            host = IDN.toASCII(host);
         }
         if (port < 0 || port > 65535) {
             throw new IllegalArgumentException(port + " is not in bounds 0 <= x <= 65535");
@@ -118,26 +118,22 @@ public final class SocksCmdResponse extends SocksResponse {
     }
 
     /**
-     * Returns host that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}.
+     * Returns host that is used as a parameter in {@link SocksCmdType}.
      * Host (BND.ADDR field in response) is address that server used when connecting to the target host.
      * This is typically different from address which client uses to connect to the SOCKS server.
      *
-     * @return host that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}
+     * @return host that is used as a parameter in {@link SocksCmdType}
      *         or null when there was no host specified during response construction
      */
     public String host() {
-        if (host != null) {
-            return IDN.toUnicode(host);
-        } else {
-            return null;
-        }
+        return host != null && addressType == SocksAddressType.DOMAIN ? IDN.toUnicode(host) : host;
     }
 
     /**
-     * Returns port that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}.
+     * Returns port that is used as a parameter in {@link SocksCmdType}.
      * Port (BND.PORT field in response) is port that the server assigned to connect to the target host.
      *
-     * @return port that is used as a parameter in {@link io.netty.handler.codec.socks.SocksCmdType}
+     * @return port that is used as a parameter in {@link SocksCmdType}
      */
     public int port() {
         return port;
@@ -158,11 +154,14 @@ public final class SocksCmdResponse extends SocksResponse {
                 break;
             }
             case DOMAIN: {
-                byte[] hostContent = host == null ?
-                        DOMAIN_ZEROED : host.getBytes(CharsetUtil.US_ASCII);
-                byteBuf.writeByte(hostContent.length);   // domain length
-                byteBuf.writeBytes(hostContent);   // domain value
-                byteBuf.writeShort(port);  // port value
+                if (host != null) {
+                    byteBuf.writeByte(host.length());
+                    byteBuf.writeCharSequence(host, CharsetUtil.US_ASCII);
+                } else {
+                    byteBuf.writeByte(DOMAIN_ZEROED.length);
+                    byteBuf.writeBytes(DOMAIN_ZEROED);
+                }
+                byteBuf.writeShort(port);
                 break;
             }
             case IPv6: {

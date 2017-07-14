@@ -33,6 +33,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.StringUtil;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -55,11 +56,11 @@ public class HpackDecoderTest {
     private Http2Headers mockHeaders;
 
     private static String hex(String s) {
-        return HpackHex.encodeHexString(s.getBytes());
+        return StringUtil.toHexString(s.getBytes());
     }
 
     private void decode(String encoded) throws Http2Exception {
-        byte[] b = HpackHex.decodeHex(encoded.toCharArray());
+        byte[] b = StringUtil.decodeHexDump(encoded);
         ByteBuf in = Unpooled.wrappedBuffer(b);
         try {
             hpackDecoder.decode(0, in, mockHeaders);
@@ -79,7 +80,7 @@ public class HpackDecoderTest {
         byte[] input = {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0x07};
         ByteBuf in = Unpooled.wrappedBuffer(input);
         try {
-            assertEquals(Integer.MAX_VALUE, decodeULE128(in, 0));
+            assertEquals(MAX_VALUE, decodeULE128(in, 0));
         } finally {
             in.release();
         }
@@ -224,7 +225,7 @@ public class HpackDecoderTest {
 
     @Test(expected = Http2Exception.class)
     public void testIncompleteIndex() throws Http2Exception {
-        byte[] compressed = HpackHex.decodeHex("FFF0".toCharArray());
+        byte[] compressed = StringUtil.decodeHexDump("FFF0");
         ByteBuf in = Unpooled.wrappedBuffer(compressed);
         try {
             hpackDecoder.decode(0, in, mockHeaders);

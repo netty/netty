@@ -671,7 +671,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
             ensureWritable(ByteBufUtil.utf8MaxBytes(sequence));
             return ByteBufUtil.writeUtf8(this, index, sequence, sequence.length());
         }
-        if (charset.equals(CharsetUtil.US_ASCII)) {
+        if (charset.equals(CharsetUtil.US_ASCII) || charset.equals(CharsetUtil.ISO_8859_1)) {
             int len = sequence.length();
             ensureWritable(len);
             return ByteBufUtil.writeAscii(this, index, sequence, len);

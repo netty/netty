@@ -27,9 +27,15 @@ import org.junit.Test;
 
 import java.util.List;
 
-import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static io.netty.handler.codec.redis.RedisCodecTestUtil.byteBufOf;
+import static io.netty.handler.codec.redis.RedisCodecTestUtil.bytesOf;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Verifies the correct functionality of the {@link RedisDecoder} and {@link RedisArrayAggregator}.
@@ -49,6 +55,16 @@ public class RedisDecoderTest {
     @After
     public void teardown() throws Exception {
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void splitEOLDoesNotInfiniteLoop() throws Exception {
+        assertFalse(channel.writeInbound(byteBufOf("$6\r\nfoobar\r")));
+        assertTrue(channel.writeInbound(byteBufOf("\n")));
+
+        RedisMessage msg = channel.readInbound();
+        assertTrue(msg instanceof FullBulkStringRedisMessage);
+        ReferenceCountUtil.release(msg);
     }
 
     @Test

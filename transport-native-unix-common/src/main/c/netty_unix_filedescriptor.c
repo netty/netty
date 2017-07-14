@@ -20,9 +20,10 @@
 #include <unistd.h>
 #include <sys/uio.h>
 
-#include "netty_unix_util.h"
 #include "netty_unix_errors.h"
 #include "netty_unix_filedescriptor.h"
+#include "netty_unix_jni.h"
+#include "netty_unix_util.h"
 
 static jmethodID posId = NULL;
 static jmethodID limitId = NULL;
@@ -261,7 +262,7 @@ jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     }
 
     free(mem);
-    return JNI_VERSION_1_6;
+    return NETTY_JNI_VERSION;
 }
 
 void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env) { }

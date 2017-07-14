@@ -17,7 +17,6 @@ package io.netty.util.internal;
 
 import org.junit.Test;
 
-import java.security.Permission;
 import java.util.Random;
 
 import static io.netty.util.internal.PlatformDependent.hashCodeAscii;
@@ -146,41 +145,5 @@ public class PlatformDependentTest {
                     hashCodeAscii(bytes, 0, bytes.length),
                     hashCodeAscii(string));
         }
-    }
-
-    @Test
-    public void testMajorVersionFromJavaSpecificationVersion() {
-        final SecurityManager current = System.getSecurityManager();
-
-        try {
-            System.setSecurityManager(new SecurityManager() {
-                @Override
-                public void checkPropertyAccess(String key) {
-                    if (key.equals("java.specification.version")) {
-                        // deny
-                        throw new SecurityException(key);
-                    }
-                }
-
-                // so we can restore the security manager
-                @Override
-                public void checkPermission(Permission perm) {
-                }
-            });
-
-            assertEquals(6, PlatformDependent.majorVersionFromJavaSpecificationVersion());
-        } finally {
-            System.setSecurityManager(current);
-        }
-    }
-
-    @Test
-    public void testMajorVersion() {
-        assertEquals(6, PlatformDependent.majorVersion("1.6"));
-        assertEquals(7, PlatformDependent.majorVersion("1.7"));
-        assertEquals(8, PlatformDependent.majorVersion("1.8"));
-        assertEquals(8, PlatformDependent.majorVersion("8"));
-        assertEquals(9, PlatformDependent.majorVersion("1.9")); // early version of JDK 9 before Project Verona
-        assertEquals(9, PlatformDependent.majorVersion("9"));
     }
 }

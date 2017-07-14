@@ -145,6 +145,10 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString CONTENT_RANGE = new AsciiString("content-range");
     /**
+     * {@code "content-security-policy"}
+     */
+    public static final AsciiString CONTENT_SECURITY_POLICY = new AsciiString("content-security-policy");
+    /**
      * {@code "content-type"}
      */
     public static final AsciiString CONTENT_TYPE = new AsciiString("content-type");
@@ -346,6 +350,10 @@ public final class HttpHeaderNames {
      * {@code "www-authenticate"}
      */
     public static final AsciiString WWW_AUTHENTICATE = new AsciiString("www-authenticate");
+    /**
+     * {@code "x-frame-options"}
+     */
+    public static final AsciiString X_FRAME_OPTIONS = new AsciiString("x-frame-options");
 
     private HttpHeaderNames() { }
 }

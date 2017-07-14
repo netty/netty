@@ -141,7 +141,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         } else if (option == EpollChannelOption.TCP_KEEPIDLE) {
             setTcpKeepIdle((Integer) value);
         } else if (option == EpollChannelOption.TCP_KEEPCNT) {
-            setTcpKeepCntl((Integer) value);
+            setTcpKeepCnt((Integer) value);
         } else if (option == EpollChannelOption.TCP_KEEPINTVL) {
             setTcpKeepIntvl((Integer) value);
         } else if (option == EpollChannelOption.TCP_USER_TIMEOUT) {
@@ -415,9 +415,17 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     }
 
     /**
+     * @deprecated use {@link #setTcpKeepCnt(int)}
+     */
+    @Deprecated
+    public EpollSocketChannelConfig setTcpKeepCntl(int probes) {
+        return setTcpKeepCnt(probes);
+    }
+
+    /**
      * Set the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public EpollSocketChannelConfig setTcpKeepCntl(int probes) {
+    public EpollSocketChannelConfig setTcpKeepCnt(int probes) {
         try {
             channel.socket.setTcpKeepCnt(probes);
             return this;

@@ -19,41 +19,39 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.AsciiString;
-import static io.netty.util.AsciiString.c2b;
+import io.netty.util.CharsetUtil;
+
+import static io.netty.handler.codec.http.HttpConstants.*;
+import static io.netty.handler.codec.http.HttpObjectEncoder.CRLF_SHORT;
 
 final class HttpHeadersEncoder {
+    private static final int COLON_AND_SPACE_SHORT = (COLON << 8) | SP;
 
     private HttpHeadersEncoder() {
     }
 
-    public static void encoderHeader(CharSequence name, CharSequence value, ByteBuf buf) throws Exception {
+    static void encoderHeader(CharSequence name, CharSequence value, ByteBuf buf) {
         final int nameLen = name.length();
         final int valueLen = value.length();
         final int entryLen = nameLen + valueLen + 4;
         buf.ensureWritable(entryLen);
         int offset = buf.writerIndex();
-        writeAscii(buf, offset, name, nameLen);
+        writeAscii(buf, offset, name);
         offset += nameLen;
-        buf.setByte(offset ++, ':');
-        buf.setByte(offset ++, ' ');
-        writeAscii(buf, offset, value, valueLen);
+        ByteBufUtil.setShortBE(buf, offset, COLON_AND_SPACE_SHORT);
+        offset += 2;
+        writeAscii(buf, offset, value);
         offset += valueLen;
-        buf.setByte(offset ++, '\r');
-        buf.setByte(offset ++, '\n');
+        ByteBufUtil.setShortBE(buf, offset, CRLF_SHORT);
+        offset += 2;
         buf.writerIndex(offset);
     }
 
-    private static void writeAscii(ByteBuf buf, int offset, CharSequence value, int valueLen) {
+    private static void writeAscii(ByteBuf buf, int offset, CharSequence value) {
         if (value instanceof AsciiString) {
-            ByteBufUtil.copy((AsciiString) value, 0, buf, offset, valueLen);
+            ByteBufUtil.copy((AsciiString) value, 0, buf, offset, value.length());
         } else {
-            writeCharSequence(buf, offset, value, valueLen);
-        }
-    }
-
-    private static void writeCharSequence(ByteBuf buf, int offset, CharSequence value, int valueLen) {
-        for (int i = 0; i < valueLen; ++i) {
-            buf.setByte(offset ++, c2b(value.charAt(i)));
+            buf.setCharSequence(offset, value, CharsetUtil.US_ASCII);
         }
     }
 }

@@ -23,19 +23,12 @@ import java.net.InetSocketAddress;
  * A {@link DnsServerAddressStreamProvider} which always uses a single DNS server for resolution.
  */
 @UnstableApi
-public final class SingletonDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
-    private final DnsServerAddresses addresses;
-
+public final class SingletonDnsServerAddressStreamProvider extends UniSequentialDnsServerAddressStreamProvider {
     /**
      * Create a new instance.
      * @param address The singleton address to use for every DNS resolution.
      */
     public SingletonDnsServerAddressStreamProvider(final InetSocketAddress address) {
-        addresses = DnsServerAddresses.singleton(address);
-    }
-
-    @Override
-    public DnsServerAddressStream nameServerAddressStream(String hostname) {
-        return addresses.stream();
+        super(DnsServerAddresses.singleton(address));
     }
 }

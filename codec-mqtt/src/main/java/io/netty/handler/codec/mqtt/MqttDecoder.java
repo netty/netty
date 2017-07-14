@@ -339,21 +339,21 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         int numberOfBytesConsumed = decodedClientId.numberOfBytesConsumed;
 
         Result<String> decodedWillTopic = null;
-        Result<String> decodedWillMessage = null;
+        Result<byte[]> decodedWillMessage = null;
         if (mqttConnectVariableHeader.isWillFlag()) {
             decodedWillTopic = decodeString(buffer, 0, 32767);
             numberOfBytesConsumed += decodedWillTopic.numberOfBytesConsumed;
-            decodedWillMessage = decodeAsciiString(buffer);
+            decodedWillMessage = decodeByteArray(buffer);
             numberOfBytesConsumed += decodedWillMessage.numberOfBytesConsumed;
         }
         Result<String> decodedUserName = null;
-        Result<String> decodedPassword = null;
+        Result<byte[]> decodedPassword = null;
         if (mqttConnectVariableHeader.hasUserName()) {
             decodedUserName = decodeString(buffer);
             numberOfBytesConsumed += decodedUserName.numberOfBytesConsumed;
         }
         if (mqttConnectVariableHeader.hasPassword()) {
-            decodedPassword = decodeString(buffer);
+            decodedPassword = decodeByteArray(buffer);
             numberOfBytesConsumed += decodedPassword.numberOfBytesConsumed;
         }
 
@@ -419,17 +419,6 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         return decodeString(buffer, 0, Integer.MAX_VALUE);
     }
 
-    private static Result<String> decodeAsciiString(ByteBuf buffer) {
-        Result<String> result = decodeString(buffer, 0, Integer.MAX_VALUE);
-        final String s = result.value;
-        for (int i = 0; i < s.length(); i++) {
-            if (s.charAt(i) > 127) {
-                return new Result<String>(null, result.numberOfBytesConsumed);
-            }
-        }
-        return new Result<String>(s, result.numberOfBytesConsumed);
-    }
-
     private static Result<String> decodeString(ByteBuf buffer, int minBytes, int maxBytes) {
         final Result<Integer> decodedSize = decodeMsbLsb(buffer);
         int size = decodedSize.value;
@@ -443,6 +432,14 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         buffer.skipBytes(size);
         numberOfBytesConsumed += size;
         return new Result<String>(s, numberOfBytesConsumed);
+    }
+
+    private static Result<byte[]> decodeByteArray(ByteBuf buffer) {
+        final Result<Integer> decodedSize = decodeMsbLsb(buffer);
+        int size = decodedSize.value;
+        byte[] bytes = new byte[size];
+        buffer.readBytes(bytes);
+        return new Result<byte[]>(bytes, decodedSize.numberOfBytesConsumed + size);
     }
 
     private static Result<Integer> decodeMsbLsb(ByteBuf buffer) {

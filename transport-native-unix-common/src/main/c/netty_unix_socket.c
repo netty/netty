@@ -26,6 +26,7 @@
 #include <netinet/tcp.h>
 
 #include "netty_unix_errors.h"
+#include "netty_unix_jni.h"
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
 
@@ -288,28 +289,42 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
     return createDatagramSocketAddress(env, &addr, res);
 }
 
+static void netty_unix_socket_optionHandleError(JNIEnv* env, int err, char* method) {
+    if (err == EBADF) {
+        netty_unix_errors_throwClosedChannelException(env);
+    } else {
+        netty_unix_errors_throwChannelExceptionErrorNo(env, method, err);
+    }
+}
+
+static void netty_unix_socket_setOptionHandleError(JNIEnv* env, int err) {
+    netty_unix_socket_optionHandleError(env, err, "setsockopt() failed: ");
+}
+
+static void netty_unix_socket_getOptionHandleError(JNIEnv* env, int err) {
+    netty_unix_socket_optionHandleError(env, err, "getsockopt() failed: ");
+}
+
+static int netty_unix_socket_setOption0(jint fd, int level, int optname, const void* optval, socklen_t len) {
+    return setsockopt(fd, level, optname, optval, len);
+}
+
+static int netty_unix_socket_getOption0(jint fd, int level, int optname, void* optval, socklen_t optlen) {
+    return getsockopt(fd, level, optname, optval, &optlen);
+}
+
 int netty_unix_socket_getOption(JNIEnv* env, jint fd, int level, int optname, void* optval, socklen_t optlen) {
-    int rc = getsockopt(fd, level, optname, optval, &optlen);
+    int rc = netty_unix_socket_getOption0(fd, level, optname, optval, optlen);
     if (rc < 0) {
-        int err = errno;
-        if (err == EBADF) {
-            netty_unix_errors_throwClosedChannelException(env);
-        } else {
-            netty_unix_errors_throwChannelExceptionErrorNo(env, "getsockopt() failed: ", err);
-        }
+        netty_unix_socket_getOptionHandleError(env, errno);
     }
     return rc;
 }
 
 int netty_unix_socket_setOption(JNIEnv* env, jint fd, int level, int optname, const void* optval, socklen_t len) {
-    int rc = setsockopt(fd, level, optname, optval, len);
+    int rc = netty_unix_socket_setOption0(fd, level, optname, optval, len);
     if (rc < 0) {
-        int err = errno;
-        if (err == EBADF) {
-            netty_unix_errors_throwClosedChannelException(env);
-        } else {
-            netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", err);
-        }
+        netty_unix_socket_setOptionHandleError(env, errno);
     }
     return rc;
 }
@@ -482,7 +497,7 @@ static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd
         return -1;
     }
 
-    struct msghdr m;
+    struct msghdr m = { 0 };
     m.msg_name = (void*) &addr;
     m.msg_namelen = addrSize;
     m.msg_iov = (struct iovec*) (intptr_t) memoryAddress;
@@ -567,7 +582,7 @@ static jint netty_unix_socket_connectDomainSocket(JNIEnv* env, jclass clazz, jin
 static jint netty_unix_socket_recvFd(JNIEnv* env, jclass clazz, jint fd) {
     int socketFd;
     struct msghdr descriptorMessage = { 0 };
-    struct iovec iov[1] = { 0 };
+    struct iovec iov[1] = { { 0 } };
     char control[CMSG_SPACE(sizeof(int))] = { 0 };
     char iovecData[1];
 
@@ -615,7 +630,7 @@ static jint netty_unix_socket_recvFd(JNIEnv* env, jclass clazz, jint fd) {
 
 static jint netty_unix_socket_sendFd(JNIEnv* env, jclass clazz, jint socketFd, jint fd) {
     struct msghdr descriptorMessage = { 0 };
-    struct iovec iov[1] = { 0 };
+    struct iovec iov[1] = { { 0 } };
     char control[CMSG_SPACE(sizeof(int))] = { 0 };
     char iovecData[1];
 
@@ -689,13 +704,18 @@ static void netty_unix_socket_setSoLinger(JNIEnv* env, jclass clazz, jint fd, ji
 }
 
 static void netty_unix_socket_setTrafficClass(JNIEnv* env, jclass clazz, jint fd, jint optval) {
-    netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_TOS, &optval, sizeof(optval));
-
     /* Try to set the ipv6 equivalent, but don't throw if this is an ipv4 only socket. */
-    int rc = netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_TCLASS, &optval, sizeof(optval));
+    int rc = netty_unix_socket_setOption0(fd, IPPROTO_IPV6, IPV6_TCLASS, &optval, sizeof(optval));
     if (rc < 0 && errno != ENOPROTOOPT) {
-        netty_unix_errors_throwChannelExceptionErrorNo(env, "setting ipv6 dscp failed: ", errno);
+        netty_unix_socket_setOptionHandleError(env, errno);
     }
+
+    /* Linux allows both ipv4 and ipv6 families to be set */
+#ifdef __linux__
+      else {
+        netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_TOS, &optval, sizeof(optval));
+    }
+#endif
 }
 
 static jint netty_unix_socket_isKeepAlive(JNIEnv* env, jclass clazz, jint fd) {
@@ -743,10 +763,15 @@ static jint netty_unix_socket_getSoLinger(JNIEnv* env, jclass clazz, jint fd) {
 }
 
 static jint netty_unix_socket_getTrafficClass(JNIEnv* env, jclass clazz, jint fd) {
+    /* macOS may throw an error if IPv6 is supported and it is not consulted first */
     int optval;
-    if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_TOS, &optval, sizeof(optval)) == -1) {
-        return -1;
+    if (netty_unix_socket_getOption0(fd, IPPROTO_IPV6, IPV6_TCLASS, &optval, sizeof(optval)) == -1) {
+        if (errno != ENOPROTOOPT || netty_unix_socket_getOption0(fd, IPPROTO_IP, IP_TOS, &optval, sizeof(optval)) == -1) {
+            netty_unix_socket_getOptionHandleError(env, errno);
+            return -1;
+        }
     }
+
     return optval;
 }
 
@@ -950,7 +975,7 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     free(mem);
 
     socketType = socket_type(env);
-    return JNI_VERSION_1_6;
+    return NETTY_JNI_VERSION;
 }
 
 void netty_unix_socket_JNI_OnUnLoad(JNIEnv* env) {

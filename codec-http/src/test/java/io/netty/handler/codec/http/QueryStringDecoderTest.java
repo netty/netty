@@ -35,7 +35,7 @@ public class QueryStringDecoderTest {
     }
 
     @Test
-    public void testBasic() throws Exception {
+    public void testBasic() {
         QueryStringDecoder d;
 
         d = new QueryStringDecoder("/foo");
@@ -94,10 +94,17 @@ public class QueryStringDecoderTest {
         Assert.assertEquals(2, d.parameters().get("a").size());
         Assert.assertEquals("1=", d.parameters().get("a").get(0));
         Assert.assertEquals("=2", d.parameters().get("a").get(1));
+
+        d = new QueryStringDecoder("/foo?abc=1%2023&abc=124%20");
+        Assert.assertEquals("/foo", d.path());
+        Assert.assertEquals(1, d.parameters().size());
+        Assert.assertEquals(2, d.parameters().get("abc").size());
+        Assert.assertEquals("1 23", d.parameters().get("abc").get(0));
+        Assert.assertEquals("124 ", d.parameters().get("abc").get(1));
     }
 
     @Test
-    public void testExotic() throws Exception {
+    public void testExotic() {
         assertQueryString("", "");
         assertQueryString("foo", "foo");
         assertQueryString("foo", "foo?");
@@ -123,7 +130,38 @@ public class QueryStringDecoderTest {
     }
 
     @Test
-    public void testHashDos() throws Exception {
+    public void testPathSpecific() {
+        // decode escaped characters
+        Assert.assertEquals("/foo bar/", new QueryStringDecoder("/foo%20bar/?").path());
+        Assert.assertEquals("/foo\r\n\\bar/", new QueryStringDecoder("/foo%0D%0A\\bar/?").path());
+
+        // a 'fragment' after '#' should be cuted (see RFC 3986)
+        Assert.assertEquals("", new QueryStringDecoder("#123").path());
+        Assert.assertEquals("foo", new QueryStringDecoder("foo?bar#anchor").path());
+        Assert.assertEquals("/foo-bar", new QueryStringDecoder("/foo-bar#anchor").path());
+        Assert.assertEquals("/foo-bar", new QueryStringDecoder("/foo-bar#a#b?c=d").path());
+
+        // '+' is not escape ' ' for the path
+        Assert.assertEquals("+", new QueryStringDecoder("+").path());
+        Assert.assertEquals("/foo+bar/", new QueryStringDecoder("/foo+bar/?").path());
+        Assert.assertEquals("/foo++", new QueryStringDecoder("/foo++?index.php").path());
+        Assert.assertEquals("/foo +", new QueryStringDecoder("/foo%20+?index.php").path());
+        Assert.assertEquals("/foo+ ", new QueryStringDecoder("/foo+%20").path());
+    }
+
+    @Test
+    public void testExcludeFragment() {
+        // a 'fragment' after '#' should be cuted (see RFC 3986)
+        Assert.assertEquals("a", new QueryStringDecoder("?a#anchor").parameters().keySet().iterator().next());
+        Assert.assertEquals("b", new QueryStringDecoder("?a=b#anchor").parameters().get("a").get(0));
+        Assert.assertTrue(new QueryStringDecoder("?#").parameters().isEmpty());
+        Assert.assertTrue(new QueryStringDecoder("?#anchor").parameters().isEmpty());
+        Assert.assertTrue(new QueryStringDecoder("#?a=b#anchor").parameters().isEmpty());
+        Assert.assertTrue(new QueryStringDecoder("?#a=b#anchor").parameters().isEmpty());
+    }
+
+    @Test
+    public void testHashDos() {
         StringBuilder buf = new StringBuilder();
         buf.append('?');
         for (int i = 0; i < 65536; i ++) {
@@ -137,7 +175,7 @@ public class QueryStringDecoderTest {
     }
 
     @Test
-    public void testHasPath() throws Exception {
+    public void testHasPath() {
         QueryStringDecoder decoder = new QueryStringDecoder("1=2", false);
         Assert.assertEquals("", decoder.path());
         Map<String, List<String>> params = decoder.parameters();
@@ -161,16 +199,18 @@ public class QueryStringDecoderTest {
             // Encoded   ->   Decoded or error message substring
             "",               "",
             "foo",            "foo",
-            "f%%b",           "f%b",
             "f+o",            "f o",
             "f++",            "f  ",
-            "fo%",            "unterminated escape sequence",
+            "fo%",            "unterminated escape sequence at index 2 of: fo%",
             "%42",            "B",
             "%5f",            "_",
-            "f%4",            "partial escape sequence",
-            "%x2",            "invalid escape sequence `%x2' at index 0 of: %x2",
-            "%4x",            "invalid escape sequence `%4x' at index 0 of: %4x",
+            "f%4",            "unterminated escape sequence at index 1 of: f%4",
+            "%x2",            "invalid hex byte 'x2' at index 1 of '%x2'",
+            "%4x",            "invalid hex byte '4x' at index 1 of '%4x'",
             "Caff%C3%A9",     caffe,
+            "случайный праздник",               "случайный праздник",
+            "случайный%20праздник",             "случайный праздник",
+            "случайный%20праздник%20%E2%98%BA", "случайный праздник ☺",
         };
         for (int i = 0; i < tests.length; i += 2) {
             final String encoded = tests[i];
@@ -179,9 +219,7 @@ public class QueryStringDecoderTest {
                 final String decoded = QueryStringDecoder.decodeComponent(encoded);
                 Assert.assertEquals(expected, decoded);
             } catch (IllegalArgumentException e) {
-                Assert.assertTrue("String \"" + e.getMessage() + "\" does"
-                                  + " not contain \"" + expected + '"',
-                                  e.getMessage().contains(expected));
+                Assert.assertEquals(expected, e.getMessage());
             }
         }
     }

@@ -19,9 +19,11 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
+import org.jctools.queues.MpscUnboundedArrayQueue;
 import org.jctools.queues.SpscLinkedQueue;
 import org.jctools.queues.atomic.MpscAtomicArrayQueue;
-import org.jctools.queues.atomic.MpscLinkedAtomicQueue;
+import org.jctools.queues.atomic.MpscGrowableAtomicArrayQueue;
+import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
@@ -51,6 +53,8 @@ import static io.netty.util.internal.PlatformDependent0.HASH_CODE_C1;
 import static io.netty.util.internal.PlatformDependent0.HASH_CODE_C2;
 import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiSanitize;
 import static io.netty.util.internal.PlatformDependent0.unalignedAccess;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 /**
  * Utility that detects various properties specific to the current runtime
@@ -67,11 +71,8 @@ public final class PlatformDependent {
     private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
             "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
 
-    private static final boolean IS_ANDROID = isAndroid0();
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean MAYBE_SUPER_USER;
-
-    private static final int JAVA_VERSION = javaVersion0();
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
@@ -82,7 +83,6 @@ public final class PlatformDependent {
 
     private static final int MPSC_CHUNK_SIZE =  1024;
     private static final int MIN_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * 2;
-    private static final int DEFAULT_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * MPSC_CHUNK_SIZE;
     private static final int MAX_ALLOWED_MPSC_CAPACITY = Pow2.MAX_POW2;
 
     private static final long BYTE_ARRAY_BASE_OFFSET = byteArrayBaseOffset0();
@@ -197,7 +197,7 @@ public final class PlatformDependent {
      * Returns {@code true} if and only if the current platform is Android
      */
     public static boolean isAndroid() {
-        return IS_ANDROID;
+        return PlatformDependent0.isAndroid();
     }
 
     /**
@@ -219,7 +219,7 @@ public final class PlatformDependent {
      * Return the version of Java under which this library is used.
      */
     public static int javaVersion() {
-        return JAVA_VERSION;
+        return PlatformDependent0.javaVersion();
     }
 
     /**
@@ -829,25 +829,27 @@ public final class PlatformDependent {
         }
 
         static <T> Queue<T> newMpscQueue(final int maxCapacity) {
-            if (USE_MPSC_CHUNKED_ARRAY_QUEUE) {
-                // Calculate the max capacity which can not be bigger then MAX_ALLOWED_MPSC_CAPACITY.
-                // This is forced by the MpscChunkedArrayQueue implementation as will try to round it
-                // up to the next power of two and so will overflow otherwise.
-                final int capacity =
-                        Math.max(Math.min(maxCapacity, MAX_ALLOWED_MPSC_CAPACITY), MIN_MAX_MPSC_CAPACITY);
-                return new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE, capacity);
-            } else {
-                return new MpscLinkedAtomicQueue<T>();
-            }
+            // Calculate the max capacity which can not be bigger then MAX_ALLOWED_MPSC_CAPACITY.
+            // This is forced by the MpscChunkedArrayQueue implementation as will try to round it
+            // up to the next power of two and so will overflow otherwise.
+            final int capacity = max(min(maxCapacity, MAX_ALLOWED_MPSC_CAPACITY), MIN_MAX_MPSC_CAPACITY);
+            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE, capacity)
+                                                : new MpscGrowableAtomicArrayQueue<T>(MPSC_CHUNK_SIZE, capacity);
+        }
+
+        static <T> Queue<T> newMpscQueue() {
+            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscUnboundedArrayQueue<T>(MPSC_CHUNK_SIZE)
+                                                : new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
         }
     }
 
     /**
      * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and a single
      * consumer (one thread!).
+     * @return A MPSC queue which may be unbounded.
      */
     public static <T> Queue<T> newMpscQueue() {
-        return newMpscQueue(DEFAULT_MAX_MPSC_CAPACITY);
+        return Mpsc.newMpscQueue();
     }
 
     /**
@@ -913,22 +915,6 @@ public final class PlatformDependent {
         return RANDOM_PROVIDER.current();
     }
 
-    private static boolean isAndroid0() {
-        boolean android;
-        try {
-            Class.forName("android.app.Application", false, getSystemClassLoader());
-            android = true;
-        } catch (Throwable ignored) {
-            // Failed to load the class uniquely available in Android.
-            android = false;
-        }
-
-        if (android) {
-            logger.debug("Platform: Android");
-        }
-        return android;
-    }
-
     private static boolean isWindows0() {
         boolean windows = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).contains("win");
         if (windows) {
@@ -944,39 +930,6 @@ public final class PlatformDependent {
         }
         // Check for root and toor as some BSDs have a toor user that is basically the same as root.
         return "root".equals(username) || "toor".equals(username);
-    }
-
-    private static int javaVersion0() {
-        final int majorVersion;
-
-        if (isAndroid()) {
-            majorVersion = 6;
-        } else {
-            majorVersion = majorVersionFromJavaSpecificationVersion();
-        }
-
-        logger.debug("Java version: {}", majorVersion);
-
-        return majorVersion;
-    }
-
-    static int majorVersionFromJavaSpecificationVersion() {
-        return majorVersion(SystemPropertyUtil.get("java.specification.version", "1.6"));
-    }
-
-    static int majorVersion(final String javaSpecVersion) {
-        final String[] components = javaSpecVersion.split("\\.");
-        final int[] version = new int[components.length];
-        for (int i = 0; i < components.length; i++) {
-            version[i] = Integer.parseInt(components[i]);
-        }
-
-        if (version[0] == 1) {
-            assert version[1] >= 6;
-            return version[1];
-        } else {
-            return version[0];
-        }
     }
 
     private static boolean hasUnsafe0() {

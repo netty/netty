@@ -17,6 +17,7 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,9 +78,9 @@ public final class MqttMessageBuilders {
         private boolean willRetain;
         private MqttQoS willQos = MqttQoS.AT_MOST_ONCE;
         private String willTopic;
-        private String willMessage;
+        private byte[] willMessage;
         private String username;
-        private String password;
+        private byte[] password;
 
         ConnectBuilder() {
         }
@@ -119,7 +120,16 @@ public final class MqttMessageBuilders {
             return this;
         }
 
+        /**
+         * @deprecated use {@link ConnectBuilder#willMessage(byte[])} instead
+         */
+        @Deprecated
         public ConnectBuilder willMessage(String willMessage) {
+            willMessage(willMessage.getBytes(CharsetUtil.UTF_8));
+            return this;
+        }
+
+        public ConnectBuilder willMessage(byte[] willMessage) {
             this.willMessage = willMessage;
             return this;
         }
@@ -145,7 +155,16 @@ public final class MqttMessageBuilders {
             return this;
         }
 
+        /**
+         * @deprecated use {@link ConnectBuilder#password(byte[])} instead
+         */
+        @Deprecated
         public ConnectBuilder password(String password) {
+            password(password.getBytes(CharsetUtil.UTF_8));
+            return this;
+        }
+
+        public ConnectBuilder password(byte[] password) {
             this.hasPassword = true;
             this.password = password;
             return this;

@@ -18,8 +18,8 @@ package io.netty.util.internal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.Closeable;
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -30,7 +30,9 @@ import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Helper class to load JNI resources.
@@ -181,7 +183,10 @@ public final class NativeLibraryLoader {
     /**
      * Load the given library with the specified {@link ClassLoader}
      */
-    public static void load(String name, ClassLoader loader) {
+    public static void load(String originalName, ClassLoader loader) {
+        // Adjust expected name to support shading of native libraries.
+        String name = SystemPropertyUtil.get("io.netty.packagePrefix", "").replace('.', '-') + originalName;
+
         String libname = System.mapLibraryName(name);
         String path = NATIVE_RESOURCE_HOME + libname;
 
@@ -224,6 +229,20 @@ public final class NativeLibraryLoader {
             out = null;
 
             loadLibrary(loader, tmpFile.getPath(), true);
+        } catch (UnsatisfiedLinkError e) {
+            try {
+                if (tmpFile != null && tmpFile.isFile() && tmpFile.canRead() &&
+                    !NoexecVolumeDetector.canExecuteExecutable(tmpFile)) {
+                    logger.info("{} exists but cannot be executed even when execute permissions set; " +
+                                "check volume for \"noexec\" flag; use -Dio.netty.native.workdir=[path] " +
+                                "to set native working directory separately.",
+                                tmpFile.getPath());
+                }
+            } catch (Throwable t) {
+                logger.debug("Error checking if {} is on a file store mounted with noexec", tmpFile, t);
+            }
+            // Re-throw to fail the load
+            throw e;
         } catch (Exception e) {
             throw (UnsatisfiedLinkError) new UnsatisfiedLinkError(
                     "could not load a native library: " + name).initCause(e);
@@ -367,5 +386,46 @@ public final class NativeLibraryLoader {
 
     private NativeLibraryLoader() {
         // Utility
+    }
+
+    private static final class NoexecVolumeDetector {
+
+        private static boolean canExecuteExecutable(File file) throws IOException {
+            if (PlatformDependent.javaVersion() < 7) {
+                // Pre-JDK7, the Java API did not directly support POSIX permissions; instead of implementing a custom
+                // work-around, assume true, which disables the check.
+                return true;
+            }
+
+            // If we can already execute, there is nothing to do.
+            if (file.canExecute()) {
+                return true;
+            }
+
+            // On volumes, with noexec set, even files with the executable POSIX permissions will fail to execute.
+            // The File#canExecute() method honors this behavior, probaby via parsing the noexec flag when initializing
+            // the UnixFileStore, though the flag is not exposed via a public API.  To find out if library is being
+            // loaded off a volume with noexec, confirm or add executalbe permissions, then check File#canExecute().
+
+            // Note: We use FQCN to not break when netty is used in java6
+            Set<java.nio.file.attribute.PosixFilePermission> existingFilePermissions =
+                    java.nio.file.Files.getPosixFilePermissions(file.toPath());
+            Set<java.nio.file.attribute.PosixFilePermission> executePermissions =
+                    EnumSet.of(java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE,
+                            java.nio.file.attribute.PosixFilePermission.GROUP_EXECUTE,
+                            java.nio.file.attribute.PosixFilePermission.OTHERS_EXECUTE);
+            if (existingFilePermissions.containsAll(executePermissions)) {
+                return false;
+            }
+
+            Set<java.nio.file.attribute.PosixFilePermission> newPermissions = EnumSet.copyOf(existingFilePermissions);
+            newPermissions.addAll(executePermissions);
+            java.nio.file.Files.setPosixFilePermissions(file.toPath(), newPermissions);
+            return file.canExecute();
+        }
+
+        private NoexecVolumeDetector() {
+            // Utility
+        }
     }
 }

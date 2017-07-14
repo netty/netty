@@ -17,7 +17,6 @@ package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
@@ -30,6 +29,7 @@ import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.IovArray;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
@@ -46,7 +46,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDgram;
-import static io.netty.channel.unix.Limits.IOV_MAX;
 
 @UnstableApi
 public final class KQueueDatagramChannel extends AbstractKQueueChannel implements DatagramChannel {
@@ -66,6 +65,10 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     public KQueueDatagramChannel() {
         super(null, newSocketDgram(), false);
         config = new KQueueDatagramChannelConfig(this);
+    }
+
+    public KQueueDatagramChannel(int fd) {
+        this(new BsdSocket(fd), true);
     }
 
     KQueueDatagramChannel(BsdSocket socket, boolean active) {
@@ -341,7 +344,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
             long memoryAddress = data.memoryAddress();
             writtenBytes = socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
                     remoteAddress.getAddress(), remoteAddress.getPort());
-        } else if (data instanceof CompositeByteBuf) {
+        } else if (data.nioBufferCount() > 1) {
             IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
             array.add(data);
             int cnt = array.count();
@@ -363,43 +366,13 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
             ByteBuf content = packet.content();
-            if (content.hasMemoryAddress()) {
-                return msg;
-            }
-
-            if (content.isDirect() && content instanceof CompositeByteBuf) {
-                // Special handling of CompositeByteBuf to reduce memory copies if some of the Components
-                // in the CompositeByteBuf are backed by a memoryAddress.
-                CompositeByteBuf comp = (CompositeByteBuf) content;
-                if (comp.isDirect() && comp.nioBufferCount() <= IOV_MAX) {
-                    return msg;
-                }
-            }
-            // We can only handle direct buffers so we need to copy if a non direct is
-            // passed to write.
-            return new DatagramPacket(newDirectBuffer(packet, content), packet.recipient());
+            return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
+                    new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
         }
 
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
-            if (!buf.hasMemoryAddress() && (PlatformDependent.hasUnsafe() || !buf.isDirect())) {
-                if (buf instanceof CompositeByteBuf) {
-                    // Special handling of CompositeByteBuf to reduce memory copies if some of the Components
-                    // in the CompositeByteBuf are backed by a memoryAddress.
-                    CompositeByteBuf comp = (CompositeByteBuf) buf;
-                    if (!comp.isDirect() || comp.nioBufferCount() > IOV_MAX) {
-                        // more then 1024 buffers for gathering writes so just do a memory copy.
-                        buf = newDirectBuffer(buf);
-                        assert buf.hasMemoryAddress();
-                    }
-                } else {
-                    // We can only handle buffers with memory address so we need to copy if a non direct is
-                    // passed to write.
-                    buf = newDirectBuffer(buf);
-                    assert buf.hasMemoryAddress();
-                }
-            }
-            return buf;
+            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
 
         if (msg instanceof AddressedEnvelope) {
@@ -409,21 +382,9 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                     (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
 
                 ByteBuf content = (ByteBuf) e.content();
-                if (content.hasMemoryAddress()) {
-                    return e;
-                }
-                if (content instanceof CompositeByteBuf) {
-                    // Special handling of CompositeByteBuf to reduce memory copies if some of the Components
-                    // in the CompositeByteBuf are backed by a memoryAddress.
-                    CompositeByteBuf comp = (CompositeByteBuf) content;
-                    if (comp.isDirect() && comp.nioBufferCount() <= IOV_MAX) {
-                        return e;
-                    }
-                }
-                // We can only handle direct buffers so we need to copy if a non direct is
-                // passed to write.
-                return new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
-                        newDirectBuffer(e, content), (InetSocketAddress) e.recipient());
+                return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
+                        new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
+                                newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
             }
         }
 
@@ -442,7 +403,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     final class KQueueDatagramChannelUnsafe extends AbstractKQueueUnsafe {
-        private final List<Object> readBuf = new ArrayList<Object>();
 
         @Override
         public void connect(SocketAddress remote, SocketAddress local, ChannelPromise channelPromise) {
@@ -522,7 +482,10 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                         allocHandle.lastBytesRead(remoteAddress.receivedAmount());
                         data.writerIndex(data.writerIndex() + allocHandle.lastBytesRead());
 
-                        readBuf.add(new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
+                        readPending = false;
+                        pipeline.fireChannelRead(
+                                new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
+
                         data = null;
                     } while (allocHandle.continueReading());
                 } catch (Throwable t) {
@@ -532,12 +495,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                     exception = t;
                 }
 
-                int size = readBuf.size();
-                for (int i = 0; i < size; i ++) {
-                    readPending = false;
-                    pipeline.fireChannelRead(readBuf.get(i));
-                }
-                readBuf.clear();
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
 
