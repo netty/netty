@@ -72,6 +72,40 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
+    public void testStreamJsonArrayOverMultipleWrites() {
+        EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(true));
+
+        String arrayPart1 = "[{\"test";
+        String arrayPart2 = "case\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"";
+        String arrayPart3 = "  }\n\n    , ";
+        String arrayPart4 = "{\"testcase\" : \"Streaming string me";
+        String arrayPart5 = "ssage\"} ]";
+
+        // Test array
+        boolean dataAvailable = ch.writeInbound(Unpooled.copiedBuffer("   " + arrayPart1, CharsetUtil.UTF_8));
+        assertFalse(dataAvailable);
+        dataAvailable = ch.writeInbound(Unpooled.copiedBuffer(arrayPart2, CharsetUtil.UTF_8));
+        assertFalse(dataAvailable);
+        dataAvailable = ch.writeInbound(Unpooled.copiedBuffer(arrayPart3, CharsetUtil.UTF_8));
+        assertTrue(dataAvailable);
+        dataAvailable = ch.writeInbound(Unpooled.copiedBuffer(arrayPart4, CharsetUtil.UTF_8));
+        assertTrue(dataAvailable);
+        dataAvailable = ch.writeInbound(Unpooled.copiedBuffer(arrayPart5 + "      ", CharsetUtil.UTF_8));
+        assertTrue(dataAvailable);
+
+        ByteBuf res = ch.readInbound();
+        assertEquals("{\"testcase\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"  }",
+                res.toString(CharsetUtil.UTF_8));
+        res.release();
+
+        res = ch.readInbound();
+        assertEquals("{\"testcase\" : \"Streaming string message\"}", res.toString(CharsetUtil.UTF_8));
+        res.release();
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testSingleByteStream() {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
 
