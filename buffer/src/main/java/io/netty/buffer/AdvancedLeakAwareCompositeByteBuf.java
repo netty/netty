@@ -1018,6 +1018,18 @@ final class AdvancedLeakAwareCompositeByteBuf extends SimpleLeakAwareCompositeBy
     }
 
     @Override
+    public boolean release() {
+        leak.record();
+        return super.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        leak.record();
+        return super.release(decrement);
+    }
+
+    @Override
     public CompositeByteBuf touch() {
         leak.record();
         return this;
