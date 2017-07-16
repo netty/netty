@@ -63,7 +63,7 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public final boolean release() {
+    public boolean release() {
         if (super.release()) {
             closeLeak();
             return true;
@@ -72,7 +72,7 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
-    public final boolean release(int decrement) {
+    public boolean release(int decrement) {
         if (super.release(decrement)) {
             closeLeak();
             return true;
