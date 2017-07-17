@@ -364,17 +364,18 @@ public class ResourceLeakDetector<T> {
         }
 
         private void record0(Object hint, int recordsToSkip) {
-            if (creationRecord != null) {
+            // Check MAX_RECORDS > 0 here to avoid similar check before remove from and add to lastRecords
+            if (creationRecord != null && MAX_RECORDS > 0) {
                 String value = newRecord(hint, recordsToSkip);
 
                 synchronized (lastRecords) {
                     int size = lastRecords.size();
                     if (size == 0 || !lastRecords.getLast().equals(value)) {
+                        if (size >= MAX_RECORDS) {
+                            lastRecords.removeFirst();
+                            ++removedRecords;
+                        }
                         lastRecords.add(value);
-                    }
-                    if (size > MAX_RECORDS) {
-                        lastRecords.removeFirst();
-                        ++removedRecords;
                     }
                 }
             }
