@@ -482,7 +482,7 @@ public final class ByteBufUtil {
         for (;;) {
             if (buf instanceof AbstractByteBuf) {
                 AbstractByteBuf byteBuf = (AbstractByteBuf) buf;
-                byteBuf.ensureWritable(utf8MaxBytes(seq));
+                byteBuf.ensureWritable0(utf8MaxBytes(seq));
                 int written = writeUtf8(byteBuf, byteBuf.writerIndex, seq, seq.length());
                 byteBuf.writerIndex += written;
                 return written;
@@ -583,7 +583,7 @@ public final class ByteBufUtil {
             for (;;) {
                 if (buf instanceof AbstractByteBuf) {
                     AbstractByteBuf byteBuf = (AbstractByteBuf) buf;
-                    byteBuf.ensureWritable(len);
+                    byteBuf.ensureWritable0(len);
                     int written = writeAscii(byteBuf, byteBuf.writerIndex, seq, len);
                     byteBuf.writerIndex += written;
                     return written;
