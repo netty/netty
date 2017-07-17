@@ -581,12 +581,11 @@ final class UnsafeByteBufUtil {
         }
     }
 
-    static void setZero(AbstractByteBuf buf, long addr, int index, int length) {
+    static void setZero(long addr, int length) {
         if (length == 0) {
             return;
         }
 
-        buf.checkIndex(index, length);
         PlatformDependent.setMemory(addr, length, ZERO);
     }
 
