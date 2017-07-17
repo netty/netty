@@ -36,6 +36,14 @@ import static java.util.Arrays.asList;
  */
 final class SslUtils {
 
+    // Protocols
+    static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
+    static final String PROTOCOL_SSL_V2 = "SSLv2";
+    static final String PROTOCOL_SSL_V3 = "SSLv3";
+    static final String PROTOCOL_TLS_V1 = "TLSv1";
+    static final String PROTOCOL_TLS_V1_1 = "TLSv1.1";
+    static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
+
     /**
      * change cipher spec
      */
