@@ -42,6 +42,12 @@ import java.util.Set;
 import static io.netty.handler.ssl.SslUtils.DEFAULT_CIPHER_SUITES;
 import static io.netty.handler.ssl.SslUtils.addIfSupported;
 import static io.netty.handler.ssl.SslUtils.useFallbackCiphersIfDefaultIsEmpty;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2_HELLO;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V3;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_1;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
 
 /**
  * Tells if <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
@@ -62,14 +68,6 @@ public final class OpenSsl {
     private static final boolean SUPPORTS_HOSTNAME_VALIDATION;
     private static final boolean USE_KEYMANAGER_FACTORY;
     private static final boolean SUPPORTS_OCSP;
-
-    // Protocols
-    static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
-    static final String PROTOCOL_SSL_V2 = "SSLv2";
-    static final String PROTOCOL_SSL_V3 = "SSLv3";
-    static final String PROTOCOL_TLS_V1 = "TLSv1";
-    static final String PROTOCOL_TLS_V1_1 = "TLSv1.1";
-    static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
 
     static final Set<String> SUPPORTED_PROTOCOLS_SET;
 
