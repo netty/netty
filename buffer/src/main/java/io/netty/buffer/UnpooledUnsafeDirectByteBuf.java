@@ -440,7 +440,8 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     @Override
     public ByteBuf setZero(int index, int length) {
-        UnsafeByteBufUtil.setZero(this, addr(index), index, length);
+        checkIndex(index, length);
+        UnsafeByteBufUtil.setZero(addr(index), length);
         return this;
     }
 
@@ -448,7 +449,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     public ByteBuf writeZero(int length) {
         ensureWritable(length);
         int wIndex = writerIndex;
-        setZero(wIndex, length);
+        UnsafeByteBufUtil.setZero(addr(wIndex), length);
         writerIndex = wIndex + length;
         return this;
     }
