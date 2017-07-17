@@ -98,7 +98,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private static final int OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1 = 2;
     private static final int OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1 = 3;
     private static final int OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2 = 4;
-    private static final int[] OPENSSL_OP_NO_PROTOCOLS = new int[] {
+    private static final int[] OPENSSL_OP_NO_PROTOCOLS = {
             SSL.SSL_OP_NO_SSLv2,
             SSL.SSL_OP_NO_SSLv3,
             SSL.SSL_OP_NO_TLSv1,

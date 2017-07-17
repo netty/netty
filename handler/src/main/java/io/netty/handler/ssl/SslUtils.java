@@ -76,7 +76,7 @@ final class SslUtils {
      */
     static final int NOT_ENCRYPTED = -2;
 
-    static final String[] DEFAULT_CIPHER_SUITES = new String[] {
+    static final String[] DEFAULT_CIPHER_SUITES = {
         // GCM (Galois/Counter Mode) requires JDK 8.
         "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
         "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
