@@ -61,6 +61,12 @@ import static io.netty.handler.ssl.OpenSsl.memoryAddress;
 import static io.netty.util.internal.EmptyArrays.EMPTY_CERTIFICATES;
 import static io.netty.util.internal.EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2_HELLO;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V3;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_1;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
@@ -1341,7 +1347,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final String[] getEnabledProtocols() {
         List<String> enabled = new ArrayList<String>(6);
         // Seems like there is no way to explicit disable SSLv2Hello in openssl so it is always enabled
-        enabled.add(OpenSsl.PROTOCOL_SSL_V2_HELLO);
+        enabled.add(PROTOCOL_SSL_V2_HELLO);
 
         int opts;
         synchronized (this) {
@@ -1351,20 +1357,20 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 return enabled.toArray(new String[1]);
             }
         }
-        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1, OpenSsl.PROTOCOL_TLS_V1)) {
-            enabled.add(OpenSsl.PROTOCOL_TLS_V1);
+        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1, PROTOCOL_TLS_V1)) {
+            enabled.add(PROTOCOL_TLS_V1);
         }
-        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_1, OpenSsl.PROTOCOL_TLS_V1_1)) {
-            enabled.add(OpenSsl.PROTOCOL_TLS_V1_1);
+        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_1, PROTOCOL_TLS_V1_1)) {
+            enabled.add(PROTOCOL_TLS_V1_1);
         }
-        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_2, OpenSsl.PROTOCOL_TLS_V1_2)) {
-            enabled.add(OpenSsl.PROTOCOL_TLS_V1_2);
+        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_2, PROTOCOL_TLS_V1_2)) {
+            enabled.add(PROTOCOL_TLS_V1_2);
         }
-        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv2, OpenSsl.PROTOCOL_SSL_V2)) {
-            enabled.add(OpenSsl.PROTOCOL_SSL_V2);
+        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv2, PROTOCOL_SSL_V2)) {
+            enabled.add(PROTOCOL_SSL_V2);
         }
-        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv3, OpenSsl.PROTOCOL_SSL_V3)) {
-            enabled.add(OpenSsl.PROTOCOL_SSL_V3);
+        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv3, PROTOCOL_SSL_V3)) {
+            enabled.add(PROTOCOL_SSL_V3);
         }
         return enabled.toArray(new String[enabled.size()]);
     }
@@ -1396,35 +1402,35 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (!OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(p)) {
                 throw new IllegalArgumentException("Protocol " + p + " is not supported.");
             }
-            if (p.equals(OpenSsl.PROTOCOL_SSL_V2)) {
+            if (p.equals(PROTOCOL_SSL_V2)) {
                 if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2) {
                     minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2;
                 }
                 if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2) {
                     maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2;
                 }
-            } else if (p.equals(OpenSsl.PROTOCOL_SSL_V3)) {
+            } else if (p.equals(PROTOCOL_SSL_V3)) {
                 if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3) {
                     minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3;
                 }
                 if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3) {
                     maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3;
                 }
-            } else if (p.equals(OpenSsl.PROTOCOL_TLS_V1)) {
+            } else if (p.equals(PROTOCOL_TLS_V1)) {
                 if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1) {
                     minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1;
                 }
                 if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1) {
                     maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1;
                 }
-            } else if (p.equals(OpenSsl.PROTOCOL_TLS_V1_1)) {
+            } else if (p.equals(PROTOCOL_TLS_V1_1)) {
                 if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1) {
                     minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1;
                 }
                 if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1) {
                     maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1;
                 }
-            } else if (p.equals(OpenSsl.PROTOCOL_TLS_V1_2)) {
+            } else if (p.equals(PROTOCOL_TLS_V1_2)) {
                 if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2) {
                     minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2;
                 }

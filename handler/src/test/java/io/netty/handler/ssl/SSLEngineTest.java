@@ -75,6 +75,10 @@ import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import javax.security.cert.X509Certificate;
 
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
+import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -152,8 +156,6 @@ public abstract class SSLEngineTest {
                     "-----END PRIVATE KEY-----\n";
     private static final String CLIENT_X509_CERT_CHAIN_PEM = CLIENT_X509_CERT_PEM + X509_CERT_PEM;
 
-    protected static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
-    protected static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
     private static final String PRINCIPAL_NAME = "CN=e8ac02fa0d65a84219016045db8b05c485b4ecdf.netty.test";
 
     @Mock
@@ -1238,7 +1240,7 @@ public abstract class SSLEngineTest {
             assertArrayEquals(protocols1, enabledProtocols);
 
             // Enable a protocol that is currently disabled
-            sslEngine.setEnabledProtocols(new String[]{PROTOCOL_TLS_V1_2});
+            sslEngine.setEnabledProtocols(new String[]{ PROTOCOL_TLS_V1_2 });
 
             // The protocol that was just enabled should be returned
             enabledProtocols = sslEngine.getEnabledProtocols();
@@ -1691,13 +1693,13 @@ public abstract class SSLEngineTest {
         clientSslCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Arrays.asList(sharedCipher))
-                .protocols(OpenSsl.PROTOCOL_TLS_V1_2, OpenSsl.PROTOCOL_TLS_V1)
+                .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
                 .sslProvider(sslClientProvider())
                 .build();
 
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .ciphers(Arrays.asList(sharedCipher))
-                .protocols(OpenSsl.PROTOCOL_TLS_V1_2, OpenSsl.PROTOCOL_TLS_V1)
+                .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
                 .sslProvider(sslServerProvider())
                 .build();
         SSLEngine clientEngine = null;
@@ -2225,20 +2227,19 @@ public abstract class SSLEngineTest {
             int remaining = encClientToServer.remaining();
 
             // We limit the buffer so we have less then the header to read, this should result in an BUFFER_UNDERFLOW.
-            encClientToServer.limit(SslUtils.SSL_RECORD_HEADER_LENGTH - 1);
+            encClientToServer.limit(SSL_RECORD_HEADER_LENGTH - 1);
             result = server.unwrap(encClientToServer, plainServer);
             assertResultIsBufferUnderflow(result);
 
             // We limit the buffer so we can read the header but not the rest, this should result in an
             // BUFFER_UNDERFLOW.
-            encClientToServer.limit(SslUtils.SSL_RECORD_HEADER_LENGTH);
+            encClientToServer.limit(SSL_RECORD_HEADER_LENGTH);
             result = server.unwrap(encClientToServer, plainServer);
             assertResultIsBufferUnderflow(result);
 
             // We limit the buffer so we can read the header and partly the rest, this should result in an
             // BUFFER_UNDERFLOW.
-            encClientToServer.limit(
-                    SslUtils.SSL_RECORD_HEADER_LENGTH  + remaining - 1 - SslUtils.SSL_RECORD_HEADER_LENGTH);
+            encClientToServer.limit(SSL_RECORD_HEADER_LENGTH  + remaining - 1 - SSL_RECORD_HEADER_LENGTH);
             result = server.unwrap(encClientToServer, plainServer);
             assertResultIsBufferUnderflow(result);
 
