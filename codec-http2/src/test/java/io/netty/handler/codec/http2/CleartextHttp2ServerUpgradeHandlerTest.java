@@ -212,7 +212,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
             }
         });
 
-        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
+        assertFalse(channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf()));
 
         ByteBuf settingsFrame = settingsFrameBuf();
 
