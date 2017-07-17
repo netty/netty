@@ -907,7 +907,7 @@ public abstract class SslContext {
 
     /**
      * Create a new SslHandler.
-     * @see #newHandler(io.netty.buffer.ByteBufAllocator)
+     * @see #newHandler(ByteBufAllocator)
      */
     SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
         return new SslHandler(newEngine(alloc), startTls);
@@ -945,7 +945,7 @@ public abstract class SslContext {
 
     /**
      * Create a new SslHandler.
-     * @see #newHandler(io.netty.buffer.ByteBufAllocator, String, int, boolean)
+     * @see #newHandler(ByteBufAllocator, String, int, boolean)
      */
     SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
         return new SslHandler(newEngine(alloc, peerHost, peerPort), startTls);
