@@ -53,6 +53,28 @@ import io.netty.util.concurrent.ScheduledFuture;
 
 public class EmbeddedChannelTest {
 
+    @Test
+    public void testNotRegistered() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(false, false);
+        assertFalse(channel.isRegistered());
+        channel.register();
+        assertTrue(channel.isRegistered());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testRegistered() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(true, false);
+        assertTrue(channel.isRegistered());
+        try {
+            channel.register();
+            fail();
+        } catch (IllegalStateException expected) {
+            // This is expected the channel is registered already on an EventLoop.
+        }
+        assertFalse(channel.finish());
+    }
+
     @Test(timeout = 2000)
     public void promiseDoesNotInfiniteLoop() throws InterruptedException {
         EmbeddedChannel channel = new EmbeddedChannel();

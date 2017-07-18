@@ -160,27 +160,32 @@ public class SslHandlerTest {
         }
 
         public void test(final boolean dropChannelActive) throws Exception {
-          SSLEngine engine = SSLContext.getDefault().createSSLEngine();
-          engine.setUseClientMode(true);
+            SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+            engine.setUseClientMode(true);
 
-          EmbeddedChannel ch = new EmbeddedChannel(
-              this,
-              new SslHandler(engine),
-              new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                  if (!dropChannelActive) {
-                    ctx.fireChannelActive();
-                  }
-                }
-              }
-          );
-          ch.config().setAutoRead(false);
-          assertFalse(ch.config().isAutoRead());
+            EmbeddedChannel ch = new EmbeddedChannel(false, false,
+                    this,
+                    new SslHandler(engine),
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                            if (!dropChannelActive) {
+                                ctx.fireChannelActive();
+                            }
+                        }
+                    }
+            );
+            ch.config().setAutoRead(false);
+            assertFalse(ch.config().isAutoRead());
 
-          assertTrue(ch.writeOutbound(Unpooled.EMPTY_BUFFER));
-          assertTrue(readIssued);
-          assertTrue(ch.finishAndReleaseAll());
+            ch.register();
+
+            assertTrue(readIssued);
+            readIssued = false;
+
+            assertTrue(ch.writeOutbound(Unpooled.EMPTY_BUFFER));
+            assertTrue(readIssued);
+            assertTrue(ch.finishAndReleaseAll());
        }
     }
 
