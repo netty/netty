@@ -146,7 +146,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         Channel sc = sb.bind().sync().channel();
 
-        Channel cc = cb.connect().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
         FileRegion region = new DefaultFileRegion(
                 new FileInputStream(file).getChannel(), startOffset, data.length - bufferSize);
         FileRegion emptyRegion = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, 0);

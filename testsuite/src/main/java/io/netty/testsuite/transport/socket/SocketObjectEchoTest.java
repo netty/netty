@@ -96,7 +96,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         });
 
         Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
         for (String element : data) {
             cc.writeAndFlush(element);
         }

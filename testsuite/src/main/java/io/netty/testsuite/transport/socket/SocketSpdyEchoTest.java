@@ -194,10 +194,10 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
         cb.handler(ch);
 
-        Channel sc = sb.localAddress(0).bind().sync().channel();
+        Channel sc = sb.bind().sync().channel();
         int port = ((InetSocketAddress) sc.localAddress()).getPort();
 
-        Channel cc = cb.remoteAddress(NetUtil.LOCALHOST, port).connect().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
         cc.writeAndFlush(frames);
 
         while (ch.counter < frames.writerIndex() - ignoredBytes) {

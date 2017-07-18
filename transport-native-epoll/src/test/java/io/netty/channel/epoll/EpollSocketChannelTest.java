@@ -26,6 +26,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Assert;
 import org.junit.Test;
@@ -117,7 +118,7 @@ public class EpollSocketChannelTest {
         EventLoopGroup group = new EpollEventLoopGroup();
         try {
             runExceptionHandleFeedbackLoop(group, EpollServerSocketChannel.class, EpollSocketChannel.class,
-                    new InetSocketAddress(0));
+                    new InetSocketAddress(NetUtil.LOCALHOST, 0));
             runExceptionHandleFeedbackLoop(group, EpollServerDomainSocketChannel.class, EpollDomainSocketChannel.class,
                     EpollSocketTestPermutation.newSocketAddress());
         } finally {
@@ -143,9 +144,8 @@ public class EpollSocketChannelTest {
             Bootstrap b = new Bootstrap();
             b.group(group);
             b.channel(channelClass);
-            b.remoteAddress(serverChannel.localAddress());
             b.handler(new MyInitializer());
-            clientChannel = b.connect().syncUninterruptibly().channel();
+            clientChannel = b.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
 
             clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[1024]));
 

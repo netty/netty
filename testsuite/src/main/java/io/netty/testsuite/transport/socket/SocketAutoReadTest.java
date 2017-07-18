@@ -67,7 +67,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         TestHandler ch = new TestHandler();
         cb.handler(ch);
         Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
         cc.writeAndFlush(Unpooled.wrappedBuffer(data)).sync();
         Thread.sleep(500);
         cc.writeAndFlush(Unpooled.wrappedBuffer(data)).sync();
@@ -106,7 +106,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         TestHandler ch = new TestHandler();
         cb.handler(ch);
         Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
         cc.writeAndFlush(Unpooled.wrappedBuffer(data)).sync();
         Thread.sleep(500);
         cc.writeAndFlush(Unpooled.wrappedBuffer(data)).sync();

@@ -44,8 +44,8 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         ServerSocket ss = new ServerSocket();
         Socket s = null;
         try {
-            ss.bind(addr);
-            SocketChannel ch = (SocketChannel) cb.handler(h).connect().sync().channel();
+            ss.bind(newSocketAddress());
+            SocketChannel ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).sync().channel();
             assertTrue(ch.isActive());
             assertFalse(ch.isOutputShutdown());
 
@@ -88,8 +88,8 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         ServerSocket ss = new ServerSocket();
         Socket s = null;
         try {
-            ss.bind(addr);
-            SocketChannel ch = (SocketChannel) cb.handler(h).connect().sync().channel();
+            ss.bind(newSocketAddress());
+            SocketChannel ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).sync().channel();
             assertTrue(ch.isActive());
             s = ss.accept();
 
