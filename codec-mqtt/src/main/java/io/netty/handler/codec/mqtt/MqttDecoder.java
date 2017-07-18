@@ -71,11 +71,15 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
         switch (state()) {
-            case READ_FIXED_HEADER:
+            case READ_FIXED_HEADER: try {
                 mqttFixedHeader = decodeFixedHeader(buffer);
                 bytesRemainingInVariablePart = mqttFixedHeader.remainingLength();
                 checkpoint(DecoderState.READ_VARIABLE_HEADER);
                 // fall through
+            } catch (Exception cause) {
+                out.add(invalidMessage(cause));
+                return;
+            }
 
             case READ_VARIABLE_HEADER:  try {
                 if (bytesRemainingInVariablePart > maxBytesInMessage) {
