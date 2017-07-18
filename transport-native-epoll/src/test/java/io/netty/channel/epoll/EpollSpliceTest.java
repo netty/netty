@@ -59,7 +59,7 @@ public class EpollSpliceTest {
         ServerBootstrap bs = new ServerBootstrap();
         bs.channel(EpollServerSocketChannel.class);
         bs.group(group).childHandler(sh);
-        final Channel sc = bs.bind(NetUtil.LOCALHOST, TestUtils.getFreePort()).syncUninterruptibly().channel();
+        final Channel sc = bs.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
 
         ServerBootstrap bs2 = new ServerBootstrap();
         bs2.channel(EpollServerSocketChannel.class);
@@ -125,7 +125,7 @@ public class EpollSpliceTest {
                 });
             }
         });
-        Channel pc = bs2.bind(NetUtil.LOCALHOST, TestUtils.getFreePort()).syncUninterruptibly().channel();
+        Channel pc = bs2.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
 
         Bootstrap cb = new Bootstrap();
         cb.group(group);
@@ -201,7 +201,7 @@ public class EpollSpliceTest {
         bs.channel(EpollServerSocketChannel.class);
         bs.group(group).childHandler(sh);
         bs.childOption(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
-        Channel sc = bs.bind(NetUtil.LOCALHOST, TestUtils.getFreePort()).syncUninterruptibly().channel();
+        Channel sc = bs.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
 
         Bootstrap cb = new Bootstrap();
         cb.group(group);

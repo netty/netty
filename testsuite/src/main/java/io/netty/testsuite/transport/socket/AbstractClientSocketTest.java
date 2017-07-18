@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.AbstractTestsuiteTest;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
 
 import java.net.InetSocketAddress;
@@ -28,8 +27,6 @@ import java.net.SocketAddress;
 import java.util.List;
 
 public abstract class AbstractClientSocketTest extends AbstractTestsuiteTest<Bootstrap> {
-
-    protected volatile SocketAddress addr;
 
     protected AbstractClientSocketTest() {
         super(Bootstrap.class);
@@ -42,13 +39,10 @@ public abstract class AbstractClientSocketTest extends AbstractTestsuiteTest<Boo
 
     @Override
     protected void configure(Bootstrap bootstrap, ByteBufAllocator allocator) {
-        addr = newSocketAddress();
-        bootstrap.remoteAddress(addr);
         bootstrap.option(ChannelOption.ALLOCATOR, allocator);
     }
 
     protected SocketAddress newSocketAddress() {
-        return new InetSocketAddress(
-                NetUtil.LOCALHOST, TestUtils.getFreePort());
+        return new InetSocketAddress(NetUtil.LOCALHOST, 0);
     }
 }

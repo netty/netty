@@ -27,7 +27,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import org.junit.Test;
 
-import java.net.BindException;
+import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -159,35 +159,16 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             }
         });
 
-        Channel sc = null;
-        BindException bindFailureCause = null;
-        for (int i = 0; i < 3; i ++) {
-            try {
-                sc = sb.bind().sync().channel();
-                break;
-            } catch (Exception e) {
-                if (e instanceof BindException) {
-                    logger.warn("Failed to bind to a free port; trying again", e);
-                    bindFailureCause = (BindException) e;
-                    refreshLocalAddress(sb);
-                } else {
-                    throw e;
-                }
-            }
-        }
-
-        if (sc == null) {
-            throw bindFailureCause;
-        }
-
+        Channel sc = sb.bind(newSocketAddress()).sync().channel();
         Channel cc;
         if (bindClient) {
-            cc = cb.bind().sync().channel();
+            cc = cb.bind(newSocketAddress()).sync().channel();
         } else {
             cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
             cc = cb.register().sync().channel();
         }
 
+        InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
         for (int i = 0; i < count; i++) {
             switch (wrapType) {
                 case DUP:

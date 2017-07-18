@@ -84,7 +84,7 @@ public class SocketConnectTest extends AbstractSocketTest {
         Channel cc = null;
         try {
             sb.childHandler(new ChannelInboundHandlerAdapter());
-            sc = sb.bind(NetUtil.LOCALHOST, TestUtils.getFreePort()).syncUninterruptibly().channel();
+            sc = sb.bind().syncUninterruptibly().channel();
 
             cb.handler(new ChannelInboundHandlerAdapter() {
                 @Override
