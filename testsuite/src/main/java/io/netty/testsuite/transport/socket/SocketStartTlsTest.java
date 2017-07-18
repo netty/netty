@@ -174,7 +174,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         });
 
         Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
 
         while (cc.isActive()) {
             if (sh.exception.get() != null) {

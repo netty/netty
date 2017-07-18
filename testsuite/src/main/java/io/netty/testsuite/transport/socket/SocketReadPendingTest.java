@@ -60,12 +60,11 @@ public class SocketReadPendingTest extends AbstractSocketTest {
 
             serverChannel = sb.bind().syncUninterruptibly().channel();
 
-            cb.remoteAddress(serverChannel.localAddress())
-              .option(ChannelOption.AUTO_READ, false)
+            cb.option(ChannelOption.AUTO_READ, false)
               // We intend to do 2 reads per read loop wakeup
               .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(2))
               .handler(clientInitializer);
-            clientChannel = cb.connect().syncUninterruptibly().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
 
             // 4 bytes means 2 read loops for TestNumReadsRecvByteBufAllocator
             clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[4]));

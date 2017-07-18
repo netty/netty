@@ -115,7 +115,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         sb.childHandler(sh);
 
         Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 8), data.length - i);
