@@ -21,14 +21,12 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.AbstractComboTestsuiteTest;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
 
 import java.net.InetSocketAddress;
 import java.util.List;
 
 public abstract class AbstractSctpTest extends AbstractComboTestsuiteTest<ServerBootstrap, Bootstrap> {
-    protected volatile InetSocketAddress addr;
 
     protected AbstractSctpTest() {
         super(ServerBootstrap.class, Bootstrap.class);
@@ -41,11 +39,9 @@ public abstract class AbstractSctpTest extends AbstractComboTestsuiteTest<Server
 
     @Override
     protected void configure(ServerBootstrap serverBootstrap, Bootstrap bootstrap, ByteBufAllocator allocator) {
-        addr = new InetSocketAddress(NetUtil.LOCALHOST, TestUtils.getFreePort());
-        serverBootstrap.localAddress(addr);
+        serverBootstrap.localAddress(new InetSocketAddress(NetUtil.LOCALHOST, 0));
         serverBootstrap.option(ChannelOption.ALLOCATOR, allocator);
         serverBootstrap.childOption(ChannelOption.ALLOCATOR, allocator);
-        bootstrap.remoteAddress(addr);
         bootstrap.option(ChannelOption.ALLOCATOR, allocator);
     }
 }

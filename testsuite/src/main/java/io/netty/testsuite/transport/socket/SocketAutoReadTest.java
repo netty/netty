@@ -66,14 +66,13 @@ public class SocketAutoReadTest extends AbstractSocketTest {
 
             serverChannel = sb.bind().syncUninterruptibly().channel();
 
-            cb.remoteAddress(serverChannel.localAddress())
-                    .option(ChannelOption.AUTO_READ, true)
+            cb.option(ChannelOption.AUTO_READ, true)
                     // We want to ensure that we attempt multiple individual read operations per read loop so we can
                     // test the auto read feature being turned off when data is first read.
                     .option(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
                     .handler(clientInitializer);
 
-            clientChannel = cb.connect().syncUninterruptibly().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
 
             // 3 bytes means 3 independent reads for TestRecvByteBufAllocator
             clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[3]));

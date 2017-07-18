@@ -53,7 +53,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         cb.handler(clientHandler);
 
         Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
 
         // Ensure the server socket accepted the client connection *and* initialized pipeline successfully.
         serverHandler.channelFuture.sync();

@@ -86,7 +86,7 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
         cb.option(EpollChannelOption.DOMAIN_SOCKET_READ_MODE,
                 DomainSocketReadMode.FILE_DESCRIPTORS);
         Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
 
         Object received = queue.take();
         cc.close().sync();

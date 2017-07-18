@@ -16,7 +16,6 @@
 package io.netty.testsuite.util;
 
 import io.netty.util.CharsetUtil;
-import io.netty.util.NetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.rules.TestName;
@@ -34,16 +33,9 @@ import java.io.OutputStream;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.reflect.Method;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.nio.channels.Channel;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
@@ -51,25 +43,12 @@ public final class TestUtils {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(TestUtils.class);
 
-    private static final int START_PORT = 32768;
-    private static final int END_PORT = 65536;
-    private static final int NUM_CANDIDATES = END_PORT - START_PORT;
-
-    private static final List<Integer> PORTS = new ArrayList<Integer>();
-    private static Iterator<Integer> portIterator;
-
     private static final Method hotspotMXBeanDumpHeap;
     private static final Object hotspotMXBean;
 
     private static final long DUMP_PROGRESS_LOGGING_INTERVAL = TimeUnit.SECONDS.toNanos(5);
 
     static {
-        // Populate the list of random ports.
-        for (int i = START_PORT; i < END_PORT; i ++) {
-            PORTS.add(i);
-        }
-        Collections.shuffle(PORTS);
-
         // Retrieve the hotspot MXBean and its class if available.
         Object mxBean;
         Method mxBeanDumpHeap;
@@ -86,80 +65,6 @@ public final class TestUtils {
 
         hotspotMXBean = mxBean;
         hotspotMXBeanDumpHeap = mxBeanDumpHeap;
-    }
-
-    /**
-     * Return a free port which can be used to bind to
-     *
-     * @return port
-     */
-    public static int getFreePort() {
-        for (int i = 0; i < NUM_CANDIDATES; i ++) {
-            final int port = nextCandidatePort();
-            final InetSocketAddress wildcardAddr = new InetSocketAddress(port);
-            final InetSocketAddress loopbackAddr = new InetSocketAddress(NetUtil.LOCALHOST4, port);
-
-            // Ensure it is possible to bind on wildcard/loopback and tcp/udp.
-            if (isTcpPortAvailable(wildcardAddr) &&
-                isTcpPortAvailable(loopbackAddr) &&
-                isUdpPortAvailable(wildcardAddr) &&
-                isUdpPortAvailable(loopbackAddr)) {
-                return port;
-            }
-        }
-
-        throw new RuntimeException("unable to find a free port");
-    }
-
-    private static int nextCandidatePort() {
-        if (portIterator == null || !portIterator.hasNext()) {
-            portIterator = PORTS.iterator();
-        }
-        return portIterator.next();
-    }
-
-    private static boolean isTcpPortAvailable(InetSocketAddress localAddress) {
-        ServerSocket ss = null;
-        try {
-            ss = new ServerSocket();
-            ss.setReuseAddress(false);
-            ss.bind(localAddress);
-            ss.close();
-            ss = null;
-            return true;
-        } catch (Exception ignore) {
-            // Unavailable
-        } finally {
-            if (ss != null) {
-                try {
-                    ss.close();
-                } catch (IOException ignore) {
-                    // Ignore
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private static boolean isUdpPortAvailable(InetSocketAddress localAddress) {
-        DatagramSocket ds = null;
-        try {
-            ds = new DatagramSocket(null);
-            ds.setReuseAddress(false);
-            ds.bind(localAddress);
-            ds.close();
-            ds = null;
-            return true;
-        } catch (Exception ignore) {
-            // Unavailable
-        } finally {
-            if (ds != null) {
-                ds.close();
-            }
-        }
-
-        return false;
     }
 
     /**
