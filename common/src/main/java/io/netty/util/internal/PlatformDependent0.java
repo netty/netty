@@ -49,7 +49,7 @@ final class PlatformDependent0 {
 
     // constants borrowed from murmur3
     static final int HASH_CODE_ASCII_SEED = 0xc2b2ae35;
-    static final int HASH_CODE_C1 = 0x1b873593;
+    static final int HASH_CODE_C1 = 0xcc9e2d51;
     static final int HASH_CODE_C2 = 0x1b873593;
 
     /**
