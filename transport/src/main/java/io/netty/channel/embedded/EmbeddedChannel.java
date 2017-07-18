@@ -111,13 +111,26 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     /**
+     * Create a new instance with the pipeline initialized with the specified handlers.
+     *
+     * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
+     *                 constructor. If {@code false} the user will need to call {@link #register()}.
+     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
+     *                      to {@link #close()}, {@link false} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(boolean register, boolean hasDisconnect, ChannelHandler... handlers) {
+        this(EmbeddedChannelId.INSTANCE, register, hasDisconnect, handlers);
+    }
+
+    /**
      * Create a new instance with the channel ID set to the given ID and the pipeline
      * initialized with the specified handlers.
      *
      * @param channelId the {@link ChannelId} that will be used to identify this channel
      * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
-    public EmbeddedChannel(ChannelId channelId, final ChannelHandler... handlers) {
+    public EmbeddedChannel(ChannelId channelId, ChannelHandler... handlers) {
         this(channelId, false, handlers);
     }
 
@@ -130,11 +143,27 @@ public class EmbeddedChannel extends AbstractChannel {
      *                      to {@link #close()}, {@link false} otherwise.
      * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
-    public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelHandler... handlers) {
+    public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, ChannelHandler... handlers) {
+        this(channelId, true, hasDisconnect, handlers);
+    }
+
+    /**
+     * Create a new instance with the channel ID set to the given ID and the pipeline
+     * initialized with the specified handlers.
+     *
+     * @param channelId the {@link ChannelId} that will be used to identify this channel
+     * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
+     *                 constructor. If {@code false} the user will need to call {@link #register()}.
+     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
+     *                      to {@link #close()}, {@link false} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(ChannelId channelId, boolean register, boolean hasDisconnect,
+                           final ChannelHandler... handlers) {
         super(null, channelId);
         metadata = metadata(hasDisconnect);
         config = new DefaultChannelConfig(this);
-        setup(handlers);
+        setup(register, handlers);
     }
 
     /**
@@ -152,14 +181,14 @@ public class EmbeddedChannel extends AbstractChannel {
         super(null, channelId);
         metadata = metadata(hasDisconnect);
         this.config = ObjectUtil.checkNotNull(config, "config");
-        setup(handlers);
+        setup(true, handlers);
     }
 
     private static ChannelMetadata metadata(boolean hasDisconnect) {
         return hasDisconnect ? METADATA_DISCONNECT : METADATA_NO_DISCONNECT;
     }
 
-    private void setup(final ChannelHandler... handlers) {
+    private void setup(boolean register, final ChannelHandler... handlers) {
         ObjectUtil.checkNotNull(handlers, "handlers");
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
@@ -174,9 +203,22 @@ public class EmbeddedChannel extends AbstractChannel {
                 }
             }
         });
+        if (register) {
+            ChannelFuture future = loop.register(this);
+            assert future.isDone();
+        }
+    }
 
+    /**
+     * Register this {@code Channel} on its {@link EventLoop}.
+     */
+    public void register() throws Exception {
         ChannelFuture future = loop.register(this);
         assert future.isDone();
+        Throwable cause = future.cause();
+        if (cause != null) {
+            PlatformDependent.throwException(cause);
+        }
     }
 
     @Override
