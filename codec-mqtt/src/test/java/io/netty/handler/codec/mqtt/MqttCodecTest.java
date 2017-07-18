@@ -239,6 +239,29 @@ public class MqttCodecTest {
         testMessageWithOnlyFixedHeader(MqttMessageType.DISCONNECT);
     }
 
+    @Test
+    public void testUnknownMessageType() throws Exception {
+
+        final MqttMessage message = createMessageWithFixedHeader(MqttMessageType.PINGREQ);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
+        try {
+            // setting an invalid message type (15, reserved and forbidden by MQTT 3.1.1 spec)
+            byteBuf.setByte(0, 0xF0);
+            final List<Object> out = new LinkedList<Object>();
+            mqttDecoder.decode(ctx, byteBuf, out);
+
+            assertEquals("Expected one object but got " + out.size(), 1, out.size());
+
+            final MqttMessage decodedMessage = (MqttMessage) out.get(0);
+            assertTrue(decodedMessage.decoderResult().isFailure());
+            Throwable cause = decodedMessage.decoderResult().cause();
+            assertTrue(cause instanceof IllegalArgumentException);
+            assertEquals("unknown message type: 15", cause.getMessage());
+        } finally {
+            byteBuf.release();
+        }
+    }
+
     private void testMessageWithOnlyFixedHeader(MqttMessageType messageType) throws Exception {
         MqttMessage message = createMessageWithFixedHeader(messageType);
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
