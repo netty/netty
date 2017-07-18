@@ -18,6 +18,7 @@ package io.netty.channel.embedded;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
+import java.util.Map;
 import java.util.Queue;
 
 import io.netty.channel.AbstractChannel;
@@ -29,6 +30,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -119,6 +121,20 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(ChannelId channelId, final ChannelHandler... handlers) {
         this(channelId, false, handlers);
+    }
+
+    /**
+     * Create a new instance with the channel options applied and the pipeline initialized with the specified handlers.
+     *
+     * @param options {@link ChannelOption}s that will be applied before the handlers are initialized.
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(Map<ChannelOption<?>, ?> options, final ChannelHandler... handlers) {
+        super(null, EmbeddedChannelId.INSTANCE);
+        metadata = metadata(false);
+        config = new DefaultChannelConfig(this);
+        this.config.setOptions(options);
+        setup(handlers);
     }
 
     /**
