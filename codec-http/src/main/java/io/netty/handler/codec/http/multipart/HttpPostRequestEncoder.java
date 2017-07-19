@@ -1062,40 +1062,30 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             isLastChunkSent = true;
             return LastHttpContent.EMPTY_LAST_CONTENT;
         }
-        ByteBuf buffer;
-        int size = HttpPostBodyUtil.chunkSize;
         // first test if previous buffer is not empty
-        if (currentBuffer != null) {
-            size -= currentBuffer.readableBytes();
-        }
+        int size = calculateRemainingSize();
         if (size <= 0) {
             // NextChunk from buffer
-            buffer = fillByteBuf();
+            ByteBuf buffer = fillByteBuf();
             return new DefaultHttpContent(buffer);
         }
         // size > 0
         if (currentData != null) {
             // continue to read data
+            HttpContent chunk;
             if (isMultipart) {
-                HttpContent chunk = encodeNextChunkMultipart(size);
-                if (chunk != null) {
-                    return chunk;
-                }
+                chunk = encodeNextChunkMultipart(size);
             } else {
-                HttpContent chunk = encodeNextChunkUrlEncoded(size);
-                if (chunk != null) {
-                    // NextChunk Url from currentData
-                    return chunk;
-                }
+                chunk = encodeNextChunkUrlEncoded(size);
             }
-            size = HttpPostBodyUtil.chunkSize - currentBuffer.readableBytes();
+            if (chunk != null) {
+                // NextChunk from data
+                return chunk;
+            }
+            size = calculateRemainingSize();
         }
         if (!iterator.hasNext()) {
-            isLastChunk = true;
-            // NextChunk as last non empty from buffer
-            buffer = currentBuffer;
-            currentBuffer = null;
-            return new DefaultHttpContent(buffer);
+            return lastChunk();
         }
         while (size > 0 && iterator.hasNext()) {
             currentData = iterator.next();
@@ -1107,21 +1097,33 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             }
             if (chunk == null) {
                 // not enough
-                size = HttpPostBodyUtil.chunkSize - currentBuffer.readableBytes();
+                size = calculateRemainingSize();
                 continue;
             }
             // NextChunk from data
             return chunk;
         }
         // end since no more data
+        return lastChunk();
+    }
+
+    private int calculateRemainingSize() {
+        int size = HttpPostBodyUtil.chunkSize;
+        if (currentBuffer != null) {
+            size -= currentBuffer.readableBytes();
+        }
+        return size;
+    }
+
+    private HttpContent lastChunk() {
         isLastChunk = true;
         if (currentBuffer == null) {
             isLastChunkSent = true;
             // LastChunk with no more data
             return LastHttpContent.EMPTY_LAST_CONTENT;
         }
-        // Previous LastChunk with no more data
-        buffer = currentBuffer;
+        // NextChunk as last non empty from buffer
+        ByteBuf buffer = currentBuffer;
         currentBuffer = null;
         return new DefaultHttpContent(buffer);
     }
