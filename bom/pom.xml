@@ -198,14 +198,14 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty-transport-unix-common</artifactId>
-        <version>4.1.13.Final-SNAPSHOT</version>
+        <artifactId>netty-transport-native-unix-common</artifactId>
+        <version>4.1.14.Final-SNAPSHOT</version>
         <classifier>linux-x86_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty-transport-unix-common</artifactId>
-        <version>4.1.13.Final-SNAPSHOT</version>
+        <artifactId>netty-transport-native-unix-common</artifactId>
+        <version>4.1.14.Final-SNAPSHOT</version>
         <classifier>osx-x86_64</classifier>
       </dependency>
       <dependency>
