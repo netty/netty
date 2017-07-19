@@ -94,6 +94,7 @@ import static org.junit.Assert.fail;
 public class DnsNameResolverTest {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
+    private static final long DEFAULT_TEST_TIMEOUT_MS = 30000;
 
     // Using the top-100 web sites ranked in Alexa.com (Oct 2014)
     // Please use the following series of shell commands to get this up-to-date:
@@ -474,12 +475,12 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
     public void testNonCachedResolveEmptyHostName() throws Exception {
         testNonCachedResolveEmptyHostName("");
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
     public void testNonCachedResolveNullHostName() throws Exception {
         testNonCachedResolveEmptyHostName(null);
     }
@@ -494,12 +495,12 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
     public void testNonCachedResolveAllEmptyHostName() throws Exception {
         testNonCachedResolveAllEmptyHostName("");
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
     public void testNonCachedResolveAllNullHostName() throws Exception {
         testNonCachedResolveAllEmptyHostName(null);
     }
@@ -642,7 +643,7 @@ public class DnsNameResolverTest {
             };
 
             negativeLookupThread.start();
-            negativeLookupThread.join(5000);
+            negativeLookupThread.join(DEFAULT_TEST_TIMEOUT_MS);
 
             if (negativeLookupThread.isAlive()) {
                 negativeLookupThread.interrupt();
@@ -788,12 +789,12 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
     public void secondDnsServerShouldBeUsedBeforeCNAMEFirstServerNotStarted() throws IOException {
         secondDnsServerShouldBeUsedBeforeCNAME(false);
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
     public void secondDnsServerShouldBeUsedBeforeCNAMEFirstServerFailResolve() throws IOException {
         secondDnsServerShouldBeUsedBeforeCNAME(true);
     }
@@ -852,7 +853,7 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
     public void aAndAAAAQueryShouldTryFirstDnsServerBeforeSecond() throws IOException {
         final String knownHostName = "netty.io";
         final TestDnsServer dnsServer1 = new TestDnsServer(new HashSet<String>(Arrays.asList("notnetty.com")));
