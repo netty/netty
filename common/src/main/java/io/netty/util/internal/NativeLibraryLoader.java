@@ -181,11 +181,31 @@ public final class NativeLibraryLoader {
     }
 
     /**
+     * The shading prefix added to this class's full name.
+     *
+     * @throws UnsatisfiedLinkError if the shader used something other than a prefix
+     */
+    private static String calculatePackagePrefix() {
+        String maybeShaded = NativeLibraryLoader.class.getName();
+        // Use ! instead of . to avoid shading utilities from modifying the string
+        String expected = "io!netty!util!internal!NativeLibraryLoader".replace('!', '.');
+        if (!maybeShaded.endsWith(expected)) {
+            throw new UnsatisfiedLinkError(String.format(
+                    "Could not find prefix added to %s to get %s. When shading, only adding a "
+                    + "package prefix is supported", expected, maybeShaded));
+        }
+        return maybeShaded.substring(0, maybeShaded.length() - expected.length());
+    }
+
+    /**
      * Load the given library with the specified {@link ClassLoader}
      */
     public static void load(String originalName, ClassLoader loader) {
         // Adjust expected name to support shading of native libraries.
-        String name = SystemPropertyUtil.get("io.netty.packagePrefix", "").replace('.', '-') + originalName;
+        String implicitPackagePrefix = calculatePackagePrefix();
+        // The system property should not be necessary; it can be removed in the future.
+        String packagePrefix = SystemPropertyUtil.get("io.netty.packagePrefix", implicitPackagePrefix);
+        String name = packagePrefix.replace('.', '-') + originalName;
 
         String libname = System.mapLibraryName(name);
         String path = NATIVE_RESOURCE_HOME + libname;
