@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -55,10 +56,13 @@ import java.nio.channels.ClosedChannelException;
 import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -160,28 +164,32 @@ public class SslHandlerTest {
         }
 
         public void test(final boolean dropChannelActive) throws Exception {
-          SSLEngine engine = SSLContext.getDefault().createSSLEngine();
-          engine.setUseClientMode(true);
+            SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+            engine.setUseClientMode(true);
 
-          EmbeddedChannel ch = new EmbeddedChannel(
-              this,
-              new SslHandler(engine),
-              new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                  if (!dropChannelActive) {
-                    ctx.fireChannelActive();
-                  }
-                }
-              }
-          );
-          ch.config().setAutoRead(false);
-          assertFalse(ch.config().isAutoRead());
+            Map<ChannelOption<?>, Object> options = new HashMap<ChannelOption<?>, Object>();
+            options.put(ChannelOption.AUTO_READ, false);
+            EmbeddedChannel ch = new EmbeddedChannel(
+                    options,
+                    this,
+                    new SslHandler(engine),
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                            if (!dropChannelActive) {
+                                ctx.fireChannelActive();
+                            }
+                        }
+                    }
+            );
+            assertFalse(ch.config().isAutoRead());
+            assertTrue(readIssued);
+            readIssued = false;
 
-          assertTrue(ch.writeOutbound(Unpooled.EMPTY_BUFFER));
-          assertTrue(readIssued);
-          assertTrue(ch.finishAndReleaseAll());
-       }
+            assertTrue(ch.writeOutbound(Unpooled.EMPTY_BUFFER));
+            assertTrue(readIssued);
+            assertTrue(ch.finishAndReleaseAll());
+        }
     }
 
     @Test
