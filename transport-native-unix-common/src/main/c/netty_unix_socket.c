@@ -188,17 +188,40 @@ static int socket_type(JNIEnv* env) {
     }
 }
 
+static void netty_unix_socket_optionHandleError(JNIEnv* env, int err, char* method) {
+    if (err == EBADF) {
+        netty_unix_errors_throwClosedChannelException(env);
+    } else {
+        netty_unix_errors_throwChannelExceptionErrorNo(env, method, err);
+    }
+}
+
+static void netty_unix_socket_setOptionHandleError(JNIEnv* env, int err) {
+    netty_unix_socket_optionHandleError(env, err, "setsockopt() failed: ");
+}
+
+static int netty_unix_socket_setOption0(jint fd, int level, int optname, const void* optval, socklen_t len) {
+    return setsockopt(fd, level, optname, optval, len);
+}
+
 static jint _socket(JNIEnv* env, jclass clazz, int type) {
     int fd = nettyNonBlockingSocket(socketType, type, 0);
     if (fd == -1) {
         return -errno;
     } else if (socketType == AF_INET6) {
-        // Allow to listen /connect ipv4 and ipv6
+        // Try to allow listen /connect ipv4 and ipv6
         int optval = 0;
-        if (netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_V6ONLY, &optval, sizeof(optval)) < 0) {
-            // Something went wrong so close the fd and return here. setOption(...) itself throws the exception already.
-            close(fd);
-            return -1;
+        if (netty_unix_socket_setOption0(fd, IPPROTO_IPV6, IPV6_V6ONLY, &optval, sizeof(optval)) < 0) {
+            if (errno != EAFNOSUPPORT) {
+              netty_unix_socket_setOptionHandleError(env, errno);
+              // Something went wrong so close the fd and return here. setOption(...) itself throws the exception already.
+              close(fd);
+              return -1;
+            }
+            // else we failed to enable dual stack mode.
+            // It is assumed the socket is re‐stricted to sending and receiving IPv6 packets only.
+            // Don't close fd and don't return -1. At best we can do is log.
+            // TODO: bubble this up to an actual Logger.
         }
     }
     return fd;
@@ -289,24 +312,8 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
     return createDatagramSocketAddress(env, &addr, res);
 }
 
-static void netty_unix_socket_optionHandleError(JNIEnv* env, int err, char* method) {
-    if (err == EBADF) {
-        netty_unix_errors_throwClosedChannelException(env);
-    } else {
-        netty_unix_errors_throwChannelExceptionErrorNo(env, method, err);
-    }
-}
-
-static void netty_unix_socket_setOptionHandleError(JNIEnv* env, int err) {
-    netty_unix_socket_optionHandleError(env, err, "setsockopt() failed: ");
-}
-
 static void netty_unix_socket_getOptionHandleError(JNIEnv* env, int err) {
     netty_unix_socket_optionHandleError(env, err, "getsockopt() failed: ");
-}
-
-static int netty_unix_socket_setOption0(jint fd, int level, int optname, const void* optval, socklen_t len) {
-    return setsockopt(fd, level, optname, optval, len);
 }
 
 static int netty_unix_socket_getOption0(jint fd, int level, int optname, void* optval, socklen_t optlen) {
