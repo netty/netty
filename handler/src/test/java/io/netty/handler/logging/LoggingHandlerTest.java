@@ -26,6 +26,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import net.jcip.annotations.NotThreadSafe;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -50,6 +51,7 @@ import static org.slf4j.Logger.ROOT_LOGGER_NAME;
 /**
  * Verifies the correct functionality of the {@link LoggingHandler}.
  */
+@NotThreadSafe
 public class LoggingHandlerTest {
 
     private static final String LOGGER_NAME = LoggingHandler.class.getName();

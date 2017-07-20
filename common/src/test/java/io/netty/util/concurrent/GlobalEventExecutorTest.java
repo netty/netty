@@ -16,6 +16,7 @@
 
 package io.netty.util.concurrent;
 
+import net.jcip.annotations.NotThreadSafe;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -30,6 +31,7 @@ import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
+@NotThreadSafe
 public class GlobalEventExecutorTest {
 
     private static final GlobalEventExecutor e = GlobalEventExecutor.INSTANCE;

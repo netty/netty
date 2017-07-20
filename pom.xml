@@ -446,6 +446,12 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>com.github.stephenc.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>1.0-1</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>netty-build</artifactId>
         <version>${netty.build.version}</version>
@@ -545,6 +551,12 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.stephenc.jcip</groupId>
+      <artifactId>jcip-annotations</artifactId>
+      <version>1.0-1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -822,6 +834,8 @@
             </property>
           </properties>
           <jvm>${testJavaHome}/bin/java</jvm>
+          <parallel>classes</parallel>
+          <threadCount>4</threadCount>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
@@ -1069,7 +1083,7 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.19.1</version>
+          <version>2.20</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>

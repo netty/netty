@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import net.jcip.annotations.NotThreadSafe;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.junit.Test;
 
@@ -26,6 +27,7 @@ import java.util.Arrays;
 
 import static io.netty.handler.codec.compression.Lz4Constants.*;
 
+@NotThreadSafe
 public class Lz4FrameDecoderTest extends AbstractDecoderTest {
 
     private static final byte[] DATA = { 0x4C, 0x5A, 0x34, 0x42, 0x6C, 0x6F, 0x63, 0x6B,  // magic bytes
