@@ -235,26 +235,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION;
         }
         this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
-        final List<String> convertedCiphers;
-        if (ciphers == null) {
-            convertedCiphers = null;
-        } else {
-            convertedCiphers = new ArrayList<String>();
-            for (String c : ciphers) {
-                if (c == null) {
-                    break;
-                }
-
-                String converted = CipherSuiteConverter.toOpenSsl(c);
-                if (converted != null) {
-                    c = converted;
-                }
-                convertedCiphers.add(c);
-            }
-        }
 
         unmodifiableCiphers = Arrays.asList(checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
-                convertedCiphers, DEFAULT_CIPHERS, availableJavaCipherSuites()));
+                ciphers, DEFAULT_CIPHERS, availableJavaCipherSuites()));
 
         this.apn = checkNotNull(apn, "apn");
 
