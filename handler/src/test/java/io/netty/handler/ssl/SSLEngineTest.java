@@ -1715,6 +1715,37 @@ public abstract class SSLEngineTest {
     }
 
     @Test
+    public void testHandshakeCompletesWithoutFilteringSupportedCipher() throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
+        // due to no shared/supported cipher.
+        final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .ciphers(Arrays.asList(sharedCipher), SupportedCipherSuiteFilter.INSTANCE)
+                .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .sslProvider(sslClientProvider())
+                .build();
+
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .ciphers(Arrays.asList(sharedCipher), SupportedCipherSuiteFilter.INSTANCE)
+                .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            handshake(clientEngine, serverEngine);
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            ssc.delete();
+        }
+    }
+
+    @Test
     public void testPacketBufferSizeLimit() throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
 
