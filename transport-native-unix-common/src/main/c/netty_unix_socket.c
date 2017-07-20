@@ -213,10 +213,10 @@ static jint _socket(JNIEnv* env, jclass clazz, int type) {
         int optval = 0;
         if (netty_unix_socket_setOption0(fd, IPPROTO_IPV6, IPV6_V6ONLY, &optval, sizeof(optval)) < 0) {
             if (errno != EAFNOSUPPORT) {
-              netty_unix_socket_setOptionHandleError(env, errno);
-              // Something went wrong so close the fd and return here. setOption(...) itself throws the exception already.
-              close(fd);
-              return -1;
+                netty_unix_socket_setOptionHandleError(env, errno);
+                // Something went wrong so close the fd and return here. setOption(...) itself throws the exception already.
+                close(fd);
+                return -1;
             }
             // else we failed to enable dual stack mode.
             // It is assumed the socket is re‐stricted to sending and receiving IPv6 packets only.
