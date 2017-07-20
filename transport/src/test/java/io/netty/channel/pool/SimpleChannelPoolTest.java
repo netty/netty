@@ -26,16 +26,16 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
+import net.jcip.annotations.NotThreadSafe;
 import org.hamcrest.CoreMatchers;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.Assert.*;
 
+@NotThreadSafe
 public class SimpleChannelPoolTest {
     private static final String LOCAL_ADDR_ID = "test.id";
 

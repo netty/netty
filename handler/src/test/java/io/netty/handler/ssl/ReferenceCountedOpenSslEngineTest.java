@@ -16,9 +16,11 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.ReferenceCountUtil;
+import net.jcip.annotations.NotThreadSafe;
 
 import javax.net.ssl.SSLEngine;
 
+@NotThreadSafe
 public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
     public ReferenceCountedOpenSslEngineTest(BufferType type) {

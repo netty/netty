@@ -22,6 +22,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.internal.PlatformDependent;
+import net.jcip.annotations.NotThreadSafe;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -58,7 +59,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
-
+@NotThreadSafe
 @RunWith(Parameterized.class)
 public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";

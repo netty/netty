@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import net.jcip.annotations.NotThreadSafe;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,6 +29,7 @@ import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFact
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static org.junit.Assume.assumeTrue;
 
+@NotThreadSafe
 @RunWith(Parameterized.class)
 public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 

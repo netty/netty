@@ -15,19 +15,21 @@
  */
 package io.netty.handler.ssl;
 
-import java.security.Provider;
+import net.jcip.annotations.NotThreadSafe;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.security.Provider;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.Assume.*;
 
+@NotThreadSafe
 @RunWith(Parameterized.class)
 public class JdkConscryptSslEngineInteropTest extends SSLEngineTest {
 

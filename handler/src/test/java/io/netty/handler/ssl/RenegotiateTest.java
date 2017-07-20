@@ -31,11 +31,13 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import net.jcip.annotations.NotThreadSafe;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
+@NotThreadSafe
 public abstract class RenegotiateTest {
 
     @Test(timeout = 30000)

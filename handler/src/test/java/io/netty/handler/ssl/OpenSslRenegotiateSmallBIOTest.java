@@ -15,6 +15,9 @@
  */
 package io.netty.handler.ssl;
 
+import net.jcip.annotations.NotThreadSafe;
+
+@NotThreadSafe
 public class OpenSslRenegotiateSmallBIOTest extends OpenSslRenegotiateTest {
     @Override
     protected void initSslServerContext(SslContext context) {

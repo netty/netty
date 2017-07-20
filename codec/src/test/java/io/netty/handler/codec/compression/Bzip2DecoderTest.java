@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.junit.Test;
 
@@ -27,6 +28,7 @@ import java.util.Arrays;
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
 import static org.junit.Assert.fail;
 
+@NotThreadSafe
 public class Bzip2DecoderTest extends AbstractDecoderTest {
 
     private static final byte[] DATA = { 0x42, 0x5A, 0x68, 0x37, 0x31, 0x41, 0x59, 0x26, 0x53,

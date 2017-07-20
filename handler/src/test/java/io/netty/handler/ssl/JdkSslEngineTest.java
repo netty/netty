@@ -22,24 +22,25 @@ import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectorFactory;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import java.security.Provider;
-import java.util.ArrayList;
-import java.util.Collection;
+import net.jcip.annotations.NotThreadSafe;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLHandshakeException;
+import java.security.Provider;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLHandshakeException;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeNoException;
+import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 
+@NotThreadSafe
 @RunWith(Parameterized.class)
 public class JdkSslEngineTest extends SSLEngineTest {
     public enum ProviderType {

@@ -19,10 +19,12 @@ import com.ning.compress.lzf.LZFEncoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import net.jcip.annotations.NotThreadSafe;
 import org.junit.Test;
 
 import static com.ning.compress.lzf.LZFChunk.*;
 
+@NotThreadSafe
 public class LzfDecoderTest extends AbstractDecoderTest {
 
     public LzfDecoderTest() throws Exception {

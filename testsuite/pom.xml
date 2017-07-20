@@ -98,6 +98,8 @@
         <configuration>
           <testSourceDirectory>${project.build.sourceDirectory}</testSourceDirectory>
           <testClassesDirectory>${project.build.outputDirectory}</testClassesDirectory>
+          <parallel>classes</parallel>
+          <threadCount>1</threadCount>
         </configuration>
       </plugin>
     </plugins>

@@ -15,11 +15,13 @@
  */
 package io.netty.handler.ssl;
 
+import net.jcip.annotations.NotThreadSafe;
 import org.junit.BeforeClass;
 
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
+@NotThreadSafe
 public class OpenSslRenegotiateTest extends RenegotiateTest {
 
     @BeforeClass
