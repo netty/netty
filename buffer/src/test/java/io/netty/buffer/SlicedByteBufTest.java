@@ -22,7 +22,10 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Tests sliced channel buffers
@@ -226,5 +229,34 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     @Override
     public void testWriteUtf16CharSequenceExpand() {
         super.testWriteUtf16CharSequenceExpand();
+    }
+
+    @Test
+    public void ensureWritableWithEnoughSpaceShouldNotThrow() {
+        ByteBuf slice = newBuffer(10);
+        ByteBuf unwrapped = slice.unwrap();
+        unwrapped.writerIndex(unwrapped.writerIndex() + 5);
+        slice.writerIndex(slice.readerIndex());
+
+        // Run ensureWritable and verify this doesn't change any indexes.
+        int originalWriterIndex = slice.writerIndex();
+        int originalReadableBytes = slice.readableBytes();
+        slice.ensureWritable(originalWriterIndex - slice.writerIndex());
+        assertEquals(originalWriterIndex, slice.writerIndex());
+        assertEquals(originalReadableBytes, slice.readableBytes());
+        slice.release();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void ensureWritableWithNotEnoughSpaceShouldThrow() {
+        ByteBuf slice = newBuffer(10);
+        ByteBuf unwrapped = slice.unwrap();
+        unwrapped.writerIndex(unwrapped.writerIndex() + 5);
+        try {
+            slice.ensureWritable(1);
+            fail();
+        } finally {
+            slice.release();
+        }
     }
 }

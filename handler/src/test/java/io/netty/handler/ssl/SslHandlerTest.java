@@ -29,6 +29,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -56,9 +57,11 @@ import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -67,6 +70,7 @@ import javax.net.ssl.SSLProtocolException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -87,14 +91,14 @@ public class SslHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
         // Push the first part of a 5-byte handshake message.
-        ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{22, 3, 1, 0, 5}));
+        ch.writeInbound(wrappedBuffer(new byte[]{22, 3, 1, 0, 5}));
 
         // Should decode nothing yet.
         assertThat(ch.readInbound(), is(nullValue()));
 
         try {
             // Push the second part of the 5-byte handshake message.
-            ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{2, 0, 0, 1, 0}));
+            ch.writeInbound(wrappedBuffer(new byte[]{2, 0, 0, 1, 0}));
             fail();
         } catch (DecoderException e) {
             // Be sure we cleanup the channel and release any pending messages that may have been generated because
@@ -465,6 +469,76 @@ public class SslHandlerTest {
         assumeTrue(OpenSsl.isAvailable());
         testCloseNotify(SslProvider.OPENSSL, 0, false);
         testCloseNotify(SslProvider.OPENSSL_REFCNT, 0, false);
+    }
+
+    @Test
+    public void writingReadOnlyBufferDoesNotBreakAggregation() throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+
+        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+
+        EventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        final CountDownLatch serverReceiveLatch = new CountDownLatch(1);
+        try {
+            final int expectedBytes = 11;
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
+                                private int readBytes;
+                                @Override
+                                protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+                                    readBytes += msg.readableBytes();
+                                    if (readBytes >= expectedBytes) {
+                                        serverReceiveLatch.countDown();
+                                    }
+                                }
+                            });
+                        }
+                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            cc = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                        }
+                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+
+            // We first write a ReadOnlyBuffer because SslHandler will attempt to take the first buffer and append to it
+            // until there is no room, or the aggregation size threshold is exceeded. We want to verify that we don't
+            // throw when a ReadOnlyBuffer is used and just verify that we don't aggregate in this case.
+            ByteBuf firstBuffer = Unpooled.buffer(10);
+            firstBuffer.writeByte(0);
+            firstBuffer = firstBuffer.asReadOnly();
+            ByteBuf secondBuffer = Unpooled.buffer(10);
+            secondBuffer.writerIndex(secondBuffer.capacity());
+            cc.write(firstBuffer);
+            cc.writeAndFlush(secondBuffer).syncUninterruptibly();
+            serverReceiveLatch.countDown();
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
+
+            ReferenceCountUtil.release(sslServerCtx);
+            ReferenceCountUtil.release(sslClientCtx);
+        }
     }
 
     private static void testCloseNotify(SslProvider provider, final long closeNotifyReadTimeout, final boolean timeout)
