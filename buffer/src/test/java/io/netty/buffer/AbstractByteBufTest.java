@@ -2146,6 +2146,10 @@ public abstract class AbstractByteBufTest {
 
     private ByteBuf releasedBuffer() {
         ByteBuf buffer = newBuffer(8);
+        // Clear the buffer so we are sure the reader and writer indices are 0.
+        // This is important as we may return a slice from newBuffer(...).
+        buffer.clear();
+
         assertTrue(buffer.release());
         return buffer;
     }
