@@ -373,27 +373,27 @@ public class HttpPostRequestEncoderTest {
                 HttpConstants.DEFAULT_CHARSET, HttpPostRequestEncoder.EncoderMode.RFC1738);
 
         MemoryFileUpload first = new MemoryFileUpload("resources", "", "application/json", null,
-                Charset.forName("UTF-8"), -1);
+                CharsetUtil.UTF_8, -1);
         first.setMaxSize(-1);
         first.setContent(new ByteArrayInputStream(new byte[7955]));
         encoder.addBodyHttpData(first);
 
         MemoryFileUpload second = new MemoryFileUpload("resources2", "", "application/json", null,
-                Charset.forName("UTF-8"), -1);
+                CharsetUtil.UTF_8, -1);
         second.setMaxSize(-1);
         second.setContent(new ByteArrayInputStream(new byte[7928]));
         encoder.addBodyHttpData(second);
 
         assertNotNull(encoder.finalizeRequest());
 
-        checkNextChunkSize(encoder, 8096);
-        checkNextChunkSize(encoder, 8096);
+        checkNextChunkSize(encoder, 8080);
+        checkNextChunkSize(encoder, 8080);
 
         HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
         assertTrue("Expected LastHttpContent is not received", httpContent instanceof LastHttpContent);
         httpContent.release();
 
-        assertTrue("Expected end of input is not receive", encoder.isEndOfInput());
+           assertTrue("Expected end of input is not receive", encoder.isEndOfInput());
     }
 
     @Test
@@ -409,7 +409,7 @@ public class HttpPostRequestEncoderTest {
 
         assertNotNull(encoder.finalizeRequest());
 
-        checkNextChunkSize(encoder, 8096);
+        checkNextChunkSize(encoder, 8080);
 
         HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
         assertTrue("Expected LastHttpContent is not received", httpContent instanceof LastHttpContent);
@@ -418,9 +418,20 @@ public class HttpPostRequestEncoderTest {
         assertTrue("Expected end of input is not receive", encoder.isEndOfInput());
     }
 
-    private static void checkNextChunkSize(HttpPostRequestEncoder encoder, int expectedSize) throws Exception {
+    private static void checkNextChunkSize(HttpPostRequestEncoder encoder, int sizeWithoutDelimiter) throws Exception {
+        // 16 bytes as HttpPostRequestEncoder uses Long.toHexString(...) to generate a hex-string which will be between
+        // 2 and 16 bytes.
+        // See https://github.com/netty/netty/blob/4.1/codec-http/src/main/java/io/netty/handler/
+        // codec/http/multipart/HttpPostRequestEncoder.java#L291
+        int expectedSizeMin = sizeWithoutDelimiter + 2;
+        int expectedSizeMax = sizeWithoutDelimiter + 16;
+
         HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
-        assertEquals("Chunk is not " + expectedSize + " bytes", expectedSize, httpContent.content().readableBytes());
+
+        int readable = httpContent.content().readableBytes();
+        boolean expectedSize = readable >= expectedSizeMin && readable <= expectedSizeMax;
+        assertTrue("Chunk size is not in expected range (" + expectedSizeMin + " - " + expectedSizeMax + "), was: "
+                + readable, expectedSize);
         httpContent.release();
     }
 }
