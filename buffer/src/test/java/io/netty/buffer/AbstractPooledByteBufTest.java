@@ -15,7 +15,13 @@
  */
 package io.netty.buffer;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
 
@@ -33,5 +39,24 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
         assertEquals(0, buffer.writerIndex());
         assertEquals(0, buffer.readerIndex());
         return buffer;
+    }
+
+    @Test
+    public void ensureWritableWithEnoughSpaceShouldNotThrow() {
+        ByteBuf buf = newBuffer(1, 10);
+        buf.ensureWritable(3);
+        assertThat(buf.writableBytes(), is(greaterThanOrEqualTo(3)));
+        buf.release();
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void ensureWritableWithNotEnoughSpaceShouldThrow() {
+        ByteBuf buf = newBuffer(1, 10);
+        try {
+            buf.ensureWritable(11);
+            fail();
+        } finally {
+            buf.release();
+        }
     }
 }

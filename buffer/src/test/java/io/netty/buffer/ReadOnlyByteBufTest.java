@@ -21,12 +21,23 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ReadOnlyBufferException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
-import static io.netty.buffer.Unpooled.*;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
+import static io.netty.buffer.Unpooled.BIG_ENDIAN;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
+import static io.netty.buffer.Unpooled.buffer;
+import static io.netty.buffer.Unpooled.unmodifiableBuffer;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests read-only channel buffers
@@ -179,6 +190,37 @@ public class ReadOnlyByteBufTest {
     @Test
     public void shouldIndicateNotWritableAnyNumber() {
         assertFalse(unmodifiableBuffer(buffer(1)).isWritable(1));
+    }
+
+    @Test
+    public void ensureWritableIntStatusShouldFailButNotThrow() {
+        ensureWritableIntStatusShouldFailButNotThrow(false);
+    }
+
+    @Test
+    public void ensureWritableForceIntStatusShouldFailButNotThrow() {
+        ensureWritableIntStatusShouldFailButNotThrow(true);
+    }
+
+    private void ensureWritableIntStatusShouldFailButNotThrow(boolean force) {
+        ByteBuf buf = buffer(1);
+        ByteBuf readOnly = buf.asReadOnly();
+        int result = readOnly.ensureWritable(1, force);
+        assertEquals(1, result);
+        assertFalse(ensureWritableSuccess(result));
+        readOnly.release();
+    }
+
+    @Test(expected = ReadOnlyBufferException.class)
+    public void ensureWritableShouldThrow() {
+        ByteBuf buf = buffer(1);
+        ByteBuf readOnly = buf.asReadOnly();
+        try {
+            readOnly.ensureWritable(1);
+            fail();
+        } finally {
+            buf.release();
+        }
     }
 
     @Test
