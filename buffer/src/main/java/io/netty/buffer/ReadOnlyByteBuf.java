@@ -66,6 +66,16 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public int ensureWritable(int minWritableBytes, boolean force) {
+        return 1;
+    }
+
+    @Override
+    public ByteBuf ensureWritable(int minWritableBytes) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public ByteBuf unwrap() {
         return buffer;
     }
