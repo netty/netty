@@ -244,7 +244,7 @@ public final class Native {
         tcpInfo0(fd, info.info);
     }
 
-    private static native void tcpInfo0(int fd, int[] array) throws IOException;
+    private static native void tcpInfo0(int fd, long[] array) throws IOException;
 
     public static void setTcpMd5Sig(int fd, InetAddress address, byte[] key) throws IOException {
         final NativeInetAddress a = NativeInetAddress.newInstance(address);
