@@ -85,7 +85,6 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Http2Settings initialSettings = Http2Settings.defaultSettings();
     private Http2FrameListener frameListener;
     private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
-    private boolean gracefulShutdownIndefiniteWait;
 
     // The property that will prohibit connection() and codec() if set by server(),
     // because this property is used only when this builder creates a Http2Connection.
@@ -147,14 +146,17 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * timeout is indefinite.
      */
     protected long gracefulShutdownTimeoutMillis() {
-        return gracefulShutdownIndefiniteWait ? -1 : gracefulShutdownTimeoutMillis;
+        return gracefulShutdownTimeoutMillis;
     }
 
     /**
      * Sets the graceful shutdown timeout of the {@link Http2Connection} in milliseconds.
      */
     protected B gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
-        gracefulShutdownIndefiniteWait = false;
+        if (gracefulShutdownTimeoutMillis < 0) {
+            throw new IllegalArgumentException("gracefulShutdownTimeoutMillis: " + gracefulShutdownTimeoutMillis +
+                                               " (expected: >= 0)");
+        }
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
         return self();
     }
@@ -163,7 +165,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * Sets the graceful shutdown timeout to be indefinite.
      */
     protected B gracefulShutdownIndefiniteWait() {
-        gracefulShutdownIndefiniteWait = true;
+        gracefulShutdownTimeoutMillis = -1;
         return self();
     }
 
@@ -432,7 +434,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         }
 
         // Setup post build options
-        if (gracefulShutdownIndefiniteWait) {
+        if (gracefulShutdownTimeoutMillis == -1) {
             handler.gracefulShutdownIndefiniteWait();
         } else {
             handler.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);

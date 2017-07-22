@@ -79,7 +79,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private ChannelFutureListener closeListener;
     private BaseDecoder byteDecoder;
     private long gracefulShutdownTimeoutMillis;
-    private boolean gracefulShutdownIndefiniteWait;
 
     protected Http2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                      Http2Settings initialSettings) {
@@ -97,7 +96,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * indefinitely for all streams to close.
      */
     public long gracefulShutdownTimeoutMillis() {
-        return gracefulShutdownIndefiniteWait ? -1 : gracefulShutdownTimeoutMillis;
+        return gracefulShutdownTimeoutMillis;
     }
 
     /**
@@ -111,7 +110,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             throw new IllegalArgumentException("gracefulShutdownTimeoutMillis: " + gracefulShutdownTimeoutMillis +
                                                " (expected: >= 0)");
         }
-        gracefulShutdownIndefiniteWait = false;
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
     }
 
@@ -120,7 +118,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * shutdown process.
      */
     public void gracefulShutdownIndefiniteWait() {
-        gracefulShutdownIndefiniteWait = true;
+        gracefulShutdownTimeoutMillis = -1;
     }
 
     public Http2Connection connection() {
@@ -465,7 +463,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             future.addListener(new ClosingChannelFutureListener(ctx, promise));
         } else {
             // If there are active streams we should wait until they are all closed before closing the connection.
-            if (gracefulShutdownIndefiniteWait) {
+            if (gracefulShutdownTimeoutMillis == -1) {
                 closeListener = new ClosingChannelFutureListener(ctx, promise);
             } else {
                 closeListener = new ClosingChannelFutureListener(ctx, promise,
