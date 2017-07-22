@@ -154,7 +154,7 @@ final class LinuxSocket extends Socket {
     private static native int getTcpUserTimeout(int fd) throws IOException;
     private static native int isIpFreeBind(int fd) throws IOException;
     private static native int isIpTransparent(int fd) throws IOException;
-    private static native void getTcpInfo(int fd, int[] array) throws IOException;
+    private static native void getTcpInfo(int fd, long[] array) throws IOException;
     private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
 
     private static native void setTcpDeferAccept(int fd, int deferAccept) throws IOException;
