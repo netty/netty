@@ -1073,6 +1073,7 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
+            ssc.delete();
         }
     }
 
@@ -1107,6 +1108,7 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
+            ssc.delete();
         }
     }
 
@@ -1218,6 +1220,7 @@ public abstract class SSLEngineTest {
         clientChannel = ccf.channel();
 
         serverLatch.await();
+        ssc.delete();
     }
 
     protected void testEnablingAnAlreadyDisabledSslProtocol(String[] protocols1, String[] protocols2) throws Exception {
@@ -1401,24 +1404,28 @@ public abstract class SSLEngineTest {
             throws InterruptedException, SSLException, CertificateException {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
 
-        setupHandlers(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
-                        .sslProvider(sslServerProvider())
-                        .sslContextProvider(serverSslContextProvider())
-                        .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                        .applicationProtocolConfig(serverApn)
-                        .sessionCacheSize(0)
-                        .sessionTimeout(0)
-                        .build(),
+        try {
+          setupHandlers(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
+                          .sslProvider(sslServerProvider())
+                          .sslContextProvider(serverSslContextProvider())
+                          .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                          .applicationProtocolConfig(serverApn)
+                          .sessionCacheSize(0)
+                          .sessionTimeout(0)
+                          .build(),
 
-                SslContextBuilder.forClient()
-                        .sslProvider(sslClientProvider())
-                        .sslContextProvider(clientSslContextProvider())
-                        .applicationProtocolConfig(clientApn)
-                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                        .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                        .sessionCacheSize(0)
-                        .sessionTimeout(0)
-                        .build());
+                  SslContextBuilder.forClient()
+                          .sslProvider(sslClientProvider())
+                          .sslContextProvider(clientSslContextProvider())
+                          .applicationProtocolConfig(clientApn)
+                          .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                          .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                          .sessionCacheSize(0)
+                          .sessionTimeout(0)
+                          .build());
+        } finally {
+          ssc.delete();
+        }
     }
 
     protected void setupHandlers(SslContext serverCtx, SslContext clientCtx)
@@ -1644,6 +1651,7 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
+            cert.delete();
         }
     }
 
@@ -1711,6 +1719,7 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
+            ssc.delete();
         }
     }
 
@@ -1859,6 +1868,7 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
+            cert.delete();
         }
     }
 
@@ -1905,6 +1915,7 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
+            cert.delete();
         }
     }
 
