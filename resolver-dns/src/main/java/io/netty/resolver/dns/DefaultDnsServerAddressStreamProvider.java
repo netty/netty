@@ -69,7 +69,9 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
             String[] servers = dnsUrls.split(" ");
             for (String server : servers) {
                 try {
-                    defaultNameServers.add(SocketUtils.socketAddress(new URI(server).getHost(), DNS_PORT));
+                    URI uri = new URI(server);
+                    int port  = uri.getPort();
+                    defaultNameServers.add(SocketUtils.socketAddress(uri.getHost(), port == -1 ? DNS_PORT : port));
                 } catch (URISyntaxException e) {
                     logger.debug("Skipping a malformed nameserver URI: {}", server, e);
                 }
