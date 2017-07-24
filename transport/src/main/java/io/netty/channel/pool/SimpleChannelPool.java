@@ -49,6 +49,7 @@ public class SimpleChannelPool implements ChannelPool {
     private final ChannelHealthChecker healthCheck;
     private final Bootstrap bootstrap;
     private final boolean releaseHealthCheck;
+    private final boolean lastRecentUsed;
 
     /**
      * Creates a new instance using the {@link ChannelHealthChecker#ACTIVE}.
@@ -84,6 +85,22 @@ public class SimpleChannelPool implements ChannelPool {
      */
     public SimpleChannelPool(Bootstrap bootstrap, final ChannelPoolHandler handler, ChannelHealthChecker healthCheck,
                              boolean releaseHealthCheck) {
+        this(bootstrap, handler, healthCheck, releaseHealthCheck, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param bootstrap          the {@link Bootstrap} that is used for connections
+     * @param handler            the {@link ChannelPoolHandler} that will be notified for the different pool actions
+     * @param healthCheck        the {@link ChannelHealthChecker} that will be used to check if a {@link Channel} is
+     *                           still healthy when obtain from the {@link ChannelPool}
+     * @param releaseHealthCheck will check channel health before offering back if this parameter set to {@code true};
+     *                           otherwise, channel health is only checked at acquisition time
+     * @param lastRecentUsed    {@code true} {@link Channel} selection will be LIFO, if {@code false} FIFO.
+     */
+    public SimpleChannelPool(Bootstrap bootstrap, final ChannelPoolHandler handler, ChannelHealthChecker healthCheck,
+                             boolean releaseHealthCheck, boolean lastRecentUsed) {
         this.handler = checkNotNull(handler, "handler");
         this.healthCheck = checkNotNull(healthCheck, "healthCheck");
         this.releaseHealthCheck = releaseHealthCheck;
@@ -96,6 +113,7 @@ public class SimpleChannelPool implements ChannelPool {
                 handler.channelCreated(ch);
             }
         });
+        this.lastRecentUsed = lastRecentUsed;
     }
 
     /**
@@ -355,7 +373,7 @@ public class SimpleChannelPool implements ChannelPool {
      * implementations of these methods needs to be thread-safe!
      */
     protected Channel pollChannel() {
-        return deque.pollLast();
+        return lastRecentUsed ? deque.pollLast() : deque.pollFirst();
     }
 
     /**
