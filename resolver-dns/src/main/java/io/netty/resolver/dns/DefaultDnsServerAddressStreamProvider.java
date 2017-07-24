@@ -66,14 +66,25 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
         try {
             DirContext ctx = new InitialDirContext(env);
             String dnsUrls = (String) ctx.getEnvironment().get("java.naming.provider.url");
-            String[] servers = dnsUrls.split(" ");
-            for (String server : servers) {
-                try {
-                    URI uri = new URI(server);
-                    int port  = uri.getPort();
-                    defaultNameServers.add(SocketUtils.socketAddress(uri.getHost(), port == -1 ? DNS_PORT : port));
-                } catch (URISyntaxException e) {
-                    logger.debug("Skipping a malformed nameserver URI: {}", server, e);
+            // Only try if not empty as otherwise we will produce an exception
+            if (dnsUrls != null && !dnsUrls.isEmpty()) {
+                String[] servers = dnsUrls.split(" ");
+                for (String server : servers) {
+                    try {
+                        URI uri = new URI(server);
+                        String host = new URI(server).getHost();
+
+                        if (host == null || host.isEmpty()) {
+                            logger.debug(
+                                    "Skipping a nameserver URI as host portion could not be extracted: {}", server);
+                            // If the host portion can not be parsed we should just skip this entry.
+                            continue;
+                        }
+                        int port  = uri.getPort();
+                        defaultNameServers.add(SocketUtils.socketAddress(uri.getHost(), port == -1 ? DNS_PORT : port));
+                    } catch (URISyntaxException e) {
+                        logger.debug("Skipping a malformed nameserver URI: {}", server, e);
+                    }
                 }
             }
         } catch (NamingException ignore) {
