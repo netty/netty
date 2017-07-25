@@ -26,6 +26,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.SliceableFileRegion;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
 
@@ -203,7 +204,15 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     readableBytes = newReadableBytes;
                 }
                 in.remove();
+            } else if (msg instanceof SliceableFileRegion) {
+                SliceableFileRegion region = (SliceableFileRegion) msg;
+                long transferIndex = region.transferIndex();
+                doWriteFileRegion(region);
+                in.progress(region.transferIndex() - transferIndex);
+                in.remove();
             } else if (msg instanceof FileRegion) {
+                // TODO: consider remove this branch once we move the methods in SliceableFileRegion
+                // into FileRegion in the next minor release.
                 FileRegion region = (FileRegion) msg;
                 long transferred = region.transferred();
                 doWriteFileRegion(region);

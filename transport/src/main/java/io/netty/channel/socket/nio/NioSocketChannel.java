@@ -25,13 +25,14 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.util.internal.SocketUtils;
+import io.netty.channel.SliceableFileRegion;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -402,8 +403,15 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     protected long doWriteFileRegion(FileRegion region) throws Exception {
-        final long position = region.transferred();
-        return region.transferTo(javaChannel(), position);
+        if (region instanceof SliceableFileRegion) {
+            SliceableFileRegion r = (SliceableFileRegion) region;
+            return r.transferBytesTo(javaChannel(), r.transferableBytes());
+        } else {
+            // TODO: consider remove this branch once we move the methods in SliceableFileRegion
+            // into FileRegion in the next minor release.
+            final long position = region.transferred();
+            return region.transferTo(javaChannel(), position);
+        }
     }
 
     @Override

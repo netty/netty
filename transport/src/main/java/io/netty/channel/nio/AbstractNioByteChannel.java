@@ -26,6 +26,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.SliceableFileRegion;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.util.internal.StringUtil;
@@ -157,12 +158,70 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         }
     }
 
+    private enum WriteStatus {
+        SET_OP_WRITE, // We have not written out the whole message and output channel is not writable
+        INCOMPLETE, // We have not written out the whole message after the spin count
+        DONE // we have written out the whole message
+    }
+
+    private WriteStatus doWriteFileRegion(ChannelOutboundBuffer in, FileRegion region,
+            int writeSpinCount) throws Exception {
+        if (region instanceof SliceableFileRegion) {
+            SliceableFileRegion sliceableRegion = (SliceableFileRegion) region;
+            if (!sliceableRegion.isTransferable()) {
+                return WriteStatus.DONE;
+            }
+            WriteStatus status = WriteStatus.INCOMPLETE;
+            long flushedAmount = 0;
+
+            for (int i = writeSpinCount - 1; i >= 0; i--) {
+                long localFlushedAmount = doWriteFileRegion(sliceableRegion);
+                if (localFlushedAmount == 0) {
+                    status = WriteStatus.SET_OP_WRITE;
+                    break;
+                }
+
+                flushedAmount += localFlushedAmount;
+                if (!sliceableRegion.isTransferable()) {
+                    status = WriteStatus.DONE;
+                    break;
+                }
+            }
+            in.progress(flushedAmount);
+            return status;
+        } else {
+            // TODO: consider remove this branch once we move the methods in SliceableFileRegion
+            // into FileRegion in the next minor release.
+            if (region.transferred() >= region.count()) {
+                return WriteStatus.DONE;
+            }
+            WriteStatus status = WriteStatus.INCOMPLETE;
+            long flushedAmount = 0;
+
+            for (int i = writeSpinCount - 1; i >= 0; i--) {
+                long localFlushedAmount = doWriteFileRegion(region);
+                if (localFlushedAmount == 0) {
+                    status = WriteStatus.SET_OP_WRITE;
+                    break;
+                }
+
+                flushedAmount += localFlushedAmount;
+                if (region.transferred() >= region.count()) {
+                    status = WriteStatus.DONE;
+                    break;
+                }
+            }
+            in.progress(flushedAmount);
+            return status;
+        }
+    }
+
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         int writeSpinCount = -1;
 
         boolean setOpWrite = false;
-        for (;;) {
+        loop: for (;;) {
             Object msg = in.current();
             if (msg == null) {
                 // Wrote all messages.
@@ -208,36 +267,23 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
             } else if (msg instanceof FileRegion) {
                 FileRegion region = (FileRegion) msg;
-                boolean done = region.transferred() >= region.count();
-
-                if (!done) {
-                    long flushedAmount = 0;
-                    if (writeSpinCount == -1) {
-                        writeSpinCount = config().getWriteSpinCount();
-                    }
-
-                    for (int i = writeSpinCount - 1; i >= 0; i--) {
-                        long localFlushedAmount = doWriteFileRegion(region);
-                        if (localFlushedAmount == 0) {
-                            setOpWrite = true;
-                            break;
-                        }
-
-                        flushedAmount += localFlushedAmount;
-                        if (region.transferred() >= region.count()) {
-                            done = true;
-                            break;
-                        }
-                    }
-
-                    in.progress(flushedAmount);
+                if (writeSpinCount == -1) {
+                    writeSpinCount = config().getWriteSpinCount();
                 }
-
-                if (done) {
-                    in.remove();
-                } else {
-                    // Break the loop and so incompleteWrite(...) is called.
-                    break;
+                switch (doWriteFileRegion(in, region, writeSpinCount)) {
+                    case SET_OP_WRITE:
+                        setOpWrite = true;
+                        // the fall through is intentional, setOpWrite also means we have not
+                        // written out the whole message.
+                    case INCOMPLETE:
+                        // Break the loop and so incompleteWrite(...) is called.
+                        break loop;
+                    case DONE:
+                        in.remove();
+                        break;
+                    default:
+                        // Should not reach here.
+                        throw new Error();
                 }
             } else {
                 // Should not reach here.
