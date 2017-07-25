@@ -39,7 +39,7 @@ import static io.netty.handler.codec.mqtt.MqttCodecUtil.validateFixedHeader;
  */
 public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
-    private static final int DEFAULT_MAX_BYTES_IN_MESSAGE = 8092;
+    private static final int DEFAULT_MAX_BYTES_IN_MESSAGE = 268435455;
 
     /**
      * States of the decoder.
