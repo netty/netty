@@ -455,7 +455,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             future.addListener(new ClosingChannelFutureListener(ctx, promise));
         } else {
             // If there are active streams we should wait until they are all closed before closing the connection.
-            if (gracefulShutdownTimeoutMillis == -1) {
+            if (gracefulShutdownTimeoutMillis < 0) {
                 closeListener = new ClosingChannelFutureListener(ctx, promise);
             } else {
                 closeListener = new ClosingChannelFutureListener(ctx, promise,
