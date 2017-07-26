@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -56,6 +57,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     };
 
+    private static final AtomicReferenceFieldUpdater<DefaultChannelPipeline, MessageSizeEstimator.Handle> ESTIMATOR =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    DefaultChannelPipeline.class, MessageSizeEstimator.Handle.class, "estimatorHandle");
     final AbstractChannelHandlerContext head;
     final AbstractChannelHandlerContext tail;
 
@@ -65,7 +69,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
     private Map<EventExecutorGroup, EventExecutor> childExecutors;
-    private MessageSizeEstimator.Handle estimatorHandle;
+    private volatile MessageSizeEstimator.Handle estimatorHandle;
     private boolean firstRegistration = true;
 
     /**
@@ -97,10 +101,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     final MessageSizeEstimator.Handle estimatorHandle() {
-        if (estimatorHandle == null) {
-            estimatorHandle = channel.config().getMessageSizeEstimator().newHandle();
+        MessageSizeEstimator.Handle handle = estimatorHandle;
+        if (handle == null) {
+            handle = channel.config().getMessageSizeEstimator().newHandle();
+            if (!ESTIMATOR.compareAndSet(this, null, handle)) {
+                handle = estimatorHandle;
+            }
         }
-        return estimatorHandle;
+        return handle;
     }
 
     final Object touch(Object msg, AbstractChannelHandlerContext next) {
