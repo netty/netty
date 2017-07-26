@@ -106,19 +106,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * streams to be closed before closing the connection during the graceful shutdown process.
      */
     public void gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
-        if (gracefulShutdownTimeoutMillis < 0) {
+        if (gracefulShutdownTimeoutMillis < -1) {
             throw new IllegalArgumentException("gracefulShutdownTimeoutMillis: " + gracefulShutdownTimeoutMillis +
-                                               " (expected: >= 0)");
+                                               " (expected: -1 for indefinite or >= 0)");
         }
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
-    }
-
-    /**
-     * Configures this endpoint to wait until all streams are closed before closing the connection during the graceful
-     * shutdown process.
-     */
-    public void gracefulShutdownIndefiniteWait() {
-        gracefulShutdownTimeoutMillis = -1;
     }
 
     public Http2Connection connection() {

@@ -642,7 +642,7 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void gracefulShutdownIndefiniteTimeoutTest() throws Exception {
         handler = newHandler();
-        handler.gracefulShutdownIndefiniteWait();
+        handler.gracefulShutdownTimeoutMillis(-1);
         handler.close(ctx, promise);
         verify(executor, never()).schedule(any(Runnable.class), anyLong(), any(TimeUnit.class));
     }

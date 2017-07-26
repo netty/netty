@@ -153,19 +153,11 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * Sets the graceful shutdown timeout of the {@link Http2Connection} in milliseconds.
      */
     protected B gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
-        if (gracefulShutdownTimeoutMillis < 0) {
+        if (gracefulShutdownTimeoutMillis < -1) {
             throw new IllegalArgumentException("gracefulShutdownTimeoutMillis: " + gracefulShutdownTimeoutMillis +
-                                               " (expected: >= 0)");
+                                               " (expected: -1 for indefinite or >= 0)");
         }
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
-        return self();
-    }
-
-    /**
-     * Sets the graceful shutdown timeout to be indefinite.
-     */
-    protected B gracefulShutdownIndefiniteWait() {
-        gracefulShutdownTimeoutMillis = -1;
         return self();
     }
 
@@ -434,11 +426,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         }
 
         // Setup post build options
-        if (gracefulShutdownTimeoutMillis == -1) {
-            handler.gracefulShutdownIndefiniteWait();
-        } else {
-            handler.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
-        }
+        handler.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
         if (handler.decoder().frameListener() == null) {
             handler.decoder().frameListener(frameListener);
         }

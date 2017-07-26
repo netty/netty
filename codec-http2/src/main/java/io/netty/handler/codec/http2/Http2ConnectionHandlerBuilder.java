@@ -47,11 +47,6 @@ public final class Http2ConnectionHandlerBuilder
     }
 
     @Override
-    public Http2ConnectionHandlerBuilder gracefulShutdownIndefiniteWait() {
-        return super.gracefulShutdownIndefiniteWait();
-    }
-
-    @Override
     public Http2ConnectionHandlerBuilder server(boolean isServer) {
         return super.server(isServer);
     }
