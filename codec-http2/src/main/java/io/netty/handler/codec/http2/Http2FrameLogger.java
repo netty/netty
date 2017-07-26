@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.logging.LogLevel;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -132,6 +133,10 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     }
 
     private String toString(ByteBuf buf) {
+        if (!logger.isEnabled(level)) {
+            return StringUtil.EMPTY_STRING;
+        }
+
         if (level == InternalLogLevel.TRACE || buf.readableBytes() <= BUFFER_LENGTH_THRESHOLD) {
             // Log the entire buffer.
             return ByteBufUtil.hexDump(buf);
