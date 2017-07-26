@@ -75,7 +75,7 @@ public final class ServerCookieDecoder extends CookieDecoder {
         boolean rfc2965Style = false;
         if (header.regionMatches(true, 0, RFC2965_VERSION, 0, RFC2965_VERSION.length())) {
             // RFC 2965 style cookie, move to after version value
-            i = header.indexOf(';') + 1;
+            i = indexOfLegacyDelimiter(header, 0) + 1;
             rfc2965Style = true;
         }
 
@@ -103,7 +103,7 @@ public final class ServerCookieDecoder extends CookieDecoder {
             for (;;) {
 
                 char curChar = header.charAt(i);
-                if (curChar == ';') {
+                if (curChar == ';' || (rfc2965Style && curChar == ',')) {
                     // NAME; (no value till ';')
                     nameEnd = i;
                     valueBegin = valueEnd = -1;
@@ -121,8 +121,14 @@ public final class ServerCookieDecoder extends CookieDecoder {
 
                     valueBegin = i;
                     // NAME=VALUE;
-                    int semiPos = header.indexOf(';', i);
-                    valueEnd = i = semiPos > 0 ? semiPos : headerLen;
+                    int delimiterPos;
+                    if (rfc2965Style) {
+                        delimiterPos = indexOfLegacyDelimiter(header, i);
+                    } else {
+                        delimiterPos = header.indexOf(';', i);
+                    }
+
+                    valueEnd = i = delimiterPos > 0 ? delimiterPos : headerLen;
                     break;
                 } else {
                     i++;
@@ -151,5 +157,15 @@ public final class ServerCookieDecoder extends CookieDecoder {
         }
 
         return cookies;
+    }
+
+    private static int indexOfLegacyDelimiter(String header, int offset) {
+        for (int pos = offset; pos < header.length(); pos++) {
+            char c = header.charAt(pos);
+            if (c == ',' || c == ';') {
+                return pos;
+            }
+        }
+        return -1;
     }
 }

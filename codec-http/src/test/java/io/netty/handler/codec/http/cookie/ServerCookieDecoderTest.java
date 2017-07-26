@@ -172,6 +172,48 @@ public class ServerCookieDecoderTest {
     }
 
     @Test
+    public void testDecodingOldRFC2965CookiesWithCommaSeparatorAfterVersion() {
+        String source = "$Version=\"1\", " +
+                "Part_Number1=\"Riding_Rocket_0023\"; $Path=\"/acme/ammo\", " +
+                "Part_Number2=\"Rocket_Launcher_0001\"; $Path=\"/acme\"";
+
+        Set<Cookie> cookies = ServerCookieDecoder.STRICT.decode(source);
+        Iterator<Cookie> it = cookies.iterator();
+        Cookie c;
+
+        c = it.next();
+        assertEquals("Part_Number1", c.name());
+        assertEquals("Riding_Rocket_0023", c.value());
+
+        c = it.next();
+        assertEquals("Part_Number2", c.name());
+        assertEquals("Rocket_Launcher_0001", c.value());
+
+        assertFalse(it.hasNext());
+    }
+
+    @Test
+    public void testDecodingOldRFC2965CookiesWithCommaSeparatorBetweenCookies() {
+        String source = "$Version=\"1\"; " +
+                "Part_Number1=\"Riding_Rocket_0023\"; $Path=\"/acme/ammo\", " +
+                "Part_Number2=\"Rocket_Launcher_0001\"; $Path=\"/acme\"";
+
+        Set<Cookie> cookies = ServerCookieDecoder.STRICT.decode(source);
+        Iterator<Cookie> it = cookies.iterator();
+        Cookie c;
+
+        c = it.next();
+        assertEquals("Part_Number1", c.name());
+        assertEquals("Riding_Rocket_0023", c.value());
+
+        c = it.next();
+        assertEquals("Part_Number2", c.name());
+        assertEquals("Rocket_Launcher_0001", c.value());
+
+        assertFalse(it.hasNext());
+    }
+
+    @Test
     public void testRejectCookieValueWithSemicolon() {
         Set<Cookie> cookies = ServerCookieDecoder.STRICT.decode("name=\"foo;bar\";");
         assertTrue(cookies.isEmpty());
