@@ -823,6 +823,14 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 task = WriteTask.newInstance(next, m, promise);
             }
             safeExecute(executor, task, promise, m);
+            if (!flush) {
+                /**
+                 * Whenever there is a write, if auto-flush is enabled, the eventloop is required to be woken up,
+                 * otherwise the write may never be flushed or have latency.
+                 * This method just wakes up the eventloop once till the next auto-flush task is run.
+                 */
+                pipeline.wakeUpForAutoFlushIfRequired();
+            }
         }
     }
 
