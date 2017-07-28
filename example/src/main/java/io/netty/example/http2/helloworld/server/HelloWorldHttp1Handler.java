@@ -60,11 +60,16 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
 
         if (!keepAlive) {
-            ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+            ctx.write(response).addListener(ChannelFutureListener.CLOSE);
         } else {
             response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
-            ctx.writeAndFlush(response);
+            ctx.write(response);
         }
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override
