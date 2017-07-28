@@ -695,6 +695,8 @@
 
             <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
             <ignore>java.util.concurrent.ThreadLocalRandom</ignore>
+            <ignore>java.util.Base64</ignore>
+            <ignore>java.util.Base64$Encoder</ignore>
 
             <!-- Compression -->
             <ignore>java.util.zip.CRC32</ignore>
