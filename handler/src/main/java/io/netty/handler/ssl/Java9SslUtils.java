@@ -15,10 +15,15 @@
  */
 package io.netty.handler.ssl;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 
@@ -32,11 +37,15 @@ final class Java9SslUtils {
     private static final boolean supportsAlpn;
     private static final Method setApplicationProtocols;
     private static final Method getApplicationProtocol;
+    private static final Method setHandshakeApplicationProtocolSelector;
+    private static final Class biFunctionClass;
 
     static {
         boolean support = false;
         Method setter = null;
         Method getter = null;
+        Method selector = null;
+        Class biFunction = null;
 
         if (PlatformDependent.javaVersion() >= 9) {
             try {
@@ -52,6 +61,14 @@ final class Java9SslUtils {
                         return SSLParameters.class.getMethod("setApplicationProtocols", String[].class);
                     }
                 });
+                biFunction = Class.forName("java.util.function.BiFunction");
+                selector = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
+                    @Override
+                    public Method run() throws Exception {
+                        Class biFunction = Class.forName("java.util.function.BiFunction");
+                        return SSLEngine.class.getMethod("setHandshakeApplicationProtocolSelector", biFunction);
+                    }
+                });
                 support = true;
             } catch (Throwable t) {
                 log.error("Unable to initialize Java9SslUtils, but the detected javaVersion was " +
@@ -62,6 +79,8 @@ final class Java9SslUtils {
         supportsAlpn = support;
         getApplicationProtocol = getter;
         setApplicationProtocols = setter;
+        biFunctionClass = biFunction;
+        setHandshakeApplicationProtocolSelector = selector;
     }
 
     private Java9SslUtils() {
@@ -81,16 +100,20 @@ final class Java9SslUtils {
     }
 
     static SSLEngine configureAlpn(
-            SSLEngine engine,
-            JdkApplicationProtocolNegotiator applicationNegotiator,
-            boolean isServer,
-            boolean failIfNoCommonProtocols
+        SSLEngine engine,
+        JdkApplicationProtocolNegotiator applicationNegotiator,
+        boolean isServer,
+        boolean failIfNoCommonProtocols
     ) {
         List<String> supportedProtocols = applicationNegotiator.protocols();
 
-        SSLParameters params = engine.getSSLParameters();
-        setApplicationProtocols(params, supportedProtocols);
-        engine.setSSLParameters(params);
+        if (isServer && !failIfNoCommonProtocols) {
+            installSelector(engine, supportedProtocols);
+        } else {
+            SSLParameters params = engine.getSSLParameters();
+            setApplicationProtocols(params, supportedProtocols);
+            engine.setSSLParameters(params);
+        }
 
         return engine;
     }
@@ -109,6 +132,49 @@ final class Java9SslUtils {
             setApplicationProtocols.invoke(parameters, new Object[]{ protocolArray });
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
+        }
+    }
+
+    private static void installSelector(final SSLEngine sslEngine, final List<String> supportedProtocols) {
+        checkNotNull(supportedProtocols, "supportedProtocols");
+
+        Object biFunction = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            @Override
+            public Object run() {
+                return Proxy.newProxyInstance(Java9SslUtils.class.getClassLoader(), new Class[]{ biFunctionClass },
+                        new AlpnSelector(supportedProtocols));
+            }
+        });
+
+        try {
+            setHandshakeApplicationProtocolSelector.invoke(sslEngine, biFunction);
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    private static final class AlpnSelector implements InvocationHandler {
+        private final List<String> supportedProtocols;
+
+        private AlpnSelector(List<String> supportedProtocols) {
+            this.supportedProtocols = supportedProtocols;
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            if (!"apply".equals(method.getName())) {
+                throw new UnsupportedOperationException("Invoked unknown method " + method.getName());
+            }
+
+            SSLEngine sslEngine = (SSLEngine) args[0];
+            List<String> protocols = (List<String>) args[1];
+            for (String p : supportedProtocols) {
+                if (protocols.contains(p)) {
+                    return p;
+                }
+            }
+
+            return "";
         }
     }
 }
