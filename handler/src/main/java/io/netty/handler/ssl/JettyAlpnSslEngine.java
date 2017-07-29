@@ -27,7 +27,7 @@ import org.eclipse.jetty.alpn.ALPN;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.EngineConfigurator;
 import io.netty.util.internal.PlatformDependent;
 
-abstract class JettyAlpnSslEngine extends JdkSslEngine {
+final class JettyAlpnSslEngine extends JdkSslEngine {
     private static final boolean available = initAvailable();
 
     static boolean isAvailable() {
@@ -48,103 +48,77 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
     }
 
     static JettyAlpnSslEngine newClientEngine(SSLEngine engine,
-            JdkApplicationProtocolNegotiator applicationNegotiator) {
-        return new ClientEngine(engine, applicationNegotiator);
+            final JdkApplicationProtocolNegotiator applicationNegotiator) {
+        JettyAlpnSslEngine clientEngine = new JettyAlpnSslEngine(engine);
+        final EngineConfigurator engineConfigurator = checkNotNull(applicationNegotiator, "applicationNegotiator")
+                .newEngineConfigurator(clientEngine);
+        ALPN.put(engine, new ALPN.ClientProvider() {
+            @Override
+            public List<String> protocols() {
+                return applicationNegotiator.protocols();
+            }
+
+            @Override
+            public void selected(String protocol) throws SSLException {
+                try {
+                    engineConfigurator.selected(protocol);
+                } catch (Throwable t) {
+                    throw toSSLHandshakeException(t);
+                }
+            }
+
+            @Override
+            public void unsupported() {
+                engineConfigurator.unsupported();
+            }
+        });
+
+        return clientEngine;
     }
 
     static JettyAlpnSslEngine newServerEngine(SSLEngine engine,
             JdkApplicationProtocolNegotiator applicationNegotiator) {
-        return new ServerEngine(engine, applicationNegotiator);
+        JettyAlpnSslEngine serverEngine = new JettyAlpnSslEngine(engine);
+        final EngineConfigurator engineConfigurator = checkNotNull(applicationNegotiator, "applicationNegotiator")
+                .newEngineConfigurator(serverEngine);
+        ALPN.put(engine, new ALPN.ServerProvider() {
+            @Override
+            public String select(List<String> protocols) throws SSLException {
+                try {
+                    return engineConfigurator.select(protocols);
+                } catch (Throwable t) {
+                    throw toSSLHandshakeException(t);
+                }
+            }
+
+            @Override
+            public void unsupported() {
+                engineConfigurator.unsupported();
+            }
+        });
+
+        return serverEngine;
     }
 
     private JettyAlpnSslEngine(SSLEngine engine) {
         super(engine);
     }
 
-    private static final class ClientEngine extends JettyAlpnSslEngine {
-        ClientEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator) {
-            super(engine);
-            checkNotNull(applicationNegotiator, "applicationNegotiator");
-            final EngineConfigurator engineConfigurator = applicationNegotiator.newEngineConfigurator(this);
-            ALPN.put(engine, new ALPN.ClientProvider() {
-                @Override
-                public List<String> protocols() {
-                    return applicationNegotiator.protocols();
-                }
-
-                @Override
-                public void selected(String protocol) throws SSLException {
-                    try {
-                        engineConfigurator.selected(protocol);
-                    } catch (Throwable t) {
-                        throw toSSLHandshakeException(t);
-                    }
-                }
-
-                @Override
-                public void unsupported() {
-                    engineConfigurator.unsupported();
-                }
-            });
-        }
-
-        @Override
-        public void closeInbound() throws SSLException {
-            try {
-                ALPN.remove(getWrappedEngine());
-            } finally {
-                super.closeInbound();
-            }
-        }
-
-        @Override
-        public void closeOutbound() {
-            try {
-                ALPN.remove(getWrappedEngine());
-            } finally {
-                super.closeOutbound();
-            }
+    @Override
+    public void closeInbound() throws SSLException {
+        try {
+            ALPN.remove(getWrappedEngine());
+        } finally {
+            super.closeInbound();
         }
     }
 
-    private static final class ServerEngine extends JettyAlpnSslEngine {
-        ServerEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator) {
-            super(engine);
-            checkNotNull(applicationNegotiator, "applicationNegotiator");
-            final EngineConfigurator engineConfigurator = applicationNegotiator.newEngineConfigurator(this);
-            ALPN.put(engine, new ALPN.ServerProvider() {
-                @Override
-                public String select(List<String> protocols) throws SSLException {
-                    try {
-                        return engineConfigurator.select(protocols);
-                    } catch (Throwable t) {
-                        throw toSSLHandshakeException(t);
-                    }
-                }
-
-                @Override
-                public void unsupported() {
-                    engineConfigurator.unsupported();
-                }
-            });
-        }
-
-        @Override
-        public void closeInbound() throws SSLException {
-            try {
-                ALPN.remove(getWrappedEngine());
-            } finally {
-                super.closeInbound();
-            }
-        }
-
-        @Override
-        public void closeOutbound() {
-            try {
-                ALPN.remove(getWrappedEngine());
-            } finally {
-                super.closeOutbound();
-            }
+    @Override
+    public void closeOutbound() {
+        try {
+            ALPN.remove(getWrappedEngine());
+        } finally {
+            super.closeOutbound();
         }
     }
 }
