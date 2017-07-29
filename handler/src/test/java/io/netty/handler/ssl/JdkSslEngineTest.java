@@ -22,6 +22,7 @@ import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectorFactory;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.internal.PlatformDependent;
 import java.security.Provider;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -62,7 +63,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
         ALPN_DEFAULT {
             @Override
             boolean isAvailable() {
-                return JettyAlpnSslEngine.isAvailable();
+                return JettyAlpnSslEngine.isAvailable() || PlatformDependent.javaVersion() >= 9;
             }
 
             @Override

@@ -45,6 +45,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -87,7 +88,7 @@ public class SniHandlerTest {
                 assumeTrue(OpenSsl.isAlpnSupported());
                 break;
             case JDK:
-                assumeTrue(JettyAlpnSslEngine.isAvailable());
+                assumeTrue(JettyAlpnSslEngine.isAvailable() || PlatformDependent.javaVersion() >= 9);
                 break;
             default:
                 throw new Error();
