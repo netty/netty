@@ -15,17 +15,17 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
+
+import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 final class Java9SslUtils {
     private static final InternalLogger log = InternalLoggerFactory.getInstance(Java9SslUtils.class);
@@ -80,7 +80,12 @@ final class Java9SslUtils {
         }
     }
 
-    static SSLEngine configureAlpn(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator) {
+    static SSLEngine configureAlpn(
+            SSLEngine engine,
+            JdkApplicationProtocolNegotiator applicationNegotiator,
+            boolean isServer,
+            boolean failIfNoCommonProtocols
+    ) {
         List<String> supportedProtocols = applicationNegotiator.protocols();
 
         SSLParameters params = engine.getSSLParameters();

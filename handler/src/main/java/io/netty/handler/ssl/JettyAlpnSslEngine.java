@@ -18,17 +18,14 @@ package io.netty.handler.ssl;
 import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
-import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-
-import java.util.LinkedHashSet;
-import java.util.List;
-
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import java.util.List;
 
-import io.netty.util.internal.PlatformDependent;
 import org.eclipse.jetty.alpn.ALPN;
+
+import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.EngineConfigurator;
+import io.netty.util.internal.PlatformDependent;
 
 abstract class JettyAlpnSslEngine extends JdkSslEngine {
     private static final boolean available = initAvailable();
@@ -68,9 +65,7 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
         ClientEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine);
             checkNotNull(applicationNegotiator, "applicationNegotiator");
-            final ProtocolSelectionListener protocolListener = checkNotNull(applicationNegotiator
-                            .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()),
-                    "protocolListener");
+            final EngineConfigurator engineConfigurator = applicationNegotiator.newEngineConfigurator(this);
             ALPN.put(engine, new ALPN.ClientProvider() {
                 @Override
                 public List<String> protocols() {
@@ -80,7 +75,7 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
                 @Override
                 public void selected(String protocol) throws SSLException {
                     try {
-                        protocolListener.selected(protocol);
+                        engineConfigurator.selected(protocol);
                     } catch (Throwable t) {
                         throw toSSLHandshakeException(t);
                     }
@@ -88,7 +83,7 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
 
                 @Override
                 public void unsupported() {
-                    protocolListener.unsupported();
+                    engineConfigurator.unsupported();
                 }
             });
         }
@@ -116,14 +111,12 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
         ServerEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine);
             checkNotNull(applicationNegotiator, "applicationNegotiator");
-            final ProtocolSelector protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
-                            .newSelector(this, new LinkedHashSet<String>(applicationNegotiator.protocols())),
-                    "protocolSelector");
+            final EngineConfigurator engineConfigurator = applicationNegotiator.newEngineConfigurator(this);
             ALPN.put(engine, new ALPN.ServerProvider() {
                 @Override
                 public String select(List<String> protocols) throws SSLException {
                     try {
-                        return protocolSelector.select(protocols);
+                        return engineConfigurator.select(protocols);
                     } catch (Throwable t) {
                         throw toSSLHandshakeException(t);
                     }
@@ -131,7 +124,7 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
 
                 @Override
                 public void unsupported() {
-                    protocolSelector.unsupported();
+                    engineConfigurator.unsupported();
                 }
             });
         }

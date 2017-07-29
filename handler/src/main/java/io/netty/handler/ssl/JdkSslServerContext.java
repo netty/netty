@@ -16,9 +16,7 @@
 
 package io.netty.handler.ssl;
 
-import java.security.Provider;
 import javax.net.ssl.KeyManager;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
@@ -27,6 +25,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.cert.X509Certificate;
 
 /**
@@ -62,7 +61,7 @@ public final class JdkSslServerContext extends JdkSslContext {
     @Deprecated
     public JdkSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
         this(certChainFile, keyFile, keyPassword, null, IdentityCipherSuiteFilter.INSTANCE,
-                JdkDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0);
+                JdkApplicationProtocolNegotiator.DEFAULT, 0, 0);
     }
 
     /**
@@ -88,7 +87,7 @@ public final class JdkSslServerContext extends JdkSslContext {
             Iterable<String> ciphers, Iterable<String> nextProtocols,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         this(certChainFile, keyFile, keyPassword, ciphers, IdentityCipherSuiteFilter.INSTANCE,
-             toNegotiator(toApplicationProtocolConfig(nextProtocols), true), sessionCacheSize, sessionTimeout);
+             toNegotiator(toApplicationProtocolConfig(nextProtocols)), sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -114,7 +113,7 @@ public final class JdkSslServerContext extends JdkSslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         this(certChainFile, keyFile, keyPassword, ciphers, cipherFilter,
-                toNegotiator(apn, true), sessionCacheSize, sessionTimeout);
+                toNegotiator(apn), sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -186,7 +185,7 @@ public final class JdkSslServerContext extends JdkSslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         this(trustCertCollectionFile, trustManagerFactory, keyCertChainFile, keyFile, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, toNegotiator(apn, true), sessionCacheSize, sessionTimeout);
+                ciphers, cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -236,7 +235,7 @@ public final class JdkSslServerContext extends JdkSslContext {
                         ClientAuth clientAuth, String[] protocols, boolean startTls) throws SSLException {
         super(newSSLContext(provider, trustCertCollection, trustManagerFactory, keyCertChain, key,
                 keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout), false,
-                ciphers, cipherFilter, toNegotiator(apn, true), clientAuth, protocols, startTls);
+                ciphers, cipherFilter, toNegotiator(apn), clientAuth, protocols, startTls);
     }
 
     private static SSLContext newSSLContext(Provider sslContextProvider, X509Certificate[] trustCertCollection,

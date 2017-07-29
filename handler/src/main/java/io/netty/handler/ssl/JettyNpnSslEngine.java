@@ -17,19 +17,17 @@
 package io.netty.handler.ssl;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
-import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import io.netty.util.internal.PlatformDependent;
-
-import java.util.LinkedHashSet;
-import java.util.List;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import java.util.List;
 
 import org.eclipse.jetty.npn.NextProtoNego;
 import org.eclipse.jetty.npn.NextProtoNego.ClientProvider;
 import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
+
+import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.EngineConfigurator;
+import io.netty.util.internal.PlatformDependent;
 
 final class JettyNpnSslEngine extends JdkSslEngine {
     private static boolean available;
@@ -57,13 +55,11 @@ final class JettyNpnSslEngine extends JdkSslEngine {
         checkNotNull(applicationNegotiator, "applicationNegotiator");
 
         if (server) {
-            final ProtocolSelectionListener protocolListener = checkNotNull(applicationNegotiator
-                    .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()),
-                    "protocolListener");
+            final EngineConfigurator engineConfigurator = applicationNegotiator.newEngineConfigurator(this);
             NextProtoNego.put(engine, new ServerProvider() {
                 @Override
                 public void unsupported() {
-                    protocolListener.unsupported();
+                    engineConfigurator.unsupported();
                 }
 
                 @Override
@@ -74,16 +70,14 @@ final class JettyNpnSslEngine extends JdkSslEngine {
                 @Override
                 public void protocolSelected(String protocol) {
                     try {
-                        protocolListener.selected(protocol);
+                        engineConfigurator.selected(protocol);
                     } catch (Throwable t) {
                         PlatformDependent.throwException(t);
                     }
                 }
             });
         } else {
-            final ProtocolSelector protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
-                    .newSelector(this, new LinkedHashSet<String>(applicationNegotiator.protocols())),
-                    "protocolSelector");
+            final EngineConfigurator engineConfigurator = applicationNegotiator.newEngineConfigurator(this);
             NextProtoNego.put(engine, new ClientProvider() {
                 @Override
                 public boolean supports() {
@@ -92,13 +86,13 @@ final class JettyNpnSslEngine extends JdkSslEngine {
 
                 @Override
                 public void unsupported() {
-                    protocolSelector.unsupported();
+                    engineConfigurator.unsupported();
                 }
 
                 @Override
                 public String selectProtocol(List<String> protocols) {
                     try {
-                        return protocolSelector.select(protocols);
+                        return engineConfigurator.select(protocols);
                     } catch (Throwable t) {
                         PlatformDependent.throwException(t);
                         return null;

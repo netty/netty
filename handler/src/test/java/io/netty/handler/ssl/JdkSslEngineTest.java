@@ -15,31 +15,29 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
-import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
-import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
-import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectorFactory;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.internal.PlatformDependent;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeNoException;
+
+import javax.net.ssl.SSLHandshakeException;
 import java.security.Provider;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLHandshakeException;
-
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeNoException;
+import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.internal.PlatformDependent;
 
 @RunWith(Parameterized.class)
 public class JdkSslEngineTest extends SSLEngineTest {
@@ -190,25 +188,26 @@ public class JdkSslEngineTest extends SSLEngineTest {
             } else {
                 // ALPN
                 SelfSignedCertificate ssc = new SelfSignedCertificate();
-                JdkApplicationProtocolNegotiator clientApn = new JdkAlpnApplicationProtocolNegotiator(true, true,
-                    PREFERRED_APPLICATION_LEVEL_PROTOCOL);
-                JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(
-                    new ProtocolSelectorFactory() {
-                        @Override
-                        public ProtocolSelector newSelector(SSLEngine engine, Set<String> supportedProtocols) {
-                            return new ProtocolSelector() {
-                                @Override
-                                public void unsupported() {
-                                }
+                JdkApplicationProtocolNegotiator clientApn = new JdkApplicationProtocolNegotiator(
+                        Collections.singletonList(PREFERRED_APPLICATION_LEVEL_PROTOCOL), true, Protocol.ALPN);
+                JdkApplicationProtocolNegotiator serverApn = new JdkApplicationProtocolNegotiator(
+                        Collections.singletonList(APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE), true, Protocol.ALPN) {
+                    // The purpose of this override is to simulate a broken server that returns an application level
+                    // protocol that was never specified by the client.
+                    @Override
+                    EngineConfigurator newEngineConfigurator(JdkSslEngine engine) {
+                        return new EngineConfigurator(engine) {
+                            @Override
+                            String select(List<String> protocols) throws Exception {
+                                return APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE;
+                            }
 
-                                @Override
-                                public String select(List<String> protocols) {
-                                    return APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE;
-                                }
-                            };
-                        }
-                    }, JdkBaseApplicationProtocolNegotiator.FAIL_SELECTION_LISTENER_FACTORY,
-                    APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
+                            @Override
+                            void unsupported() {
+                            }
+                        };
+                    }
+                };
 
                 SslContext serverSslCtx = new JdkSslServerContext(providerType.provider(),
                     ssc.certificate(), ssc.privateKey(), null, null,
