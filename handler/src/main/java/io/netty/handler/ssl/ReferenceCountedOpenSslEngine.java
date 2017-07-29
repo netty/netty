@@ -235,7 +235,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                   int peerPort, boolean jdkCompatibilityMode, boolean leakDetection) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
-        leak = leakDetection ? leakDetector.track(this) : null;
         this.alloc = checkNotNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
         session = new OpenSslSession(context.sessionContext());
@@ -288,6 +287,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 PlatformDependent.throwException(cause);
             }
         }
+        leak = leakDetection ? leakDetector.track(this) : null;
     }
 
     /**
