@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
 import org.junit.After;
 import org.junit.Test;
 
@@ -46,6 +47,10 @@ public class SnappyTest {
             0x6e, 0x65, 0x74, 0x74, 0x79
         });
         assertEquals("Literal was not decoded correctly", expected, out);
+
+        in.release();
+        out.release();
+        expected.release();
     }
 
     @Test
@@ -65,6 +70,10 @@ public class SnappyTest {
             0x6e, 0x65, 0x74, 0x74, 0x79, 0x6e, 0x65, 0x74, 0x74, 0x79
         });
         assertEquals("Copy was not decoded correctly", expected, out);
+
+        in.release();
+        out.release();
+        expected.release();
     }
 
     @Test(expected = DecompressionException.class)
@@ -77,7 +86,12 @@ public class SnappyTest {
             0x00 // INVALID offset (< 1)
         });
         ByteBuf out = Unpooled.buffer(10);
-        snappy.decode(in, out);
+        try {
+            snappy.decode(in, out);
+        } finally {
+            in.release();
+            out.release();
+        }
     }
 
     @Test(expected = DecompressionException.class)
@@ -90,7 +104,12 @@ public class SnappyTest {
             0x0b // INVALID offset (greater than chunk size)
         });
         ByteBuf out = Unpooled.buffer(10);
-        snappy.decode(in, out);
+        try {
+            snappy.decode(in, out);
+        } finally {
+            in.release();
+            out.release();
+        }
     }
 
     @Test(expected = DecompressionException.class)
@@ -101,7 +120,12 @@ public class SnappyTest {
             0x6e, 0x65, 0x74, 0x74, 0x79, // "netty"
         });
         ByteBuf out = Unpooled.buffer(10);
-        snappy.decode(in, out);
+        try {
+            snappy.decode(in, out);
+        } finally {
+            in.release();
+            out.release();
+        }
     }
 
     @Test
@@ -118,22 +142,25 @@ public class SnappyTest {
             0x6e, 0x65, 0x74, 0x74, 0x79 // "netty"
         });
         assertEquals("Encoded literal was invalid", expected, out);
+
+        in.release();
+        out.release();
+        expected.release();
     }
 
     @Test
-    public void encodeLongTextUsesCopy() throws Exception {
-        ByteBuf in = Unpooled.wrappedBuffer(
-            ("Netty has been designed carefully with the experiences " +
-            "earned from the implementation of a lot of protocols " +
-            "such as FTP, SMTP, HTTP, and various binary and " +
-            "text-based legacy protocols").getBytes("US-ASCII")
-        );
+    public void encodeAndDecodeLongTextUsesCopy() throws Exception {
+        String srcStr = "Netty has been designed carefully with the experiences " +
+                   "earned from the implementation of a lot of protocols " +
+                   "such as FTP, SMTP, HTTP, and various binary and " +
+                   "text-based legacy protocols";
+        ByteBuf in = Unpooled.wrappedBuffer(srcStr.getBytes("US-ASCII"));
         ByteBuf out = Unpooled.buffer(180);
         snappy.encode(in, out, in.readableBytes());
 
-        // The only compressibility in the above are the words "the ",
-        // and "protocols", so this is a literal, followed by a copy
-        // followed by another literal, followed by another copy
+        // The only compressibility in the above are the words:
+        // "the ", "rotocols", " of ", "TP, " and "and ". So this is a literal,
+        // followed by a copy followed by another literal, followed by another copy...
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
             -0x49, 0x01, // preamble length
             -0x10, 0x42, // literal tag + length
@@ -147,27 +174,56 @@ public class SnappyTest {
             0x6e, 0x63, 0x65, 0x73, 0x20, 0x65, 0x61, 0x72, 0x6e, 0x65,
             0x64, 0x20, 0x66, 0x72, 0x6f, 0x6d, 0x20,
 
-            // First copy (the)
-            0x01, 0x1C, -0x10,
+            // copy of "the "
+            0x01, 0x1c, 0x58,
 
             // Next literal
-            0x66, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x6d, 0x65, 0x6e, 0x74,
-            0x61, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x6f, 0x66, 0x20, 0x61,
-            0x20, 0x6c, 0x6f, 0x74, 0x20, 0x6f, 0x66, 0x20, 0x70, 0x72,
-            0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x73, 0x20, 0x73, 0x75,
-            0x63, 0x68, 0x20, 0x61, 0x73, 0x20, 0x46, 0x54, 0x50, 0x2c,
-            0x20, 0x53, 0x4d, 0x54, 0x50, 0x2c, 0x20, 0x48, 0x54, 0x54,
-            0x50, 0x2c, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x76, 0x61, 0x72,
-            0x69, 0x6f, 0x75, 0x73, 0x20, 0x62, 0x69, 0x6e, 0x61, 0x72,
-            0x79, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x74, 0x65, 0x78, 0x74,
-            0x2d, 0x62, 0x61, 0x73, 0x65, 0x64, 0x20, 0x6c, 0x65, 0x67,
-            0x61, 0x63, 0x79, 0x20,
+            0x69, 0x6d, 0x70, 0x6c, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x61,
+            0x74, 0x69, 0x6f, 0x6e, 0x20, 0x6f, 0x66, 0x20, 0x61, 0x20,
+            0x6c, 0x6f, 0x74,
 
-            // Second copy (protocols)
-            0x15, 0x4c
+            // copy of " of "
+            0x01, 0x09, 0x60,
+
+            // literal
+            0x70, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x73, 0x20,
+            0x73, 0x75, 0x63, 0x68, 0x20, 0x61, 0x73, 0x20, 0x46, 0x54,
+            0x50, 0x2c, 0x20, 0x53, 0x4d,
+
+            // copy of " TP, "
+            0x01, 0x06, 0x04,
+
+            // literal
+            0x48, 0x54,
+
+            // copy of " TP, "
+            0x01, 0x06, 0x44,
+
+            // literal
+            0x61, 0x6e, 0x64, 0x20, 0x76, 0x61, 0x72, 0x69, 0x6f, 0x75,
+            0x73, 0x20, 0x62, 0x69, 0x6e, 0x61, 0x72, 0x79,
+
+            // copy of "and "
+            0x05, 0x13, 0x48,
+
+            // literal
+            0x74, 0x65, 0x78, 0x74, 0x2d, 0x62, 0x61, 0x73, 0x65,
+            0x64, 0x20, 0x6c, 0x65, 0x67, 0x61, 0x63, 0x79, 0x20, 0x70,
+
+            // copy of "rotocols"
+            0x11, 0x4c,
         });
 
         assertEquals("Encoded result was incorrect", expected, out);
+
+        // Decode
+        ByteBuf outDecoded = Unpooled.buffer();
+        snappy.decode(out, outDecoded);
+        assertEquals(srcStr, outDecoded.toString(0, outDecoded.writerIndex(), CharsetUtil.US_ASCII));
+
+        in.release();
+        out.release();
+        outDecoded.release();
     }
 
     @Test
@@ -176,6 +232,7 @@ public class SnappyTest {
                 'n', 'e', 't', 't', 'y'
         });
         assertEquals(maskChecksum(0xd6cb8b55), calculateChecksum(input));
+        input.release();
     }
 
     @Test
@@ -185,6 +242,7 @@ public class SnappyTest {
         });
 
         validateChecksum(maskChecksum(0x2d4d3535), input);
+        input.release();
     }
 
     @Test(expected = DecompressionException.class)
@@ -192,13 +250,16 @@ public class SnappyTest {
         ByteBuf input = Unpooled.wrappedBuffer(new byte[] {
                 'y', 't', 't', 'e', 'n'
         });
-
-        validateChecksum(maskChecksum(0xd6cb8b55), input);
+        try {
+            validateChecksum(maskChecksum(0xd6cb8b55), input);
+        } finally {
+            input.release();
+        }
     }
 
     @Test
     public void testEncodeLiteralAndDecodeLiteral() {
-        int[] lengths = new int[] {
+        int[] lengths = {
             0x11, // default
             0x100, // case 60
             0x1000, // case 61
@@ -211,9 +272,9 @@ public class SnappyTest {
             ByteBuf decoded = Unpooled.buffer(10);
             ByteBuf expected = Unpooled.wrappedBuffer(new byte[len]);
             try {
-                Snappy.encodeLiteral(in, encoded, len);
+                encodeLiteral(in, encoded, len);
                 byte tag = encoded.readByte();
-                Snappy.decodeLiteral(tag, encoded, decoded);
+                decodeLiteral(tag, encoded, decoded);
                 assertEquals("Encoded or decoded literal was incorrect", expected, decoded);
             } finally {
                 in.release();
