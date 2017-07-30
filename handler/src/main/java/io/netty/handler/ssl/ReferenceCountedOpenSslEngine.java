@@ -287,6 +287,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 PlatformDependent.throwException(cause);
             }
         }
+
+        // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
+        // the ResourceLeakDetector.
         leak = leakDetection ? leakDetector.track(this) : null;
     }
 
