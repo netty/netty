@@ -72,7 +72,7 @@ public final class Snappy {
         final int baseIndex = inIndex;
 
         final short[] table = getHashTable(length);
-        final int shift = 32 - (int) Math.floor(Math.log(table.length) / Math.log(2));
+        final int shift = Integer.numberOfLeadingZeros(table.length) + 1;
 
         int nextEmit = inIndex;
 
@@ -148,7 +148,7 @@ public final class Snappy {
      * @return A 32-bit hash of 4 bytes located at index
      */
     private static int hash(ByteBuf in, int index, int shift) {
-        return in.getInt(index) + 0x1e35a7bd >>> shift;
+        return in.getInt(index) * 0x1e35a7bd >>> shift;
     }
 
     /**
@@ -162,15 +162,7 @@ public final class Snappy {
         while (htSize < MAX_HT_SIZE && htSize < inputSize) {
             htSize <<= 1;
         }
-
-        short[] table;
-        if (htSize <= 256) {
-            table = new short[256];
-        } else {
-            table = new short[MAX_HT_SIZE];
-        }
-
-        return table;
+        return new short[htSize];
     }
 
     /**
