@@ -450,7 +450,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
             throw new ChannelException(e);
         }
     }
-    
+
      /**
      * Returns {@code true} if <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
