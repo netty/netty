@@ -545,6 +545,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     private void shutdownOutput0(final ChannelPromise promise) {
         try {
             socket.shutdown(false, true);
+            ((AbstractUnsafe) unsafe()).shutdownOutput();
             promise.setSuccess();
         } catch (Throwable cause) {
             promise.setFailure(cause);
@@ -563,6 +564,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     private void shutdown0(final ChannelPromise promise) {
         try {
             socket.shutdown(true, true);
+            ((AbstractUnsafe) unsafe()).shutdownOutput();
             promise.setSuccess();
         } catch (Throwable cause) {
             promise.setFailure(cause);
