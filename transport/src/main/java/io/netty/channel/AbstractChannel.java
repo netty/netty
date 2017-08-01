@@ -16,10 +16,13 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.socket.ChannelOutputShutdownEvent;
+import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -605,6 +608,19 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assertEventLoop();
 
             close(promise, CLOSE_CLOSED_CHANNEL_EXCEPTION, CLOSE_CLOSED_CHANNEL_EXCEPTION, false);
+        }
+
+        @UnstableApi
+        public void shutdownOutput() {
+            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            if (outboundBuffer == null) {
+                return;
+            }
+            this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
+            ChannelOutputShutdownException e = new ChannelOutputShutdownException("Channel output explicitly shutdown");
+            outboundBuffer.failFlushed(e, false);
+            outboundBuffer.close(e, true);
+            pipeline.fireUserEventTriggered(ChannelOutputShutdownEvent.INSTANCE);
         }
 
         private void close(final ChannelPromise promise, final Throwable cause,

@@ -373,6 +373,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     private void shutdownOutput0(final ChannelPromise promise) {
         try {
             socket.shutdown(false, true);
+            ((AbstractUnsafe) unsafe()).shutdownOutput();
             promise.setSuccess();
         } catch (Throwable cause) {
             promise.setFailure(cause);
@@ -391,6 +392,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     private void shutdown0(final ChannelPromise promise) {
         try {
             socket.shutdown(true, true);
+            ((AbstractUnsafe) unsafe()).shutdownOutput();
             promise.setSuccess();
         } catch (Throwable cause) {
             promise.setFailure(cause);
