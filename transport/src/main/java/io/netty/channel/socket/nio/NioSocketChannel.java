@@ -190,6 +190,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         } else {
             javaChannel().socket().shutdownOutput();
         }
+        ((AbstractUnsafe) unsafe()).shutdownOutput();
     }
 
     private void shutdownInput0(final ChannelPromise promise) {

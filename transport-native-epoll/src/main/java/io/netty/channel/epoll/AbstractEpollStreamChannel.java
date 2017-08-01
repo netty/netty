@@ -559,6 +559,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     protected void shutdownOutput0(final ChannelPromise promise) {
         try {
             fd().shutdown(false, true);
+            ((AbstractUnsafe) unsafe()).shutdownOutput();
             promise.setSuccess();
         } catch (Throwable cause) {
             promise.setFailure(cause);

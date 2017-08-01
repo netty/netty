@@ -143,24 +143,58 @@ public class OioSocketChannel extends OioByteStreamChannel
     }
 
     @Override
-    public ChannelFuture shutdownOutput(final ChannelPromise future) {
+    public ChannelFuture shutdownOutput(final ChannelPromise promise) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
-            try {
-                socket.shutdownOutput();
-                future.setSuccess();
-            } catch (Throwable t) {
-                future.setFailure(t);
-            }
+            shutdownOutput0(promise);
         } else {
             loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    shutdownOutput(future);
+                    shutdownOutput0(promise);
                 }
             });
         }
-        return future;
+        return promise;
+    }
+
+    private void shutdownOutput0(ChannelPromise promise) {
+        try {
+            shutdownOutput0();
+            promise.setSuccess();
+        } catch (Throwable t) {
+            promise.setFailure(t);
+        }
+    }
+
+    private void shutdownOutput0() throws IOException {
+        socket.shutdownOutput();
+        ((AbstractUnsafe) unsafe()).shutdownOutput();
+    }
+
+    private void shutdown0(ChannelPromise promise) {
+        Throwable cause = null;
+        try {
+            shutdownOutput0();
+        } catch (Throwable t) {
+            cause = t;
+        }
+        try {
+            socket.shutdownInput();
+        } catch (Throwable t) {
+            if (cause == null) {
+                promise.setFailure(t);
+            } else {
+                logger.debug("Exception suppressed because a previous exception occurred.", t);
+                promise.setFailure(cause);
+            }
+            return;
+        }
+        if (cause == null) {
+            promise.setSuccess();
+        } else {
+            promise.setFailure(cause);
+        }
     }
 
     @Override
