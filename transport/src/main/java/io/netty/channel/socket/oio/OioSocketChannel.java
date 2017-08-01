@@ -173,11 +173,16 @@ public class OioSocketChannel extends OioByteStreamChannel implements SocketChan
 
     private void shutdownOutput0(ChannelPromise promise) {
         try {
-            socket.shutdownOutput();
+            shutdownOutput0();
             promise.setSuccess();
         } catch (Throwable t) {
             promise.setFailure(t);
         }
+    }
+
+    private void shutdownOutput0() throws IOException {
+        socket.shutdownOutput();
+        ((AbstractUnsafe) unsafe()).shutdownOutput();
     }
 
     @Override
@@ -224,7 +229,7 @@ public class OioSocketChannel extends OioByteStreamChannel implements SocketChan
     private void shutdown0(ChannelPromise promise) {
         Throwable cause = null;
         try {
-            socket.shutdownOutput();
+            shutdownOutput0();
         } catch (Throwable t) {
             cause = t;
         }
