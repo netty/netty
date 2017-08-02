@@ -109,11 +109,10 @@ static jint netty_kqueue_native_keventWait(JNIEnv* env, jclass clazz, jint kqueu
     timeoutTs.tv_sec = tvSec;
     timeoutTs.tv_nsec = tvNsec;
 
-    // Negatives = wait indefinitely, Zeros = poll (aka return immediately).
-    if ((tvSec == 0 && tvNsec == 0) || tvSec < 0 || tvNsec < 0) {
-        const struct timespec* fixedTs = (tvSec == 0 && tvNsec == 0) ? &timeoutTs : NULL;
+    if (tvSec == 0 && tvNsec == 0) {
+        // Zeros = poll (aka return immediately).
         for (;;) {
-            result = kevent(kqueueFd, changeList, changeListLength, eventList, eventListLength, fixedTs);
+            result = kevent(kqueueFd, changeList, changeListLength, eventList, eventListLength, &timeoutTs);
             if (result >= 0) {
                 return result;
             }

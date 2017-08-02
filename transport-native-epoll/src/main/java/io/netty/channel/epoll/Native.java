@@ -97,9 +97,15 @@ public final class Native {
         return new FileDescriptor(eventFd());
     }
 
+    public static FileDescriptor newTimerFd() {
+        return new FileDescriptor(timerFd());
+    }
+
     private static native int eventFd();
+    private static native int timerFd();
     public static native void eventFdWrite(int fd, long value);
     public static native void eventFdRead(int fd);
+    static native void timerFdRead(int fd);
 
     public static FileDescriptor newEpollCreate() {
         return new FileDescriptor(epollCreate());
@@ -107,14 +113,16 @@ public final class Native {
 
     private static native int epollCreate();
 
-    public static int epollWait(int efd, EpollEventArray events, int timeout) throws IOException {
-        int ready = epollWait0(efd, events.memoryAddress(), events.length(), timeout);
+    public static int epollWait(FileDescriptor epollFd, EpollEventArray events, FileDescriptor timerFd,
+                                int timeoutSec, int timeoutNs) throws IOException {
+        int ready = epollWait0(epollFd.intValue(), events.memoryAddress(), events.length(), timerFd.intValue(),
+                               timeoutSec, timeoutNs);
         if (ready < 0) {
             throw newIOException("epoll_wait", ready);
         }
         return ready;
     }
-    private static native int epollWait0(int efd, long address, int len, int timeout);
+    private static native int epollWait0(int efd, long address, int len, int timerFd, int timeoutSec, int timeoutNs);
 
     public static void epollCtlAdd(int efd, final int fd, final int flags) throws IOException {
         int res = epollCtlAdd0(efd, fd, flags);
