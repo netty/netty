@@ -100,9 +100,9 @@ public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureL
                 Throwable cause = future.cause();
                 aggregatePromise.setFailure(cause);
                 if (failPending) {
-                    for (Promise<V> pendingFuture : pendingPromises) {
+                    pendingPromises.forEach(pendingFuture -> {
                         pendingFuture.setFailure(cause);
-                    }
+                    });
                 }
             } else {
                 if (pendingPromises.isEmpty()) {
@@ -111,5 +111,4 @@ public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureL
             }
         }
     }
-
 }

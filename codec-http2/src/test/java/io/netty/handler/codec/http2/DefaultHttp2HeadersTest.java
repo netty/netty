@@ -71,11 +71,15 @@ public class DefaultHttp2HeadersTest {
         }
 
         // Add back all non-pseudo headers
-        for (Entry<CharSequence, CharSequence> nonPseudoHeaderEntry : nonPseudoHeaders) {
+        nonPseudoHeaders.stream().map(nonPseudoHeaderEntry -> {
             headers.add(nonPseudoHeaderEntry.getKey(), of("goo"));
+            return _item;
+        }).map(_item -> {
             verifyPseudoHeadersFirst(headers);
+            return _item;
+        }).forEach(_item -> {
             verifyAllPseudoHeadersPresent(headers);
-        }
+        });
     }
 
     @Test

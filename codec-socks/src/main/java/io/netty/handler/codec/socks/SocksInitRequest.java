@@ -50,8 +50,8 @@ public final class SocksInitRequest extends SocksRequest {
     public void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(protocolVersion().byteValue());
         byteBuf.writeByte(authSchemes.size());
-        for (SocksAuthScheme authScheme : authSchemes) {
+        authSchemes.forEach(authScheme -> {
             byteBuf.writeByte(authScheme.byteValue());
-        }
+        });
     }
 }

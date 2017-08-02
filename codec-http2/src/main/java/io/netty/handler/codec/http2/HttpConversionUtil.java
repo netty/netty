@@ -318,9 +318,9 @@ public final class HttpConversionUtil {
             HttpVersion httpVersion, boolean isTrailer, boolean isRequest) throws Http2Exception {
         Http2ToHttpHeaderTranslator translator = new Http2ToHttpHeaderTranslator(streamId, outputHeaders, isRequest);
         try {
-            for (Entry<CharSequence, CharSequence> entry : inputHeaders) {
+            inputHeaders.forEach(entry -> {
                 translator.translate(entry);
-            }
+            });
         } catch (Http2Exception ex) {
             throw ex;
         } catch (Throwable t) {

@@ -249,9 +249,9 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     public void cleanRequestHttpData(HttpRequest request) {
         List<HttpData> fileToDelete = requestFileDeleteMap.remove(request);
         if (fileToDelete != null) {
-            for (HttpData data: fileToDelete) {
+            fileToDelete.forEach(data -> {
                 data.delete();
-            }
+            });
             fileToDelete.clear();
         }
     }
@@ -265,9 +265,9 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
             List<HttpData> fileToDelete = e.getValue();
             if (fileToDelete != null) {
-                for (HttpData data : fileToDelete) {
+                fileToDelete.forEach(data -> {
                     data.delete();
-                }
+                });
                 fileToDelete.clear();
             }
         }

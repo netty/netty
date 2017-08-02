@@ -160,9 +160,9 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         for (EventLoop l: activeChildren) {
             l.shutdownGracefully(quietPeriod, timeout, unit);
         }
-        for (EventLoop l: idleChildren) {
+        idleChildren.forEach(l -> {
             l.shutdownGracefully(quietPeriod, timeout, unit);
-        }
+        });
 
         // Notify the future if there was no children.
         if (isTerminated()) {
@@ -185,9 +185,9 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         for (EventLoop l: activeChildren) {
             l.shutdown();
         }
-        for (EventLoop l: idleChildren) {
+        idleChildren.forEach(l -> {
             l.shutdown();
-        }
+        });
 
         // Notify the future if there was no children.
         if (isTerminated()) {

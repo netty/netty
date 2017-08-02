@@ -236,9 +236,9 @@ public final class ChannelFlushPromiseNotifier {
             // Reset the counter only when the counter grew pretty large
             // so that we can reduce the cost of updating all entries in the notification list.
             this.writeCounter = 0;
-            for (FlushCheckpoint cp: flushCheckpoints) {
+            flushCheckpoints.forEach(cp -> {
                 cp.flushCheckpoint(cp.flushCheckpoint() - newWriteCounter);
-            }
+            });
         }
     }
 

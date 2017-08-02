@@ -382,9 +382,9 @@ public class SingleThreadEventLoopTest {
             assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
             assertFalse(f.channel().isOpen());
         } finally {
-            for (Appender<ILoggingEvent> a: appenders) {
+            appenders.forEach(a -> {
                 root.addAppender(a);
-            }
+            });
         }
     }
 
@@ -421,9 +421,9 @@ public class SingleThreadEventLoopTest {
             assertFalse(latch.await(1, TimeUnit.SECONDS));
             assertFalse(ch.isOpen());
         } finally {
-            for (Appender<ILoggingEvent> a: appenders) {
+            appenders.forEach(a -> {
                 root.addAppender(a);
-            }
+            });
         }
     }
 

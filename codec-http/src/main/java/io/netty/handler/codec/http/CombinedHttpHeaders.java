@@ -112,9 +112,9 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
                     }
                 }
             } else {
-                for (Map.Entry<? extends CharSequence, ? extends CharSequence> header : headers) {
+                headers.forEach(header -> {
                     add(header.getKey(), header.getValue());
-                }
+                });
             }
             return this;
         }

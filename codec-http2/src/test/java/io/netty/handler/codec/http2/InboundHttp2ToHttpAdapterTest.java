@@ -740,18 +740,18 @@ public class InboundHttp2ToHttpAdapterTest {
 
     private void cleanupCapturedRequests() {
         if (capturedRequests != null) {
-            for (FullHttpMessage capturedRequest : capturedRequests) {
+            capturedRequests.forEach(capturedRequest -> {
                 capturedRequest.release();
-            }
+            });
             capturedRequests = null;
         }
     }
 
     private void cleanupCapturedResponses() {
         if (capturedResponses != null) {
-            for (FullHttpMessage capturedResponse : capturedResponses) {
+            capturedResponses.forEach(capturedResponse -> {
                 capturedResponse.release();
-            }
+            });
             capturedResponses = null;
         }
     }

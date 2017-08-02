@@ -77,9 +77,9 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         try {
             final Set<SocketAddress> allLocalAddresses = javaChannel().getAllLocalAddresses();
             final Set<InetSocketAddress> addresses = new LinkedHashSet<InetSocketAddress>(allLocalAddresses.size());
-            for (SocketAddress socketAddress : allLocalAddresses) {
+            allLocalAddresses.forEach(socketAddress -> {
                 addresses.add((InetSocketAddress) socketAddress);
-            }
+            });
             return addresses;
         } catch (Throwable ignored) {
             return Collections.emptySet();

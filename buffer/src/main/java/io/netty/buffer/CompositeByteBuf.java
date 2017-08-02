@@ -1576,9 +1576,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Discard everything if (readerIndex = writerIndex = capacity).
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
-            for (Component c: components) {
+            components.forEach(c -> {
                 c.freeIfNecessary();
-            }
+            });
             components.clear();
             setIndex(0, 0);
             adjustMarkers(readerIndex);
@@ -1612,9 +1612,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Discard everything if (readerIndex = writerIndex = capacity).
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
-            for (Component c: components) {
+            components.forEach(c -> {
                 c.freeIfNecessary();
-            }
+            });
             components.clear();
             setIndex(0, 0);
             adjustMarkers(readerIndex);

@@ -359,9 +359,9 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             array.add(channel);
         }
 
-        for (AbstractEpollChannel ch: array) {
+        array.forEach(ch -> {
             ch.unsafe().close(ch.unsafe().voidPromise());
-        }
+        });
     }
 
     private void processReady(EpollEventArray events, int ready) {

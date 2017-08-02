@@ -94,9 +94,9 @@ public class SslErrorTest {
         List<Object[]> params = new ArrayList<Object[]>();
         for (SslProvider serverProvider: serverProviders) {
             for (SslProvider clientProvider: clientProviders) {
-                for (CertificateException exception: exceptions) {
+                exceptions.forEach(exception -> {
                     params.add(new Object[] { serverProvider, clientProvider, exception});
-                }
+                });
             }
         }
         return params;

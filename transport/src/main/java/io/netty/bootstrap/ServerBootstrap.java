@@ -247,9 +247,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
             setChannelOptions(child, childOptions, logger);
 
-            for (Entry<AttributeKey<?>, Object> e: childAttrs) {
+            childAttrs.forEach(e -> {
                 child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
-            }
+            });
 
             try {
                 childGroup.register(child).addListener(new ChannelFutureListener() {

@@ -98,9 +98,9 @@ public class BootstrapTest {
             }));
         }
 
-        for (Future<?> f: bindFutures) {
+        bindFutures.forEach(f -> {
             f.sync();
-        }
+        });
     }
 
     @Test(timeout = 10000)
@@ -134,9 +134,9 @@ public class BootstrapTest {
             }));
         }
 
-        for (Future<?> f: bindFutures) {
+        bindFutures.forEach(f -> {
             f.sync();
-        }
+        });
     }
 
     @Test

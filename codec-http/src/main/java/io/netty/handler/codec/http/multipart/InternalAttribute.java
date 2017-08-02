@@ -102,9 +102,9 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
     @Override
     public String toString() {
         StringBuilder result = new StringBuilder();
-        for (ByteBuf elt : value) {
+        value.forEach(elt -> {
             result.append(elt.toString(charset));
-        }
+        });
         return result.toString();
     }
 
@@ -128,33 +128,33 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
 
     @Override
     public InterfaceHttpData retain() {
-        for (ByteBuf buf: value) {
+        value.forEach(buf -> {
             buf.retain();
-        }
+        });
         return this;
     }
 
     @Override
     public InterfaceHttpData retain(int increment) {
-        for (ByteBuf buf: value) {
+        value.forEach(buf -> {
             buf.retain(increment);
-        }
+        });
         return this;
     }
 
     @Override
     public InterfaceHttpData touch() {
-        for (ByteBuf buf: value) {
+        value.forEach(buf -> {
             buf.touch();
-        }
+        });
         return this;
     }
 
     @Override
     public InterfaceHttpData touch(Object hint) {
-        for (ByteBuf buf: value) {
+        value.forEach(buf -> {
             buf.touch(hint);
-        }
+        });
         return this;
     }
 }

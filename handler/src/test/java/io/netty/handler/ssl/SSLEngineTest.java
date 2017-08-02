@@ -1026,9 +1026,9 @@ public abstract class SSLEngineTest {
             assertEquals(message, dataCapture.get(0));
         } finally {
             if (dataCapture != null) {
-                for (ByteBuf data : dataCapture) {
+                dataCapture.forEach(data -> {
                     data.release();
-                }
+                });
             }
         }
     }
