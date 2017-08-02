@@ -27,6 +27,7 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/timerfd.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -68,16 +69,6 @@
 #define TCP_FASTOPEN 23
 #endif
 
-/**
- * On older Linux kernels, epoll can't handle timeout
- * values bigger than (LONG_MAX - 999ULL)/HZ.
- *
- * See:
- *   - https://github.com/libevent/libevent/blob/master/epoll.c#L138
- *   - http://cvs.schmorp.de/libev/ev_epoll.c?revision=1.68&view=markup
- */
-#define MAX_EPOLL_TIMEOUT_MSEC (35*60*1000)
-
 // optional
 extern int epoll_create1(int flags) __attribute__((weak));
 
@@ -104,49 +95,7 @@ jfieldID packetPortFieldId = NULL;
 jfieldID packetMemoryAddressFieldId = NULL;
 jfieldID packetCountFieldId = NULL;
 
-clockid_t epollWaitClock = 0; // initialized in initializeEpollWaitClock
-
 // util methods
-static jboolean initializeEpollWaitClock() {
-  struct timespec ts;
-  // First try to get a monotonic clock, as we effectively measure execution time and don't want the underlying clock
-  // moving unexpectedly/abruptly.
-  #ifdef CLOCK_MONOTONIC_COARSE
-  epollWaitClock = CLOCK_MONOTONIC_COARSE;
-  if (clock_gettime(epollWaitClock, &ts) != EINVAL) {
-    return JNI_TRUE;
-  }
-  #endif
-  #ifdef CLOCK_MONOTONIC_RAW
-  epollWaitClock = CLOCK_MONOTONIC_RAW;
-  if (clock_gettime(epollWaitClock, &ts) != EINVAL) {
-    return JNI_TRUE;
-  }
-  #endif
-  #ifdef CLOCK_MONOTONIC
-  epollWaitClock = CLOCK_MONOTONIC;
-  if (clock_gettime(epollWaitClock, &ts) != EINVAL) {
-    return JNI_TRUE;
-  }
-  #endif
-
-  // Fallback to realtime ... in this case we are subject to clock movements on the system.
-  #ifdef CLOCK_REALTIME_COARSE
-  epollWaitClock = CLOCK_REALTIME_COARSE;
-  if (clock_gettime(epollWaitClock, &ts) != EINVAL) {
-    return JNI_TRUE;
-  }
-  #endif
-  #ifdef CLOCK_REALTIME
-  epollWaitClock = CLOCK_REALTIME;
-  if (clock_gettime(epollWaitClock, &ts) != EINVAL) {
-    return JNI_TRUE;
-  }
-  #endif
-  fprintf(stderr, "FATAL: could not find a clock for clock_gettime!\n");
-  return JNI_FALSE;
-}
-
 static int getSysctlValue(const char * property, int* returnValue) {
     int rc = -1;
     FILE *fd=fopen(property, "r");
@@ -175,18 +124,25 @@ static jint netty_epoll_native_eventFd(JNIEnv* env, jclass clazz) {
     jint eventFD = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 
     if (eventFD < 0) {
-        int err = errno;
-        netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd() failed: ", err);
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd() failed: ", errno);
     }
     return eventFD;
+}
+
+static jint netty_epoll_native_timerFd(JNIEnv* env, jclass clazz) {
+    jint timerFD = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK);
+
+    if (timerFD < 0) {
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_create() failed: ", errno);
+    }
+    return timerFD;
 }
 
 static void netty_epoll_native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlong value) {
     jint eventFD = eventfd_write(fd, (eventfd_t) value);
 
     if (eventFD < 0) {
-        int err = errno;
-        netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write() failed: ", err);
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write() failed: ", errno);
     }
 }
 
@@ -196,6 +152,15 @@ static void netty_epoll_native_eventFdRead(JNIEnv* env, jclass clazz, jint fd) {
     if (eventfd_read(fd, &eventfd_t) != 0) {
         // something is serious wrong
         netty_unix_errors_throwRuntimeException(env, "eventfd_read() failed");
+    }
+}
+
+static void netty_epoll_native_timerFdRead(JNIEnv* env, jclass clazz, jint fd) {
+    uint64_t timerFireCount;
+
+    if (read(fd, &timerFireCount, sizeof(uint64_t)) < 0) {
+        // it is expected that this is only called where there is known to be activity, so this is an error.
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "read() failed: ", errno);
     }
 }
 
@@ -227,42 +192,44 @@ static jint netty_epoll_native_epollCreate(JNIEnv* env, jclass clazz) {
     return efd;
 }
 
-static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timeout) {
+static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec) {
     struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
-    struct timespec ts;
-    jlong timeBeforeWait, timeNow;
-    int timeDiff, result, err;
+    int result, err;
 
-    if (timeout > MAX_EPOLL_TIMEOUT_MSEC) {
-        // Workaround for bug in older linux kernels that can not handle bigger timeout then MAX_EPOLL_TIMEOUT_MSEC.
-        timeout = MAX_EPOLL_TIMEOUT_MSEC;
-    }
-
-    clock_gettime(epollWaitClock, &ts);
-    timeBeforeWait = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-
-    for (;;) {
-      result = epoll_wait(efd, ev, len, timeout);
-      if (result >= 0) {
-        return result;
-      }
-      if ((err = errno) == EINTR) {
-        if (timeout > 0) {
-          clock_gettime(epollWaitClock, &ts);
-          timeNow = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-          timeDiff = timeNow - timeBeforeWait;
-          timeout -= timeDiff;
-          if (timeDiff < 0 || timeout <= 0) {
-            return 0;
-          }
-          timeBeforeWait = timeNow;
-        } else if (timeout == 0) {
-          return 0;
+    if (tvSec == 0 && tvNsec == 0) {
+        // Zeros = poll (aka return immediately).
+        do {
+            result = epoll_wait(efd, ev, len, 0);
+            if (result >= 0) {
+                return result;
+            }
+        } while((err = errno) == EINTR);
+    } else {
+        struct itimerspec ts;
+        memset(&ts.it_interval, 0, sizeof(struct timespec));
+        ts.it_value.tv_sec = tvSec;
+        ts.it_value.tv_nsec = tvNsec;
+        if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
+            netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
+            return -1;
         }
-      } else {
-        return -err;
-      }
+        do {
+            result = epoll_wait(efd, ev, len, -1);
+            if (result > 0) {
+                // Detect timeout, and preserve the epoll_wait API.
+                if (result == 1 && ev[0].data.fd == timerFd) {
+                    // We assume that timerFD is in ET mode. So we must consume this event to ensure we are notified
+                    // of future timer events because ET mode only notifies a single time until the event is consumed.
+                    uint64_t timerFireCount;
+                    // We don't care what the result is. We just want to consume the wakeup event and reset ET.
+                    result = read(timerFd, &timerFireCount, sizeof(uint64_t));
+                    return 0;
+                }
+                return result;
+            }
+        } while((err = errno) == EINTR);
     }
+    return -err;
 }
 
 static jint netty_epoll_native_epollCtlAdd0(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags) {
@@ -623,8 +590,7 @@ static jstring netty_epoll_native_kernelVersion(JNIEnv* env, jclass clazz) {
     if (res == 0) {
         return (*env)->NewStringUTF(env, name.release);
     }
-    int err = errno;
-    netty_unix_errors_throwRuntimeExceptionErrorNo(env, "uname() failed: ", err);
+    netty_unix_errors_throwRuntimeExceptionErrorNo(env, "uname() failed: ", errno);
     return NULL;
 }
 
@@ -773,10 +739,12 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
   { "eventFd", "()I", (void *) netty_epoll_native_eventFd },
+  { "timerFd", "()I", (void *) netty_epoll_native_timerFd },
   { "eventFdWrite", "(IJ)V", (void *) netty_epoll_native_eventFdWrite },
   { "eventFdRead", "(I)V", (void *) netty_epoll_native_eventFdRead },
+  { "timerFdRead", "(I)V", (void *) netty_epoll_native_timerFdRead },
   { "epollCreate", "()I", (void *) netty_epoll_native_epollCreate },
-  { "epollWait0", "(IJII)I", (void *) netty_epoll_native_epollWait0 },
+  { "epollWait0", "(IJIIII)I", (void *) netty_epoll_native_epollWait0 },
   { "epollCtlAdd0", "(III)I", (void *) netty_epoll_native_epollCtlAdd0 },
   { "epollCtlMod0", "(III)I", (void *) netty_epoll_native_epollCtlMod0 },
   { "epollCtlDel0", "(II)I", (void *) netty_epoll_native_epollCtlDel0 },
@@ -953,11 +921,7 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
         return JNI_ERR;
     }
 
-    if (!initializeEpollWaitClock()) {
-      return JNI_ERR;
-    }
-
-    return JNI_VERSION_1_6;
+    return JNI_VERSION_1_6; 
 }
 
 static void netty_epoll_native_JNI_OnUnLoad(JNIEnv* env) {
