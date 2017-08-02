@@ -174,9 +174,9 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
     public void http2Iterate(Blackhole bh) {
-        for (Entry<CharSequence, CharSequence> entry : http2Headers) {
+        http2Headers.forEach(entry -> {
             bh.consume(entry);
-        }
+        });
     }
 
     @Benchmark

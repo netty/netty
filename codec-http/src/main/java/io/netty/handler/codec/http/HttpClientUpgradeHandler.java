@@ -272,10 +272,12 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
 
         // Set the CONNECTION header from the set of all protocol-specific headers that were added.
         StringBuilder builder = new StringBuilder();
-        for (CharSequence part : connectionParts) {
+        connectionParts.stream().map(part -> {
             builder.append(part);
+            return _item;
+        }).forEach(_item -> {
             builder.append(',');
-        }
+        });
         builder.append(HttpHeaderValues.UPGRADE);
         request.headers().set(HttpHeaderNames.CONNECTION, builder.toString());
     }

@@ -113,7 +113,7 @@ public final class Version {
         }
 
         Map<String, Version> versions = new TreeMap<String, Version>();
-        for (String artifactId: artifactIds) {
+        artifactIds.forEach(artifactId -> {
             versions.put(
                     artifactId,
                     new Version(
@@ -124,7 +124,7 @@ public final class Version {
                             props.getProperty(artifactId + PROP_SHORT_COMMIT_HASH),
                             props.getProperty(artifactId + PROP_LONG_COMMIT_HASH),
                             props.getProperty(artifactId + PROP_REPO_STATUS)));
-        }
+        });
 
         return versions;
     }

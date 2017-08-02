@@ -128,14 +128,14 @@ public class Http2FrameRoundtripTest {
                 buf.release();
             }
             // Now verify that all of the reference counts are zero.
-            for (ByteBuf buf : needReleasing) {
+            needReleasing.forEach(buf -> {
                 int expectedFinalRefCount = 0;
                 if (buf.isReadOnly() || buf instanceof EmptyByteBuf) {
                     // Special case for when we're writing slices of the padding buffer.
                     expectedFinalRefCount = 1;
                 }
                 assertEquals(expectedFinalRefCount, buf.refCnt());
-            }
+            });
         } finally {
             needReleasing.clear();
         }

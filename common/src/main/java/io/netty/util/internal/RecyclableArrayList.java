@@ -100,11 +100,9 @@ public final class RecyclableArrayList extends ArrayList<Object> {
                 }
             }
         } else {
-            for (Object element: c) {
-                if (element == null) {
-                    throw new IllegalArgumentException("c contains null values");
-                }
-            }
+            c.stream().filter(element -> element == null).forEach(_item -> {
+                throw new IllegalArgumentException("c contains null values");
+            });
         }
     }
 

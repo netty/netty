@@ -99,9 +99,9 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
         List<Object[]> params = new ArrayList<Object[]>();
         for (SslContext sc: serverContexts) {
-            for (SslContext cc: clientContexts) {
+            clientContexts.forEach(cc -> {
                 params.add(new Object[] { sc, cc });
-            }
+            });
         }
         return params;
     }

@@ -1393,9 +1393,9 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         if (headers == null) {
             throw new NullPointerException("headers");
         }
-        for (Map.Entry<String, String> e: headers) {
+        headers.forEach(e -> {
             add(e.getKey(), e.getValue());
-        }
+        });
         return this;
     }
 
@@ -1479,11 +1479,12 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             return this;
         }
 
-        for (Entry<String, String> entry : headers) {
+        headers.forEach(entry -> {
             add(entry.getKey(), entry.getValue());
-        }
+        });
         return this;
     }
+
 
     /**
      * Retains all current headers but calls {@link #set(String, Object)} for each entry in {@code headers}
@@ -1498,9 +1499,9 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             return this;
         }
 
-        for (Entry<String, String> entry : headers) {
+        headers.forEach(entry -> {
             set(entry.getKey(), entry.getValue());
-        }
+        });
         return this;
     }
 

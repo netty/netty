@@ -149,9 +149,9 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
         try {
             final Set<SocketAddress> allLocalAddresses = sch.getAllLocalAddresses();
             final Set<InetSocketAddress> addresses = new LinkedHashSet<InetSocketAddress>(allLocalAddresses.size());
-            for (SocketAddress socketAddress : allLocalAddresses) {
+            allLocalAddresses.forEach(socketAddress -> {
                 addresses.add((InetSocketAddress) socketAddress);
-            }
+            });
             return addresses;
         } catch (Throwable ignored) {
             return Collections.emptySet();

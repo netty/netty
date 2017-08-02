@@ -282,15 +282,15 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         }
 
         void sendFrames() {
-            for (Frame frame : frames) {
+            frames.forEach(frame -> {
                 frame.send(ctx, streamId);
-            }
+            });
         }
 
         void close(Throwable t) {
-            for (Frame frame : frames) {
+            frames.forEach(frame -> {
                 frame.release(t);
-            }
+            });
         }
     }
 

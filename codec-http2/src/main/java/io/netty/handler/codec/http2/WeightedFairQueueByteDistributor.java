@@ -767,10 +767,12 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
                     .append(" parent.streamId ").append(parent == null ? -1 : parent.streamId).append("} [");
 
             if (!pseudoTimeQueue.isEmpty()) {
-                for (State s : pseudoTimeQueue) {
+                pseudoTimeQueue.stream().map(s -> {
                     s.toString(sb);
+                    return _item;
+                }).forEach(_item -> {
                     sb.append(", ");
-                }
+                });
                 // Remove the last ", "
                 sb.setLength(sb.length() - 2);
             }

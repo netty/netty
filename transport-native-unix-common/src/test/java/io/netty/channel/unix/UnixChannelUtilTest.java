@@ -78,9 +78,9 @@ public class UnixChannelUtilTest {
         }
 
         Collections.shuffle(byteBufs);
-        for (ByteBuf byteBuf : byteBufs) {
+        byteBufs.forEach(byteBuf -> {
             comp.addComponent(byteBuf);
-        }
+        });
 
         assertEquals(byteBufs.toString(), expected, isBufferCopyNeededForWrite(comp, IOV_MAX));
         assertTrue(comp.release());

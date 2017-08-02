@@ -69,9 +69,9 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
             long endTime = System.nanoTime();
             assertTrue(endTime - startTime > TIMEOUT);
         } finally {
-            for (Socket s: sockets) {
+            sockets.forEach(s -> {
                 s.close();
-            }
+            });
         }
 
         Thread.sleep(TIMEOUT / 1000000);
@@ -87,9 +87,9 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
 
             assertTrue(endTime - startTime < TIMEOUT);
         } finally {
-            for (Socket s: sockets) {
+            sockets.forEach(s -> {
                 s.close();
-            }
+            });
         }
     }
 

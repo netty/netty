@@ -312,9 +312,9 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         try {
             final Set<SocketAddress> allLocalAddresses = ch.getAllLocalAddresses();
             final Set<InetSocketAddress> addresses = new LinkedHashSet<InetSocketAddress>(allLocalAddresses.size());
-            for (SocketAddress socketAddress : allLocalAddresses) {
+            allLocalAddresses.forEach(socketAddress -> {
                 addresses.add((InetSocketAddress) socketAddress);
-            }
+            });
             return addresses;
         } catch (Throwable ignored) {
             return Collections.emptySet();
@@ -339,9 +339,9 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         try {
             final Set<SocketAddress> allLocalAddresses = ch.getRemoteAddresses();
             final Set<InetSocketAddress> addresses = new LinkedHashSet<InetSocketAddress>(allLocalAddresses.size());
-            for (SocketAddress socketAddress : allLocalAddresses) {
+            allLocalAddresses.forEach(socketAddress -> {
                 addresses.add((InetSocketAddress) socketAddress);
-            }
+            });
             return addresses;
         } catch (Throwable ignored) {
             return Collections.emptySet();

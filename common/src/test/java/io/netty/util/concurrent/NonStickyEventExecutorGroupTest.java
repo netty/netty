@@ -81,9 +81,9 @@ public class NonStickyEventExecutorGroupTest {
                 thread.start();
             }
             startLatch.countDown();
-            for (Thread t: threadList) {
+            threadList.forEach(t -> {
                 t.join();
-            }
+            });
             Throwable cause = error.get();
             if (cause != null) {
                 throw cause;
@@ -126,9 +126,9 @@ public class NonStickyEventExecutorGroupTest {
             }));
         }
         latch.await();
-        for (Future<?> future: futures) {
+        futures.forEach(future -> {
             future.syncUninterruptibly();
-        }
+        });
         Throwable error = cause.get();
         if (error != null) {
             throw error;

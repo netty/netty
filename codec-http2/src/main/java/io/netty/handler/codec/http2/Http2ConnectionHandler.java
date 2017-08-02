@@ -569,9 +569,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             onStreamError(ctx, cause, (StreamException) embedded);
         } else if (embedded instanceof CompositeStreamException) {
             CompositeStreamException compositException = (CompositeStreamException) embedded;
-            for (StreamException streamException : compositException) {
+            compositException.forEach(streamException -> {
                 onStreamError(ctx, cause, streamException);
-            }
+            });
         } else {
             onConnectionError(ctx, cause, embedded);
         }

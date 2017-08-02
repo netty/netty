@@ -328,9 +328,10 @@ public class DefaultChannelPipelineTest {
 
         final CountDownLatch removeLatch = new CountDownLatch(COUNT);
 
-        for (final LifeCycleAwareTestHandler handler : handlers) {
+        handlers.stream().map(handler -> {
             assertSame(handler, p.remove(handler.name));
-
+            return handler;
+        }).forEach(handler -> {
             self.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
@@ -339,7 +340,7 @@ public class DefaultChannelPipelineTest {
                     removeLatch.countDown();
                 }
             });
-        }
+        });
         removeLatch.await();
     }
 
@@ -1335,9 +1336,9 @@ public class DefaultChannelPipelineTest {
                 ctx.fireChannelReadComplete();
             }
             if (!outboundBuffer.isEmpty()) {
-                for (Object o: outboundBuffer) {
+                outboundBuffer.forEach(o -> {
                     ctx.write(o);
-                }
+                });
                 ctx.flush();
             }
         }

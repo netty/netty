@@ -206,9 +206,9 @@ public final class UnitHelp {
     public static void logSet(final Set<?> set) {
         @SuppressWarnings("unchecked")
         final TreeSet<?> treeSet = new TreeSet(set);
-        for (final Object item : treeSet) {
+        treeSet.forEach(item -> {
             log.info("-> {}", item);
-        }
+        });
     }
 
     public static String property(final String name) {

@@ -122,9 +122,7 @@ public class ReadOnlyHttp2HeadersBenchmark extends AbstractMicrobenchmark {
 
     private static int iterate(Http2Headers headers) {
         int length = 0;
-        for (Map.Entry<CharSequence, CharSequence> entry : headers) {
-            length += entry.getKey().length() + entry.getValue().length();
-        }
+        headers.stream().map(entry -> entry.getKey().length() + entry.getValue().length()).reduce(length, Integer::sum);
         return length;
     }
 

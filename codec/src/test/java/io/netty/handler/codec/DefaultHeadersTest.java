@@ -365,9 +365,9 @@ public class DefaultHeadersTest {
         assertEquals(8, headers1.size());
 
         TestDefaultHeaders headers2 = newInstance();
-        for (Entry<CharSequence, CharSequence> entry : headers1) {
+        headers1.forEach(entry -> {
             headers2.add(entry.getKey(), entry.getValue());
-        }
+        });
 
         assertEquals(headers1, headers2);
     }

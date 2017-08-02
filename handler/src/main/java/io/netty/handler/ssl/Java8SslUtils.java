@@ -49,9 +49,9 @@ final class Java8SslUtils {
 
     static void setSniHostNames(SSLParameters sslParameters, List<String> names) {
         List<SNIServerName> sniServerNames = new ArrayList<SNIServerName>(names.size());
-        for (String name: names) {
+        names.forEach(name -> {
             sniServerNames.add(new SNIHostName(name));
-        }
+        });
         sslParameters.setServerNames(sniServerNames);
     }
 

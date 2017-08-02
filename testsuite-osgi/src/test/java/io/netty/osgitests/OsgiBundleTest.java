@@ -92,14 +92,14 @@ public class OsgiBundleTest {
         options.add(mavenBundle("com.barchart.udt", "barchart-udt-bundle").versionAsInProject());
         options.add(wrappedBundle(mavenBundle("org.rxtx", "rxtx").versionAsInProject()));
 
-        for (String name : BUNDLES) {
+        BUNDLES.forEach(name -> {
             options.add(mavenBundle(GROUP, name).versionAsInProject());
-        }
+        });
 
         return options.toArray(new Option[0]);
     }
 
-    @Test
+@Test
     public void testResolvedBundles() {
         // No-op, as we just want the bundles to be resolved. Just check if we tested something
         assertFalse("At least one bundle needs to be tested", BUNDLES.isEmpty());

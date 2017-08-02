@@ -689,9 +689,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
         }
 
-        for (AbstractNioChannel ch: channels) {
+        channels.forEach(ch -> {
             ch.unsafe().close(ch.unsafe().voidPromise());
-        }
+        });
     }
 
     private static void invokeChannelUnregistered(NioTask<SelectableChannel> task, SelectionKey k, Throwable cause) {

@@ -545,15 +545,13 @@ public final class NioDatagramChannel
         synchronized (this) {
             if (memberships != null) {
                 List<MembershipKey> keys = memberships.get(multicastAddress);
-                for (MembershipKey key: keys) {
-                    if (networkInterface.equals(key.networkInterface())) {
-                        try {
-                            key.block(sourceToBlock);
-                        } catch (IOException e) {
-                            promise.setFailure(e);
-                        }
+                keys.stream().filter(key -> networkInterface.equals(key.networkInterface())).forEach(key -> {
+                    try {
+                        key.block(sourceToBlock);
+                    } catch (IOException e) {
+                        promise.setFailure(e);
                     }
-                }
+                });
             }
         }
         promise.setSuccess();
