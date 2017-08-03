@@ -60,6 +60,10 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         setRecvByteBufAllocator(DEFAULT_RCVBUF_ALLOCATOR);
     }
 
+    protected final DatagramSocket javaSocket() {
+        return javaSocket;
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     public Map<ChannelOption<?>, Object> getOptions() {
