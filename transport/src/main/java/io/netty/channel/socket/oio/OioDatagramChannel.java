@@ -29,7 +29,6 @@ import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.DefaultDatagramChannelConfig;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -69,7 +68,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             StringUtil.simpleClassName(ByteBuf.class) + ')';
 
     private final MulticastSocket socket;
-    private final DatagramChannelConfig config;
+    private final OioDatagramChannelConfig config;
     private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0);
 
     private static MulticastSocket newSocket() {
@@ -110,7 +109,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         }
 
         this.socket = socket;
-        config = new DefaultDatagramChannelConfig(this, socket);
+        config = new DefaultOioDatagramChannelConfig(this, socket);
     }
 
     @Override
@@ -118,7 +117,13 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         return METADATA;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * This can be safetly cast to {@link OioDatagramChannelConfig}.
+     */
     @Override
+    // TODO: Change return type to OioDatagramChannelConfig in next major release
     public DatagramChannelConfig config() {
         return config;
     }
