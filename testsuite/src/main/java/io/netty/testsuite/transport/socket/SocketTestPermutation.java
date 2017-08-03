@@ -122,7 +122,8 @@ public class SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(oioWorkerGroup).channel(OioDatagramChannel.class);
+                        return new Bootstrap().group(oioWorkerGroup).channel(OioDatagramChannel.class)
+                                .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                     }
                 }
         );

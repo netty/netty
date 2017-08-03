@@ -58,6 +58,10 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         this.javaSocket = javaSocket;
     }
 
+    protected final DatagramSocket javaSocket() {
+        return javaSocket;
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     public Map<ChannelOption<?>, Object> getOptions() {
