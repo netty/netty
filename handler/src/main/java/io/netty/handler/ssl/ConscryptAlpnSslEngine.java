@@ -214,8 +214,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
 
         BufferAdapter(ByteBuf nettyBuffer) {
             this.nettyBuffer = nettyBuffer;
-            nettyBuffer.writerIndex(nettyBuffer.capacity());
-            this.buffer = nettyBuffer.nioBuffer();
+            this.buffer = nettyBuffer.nioBuffer(0, nettyBuffer.capacity());
         }
 
         @Override
