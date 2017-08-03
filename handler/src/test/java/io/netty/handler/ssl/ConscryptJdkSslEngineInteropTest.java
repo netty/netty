@@ -73,4 +73,10 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
     }
+
+    @Override
+    protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
+        // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
+        return super.mySetupMutualAuthServerIsValidServerException(cause) || causedBySSLException(cause);
+    }
 }

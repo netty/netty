@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBufAllocator;
 import javax.net.ssl.SSLEngine;
 
 /**
@@ -108,8 +109,8 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
 
     private static final class FailureWrapper implements SslEngineWrapperFactory {
         @Override
-        public SSLEngine wrapSslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator,
-                                       boolean isServer) {
+        public SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
+                                       JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
             throw new RuntimeException("ALPN unsupported. Is your classpath configured correctly?"
                     + " For Conscrypt, add the appropriate Conscrypt JAR to classpath and set the security provider."
                     + " For Jetty-ALPN, see "
@@ -119,11 +120,11 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
 
     private static final class AlpnWrapper implements SslEngineWrapperFactory {
         @Override
-        public SSLEngine wrapSslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator,
-                                       boolean isServer) {
+        public SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
+                                       JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
             if (ConscryptAlpnSslEngine.isEngineSupported(engine)) {
-                return isServer ? ConscryptAlpnSslEngine.newServerEngine(engine, applicationNegotiator)
-                        : ConscryptAlpnSslEngine.newClientEngine(engine, applicationNegotiator);
+                return isServer ? ConscryptAlpnSslEngine.newServerEngine(engine, alloc, applicationNegotiator)
+                        : ConscryptAlpnSslEngine.newClientEngine(engine, alloc, applicationNegotiator);
             }
             if (JettyAlpnSslEngine.isAvailable()) {
                 return isServer ? JettyAlpnSslEngine.newServerEngine(engine, applicationNegotiator)

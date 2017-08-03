@@ -210,15 +210,15 @@ public class JdkSslContext extends SslContext {
 
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc) {
-        return configureAndWrapEngine(context().createSSLEngine());
+        return configureAndWrapEngine(context().createSSLEngine(), alloc);
     }
 
     @Override
     public final SSLEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
-        return configureAndWrapEngine(context().createSSLEngine(peerHost, peerPort));
+        return configureAndWrapEngine(context().createSSLEngine(peerHost, peerPort), alloc);
     }
 
-    private SSLEngine configureAndWrapEngine(SSLEngine engine) {
+    private SSLEngine configureAndWrapEngine(SSLEngine engine, ByteBufAllocator alloc) {
         engine.setEnabledCipherSuites(cipherSuites);
         engine.setEnabledProtocols(protocols);
         engine.setUseClientMode(isClient());
@@ -236,7 +236,7 @@ public class JdkSslContext extends SslContext {
                     throw new Error("Unknown auth " + clientAuth);
             }
         }
-        return apn.wrapperFactory().wrapSslEngine(engine, apn, isServer());
+        return apn.wrapperFactory().wrapSslEngine(engine, alloc, apn, isServer());
     }
 
     @Override
