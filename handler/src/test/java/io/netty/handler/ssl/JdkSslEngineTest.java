@@ -81,7 +81,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
 
             @Override
             boolean isAvailable() {
-                return ConscryptAlpnSslEngine.isAvailable();
+                return Conscrypt.isAvailable();
             }
 
             @Override

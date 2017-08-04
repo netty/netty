@@ -23,7 +23,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -32,7 +31,6 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import org.conscrypt.AllocatedBuffer;
 import org.conscrypt.BufferAllocator;
@@ -45,18 +43,6 @@ import org.conscrypt.HandshakeListener;
 abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
     private static final boolean USE_BUFFER_ALLOCATOR = SystemPropertyUtil.getBoolean(
             "io.netty.handler.ssl.conscrypt.useBufferAllocator", true);
-    private static final Class<?> ENGINES_CLASS = getEnginesClass();
-
-    /**
-     * Indicates whether or not conscrypt is available on the current system.
-     */
-    static boolean isAvailable() {
-        return ENGINES_CLASS != null && PlatformDependent.javaVersion() >= 8;
-    }
-
-    static boolean isEngineSupported(SSLEngine engine) {
-        return isAvailable() && isConscryptEngine(engine, ENGINES_CLASS);
-    }
 
     static ConscryptAlpnSslEngine newClientEngine(SSLEngine engine, ByteBufAllocator alloc,
             JdkApplicationProtocolNegotiator applicationNegotiator) {
@@ -168,33 +154,6 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
         }
     }
 
-    private static Class<?> getEnginesClass() {
-        try {
-            // Always use bootstrap class loader.
-            Class<?> engineClass = Class.forName("org.conscrypt.Conscrypt$Engines", true,
-                    ConscryptAlpnSslEngine.class.getClassLoader());
-            // Ensure that it also has the isConscrypt method.
-            getIsConscryptMethod(engineClass);
-            return engineClass;
-        } catch (Throwable ignore) {
-            // Conscrypt was not loaded.
-            return null;
-        }
-    }
-
-    private static boolean isConscryptEngine(SSLEngine engine, Class<?> enginesClass) {
-        try {
-            Method method = getIsConscryptMethod(enginesClass);
-            return (Boolean) method.invoke(null, engine);
-        } catch (Throwable ignore) {
-            return false;
-        }
-    }
-
-    private static Method getIsConscryptMethod(Class<?> enginesClass) throws NoSuchMethodException {
-        return enginesClass.getMethod("isConscrypt", SSLEngine.class);
-    }
-
     private static final class BufferAllocatorAdapter extends BufferAllocator {
         private final ByteBufAllocator alloc;
 
@@ -214,7 +173,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
 
         BufferAdapter(ByteBuf nettyBuffer) {
             this.nettyBuffer = nettyBuffer;
-            this.buffer = nettyBuffer.nioBuffer(0, nettyBuffer.capacity());
+            buffer = nettyBuffer.nioBuffer(0, nettyBuffer.capacity());
         }
 
         @Override
