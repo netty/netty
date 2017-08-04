@@ -202,10 +202,7 @@ public final class NativeLibraryLoader {
      */
     public static void load(String originalName, ClassLoader loader) {
         // Adjust expected name to support shading of native libraries.
-        String implicitPackagePrefix = calculatePackagePrefix();
-        // The system property should not be necessary; it can be removed in the future.
-        String packagePrefix = SystemPropertyUtil.get("io.netty.packagePrefix", implicitPackagePrefix);
-        String name = packagePrefix.replace('.', '-') + originalName;
+        String name = calculatePackagePrefix().replace('.', '-') + originalName;
 
         String libname = System.mapLibraryName(name);
         String path = NATIVE_RESOURCE_HOME + libname;
