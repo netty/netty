@@ -22,7 +22,7 @@ import javax.net.ssl.SSLEngine;
  * The {@link JdkApplicationProtocolNegotiator} to use if you need ALPN and are using {@link SslProvider#JDK}.
  */
 public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicationProtocolNegotiator {
-    private static final boolean AVAILABLE = ConscryptAlpnSslEngine.isAvailable() || JettyAlpnSslEngine.isAvailable();
+    private static final boolean AVAILABLE = Conscrypt.isAvailable() || JettyAlpnSslEngine.isAvailable();
     private static final SslEngineWrapperFactory ALPN_WRAPPER = AVAILABLE ? new AlpnWrapper() : new FailureWrapper();
 
     /**
@@ -122,7 +122,7 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
         @Override
         public SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
                                        JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
-            if (ConscryptAlpnSslEngine.isEngineSupported(engine)) {
+            if (Conscrypt.isEngineSupported(engine)) {
                 return isServer ? ConscryptAlpnSslEngine.newServerEngine(engine, alloc, applicationNegotiator)
                         : ConscryptAlpnSslEngine.newClientEngine(engine, alloc, applicationNegotiator);
             }
