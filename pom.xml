@@ -80,7 +80,7 @@
         <!-- This is needed as earlier ASM versions not support java9 -->
         <!-- https://issues.apache.org/jira/browse/MSHADE-242 -->
         <!-- https://github.com/netty/netty/issues/6100 -->
-        <asm.version>6.0_ALPHA</asm.version>
+        <asm.version>6.0_BETA</asm.version>
         <!-- Skip as maven plugin not works with Java9 yet --> 
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
