@@ -26,29 +26,22 @@ public class MqttMessage {
 
     private final MqttFixedHeader mqttFixedHeader;
     private final Object variableHeader;
-    private final Object payload;
     private final DecoderResult decoderResult;
 
     public MqttMessage(MqttFixedHeader mqttFixedHeader) {
-        this(mqttFixedHeader, null, null);
+        this(mqttFixedHeader, null);
     }
 
     public MqttMessage(MqttFixedHeader mqttFixedHeader, Object variableHeader) {
-        this(mqttFixedHeader, variableHeader, null);
-    }
-
-    public MqttMessage(MqttFixedHeader mqttFixedHeader, Object variableHeader, Object payload) {
-        this(mqttFixedHeader, variableHeader, payload, DecoderResult.SUCCESS);
+        this(mqttFixedHeader, variableHeader, DecoderResult.SUCCESS);
     }
 
     public MqttMessage(
             MqttFixedHeader mqttFixedHeader,
             Object variableHeader,
-            Object payload,
             DecoderResult decoderResult) {
         this.mqttFixedHeader = mqttFixedHeader;
         this.variableHeader = variableHeader;
-        this.payload = payload;
         this.decoderResult = decoderResult;
     }
 
@@ -61,7 +54,7 @@ public class MqttMessage {
     }
 
     public Object payload() {
-        return payload;
+        return null;
     }
 
     public DecoderResult decoderResult() {
@@ -74,7 +67,7 @@ public class MqttMessage {
             .append('[')
             .append("fixedHeader=").append(fixedHeader() != null ? fixedHeader().toString() : "")
             .append(", variableHeader=").append(variableHeader() != null ? variableHeader.toString() : "")
-            .append(", payload=").append(payload() != null ? payload.toString() : "")
+            .append(", payload=").append(payload() != null ? payload().toString() : "")
             .append(']')
             .toString();
     }

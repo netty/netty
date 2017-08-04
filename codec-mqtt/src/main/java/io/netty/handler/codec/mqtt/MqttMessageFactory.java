@@ -82,7 +82,7 @@ public final class MqttMessageFactory {
     }
 
     public static MqttMessage newInvalidMessage(Throwable cause) {
-        return new MqttMessage(null, null, null, DecoderResult.failure(cause));
+        return new MqttMessage(null, null, DecoderResult.failure(cause));
     }
 
     private MqttMessageFactory() { }

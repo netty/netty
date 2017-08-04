@@ -16,16 +16,21 @@
 
 package io.netty.handler.codec.mqtt;
 
+import io.netty.util.internal.ObjectUtil;
+
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#suback">MQTTV3.1/suback</a>
  */
 public final class MqttSubAckMessage extends MqttMessage {
 
+    private final MqttSubAckPayload payload;
+
     public MqttSubAckMessage(
             MqttFixedHeader mqttFixedHeader,
             MqttMessageIdVariableHeader variableHeader,
             MqttSubAckPayload payload) {
-        super(mqttFixedHeader, variableHeader, payload);
+        super(mqttFixedHeader, variableHeader);
+        this.payload = ObjectUtil.checkNotNull(payload, "payload");
     }
 
     @Override
@@ -35,6 +40,6 @@ public final class MqttSubAckMessage extends MqttMessage {
 
     @Override
     public MqttSubAckPayload payload() {
-        return (MqttSubAckPayload) super.payload();
+        return payload;
     }
 }

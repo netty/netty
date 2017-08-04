@@ -22,7 +22,7 @@ package io.netty.handler.codec.mqtt;
 public final class MqttUnsubAckMessage extends MqttMessage {
 
     public MqttUnsubAckMessage(MqttFixedHeader mqttFixedHeader, MqttMessageIdVariableHeader variableHeader) {
-        super(mqttFixedHeader, variableHeader, null);
+        super(mqttFixedHeader, variableHeader);
     }
 
     @Override
