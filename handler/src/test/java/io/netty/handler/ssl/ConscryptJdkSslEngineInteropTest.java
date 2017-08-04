@@ -46,7 +46,7 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
     @BeforeClass
     public static void checkConscrypt() {
-        assumeTrue(ConscryptAlpnSslEngine.isAvailable());
+        assumeTrue(Conscrypt.isAvailable());
     }
 
     @Override
