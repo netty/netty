@@ -134,4 +134,49 @@ public class HttpResponseEncoderTest {
 
         assertFalse(channel.finish());
     }
+
+    @Test
+    public void testEmptyContentChunked() throws Exception {
+        testEmptyContent(true);
+    }
+
+    @Test
+    public void testEmptyContentNotChunked() throws Exception {
+        testEmptyContent(false);
+    }
+
+    private static void testEmptyContent(boolean chunked) throws Exception {
+        String content = "netty rocks";
+        ByteBuf contentBuffer = Unpooled.copiedBuffer(content, CharsetUtil.US_ASCII);
+        int length = contentBuffer.readableBytes();
+
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        if (!chunked) {
+            HttpHeaders.setContentLength(response, length);
+        }
+        assertTrue(channel.writeOutbound(response));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
+        assertTrue(channel.writeOutbound(new DefaultLastHttpContent(contentBuffer)));
+
+        ByteBuf buffer = (ByteBuf) channel.readOutbound();
+        if (!chunked) {
+            assertEquals("HTTP/1.1 200 OK\r\nContent-Length: " + length + "\r\n\r\n",
+                    buffer.toString(CharsetUtil.US_ASCII));
+        } else {
+            assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
+        }
+        buffer.release();
+
+        // Test writing an empty buffer works when the encoder is not at ST_INIT.
+        buffer = (ByteBuf) channel.readOutbound();
+        assertEquals(0, buffer.readableBytes());
+        buffer.release();
+
+        buffer = (ByteBuf) channel.readOutbound();
+        assertEquals(length, buffer.readableBytes());
+        buffer.release();
+
+        assertFalse(channel.finish());
+    }
 }
