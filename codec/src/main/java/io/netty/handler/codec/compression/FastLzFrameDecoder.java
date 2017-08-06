@@ -204,7 +204,7 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
                     currentState = State.INIT_BLOCK;
                     success = true;
                 } finally {
-                    if (!success) {
+                    if (!success && uncompressed != null) {
                         uncompressed.release();
                     }
                 }

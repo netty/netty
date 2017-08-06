@@ -60,7 +60,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
                 ALLOW_HALF_CLOSURE, EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_NOTSENT_LOWAT,
                 EpollChannelOption.TCP_KEEPCNT, EpollChannelOption.TCP_KEEPIDLE, EpollChannelOption.TCP_KEEPINTVL,
-                EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK);
+                EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK, EpollChannelOption.IP_TRANSPARENT);
     }
 
     @SuppressWarnings("unchecked")
@@ -111,6 +111,9 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         if (option == EpollChannelOption.TCP_QUICKACK) {
             return (T) Boolean.valueOf(isTcpQuickAck());
         }
+        if (option == EpollChannelOption.IP_TRANSPARENT) {
+            return (T) Boolean.valueOf(isIpTransparent());
+        }
         return super.getOption(option);
     }
 
@@ -146,6 +149,8 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
             setTcpKeepIntvl((Integer) value);
         } else if (option == EpollChannelOption.TCP_USER_TIMEOUT) {
             setTcpUserTimeout((Integer) value);
+        } else if (option == EpollChannelOption.IP_TRANSPARENT) {
+            setIpTransparent((Boolean) value);
         } else if (option == EpollChannelOption.TCP_MD5SIG) {
             @SuppressWarnings("unchecked")
             final Map<InetAddress, byte[]> m = (Map<InetAddress, byte[]>) value;
@@ -440,6 +445,31 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     public EpollSocketChannelConfig setTcpUserTimeout(int milliseconds) {
         try {
             channel.socket.setTcpUserTimeout(milliseconds);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+     /**
+     * Returns {@code true} if <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
+     * {@code false} otherwise.
+     */
+    public boolean isIpTransparent() {
+        try {
+            return channel.socket.isIpTransparent();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * If {@code true} is used <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
+     * {@code false} for disable it. Default is disabled.
+     */
+    public EpollSocketChannelConfig setIpTransparent(boolean transparent) {
+        try {
+            channel.socket.setIpTransparent(transparent);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);

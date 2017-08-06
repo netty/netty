@@ -46,7 +46,7 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
     @BeforeClass
     public static void checkConscrypt() {
-        assumeTrue(ConscryptAlpnSslEngine.isAvailable());
+        assumeTrue(Conscrypt.isAvailable());
     }
 
     @Override
@@ -72,5 +72,11 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
     @Ignore /* Does the JDK support a "max certificate chain length"? */
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
+    }
+
+    @Override
+    protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
+        // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
+        return super.mySetupMutualAuthServerIsValidServerException(cause) || causedBySSLException(cause);
     }
 }

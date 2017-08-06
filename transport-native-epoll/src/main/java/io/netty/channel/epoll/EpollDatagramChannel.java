@@ -30,7 +30,6 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannelUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -40,7 +39,6 @@ import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.channels.NotYetConnectedException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,10 +57,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
 
-    private volatile InetSocketAddress local;
-    private volatile InetSocketAddress remote;
-    private volatile boolean connected;
     private final EpollDatagramChannelConfig config;
+    private volatile boolean connected;
 
     public EpollDatagramChannel() {
         super(newSocketDgram(), Native.EPOLLIN);
@@ -75,9 +71,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     EpollDatagramChannel(LinuxSocket fd) {
         super(null, fd, Native.EPOLLIN, true);
-        // As we create an EpollDatagramChannel from a FileDescriptor we should try to obtain the remote and local
-        // address from it. This is needed as the FileDescriptor may be bound already.
-        local = fd.localAddress();
         config = new EpollDatagramChannelConfig(this);
     }
 
@@ -117,8 +110,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         try {
             return joinGroup(
                     multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
-                    null, promise);
+                    NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
@@ -262,21 +254,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    protected InetSocketAddress localAddress0() {
-        return local;
-    }
-
-    @Override
-    protected InetSocketAddress remoteAddress0() {
-        return remote;
-    }
-
-    @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        InetSocketAddress addr = (InetSocketAddress) localAddress;
-        checkResolvable(addr);
-        socket.bind(addr);
-        local = socket.localAddress();
+        super.doBind(localAddress);
         active = true;
     }
 
@@ -360,30 +339,35 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return true;
         }
 
-        if (remoteAddress == null) {
-            remoteAddress = remote;
-            if (remoteAddress == null) {
-                throw new NotYetConnectedException();
-            }
-        }
-
-        final int writtenBytes;
+        final long writtenBytes;
         if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
-            writtenBytes = socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
-                    remoteAddress.getAddress(), remoteAddress.getPort());
+            if (remoteAddress == null) {
+                writtenBytes = socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
+            } else {
+                writtenBytes = socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
+                        remoteAddress.getAddress(), remoteAddress.getPort());
+            }
         } else if (data.nioBufferCount() > 1) {
             IovArray array = ((EpollEventLoop) eventLoop()).cleanArray();
             array.add(data);
             int cnt = array.count();
             assert cnt != 0;
 
-            writtenBytes = socket.sendToAddresses(array.memoryAddress(0),
-                    cnt, remoteAddress.getAddress(), remoteAddress.getPort());
+            if (remoteAddress == null) {
+                writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
+            } else {
+                writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
+                        remoteAddress.getAddress(), remoteAddress.getPort());
+            }
         } else  {
             ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
-            writtenBytes = socket.sendTo(nioData, nioData.position(), nioData.limit(),
-                    remoteAddress.getAddress(), remoteAddress.getPort());
+            if (remoteAddress == null) {
+                writtenBytes = socket.write(nioData, nioData.position(), nioData.limit());
+            } else {
+                writtenBytes = socket.sendTo(nioData, nioData.position(), nioData.limit(),
+                        remoteAddress.getAddress(), remoteAddress.getPort());
+            }
         }
 
         return writtenBytes > 0;
@@ -427,47 +411,26 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     @Override
     protected void doDisconnect() throws Exception {
+        socket.disconnect();
+        connected = active = false;
+    }
+
+    @Override
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        if (super.doConnect(remoteAddress, localAddress)) {
+            connected = true;
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        super.doClose();
         connected = false;
     }
 
     final class EpollDatagramChannelUnsafe extends AbstractEpollUnsafe {
-
-        @Override
-        public void connect(SocketAddress remote, SocketAddress local, ChannelPromise channelPromise) {
-            boolean success = false;
-            try {
-                try {
-                    boolean wasActive = isActive();
-                    InetSocketAddress remoteAddress = (InetSocketAddress) remote;
-                    if (local != null) {
-                        InetSocketAddress localAddress = (InetSocketAddress) local;
-                        doBind(localAddress);
-                    }
-
-                    checkResolvable(remoteAddress);
-                    EpollDatagramChannel.this.remote = remoteAddress;
-                    EpollDatagramChannel.this.local = socket.localAddress();
-                    success = true;
-
-                    // First notify the promise before notifying the handler.
-                    channelPromise.trySuccess();
-
-                    // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
-                    // because what happened is what happened.
-                    if (!wasActive && isActive()) {
-                        pipeline().fireChannelActive();
-                    }
-                } finally {
-                    if (!success) {
-                        doClose();
-                    } else {
-                        connected = true;
-                    }
-                }
-            } catch (Throwable cause) {
-                channelPromise.tryFailure(cause);
-            }
-        }
 
         @Override
         void epollInReady() {

@@ -34,12 +34,24 @@ import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class SocketTestPermutation {
+
+    static final String BAD_HOST = SystemPropertyUtil.get("io.netty.testsuite.badHost", "netty.io");
+    static final int BAD_PORT = SystemPropertyUtil.getInt("io.netty.testsuite.badPort", 65535);
+
+    static {
+        InternalLogger logger = InternalLoggerFactory.getInstance(SocketConnectionAttemptTest.class);
+        logger.debug("-Dio.netty.testsuite.badHost: {}", BAD_HOST);
+        logger.debug("-Dio.netty.testsuite.badPort: {}", BAD_PORT);
+    }
 
     static final SocketTestPermutation INSTANCE = new SocketTestPermutation();
 
@@ -163,6 +175,24 @@ public class SocketTestPermutation {
                     @Override
                     public Bootstrap newInstance() {
                         return new Bootstrap().group(oioWorkerGroup).channel(OioSocketChannel.class)
+                                .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
+                    }
+                }
+        );
+    }
+
+    public List<BootstrapFactory<Bootstrap>> datagramSocket() {
+        return Arrays.asList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(nioWorkerGroup).channel(NioDatagramChannel.class);
+                    }
+                },
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(oioWorkerGroup).channel(OioDatagramChannel.class)
                                 .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                     }
                 }

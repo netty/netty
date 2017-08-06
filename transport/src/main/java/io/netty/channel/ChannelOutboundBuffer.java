@@ -622,12 +622,12 @@ public final class ChannelOutboundBuffer {
         }
     }
 
-    void close(final ClosedChannelException cause) {
+    void close(final Throwable cause, final boolean allowChannelOpen) {
         if (inFail) {
             channel.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    close(cause);
+                    close(cause, allowChannelOpen);
                 }
             });
             return;
@@ -635,7 +635,7 @@ public final class ChannelOutboundBuffer {
 
         inFail = true;
 
-        if (channel.isOpen()) {
+        if (!allowChannelOpen && channel.isOpen()) {
             throw new IllegalStateException("close() must be invoked after the channel is closed.");
         }
 
@@ -661,6 +661,10 @@ public final class ChannelOutboundBuffer {
             inFail = false;
         }
         clearNioBuffers();
+    }
+
+    void close(ClosedChannelException cause) {
+        close(cause, false);
     }
 
     private static void safeSuccess(ChannelPromise promise) {

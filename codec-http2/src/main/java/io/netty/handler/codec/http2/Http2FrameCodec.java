@@ -127,7 +127,7 @@ public class Http2FrameCodec extends ChannelDuplexHandler {
      * @param server {@code true} this is a server
      */
     public Http2FrameCodec(boolean server, Http2FrameLogger frameLogger) {
-        this(server, new DefaultHttp2FrameWriter(), frameLogger, new Http2Settings());
+        this(server, new DefaultHttp2FrameWriter(), frameLogger, Http2Settings.defaultSettings());
     }
 
     // Visible for testing
