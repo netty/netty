@@ -72,6 +72,8 @@ public final class PlatformDependent {
             "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
 
     private static final boolean IS_WINDOWS = isWindows0();
+    private static final boolean IS_OSX = isOsx0();
+
     private static final boolean MAYBE_SUPER_USER;
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
@@ -205,6 +207,13 @@ public final class PlatformDependent {
      */
     public static boolean isWindows() {
         return IS_WINDOWS;
+    }
+
+    /**
+     * Return {@code true} if the JVM is running on OSX / MacOS
+     */
+    public static boolean isOsx() {
+        return IS_OSX;
     }
 
     /**
@@ -921,6 +930,16 @@ public final class PlatformDependent {
             logger.debug("Platform: Windows");
         }
         return windows;
+    }
+
+    private static boolean isOsx0() {
+        String osname = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US);
+        boolean osx = osname.startsWith("macosx") || osname.startsWith("osx");
+
+        if (osx) {
+            logger.debug("Platform: MacOS");
+        }
+        return osx;
     }
 
     private static boolean maybeSuperUser0() {

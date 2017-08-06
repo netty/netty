@@ -31,7 +31,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -43,13 +42,10 @@ public final class NativeLibraryLoader {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NativeLibraryLoader.class);
 
     private static final String NATIVE_RESOURCE_HOME = "META-INF/native/";
-    private static final String OSNAME;
     private static final File WORKDIR;
     private static final boolean DELETE_NATIVE_LIB_AFTER_LOADING;
 
     static {
-        OSNAME = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "");
-
         String workdir = SystemPropertyUtil.get("io.netty.native.workdir");
         if (workdir != null) {
             File f = new File(workdir);
@@ -64,99 +60,12 @@ public final class NativeLibraryLoader {
             WORKDIR = f;
             logger.debug("-Dio.netty.native.workdir: " + WORKDIR);
         } else {
-            WORKDIR = tmpdir();
+            WORKDIR = PlatformDependent.tmpdir();
             logger.debug("-Dio.netty.native.workdir: " + WORKDIR + " (io.netty.tmpdir)");
         }
 
         DELETE_NATIVE_LIB_AFTER_LOADING = SystemPropertyUtil.getBoolean(
                 "io.netty.native.deleteLibAfterLoading", true);
-    }
-
-    private static File tmpdir() {
-        File f;
-        try {
-            f = toDirectory(SystemPropertyUtil.get("io.netty.tmpdir"));
-            if (f != null) {
-                logger.debug("-Dio.netty.tmpdir: " + f);
-                return f;
-            }
-
-            f = toDirectory(SystemPropertyUtil.get("java.io.tmpdir"));
-            if (f != null) {
-                logger.debug("-Dio.netty.tmpdir: " + f + " (java.io.tmpdir)");
-                return f;
-            }
-
-            // This shouldn't happen, but just in case ..
-            if (isWindows()) {
-                f = toDirectory(System.getenv("TEMP"));
-                if (f != null) {
-                    logger.debug("-Dio.netty.tmpdir: " + f + " (%TEMP%)");
-                    return f;
-                }
-
-                String userprofile = System.getenv("USERPROFILE");
-                if (userprofile != null) {
-                    f = toDirectory(userprofile + "\\AppData\\Local\\Temp");
-                    if (f != null) {
-                        logger.debug("-Dio.netty.tmpdir: " + f + " (%USERPROFILE%\\AppData\\Local\\Temp)");
-                        return f;
-                    }
-
-                    f = toDirectory(userprofile + "\\Local Settings\\Temp");
-                    if (f != null) {
-                        logger.debug("-Dio.netty.tmpdir: " + f + " (%USERPROFILE%\\Local Settings\\Temp)");
-                        return f;
-                    }
-                }
-            } else {
-                f = toDirectory(System.getenv("TMPDIR"));
-                if (f != null) {
-                    logger.debug("-Dio.netty.tmpdir: " + f + " ($TMPDIR)");
-                    return f;
-                }
-            }
-        } catch (Exception ignored) {
-            // Environment variable inaccessible
-        }
-
-        // Last resort.
-        if (isWindows()) {
-            f = new File("C:\\Windows\\Temp");
-        } else {
-            f = new File("/tmp");
-        }
-
-        logger.warn("Failed to get the temporary directory; falling back to: " + f);
-        return f;
-    }
-
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    private static File toDirectory(String path) {
-        if (path == null) {
-            return null;
-        }
-
-        File f = new File(path);
-        f.mkdirs();
-
-        if (!f.isDirectory()) {
-            return null;
-        }
-
-        try {
-            return f.getAbsoluteFile();
-        } catch (Exception ignored) {
-            return f;
-        }
-    }
-
-    private static boolean isWindows() {
-        return OSNAME.startsWith("windows");
-    }
-
-    private static boolean isOSX() {
-        return OSNAME.startsWith("macosx") || OSNAME.startsWith("osx");
     }
 
     /**
@@ -208,7 +117,7 @@ public final class NativeLibraryLoader {
         String path = NATIVE_RESOURCE_HOME + libname;
 
         URL url = loader.getResource(path);
-        if (url == null && isOSX()) {
+        if (url == null && PlatformDependent.isOsx()) {
             if (path.endsWith(".jnilib")) {
                 url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".dynlib");
             } else {
