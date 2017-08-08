@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
+import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.DatagramChannel;
@@ -36,6 +37,7 @@ final class DefaultOioDatagramChannelConfig extends DefaultDatagramChannelConfig
 
     DefaultOioDatagramChannelConfig(DatagramChannel channel, DatagramSocket javaSocket) {
         super(channel, javaSocket);
+        setAllocator(new PreferHeapByteBufAllocator(getAllocator()));
     }
 
     @Override

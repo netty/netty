@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
+import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
@@ -49,6 +50,7 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
 
     DefaultRxtxChannelConfig(RxtxChannel channel) {
         super(channel);
+        setAllocator(new PreferHeapByteBufAllocator(getAllocator()));
     }
 
     @Override
