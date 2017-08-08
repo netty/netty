@@ -211,6 +211,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         ByteBuf data = config.getAllocator().heapBuffer(allocHandle.guess());
         boolean free = true;
         try {
+            // Ensure we null out the address which may have been set before.
+            tmpPacket.setAddress(null);
             tmpPacket.setData(data.array(), data.arrayOffset(), data.capacity());
             socket.receive(tmpPacket);
 
@@ -268,6 +270,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                         // NioDatagramChannel
                         throw new NotYetConnectedException();
                     }
+                    // Ensure we null out the address which may have been set before.
+                    tmpPacket.setAddress(null);
                 }
                 if (data.hasArray()) {
                     tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
