@@ -935,7 +935,6 @@ public final class PlatformDependent {
     private static boolean isOsx0() {
         String osname = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US)
                 .replaceAll("[^a-z0-9]+", "");
-        System.err.println("osname=" + osname);
         boolean osx = osname.startsWith("macosx") || osname.startsWith("osx");
 
         if (osx) {
