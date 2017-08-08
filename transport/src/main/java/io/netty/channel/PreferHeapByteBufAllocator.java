@@ -13,21 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.local;
+package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * Wraps another {@link ByteBufAllocator} and use heapbuffers everywhere except when a direct buffer is explicit
  * requested.
  */
-final class PreferHeapByteBufAllocator implements ByteBufAllocator {
+@UnstableApi
+public final class PreferHeapByteBufAllocator implements ByteBufAllocator {
     private final ByteBufAllocator allocator;
 
-    PreferHeapByteBufAllocator(ByteBufAllocator allocator) {
-        this.allocator = allocator;
+    public PreferHeapByteBufAllocator(ByteBufAllocator allocator) {
+        this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
     }
 
     @Override
