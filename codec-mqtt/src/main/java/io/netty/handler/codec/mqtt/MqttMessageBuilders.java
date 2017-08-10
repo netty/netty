@@ -125,7 +125,7 @@ public final class MqttMessageBuilders {
          */
         @Deprecated
         public ConnectBuilder willMessage(String willMessage) {
-            willMessage(willMessage.getBytes(CharsetUtil.UTF_8));
+            willMessage(willMessage == null ? null : willMessage.getBytes(CharsetUtil.UTF_8));
             return this;
         }
 
@@ -160,7 +160,7 @@ public final class MqttMessageBuilders {
          */
         @Deprecated
         public ConnectBuilder password(String password) {
-            password(password.getBytes(CharsetUtil.UTF_8));
+            password(password == null ? null : password.getBytes(CharsetUtil.UTF_8));
             return this;
         }
 
