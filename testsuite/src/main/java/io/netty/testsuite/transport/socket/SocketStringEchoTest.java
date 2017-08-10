@@ -27,13 +27,13 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.junit.Assert.*;
 
 public class SocketStringEchoTest extends AbstractSocketTest {
 
@@ -74,8 +74,10 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
-        final StringEchoHandler sh = new StringEchoHandler(autoRead);
-        final StringEchoHandler ch = new StringEchoHandler(autoRead);
+        Promise<Void> serverDonePromise = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Void> clientDonePromise = ImmediateEventExecutor.INSTANCE.newPromise();
+        final StringEchoHandler sh = new StringEchoHandler(autoRead, serverDonePromise);
+        final StringEchoHandler ch = new StringEchoHandler(autoRead, clientDonePromise);
 
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -104,35 +106,8 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             cc.writeAndFlush(element + delimiter);
         }
 
-        while (ch.counter < data.length) {
-            if (sh.exception.get() != null) {
-                break;
-            }
-            if (ch.exception.get() != null) {
-                break;
-            }
-
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
-        }
-
-        while (sh.counter < data.length) {
-            if (sh.exception.get() != null) {
-                break;
-            }
-            if (ch.exception.get() != null) {
-                break;
-            }
-
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
-        }
+        ch.donePromise.sync();
+        sh.donePromise.sync();
         sh.channel.close().sync();
         ch.channel.close().sync();
         sc.close().sync();
@@ -153,12 +128,14 @@ public class SocketStringEchoTest extends AbstractSocketTest {
 
     static class StringEchoHandler extends SimpleChannelInboundHandler<String> {
         private final boolean autoRead;
+        private final Promise<Void> donePromise;
+        private int dataIndex;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
-        volatile int counter;
 
-        StringEchoHandler(boolean autoRead) {
+        StringEchoHandler(boolean autoRead, Promise<Void> donePromise) {
             this.autoRead = autoRead;
+            this.donePromise = donePromise;
         }
 
         @Override
@@ -171,14 +148,20 @@ public class SocketStringEchoTest extends AbstractSocketTest {
 
         @Override
         public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
-            assertEquals(data[counter], msg);
+            if (!data[dataIndex].equals(msg)) {
+                donePromise.tryFailure(new IllegalStateException("index: " + dataIndex + " didn't match!"));
+                ctx.close();
+                return;
+            }
 
             if (channel.parent() != null) {
                 String delimiter = random.nextBoolean() ? "\r\n" : "\n";
                 channel.write(msg + delimiter);
             }
 
-            counter ++;
+            if (++dataIndex >= data.length) {
+                donePromise.setSuccess(null);
+            }
         }
 
         @Override
@@ -195,8 +178,14 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
+                donePromise.tryFailure(new IllegalStateException("exceptionCaught: " + ctx.channel(), cause));
                 ctx.close();
             }
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            donePromise.tryFailure(new IllegalStateException("channelInactive: " + ctx.channel()));
         }
     }
 }
