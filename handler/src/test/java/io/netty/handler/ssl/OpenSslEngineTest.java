@@ -34,6 +34,7 @@ import java.security.AlgorithmParameters;
 import java.security.CryptoPrimitive;
 import java.security.Key;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -63,6 +64,34 @@ import static org.junit.Assume.assumeTrue;
 public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
+
+    private final List<String> CIPHERS_INPUT = Arrays.asList(
+            "ECDHE-ECDSA-CHACHA20-POLY1305",
+            "ECDHE-RSA-CHACHA20-POLY1305",
+            "ECDHE-ECDSA-AES128-GCM-SHA256",
+            "ECDHE-RSA-AES128-GCM-SHA256",
+            "ECDHE-ECDSA-AES256-GCM-SHA384",
+            "ECDHE-RSA-AES256-GCM-SHA384",
+            "DHE-RSA-AES128-GCM-SHA256",
+            "DHE-RSA-AES256-GCM-SHA384",
+            "ECDHE-ECDSA-AES128-SHA256",
+            "ECDHE-RSA-AES128-SHA256",
+            "ECDHE-ECDSA-AES128-SHA",
+            "ECDHE-RSA-AES256-SHA384",
+            "ECDHE-RSA-AES128-SHA",
+            "ECDHE-ECDSA-AES256-SHA384",
+            "ECDHE-ECDSA-AES256-SHA",
+            "ECDHE-RSA-AES256-SHA",
+            "DHE-RSA-AES128-SHA256",
+            "DHE-RSA-AES128-SHA",
+            "DHE-RSA-AES256-SHA256",
+            "DHE-RSA-AES256-SHA",
+            "AES128-GCM-SHA256",
+            "AES256-GCM-SHA384",
+            "AES128-SHA256",
+            "AES256-SHA256",
+            "AES128-SHA",
+            "AES256-SHA");
 
     @Parameterized.Parameters(name = "{index}: bufferType = {0}")
     public static Collection<Object> data() {
@@ -991,5 +1020,43 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 SelectorFailureBehavior.NO_ADVERTISE,
                 SelectedListenerFailureBehavior.ACCEPT,
                 supportedProtocols);
+    }
+
+    @Test
+    public void testOpenSslCiphers() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SslContext ctx = null;
+        try {
+            ctx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+                    .sslProvider(SslProvider.OPENSSL)
+                    .ciphers(CIPHERS_INPUT, new NoDefaultsCipherSuiteFilter())
+                    .build();
+
+            // This will fail with "SSLException: failed to set cipher suite: []"
+        } finally {
+            if (ctx != null) {
+                cleanupServerSslContext(ctx);
+            }
+            cert.delete();
+        }
+    }
+
+    /**
+     * A {@link CipherSuiteFilter} that ignores the defaults and only uses things
+     * that are defined in the supported working set.
+     */
+    private static final class NoDefaultsCipherSuiteFilter implements CipherSuiteFilter {
+        @Override
+        public String[] filterCipherSuites(
+                Iterable<String> ciphers, List<String> defaultCiphers, Set<String> supportedCiphers) {
+            List<String> dst = new ArrayList<String>();
+            for (String value : ciphers) {
+                if (value != null && supportedCiphers.contains(value)) {
+                    dst.add(value);
+                }
+            }
+
+            return dst.toArray(new String[dst.size()]);
+        }
     }
 }
