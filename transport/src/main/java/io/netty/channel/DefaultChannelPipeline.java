@@ -23,6 +23,7 @@ import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -1175,6 +1176,22 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                             "Please check your pipeline configuration.", msg);
         } finally {
             ReferenceCountUtil.release(msg);
+        }
+    }
+
+    @UnstableApi
+    protected void incrementPendingOutboundBytes(long size) {
+        ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
+        if (buffer != null) {
+            buffer.incrementPendingOutboundBytes(size);
+        }
+    }
+
+    @UnstableApi
+    protected void decrementPendingOutboundBytes(long size) {
+        ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
+        if (buffer != null) {
+            buffer.decrementPendingOutboundBytes(size);
         }
     }
 

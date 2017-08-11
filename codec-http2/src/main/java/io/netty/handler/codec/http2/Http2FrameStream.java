@@ -13,28 +13,44 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.codec.http2;
 
+import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * HTTP/2 HEADERS frame.
+ * A single stream within a HTTP/2 connection. To be used with the {@link Http2FrameCodec}.
  */
 @UnstableApi
-public interface Http2HeadersFrame extends Http2StreamFrame {
+public interface Http2FrameStream {
 
     /**
-     * A complete header list. CONTINUATION frames are automatically handled.
+     * The stream with identifier 0, representing the HTTP/2 connection.
      */
-    Http2Headers headers();
+    Http2FrameStream CONNECTION_STREAM = new Http2FrameStream() {
+
+        @Override
+        public int id() {
+            return 0;
+        }
+
+        @Override
+        public State state() {
+            return State.IDLE;
+        }
+    };
 
     /**
-     * Frame padding to use. Must be non-negative and less than 256.
+     * Returns the stream identifier.
+     *
+     * <p>Use {@link Http2CodecUtil#isStreamIdValid(int)} to check if the stream has already been assigned an
+     * identifier.
      */
-    int padding();
+    int id();
 
     /**
-     * Returns {@code true} if the END_STREAM flag ist set.
+     * Returns the state of this stream.
      */
-    boolean isEndStream();
+    State state();
 }

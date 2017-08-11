@@ -13,28 +13,26 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.codec.http2;
 
 import io.netty.util.internal.UnstableApi;
 
 /**
- * HTTP/2 HEADERS frame.
+ * A visitor that allows to iterate over a collection of {@link Http2FrameStream}s.
  */
 @UnstableApi
-public interface Http2HeadersFrame extends Http2StreamFrame {
+public interface Http2FrameStreamVisitor {
 
     /**
-     * A complete header list. CONTINUATION frames are automatically handled.
+     * This method is called once for each stream of the collection.
+     *
+     * <p>If an {@link Exception} is thrown, the loop is stopped.
+     *
+     * @return <ul>
+     *         <li>{@code true} if the visitor wants to continue the loop and handle the stream.</li>
+     *         <li>{@code false} if the visitor wants to stop handling the stream and abort the loop.</li>
+     *         </ul>
      */
-    Http2Headers headers();
-
-    /**
-     * Frame padding to use. Must be non-negative and less than 256.
-     */
-    int padding();
-
-    /**
-     * Returns {@code true} if the END_STREAM flag ist set.
-     */
-    boolean isEndStream();
+    boolean visit(Http2FrameStream stream);
 }
