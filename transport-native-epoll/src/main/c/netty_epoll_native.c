@@ -604,7 +604,7 @@ jint JNI_OnLoad_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
         fprintf(stderr, "FATAL: transport-native-epoll JNI call to dladdr failed!\n");
         return JNI_ERR;
     }
-    packagePrefix = netty_unix_util_parse_package_prefix(dlinfo.dli_fname, "netty-transport-native-epoll", &status);
+    packagePrefix = netty_unix_util_parse_package_prefix(dlinfo.dli_fname, "netty_transport_native_epoll", &status);
     if (status == JNI_ERR) {
         fprintf(stderr, "FATAL: transport-native-epoll JNI encountered unexpected dlinfo.dli_fname: %s\n", dlinfo.dli_fname);
         return JNI_ERR;

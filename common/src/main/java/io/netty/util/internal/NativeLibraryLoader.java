@@ -111,7 +111,7 @@ public final class NativeLibraryLoader {
      */
     public static void load(String originalName, ClassLoader loader) {
         // Adjust expected name to support shading of native libraries.
-        String name = calculatePackagePrefix().replace('.', '-') + originalName;
+        String name = calculatePackagePrefix().replace('.', '_') + originalName;
 
         String libname = System.mapLibraryName(name);
         String path = NATIVE_RESOURCE_HOME + libname;

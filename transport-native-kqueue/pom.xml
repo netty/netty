@@ -70,6 +70,7 @@
               <execution>
                 <id>build-native-lib</id>
                 <configuration>
+                  <name>netty_transport_native_kqueue</name>
                   <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
@@ -109,7 +110,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty-transport-native-kqueue.jnilib; osname=darwin, processor=x86_64"</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue.jnilib; osname=darwin, processor=x86_64"</Bundle-NativeCode>
                     </manifestEntries>
                     <index>true</index>
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
@@ -178,6 +179,7 @@
               <execution>
                 <id>build-native-lib</id>
                 <configuration>
+                  <name>netty_transport_native_kqueue</name>
                   <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
@@ -215,7 +217,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty-transport-native-kqueue.jnilib; osname=darwin, processor=x86_64"</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue.jnilib; osname=darwin, processor=x86_64"</Bundle-NativeCode>
                     </manifestEntries>
                     <index>true</index>
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
@@ -284,6 +286,7 @@
               <execution>
                 <id>build-native-lib</id>
                 <configuration>
+                  <name>netty_transport_native_kqueue</name>
                   <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
@@ -321,7 +324,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty-transport-native-kqueue.jnilib; osname=darwin, processor=x86_64"</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue.jnilib; osname=darwin, processor=x86_64"</Bundle-NativeCode>
                     </manifestEntries>
                     <index>true</index>
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
