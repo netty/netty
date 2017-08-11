@@ -90,6 +90,25 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
     }
 
+    Http2ConnectionHandler(boolean server, Http2FrameWriter frameWriter, Http2FrameLogger frameLogger,
+                    Http2Settings initialSettings) {
+        this.initialSettings = checkNotNull(initialSettings, "initialSettings");
+
+        Http2Connection connection = new DefaultHttp2Connection(server);
+
+        Long maxHeaderListSize = initialSettings.maxHeaderListSize();
+        Http2FrameReader frameReader = new DefaultHttp2FrameReader(maxHeaderListSize == null ?
+                new DefaultHttp2HeadersDecoder(true) :
+                new DefaultHttp2HeadersDecoder(true, maxHeaderListSize));
+
+        if (frameLogger != null) {
+            frameWriter = new Http2OutboundFrameLogger(frameWriter, frameLogger);
+            frameReader = new Http2InboundFrameLogger(frameReader, frameLogger);
+        }
+        encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
+        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
+    }
+
     /**
      * Get the amount of time (in milliseconds) this endpoint will wait for all streams to be closed before closing
      * the connection during the graceful shutdown process. Returns -1 if this connection is configured to wait
@@ -165,7 +184,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Http2Exception {
+    public void flush(ChannelHandlerContext ctx) {
         try {
             // Trigger pending writes in the remote flow controller.
             encoder.flowController().writePendingBytes();
@@ -484,11 +503,15 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // Trigger flush after read on the assumption that flush is cheap if there is nothing to write and that
         // for flow-control the read may release window that causes data to be written that can now be flushed.
         try {
-            // First call channelReadComplete(...) as this may produce more data that we want to flush
-            super.channelReadComplete(ctx);
+            // First call channelReadComplete0(...) as this may produce more data that we want to flush
+            channelReadComplete0(ctx);
         } finally {
             flush(ctx);
         }
+    }
+
+    void channelReadComplete0(ChannelHandlerContext ctx) throws Exception {
+        super.channelReadComplete(ctx);
     }
 
     /**

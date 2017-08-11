@@ -19,10 +19,10 @@ package io.netty.handler.codec.http2;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * A visitor that allows to iterate over a collection of {@link Http2Stream2}s.
+ * A visitor that allows to iterate over a collection of {@link Http2FrameStream}s.
  */
 @UnstableApi
-public interface Http2Stream2Visitor {
+public interface Http2FrameStreamVisitor {
 
     /**
      * This method is called once for each stream of the collection.
@@ -34,5 +34,5 @@ public interface Http2Stream2Visitor {
      *         <li>{@code false} if the visitor wants to stop handling the stream and abort the loop.</li>
      *         </ul>
      */
-    boolean visit(Http2Stream2 stream);
+    boolean visit(Http2FrameStream stream);
 }
