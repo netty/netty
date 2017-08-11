@@ -188,11 +188,8 @@ public final class Native {
         if (!name.startsWith("linux")) {
             throw new IllegalStateException("Only supported on Linux");
         }
-        String []libraryNames = new String[] {
-          "netty-transport-native-epoll",
-          "netty_transport_native_epoll"
-        };
-        NativeLibraryLoader.loadFirstAvailable(PlatformDependent.getClassLoader(Native.class), libraryNames);
+        NativeLibraryLoader.loadFirstAvailable(PlatformDependent.getClassLoader(Native.class),
+                "netty_transport_native_epoll");
     }
 
     private Native() {
