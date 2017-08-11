@@ -18,7 +18,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
-import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -53,17 +53,17 @@ public class DefaultHttp2PingFrame extends DefaultByteBufHolder implements Http2
 
     @Override
     public DefaultHttp2PingFrame copy() {
-        return new DefaultHttp2PingFrame(content().copy(), ack);
+        return replace(content().copy());
     }
 
     @Override
     public DefaultHttp2PingFrame duplicate() {
-        return (DefaultHttp2PingFrame) super.duplicate();
+        return replace(content().duplicate());
     }
 
     @Override
     public DefaultHttp2PingFrame retainedDuplicate() {
-        return (DefaultHttp2PingFrame) super.retainedDuplicate();
+        return replace(content().retainedDuplicate());
     }
 
     @Override
@@ -112,7 +112,6 @@ public class DefaultHttp2PingFrame extends DefaultByteBufHolder implements Http2
     }
 
     private static ByteBuf mustBeEightBytes(ByteBuf content) {
-        ObjectUtil.checkNotNull(content, "content must not be null.");
         if (content.readableBytes() != 8) {
             throw new IllegalArgumentException("PING frames require 8 bytes of content. Was " +
                                                content.readableBytes() + " bytes.");
@@ -122,6 +121,6 @@ public class DefaultHttp2PingFrame extends DefaultByteBufHolder implements Http2
 
     @Override
     public String toString() {
-        return "DefaultHttp2PingFrame(content=" + contentToString() + ", ack=" + ack + ')';
+        return StringUtil.simpleClassName(this) + "(content=" + contentToString() + ", ack=" + ack + ')';
     }
 }

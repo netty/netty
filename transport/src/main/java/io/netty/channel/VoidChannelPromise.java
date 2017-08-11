@@ -18,10 +18,12 @@ package io.netty.channel;
 import io.netty.util.concurrent.AbstractFuture;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.concurrent.TimeUnit;
 
-final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPromise {
+@UnstableApi
+public final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPromise {
 
     private final Channel channel;
     private final boolean fireException;
@@ -31,7 +33,7 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
      *
      * @param channel the {@link Channel} associated with this future
      */
-    VoidChannelPromise(Channel channel, boolean fireException) {
+    public VoidChannelPromise(Channel channel, boolean fireException) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }

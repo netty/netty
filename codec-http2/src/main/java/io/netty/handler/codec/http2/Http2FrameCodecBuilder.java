@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,38 +16,21 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2ChannelClosedException;
-import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
 import io.netty.util.internal.UnstableApi;
 
-import java.util.concurrent.TimeUnit;
-
-import static io.netty.handler.codec.http2.DefaultHttp2LocalFlowController.DEFAULT_WINDOW_UPDATE_RATIO;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Builder for the {@link Http2FrameCodec}.
  */
 @UnstableApi
-public final class Http2FrameCodecBuilder {
+public class Http2FrameCodecBuilder extends
+        AbstractHttp2ConnectionHandlerBuilder<Http2FrameCodec, Http2FrameCodecBuilder> {
 
-    private final boolean server;
     private Http2FrameWriter frameWriter;
-    private Http2FrameReader frameReader;
-    private Http2Settings initialSettings;
-    private long gracefulShutdownTimeoutMillis;
-    private float windowUpdateRatio;
-    private Http2FrameLogger frameLogger;
-    private boolean bufferOutboundStreams;
 
-    private Http2FrameCodecBuilder(boolean server) {
-        this.server = server;
-        frameWriter = new DefaultHttp2FrameWriter();
-        frameReader = new DefaultHttp2FrameReader();
-        initialSettings = new Http2Settings();
-        gracefulShutdownTimeoutMillis = Http2CodecUtil.DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
-        windowUpdateRatio = DEFAULT_WINDOW_UPDATE_RATIO;
+    Http2FrameCodecBuilder(boolean server) {
+        server(server);
     }
 
     /**
@@ -64,111 +47,131 @@ public final class Http2FrameCodecBuilder {
         return new Http2FrameCodecBuilder(true);
     }
 
-    /**
-     * Specify the {@link Http2FrameWriter} to use.
-     *
-     * <p>If not set, the {@link DefaultHttp2FrameWriter} is used.
-     */
-    public Http2FrameCodecBuilder frameWriter(Http2FrameWriter frameWriter) {
+    // For testing only.
+    Http2FrameCodecBuilder frameWriter(Http2FrameWriter frameWriter) {
         this.frameWriter = checkNotNull(frameWriter, "frameWriter");
         return this;
     }
 
-    /**
-     * Specify the {@link Http2FrameWriter} to use.
-     *
-     * <p>If not set, the {@link DefaultHttp2FrameReader} is used.
-     */
-    public Http2FrameCodecBuilder frameReader(Http2FrameReader frameReader) {
-        this.frameReader = checkNotNull(frameReader, "frameReader");
-        return this;
+    @Override
+    public Http2Settings initialSettings() {
+        return super.initialSettings();
     }
 
-    /**
-     * Specify the initial {@link Http2Settings} to send to the remote endpoint.
-     *
-     * <p>If not set, the default values of {@link Http2Settings} are used.
-     */
-    public Http2FrameCodecBuilder initialSettings(Http2Settings initialSettings) {
-        this.initialSettings = checkNotNull(initialSettings, "initialSettings");
-        return this;
+    @Override
+    public Http2FrameCodecBuilder initialSettings(Http2Settings settings) {
+        return super.initialSettings(settings);
     }
 
-    /**
-     * The amount of time to wait for all active streams to be closed, before the connection is closed.
-     *
-     * <p>The default value is {@link Http2CodecUtil#DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
-     */
-    public Http2FrameCodecBuilder gracefulShutdownTimeout(long timeout, TimeUnit unit) {
-        gracefulShutdownTimeoutMillis =
-                checkNotNull(unit, "unit").toMillis(checkPositiveOrZero(timeout, "timeout"));
-        return this;
+    @Override
+    public long gracefulShutdownTimeoutMillis() {
+        return super.gracefulShutdownTimeoutMillis();
     }
 
-    /**
-     * Specify the HTTP/2 flow control window update ratio for both the connection and stream window.
-     */
-    public Http2FrameCodecBuilder windowUpdateRatio(float windowUpdateRatio) {
-        if (Float.compare(windowUpdateRatio, 0) < 1 || Float.compare(windowUpdateRatio, 1) > -1) {
-            throw new IllegalArgumentException("windowUpdateRatio must be (0,1). Was: " + windowUpdateRatio);
-        }
-        this.windowUpdateRatio = windowUpdateRatio;
-        return this;
+    @Override
+    public Http2FrameCodecBuilder gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
+        return super.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
     }
 
-    /**
-     * Specify the {@link Http2FrameLogger} to use.
-     *
-     * <p>By default no frame logger is used.
-     */
+    @Override
+    public boolean isServer() {
+        return super.isServer();
+    }
+
+    @Override
+    public int maxReservedStreams() {
+        return super.maxReservedStreams();
+    }
+
+    @Override
+    public Http2FrameCodecBuilder maxReservedStreams(int maxReservedStreams) {
+        return super.maxReservedStreams(maxReservedStreams);
+    }
+
+    @Override
+    public boolean isValidateHeaders() {
+        return super.isValidateHeaders();
+    }
+
+    @Override
+    public Http2FrameCodecBuilder validateHeaders(boolean validateHeaders) {
+        return super.validateHeaders(validateHeaders);
+    }
+
+    @Override
+    public Http2FrameLogger frameLogger() {
+        return super.frameLogger();
+    }
+
+    @Override
     public Http2FrameCodecBuilder frameLogger(Http2FrameLogger frameLogger) {
-        this.frameLogger = checkNotNull(frameLogger, "frameLogger");
-        return this;
+        return super.frameLogger(frameLogger);
     }
 
-    /**
-     * Whether to buffer new outbound HTTP/2 streams when the {@code MAX_CONCURRENT_STREAMS} limit is reached.
-     *
-     * <p>When this limit is hit, instead of rejecting any new streams, newly created streams and their corresponding
-     * frames are buffered. Once an active stream gets closed or the maximum number of concurrent streams is increased,
-     * the codec will automatically try to empty its buffer and create as many new streams as possible.
-     *
-     * <p>If a {@code GOAWAY} frame is received from the remote endpoint, all buffered writes for streams with an ID
-     * less than the specified {@code lastStreamId} will immediately fail with a {@link Http2GoAwayException}.
-     *
-     * <p>If the channel gets closed, all new and buffered writes will immediately fail with a
-     * {@link Http2ChannelClosedException}.
-     *
-     * <p>This implementation makes the buffering mostly transparent and does not enforce an upper bound as to how many
-     * streams/frames can be buffered.
-     */
-    public Http2FrameCodecBuilder bufferOutboundStreams(boolean bufferOutboundStreams) {
-        this.bufferOutboundStreams = bufferOutboundStreams;
-        return this;
+    @Override
+    public boolean encoderEnforceMaxConcurrentStreams() {
+        return super.encoderEnforceMaxConcurrentStreams();
+    }
+
+    @Override
+    public Http2FrameCodecBuilder encoderEnforceMaxConcurrentStreams(boolean encoderEnforceMaxConcurrentStreams) {
+        return super.encoderEnforceMaxConcurrentStreams(encoderEnforceMaxConcurrentStreams);
+    }
+
+    @Override
+    public Http2HeadersEncoder.SensitivityDetector headerSensitivityDetector() {
+        return super.headerSensitivityDetector();
+    }
+
+    @Override
+    public Http2FrameCodecBuilder headerSensitivityDetector(
+            Http2HeadersEncoder.SensitivityDetector headerSensitivityDetector) {
+        return super.headerSensitivityDetector(headerSensitivityDetector);
+    }
+
+    @Override
+    public Http2FrameCodecBuilder encoderIgnoreMaxHeaderListSize(boolean ignoreMaxHeaderListSize) {
+        return super.encoderIgnoreMaxHeaderListSize(ignoreMaxHeaderListSize);
+    }
+
+    @Override
+    public Http2FrameCodecBuilder initialHuffmanDecodeCapacity(int initialHuffmanDecodeCapacity) {
+        return super.initialHuffmanDecodeCapacity(initialHuffmanDecodeCapacity);
     }
 
     /**
      * Build a {@link Http2FrameCodec} object.
      */
+    @Override
     public Http2FrameCodec build() {
-        Http2Connection connection = new DefaultHttp2Connection(server);
+        Http2FrameWriter frameWriter = this.frameWriter;
+        if (frameWriter != null) {
+            // This is to support our tests and will never be executed by the user as frameWriter(...)
+            // is package-private.
+            DefaultHttp2Connection connection = new DefaultHttp2Connection(isServer(), maxReservedStreams());
+            Long maxHeaderListSize = initialSettings().maxHeaderListSize();
+            Http2FrameReader frameReader = new DefaultHttp2FrameReader(maxHeaderListSize == null ?
+                    new DefaultHttp2HeadersDecoder(true) :
+                    new DefaultHttp2HeadersDecoder(true, maxHeaderListSize));
 
-        if (frameLogger != null) {
-            frameWriter = new Http2OutboundFrameLogger(frameWriter, frameLogger);
-            frameReader = new Http2InboundFrameLogger(frameReader, frameLogger);
+            if (frameLogger() != null) {
+                frameWriter = new Http2OutboundFrameLogger(frameWriter, frameLogger());
+                frameReader = new Http2InboundFrameLogger(frameReader, frameLogger());
+            }
+            Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
+            if (encoderEnforceMaxConcurrentStreams()) {
+                encoder = new StreamBufferingEncoder(encoder);
+            }
+            Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
+
+            return build(decoder, encoder, initialSettings());
         }
+        return super.build();
+    }
 
-        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
-
-        if (bufferOutboundStreams) {
-            encoder = new StreamBufferingEncoder(encoder);
-        }
-
-        connection.local().flowController(new DefaultHttp2LocalFlowController(connection, windowUpdateRatio,
-                                                                              true /* auto refill conn window */));
-
-        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
-
-        return new Http2FrameCodec(encoder, decoder, initialSettings, gracefulShutdownTimeoutMillis);
+    @Override
+    protected Http2FrameCodec build(
+            Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings) {
+        return new Http2FrameCodec(encoder, decoder, initialSettings);
     }
 }

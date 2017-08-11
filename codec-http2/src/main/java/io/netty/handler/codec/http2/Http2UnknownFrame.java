@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,25 +15,45 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.util.internal.UnstableApi;
 
-/**
- * A frame whose meaning <em>may</em> apply to a particular stream, instead of the entire connection. It is still
- * possible for this frame type to apply to the entire connection. In such cases, the {@link #stream()} must return
- * {@link Http2FrameStream#CONNECTION_STREAM}. If the frame applies to a stream, the {@link Http2FrameStream#id()} must
- * be greater than zero.
- */
 @UnstableApi
-public interface Http2StreamFrame extends Http2Frame {
+public interface Http2UnknownFrame extends Http2Frame, ByteBufHolder {
+
+    Http2FrameStream stream();
 
     /**
      * Set the {@link Http2FrameStream} object for this frame.
      */
-    Http2StreamFrame stream(Http2FrameStream stream);
+    Http2UnknownFrame stream(Http2FrameStream stream);
 
-    /**
-     * Returns the {@link Http2FrameStream} object for this frame, or {@code null} if the frame has yet to be associated
-     * with a stream.
-     */
-    Http2FrameStream stream();
+    byte frameType();
+
+    Http2Flags flags();
+
+    @Override
+    Http2UnknownFrame copy();
+
+    @Override
+    Http2UnknownFrame duplicate();
+
+    @Override
+    Http2UnknownFrame retainedDuplicate();
+
+    @Override
+    Http2UnknownFrame replace(ByteBuf content);
+
+    @Override
+    Http2UnknownFrame retain();
+
+    @Override
+    Http2UnknownFrame retain(int increment);
+
+    @Override
+    Http2UnknownFrame touch();
+
+    @Override
+    Http2UnknownFrame touch(Object hint);
 }

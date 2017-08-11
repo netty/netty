@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,27 +16,18 @@
 
 package io.netty.handler.codec.http2;
 
-/**
- * A HTTP/2 exception for a specific {@link Http2Stream2}.
- */
-public class Http2Stream2Exception extends Exception {
+import io.netty.channel.Channel;
+import io.netty.util.internal.UnstableApi;
 
-    private static final long serialVersionUID = -4407186173493887044L;
+// TODO: Should we have an extra method to "open" the stream and so Channel and take care of sending the
+//       Http2HeadersFrame under the hood ?
+// TODO: Should we extend SocketChannel and map input and output state to the stream state ?
+//
+@UnstableApi
+public interface Http2StreamChannel extends Channel {
 
-    private final Http2Error error;
-    private final Http2Stream2 stream;
-
-    public <T> Http2Stream2Exception(Http2Stream2 stream, Http2Error error, Throwable cause) {
-        super(cause.getMessage(), cause);
-        this.stream = stream;
-        this.error = error;
-    }
-
-    public Http2Error error() {
-        return error;
-    }
-
-    public Http2Stream2 stream() {
-        return stream;
-    }
+    /**
+     * Returns the {@link Http2FrameStream} that belongs to this channel.
+     */
+    Http2FrameStream stream();
 }

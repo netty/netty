@@ -184,8 +184,8 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     }
 
     @Test
-    public void usedHttp2Codec() throws Exception {
-        final Http2Codec http2Codec = new Http2CodecBuilder(true, new ChannelInitializer<Channel>() {
+    public void usedHttp2MultiplexCodec() throws Exception {
+        final Http2MultiplexCodec http2Codec = new Http2MultiplexCodecBuilder(true, new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
             }
@@ -196,7 +196,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
                 return new Http2ServerUpgradeCodec(http2Codec);
             }
         };
-        http2ConnectionHandler = http2Codec.frameCodec().connectionHandler();
+        http2ConnectionHandler = http2Codec;
 
         userEvents = new ArrayList<Object>();
 

@@ -19,38 +19,59 @@ package io.netty.handler.codec.http2;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * A {@link ChannelDuplexHandler} providing additional functionality for HTTP/2. Specifically it allows to:
  * <ul>
  *     <li>Create new outbound streams using {@link #newStream()}.</li>
- *     <li>Iterate over all active streams using {@link #forEachActiveStream(Http2Stream2Visitor)}.</li>
+ *     <li>Iterate over all active streams using {@link #forEachActiveStream(Http2FrameStreamVisitor)}.</li>
  * </ul>
  *
  * <p>The {@link Http2FrameCodec} is required to be part of the {@link ChannelPipeline} before this handler is added,
  * or else an {@link IllegalStateException} will be thrown.
  */
-public class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
+@UnstableApi
+public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
 
-    private Http2FrameCodec frameCodec;
+    private volatile Http2FrameCodec frameCodec;
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public final void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         frameCodec = requireHttp2FrameCodec(ctx);
+        handlerAdded0(ctx);
+    }
+
+    protected void handlerAdded0(@SuppressWarnings("unused") ChannelHandlerContext ctx) throws Exception {
+        // NOOP
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        frameCodec = null;
+    public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        try {
+            handlerRemoved0(ctx);
+        } finally {
+            frameCodec = null;
+        }
+    }
+
+    protected void handlerRemoved0(@SuppressWarnings("unused") ChannelHandlerContext ctx) throws Exception {
+        // NOOP
     }
 
     /**
-     * Creates a new {@link Http2Stream2} object.
+     * Creates a new {@link Http2FrameStream} object.
      *
      * <p>This method is <em>thread-safe</em>.
      */
-    public final Http2Stream2 newStream() {
-        return newStream0();
+    public final Http2FrameStream newStream() {
+        Http2FrameCodec codec = frameCodec;
+        if (codec == null) {
+            throw new IllegalStateException(StringUtil.simpleClassName(Http2FrameCodec.class) + " not found." +
+                    " Has the handler been added to a pipeline?");
+        }
+        return codec.newStream();
     }
 
     /**
@@ -58,21 +79,8 @@ public class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
      *
      * <p>This method may only be called from the eventloop thread.
      */
-    protected final void forEachActiveStream(Http2Stream2Visitor streamVisitor) throws Http2Exception {
-        forEachActiveStream0(streamVisitor);
-    }
-
-    // So that it can be overwritten by tests, without being visible to the public.
-    void forEachActiveStream0(Http2Stream2Visitor streamVisitor) throws Http2Exception {
+    protected final void forEachActiveStream(Http2FrameStreamVisitor streamVisitor) throws Http2Exception {
         frameCodec.forEachActiveStream(streamVisitor);
-    }
-
-    // So that it can be overwritten by tests, without being visible to the public.
-    Http2Stream2 newStream0() {
-        if (frameCodec == null) {
-            throw new IllegalStateException("Frame codec not found. Has the handler been added to a pipeline?");
-        }
-        return frameCodec.newStream();
     }
 
     private static Http2FrameCodec requireHttp2FrameCodec(ChannelHandlerContext ctx) {
