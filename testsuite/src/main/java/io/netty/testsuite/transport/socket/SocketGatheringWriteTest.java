@@ -47,7 +47,7 @@ import static org.junit.Assert.assertTrue;
 public class SocketGatheringWriteTest extends AbstractSocketTest {
 
     @Rule
-    public final Timeout globalTimeout = new Timeout(60000);
+    public final Timeout globalTimeout = new Timeout(120000);
 
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
@@ -141,7 +141,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         ChannelFuture cf = cc.writeAndFlush(Unpooled.EMPTY_BUFFER);
         assertNotEquals(cc.voidPromise(), cf);
         try {
-            assertTrue(cf.await(30000));
+            assertTrue(cf.await(60000));
             cf.sync();
         } catch (Throwable t) {
             // TODO: Remove this once we fix this test.
