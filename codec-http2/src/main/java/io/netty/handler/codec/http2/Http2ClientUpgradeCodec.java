@@ -53,7 +53,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     }
 
     public Http2ClientUpgradeCodec(String handlerName, Http2FrameCodec frameCodec, ChannelHandler upgradeToHandler) {
-        this(handlerName, frameCodec.connectionHandler(), upgradeToHandler);
+        this(handlerName, (Http2ConnectionHandler) frameCodec, upgradeToHandler);
     }
 
     /**
