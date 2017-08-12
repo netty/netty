@@ -30,19 +30,19 @@ public final class SpdyHttpHeaders {
         /**
          * {@code "x-spdy-stream-id"}
          */
-        public static final AsciiString STREAM_ID = new AsciiString("x-spdy-stream-id");
+        public static final AsciiString STREAM_ID = AsciiString.cached("x-spdy-stream-id");
         /**
          * {@code "x-spdy-associated-to-stream-id"}
          */
-        public static final AsciiString ASSOCIATED_TO_STREAM_ID = new AsciiString("x-spdy-associated-to-stream-id");
+        public static final AsciiString ASSOCIATED_TO_STREAM_ID = AsciiString.cached("x-spdy-associated-to-stream-id");
         /**
          * {@code "x-spdy-priority"}
          */
-        public static final AsciiString PRIORITY = new AsciiString("x-spdy-priority");
+        public static final AsciiString PRIORITY = AsciiString.cached("x-spdy-priority");
         /**
          * {@code "x-spdy-scheme"}
          */
-        public static final AsciiString SCHEME = new AsciiString("x-spdy-scheme");
+        public static final AsciiString SCHEME = AsciiString.cached("x-spdy-scheme");
 
         private Names() { }
     }

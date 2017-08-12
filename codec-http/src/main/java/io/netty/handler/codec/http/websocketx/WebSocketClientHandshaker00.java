@@ -43,7 +43,7 @@ import java.nio.ByteBuffer;
  */
 public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
-    private static final AsciiString WEBSOCKET = new AsciiString("WebSocket");
+    private static final AsciiString WEBSOCKET = AsciiString.cached("WebSocket");
 
     private ByteBuf expectedChallengeResponseBytes;
 

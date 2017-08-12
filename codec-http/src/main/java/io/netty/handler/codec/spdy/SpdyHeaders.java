@@ -35,27 +35,27 @@ public interface SpdyHeaders extends Headers<CharSequence, CharSequence, SpdyHea
         /**
          * {@code ":host"}
          */
-        public static final AsciiString HOST = new AsciiString(":host");
+        public static final AsciiString HOST = AsciiString.cached(":host");
         /**
          * {@code ":method"}
          */
-        public static final AsciiString METHOD = new AsciiString(":method");
+        public static final AsciiString METHOD = AsciiString.cached(":method");
         /**
          * {@code ":path"}
          */
-        public static final AsciiString PATH = new AsciiString(":path");
+        public static final AsciiString PATH = AsciiString.cached(":path");
         /**
          * {@code ":scheme"}
          */
-        public static final AsciiString SCHEME = new AsciiString(":scheme");
+        public static final AsciiString SCHEME = AsciiString.cached(":scheme");
         /**
          * {@code ":status"}
          */
-        public static final AsciiString STATUS = new AsciiString(":status");
+        public static final AsciiString STATUS = AsciiString.cached(":status");
         /**
          * {@code ":version"}
          */
-        public static final AsciiString VERSION = new AsciiString(":version");
+        public static final AsciiString VERSION = AsciiString.cached(":version");
 
         private HttpNames() { }
     }
