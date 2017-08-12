@@ -28,332 +28,332 @@ public final class HttpHeaderNames {
     /**
      * {@code "accept"}
      */
-    public static final AsciiString ACCEPT = new AsciiString("accept");
+    public static final AsciiString ACCEPT = AsciiString.cached("accept");
     /**
      * {@code "accept-charset"}
      */
-    public static final AsciiString ACCEPT_CHARSET = new AsciiString("accept-charset");
+    public static final AsciiString ACCEPT_CHARSET = AsciiString.cached("accept-charset");
     /**
      * {@code "accept-encoding"}
      */
-    public static final AsciiString ACCEPT_ENCODING = new AsciiString("accept-encoding");
+    public static final AsciiString ACCEPT_ENCODING = AsciiString.cached("accept-encoding");
     /**
      * {@code "accept-language"}
      */
-    public static final AsciiString ACCEPT_LANGUAGE = new AsciiString("accept-language");
+    public static final AsciiString ACCEPT_LANGUAGE = AsciiString.cached("accept-language");
     /**
      * {@code "accept-ranges"}
      */
-    public static final AsciiString ACCEPT_RANGES = new AsciiString("accept-ranges");
+    public static final AsciiString ACCEPT_RANGES = AsciiString.cached("accept-ranges");
     /**
      * {@code "accept-patch"}
      */
-    public static final AsciiString ACCEPT_PATCH = new AsciiString("accept-patch");
+    public static final AsciiString ACCEPT_PATCH = AsciiString.cached("accept-patch");
     /**
      * {@code "access-control-allow-credentials"}
      */
     public static final AsciiString ACCESS_CONTROL_ALLOW_CREDENTIALS =
-            new AsciiString("access-control-allow-credentials");
+            AsciiString.cached("access-control-allow-credentials");
     /**
      * {@code "access-control-allow-headers"}
      */
     public static final AsciiString ACCESS_CONTROL_ALLOW_HEADERS =
-            new AsciiString("access-control-allow-headers");
+            AsciiString.cached("access-control-allow-headers");
     /**
      * {@code "access-control-allow-methods"}
      */
     public static final AsciiString ACCESS_CONTROL_ALLOW_METHODS =
-            new AsciiString("access-control-allow-methods");
+            AsciiString.cached("access-control-allow-methods");
     /**
      * {@code "access-control-allow-origin"}
      */
     public static final AsciiString ACCESS_CONTROL_ALLOW_ORIGIN =
-            new AsciiString("access-control-allow-origin");
+            AsciiString.cached("access-control-allow-origin");
     /**
      * {@code "access-control-expose-headers"}
      */
     public static final AsciiString ACCESS_CONTROL_EXPOSE_HEADERS =
-            new AsciiString("access-control-expose-headers");
+            AsciiString.cached("access-control-expose-headers");
     /**
      * {@code "access-control-max-age"}
      */
-    public static final AsciiString ACCESS_CONTROL_MAX_AGE = new AsciiString("access-control-max-age");
+    public static final AsciiString ACCESS_CONTROL_MAX_AGE = AsciiString.cached("access-control-max-age");
     /**
      * {@code "access-control-request-headers"}
      */
     public static final AsciiString ACCESS_CONTROL_REQUEST_HEADERS =
-            new AsciiString("access-control-request-headers");
+            AsciiString.cached("access-control-request-headers");
     /**
      * {@code "access-control-request-method"}
      */
     public static final AsciiString ACCESS_CONTROL_REQUEST_METHOD =
-            new AsciiString("access-control-request-method");
+            AsciiString.cached("access-control-request-method");
     /**
      * {@code "age"}
      */
-    public static final AsciiString AGE = new AsciiString("age");
+    public static final AsciiString AGE = AsciiString.cached("age");
     /**
      * {@code "allow"}
      */
-    public static final AsciiString ALLOW = new AsciiString("allow");
+    public static final AsciiString ALLOW = AsciiString.cached("allow");
     /**
      * {@code "authorization"}
      */
-    public static final AsciiString AUTHORIZATION = new AsciiString("authorization");
+    public static final AsciiString AUTHORIZATION = AsciiString.cached("authorization");
     /**
      * {@code "cache-control"}
      */
-    public static final AsciiString CACHE_CONTROL = new AsciiString("cache-control");
+    public static final AsciiString CACHE_CONTROL = AsciiString.cached("cache-control");
     /**
      * {@code "connection"}
      */
-    public static final AsciiString CONNECTION = new AsciiString("connection");
+    public static final AsciiString CONNECTION = AsciiString.cached("connection");
     /**
      * {@code "content-base"}
      */
-    public static final AsciiString CONTENT_BASE = new AsciiString("content-base");
+    public static final AsciiString CONTENT_BASE = AsciiString.cached("content-base");
     /**
      * {@code "content-encoding"}
      */
-    public static final AsciiString CONTENT_ENCODING = new AsciiString("content-encoding");
+    public static final AsciiString CONTENT_ENCODING = AsciiString.cached("content-encoding");
     /**
      * {@code "content-language"}
      */
-    public static final AsciiString CONTENT_LANGUAGE = new AsciiString("content-language");
+    public static final AsciiString CONTENT_LANGUAGE = AsciiString.cached("content-language");
     /**
      * {@code "content-length"}
      */
-    public static final AsciiString CONTENT_LENGTH = new AsciiString("content-length");
+    public static final AsciiString CONTENT_LENGTH = AsciiString.cached("content-length");
     /**
      * {@code "content-location"}
      */
-    public static final AsciiString CONTENT_LOCATION = new AsciiString("content-location");
+    public static final AsciiString CONTENT_LOCATION = AsciiString.cached("content-location");
     /**
      * {@code "content-transfer-encoding"}
      */
-    public static final AsciiString CONTENT_TRANSFER_ENCODING = new AsciiString("content-transfer-encoding");
+    public static final AsciiString CONTENT_TRANSFER_ENCODING = AsciiString.cached("content-transfer-encoding");
     /**
      * {@code "content-disposition"}
      */
-    public static final AsciiString CONTENT_DISPOSITION = new AsciiString("content-disposition");
+    public static final AsciiString CONTENT_DISPOSITION = AsciiString.cached("content-disposition");
     /**
      * {@code "content-md5"}
      */
-    public static final AsciiString CONTENT_MD5 = new AsciiString("content-md5");
+    public static final AsciiString CONTENT_MD5 = AsciiString.cached("content-md5");
     /**
      * {@code "content-range"}
      */
-    public static final AsciiString CONTENT_RANGE = new AsciiString("content-range");
+    public static final AsciiString CONTENT_RANGE = AsciiString.cached("content-range");
     /**
      * {@code "content-security-policy"}
      */
-    public static final AsciiString CONTENT_SECURITY_POLICY = new AsciiString("content-security-policy");
+    public static final AsciiString CONTENT_SECURITY_POLICY = AsciiString.cached("content-security-policy");
     /**
      * {@code "content-type"}
      */
-    public static final AsciiString CONTENT_TYPE = new AsciiString("content-type");
+    public static final AsciiString CONTENT_TYPE = AsciiString.cached("content-type");
     /**
      * {@code "cookie"}
      */
-    public static final AsciiString COOKIE = new AsciiString("cookie");
+    public static final AsciiString COOKIE = AsciiString.cached("cookie");
     /**
      * {@code "date"}
      */
-    public static final AsciiString DATE = new AsciiString("date");
+    public static final AsciiString DATE = AsciiString.cached("date");
     /**
      * {@code "etag"}
      */
-    public static final AsciiString ETAG = new AsciiString("etag");
+    public static final AsciiString ETAG = AsciiString.cached("etag");
     /**
      * {@code "expect"}
      */
-    public static final AsciiString EXPECT = new AsciiString("expect");
+    public static final AsciiString EXPECT = AsciiString.cached("expect");
     /**
      * {@code "expires"}
      */
-    public static final AsciiString EXPIRES = new AsciiString("expires");
+    public static final AsciiString EXPIRES = AsciiString.cached("expires");
     /**
      * {@code "from"}
      */
-    public static final AsciiString FROM = new AsciiString("from");
+    public static final AsciiString FROM = AsciiString.cached("from");
     /**
      * {@code "host"}
      */
-    public static final AsciiString HOST = new AsciiString("host");
+    public static final AsciiString HOST = AsciiString.cached("host");
     /**
      * {@code "if-match"}
      */
-    public static final AsciiString IF_MATCH = new AsciiString("if-match");
+    public static final AsciiString IF_MATCH = AsciiString.cached("if-match");
     /**
      * {@code "if-modified-since"}
      */
-    public static final AsciiString IF_MODIFIED_SINCE = new AsciiString("if-modified-since");
+    public static final AsciiString IF_MODIFIED_SINCE = AsciiString.cached("if-modified-since");
     /**
      * {@code "if-none-match"}
      */
-    public static final AsciiString IF_NONE_MATCH = new AsciiString("if-none-match");
+    public static final AsciiString IF_NONE_MATCH = AsciiString.cached("if-none-match");
     /**
      * {@code "if-range"}
      */
-    public static final AsciiString IF_RANGE = new AsciiString("if-range");
+    public static final AsciiString IF_RANGE = AsciiString.cached("if-range");
     /**
      * {@code "if-unmodified-since"}
      */
-    public static final AsciiString IF_UNMODIFIED_SINCE = new AsciiString("if-unmodified-since");
+    public static final AsciiString IF_UNMODIFIED_SINCE = AsciiString.cached("if-unmodified-since");
     /**
      * @deprecated use {@link #CONNECTION}
      *
      * {@code "keep-alive"}
      */
     @Deprecated
-    public static final AsciiString KEEP_ALIVE = new AsciiString("keep-alive");
+    public static final AsciiString KEEP_ALIVE = AsciiString.cached("keep-alive");
     /**
      * {@code "last-modified"}
      */
-    public static final AsciiString LAST_MODIFIED = new AsciiString("last-modified");
+    public static final AsciiString LAST_MODIFIED = AsciiString.cached("last-modified");
     /**
      * {@code "location"}
      */
-    public static final AsciiString LOCATION = new AsciiString("location");
+    public static final AsciiString LOCATION = AsciiString.cached("location");
     /**
      * {@code "max-forwards"}
      */
-    public static final AsciiString MAX_FORWARDS = new AsciiString("max-forwards");
+    public static final AsciiString MAX_FORWARDS = AsciiString.cached("max-forwards");
     /**
      * {@code "origin"}
      */
-    public static final AsciiString ORIGIN = new AsciiString("origin");
+    public static final AsciiString ORIGIN = AsciiString.cached("origin");
     /**
      * {@code "pragma"}
      */
-    public static final AsciiString PRAGMA = new AsciiString("pragma");
+    public static final AsciiString PRAGMA = AsciiString.cached("pragma");
     /**
      * {@code "proxy-authenticate"}
      */
-    public static final AsciiString PROXY_AUTHENTICATE = new AsciiString("proxy-authenticate");
+    public static final AsciiString PROXY_AUTHENTICATE = AsciiString.cached("proxy-authenticate");
     /**
      * {@code "proxy-authorization"}
      */
-    public static final AsciiString PROXY_AUTHORIZATION = new AsciiString("proxy-authorization");
+    public static final AsciiString PROXY_AUTHORIZATION = AsciiString.cached("proxy-authorization");
     /**
      * @deprecated use {@link #CONNECTION}
      *
      * {@code "proxy-connection"}
      */
     @Deprecated
-    public static final AsciiString PROXY_CONNECTION = new AsciiString("proxy-connection");
+    public static final AsciiString PROXY_CONNECTION = AsciiString.cached("proxy-connection");
     /**
      * {@code "range"}
      */
-    public static final AsciiString RANGE = new AsciiString("range");
+    public static final AsciiString RANGE = AsciiString.cached("range");
     /**
      * {@code "referer"}
      */
-    public static final AsciiString REFERER = new AsciiString("referer");
+    public static final AsciiString REFERER = AsciiString.cached("referer");
     /**
      * {@code "retry-after"}
      */
-    public static final AsciiString RETRY_AFTER = new AsciiString("retry-after");
+    public static final AsciiString RETRY_AFTER = AsciiString.cached("retry-after");
     /**
      * {@code "sec-websocket-key1"}
      */
-    public static final AsciiString SEC_WEBSOCKET_KEY1 = new AsciiString("sec-websocket-key1");
+    public static final AsciiString SEC_WEBSOCKET_KEY1 = AsciiString.cached("sec-websocket-key1");
     /**
      * {@code "sec-websocket-key2"}
      */
-    public static final AsciiString SEC_WEBSOCKET_KEY2 = new AsciiString("sec-websocket-key2");
+    public static final AsciiString SEC_WEBSOCKET_KEY2 = AsciiString.cached("sec-websocket-key2");
     /**
      * {@code "sec-websocket-location"}
      */
-    public static final AsciiString SEC_WEBSOCKET_LOCATION = new AsciiString("sec-websocket-location");
+    public static final AsciiString SEC_WEBSOCKET_LOCATION = AsciiString.cached("sec-websocket-location");
     /**
      * {@code "sec-websocket-origin"}
      */
-    public static final AsciiString SEC_WEBSOCKET_ORIGIN = new AsciiString("sec-websocket-origin");
+    public static final AsciiString SEC_WEBSOCKET_ORIGIN = AsciiString.cached("sec-websocket-origin");
     /**
      * {@code "sec-websocket-protocol"}
      */
-    public static final AsciiString SEC_WEBSOCKET_PROTOCOL = new AsciiString("sec-websocket-protocol");
+    public static final AsciiString SEC_WEBSOCKET_PROTOCOL = AsciiString.cached("sec-websocket-protocol");
     /**
      * {@code "sec-websocket-version"}
      */
-    public static final AsciiString SEC_WEBSOCKET_VERSION = new AsciiString("sec-websocket-version");
+    public static final AsciiString SEC_WEBSOCKET_VERSION = AsciiString.cached("sec-websocket-version");
     /**
      * {@code "sec-websocket-key"}
      */
-    public static final AsciiString SEC_WEBSOCKET_KEY = new AsciiString("sec-websocket-key");
+    public static final AsciiString SEC_WEBSOCKET_KEY = AsciiString.cached("sec-websocket-key");
     /**
      * {@code "sec-websocket-accept"}
      */
-    public static final AsciiString SEC_WEBSOCKET_ACCEPT = new AsciiString("sec-websocket-accept");
+    public static final AsciiString SEC_WEBSOCKET_ACCEPT = AsciiString.cached("sec-websocket-accept");
     /**
      * {@code "sec-websocket-protocol"}
      */
-    public static final AsciiString SEC_WEBSOCKET_EXTENSIONS = new AsciiString("sec-websocket-extensions");
+    public static final AsciiString SEC_WEBSOCKET_EXTENSIONS = AsciiString.cached("sec-websocket-extensions");
     /**
      * {@code "server"}
      */
-    public static final AsciiString SERVER = new AsciiString("server");
+    public static final AsciiString SERVER = AsciiString.cached("server");
     /**
      * {@code "set-cookie"}
      */
-    public static final AsciiString SET_COOKIE = new AsciiString("set-cookie");
+    public static final AsciiString SET_COOKIE = AsciiString.cached("set-cookie");
     /**
      * {@code "set-cookie2"}
      */
-    public static final AsciiString SET_COOKIE2 = new AsciiString("set-cookie2");
+    public static final AsciiString SET_COOKIE2 = AsciiString.cached("set-cookie2");
     /**
      * {@code "te"}
      */
-    public static final AsciiString TE = new AsciiString("te");
+    public static final AsciiString TE = AsciiString.cached("te");
     /**
      * {@code "trailer"}
      */
-    public static final AsciiString TRAILER = new AsciiString("trailer");
+    public static final AsciiString TRAILER = AsciiString.cached("trailer");
     /**
      * {@code "transfer-encoding"}
      */
-    public static final AsciiString TRANSFER_ENCODING = new AsciiString("transfer-encoding");
+    public static final AsciiString TRANSFER_ENCODING = AsciiString.cached("transfer-encoding");
     /**
      * {@code "upgrade"}
      */
-    public static final AsciiString UPGRADE = new AsciiString("upgrade");
+    public static final AsciiString UPGRADE = AsciiString.cached("upgrade");
     /**
      * {@code "user-agent"}
      */
-    public static final AsciiString USER_AGENT = new AsciiString("user-agent");
+    public static final AsciiString USER_AGENT = AsciiString.cached("user-agent");
     /**
      * {@code "vary"}
      */
-    public static final AsciiString VARY = new AsciiString("vary");
+    public static final AsciiString VARY = AsciiString.cached("vary");
     /**
      * {@code "via"}
      */
-    public static final AsciiString VIA = new AsciiString("via");
+    public static final AsciiString VIA = AsciiString.cached("via");
     /**
      * {@code "warning"}
      */
-    public static final AsciiString WARNING = new AsciiString("warning");
+    public static final AsciiString WARNING = AsciiString.cached("warning");
     /**
      * {@code "websocket-location"}
      */
-    public static final AsciiString WEBSOCKET_LOCATION = new AsciiString("websocket-location");
+    public static final AsciiString WEBSOCKET_LOCATION = AsciiString.cached("websocket-location");
     /**
      * {@code "websocket-origin"}
      */
-    public static final AsciiString WEBSOCKET_ORIGIN = new AsciiString("websocket-origin");
+    public static final AsciiString WEBSOCKET_ORIGIN = AsciiString.cached("websocket-origin");
     /**
      * {@code "websocket-protocol"}
      */
-    public static final AsciiString WEBSOCKET_PROTOCOL = new AsciiString("websocket-protocol");
+    public static final AsciiString WEBSOCKET_PROTOCOL = AsciiString.cached("websocket-protocol");
     /**
      * {@code "www-authenticate"}
      */
-    public static final AsciiString WWW_AUTHENTICATE = new AsciiString("www-authenticate");
+    public static final AsciiString WWW_AUTHENTICATE = AsciiString.cached("www-authenticate");
     /**
      * {@code "x-frame-options"}
      */
-    public static final AsciiString X_FRAME_OPTIONS = new AsciiString("x-frame-options");
+    public static final AsciiString X_FRAME_OPTIONS = AsciiString.cached("x-frame-options");
 
     private HttpHeaderNames() { }
 }

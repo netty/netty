@@ -39,7 +39,7 @@ public final class HttpUtil {
     @Deprecated
     static final EmptyHttpHeaders EMPTY_HEADERS = new EmptyHttpHeaders();
     private static final AsciiString CHARSET_EQUALS = AsciiString.of(HttpHeaderValues.CHARSET + "=");
-    private static final AsciiString SEMICOLON = AsciiString.of(";");
+    private static final AsciiString SEMICOLON = AsciiString.cached(";");
 
     private HttpUtil() { }
 

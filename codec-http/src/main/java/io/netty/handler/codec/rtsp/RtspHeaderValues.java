@@ -26,11 +26,11 @@ public final class RtspHeaderValues {
     /**
      * {@code "append"}
      */
-    public static final AsciiString APPEND = new AsciiString("append");
+    public static final AsciiString APPEND = AsciiString.cached("append");
     /**
      * {@code "AVP"}
      */
-    public static final AsciiString AVP = new AsciiString("AVP");
+    public static final AsciiString AVP = AsciiString.cached("AVP");
     /**
      * {@code "bytes"}
      */
@@ -42,11 +42,11 @@ public final class RtspHeaderValues {
     /**
      * {@code "client_port"}
      */
-    public static final AsciiString CLIENT_PORT = new AsciiString("client_port");
+    public static final AsciiString CLIENT_PORT = AsciiString.cached("client_port");
     /**
      * {@code "clock"}
      */
-    public static final AsciiString CLOCK = new AsciiString("clock");
+    public static final AsciiString CLOCK = AsciiString.cached("clock");
     /**
      * {@code "close"}
      */
@@ -66,7 +66,7 @@ public final class RtspHeaderValues {
     /**
      * {@code "destination"}
      */
-    public static final AsciiString DESTINATION = new AsciiString("destination");
+    public static final AsciiString DESTINATION = AsciiString.cached("destination");
     /**
      * {@code "gzip"}
      */
@@ -78,7 +78,7 @@ public final class RtspHeaderValues {
     /**
      * {@code "interleaved"}
      */
-    public static final AsciiString INTERLEAVED = new AsciiString("interleaved");
+    public static final AsciiString INTERLEAVED = AsciiString.cached("interleaved");
     /**
      * {@code "keep-alive"}
      */
@@ -86,7 +86,7 @@ public final class RtspHeaderValues {
     /**
      * {@code "layers"}
      */
-    public static final AsciiString LAYERS = new AsciiString("layers");
+    public static final AsciiString LAYERS = AsciiString.cached("layers");
     /**
      * {@code "max-age"}
      */
@@ -102,11 +102,11 @@ public final class RtspHeaderValues {
     /**
      * {@code "mode"}
      */
-    public static final AsciiString MODE = new AsciiString("mode");
+    public static final AsciiString MODE = AsciiString.cached("mode");
     /**
      * {@code "multicast"}
      */
-    public static final AsciiString MULTICAST = new AsciiString("multicast");
+    public static final AsciiString MULTICAST = AsciiString.cached("multicast");
     /**
      * {@code "must-revalidate"}
      */
@@ -130,7 +130,7 @@ public final class RtspHeaderValues {
     /**
      * {@code "port"}
      */
-    public static final AsciiString PORT = new AsciiString("port");
+    public static final AsciiString PORT = AsciiString.cached("port");
     /**
      * {@code "private"}
      */
@@ -146,51 +146,51 @@ public final class RtspHeaderValues {
     /**
      * {@code "RTP"}
      */
-    public static final AsciiString RTP = new AsciiString("RTP");
+    public static final AsciiString RTP = AsciiString.cached("RTP");
     /**
      * {@code "rtptime"}
      */
-    public static final AsciiString RTPTIME = new AsciiString("rtptime");
+    public static final AsciiString RTPTIME = AsciiString.cached("rtptime");
     /**
      * {@code "seq"}
      */
-    public static final AsciiString SEQ = new AsciiString("seq");
+    public static final AsciiString SEQ = AsciiString.cached("seq");
     /**
      * {@code "server_port"}
      */
-    public static final AsciiString SERVER_PORT = new AsciiString("server_port");
+    public static final AsciiString SERVER_PORT = AsciiString.cached("server_port");
     /**
      * {@code "ssrc"}
      */
-    public static final AsciiString SSRC = new AsciiString("ssrc");
+    public static final AsciiString SSRC = AsciiString.cached("ssrc");
     /**
      * {@code "TCP"}
      */
-    public static final AsciiString TCP = new AsciiString("TCP");
+    public static final AsciiString TCP = AsciiString.cached("TCP");
     /**
      * {@code "time"}
      */
-    public static final AsciiString TIME = new AsciiString("time");
+    public static final AsciiString TIME = AsciiString.cached("time");
     /**
      * {@code "timeout"}
      */
-    public static final AsciiString TIMEOUT = new AsciiString("timeout");
+    public static final AsciiString TIMEOUT = AsciiString.cached("timeout");
     /**
      * {@code "ttl"}
      */
-    public static final AsciiString TTL = new AsciiString("ttl");
+    public static final AsciiString TTL = AsciiString.cached("ttl");
     /**
      * {@code "UDP"}
      */
-    public static final AsciiString UDP = new AsciiString("UDP");
+    public static final AsciiString UDP = AsciiString.cached("UDP");
     /**
      * {@code "unicast"}
      */
-    public static final AsciiString UNICAST = new AsciiString("unicast");
+    public static final AsciiString UNICAST = AsciiString.cached("unicast");
     /**
      * {@code "url"}
      */
-    public static final AsciiString URL = new AsciiString("url");
+    public static final AsciiString URL = AsciiString.cached("url");
 
     private RtspHeaderValues() { }
 }
