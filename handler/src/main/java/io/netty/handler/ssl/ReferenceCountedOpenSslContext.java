@@ -237,7 +237,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
 
         unmodifiableCiphers = Arrays.asList(checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
-                ciphers, DEFAULT_CIPHERS, availableJavaCipherSuites()));
+                ciphers, DEFAULT_CIPHERS, OpenSsl.AVAILABLE_CIPHER_SUITES));
 
         this.apn = checkNotNull(apn, "apn");
 
