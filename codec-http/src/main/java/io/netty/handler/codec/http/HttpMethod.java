@@ -132,7 +132,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
             }
         }
 
-        this.name = new AsciiString(name);
+        this.name = AsciiString.cached(name);
     }
 
     /**

@@ -66,7 +66,7 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
         }
 
         PseudoHeaderName(String value) {
-            this.value = new AsciiString(value);
+            this.value = AsciiString.cached(value);
         }
 
         public AsciiString value() {

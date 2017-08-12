@@ -29,19 +29,19 @@ import java.util.Map;
  */
 @UnstableApi
 public final class SmtpCommand {
-    public static final SmtpCommand EHLO = new SmtpCommand(new AsciiString("EHLO"), false);
-    public static final SmtpCommand HELO = new SmtpCommand(new AsciiString("HELO"), false);
-    public static final SmtpCommand MAIL = new SmtpCommand(new AsciiString("MAIL"), false);
-    public static final SmtpCommand RCPT = new SmtpCommand(new AsciiString("RCPT"), false);
-    public static final SmtpCommand DATA = new SmtpCommand(new AsciiString("DATA"), true);
-    public static final SmtpCommand NOOP = new SmtpCommand(new AsciiString("NOOP"), false);
-    public static final SmtpCommand RSET = new SmtpCommand(new AsciiString("RSET"), false);
-    public static final SmtpCommand EXPN = new SmtpCommand(new AsciiString("EXPN"), false);
-    public static final SmtpCommand VRFY = new SmtpCommand(new AsciiString("VRFY"), false);
-    public static final SmtpCommand HELP = new SmtpCommand(new AsciiString("HELP"), false);
-    public static final SmtpCommand QUIT = new SmtpCommand(new AsciiString("QUIT"), false);
+    public static final SmtpCommand EHLO = new SmtpCommand(AsciiString.cached("EHLO"), false);
+    public static final SmtpCommand HELO = new SmtpCommand(AsciiString.cached("HELO"), false);
+    public static final SmtpCommand MAIL = new SmtpCommand(AsciiString.cached("MAIL"), false);
+    public static final SmtpCommand RCPT = new SmtpCommand(AsciiString.cached("RCPT"), false);
+    public static final SmtpCommand DATA = new SmtpCommand(AsciiString.cached("DATA"), true);
+    public static final SmtpCommand NOOP = new SmtpCommand(AsciiString.cached("NOOP"), false);
+    public static final SmtpCommand RSET = new SmtpCommand(AsciiString.cached("RSET"), false);
+    public static final SmtpCommand EXPN = new SmtpCommand(AsciiString.cached("EXPN"), false);
+    public static final SmtpCommand VRFY = new SmtpCommand(AsciiString.cached("VRFY"), false);
+    public static final SmtpCommand HELP = new SmtpCommand(AsciiString.cached("HELP"), false);
+    public static final SmtpCommand QUIT = new SmtpCommand(AsciiString.cached("QUIT"), false);
 
-    private static final CharSequence DATA_CMD = new AsciiString("DATA");
+    private static final CharSequence DATA_CMD = AsciiString.cached("DATA");
     private static final Map<CharSequence, SmtpCommand> COMMANDS = new HashMap<CharSequence, SmtpCommand>();
     static {
         COMMANDS.put(EHLO.name(), EHLO);

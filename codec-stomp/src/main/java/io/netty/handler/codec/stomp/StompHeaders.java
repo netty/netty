@@ -28,25 +28,25 @@ import java.util.Map.Entry;
  */
 public interface StompHeaders extends Headers<CharSequence, CharSequence, StompHeaders> {
 
-    AsciiString ACCEPT_VERSION = new AsciiString("accept-version");
-    AsciiString HOST = new AsciiString("host");
-    AsciiString LOGIN = new AsciiString("login");
-    AsciiString PASSCODE = new AsciiString("passcode");
-    AsciiString HEART_BEAT = new AsciiString("heart-beat");
-    AsciiString VERSION = new AsciiString("version");
-    AsciiString SESSION = new AsciiString("session");
-    AsciiString SERVER = new AsciiString("server");
-    AsciiString DESTINATION = new AsciiString("destination");
-    AsciiString ID = new AsciiString("id");
-    AsciiString ACK = new AsciiString("ack");
-    AsciiString TRANSACTION = new AsciiString("transaction");
-    AsciiString RECEIPT = new AsciiString("receipt");
-    AsciiString MESSAGE_ID = new AsciiString("message-id");
-    AsciiString SUBSCRIPTION = new AsciiString("subscription");
-    AsciiString RECEIPT_ID = new AsciiString("receipt-id");
-    AsciiString MESSAGE = new AsciiString("message");
-    AsciiString CONTENT_LENGTH = new AsciiString("content-length");
-    AsciiString CONTENT_TYPE = new AsciiString("content-type");
+    AsciiString ACCEPT_VERSION = AsciiString.cached("accept-version");
+    AsciiString HOST = AsciiString.cached("host");
+    AsciiString LOGIN = AsciiString.cached("login");
+    AsciiString PASSCODE = AsciiString.cached("passcode");
+    AsciiString HEART_BEAT = AsciiString.cached("heart-beat");
+    AsciiString VERSION = AsciiString.cached("version");
+    AsciiString SESSION = AsciiString.cached("session");
+    AsciiString SERVER = AsciiString.cached("server");
+    AsciiString DESTINATION = AsciiString.cached("destination");
+    AsciiString ID = AsciiString.cached("id");
+    AsciiString ACK = AsciiString.cached("ack");
+    AsciiString TRANSACTION = AsciiString.cached("transaction");
+    AsciiString RECEIPT = AsciiString.cached("receipt");
+    AsciiString MESSAGE_ID = AsciiString.cached("message-id");
+    AsciiString SUBSCRIPTION = AsciiString.cached("subscription");
+    AsciiString RECEIPT_ID = AsciiString.cached("receipt-id");
+    AsciiString MESSAGE = AsciiString.cached("message");
+    AsciiString CONTENT_LENGTH = AsciiString.cached("content-length");
+    AsciiString CONTENT_TYPE = AsciiString.cached("content-type");
 
     /**
      * {@link Headers#get(Object)} and convert the result to a {@link String}.

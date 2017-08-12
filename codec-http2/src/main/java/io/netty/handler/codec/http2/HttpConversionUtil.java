@@ -99,7 +99,7 @@ public final class HttpConversionUtil {
      * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a> states the path must not
      * be empty, and instead should be {@code /}.
      */
-    private static final AsciiString EMPTY_REQUEST_PATH = new AsciiString("/");
+    private static final AsciiString EMPTY_REQUEST_PATH = AsciiString.cached("/");
 
     private HttpConversionUtil() {
     }
@@ -154,7 +154,7 @@ public final class HttpConversionUtil {
         private final AsciiString text;
 
         ExtensionHeaderNames(String text) {
-            this.text = new AsciiString(text);
+            this.text = AsciiString.cached(text);
         }
 
         public AsciiString text() {

@@ -30,10 +30,10 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
     private static final byte[] CONTENT = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd' };
 
-    private static final AsciiString CONTENT_TYPE = new AsciiString("Content-Type");
-    private static final AsciiString CONTENT_LENGTH = new AsciiString("Content-Length");
-    private static final AsciiString CONNECTION = new AsciiString("Connection");
-    private static final AsciiString KEEP_ALIVE = new AsciiString("keep-alive");
+    private static final AsciiString CONTENT_TYPE = AsciiString.cached("Content-Type");
+    private static final AsciiString CONTENT_LENGTH = AsciiString.cached("Content-Length");
+    private static final AsciiString CONNECTION = AsciiString.cached("Connection");
+    private static final AsciiString KEEP_ALIVE = AsciiString.cached("keep-alive");
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
