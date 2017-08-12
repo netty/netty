@@ -125,10 +125,13 @@ public final class NativeLibraryLoader {
             }
         }
 
-        if (url == null) {
-            // Fall back to normal loading of JNI stuff
+        try {
+            // first try to load from java.library.path
             loadLibrary(loader, name, false);
+            logger.info("{} was loaded from java.libary.path", name);
             return;
+        } catch (Exception ex) {
+            logger.info("{} cannot be loaded from java.libary.path", name, ex);
         }
 
         int index = libname.lastIndexOf('.');
