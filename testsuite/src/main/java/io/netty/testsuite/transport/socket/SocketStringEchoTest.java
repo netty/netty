@@ -52,7 +52,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 60000)
     public void testStringEcho() throws Throwable {
         run();
     }
@@ -61,7 +61,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         testStringEcho(sb, cb, true);
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 60000)
     public void testStringEchoNotAutoRead() throws Throwable {
         run();
     }
