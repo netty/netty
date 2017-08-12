@@ -756,6 +756,9 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             @Override
             public void connect(final SocketAddress remoteAddress,
                                 SocketAddress localAddress, final ChannelPromise promise) {
+                if (!promise.setUncancellable()) {
+                    return;
+                }
                 promise.setFailure(new UnsupportedOperationException());
             }
 
@@ -779,6 +782,9 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
             @Override
             public void register(EventLoop eventLoop, ChannelPromise promise) {
+                if (!promise.setUncancellable()) {
+                    return;
+                }
                 if (registered) {
                     throw new UnsupportedOperationException("Re-register is not supported");
                 }
@@ -798,16 +804,25 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
             @Override
             public void bind(SocketAddress localAddress, ChannelPromise promise) {
+                if (!promise.setUncancellable()) {
+                    return;
+                }
                 promise.setFailure(new UnsupportedOperationException());
             }
 
             @Override
             public void disconnect(ChannelPromise promise) {
+                if (!promise.setUncancellable()) {
+                    return;
+                }
                 close(promise);
             }
 
             @Override
             public void close(ChannelPromise promise) {
+                if (!promise.setUncancellable()) {
+                    return;
+                }
                 if (closePromise.isDone()) {
                     promise.setFailure(new ClosedChannelException());
                     return;
@@ -857,6 +872,9 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
             @Override
             public void deregister(ChannelPromise promise) {
+                if (!promise.setUncancellable()) {
+                    return;
+                }
                 if (registered) {
                     registered = true;
                     promise.setSuccess();
@@ -922,15 +940,15 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
             @Override
             public void write(Object msg, final ChannelPromise promise) {
-                if (!isActive()) {
-                    ReferenceCountUtil.release(msg);
-                    promise.setFailure(CLOSED_CHANNEL_EXCEPTION);
-                    return;
-                }
-
                 // After this point its not possible to cancel a write anymore.
                 if (!promise.setUncancellable()) {
                     ReferenceCountUtil.release(msg);
+                    return;
+                }
+
+                if (!isActive()) {
+                    ReferenceCountUtil.release(msg);
+                    promise.setFailure(CLOSED_CHANNEL_EXCEPTION);
                     return;
                 }
 
