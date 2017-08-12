@@ -591,7 +591,9 @@ public final class ByteBufUtil {
                     // Unwrap as the wrapped buffer may be an AbstractByteBuf and so we can use fast-path.
                     buf = buf.unwrap();
                 } else {
-                    buf.writeBytes(seq.toString().getBytes(CharsetUtil.US_ASCII));
+                    byte[] bytes = seq.toString().getBytes(CharsetUtil.US_ASCII);
+                    buf.writeBytes(bytes);
+                    return bytes.length;
                 }
             }
         }
