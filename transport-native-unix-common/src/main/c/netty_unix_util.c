@@ -66,8 +66,25 @@ static char* netty_unix_util_strstr_last(const char* haystack, const char* needl
 char* netty_unix_util_parse_package_prefix(const char* libraryPathName, const char* libraryName, jint* status) {
     char* packageNameEnd = netty_unix_util_strstr_last(libraryPathName, libraryName);
     if (packageNameEnd == NULL) {
-        *status = JNI_ERR;
-        return NULL;
+        // Retry lib name after with all - replaced by _
+        // Make a copy so we can modify the value without impacting libraryPathName.
+        size_t libraryNameLen = strnlen(libraryName, 256);
+        char* libraryNameUnderscore = strndup(libraryName, libraryNameLen);
+        // Make sure the packagePrefix is in the correct format for the JNI functions it will be used with.
+        char* templn = libraryNameUnderscore;
+        char* libraryNameUnderscoreEnd = libraryNameUnderscore + libraryNameLen;
+        // Package names must be sanitized, in JNI packages names are separated by '/' characters.
+        for (; templn != libraryNameUnderscoreEnd; ++templn) {
+            if (*templn == '-') {
+                *templn = '_';
+            }
+        }
+        packageNameEnd = netty_unix_util_strstr_last(libraryPathName, libraryNameUnderscore);
+        free(libraryNameUnderscore);
+        if (packageNameEnd == NULL) {
+            *status = JNI_ERR;
+            return NULL;
+        }
     }
     char* packagePrefix = netty_unix_util_rstrstr(packageNameEnd, libraryPathName, "lib");
     if (packagePrefix == NULL) {
