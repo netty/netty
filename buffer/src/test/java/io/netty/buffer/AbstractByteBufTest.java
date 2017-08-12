@@ -786,29 +786,57 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testRandomFloatAccess() {
+        testRandomFloatAccess(true);
+    }
+
+    @Test
+    public void testRandomFloatLEAccess() {
+        testRandomFloatAccess(false);
+    }
+
+    private void testRandomFloatAccess(boolean testBigEndian) {
         for (int i = 0; i < buffer.capacity() - 7; i += 8) {
             float value = random.nextFloat();
-            buffer.setFloat(i, value);
+            if (testBigEndian) {
+                buffer.setFloat(i, value);
+            } else {
+                buffer.setFloatLE(i, value);
+            }
         }
 
         random.setSeed(seed);
         for (int i = 0; i < buffer.capacity() - 7; i += 8) {
-            float value = random.nextFloat();
-            assertEquals(value, buffer.getFloat(i), 0.01);
+            float expected = random.nextFloat();
+            float actual = testBigEndian? buffer.getFloat(i) : buffer.getFloatLE(i);
+            assertEquals(expected, actual, 0.01);
         }
     }
 
     @Test
     public void testRandomDoubleAccess() {
+        testRandomDoubleAccess(true);
+    }
+
+    @Test
+    public void testRandomDoubleLEAccess() {
+        testRandomDoubleAccess(false);
+    }
+
+    private void testRandomDoubleAccess(boolean testBigEndian) {
         for (int i = 0; i < buffer.capacity() - 7; i += 8) {
             double value = random.nextDouble();
-            buffer.setDouble(i, value);
+            if (testBigEndian) {
+                buffer.setDouble(i, value);
+            } else {
+                buffer.setDoubleLE(i, value);
+            }
         }
 
         random.setSeed(seed);
         for (int i = 0; i < buffer.capacity() - 7; i += 8) {
-            double value = random.nextDouble();
-            assertEquals(value, buffer.getDouble(i), 0.01);
+            double expected = random.nextDouble();
+            double actual = testBigEndian? buffer.getDouble(i) : buffer.getDoubleLE(i);
+            assertEquals(expected, actual, 0.01);
         }
     }
 
@@ -2616,8 +2644,18 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test(expected = IllegalReferenceCountException.class)
+    public void testGetFloatLEAfterRelease() {
+        releasedBuffer().getFloatLE(0);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
     public void testGetDoubleAfterRelease() {
         releasedBuffer().getDouble(0);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testGetDoubleLEAfterRelease() {
+        releasedBuffer().getDoubleLE(0);
     }
 
     @Test(expected = IllegalReferenceCountException.class)
@@ -2920,8 +2958,18 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test(expected = IllegalReferenceCountException.class)
+    public void testReadFloatLEAfterRelease() {
+        releasedBuffer().readFloatLE();
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
     public void testReadDoubleAfterRelease() {
         releasedBuffer().readDouble();
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testReadDoubleLEAfterRelease() {
+        releasedBuffer().readDoubleLE();
     }
 
     @Test(expected = IllegalReferenceCountException.class)
@@ -3050,8 +3098,18 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test(expected = IllegalReferenceCountException.class)
+    public void testWriteFloatLEAfterRelease() {
+        releasedBuffer().writeFloatLE(1);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
     public void testWriteDoubleAfterRelease() {
         releasedBuffer().writeDouble(1);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testWriteDoubleLEAfterRelease() {
+        releasedBuffer().writeDoubleLE(1);
     }
 
     @Test(expected = IllegalReferenceCountException.class)
