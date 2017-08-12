@@ -758,6 +758,20 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract float getFloat(int index);
 
     /**
+     * Gets a 32-bit floating point number at the specified absolute
+     * {@code index} in this buffer in Little Endian Byte Order.
+     * This method does not modify {@code readerIndex} or
+     * {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 4} is greater than {@code this.capacity}
+     */
+    public float getFloatLE(int index) {
+        return Float.intBitsToFloat(getIntLE(index));
+    }
+
+    /**
      * Gets a 64-bit floating point number at the specified absolute
      * {@code index} in this buffer.  This method does not modify
      * {@code readerIndex} or {@code writerIndex} of this buffer.
@@ -767,6 +781,20 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         {@code index + 8} is greater than {@code this.capacity}
      */
     public abstract double getDouble(int index);
+
+    /**
+     * Gets a 64-bit floating point number at the specified absolute
+     * {@code index} in this buffer in Little Endian Byte Order.
+     * This method does not modify {@code readerIndex} or
+     * {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 8} is greater than {@code this.capacity}
+     */
+    public double getDoubleLE(int index) {
+        return Double.longBitsToDouble(getLongLE(index));
+    }
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -1090,6 +1118,20 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf setFloat(int index, float value);
 
     /**
+     * Sets the specified 32-bit floating-point number at the specified
+     * absolute {@code index} in this buffer in Little Endian Byte Order.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 4} is greater than {@code this.capacity}
+     */
+    public ByteBuf setFloatLE(int index, float value) {
+        return setIntLE(index, Float.floatToRawIntBits(value));
+    }
+
+    /**
      * Sets the specified 64-bit floating-point number at the specified
      * absolute {@code index} in this buffer.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
@@ -1100,6 +1142,20 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         {@code index + 8} is greater than {@code this.capacity}
      */
     public abstract ByteBuf setDouble(int index, double value);
+
+    /**
+     * Sets the specified 64-bit floating-point number at the specified
+     * absolute {@code index} in this buffer in Little Endian Byte Order.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 8} is greater than {@code this.capacity}
+     */
+    public ByteBuf setDoubleLE(int index, double value) {
+        return setLongLE(index, Double.doubleToRawLongBits(value));
+    }
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -1464,6 +1520,18 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract float readFloat();
 
     /**
+     * Gets a 32-bit floating point number at the current {@code readerIndex}
+     * in Little Endian Byte Order and increases the {@code readerIndex}
+     * by {@code 4} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 4}
+     */
+    public float readFloatLE() {
+        return Float.intBitsToFloat(readIntLE());
+    }
+
+    /**
      * Gets a 64-bit floating point number at the current {@code readerIndex}
      * and increases the {@code readerIndex} by {@code 8} in this buffer.
      *
@@ -1471,6 +1539,18 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if {@code this.readableBytes} is less than {@code 8}
      */
     public abstract double readDouble();
+
+    /**
+     * Gets a 64-bit floating point number at the current {@code readerIndex}
+     * in Little Endian Byte Order and increases the {@code readerIndex}
+     * by {@code 8} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 8}
+     */
+    public double readDoubleLE() {
+        return Double.longBitsToDouble(readLongLE());
+    }
 
     /**
      * Transfers this buffer's data to a newly created buffer starting at
@@ -1795,6 +1875,18 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf writeFloat(float value);
 
     /**
+     * Sets the specified 32-bit floating point number at the current
+     * {@code writerIndex} in Little Endian Byte Order and increases
+     * the {@code writerIndex} by {@code 4} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than {@code 4}
+     */
+    public ByteBuf writeFloatLE(float value) {
+        return writeIntLE(Float.floatToRawIntBits(value));
+    }
+
+    /**
      * Sets the specified 64-bit floating point number at the current
      * {@code writerIndex} and increases the {@code writerIndex} by {@code 8}
      * in this buffer.
@@ -1803,6 +1895,18 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *         if {@code this.writableBytes} is less than {@code 8}
      */
     public abstract ByteBuf writeDouble(double value);
+
+    /**
+     * Sets the specified 64-bit floating point number at the current
+     * {@code writerIndex} in Little Endian Byte Order and increases
+     * the {@code writerIndex} by {@code 8} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than {@code 8}
+     */
+    public ByteBuf writeDoubleLE(double value) {
+        return writeLongLE(Double.doubleToRawLongBits(value));
+    }
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
