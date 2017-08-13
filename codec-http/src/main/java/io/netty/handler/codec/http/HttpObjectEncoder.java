@@ -16,11 +16,11 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Iterator;
@@ -47,10 +47,10 @@ import static io.netty.handler.codec.http.HttpConstants.LF;
  * implement all abstract methods properly.
  */
 public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToMessageEncoder<Object> {
-    static final byte[] CRLF = { CR, LF };
-    private static final byte[] ZERO_CRLF = { '0', CR, LF };
+    static final int CRLF_SHORT = (CR << 8) | LF;
+    private static final int ZERO_CRLF_MEDIUM = ('0' << 16) | CRLF_SHORT;
     private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
-    private static final ByteBuf CRLF_BUF = unreleasableBuffer(directBuffer(CRLF.length).writeBytes(CRLF));
+    private static final ByteBuf CRLF_BUF = unreleasableBuffer(directBuffer(2).writeByte(CR).writeByte(LF));
     private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(directBuffer(ZERO_CRLF_CRLF.length)
             .writeBytes(ZERO_CRLF_CRLF));
 
@@ -77,7 +77,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             // Encode the message.
             encodeInitialLine(buf, m);
             encodeHeaders(m.headers(), buf);
-            buf.writeBytes(CRLF);
+            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
             state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
                     HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
@@ -153,7 +153,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     /**
      * Encode the {@link HttpHeaders} into a {@link ByteBuf}.
      */
-    protected void encodeHeaders(HttpHeaders headers, ByteBuf buf) throws Exception {
+    protected void encodeHeaders(HttpHeaders headers, ByteBuf buf) {
         Iterator<Entry<CharSequence, CharSequence>> iter = headers.iteratorCharSequence();
         while (iter.hasNext()) {
             Entry<CharSequence, CharSequence> header = iter.next();
@@ -163,10 +163,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     private void encodeChunkedContent(ChannelHandlerContext ctx, Object msg, long contentLength, List<Object> out) {
         if (contentLength > 0) {
-            byte[] length = Long.toHexString(contentLength).getBytes(CharsetUtil.US_ASCII);
-            ByteBuf buf = ctx.alloc().buffer(length.length + 2);
-            buf.writeBytes(length);
-            buf.writeBytes(CRLF);
+            String lengthHex = Long.toHexString(contentLength);
+            ByteBuf buf = ctx.alloc().buffer(lengthHex.length() + 2);
+            buf.writeCharSequence(lengthHex, CharsetUtil.US_ASCII);
+            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
             out.add(buf);
             out.add(encodeAndRetain(msg));
             out.add(CRLF_BUF.duplicate());
@@ -178,24 +178,26 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 out.add(ZERO_CRLF_CRLF_BUF.duplicate());
             } else {
                 ByteBuf buf = ctx.alloc().buffer();
-                buf.writeBytes(ZERO_CRLF);
-                try {
-                    encodeHeaders(headers, buf);
-                } catch (Exception ex) {
-                    buf.release();
-                    PlatformDependent.throwException(ex);
-                }
-                buf.writeBytes(CRLF);
+                ByteBufUtil.writeMediumBE(buf, ZERO_CRLF_MEDIUM);
+                encodeHeaders(headers, buf);
+                ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
                 out.add(buf);
             }
         } else if (contentLength == 0) {
             // Need to produce some output otherwise an
-            // IllegalstateException will be thrown
+            // IllegalStateException will be thrown
             out.add(EMPTY_BUFFER);
         }
     }
 
-    boolean isContentAlwaysEmpty(@SuppressWarnings("unused") H msg) {
+    /**
+     * Determine whether a message has a content or not. Some message may have headers indicating
+     * a content without having an actual content, e.g the response to an HEAD or CONNECT request.
+     *
+     * @param msg the message to test
+     * @return {@code true} to signal the message has no content
+     */
+    protected boolean isContentAlwaysEmpty(@SuppressWarnings("unused") H msg) {
         return false;
     }
 
@@ -232,7 +234,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     @Deprecated
     protected static void encodeAscii(String s, ByteBuf buf) {
-        HttpUtil.encodeAscii0(s, buf);
+        buf.writeCharSequence(s, CharsetUtil.US_ASCII);
     }
 
     protected abstract void encodeInitialLine(ByteBuf buf, H message) throws Exception;

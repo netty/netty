@@ -26,11 +26,13 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <linux/tcp.h> // TCP_NOTSENT_LOWAT is a linux specific define
-#include "netty_unix_filedescriptor.h"
-#include "netty_unix_socket.h"
-#include "netty_unix_errors.h"
-#include "netty_unix_util.h"
+
 #include "netty_epoll_linuxsocket.h"
+#include "netty_unix_errors.h"
+#include "netty_unix_filedescriptor.h"
+#include "netty_unix_jni.h"
+#include "netty_unix_socket.h"
+#include "netty_unix_util.h"
 
 // TCP_FASTOPEN is defined in linux 3.7. We define this here so older kernels can compile.
 #ifndef TCP_FASTOPEN
@@ -84,6 +86,10 @@ static void netty_epoll_linuxsocket_setTcpUserTimeout(JNIEnv* env, jclass clazz,
 
 static void netty_epoll_linuxsocket_setIpFreeBind(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_FREEBIND, &optval, sizeof(optval));
+}
+
+static void netty_epoll_linuxsocket_setIpTransparent(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty_unix_socket_setOption(env, fd, SOL_IP, IP_TRANSPARENT, &optval, sizeof(optval));
 }
 
 static void netty_epoll_linuxsocket_setTcpMd5Sig(JNIEnv* env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jbyteArray key) {
@@ -164,46 +170,55 @@ static jint netty_epoll_linuxsocket_isIpFreeBind(JNIEnv* env, jclass clazz, jint
      return optval;
 }
 
-static void netty_epoll_linuxsocket_getTcpInfo(JNIEnv* env, jclass clazz, jint fd, jintArray array) {
+static jint netty_epoll_linuxsocket_isIpTransparent(JNIEnv* env, jclass clazz, jint fd) {
+     int optval;
+     if (netty_unix_socket_getOption(env, fd, SOL_IP, IP_TRANSPARENT, &optval, sizeof(optval)) == -1) {
+         return -1;
+     }
+     return optval;
+}
+
+static void netty_epoll_linuxsocket_getTcpInfo(JNIEnv* env, jclass clazz, jint fd, jlongArray array) {
      struct tcp_info tcp_info;
      if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_INFO, &tcp_info, sizeof(tcp_info)) == -1) {
          return;
      }
-     unsigned int cArray[32];
-     cArray[0] = tcp_info.tcpi_state;
-     cArray[1] = tcp_info.tcpi_ca_state;
-     cArray[2] = tcp_info.tcpi_retransmits;
-     cArray[3] = tcp_info.tcpi_probes;
-     cArray[4] = tcp_info.tcpi_backoff;
-     cArray[5] = tcp_info.tcpi_options;
-     cArray[6] = tcp_info.tcpi_snd_wscale;
-     cArray[7] = tcp_info.tcpi_rcv_wscale;
-     cArray[8] = tcp_info.tcpi_rto;
-     cArray[9] = tcp_info.tcpi_ato;
-     cArray[10] = tcp_info.tcpi_snd_mss;
-     cArray[11] = tcp_info.tcpi_rcv_mss;
-     cArray[12] = tcp_info.tcpi_unacked;
-     cArray[13] = tcp_info.tcpi_sacked;
-     cArray[14] = tcp_info.tcpi_lost;
-     cArray[15] = tcp_info.tcpi_retrans;
-     cArray[16] = tcp_info.tcpi_fackets;
-     cArray[17] = tcp_info.tcpi_last_data_sent;
-     cArray[18] = tcp_info.tcpi_last_ack_sent;
-     cArray[19] = tcp_info.tcpi_last_data_recv;
-     cArray[20] = tcp_info.tcpi_last_ack_recv;
-     cArray[21] = tcp_info.tcpi_pmtu;
-     cArray[22] = tcp_info.tcpi_rcv_ssthresh;
-     cArray[23] = tcp_info.tcpi_rtt;
-     cArray[24] = tcp_info.tcpi_rttvar;
-     cArray[25] = tcp_info.tcpi_snd_ssthresh;
-     cArray[26] = tcp_info.tcpi_snd_cwnd;
-     cArray[27] = tcp_info.tcpi_advmss;
-     cArray[28] = tcp_info.tcpi_reordering;
-     cArray[29] = tcp_info.tcpi_rcv_rtt;
-     cArray[30] = tcp_info.tcpi_rcv_space;
-     cArray[31] = tcp_info.tcpi_total_retrans;
+     jlong cArray[32];
+     // Expand to 64 bits, then cast away unsigned-ness.
+     cArray[0] = (jlong) (uint64_t) tcp_info.tcpi_state;
+     cArray[1] = (jlong) (uint64_t) tcp_info.tcpi_ca_state;
+     cArray[2] = (jlong) (uint64_t) tcp_info.tcpi_retransmits;
+     cArray[3] = (jlong) (uint64_t) tcp_info.tcpi_probes;
+     cArray[4] = (jlong) (uint64_t) tcp_info.tcpi_backoff;
+     cArray[5] = (jlong) (uint64_t) tcp_info.tcpi_options;
+     cArray[6] = (jlong) (uint64_t) tcp_info.tcpi_snd_wscale;
+     cArray[7] = (jlong) (uint64_t) tcp_info.tcpi_rcv_wscale;
+     cArray[8] = (jlong) (uint64_t) tcp_info.tcpi_rto;
+     cArray[9] = (jlong) (uint64_t) tcp_info.tcpi_ato;
+     cArray[10] = (jlong) (uint64_t) tcp_info.tcpi_snd_mss;
+     cArray[11] = (jlong) (uint64_t) tcp_info.tcpi_rcv_mss;
+     cArray[12] = (jlong) (uint64_t) tcp_info.tcpi_unacked;
+     cArray[13] = (jlong) (uint64_t) tcp_info.tcpi_sacked;
+     cArray[14] = (jlong) (uint64_t) tcp_info.tcpi_lost;
+     cArray[15] = (jlong) (uint64_t) tcp_info.tcpi_retrans;
+     cArray[16] = (jlong) (uint64_t) tcp_info.tcpi_fackets;
+     cArray[17] = (jlong) (uint64_t) tcp_info.tcpi_last_data_sent;
+     cArray[18] = (jlong) (uint64_t) tcp_info.tcpi_last_ack_sent;
+     cArray[19] = (jlong) (uint64_t) tcp_info.tcpi_last_data_recv;
+     cArray[20] = (jlong) (uint64_t) tcp_info.tcpi_last_ack_recv;
+     cArray[21] = (jlong) (uint64_t) tcp_info.tcpi_pmtu;
+     cArray[22] = (jlong) (uint64_t) tcp_info.tcpi_rcv_ssthresh;
+     cArray[23] = (jlong) (uint64_t) tcp_info.tcpi_rtt;
+     cArray[24] = (jlong) (uint64_t) tcp_info.tcpi_rttvar;
+     cArray[25] = (jlong) (uint64_t) tcp_info.tcpi_snd_ssthresh;
+     cArray[26] = (jlong) (uint64_t) tcp_info.tcpi_snd_cwnd;
+     cArray[27] = (jlong) (uint64_t) tcp_info.tcpi_advmss;
+     cArray[28] = (jlong) (uint64_t) tcp_info.tcpi_reordering;
+     cArray[29] = (jlong) (uint64_t) tcp_info.tcpi_rcv_rtt;
+     cArray[30] = (jlong) (uint64_t) tcp_info.tcpi_rcv_space;
+     cArray[31] = (jlong) (uint64_t) tcp_info.tcpi_total_retrans;
 
-     (*env)->SetIntArrayRegion(env, array, 0, 32, cArray);
+     (*env)->SetLongArrayRegion(env, array, 0, 32, cArray);
 }
 
 static jint netty_epoll_linuxsocket_isTcpCork(JNIEnv* env, jclass clazz, jint fd) {
@@ -265,12 +280,14 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setTcpKeepCnt", "(II)V", (void *) netty_epoll_linuxsocket_setTcpKeepCnt },
   { "setTcpUserTimeout", "(II)V", (void *) netty_epoll_linuxsocket_setTcpUserTimeout },
   { "setIpFreeBind", "(II)V", (void *) netty_epoll_linuxsocket_setIpFreeBind },
+  { "setIpTransparent", "(II)V", (void *) netty_epoll_linuxsocket_setIpTransparent },
   { "getTcpKeepIdle", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepIdle },
   { "getTcpKeepIntvl", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepIntvl },
   { "getTcpKeepCnt", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepCnt },
   { "getTcpUserTimeout", "(I)I", (void *) netty_epoll_linuxsocket_getTcpUserTimeout },
   { "isIpFreeBind", "(I)I", (void *) netty_epoll_linuxsocket_isIpFreeBind },
-  { "getTcpInfo", "(I[I)V", (void *) netty_epoll_linuxsocket_getTcpInfo },
+  { "isIpTransparent", "(I)I", (void *) netty_epoll_linuxsocket_isIpTransparent },
+  { "getTcpInfo", "(I[J)V", (void *) netty_epoll_linuxsocket_getTcpInfo },
   { "setTcpMd5Sig", "(I[BI[B)V", (void *) netty_epoll_linuxsocket_setTcpMd5Sig }
 };
 
@@ -335,7 +352,7 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
         return JNI_ERR;
     }
 
-    return JNI_VERSION_1_6;
+    return NETTY_JNI_VERSION;
 }
 
 void netty_epoll_linuxsocket_JNI_OnUnLoad(JNIEnv* env) {

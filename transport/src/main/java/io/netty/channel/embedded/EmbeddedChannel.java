@@ -35,6 +35,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -111,13 +112,26 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     /**
+     * Create a new instance with the pipeline initialized with the specified handlers.
+     *
+     * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
+     *                 constructor. If {@code false} the user will need to call {@link #register()}.
+     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
+     *                      to {@link #close()}, {@link false} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(boolean register, boolean hasDisconnect, ChannelHandler... handlers) {
+        this(EmbeddedChannelId.INSTANCE, register, hasDisconnect, handlers);
+    }
+
+    /**
      * Create a new instance with the channel ID set to the given ID and the pipeline
      * initialized with the specified handlers.
      *
      * @param channelId the {@link ChannelId} that will be used to identify this channel
      * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
-    public EmbeddedChannel(ChannelId channelId, final ChannelHandler... handlers) {
+    public EmbeddedChannel(ChannelId channelId, ChannelHandler... handlers) {
         this(channelId, false, handlers);
     }
 
@@ -130,11 +144,27 @@ public class EmbeddedChannel extends AbstractChannel {
      *                      to {@link #close()}, {@link false} otherwise.
      * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
-    public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelHandler... handlers) {
+    public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, ChannelHandler... handlers) {
+        this(channelId, true, hasDisconnect, handlers);
+    }
+
+    /**
+     * Create a new instance with the channel ID set to the given ID and the pipeline
+     * initialized with the specified handlers.
+     *
+     * @param channelId the {@link ChannelId} that will be used to identify this channel
+     * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
+     *                 constructor. If {@code false} the user will need to call {@link #register()}.
+     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
+     *                      to {@link #close()}, {@link false} otherwise.
+     * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(ChannelId channelId, boolean register, boolean hasDisconnect,
+                           final ChannelHandler... handlers) {
         super(null, channelId);
         metadata = metadata(hasDisconnect);
         config = new DefaultChannelConfig(this);
-        setup(handlers);
+        setup(register, handlers);
     }
 
     /**
@@ -152,14 +182,14 @@ public class EmbeddedChannel extends AbstractChannel {
         super(null, channelId);
         metadata = metadata(hasDisconnect);
         this.config = ObjectUtil.checkNotNull(config, "config");
-        setup(handlers);
+        setup(true, handlers);
     }
 
     private static ChannelMetadata metadata(boolean hasDisconnect) {
         return hasDisconnect ? METADATA_DISCONNECT : METADATA_NO_DISCONNECT;
     }
 
-    private void setup(final ChannelHandler... handlers) {
+    private void setup(boolean register, final ChannelHandler... handlers) {
         ObjectUtil.checkNotNull(handlers, "handlers");
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
@@ -174,9 +204,22 @@ public class EmbeddedChannel extends AbstractChannel {
                 }
             }
         });
+        if (register) {
+            ChannelFuture future = loop.register(this);
+            assert future.isDone();
+        }
+    }
 
+    /**
+     * Register this {@code Channel} on its {@link EventLoop}.
+     */
+    public void register() throws Exception {
         ChannelFuture future = loop.register(this);
         assert future.isDone();
+        Throwable cause = future.cause();
+        if (cause != null) {
+            PlatformDependent.throwException(cause);
+        }
     }
 
     @Override
@@ -659,7 +702,12 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected AbstractUnsafe newUnsafe() {
-        return new DefaultUnsafe();
+        return new EmbeddedUnsafe();
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return ((EmbeddedUnsafe) super.unsafe()).wrapped;
     }
 
     @Override
@@ -692,7 +740,97 @@ public class EmbeddedChannel extends AbstractChannel {
         inboundMessages().add(msg);
     }
 
-    private class DefaultUnsafe extends AbstractUnsafe {
+    private final class EmbeddedUnsafe extends AbstractUnsafe {
+
+        // Delegates to the EmbeddedUnsafe instance but ensures runPendingTasks() is called after each operation
+        // that may change the state of the Channel and may schedule tasks for later execution.
+        final Unsafe wrapped = new Unsafe() {
+            @Override
+            public RecvByteBufAllocator.Handle recvBufAllocHandle() {
+                return EmbeddedUnsafe.this.recvBufAllocHandle();
+            }
+
+            @Override
+            public SocketAddress localAddress() {
+                return EmbeddedUnsafe.this.localAddress();
+            }
+
+            @Override
+            public SocketAddress remoteAddress() {
+                return EmbeddedUnsafe.this.remoteAddress();
+            }
+
+            @Override
+            public void register(EventLoop eventLoop, ChannelPromise promise) {
+                EmbeddedUnsafe.this.register(eventLoop, promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void bind(SocketAddress localAddress, ChannelPromise promise) {
+                EmbeddedUnsafe.this.bind(localAddress, promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+                EmbeddedUnsafe.this.connect(remoteAddress, localAddress, promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void disconnect(ChannelPromise promise) {
+                EmbeddedUnsafe.this.disconnect(promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void close(ChannelPromise promise) {
+                EmbeddedUnsafe.this.close(promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void closeForcibly() {
+                EmbeddedUnsafe.this.closeForcibly();
+                runPendingTasks();
+            }
+
+            @Override
+            public void deregister(ChannelPromise promise) {
+                EmbeddedUnsafe.this.deregister(promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void beginRead() {
+                EmbeddedUnsafe.this.beginRead();
+                runPendingTasks();
+            }
+
+            @Override
+            public void write(Object msg, ChannelPromise promise) {
+                EmbeddedUnsafe.this.write(msg, promise);
+                runPendingTasks();
+            }
+
+            @Override
+            public void flush() {
+                EmbeddedUnsafe.this.flush();
+                runPendingTasks();
+            }
+
+            @Override
+            public ChannelPromise voidPromise() {
+                return EmbeddedUnsafe.this.voidPromise();
+            }
+
+            @Override
+            public ChannelOutboundBuffer outboundBuffer() {
+                return EmbeddedUnsafe.this.outboundBuffer();
+            }
+        };
+
         @Override
         public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
             safeSetSuccess(promise);
@@ -700,7 +838,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
-        public EmbeddedChannelPipeline(EmbeddedChannel channel) {
+        EmbeddedChannelPipeline(EmbeddedChannel channel) {
             super(channel);
         }
 

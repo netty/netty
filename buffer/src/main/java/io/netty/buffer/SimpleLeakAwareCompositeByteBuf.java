@@ -31,7 +31,7 @@ class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     }
 
     @Override
-    public final boolean release() {
+    public boolean release() {
         // Call unwrap() before just in case that super.release() will change the ByteBuf instance that is returned
         // by unwrap().
         ByteBuf unwrapped = unwrap();
@@ -43,7 +43,7 @@ class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
     }
 
     @Override
-    public final boolean release(int decrement) {
+    public boolean release(int decrement) {
         // Call unwrap() before just in case that super.release() will change the ByteBuf instance that is returned
         // by unwrap().
         ByteBuf unwrapped = unwrap();

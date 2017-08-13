@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBufAllocator;
 import javax.net.ssl.SSLEngine;
 import java.util.List;
 import java.util.Set;
@@ -31,6 +32,7 @@ public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNeg
          * Abstract factory pattern for wrapping an {@link SSLEngine} object. This is useful for NPN/APLN support.
          *
          * @param engine The engine to wrap.
+         * @param alloc the buffer allocator.
          * @param applicationNegotiator The application level protocol negotiator
          * @param isServer <ul>
          * <li>{@code true} if the engine is for server side of connections</li>
@@ -38,8 +40,8 @@ public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNeg
          * </ul>
          * @return The resulting wrapped engine. This may just be {@code engine}.
          */
-        SSLEngine wrapSslEngine(SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator,
-                boolean isServer);
+        SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
+                JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer);
     }
 
     /**

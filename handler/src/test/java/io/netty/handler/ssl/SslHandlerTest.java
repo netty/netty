@@ -16,11 +16,51 @@
 
 package io.netty.handler.ssl;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.CodecException;
+import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
+import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
+import io.netty.util.internal.EmptyArrays;
+import org.junit.Test;
+
+import java.io.File;
+import java.net.InetSocketAddress;
+import java.nio.channels.ClosedChannelException;
+import java.security.KeyStore;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SSLContext;
@@ -30,52 +70,16 @@ import javax.net.ssl.SSLProtocolException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.CodecException;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
-import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
-import io.netty.util.internal.EmptyArrays;
-import org.junit.Test;
-
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.DecoderException;
-import io.netty.handler.codec.UnsupportedMessageTypeException;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
-
-import java.io.File;
-import java.net.InetSocketAddress;
-import java.nio.channels.ClosedChannelException;
-import java.security.KeyStore;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 public class SslHandlerTest {
 
@@ -87,14 +91,14 @@ public class SslHandlerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
         // Push the first part of a 5-byte handshake message.
-        ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{22, 3, 1, 0, 5}));
+        ch.writeInbound(wrappedBuffer(new byte[]{22, 3, 1, 0, 5}));
 
         // Should decode nothing yet.
         assertThat(ch.readInbound(), is(nullValue()));
 
         try {
             // Push the second part of the 5-byte handshake message.
-            ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{2, 0, 0, 1, 0}));
+            ch.writeInbound(wrappedBuffer(new byte[]{2, 0, 0, 1, 0}));
             fail();
         } catch (DecoderException e) {
             // Be sure we cleanup the channel and release any pending messages that may have been generated because
@@ -160,27 +164,32 @@ public class SslHandlerTest {
         }
 
         public void test(final boolean dropChannelActive) throws Exception {
-          SSLEngine engine = SSLContext.getDefault().createSSLEngine();
-          engine.setUseClientMode(true);
+            SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+            engine.setUseClientMode(true);
 
-          EmbeddedChannel ch = new EmbeddedChannel(
-              this,
-              new SslHandler(engine),
-              new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                  if (!dropChannelActive) {
-                    ctx.fireChannelActive();
-                  }
-                }
-              }
-          );
-          ch.config().setAutoRead(false);
-          assertFalse(ch.config().isAutoRead());
+            EmbeddedChannel ch = new EmbeddedChannel(false, false,
+                    this,
+                    new SslHandler(engine),
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                            if (!dropChannelActive) {
+                                ctx.fireChannelActive();
+                            }
+                        }
+                    }
+            );
+            ch.config().setAutoRead(false);
+            assertFalse(ch.config().isAutoRead());
 
-          assertTrue(ch.writeOutbound(Unpooled.EMPTY_BUFFER));
-          assertTrue(readIssued);
-          assertTrue(ch.finishAndReleaseAll());
+            ch.register();
+
+            assertTrue(readIssued);
+            readIssued = false;
+
+            assertTrue(ch.writeOutbound(Unpooled.EMPTY_BUFFER));
+            assertTrue(readIssued);
+            assertTrue(ch.finishAndReleaseAll());
        }
     }
 
@@ -388,8 +397,14 @@ public class SslHandlerTest {
         SslHandler handler = new SslHandler(SSLContext.getDefault().createSSLEngine());
         EmbeddedChannel ch = new EmbeddedChannel(handler);
 
-        // Closing the Channel will also produce a close_notify so it is expected to return true.
-        assertTrue(ch.finishAndReleaseAll());
+        ch.close();
+
+        // When the channel is closed the SslHandler will write an empty buffer to the channel.
+        ByteBuf buf = ch.readOutbound();
+        assertFalse(buf.isReadable());
+        buf.release();
+
+        assertFalse(ch.finishAndReleaseAll());
 
         assertTrue(handler.handshakeFuture().cause() instanceof ClosedChannelException);
         assertTrue(handler.sslCloseFuture().cause() instanceof ClosedChannelException);
@@ -454,6 +469,76 @@ public class SslHandlerTest {
         assumeTrue(OpenSsl.isAvailable());
         testCloseNotify(SslProvider.OPENSSL, 0, false);
         testCloseNotify(SslProvider.OPENSSL_REFCNT, 0, false);
+    }
+
+    @Test
+    public void writingReadOnlyBufferDoesNotBreakAggregation() throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+
+        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+
+        EventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        final CountDownLatch serverReceiveLatch = new CountDownLatch(1);
+        try {
+            final int expectedBytes = 11;
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
+                                private int readBytes;
+                                @Override
+                                protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+                                    readBytes += msg.readableBytes();
+                                    if (readBytes >= expectedBytes) {
+                                        serverReceiveLatch.countDown();
+                                    }
+                                }
+                            });
+                        }
+                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            cc = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                        }
+                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+
+            // We first write a ReadOnlyBuffer because SslHandler will attempt to take the first buffer and append to it
+            // until there is no room, or the aggregation size threshold is exceeded. We want to verify that we don't
+            // throw when a ReadOnlyBuffer is used and just verify that we don't aggregate in this case.
+            ByteBuf firstBuffer = Unpooled.buffer(10);
+            firstBuffer.writeByte(0);
+            firstBuffer = firstBuffer.asReadOnly();
+            ByteBuf secondBuffer = Unpooled.buffer(10);
+            secondBuffer.writerIndex(secondBuffer.capacity());
+            cc.write(firstBuffer);
+            cc.writeAndFlush(secondBuffer).syncUninterruptibly();
+            serverReceiveLatch.countDown();
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
+
+            ReferenceCountUtil.release(sslServerCtx);
+            ReferenceCountUtil.release(sslClientCtx);
+        }
     }
 
     private static void testCloseNotify(SslProvider provider, final long closeNotifyReadTimeout, final boolean timeout)
@@ -566,7 +651,7 @@ public class SslHandlerTest {
         }
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 300000)
     public void testCompositeBufSizeEstimationGuaranteesSynchronousWrite()
             throws CertificateException, SSLException, ExecutionException, InterruptedException {
         SslProvider[] providers = SslProvider.values();
@@ -576,7 +661,22 @@ public class SslHandlerTest {
                 for (int j = 0; j < providers.length; ++j) {
                     SslProvider clientProvider = providers[j];
                     if (isSupported(clientProvider)) {
-                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                true, true, true);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                true, true, false);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                true, false, true);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                true, false, false);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                false, true, true);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                false, true, false);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                false, false, true);
+                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                false, false, false);
                     }
                 }
             }
@@ -584,7 +684,9 @@ public class SslHandlerTest {
     }
 
     private static void compositeBufSizeEstimationGuaranteesSynchronousWrite(
-            SslProvider serverProvider, SslProvider clientProvider)
+            SslProvider serverProvider, SslProvider clientProvider,
+            final boolean serverDisableWrapSize,
+            final boolean letHandlerCreateServerEngine, final boolean letHandlerCreateClientEngine)
             throws CertificateException, SSLException, ExecutionException, InterruptedException {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
 
@@ -601,7 +703,14 @@ public class SslHandlerTest {
         Channel cc = null;
         try {
             final Promise<Void> donePromise = group.next().newPromise();
-            final int expectedBytes = 469 + 1024 + 1024;
+            // The goal is to provide the SSLEngine with many ByteBuf components to ensure that the overhead for wrap
+            // is correctly accounted for on each component.
+            final int numComponents = 150;
+            // This is the TLS packet size. The goal is to divide the maximum amount of application data that can fit
+            // into a single TLS packet into many components to ensure the overhead is correctly taken into account.
+            final int desiredBytes = 16384;
+            final int singleComponentSize = desiredBytes / numComponents;
+            final int expectedBytes = numComponents * singleComponentSize;
 
             sc = new ServerBootstrap()
                     .group(group)
@@ -609,25 +718,26 @@ public class SslHandlerTest {
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            final SslHandler handler = letHandlerCreateServerEngine
+                                                              ? sslServerCtx.newHandler(ch.alloc())
+                                                              : new SslHandler(sslServerCtx.newEngine(ch.alloc()));
+                            if (serverDisableWrapSize) {
+                                handler.setWrapDataSize(-1);
+                            }
+                            ch.pipeline().addLast(handler);
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                                         if (sslEvt.isSuccess()) {
-                                            final ByteBuf input = ctx.alloc().buffer();
-                                            input.writeBytes(new byte[expectedBytes]);
-                                            CompositeByteBuf content = ctx.alloc().compositeBuffer();
-                                            content.addComponent(true, input.readRetainedSlice(469));
-                                            content.addComponent(true, input.readRetainedSlice(1024));
-                                            content.addComponent(true, input.readRetainedSlice(1024));
-                                            ctx.writeAndFlush(content).addListener(new ChannelFutureListener() {
-                                                @Override
-                                                public void operationComplete(ChannelFuture future) {
-                                                    input.release();
-                                                }
-                                            });
+                                            CompositeByteBuf content = ctx.alloc().compositeDirectBuffer(numComponents);
+                                            for (int i = 0; i < numComponents; ++i) {
+                                                ByteBuf buf = ctx.alloc().directBuffer(singleComponentSize);
+                                                buf.writerIndex(buf.writerIndex() + singleComponentSize);
+                                                content.addComponent(true, buf);
+                                            }
+                                            ctx.writeAndFlush(content);
                                         } else {
                                             donePromise.tryFailure(sslEvt.cause());
                                         }
@@ -654,7 +764,11 @@ public class SslHandlerTest {
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                            if (letHandlerCreateClientEngine) {
+                                ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                            } else {
+                                ch.pipeline().addLast(new SslHandler(sslClientCtx.newEngine(ch.alloc())));
+                            }
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 private int bytesSeen;
                                 @Override
@@ -675,7 +789,8 @@ public class SslHandlerTest {
 
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) {
-                                    donePromise.tryFailure(new IllegalStateException("client closed"));
+                                    donePromise.tryFailure(new IllegalStateException("client closed. bytesSeen: " +
+                                                                                     bytesSeen));
                                 }
                             });
                         }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,22 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http2;
+package io.netty.channel.socket;
 
-import io.netty.util.internal.ObjectUtil;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.internal.UnstableApi;
 
+/**
+ * Special event which will be fired and passed to the
+ * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} methods once the output of
+ * a {@link SocketChannel} was shutdown.
+ */
 @UnstableApi
-public abstract class AbstractHttp2StreamStateEvent implements Http2StreamStateEvent {
+public final class ChannelOutputShutdownEvent {
+    public static final ChannelOutputShutdownEvent INSTANCE = new ChannelOutputShutdownEvent();
 
-    private final int streamId;
-
-    protected AbstractHttp2StreamStateEvent(int streamId) {
-        this.streamId = ObjectUtil.checkPositiveOrZero(streamId, "streamId");
-    }
-
-    @Override
-    public int streamId() {
-        return streamId;
+    private ChannelOutputShutdownEvent() {
     }
 }

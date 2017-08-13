@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec.mqtt;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -25,16 +26,34 @@ public final class MqttConnectPayload {
 
     private final String clientIdentifier;
     private final String willTopic;
-    private final String willMessage;
+    private final byte[] willMessage;
     private final String userName;
-    private final String password;
+    private final byte[] password;
 
+    /**
+     * @deprecated use {@link MqttConnectPayload#MqttConnectPayload(String, String, byte[], String, byte[])} instead
+     */
+    @Deprecated
     public MqttConnectPayload(
             String clientIdentifier,
             String willTopic,
             String willMessage,
             String userName,
             String password) {
+        this(
+          clientIdentifier,
+          willTopic,
+          willMessage.getBytes(CharsetUtil.UTF_8),
+          userName,
+          password.getBytes(CharsetUtil.UTF_8));
+    }
+
+    public MqttConnectPayload(
+            String clientIdentifier,
+            String willTopic,
+            byte[] willMessage,
+            String userName,
+            byte[] password) {
         this.clientIdentifier = clientIdentifier;
         this.willTopic = willTopic;
         this.willMessage = willMessage;
@@ -50,7 +69,15 @@ public final class MqttConnectPayload {
         return willTopic;
     }
 
+    /**
+     * @deprecated use {@link MqttConnectPayload#willMessageInBytes()} instead
+     */
+    @Deprecated
     public String willMessage() {
+        return willMessage == null ? null : new String(willMessage, CharsetUtil.UTF_8);
+    }
+
+    public byte[] willMessageInBytes() {
         return willMessage;
     }
 
@@ -58,7 +85,15 @@ public final class MqttConnectPayload {
         return userName;
     }
 
+    /**
+     * @deprecated use {@link MqttConnectPayload#passwordInBytes()} instead
+     */
+    @Deprecated
     public String password() {
+        return password == null ? null : new String(password, CharsetUtil.UTF_8);
+    }
+
+    public byte[] passwordInBytes() {
         return password;
     }
 

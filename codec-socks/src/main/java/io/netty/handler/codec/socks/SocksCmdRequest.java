@@ -51,9 +51,11 @@ public final class SocksCmdRequest extends SocksRequest {
                 }
                 break;
             case DOMAIN:
-                if (IDN.toASCII(host).length() > 255) {
-                    throw new IllegalArgumentException(host + " IDN: " + IDN.toASCII(host) + " exceeds 255 char limit");
+                String asciiHost = IDN.toASCII(host);
+                if (asciiHost.length() > 255) {
+                    throw new IllegalArgumentException(host + " IDN: " + asciiHost + " exceeds 255 char limit");
                 }
+                host = asciiHost;
                 break;
             case IPv6:
                 if (!NetUtil.isValidIpV6Address(host)) {
@@ -68,7 +70,7 @@ public final class SocksCmdRequest extends SocksRequest {
         }
         this.cmdType = cmdType;
         this.addressType = addressType;
-        this.host = IDN.toASCII(host);
+        this.host = host;
         this.port = port;
     }
 
@@ -96,7 +98,7 @@ public final class SocksCmdRequest extends SocksRequest {
      * @return host that is used as a parameter in {@link SocksCmdType}
      */
     public String host() {
-        return IDN.toUnicode(host);
+        return addressType == SocksAddressType.DOMAIN ? IDN.toUnicode(host) : host;
     }
 
     /**
@@ -123,7 +125,7 @@ public final class SocksCmdRequest extends SocksRequest {
 
             case DOMAIN: {
                 byteBuf.writeByte(host.length());
-                byteBuf.writeBytes(host.getBytes(CharsetUtil.US_ASCII));
+                byteBuf.writeCharSequence(host, CharsetUtil.US_ASCII);
                 byteBuf.writeShort(port);
                 break;
             }

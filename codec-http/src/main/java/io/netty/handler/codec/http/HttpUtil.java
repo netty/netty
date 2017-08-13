@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
@@ -172,23 +171,19 @@ public final class HttpUtil {
     }
 
     /**
-     * Returns the length of the content. Please note that this value is
-     * not retrieved from {@link HttpContent#content()} but from the
-     * {@code "Content-Length"} header, and thus they are independent from each
-     * other.
+     * Returns the length of the content or the specified default value if the message does not have the {@code
+     * "Content-Length" header}. Please note that this value is not retrieved from {@link HttpContent#content()} but
+     * from the {@code "Content-Length"} header, and thus they are independent from each other.
      *
-     * @return the content length or {@code defaultValue} if this message does
-     *         not have the {@code "Content-Length"} header or its value is not
-     *         a number
+     * @param message      the message
+     * @param defaultValue the default value
+     * @return the content length or the specified default value
+     * @throws NumberFormatException if the {@code "Content-Length"} header does not parse as a long
      */
     public static long getContentLength(HttpMessage message, long defaultValue) {
         String value = message.headers().get(HttpHeaderNames.CONTENT_LENGTH);
         if (value != null) {
-            try {
-                return Long.parseLong(value);
-            } catch (NumberFormatException ignore) {
-                return defaultValue;
-            }
+            return Long.parseLong(value);
         }
 
         // We know the content length if it's a Web Socket message even if
@@ -357,7 +352,7 @@ public final class HttpUtil {
      * Fetch charset from message's Content-Type header.
      *
      * @param message entity to fetch Content-Type header from
-     * @return the charset from message's Content-Type header or {@link io.netty.util.CharsetUtil#ISO_8859_1}
+     * @return the charset from message's Content-Type header or {@link CharsetUtil#ISO_8859_1}
      * if charset is not presented or unparsable
      */
     public static Charset getCharset(HttpMessage message) {
@@ -368,7 +363,7 @@ public final class HttpUtil {
      * Fetch charset from Content-Type header value.
      *
      * @param contentTypeValue Content-Type header value to parse
-     * @return the charset from message's Content-Type header or {@link io.netty.util.CharsetUtil#ISO_8859_1}
+     * @return the charset from message's Content-Type header or {@link CharsetUtil#ISO_8859_1}
      * if charset is not presented or unparsable
      */
     public static Charset getCharset(CharSequence contentTypeValue) {
@@ -383,7 +378,7 @@ public final class HttpUtil {
      * Fetch charset from message's Content-Type header.
      *
      * @param message entity to fetch Content-Type header from
-     * @param defaultCharset result to use in case of empty, incorrect or doesn't conain required part header value
+     * @param defaultCharset result to use in case of empty, incorrect or doesn't contain required part header value
      * @return the charset from message's Content-Type header or {@code defaultCharset}
      * if charset is not presented or unparsable
      */
@@ -410,7 +405,7 @@ public final class HttpUtil {
             if (charsetCharSequence != null) {
                 try {
                     return Charset.forName(charsetCharSequence.toString());
-                } catch (UnsupportedCharsetException unsupportedException) {
+                } catch (UnsupportedCharsetException ignored) {
                     return defaultCharset;
                 }
             } else {
@@ -523,16 +518,5 @@ public final class HttpUtil {
         } else {
             return contentTypeValue.length() > 0 ? contentTypeValue : null;
         }
-    }
-
-    static void encodeAscii0(CharSequence seq, ByteBuf buf) {
-        int length = seq.length();
-        for (int i = 0 ; i < length; i++) {
-            buf.writeByte(c2b(seq.charAt(i)));
-        }
-    }
-
-    private static byte c2b(char c) {
-        return c > 255 ? (byte) '?' : (byte) c;
     }
 }

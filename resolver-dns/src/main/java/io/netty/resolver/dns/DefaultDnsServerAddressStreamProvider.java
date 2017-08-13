@@ -15,6 +15,7 @@
  */
 package io.netty.resolver.dns;
 
+import io.netty.util.NetUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -25,6 +26,7 @@ import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import java.lang.reflect.Method;
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -66,12 +68,25 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
         try {
             DirContext ctx = new InitialDirContext(env);
             String dnsUrls = (String) ctx.getEnvironment().get("java.naming.provider.url");
-            String[] servers = dnsUrls.split(" ");
-            for (String server : servers) {
-                try {
-                    defaultNameServers.add(SocketUtils.socketAddress(new URI(server).getHost(), DNS_PORT));
-                } catch (URISyntaxException e) {
-                    logger.debug("Skipping a malformed nameserver URI: {}", server, e);
+            // Only try if not empty as otherwise we will produce an exception
+            if (dnsUrls != null && !dnsUrls.isEmpty()) {
+                String[] servers = dnsUrls.split(" ");
+                for (String server : servers) {
+                    try {
+                        URI uri = new URI(server);
+                        String host = new URI(server).getHost();
+
+                        if (host == null || host.isEmpty()) {
+                            logger.debug(
+                                    "Skipping a nameserver URI as host portion could not be extracted: {}", server);
+                            // If the host portion can not be parsed we should just skip this entry.
+                            continue;
+                        }
+                        int port  = uri.getPort();
+                        defaultNameServers.add(SocketUtils.socketAddress(uri.getHost(), port == -1 ? DNS_PORT : port));
+                    } catch (URISyntaxException e) {
+                        logger.debug("Skipping a malformed nameserver URI: {}", server, e);
+                    }
                 }
             }
         } catch (NamingException ignore) {
@@ -104,10 +119,21 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
                         "Default DNS servers: {} (sun.net.dns.ResolverConfiguration)", defaultNameServers);
             }
         } else {
-            Collections.addAll(
-                    defaultNameServers,
-                    SocketUtils.socketAddress("8.8.8.8", DNS_PORT),
-                    SocketUtils.socketAddress("8.8.4.4", DNS_PORT));
+            // Depending if IPv6 or IPv4 is used choose the correct DNS servers provided by google:
+            // https://developers.google.com/speed/public-dns/docs/using
+            // https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
+            if (NetUtil.isIpV6AddressesPreferred() ||
+                    (NetUtil.LOCALHOST instanceof Inet6Address && !NetUtil.isIpV4StackPreferred())) {
+                Collections.addAll(
+                        defaultNameServers,
+                        SocketUtils.socketAddress("2001:4860:4860::8888", DNS_PORT),
+                        SocketUtils.socketAddress("2001:4860:4860::8844", DNS_PORT));
+            } else {
+                Collections.addAll(
+                        defaultNameServers,
+                        SocketUtils.socketAddress("8.8.8.8", DNS_PORT),
+                        SocketUtils.socketAddress("8.8.4.4", DNS_PORT));
+            }
 
             if (logger.isWarnEnabled()) {
                 logger.warn(

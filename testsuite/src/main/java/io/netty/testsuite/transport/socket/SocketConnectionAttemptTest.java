@@ -16,19 +16,15 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.util.internal.SocketUtils;
-import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
 
@@ -39,17 +35,13 @@ import java.net.Socket;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
+import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_HOST;
+import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_PORT;
 
 public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
-    private static final String BAD_HOST = SystemPropertyUtil.get("io.netty.testsuite.badHost", "netty.io");
-    private static final int BAD_PORT = SystemPropertyUtil.getInt("io.netty.testsuite.badPort", 65535);
-
-    static {
-        InternalLogger logger = InternalLoggerFactory.getInstance(SocketConnectionAttemptTest.class);
-        logger.debug("-Dio.netty.testsuite.badHost: {}", BAD_HOST);
-        logger.debug("-Dio.netty.testsuite.badPort: {}", BAD_PORT);
-    }
+    // See /etc/services
+    private static final int UNASSIGNED_PORT = 4;
 
     @Test(timeout = 30000)
     public void testConnectTimeout() throws Throwable {
@@ -89,14 +81,13 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         ChannelHandler handler = new ChannelInboundHandlerAdapter() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                Channel channel = ctx.channel();
                 errorPromise.setFailure(new AssertionError("should have never been called"));
             }
         };
 
         cb.handler(handler);
         cb.option(ChannelOption.ALLOW_HALF_CLOSURE, halfClosure);
-        ChannelFuture future = cb.connect(NetUtil.LOCALHOST, TestUtils.getFreePort()).awaitUninterruptibly();
+        ChannelFuture future = cb.connect(NetUtil.LOCALHOST, UNASSIGNED_PORT).awaitUninterruptibly();
         assertThat(future.cause(), is(instanceOf(ConnectException.class)));
         assertThat(errorPromise.cause(), is(nullValue()));
     }
@@ -122,7 +113,8 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
             }
         }
 
-        assumeThat("The connection attempt to " + BAD_HOST + " does not time out.", badHostTimedOut, is(true));
+        assumeThat("The connection attempt to " + BAD_HOST + " does not time out.",
+                badHostTimedOut, is(true));
 
         run();
     }

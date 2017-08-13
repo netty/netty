@@ -373,13 +373,16 @@ public class DefaultHttp2Connection implements Http2Connection {
      * Simple stream implementation. Streams can be compared to each other by priority.
      */
     private class DefaultStream implements Http2Stream {
-        private static final byte SENT_STATE_RST = 0x1;
-        private static final byte SENT_STATE_HEADERS = 0x2;
-        private static final byte SENT_STATE_PUSHPROMISE = 0x4;
+        private static final byte META_STATE_SENT_RST = 1;
+        private static final byte META_STATE_SENT_HEADERS = 1 << 1;
+        private static final byte META_STATE_SENT_TRAILERS = 1 << 2;
+        private static final byte META_STATE_SENT_PUSHPROMISE = 1 << 3;
+        private static final byte META_STATE_RECV_HEADERS = 1 << 4;
+        private static final byte META_STATE_RECV_TRAILERS = 1 << 5;
         private final int id;
         private final PropertyMap properties = new PropertyMap();
         private State state;
-        private byte sentState;
+        private byte metaState;
 
         DefaultStream(int id, State state) {
             this.id = id;
@@ -398,35 +401,60 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public boolean isResetSent() {
-            return (sentState & SENT_STATE_RST) != 0;
+            return (metaState & META_STATE_SENT_RST) != 0;
         }
 
         @Override
         public Http2Stream resetSent() {
-            sentState |= SENT_STATE_RST;
+            metaState |= META_STATE_SENT_RST;
             return this;
         }
 
         @Override
-        public Http2Stream headersSent() {
-            sentState |= SENT_STATE_HEADERS;
+        public Http2Stream headersSent(boolean isInformational) {
+            if (!isInformational) {
+                metaState |= isHeadersSent() ? META_STATE_SENT_TRAILERS : META_STATE_SENT_HEADERS;
+            }
             return this;
         }
 
         @Override
         public boolean isHeadersSent() {
-            return (sentState & SENT_STATE_HEADERS) != 0;
+            return (metaState & META_STATE_SENT_HEADERS) != 0;
+        }
+
+        @Override
+        public boolean isTrailersSent() {
+            return (metaState & META_STATE_SENT_TRAILERS) != 0;
+        }
+
+        @Override
+        public Http2Stream headersReceived(boolean isInformational) {
+            if (!isInformational) {
+                metaState |= isHeadersReceived() ? META_STATE_RECV_TRAILERS : META_STATE_RECV_HEADERS;
+            }
+            return this;
+        }
+
+        @Override
+        public boolean isHeadersReceived() {
+            return (metaState & META_STATE_RECV_HEADERS) != 0;
+        }
+
+        @Override
+        public boolean isTrailersReceived() {
+            return (metaState & META_STATE_RECV_TRAILERS) != 0;
         }
 
         @Override
         public Http2Stream pushPromiseSent() {
-            sentState |= SENT_STATE_PUSHPROMISE;
+            metaState |= META_STATE_SENT_PUSHPROMISE;
             return this;
         }
 
         @Override
         public boolean isPushPromiseSent() {
-            return (sentState & SENT_STATE_PUSHPROMISE) != 0;
+            return (metaState & META_STATE_SENT_PUSHPROMISE) != 0;
         }
 
         @Override
@@ -599,7 +627,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         @Override
-        public Http2Stream headersSent() {
+        public Http2Stream headersSent(boolean isInformational) {
             throw new UnsupportedOperationException();
         }
 

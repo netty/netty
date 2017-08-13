@@ -16,7 +16,6 @@
 package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
-import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -262,7 +261,7 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
     @Override
     public CharSequence getCharSequence(int index, int length, Charset charset) {
         checkIndex0(index, length);
-        return buffer.getCharSequence(idx(index), length, charset);
+        return unwrap().getCharSequence(idx(index), length, charset);
     }
 
     @Override
@@ -385,23 +384,6 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
         checkIndex0(index, src.remaining());
         unwrap().setBytes(idx(index), src);
         return this;
-    }
-
-    @Override
-    public int setCharSequence(int index, CharSequence sequence, Charset charset) {
-        if (charset.equals(CharsetUtil.UTF_8)) {
-            checkIndex0(index, ByteBufUtil.utf8MaxBytes(sequence));
-            return ByteBufUtil.writeUtf8(this, idx(index), sequence, sequence.length());
-        }
-        if (charset.equals(CharsetUtil.US_ASCII)) {
-            int len = sequence.length();
-            checkIndex0(index, len);
-            return ByteBufUtil.writeAscii(this, idx(index), sequence, len);
-        }
-        byte[] bytes = sequence.toString().getBytes(charset);
-        checkIndex0(index, bytes.length);
-        buffer.setBytes(idx(index), bytes);
-        return bytes.length;
     }
 
     @Override

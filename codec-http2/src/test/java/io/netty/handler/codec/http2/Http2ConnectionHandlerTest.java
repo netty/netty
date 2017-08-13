@@ -43,6 +43,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
@@ -627,6 +628,23 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void writeRstStreamForKnownStreamUsingVoidPromise() throws Exception {
         writeRstStreamUsingVoidPromise(STREAM_ID);
+    }
+
+    @Test
+    public void gracefulShutdownTimeoutTest() throws Exception {
+        handler = newHandler();
+        final long expectedMillis = 1234;
+        handler.gracefulShutdownTimeoutMillis(expectedMillis);
+        handler.close(ctx, promise);
+        verify(executor).schedule(any(Runnable.class), eq(expectedMillis), eq(TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    public void gracefulShutdownIndefiniteTimeoutTest() throws Exception {
+        handler = newHandler();
+        handler.gracefulShutdownTimeoutMillis(-1);
+        handler.close(ctx, promise);
+        verify(executor, never()).schedule(any(Runnable.class), anyLong(), any(TimeUnit.class));
     }
 
     private void writeRstStreamUsingVoidPromise(int streamId) throws Exception {

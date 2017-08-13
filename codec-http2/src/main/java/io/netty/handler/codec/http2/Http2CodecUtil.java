@@ -35,6 +35,8 @@ import static io.netty.handler.codec.http2.Http2Exception.headerListSizeError;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
@@ -118,6 +120,7 @@ public final class Http2CodecUtil {
     public static final int SMALLEST_MAX_CONCURRENT_STREAMS = 100;
     static final int DEFAULT_MAX_RESERVED_STREAMS = SMALLEST_MAX_CONCURRENT_STREAMS;
     static final int DEFAULT_MIN_ALLOCATION_CHUNK = 1024;
+    static final int DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY = 32;
 
     /**
      * Calculate the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
@@ -130,6 +133,8 @@ public final class Http2CodecUtil {
         // This is equivalent to `maxHeaderListSize * 1.25` but we avoid floating point multiplication.
         return maxHeaderListSize + (maxHeaderListSize >>> 2);
     }
+
+    public static final long DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = MILLISECONDS.convert(30, SECONDS);
 
     /**
      * Returns {@code true} if the stream is an outbound stream.

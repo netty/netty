@@ -26,8 +26,13 @@ import org.junit.Test;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class ByteToMessageDecoderTest {
 
@@ -87,17 +92,7 @@ public class ByteToMessageDecoderTest {
     @Test
     public void testInternalBufferClearReadAll() {
         final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a'});
-        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
-            @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-                ByteBuf byteBuf = internalBuffer();
-                assertEquals(1, byteBuf.refCnt());
-                in.readByte();
-                // Removal from pipeline should clear internal buffer
-                ctx.pipeline().remove(this);
-                assertEquals(0, byteBuf.refCnt());
-            }
-        });
+        EmbeddedChannel channel = newInternalBufferTestChannel();
         assertFalse(channel.writeInbound(buf));
         assertFalse(channel.finish());
     }
@@ -109,17 +104,7 @@ public class ByteToMessageDecoderTest {
     @Test
     public void testInternalBufferClearReadPartly() {
         final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a', 'b'});
-        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
-            @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-                ByteBuf byteBuf = internalBuffer();
-                assertEquals(1, byteBuf.refCnt());
-                in.readByte();
-                // Removal from pipeline should clear internal buffer
-                ctx.pipeline().remove(this);
-                assertEquals(0, byteBuf.refCnt());
-            }
-        });
+        EmbeddedChannel channel = newInternalBufferTestChannel();
         assertTrue(channel.writeInbound(buf));
         assertTrue(channel.finish());
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {'b'});
@@ -128,6 +113,50 @@ public class ByteToMessageDecoderTest {
         assertNull(channel.readInbound());
         expected.release();
         b.release();
+    }
+
+    private EmbeddedChannel newInternalBufferTestChannel() {
+        return new EmbeddedChannel(new ByteToMessageDecoder() {
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                ByteBuf byteBuf = internalBuffer();
+                assertEquals(1, byteBuf.refCnt());
+                in.readByte();
+                // Removal from pipeline should clear internal buffer
+                ctx.pipeline().remove(this);
+            }
+
+            @Override
+            protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+                assertCumulationReleased(internalBuffer());
+            }
+        });
+    }
+
+    @Test
+    public void handlerRemovedWillNotReleaseBufferIfDecodeInProgress() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                ctx.pipeline().remove(this);
+                assertTrue(in.refCnt() != 0);
+            }
+
+            @Override
+            protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+                assertCumulationReleased(internalBuffer());
+            }
+        });
+        byte[] bytes = new byte[1024];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+
+        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
+        assertTrue(channel.finishAndReleaseAll());
+    }
+
+    private static void assertCumulationReleased(ByteBuf byteBuf) {
+        assertTrue("unexpected value: " + byteBuf,
+                byteBuf == null || byteBuf == Unpooled.EMPTY_BUFFER || byteBuf.refCnt() == 0);
     }
 
     @Test
@@ -277,5 +306,42 @@ public class ByteToMessageDecoderTest {
         assertFalse(channel.writeInbound(Unpooled.buffer(8).writeByte(1).asReadOnly()));
         assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(new byte[] { (byte) 2 })));
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testFireChannelReadComplete() {
+        final AtomicBoolean readCompleteExpected = new AtomicBoolean();
+        final AtomicInteger readCompleteCount = new AtomicInteger();
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                if (in.readableBytes() > 1) {
+                    readCompleteExpected.set(true);
+                    out.add(in.readBytes(in.readableBytes()));
+                }
+            }
+        }, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                assertTrue(readCompleteExpected.get());
+                readCompleteCount.incrementAndGet();
+            }
+        });
+
+        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {'a'})));
+        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {'b'})));
+        ByteBuf b = channel.readInbound();
+
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {'a', 'b'});
+        assertEquals(expected, b);
+        b.release();
+        expected.release();
+
+        assertTrue(readCompleteExpected.get());
+
+        assertFalse(channel.finish());
+
+        assertEquals(1, readCompleteCount.get());
     }
 }

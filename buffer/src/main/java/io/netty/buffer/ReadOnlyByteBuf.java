@@ -66,6 +66,16 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public int ensureWritable(int minWritableBytes, boolean force) {
+        return 1;
+    }
+
+    @Override
+    public ByteBuf ensureWritable(int minWritableBytes) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public ByteBuf unwrap() {
         return buffer;
     }
@@ -103,12 +113,12 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public boolean hasMemoryAddress() {
-        return false;
+        return unwrap().hasMemoryAddress();
     }
 
     @Override
     public long memoryAddress() {
-        throw new ReadOnlyBufferException();
+        return unwrap().memoryAddress();
     }
 
     @Override

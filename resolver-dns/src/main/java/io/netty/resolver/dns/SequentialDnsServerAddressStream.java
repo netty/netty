@@ -41,6 +41,16 @@ final class SequentialDnsServerAddressStream implements DnsServerAddressStream {
     }
 
     @Override
+    public int size() {
+        return addresses.length;
+    }
+
+    @Override
+    public SequentialDnsServerAddressStream duplicate() {
+        return new SequentialDnsServerAddressStream(addresses, i);
+    }
+
+    @Override
     public String toString() {
         return toString("sequential", i, addresses);
     }

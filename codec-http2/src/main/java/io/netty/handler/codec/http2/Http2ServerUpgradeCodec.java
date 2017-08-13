@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -70,7 +71,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
      *
      * @param http2Codec the HTTP/2 multiplexing handler.
      */
-    public Http2ServerUpgradeCodec(Http2Codec http2Codec) {
+    public Http2ServerUpgradeCodec(Http2MultiplexCodec http2Codec) {
         this(null, http2Codec);
     }
 
@@ -91,8 +92,27 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
      * @param handlerName the name of the HTTP/2 connection handler to be used in the pipeline.
      * @param http2Codec the HTTP/2 multiplexing handler.
      */
-    public Http2ServerUpgradeCodec(String handlerName, Http2Codec http2Codec) {
-        this(handlerName, http2Codec.frameCodec().connectionHandler(), http2Codec);
+    public Http2ServerUpgradeCodec(String handlerName, Http2MultiplexCodec http2Codec) {
+        this(handlerName, http2Codec, http2Codec);
+    }
+
+    /**
+     * Creates the codec using a default name for the connection handler when adding to the
+     * pipeline.
+     *
+     * @param http2Codec the HTTP/2 frame handler.
+     * @param handlers the handlers that will handle the {@link Http2Frame}s.
+     */
+    public Http2ServerUpgradeCodec(final Http2FrameCodec http2Codec, final ChannelHandler... handlers) {
+        this(null, http2Codec, new ChannelHandlerAdapter() {
+
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                ctx.pipeline().addLast(http2Codec);
+                ctx.pipeline().addLast(handlers);
+                ctx.pipeline().remove(this);
+            }
+        });
     }
 
     Http2ServerUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler,

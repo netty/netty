@@ -171,7 +171,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     @Override
     protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
         // This event loop never calls takeTask()
-        return PlatformDependent.newMpscQueue(maxPendingTasks);
+        return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
+                                                    : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
     }
 
     @Override
@@ -284,8 +285,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                         if (wakenUp == 1) {
                             Native.eventFdWrite(eventFd.intValue(), 1L);
                         }
-                    default:
                         // fallthrough
+                    default:
                 }
 
                 final int ioRatio = this.ioRatio;
@@ -350,6 +351,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         } catch (IOException ignore) {
             // ignore on close
         }
+        // Using the intermediate collection to prevent ConcurrentModificationException.
+        // In the `close()` method, the channel is deleted from `channels` map.
         Collection<AbstractEpollChannel> array = new ArrayList<AbstractEpollChannel>(channels.size());
 
         for (AbstractEpollChannel channel: channels.values()) {

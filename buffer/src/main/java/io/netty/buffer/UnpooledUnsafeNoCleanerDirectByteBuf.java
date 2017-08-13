@@ -43,31 +43,23 @@ class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
     public ByteBuf capacity(int newCapacity) {
         checkNewCapacity(newCapacity);
 
-        int readerIndex = readerIndex();
-        int writerIndex = writerIndex();
         int oldCapacity = capacity();
+        if (newCapacity == oldCapacity) {
+            return this;
+        }
 
-        if (newCapacity > oldCapacity) {
-            ByteBuffer oldBuffer = buffer;
-            ByteBuffer newBuffer = reallocateDirect(oldBuffer, newCapacity);
-            setByteBuffer(newBuffer, false);
-        } else if (newCapacity < oldCapacity) {
-            ByteBuffer oldBuffer = buffer;
-            ByteBuffer newBuffer = allocateDirect(newCapacity);
-            if (readerIndex < newCapacity) {
-                if (writerIndex > newCapacity) {
-                    writerIndex = newCapacity;
-                    writerIndex(writerIndex);
+        ByteBuffer newBuffer = reallocateDirect(buffer, newCapacity);
+
+        if (newCapacity < oldCapacity) {
+            if (readerIndex() < newCapacity) {
+                if (writerIndex() > newCapacity) {
+                    writerIndex(newCapacity);
                 }
-                oldBuffer.position(readerIndex).limit(writerIndex);
-                newBuffer.position(readerIndex).limit(writerIndex);
-                newBuffer.put(oldBuffer);
-                newBuffer.clear();
             } else {
                 setIndex(newCapacity, newCapacity);
             }
-            setByteBuffer(newBuffer, true);
         }
+        setByteBuffer(newBuffer, false);
         return this;
     }
 }

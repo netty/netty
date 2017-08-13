@@ -35,7 +35,6 @@ import java.util.WeakHashMap;
  */
 public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap {
 
-    private static final int STRING_BUILDER_MAX_CAPACITY = 1024 << 6;
     private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
 
     public static final Object UNSET = new Object();
@@ -164,13 +163,17 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     }
 
     public StringBuilder stringBuilder() {
-        StringBuilder builder = stringBuilder;
-        if (builder == null || builder.capacity() > STRING_BUILDER_MAX_CAPACITY) {
-            stringBuilder = builder = new StringBuilder(512);
+        final int stringBuilderCapacity = 1024;
+        if (stringBuilder == null) {
+            stringBuilder = new StringBuilder(stringBuilderCapacity);
         } else {
-            builder.setLength(0);
+            if (stringBuilder.capacity() > stringBuilderCapacity) {
+                stringBuilder.setLength(stringBuilderCapacity);
+                stringBuilder.trimToSize();
+            }
+            stringBuilder.setLength(0);
         }
-        return builder;
+        return stringBuilder;
     }
 
     public Map<Charset, CharsetEncoder> charsetEncoderCache() {

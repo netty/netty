@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
@@ -118,6 +119,11 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      * 307 Temporary Redirect (since HTTP/1.1)
      */
     public static final HttpResponseStatus TEMPORARY_REDIRECT = newStatus(307, "Temporary Redirect");
+
+    /**
+     * 308 Permanent Redirect (RFC7538)
+     */
+    public static final HttpResponseStatus PERMANENT_REDIRECT = newStatus(308, "Permanent Redirect");
 
     /**
      * 400 Bad Request
@@ -359,6 +365,8 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return USE_PROXY;
         case 307:
             return TEMPORARY_REDIRECT;
+        case 308:
+            return PERMANENT_REDIRECT;
         case 400:
             return BAD_REQUEST;
         case 401:
@@ -660,8 +668,8 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     @Override
     public String toString() {
-        return new StringBuilder(reasonPhrase.length() + 5)
-            .append(code)
+        return new StringBuilder(reasonPhrase.length() + 4)
+            .append(codeAsText)
             .append(' ')
             .append(reasonPhrase)
             .toString();
@@ -669,9 +677,9 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     void encode(ByteBuf buf) {
         if (bytes == null) {
-            HttpUtil.encodeAscii0(String.valueOf(code()), buf);
+            ByteBufUtil.copy(codeAsText, buf);
             buf.writeByte(SP);
-            HttpUtil.encodeAscii0(String.valueOf(reasonPhrase()), buf);
+            buf.writeCharSequence(reasonPhrase, CharsetUtil.US_ASCII);
         } else {
             buf.writeBytes(bytes);
         }

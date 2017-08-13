@@ -23,7 +23,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
@@ -82,7 +81,7 @@ public class EpollReuseAddrTest {
         bootstrap.handler(new DummyHandler());
         ChannelFuture future = bootstrap.bind().syncUninterruptibly();
         try {
-            bootstrap.bind().syncUninterruptibly();
+            bootstrap.bind(future.channel().localAddress()).syncUninterruptibly();
             Assert.fail();
         } catch (Exception e) {
             Assert.assertTrue(e instanceof IOException);
@@ -102,7 +101,7 @@ public class EpollReuseAddrTest {
 
         final AtomicBoolean accepted2 = new AtomicBoolean();
         bootstrap.childHandler(new ServerSocketTestHandler(accepted2));
-        ChannelFuture future2 = bootstrap.bind().syncUninterruptibly();
+        ChannelFuture future2 = bootstrap.bind(address1).syncUninterruptibly();
         InetSocketAddress address2 = (InetSocketAddress) future2.channel().localAddress();
 
         Assert.assertEquals(address1, address2);
@@ -129,7 +128,7 @@ public class EpollReuseAddrTest {
 
         final AtomicBoolean received2 = new AtomicBoolean();
         bootstrap.handler(new DatagramSocketTestHandler(received2));
-        ChannelFuture future2 = bootstrap.bind().syncUninterruptibly();
+        ChannelFuture future2 = bootstrap.bind(address1).syncUninterruptibly();
         final InetSocketAddress address2 = (InetSocketAddress) future2.channel().localAddress();
 
         Assert.assertEquals(address1, address2);
@@ -173,7 +172,7 @@ public class EpollReuseAddrTest {
         bootstrap.group(EpollSocketTestPermutation.EPOLL_BOSS_GROUP, EpollSocketTestPermutation.EPOLL_WORKER_GROUP);
         bootstrap.channel(EpollServerSocketChannel.class);
         bootstrap.childHandler(new DummyHandler());
-        InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST, TestUtils.getFreePort());
+        InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST, 0);
         bootstrap.localAddress(address);
         return bootstrap;
     }
@@ -182,7 +181,7 @@ public class EpollReuseAddrTest {
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(EpollSocketTestPermutation.EPOLL_WORKER_GROUP);
         bootstrap.channel(EpollDatagramChannel.class);
-        InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST, TestUtils.getFreePort());
+        InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST, 0);
         bootstrap.localAddress(address);
         return bootstrap;
     }

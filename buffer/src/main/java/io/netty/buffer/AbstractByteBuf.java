@@ -266,7 +266,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return this;
     }
 
-    private void ensureWritable0(int minWritableBytes) {
+    final void ensureWritable0(int minWritableBytes) {
+        ensureAccessible();
         if (minWritableBytes <= writableBytes()) {
             return;
         }
@@ -286,6 +287,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int ensureWritable(int minWritableBytes, boolean force) {
+        ensureAccessible();
         if (minWritableBytes < 0) {
             throw new IllegalArgumentException(String.format(
                     "minWritableBytes: %d (expected: >= 0)", minWritableBytes));
@@ -295,15 +297,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
             return 0;
         }
 
+        final int maxCapacity = maxCapacity();
+        final int writerIndex = writerIndex();
         if (minWritableBytes > maxCapacity - writerIndex) {
-            if (force) {
-                if (capacity() == maxCapacity()) {
-                    return 1;
-                }
-
-                capacity(maxCapacity());
-                return 3;
+            if (!force || capacity() == maxCapacity) {
+                return 1;
             }
+
+            capacity(maxCapacity);
+            return 3;
         }
 
         // Normalize the current capacity to the power of 2.
@@ -667,17 +669,35 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int setCharSequence(int index, CharSequence sequence, Charset charset) {
+        return setCharSequence0(index, sequence, charset, false);
+    }
+
+    private int setCharSequence0(int index, CharSequence sequence, Charset charset, boolean expand) {
         if (charset.equals(CharsetUtil.UTF_8)) {
-            ensureWritable(ByteBufUtil.utf8MaxBytes(sequence));
+            int length = ByteBufUtil.utf8MaxBytes(sequence);
+            if (expand) {
+                ensureWritable0(length);
+                checkIndex0(index, length);
+            } else {
+                checkIndex(index, length);
+            }
             return ByteBufUtil.writeUtf8(this, index, sequence, sequence.length());
         }
-        if (charset.equals(CharsetUtil.US_ASCII)) {
-            int len = sequence.length();
-            ensureWritable(len);
-            return ByteBufUtil.writeAscii(this, index, sequence, len);
+        if (charset.equals(CharsetUtil.US_ASCII) || charset.equals(CharsetUtil.ISO_8859_1)) {
+            int length = sequence.length();
+            if (expand) {
+                ensureWritable0(length);
+                checkIndex0(index, length);
+            } else {
+                checkIndex(index, length);
+            }
+            return ByteBufUtil.writeAscii(this, index, sequence, length);
         }
         byte[] bytes = sequence.toString().getBytes(charset);
-        ensureWritable(bytes.length);
+        if (expand) {
+            ensureWritable0(bytes.length);
+            // setBytes(...) will take care of checking the indices.
+        }
         setBytes(index, bytes);
         return bytes.length;
     }
@@ -934,7 +954,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeByte(int value) {
-        ensureAccessible();
         ensureWritable0(1);
         _setByte(writerIndex++, value);
         return this;
@@ -942,7 +961,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeShort(int value) {
-        ensureAccessible();
         ensureWritable0(2);
         _setShort(writerIndex, value);
         writerIndex += 2;
@@ -951,7 +969,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeShortLE(int value) {
-        ensureAccessible();
         ensureWritable0(2);
         _setShortLE(writerIndex, value);
         writerIndex += 2;
@@ -960,7 +977,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeMedium(int value) {
-        ensureAccessible();
         ensureWritable0(3);
         _setMedium(writerIndex, value);
         writerIndex += 3;
@@ -969,7 +985,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeMediumLE(int value) {
-        ensureAccessible();
         ensureWritable0(3);
         _setMediumLE(writerIndex, value);
         writerIndex += 3;
@@ -978,7 +993,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeInt(int value) {
-        ensureAccessible();
         ensureWritable0(4);
         _setInt(writerIndex, value);
         writerIndex += 4;
@@ -987,7 +1001,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeIntLE(int value) {
-        ensureAccessible();
         ensureWritable0(4);
         _setIntLE(writerIndex, value);
         writerIndex += 4;
@@ -996,7 +1009,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeLong(long value) {
-        ensureAccessible();
         ensureWritable0(8);
         _setLong(writerIndex, value);
         writerIndex += 8;
@@ -1005,7 +1017,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeLongLE(long value) {
-        ensureAccessible();
         ensureWritable0(8);
         _setLongLE(writerIndex, value);
         writerIndex += 8;
@@ -1032,7 +1043,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(byte[] src, int srcIndex, int length) {
-        ensureAccessible();
         ensureWritable(length);
         setBytes(writerIndex, src, srcIndex, length);
         writerIndex += length;
@@ -1064,7 +1074,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
-        ensureAccessible();
         ensureWritable(length);
         setBytes(writerIndex, src, srcIndex, length);
         writerIndex += length;
@@ -1073,9 +1082,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(ByteBuffer src) {
-        ensureAccessible();
         int length = src.remaining();
-        ensureWritable(length);
+        ensureWritable0(length);
         setBytes(writerIndex, src);
         writerIndex += length;
         return this;
@@ -1084,7 +1092,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public int writeBytes(InputStream in, int length)
             throws IOException {
-        ensureAccessible();
         ensureWritable(length);
         int writtenBytes = setBytes(writerIndex, in, length);
         if (writtenBytes > 0) {
@@ -1095,7 +1102,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int writeBytes(ScatteringByteChannel in, int length) throws IOException {
-        ensureAccessible();
         ensureWritable(length);
         int writtenBytes = setBytes(writerIndex, in, length);
         if (writtenBytes > 0) {
@@ -1106,7 +1112,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int writeBytes(FileChannel in, long position, int length) throws IOException {
-        ensureAccessible();
         ensureWritable(length);
         int writtenBytes = setBytes(writerIndex, in, position, length);
         if (writtenBytes > 0) {
@@ -1123,7 +1128,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
         ensureWritable(length);
         int wIndex = writerIndex;
-        checkIndex(wIndex, length);
+        checkIndex0(wIndex, length);
 
         int nLong = length >>> 3;
         int nBytes = length & 7;
@@ -1153,7 +1158,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int writeCharSequence(CharSequence sequence, Charset charset) {
-        int written = setCharSequence(writerIndex, sequence, charset);
+        int written = setCharSequence0(writerIndex, sequence, charset, true);
         writerIndex += written;
         return written;
     }

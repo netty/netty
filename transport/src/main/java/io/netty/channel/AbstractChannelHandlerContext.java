@@ -1053,15 +1053,8 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             task.promise = promise;
 
             if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
-                ChannelOutboundBuffer buffer = ctx.channel().unsafe().outboundBuffer();
-
-                // Check for null as it may be set to null if the channel is closed already
-                if (buffer != null) {
-                    task.size = ctx.pipeline.estimatorHandle().size(msg) + WRITE_TASK_OVERHEAD;
-                    buffer.incrementPendingOutboundBytes(task.size);
-                } else {
-                    task.size = 0;
-                }
+                task.size = ctx.pipeline.estimatorHandle().size(msg) + WRITE_TASK_OVERHEAD;
+                ctx.pipeline.incrementPendingOutboundBytes(task.size);
             } else {
                 task.size = 0;
             }
@@ -1070,10 +1063,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         @Override
         public final void run() {
             try {
-                ChannelOutboundBuffer buffer = ctx.channel().unsafe().outboundBuffer();
                 // Check for null as it may be set to null if the channel is closed already
-                if (ESTIMATE_TASK_SIZE_ON_SUBMIT && buffer != null) {
-                    buffer.decrementPendingOutboundBytes(size);
+                if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
+                    ctx.pipeline.decrementPendingOutboundBytes(size);
                 }
                 write(ctx, msg, promise);
             } finally {

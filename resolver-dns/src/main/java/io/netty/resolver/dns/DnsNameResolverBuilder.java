@@ -54,8 +54,8 @@ public final class DnsNameResolverBuilder {
     private DnsServerAddressStreamProvider dnsServerAddressStreamProvider = platformDefault();
     private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory =
             NoopDnsQueryLifecycleObserverFactory.INSTANCE;
-    private String[] searchDomains = DnsNameResolver.DEFAULT_SEARCH_DOMAINS;
-    private int ndots = 1;
+    private String[] searchDomains;
+    private int ndots = -1;
     private boolean decodeIdn = true;
 
     /**

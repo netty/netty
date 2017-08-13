@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.11.Final-SNAPSHOT</version>
+  <version>4.1.15.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -80,7 +80,7 @@
         <!-- This is needed as earlier ASM versions not support java9 -->
         <!-- https://issues.apache.org/jira/browse/MSHADE-242 -->
         <!-- https://github.com/netty/netty/issues/6100 -->
-        <asm.version>6.0_ALPHA</asm.version>
+        <asm.version>6.0_BETA</asm.version>
         <!-- Skip as maven plugin not works with Java9 yet --> 
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
@@ -139,81 +139,6 @@
       </properties>
     </profile>
     <profile>
-      <id>linux</id>
-      <activation>
-        <os>
-          <family>linux</family>
-        </os>
-      </activation>
-      <modules>
-        <module>transport-native-unix-common-tests</module>
-        <module>transport-native-unix-common</module>
-        <module>transport-native-epoll</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>mac</id>
-      <activation>
-        <os>
-          <family>mac</family>
-        </os>
-      </activation>
-      <modules>
-        <module>transport-native-unix-common-tests</module>
-        <module>transport-native-unix-common</module>
-        <module>transport-native-kqueue</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>freebsd</id>
-      <activation>
-        <os>
-          <family>unix</family>
-          <name>freebsd</name>
-        </os>
-      </activation>
-      <modules>
-        <module>transport-native-unix-common-tests</module>
-        <module>transport-native-unix-common</module>
-        <module>transport-native-kqueue</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>openbsd</id>
-      <activation>
-        <os>
-          <family>unix</family>
-          <name>openbsd</name>
-        </os>
-      </activation>
-      <modules>
-        <module>transport-native-unix-common-tests</module>
-        <module>transport-native-unix-common</module>
-        <module>transport-native-kqueue</module>
-      </modules>
-    </profile>
-    <!-- The uber artifacts depend on artifacts built from different platforms and will fail if these artifacts are not
-         available. Typically we only build the uber jars as part of the release process so the build sequencing
-         is controlled and can be sequenced correctly. For example we may do the following:
-
-         <from a linux machine>
-         $ mvn release
-         <after this completes log onto a MacOS machine, note fail-at-end, and -D to activate multiple profiles>
-         $ mvn release -fae -Duber
-      -->
-    <profile>
-      <id>uber</id>
-      <activation>
-        <property>
-          <name>uber</name>
-        </property>
-      </activation>
-      <modules>
-        <module>all</module>
-        <module>tarball</module>
-      </modules>
-    </profile>
-    <profile>
       <!--
       This profile exists because either ALPN or NPN can exits on the class path at once, but not both.
       The JDK version is typically used to distinguish which should be used but there is some overlap
@@ -263,11 +188,11 @@
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>2.0.1.Final</tcnative.version>
+    <tcnative.version>2.0.5.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
-    <conscrypt.version>1.0.0.RC7</conscrypt.version>
+    <conscrypt.version>1.0.0.RC9</conscrypt.version>
     <conscrypt.classifier />
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
@@ -280,6 +205,7 @@
   </properties>
 
   <modules>
+    <module>all</module>
     <module>dev-tools</module>
     <module>common</module>
     <module>buffer</module>
@@ -297,7 +223,12 @@
     <module>codec-xml</module>
     <module>resolver</module>
     <module>resolver-dns</module>
+    <module>tarball</module>
     <module>transport</module>
+    <module>transport-native-unix-common-tests</module>
+    <module>transport-native-unix-common</module>
+    <module>transport-native-epoll</module>
+    <module>transport-native-kqueue</module>
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
     <module>transport-udt</module>
@@ -439,7 +370,7 @@
       <dependency>
         <groupId>org.jctools</groupId>
         <artifactId>jctools-core</artifactId>
-        <version>2.0.1</version>
+        <version>2.0.2</version>
       </dependency>
 
       <dependency>
@@ -778,6 +709,13 @@
 
             <!-- Resolver -->
             <ignore>java.net.InetAddress</ignore>
+
+            <!-- NoexecVolumeDetector -->
+            <ignore>java.nio.file.attribute.PosixFilePermission</ignore>
+            <ignore>java.nio.file.Files</ignore>
+            <ignore>java.nio.file.LinkOption</ignore>
+            <ignore>java.nio.file.Path</ignore>
+            <ignore>java.io.File</ignore>
           </ignores>
         </configuration>
         <executions>
@@ -988,13 +926,16 @@
           <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
         </configuration>
       </plugin>
+      <!-- After artifacts were deployed from linux and macos we need to execute the following on macOS (in the root of the project).
+           mvn -Psonatype-oss-release,full,uber-staging -pl transport-native-kqueue,transport-native-unix-common,all,tarball clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId=${netty-id} -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging
+      -->
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
         <!-- Downgrade to 2.4.1 if release fails -->
         <version>2.5.3</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P restricted-release,sonatype-oss-release</arguments>
+          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>

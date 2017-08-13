@@ -27,11 +27,13 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.indexOfNonWhiteSpace;
 
 /**
@@ -43,10 +45,15 @@ import static io.netty.util.internal.StringUtil.indexOfNonWhiteSpace;
 public final class UnixResolverDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(UnixResolverDnsServerAddressStreamProvider.class);
+    private static final String ETC_RESOLV_CONF_FILE = "/etc/resolv.conf";
+    private static final String ETC_RESOLVER_DIR = "/etc/resolver";
     private static final String NAMESERVER_ROW_LABEL = "nameserver";
     private static final String SORTLIST_ROW_LABEL = "sortlist";
+    private static final String OPTIONS_ROW_LABEL = "options";
     private static final String DOMAIN_ROW_LABEL = "domain";
     private static final String PORT_ROW_LABEL = "port";
+    private static final String NDOTS_LABEL = "ndots:";
+    static final int DEFAULT_NDOTS = 1;
     private final DnsServerAddresses defaultNameServerAddresses;
     private final Map<String, DnsServerAddresses> domainToNameServerStreamMap;
 
@@ -54,14 +61,14 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
      * Attempt to parse {@code /etc/resolv.conf} and files in the {@code /etc/resolver} directory by default.
      * A failure to parse will return {@link DefaultDnsServerAddressStreamProvider}.
      */
-    public static DnsServerAddressStreamProvider parseSilently() {
+    static DnsServerAddressStreamProvider parseSilently() {
         try {
             UnixResolverDnsServerAddressStreamProvider nameServerCache =
-                    new UnixResolverDnsServerAddressStreamProvider("/etc/resolv.conf", "/etc/resolver");
+                    new UnixResolverDnsServerAddressStreamProvider(ETC_RESOLV_CONF_FILE, ETC_RESOLVER_DIR);
             return nameServerCache.mayOverrideNameServers() ? nameServerCache
                                                             : DefaultDnsServerAddressStreamProvider.INSTANCE;
         } catch (Exception e) {
-            logger.debug("failed to parse /etc/resolv.conf and/or /etc/resolver", e);
+            logger.debug("failed to parse {} and/or {}", ETC_RESOLV_CONF_FILE, ETC_RESOLVER_DIR, e);
             return DefaultDnsServerAddressStreamProvider.INSTANCE;
         }
     }
@@ -80,21 +87,23 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
      * @throws IOException If an error occurs while parsing the input files.
      */
     public UnixResolverDnsServerAddressStreamProvider(File etcResolvConf, File... etcResolverFiles) throws IOException {
-        if (etcResolvConf == null && (etcResolverFiles == null || etcResolverFiles.length == 0)) {
-            throw new IllegalArgumentException("no files to parse");
-        }
-        if (etcResolverFiles != null) {
-            domainToNameServerStreamMap = parse(etcResolverFiles);
-            if (etcResolvConf != null) {
-                Map<String, DnsServerAddresses> etcResolvConfMap = parse(etcResolvConf);
-                defaultNameServerAddresses = etcResolvConfMap.remove(etcResolvConf.getName());
-                domainToNameServerStreamMap.putAll(etcResolvConfMap);
-            } else {
-                defaultNameServerAddresses = null;
+        Map<String, DnsServerAddresses> etcResolvConfMap = parse(checkNotNull(etcResolvConf, "etcResolvConf"));
+        final boolean useEtcResolverFiles = etcResolverFiles != null && etcResolverFiles.length != 0;
+        domainToNameServerStreamMap = useEtcResolverFiles ? parse(etcResolverFiles) : etcResolvConfMap;
+
+        DnsServerAddresses defaultNameServerAddresses = etcResolvConfMap.get(etcResolvConf.getName());
+        if (defaultNameServerAddresses == null) {
+            Collection<DnsServerAddresses> values = etcResolvConfMap.values();
+            if (values.isEmpty()) {
+                throw new IllegalArgumentException(etcResolvConf + " didn't provide any name servers");
             }
+            this.defaultNameServerAddresses = values.iterator().next();
         } else {
-            domainToNameServerStreamMap = parse(etcResolvConf);
-            defaultNameServerAddresses = domainToNameServerStreamMap.remove(etcResolvConf.getName());
+            this.defaultNameServerAddresses = defaultNameServerAddresses;
+        }
+
+        if (useEtcResolverFiles) {
+            domainToNameServerStreamMap.putAll(etcResolvConfMap);
         }
     }
 
@@ -113,7 +122,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
      */
     public UnixResolverDnsServerAddressStreamProvider(String etcResolvConf, String etcResolverDir) throws IOException {
         this(etcResolvConf == null ? null : new File(etcResolvConf),
-             etcResolverDir == null ? null :new File(etcResolverDir).listFiles());
+             etcResolverDir == null ? null : new File(etcResolverDir).listFiles());
     }
 
     @Override
@@ -121,7 +130,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
         for (;;) {
             int i = hostname.indexOf('.', 1);
             if (i < 0 || i == hostname.length() - 1) {
-                return defaultNameServerAddresses != null ? defaultNameServerAddresses.stream() : null;
+                return defaultNameServerAddresses.stream();
             }
 
             DnsServerAddresses addresses = domainToNameServerStreamMap.get(hostname);
@@ -133,9 +142,8 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
         }
     }
 
-    boolean mayOverrideNameServers() {
-        return !domainToNameServerStreamMap.isEmpty() ||
-                defaultNameServerAddresses != null && defaultNameServerAddresses.stream().next() != null;
+    private boolean mayOverrideNameServers() {
+        return !domainToNameServerStreamMap.isEmpty() || defaultNameServerAddresses.stream().next() != null;
     }
 
     private static Map<String, DnsServerAddresses> parse(File... etcResolverFiles) throws IOException {
@@ -176,7 +184,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                             port = Integer.parseInt(maybeIP.substring(i + 1));
                             maybeIP = maybeIP.substring(0, i);
                         }
-                        addresses.add(new InetSocketAddress(SocketUtils.addressByName(maybeIP), port));
+                        addresses.add(SocketUtils.socketAddress(maybeIP, port));
                     } else if (line.startsWith(DOMAIN_ROW_LABEL)) {
                         int i = indexOfNonWhiteSpace(line, DOMAIN_ROW_LABEL.length());
                         if (i < 0) {
@@ -184,7 +192,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                                     " in file " + etcResolverFile + " value: " + line);
                         }
                         domainName = line.substring(i);
-                        if (addresses != null && !addresses.isEmpty()) {
+                        if (!addresses.isEmpty()) {
                             putIfAbsent(domainToNameServerStreamMap, domainName, addresses);
                         }
                         addresses = new ArrayList<InetSocketAddress>(2);
@@ -199,7 +207,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                         logger.info("row type {} not supported. ignoring line: {}", SORTLIST_ROW_LABEL, line);
                     }
                 }
-                if (addresses != null && !addresses.isEmpty()) {
+                if (!addresses.isEmpty()) {
                     putIfAbsent(domainToNameServerStreamMap, domainName, addresses);
                 }
             } finally {
@@ -217,7 +225,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                                     String domainName,
                                     List<InetSocketAddress> addresses) {
         // TODO(scott): sortlist is being ignored.
-        putIfAbsent(domainToNameServerStreamMap, domainName, DnsServerAddresses.shuffled(addresses));
+        putIfAbsent(domainToNameServerStreamMap, domainName, DnsServerAddresses.sequential(addresses));
     }
 
     private static void putIfAbsent(Map<String, DnsServerAddresses> domainToNameServerStreamMap,
@@ -229,5 +237,51 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
             logger.debug("Domain name {} already maps to addresses {} so new addresses {} will be discarded",
                     domainName, existingAddresses, addresses);
         }
+    }
+
+    /**
+     * Parse a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and return the
+     * value corresponding to the first ndots in an options configuration.
+     * @return the value corresponding to the first ndots in an options configuration, or {@link #DEFAULT_NDOTS} if not
+     * found.
+     * @throws IOException If a failure occurs parsing the file.
+     */
+    static int parseEtcResolverFirstNdots() throws IOException {
+        return parseEtcResolverFirstNdots(new File(ETC_RESOLV_CONF_FILE));
+    }
+
+    /**
+     * Parse a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and return the
+     * value corresponding to the first ndots in an options configuration.
+     * @param etcResolvConf a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a>.
+     * @return the value corresponding to the first ndots in an options configuration, or {@link #DEFAULT_NDOTS} if not
+     * found.
+     * @throws IOException If a failure occurs parsing the file.
+     */
+    static int parseEtcResolverFirstNdots(File etcResolvConf) throws IOException {
+        FileReader fr = new FileReader(etcResolvConf);
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(fr);
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.startsWith(OPTIONS_ROW_LABEL)) {
+                    int i = line.indexOf(NDOTS_LABEL);
+                    if (i >= 0) {
+                        i += NDOTS_LABEL.length();
+                        final int j = line.indexOf(' ', i);
+                        return Integer.parseInt(line.substring(i, j < 0 ? line.length() : j));
+                    }
+                    break;
+                }
+            }
+        } finally {
+            if (br == null) {
+                fr.close();
+            } else {
+                br.close();
+            }
+        }
+        return DEFAULT_NDOTS;
     }
 }

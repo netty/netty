@@ -49,6 +49,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.AbstractMap.SimpleImmutableEntry;
 
 /**
@@ -207,22 +208,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             HttpDataFactory factory, HttpRequest request, boolean multipart, Charset charset,
             EncoderMode encoderMode)
             throws ErrorDataEncoderException {
-        if (factory == null) {
-            throw new NullPointerException("factory");
-        }
-        if (request == null) {
-            throw new NullPointerException("request");
-        }
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
-        HttpMethod method = request.method();
-        if (method.equals(HttpMethod.TRACE)) {
+        this.request = checkNotNull(request, "request");
+        this.charset = checkNotNull(charset, "charset");
+        this.factory = checkNotNull(factory, "factory");
+        if (HttpMethod.TRACE.equals(request.method())) {
             throw new ErrorDataEncoderException("Cannot create a Encoder if request is a TRACE");
         }
-        this.request = request;
-        this.charset = charset;
-        this.factory = factory;
         // Fill default values
         bodyListDatas = new ArrayList<InterfaceHttpData>();
         // default mode
@@ -297,7 +288,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      */
     private static String getNewMultipartDelimiter() {
         // construct a generated delimiter
-        return Long.toHexString(PlatformDependent.threadLocalRandom().nextLong()).toLowerCase();
+        return Long.toHexString(PlatformDependent.threadLocalRandom().nextLong());
     }
 
     /**
@@ -344,14 +335,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      *             if the encoding is in error or if the finalize were already done
      */
     public void addBodyAttribute(String name, String value) throws ErrorDataEncoderException {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        String svalue = value;
-        if (value == null) {
-            svalue = "";
-        }
-        Attribute data = factory.createAttribute(request, name, svalue);
+        String svalue = value != null? value : StringUtil.EMPTY_STRING;
+        Attribute data = factory.createAttribute(request, checkNotNull(name, "name"), svalue);
         addBodyHttpData(data);
     }
 
@@ -397,12 +382,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      */
     public void addBodyFileUpload(String name, String filename, File file, String contentType, boolean isText)
             throws ErrorDataEncoderException {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        if (file == null) {
-            throw new NullPointerException("file");
-        }
+        checkNotNull(name, "name");
+        checkNotNull(file, "file");
         if (filename == null) {
             filename = StringUtil.EMPTY_STRING;
         }
@@ -439,7 +420,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      *            the array of content Types associated with each file
      * @param isText
      *            the array of isText attribute (False meaning binary mode) for each file
-     * @throws NullPointerException
+     * @throws IllegalArgumentException
      *             also throws if array have different sizes
      * @throws ErrorDataEncoderException
      *             if the encoding is in error or if the finalize were already done
@@ -447,7 +428,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
     public void addBodyFileUploads(String name, File[] file, String[] contentType, boolean[] isText)
             throws ErrorDataEncoderException {
         if (file.length != contentType.length && file.length != isText.length) {
-            throw new NullPointerException("Different array length");
+            throw new IllegalArgumentException("Different array length");
         }
         for (int i = 0; i < file.length; i++) {
             addBodyFileUpload(name, file[i], contentType[i], isText[i]);
@@ -466,10 +447,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (headerFinalized) {
             throw new ErrorDataEncoderException("Cannot add value once finalized");
         }
-        if (data == null) {
-            throw new NullPointerException("data");
-        }
-        bodyListDatas.add(data);
+        bodyListDatas.add(checkNotNull(data, "data"));
         if (!isMultipart) {
             if (data instanceof Attribute) {
                 Attribute attribute = (Attribute) data;
@@ -922,18 +900,10 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             buffer = ((InternalAttribute) currentData).toByteBuf();
             currentData = null;
         } else {
-            if (currentData instanceof Attribute) {
-                try {
-                    buffer = ((Attribute) currentData).getChunk(sizeleft);
-                } catch (IOException e) {
-                    throw new ErrorDataEncoderException(e);
-                }
-            } else {
-                try {
-                    buffer = ((HttpData) currentData).getChunk(sizeleft);
-                } catch (IOException e) {
-                    throw new ErrorDataEncoderException(e);
-                }
+            try {
+                buffer = ((HttpData) currentData).getChunk(sizeleft);
+            } catch (IOException e) {
+                throw new ErrorDataEncoderException(e);
             }
             if (buffer.capacity() == 0) {
                 // end for current InterfaceHttpData, need more data
@@ -1092,40 +1062,30 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             isLastChunkSent = true;
             return LastHttpContent.EMPTY_LAST_CONTENT;
         }
-        ByteBuf buffer;
-        int size = HttpPostBodyUtil.chunkSize;
         // first test if previous buffer is not empty
-        if (currentBuffer != null) {
-            size -= currentBuffer.readableBytes();
-        }
+        int size = calculateRemainingSize();
         if (size <= 0) {
             // NextChunk from buffer
-            buffer = fillByteBuf();
+            ByteBuf buffer = fillByteBuf();
             return new DefaultHttpContent(buffer);
         }
         // size > 0
         if (currentData != null) {
             // continue to read data
+            HttpContent chunk;
             if (isMultipart) {
-                HttpContent chunk = encodeNextChunkMultipart(size);
-                if (chunk != null) {
-                    return chunk;
-                }
+                chunk = encodeNextChunkMultipart(size);
             } else {
-                HttpContent chunk = encodeNextChunkUrlEncoded(size);
-                if (chunk != null) {
-                    // NextChunk Url from currentData
-                    return chunk;
-                }
+                chunk = encodeNextChunkUrlEncoded(size);
             }
-            size = HttpPostBodyUtil.chunkSize - currentBuffer.readableBytes();
+            if (chunk != null) {
+                // NextChunk from data
+                return chunk;
+            }
+            size = calculateRemainingSize();
         }
         if (!iterator.hasNext()) {
-            isLastChunk = true;
-            // NextChunk as last non empty from buffer
-            buffer = currentBuffer;
-            currentBuffer = null;
-            return new DefaultHttpContent(buffer);
+            return lastChunk();
         }
         while (size > 0 && iterator.hasNext()) {
             currentData = iterator.next();
@@ -1137,21 +1097,33 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             }
             if (chunk == null) {
                 // not enough
-                size = HttpPostBodyUtil.chunkSize - currentBuffer.readableBytes();
+                size = calculateRemainingSize();
                 continue;
             }
             // NextChunk from data
             return chunk;
         }
         // end since no more data
+        return lastChunk();
+    }
+
+    private int calculateRemainingSize() {
+        int size = HttpPostBodyUtil.chunkSize;
+        if (currentBuffer != null) {
+            size -= currentBuffer.readableBytes();
+        }
+        return size;
+    }
+
+    private HttpContent lastChunk() {
         isLastChunk = true;
         if (currentBuffer == null) {
             isLastChunkSent = true;
             // LastChunk with no more data
             return LastHttpContent.EMPTY_LAST_CONTENT;
         }
-        // Previous LastChunk with no more data
-        buffer = currentBuffer;
+        // NextChunk as last non empty from buffer
+        ByteBuf buffer = currentBuffer;
         currentBuffer = null;
         return new DefaultHttpContent(buffer);
     }

@@ -64,7 +64,7 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
     private static ByteBuf encodeFrame(StompHeadersSubframe frame, ChannelHandlerContext ctx) {
         ByteBuf buf = ctx.alloc().buffer();
 
-        buf.writeBytes(frame.command().toString().getBytes(CharsetUtil.US_ASCII));
+        buf.writeCharSequence(frame.command().toString(), CharsetUtil.US_ASCII);
         buf.writeByte(StompConstants.LF);
         AsciiHeadersEncoder headersEncoder = new AsciiHeadersEncoder(buf, SeparatorType.COLON, NewlineType.LF);
         for (Entry<CharSequence, CharSequence> entry : frame.headers()) {

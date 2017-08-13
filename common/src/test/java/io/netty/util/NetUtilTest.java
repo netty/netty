@@ -15,6 +15,7 @@
  */
 package io.netty.util;
 
+import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
 import java.net.Inet6Address;
@@ -25,11 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static io.netty.util.NetUtil.bytesToIpAddress;
-import static io.netty.util.NetUtil.createByteArrayFromIpAddressString;
-import static io.netty.util.NetUtil.getByName;
-import static io.netty.util.NetUtil.toAddressString;
-import static io.netty.util.NetUtil.toSocketAddressString;
+import static io.netty.util.NetUtil.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -51,12 +48,13 @@ public class NetUtilTest {
     }
 
     private static final Map<String, String> validIpV4Hosts = new TestMap(
-            "192.168.1.0",    "c0a80100",
-            "10.255.255.254", "0afffffe",
-            "172.18.5.4",     "ac120504",
-            "0.0.0.0",        "00000000",
-            "127.0.0.1",      "7f000001",
-            "1.2.3.4",        "01020304");
+            "192.168.1.0",     "c0a80100",
+            "10.255.255.254",  "0afffffe",
+            "172.18.5.4",      "ac120504",
+            "0.0.0.0",         "00000000",
+            "127.0.0.1",       "7f000001",
+            "255.255.255.255", "ffffffff",
+            "1.2.3.4",         "01020304");
 
     private static final Map<String, String> invalidIpV4Hosts = new TestMap(
             "1.256.3.4",     null,
@@ -73,6 +71,20 @@ public class NetUtilTest {
             "19a.0.1.1",     null,
             "a.0.1.1",       null,
             ".0.1.1",        null,
+            "127.0.0",       null,
+            "192.0.1.256",   null,
+            "0.0.200.259",   null,
+            "1.1.-1.1",      null,
+            "1.1. 1.1",      null,
+            "1.1.1.1 ",      null,
+            "1.1.+1.1",      null,
+            "0.0x1.0.255",   null,
+            "0.01x.0.255",   null,
+            "0.x01.0.255",   null,
+            "0.-.0.0",       null,
+            "0..0.0",        null,
+            "0.A.0.0",       null,
+            "0.1111.0.0",    null,
             "...",           null);
 
     private static final Map<String, String> validIpV6Hosts = new TestMap(
@@ -94,6 +106,7 @@ public class NetUtilTest {
             "0:1:2:3::f",                                "0000000100020003000000000000000f",
             "0:0:0:0:0:0:10.0.0.1",                      "00000000000000000000ffff0a000001",
             "0:0:0:0:0::10.0.0.1",                       "00000000000000000000ffff0a000001",
+            "0:0:0:0::10.0.0.1",                         "00000000000000000000ffff0a000001",
             "::0:0:0:0:0:10.0.0.1",                      "00000000000000000000ffff0a000001",
             "0::0:0:0:0:10.0.0.1",                       "00000000000000000000ffff0a000001",
             "0:0::0:0:0:10.0.0.1",                       "00000000000000000000ffff0a000001",
@@ -105,9 +118,31 @@ public class NetUtilTest {
             "[::1%1]",                                   "00000000000000000000000000000001",
             "[::1%eth0]",                                "00000000000000000000000000000001",
             "[::1%%]",                                   "00000000000000000000000000000001",
+            "0:0:0:0:0:ffff:10.0.0.1%",                  "00000000000000000000ffff0a000001",
+            "0:0:0:0:0:ffff:10.0.0.1%1",                 "00000000000000000000ffff0a000001",
+            "[0:0:0:0:0:ffff:10.0.0.1%1]",               "00000000000000000000ffff0a000001",
+            "[0:0:0:0:0::10.0.0.1%1]",                   "00000000000000000000ffff0a000001",
+            "[::0:0:0:0:ffff:10.0.0.1%1]",               "00000000000000000000ffff0a000001",
+            "::0:0:0:0:ffff:10.0.0.1%1",                 "00000000000000000000ffff0a000001",
             "::1%1",                                     "00000000000000000000000000000001",
             "::1%eth0",                                  "00000000000000000000000000000001",
-            "::1%%",                                     "00000000000000000000000000000001");
+            "::1%%",                                     "00000000000000000000000000000001",
+            // Tests with leading or trailing compression
+            "0:0:0:0:0:0:0::",                           "00000000000000000000000000000000",
+            "0:0:0:0:0:0::",                             "00000000000000000000000000000000",
+            "0:0:0:0:0::",                               "00000000000000000000000000000000",
+            "0:0:0:0::",                                 "00000000000000000000000000000000",
+            "0:0:0::",                                   "00000000000000000000000000000000",
+            "0:0::",                                     "00000000000000000000000000000000",
+            "0::",                                       "00000000000000000000000000000000",
+            "::",                                        "00000000000000000000000000000000",
+            "::0",                                       "00000000000000000000000000000000",
+            "::0:0",                                     "00000000000000000000000000000000",
+            "::0:0:0",                                   "00000000000000000000000000000000",
+            "::0:0:0:0",                                 "00000000000000000000000000000000",
+            "::0:0:0:0:0",                               "00000000000000000000000000000000",
+            "::0:0:0:0:0:0",                             "00000000000000000000000000000000",
+            "::0:0:0:0:0:0:0",                           "00000000000000000000000000000000");
 
     private static final Map<String, String> invalidIpV6Hosts = new TestMap(
             // Test method with garbage.
@@ -128,6 +163,58 @@ public class NetUtilTest {
             "1:2:3:4:5:6:7:",           null,
             // Too many : separators leading
             ":1:2:3:4:5:6:7",           null,
+            // Compression with : separators trailing
+            "0:1:2:3:4:5::7:",          null,
+            "0:1:2:3:4::7:",            null,
+            "0:1:2:3::7:",              null,
+            "0:1:2::7:",                null,
+            "0:1::7:",                  null,
+            "0::7:",                    null,
+            // Compression at start with : separators trailing
+            "::0:1:2:3:4:5:7:",         null,
+            "::0:1:2:3:4:7:",           null,
+            "::0:1:2:3:7:",             null,
+            "::0:1:2:7:",               null,
+            "::0:1:7:",                 null,
+            "::7:",                     null,
+            // The : separators leading and trailing
+            ":1:2:3:4:5:6:7:",          null,
+            ":1:2:3:4:5:6:",            null,
+            ":1:2:3:4:5:",              null,
+            ":1:2:3:4:",                null,
+            ":1:2:3:",                  null,
+            ":1:2:",                    null,
+            ":1:",                      null,
+            // Compression with : separators leading
+            ":1::2:3:4:5:6:7",          null,
+            ":1::3:4:5:6:7",            null,
+            ":1::4:5:6:7",              null,
+            ":1::5:6:7",                null,
+            ":1::6:7",                  null,
+            ":1::7",                    null,
+            ":1:2:3:4:5:6::7",          null,
+            ":1:3:4:5:6::7",            null,
+            ":1:4:5:6::7",              null,
+            ":1:5:6::7",                null,
+            ":1:6::7",                  null,
+            ":1::",                    null,
+            // Compression trailing with : separators leading
+            ":1:2:3:4:5:6:7::",         null,
+            ":1:3:4:5:6:7::",           null,
+            ":1:4:5:6:7::",             null,
+            ":1:5:6:7::",               null,
+            ":1:6:7::",                 null,
+            ":1:7::",                   null,
+            // Double compression
+            "1::2:3:4:5:6::",           null,
+            "::1:2:3:4:5::6",           null,
+            "::1:2:3:4:5:6::",          null,
+            "::1:2:3:4:5::",            null,
+            "::1:2:3:4::",              null,
+            "::1:2:3::",                null,
+            "::1:2::",                  null,
+            "::0::",                    null,
+            "12::0::12",                null,
             // Too many : separators leading 0
             "0::1:2:3:4:5:6:7",         null,
             // Test method with preferred style, too many digits.
@@ -138,8 +225,6 @@ public class NetUtilTest {
             "0:1:2:::3",                null,
             // Test method with compressed style, too many digits.
             "0:1:2:3::abcde",           null,
-            // Test method with preferred style, too many :
-            "0:1:2:3:4:5:6:7:8",        null,
             // Test method with compressed style, not enough :
             "0:1",                      null,
             // Test method with ipv4 style, bad ipv6 digits.
@@ -184,8 +269,6 @@ public class NetUtilTest {
             "::ffff:192.168.0",         null,
             // Test method with compressed ipv4 style, adjacent .
             "::ffff:192.168..0.1",      null,
-            // Test method, garbage.
-            "absolute, and utter garbage", null,
             // Test method, bad ipv6 digits.
             "x:0:0:0:0:0:10.0.0.1",     null,
             // Test method, bad ipv4 digits.
@@ -212,12 +295,11 @@ public class NetUtilTest {
             "0:0:0:0:0:0:10.0.1",       null,
             // Test method, adjacent .
             "0:0:0:0:0:0:10.0.0..1",    null,
-            // Double compression symbol
-            "::0::",                    null,
-            // Double compression symbol
-            "12::0::12",                null,
             // Empty contents
             "",                         null,
+            // Invalid single compression
+            ":",                        null,
+            ":::",                      null,
             // Trailing : (max number of : = 8)
             "2001:0:4136:e378:8000:63bf:3fff:fdd2:", null,
             // Leading : (max number of : = 8)
@@ -268,6 +350,8 @@ public class NetUtilTest {
             "0:0:0:0:0:00000:1.0.0.1", null,
             // Invalid IPv4 mapped address - too few bytes (not enough 0's)
             "0:0:0:0:ffff:1.0.0.1", null,
+            // Invalid IPv4 mapped address - too few bytes (not enough 0's)
+            "ffff:192.168.0.1", null,
             // Invalid IPv4 mapped address - 0's after the mapped ffff indicator
             "0:0:0:0:0:ffff::10.0.0.1", null,
             // Invalid IPv4 mapped address - 0's after the mapped ffff indicator
@@ -289,7 +373,11 @@ public class NetUtilTest {
             // Too many digits
             "0:0:0:0:0:0:ffff:10.0.0.1", null,
             // Invalid IPv4 format
-            ":1.2.3.4", null);
+            ":1.2.3.4", null,
+            // Invalid IPv4 format
+            "::.2.3.4", null,
+            // Invalid IPv4 format
+            "::ffff:0.1.2.", null);
 
     private static final Map<byte[], String> ipv6ToAddressStrings = new HashMap<byte[], String>() {
         private static final long serialVersionUID = 2999763170377573184L;
@@ -511,47 +599,103 @@ public class NetUtilTest {
 
     @Test
     public void testLocalhost() {
-        assertNotNull(NetUtil.LOCALHOST);
+        assertNotNull(LOCALHOST);
     }
 
     @Test
     public void testLoopback() {
-        assertNotNull(NetUtil.LOOPBACK_IF);
+        assertNotNull(LOOPBACK_IF);
     }
 
     @Test
     public void testIsValidIpV4Address() {
         for (String host : validIpV4Hosts.keySet()) {
-            assertTrue(NetUtil.isValidIpV4Address(host));
+            assertTrue(host, isValidIpV4Address(host));
         }
         for (String host : invalidIpV4Hosts.keySet()) {
-            assertFalse(NetUtil.isValidIpV4Address(host));
+            assertFalse(host, isValidIpV4Address(host));
         }
     }
 
     @Test
     public void testIsValidIpV6Address() {
         for (String host : validIpV6Hosts.keySet()) {
-            assertTrue(host, NetUtil.isValidIpV6Address(host));
+            assertTrue(host, isValidIpV6Address(host));
+            if (host.charAt(0) != '[' && !host.contains("%")) {
+                assertNotNull(host, getByName(host, true));
+
+                String hostMod = '[' + host + ']';
+                assertTrue(hostMod, isValidIpV6Address(hostMod));
+
+                hostMod = host + '%';
+                assertTrue(hostMod, isValidIpV6Address(hostMod));
+
+                hostMod = host + "%eth1";
+                assertTrue(hostMod, isValidIpV6Address(hostMod));
+
+                hostMod = '[' + host + "%]";
+                assertTrue(hostMod, isValidIpV6Address(hostMod));
+
+                hostMod = '[' + host + "%1]";
+                assertTrue(hostMod, isValidIpV6Address(hostMod));
+
+                hostMod = '[' + host + "]%";
+                assertFalse(hostMod, isValidIpV6Address(hostMod));
+
+                hostMod = '[' + host + "]%1";
+                assertFalse(hostMod, isValidIpV6Address(hostMod));
+            }
         }
         for (String host : invalidIpV6Hosts.keySet()) {
-            assertFalse(host, NetUtil.isValidIpV6Address(host));
+            assertFalse(host, isValidIpV6Address(host));
+            assertNull(host, getByName(host));
+
+            String hostMod = '[' + host + ']';
+            assertFalse(hostMod, isValidIpV6Address(hostMod));
+
+            hostMod = host + '%';
+            assertFalse(hostMod, isValidIpV6Address(hostMod));
+
+            hostMod = host + "%eth1";
+            assertFalse(hostMod, isValidIpV6Address(hostMod));
+
+            hostMod = '[' + host + "%]";
+            assertFalse(hostMod, isValidIpV6Address(hostMod));
+
+            hostMod = '[' + host + "%1]";
+            assertFalse(hostMod, isValidIpV6Address(hostMod));
+
+            hostMod = '[' + host + "]%";
+            assertFalse(hostMod, isValidIpV6Address(hostMod));
+
+            hostMod = '[' + host + "]%1";
+            assertFalse(hostMod, isValidIpV6Address(hostMod));
+
+            hostMod = host + ']';
+            assertFalse(hostMod, isValidIpV6Address(hostMod));
+
+            hostMod = '[' + host;
+            assertFalse(hostMod, isValidIpV6Address(hostMod));
         }
     }
 
     @Test
     public void testCreateByteArrayFromIpAddressString() {
         for (Entry<String, String> e : validIpV4Hosts.entrySet()) {
-            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(e.getKey()));
+            String ip = e.getKey();
+            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(ip), ip);
         }
         for (Entry<String, String> e : invalidIpV4Hosts.entrySet()) {
-            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(e.getKey()));
+            String ip = e.getKey();
+            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(ip), ip);
         }
         for (Entry<String, String> e : validIpV6Hosts.entrySet()) {
-            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(e.getKey()));
+            String ip = e.getKey();
+            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(ip), ip);
         }
         for (Entry<String, String> e : invalidIpV6Hosts.entrySet()) {
-            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(e.getKey()));
+            String ip = e.getKey();
+            assertHexDumpEquals(e.getValue(), createByteArrayFromIpAddressString(ip), ip);
         }
     }
 
@@ -559,6 +703,7 @@ public class NetUtilTest {
     public void testBytesToIpAddress() throws UnknownHostException {
         for (Entry<String, String> e : validIpV4Hosts.entrySet()) {
             assertEquals(e.getKey(), bytesToIpAddress(createByteArrayFromIpAddressString(e.getKey())));
+            assertEquals(e.getKey(), bytesToIpAddress(validIpV4ToBytes(e.getKey())));
         }
         for (Entry<byte[], String> testEntry : ipv6ToAddressStrings.entrySet()) {
             assertEquals(testEntry.getValue(), bytesToIpAddress(testEntry.getKey()));
@@ -582,20 +727,22 @@ public class NetUtilTest {
     @Test
     public void testIpv4MappedIp6GetByName() {
         for (Entry<String, String> testEntry : ipv4MappedToIPv6AddressStrings.entrySet()) {
-            Inet6Address inet6Address = getByName(testEntry.getKey(), true);
-            assertNotNull(testEntry.getKey() + ", " + testEntry.getValue(), inet6Address);
-            assertEquals(testEntry.getKey(), testEntry.getValue(), toAddressString(inet6Address, true));
+            String srcIp = testEntry.getKey();
+            String dstIp = testEntry.getValue();
+            Inet6Address inet6Address = getByName(srcIp, true);
+            assertNotNull(srcIp + ", " + dstIp, inet6Address);
+            assertEquals(srcIp, dstIp, toAddressString(inet6Address, true));
         }
     }
 
     @Test
-    public void testinvalidIpv4MappedIp6GetByName() {
-        for (String testEntry : invalidIpV4Hosts.keySet()) {
-            assertNull(testEntry, getByName(testEntry, true));
+    public void testInvalidIpv4MappedIp6GetByName() {
+        for (String host : invalidIpV4Hosts.keySet()) {
+            assertNull(host, getByName(host, true));
         }
 
-        for (String testEntry : invalidIpV6Hosts.keySet()) {
-            assertNull(testEntry, getByName(testEntry, true));
+        for (String host : invalidIpV6Hosts.keySet()) {
+            assertNull(host, getByName(host, true));
         }
     }
 
@@ -615,8 +762,8 @@ public class NetUtilTest {
         }
     }
 
-    private static void assertHexDumpEquals(String expected, byte[] actual) {
-        assertEquals(expected, hex(actual));
+    private static void assertHexDumpEquals(String expected, byte[] actual, String message) {
+        assertEquals(message, expected, hex(actual));
     }
 
     private static String hex(byte[] value) {
@@ -626,7 +773,7 @@ public class NetUtilTest {
 
         StringBuilder buf = new StringBuilder(value.length << 1);
         for (byte b: value) {
-            String hex = Integer.toHexString(b & 0xFF);
+            String hex = StringUtil.byteToHexString(b);
             if (hex.length() == 1) {
                 buf.append('0');
             }
@@ -636,15 +783,6 @@ public class NetUtilTest {
     }
 
     private static byte[] unhex(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        byte[] buf = new byte[value.length() >>> 1];
-        for (int i = 0; i < buf.length; i ++) {
-            buf[i] = (byte) Integer.parseInt(value.substring(i << 1, i + 1 << 1), 16);
-        }
-
-        return buf;
+        return value != null ? StringUtil.decodeHexDump(value) : null;
     }
 }

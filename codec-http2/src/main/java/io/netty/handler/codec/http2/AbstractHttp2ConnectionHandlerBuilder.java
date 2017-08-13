@@ -19,8 +19,11 @@ package io.netty.handler.codec.http2;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.internal.UnstableApi;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_STREAMS;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -61,6 +64,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *   <li>{@link #headerSensitivityDetector(SensitivityDetector)}</li>
  *   <li>{@link #encoderEnforceMaxConcurrentStreams(boolean)}</li>
  *   <li>{@link #encoderIgnoreMaxHeaderListSize(boolean)}</li>
+ *   <li>{@link #initialHuffmanDecodeCapacity(int)}</li>
  * </ul>
  *
  * <h3>Exposing necessary methods in a subclass</h3>
@@ -74,13 +78,12 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2ConnectionHandler,
                                                             B extends AbstractHttp2ConnectionHandlerBuilder<T, B>> {
 
-    private static final long DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = MILLISECONDS.convert(30, SECONDS);
     private static final SensitivityDetector DEFAULT_HEADER_SENSITIVITY_DETECTOR = Http2HeadersEncoder.NEVER_SENSITIVE;
 
     // The properties that can always be set.
     private Http2Settings initialSettings = Http2Settings.defaultSettings();
     private Http2FrameListener frameListener;
-    private long gracefulShutdownTimeoutMillis = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
+    private long gracefulShutdownTimeoutMillis = Http2CodecUtil.DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
 
     // The property that will prohibit connection() and codec() if set by server(),
     // because this property is used only when this builder creates a Http2Connection.
@@ -102,6 +105,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private SensitivityDetector headerSensitivityDetector;
     private Boolean encoderEnforceMaxConcurrentStreams;
     private Boolean encoderIgnoreMaxHeaderListSize;
+    private int initialHuffmanDecodeCapacity = DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -137,7 +141,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Returns the graceful shutdown timeout of the {@link Http2Connection} in milliseconds.
+     * Returns the graceful shutdown timeout of the {@link Http2Connection} in milliseconds. Returns -1 if the
+     * timeout is indefinite.
      */
     protected long gracefulShutdownTimeoutMillis() {
         return gracefulShutdownTimeoutMillis;
@@ -147,6 +152,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * Sets the graceful shutdown timeout of the {@link Http2Connection} in milliseconds.
      */
     protected B gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
+        if (gracefulShutdownTimeoutMillis < -1) {
+            throw new IllegalArgumentException("gracefulShutdownTimeoutMillis: " + gracefulShutdownTimeoutMillis +
+                                               " (expected: -1 for indefinite or >= 0)");
+        }
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
         return self();
     }
@@ -345,6 +354,17 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Sets the initial size of an intermediate buffer used during HPACK huffman decoding.
+     * @param initialHuffmanDecodeCapacity initial size of an intermediate buffer used during HPACK huffman decoding.
+     * @return this.
+     */
+    protected B initialHuffmanDecodeCapacity(int initialHuffmanDecodeCapacity) {
+        enforceNonCodecConstraints("initialHuffmanDecodeCapacity");
+        this.initialHuffmanDecodeCapacity = checkPositive(initialHuffmanDecodeCapacity, "initialHuffmanDecodeCapacity");
+        return self();
+    }
+
+    /**
      * Create a new {@link Http2ConnectionHandler}.
      */
     protected T build() {
@@ -363,9 +383,9 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     private T buildFromConnection(Http2Connection connection) {
         Long maxHeaderListSize = initialSettings.maxHeaderListSize();
-        Http2FrameReader reader = new DefaultHttp2FrameReader(maxHeaderListSize == null ?
-                new DefaultHttp2HeadersDecoder(isValidateHeaders()) :
-                new DefaultHttp2HeadersDecoder(isValidateHeaders(), maxHeaderListSize));
+        Http2FrameReader reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(isValidateHeaders(),
+                maxHeaderListSize == null ? DEFAULT_HEADER_LIST_SIZE : maxHeaderListSize,
+                initialHuffmanDecodeCapacity));
         Http2FrameWriter writer = encoderIgnoreMaxHeaderListSize == null ?
                 new DefaultHttp2FrameWriter(headerSensitivityDetector()) :
                 new DefaultHttp2FrameWriter(headerSensitivityDetector(), encoderIgnoreMaxHeaderListSize);

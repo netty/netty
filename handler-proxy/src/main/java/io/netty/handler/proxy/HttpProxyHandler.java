@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -47,15 +48,26 @@ public final class HttpProxyHandler extends ProxyHandler {
     private final String password;
     private final CharSequence authorization;
     private HttpResponseStatus status;
+    private HttpHeaders headers;
 
     public HttpProxyHandler(SocketAddress proxyAddress) {
+        this(proxyAddress, null);
+    }
+
+    public HttpProxyHandler(SocketAddress proxyAddress, HttpHeaders headers) {
         super(proxyAddress);
         username = null;
         password = null;
         authorization = null;
+        this.headers = headers;
     }
 
     public HttpProxyHandler(SocketAddress proxyAddress, String username, String password) {
+        this(proxyAddress, username, password, null);
+    }
+
+    public HttpProxyHandler(SocketAddress proxyAddress, String username, String password,
+                            HttpHeaders headers) {
         super(proxyAddress);
         if (username == null) {
             throw new NullPointerException("username");
@@ -73,6 +85,8 @@ public final class HttpProxyHandler extends ProxyHandler {
 
         authz.release();
         authzBase64.release();
+
+        this.headers = headers;
     }
 
     @Override
@@ -123,6 +137,10 @@ public final class HttpProxyHandler extends ProxyHandler {
 
         if (authorization != null) {
             req.headers().set(HttpHeaderNames.PROXY_AUTHORIZATION, authorization);
+        }
+
+        if (headers != null) {
+            req.headers().add(headers);
         }
 
         return req;

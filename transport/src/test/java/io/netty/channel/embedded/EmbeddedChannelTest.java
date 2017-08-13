@@ -27,6 +27,7 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -52,6 +53,28 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
 
 public class EmbeddedChannelTest {
+
+    @Test
+    public void testNotRegistered() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(false, false);
+        assertFalse(channel.isRegistered());
+        channel.register();
+        assertTrue(channel.isRegistered());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testRegistered() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(true, false);
+        assertTrue(channel.isRegistered());
+        try {
+            channel.register();
+            fail();
+        } catch (IllegalStateException expected) {
+            // This is expected the channel is registered already on an EventLoop.
+        }
+        assertFalse(channel.finish());
+    }
 
     @Test(timeout = 2000)
     public void promiseDoesNotInfiniteLoop() throws InterruptedException {
@@ -539,6 +562,25 @@ public class EmbeddedChannelTest {
         if (!latch.await(1L, TimeUnit.SECONDS)) {
             fail("Nobody called #handleOutboundMessage() in time.");
         }
+    }
+
+    @Test(timeout = 5000)
+    public void testChannelInactiveFired() throws InterruptedException {
+        final AtomicBoolean inactive = new AtomicBoolean();
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                ctx.close();
+            }
+
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                inactive.set(true);
+            }
+        });
+        channel.pipeline().fireExceptionCaught(new IllegalStateException());
+
+        assertTrue(inactive.get());
     }
 
     private static void release(ByteBuf... buffers) {

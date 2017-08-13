@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -37,8 +38,7 @@ public final class PendingWriteQueue {
             SystemPropertyUtil.getInt("io.netty.transport.pendingWriteSizeOverhead", 64);
 
     private final ChannelHandlerContext ctx;
-    private final ChannelOutboundBuffer buffer;
-    private final MessageSizeEstimator.Handle estimatorHandle;
+    private final PendingTracker tracker;
 
     // head and tail pointers for the linked-list structure. If empty head and tail are null.
     private PendingWrite head;
@@ -46,13 +46,80 @@ public final class PendingWriteQueue {
     private int size;
     private long bytes;
 
+    private interface PendingTracker extends MessageSizeEstimator.Handle {
+        void incrementPendingOutboundBytes(long bytes);
+        void decrementPendingOutboundBytes(long bytes);
+    }
+
     public PendingWriteQueue(ChannelHandlerContext ctx) {
-        if (ctx == null) {
-            throw new NullPointerException("ctx");
+        this.ctx = ObjectUtil.checkNotNull(ctx, "ctx");
+        if (ctx.pipeline() instanceof DefaultChannelPipeline) {
+            final DefaultChannelPipeline pipeline = (DefaultChannelPipeline) ctx.pipeline();
+            tracker = new PendingTracker() {
+                @Override
+                public void incrementPendingOutboundBytes(long bytes) {
+                    pipeline.incrementPendingOutboundBytes(bytes);
+                }
+
+                @Override
+                public void decrementPendingOutboundBytes(long bytes) {
+                    pipeline.decrementPendingOutboundBytes(bytes);
+                }
+
+                @Override
+                public int size(Object msg) {
+                    return pipeline.estimatorHandle().size(msg);
+                }
+            };
+        } else {
+            final MessageSizeEstimator.Handle estimator = ctx.channel().config().getMessageSizeEstimator().newHandle();
+            final ChannelOutboundBuffer buffer = ctx.channel().unsafe().outboundBuffer();
+            if (buffer == null) {
+                tracker = new PendingTracker() {
+                    @Override
+                    public void incrementPendingOutboundBytes(long bytes) {
+                        // noop
+                    }
+
+                    @Override
+                    public void decrementPendingOutboundBytes(long bytes) {
+                        // noop
+                    }
+
+                    @Override
+                    public int size(Object msg) {
+                        return estimator.size(msg);
+                    }
+                };
+            } else {
+                tracker = new PendingTracker() {
+                    @Override
+                    public void incrementPendingOutboundBytes(long bytes) {
+                        // We need to guard against null as channel.unsafe().outboundBuffer() may returned null
+                        // if the channel was already closed when constructing the PendingWriteQueue.
+                        // See https://github.com/netty/netty/issues/3967
+                        if (buffer != null) {
+                            buffer.incrementPendingOutboundBytes(bytes);
+                        }
+                    }
+
+                    @Override
+                    public void decrementPendingOutboundBytes(long bytes) {
+                        // We need to guard against null as channel.unsafe().outboundBuffer() may returned null
+                        // if the channel was already closed when constructing the PendingWriteQueue.
+                        // See https://github.com/netty/netty/issues/3967
+                        if (buffer != null) {
+                            buffer.decrementPendingOutboundBytes(bytes);
+                        }
+                    }
+
+                    @Override
+                    public int size(Object msg) {
+                        return estimator.size(msg);
+                    }
+                };
+            }
         }
-        this.ctx = ctx;
-        buffer = ctx.channel().unsafe().outboundBuffer();
-        estimatorHandle = ctx.channel().config().getMessageSizeEstimator().newHandle();
     }
 
     /**
@@ -83,7 +150,7 @@ public final class PendingWriteQueue {
     private int size(Object msg) {
         // It is possible for writes to be triggered from removeAndFailAll(). To preserve ordering,
         // we should add them to the queue and let removeAndFailAll() fail them later.
-        int messageSize = estimatorHandle.size(msg);
+        int messageSize = tracker.size(msg);
         if (messageSize < 0) {
             // Size may be unknown so just use 0
             messageSize = 0;
@@ -116,12 +183,7 @@ public final class PendingWriteQueue {
         }
         size ++;
         bytes += messageSize;
-        // We need to guard against null as channel.unsafe().outboundBuffer() may returned null
-        // if the channel was already closed when constructing the PendingWriteQueue.
-        // See https://github.com/netty/netty/issues/3967
-        if (buffer != null) {
-            buffer.incrementPendingOutboundBytes(write.size);
-        }
+        tracker.incrementPendingOutboundBytes(write.size);
     }
 
     /**
@@ -286,12 +348,7 @@ public final class PendingWriteQueue {
         }
 
         write.recycle();
-        // We need to guard against null as channel.unsafe().outboundBuffer() may returned null
-        // if the channel was already closed when constructing the PendingWriteQueue.
-        // See https://github.com/netty/netty/issues/3967
-        if (buffer != null) {
-            buffer.decrementPendingOutboundBytes(writeSize);
-        }
+        tracker.decrementPendingOutboundBytes(writeSize);
     }
 
     private static void safeFail(ChannelPromise promise, Throwable cause) {

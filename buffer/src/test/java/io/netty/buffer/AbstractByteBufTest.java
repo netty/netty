@@ -36,6 +36,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
@@ -2471,6 +2472,23 @@ public abstract class AbstractByteBufTest {
         buffer.release();
     }
 
+    @Test
+    public void ensureWritableWithForceDoesNotThrow() {
+        ensureWritableDoesNotThrow(true);
+    }
+
+    @Test
+    public void ensureWritableWithOutForceDoesNotThrow() {
+        ensureWritableDoesNotThrow(false);
+    }
+
+    private void ensureWritableDoesNotThrow(boolean force) {
+        final ByteBuf buffer = newBuffer(8);
+        buffer.writerIndex(buffer.capacity());
+        buffer.ensureWritable(8, force);
+        buffer.release();
+    }
+
     // See:
     // - https://github.com/netty/netty/issues/2587
     // - https://github.com/netty/netty/issues/2580
@@ -2484,6 +2502,10 @@ public abstract class AbstractByteBufTest {
 
     private ByteBuf releasedBuffer() {
         ByteBuf buffer = newBuffer(8);
+
+        // Clear the buffer so we are sure the reader and writer indices are 0.
+        // This is important as we may return a slice from newBuffer(...).
+        buffer.clear();
         assertTrue(buffer.release());
         return buffer;
     }
@@ -2746,6 +2768,30 @@ public abstract class AbstractByteBufTest {
         } finally {
             buffer.release();
         }
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testSetUsAsciiCharSequenceAfterRelease() {
+        testSetCharSequenceAfterRelease0(CharsetUtil.US_ASCII);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testSetIso88591CharSequenceAfterRelease() {
+        testSetCharSequenceAfterRelease0(CharsetUtil.ISO_8859_1);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testSetUtf8CharSequenceAfterRelease() {
+        testSetCharSequenceAfterRelease0(CharsetUtil.UTF_8);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testSetUtf16CharSequenceAfterRelease() {
+        testSetCharSequenceAfterRelease0(CharsetUtil.UTF_16);
+    }
+
+    private void testSetCharSequenceAfterRelease0(Charset charset) {
+        releasedBuffer().setCharSequence(0, "x", charset);
     }
 
     @Test(expected = IllegalReferenceCountException.class)
@@ -3069,6 +3115,30 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test(expected = IllegalReferenceCountException.class)
+    public void testWriteUsAsciiCharSequenceAfterRelease() {
+        testWriteCharSequenceAfterRelease0(CharsetUtil.US_ASCII);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testWriteIso88591CharSequenceAfterRelease() {
+        testWriteCharSequenceAfterRelease0(CharsetUtil.ISO_8859_1);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testWriteUtf8CharSequenceAfterRelease() {
+        testWriteCharSequenceAfterRelease0(CharsetUtil.UTF_8);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testWriteUtf16CharSequenceAfterRelease() {
+        testWriteCharSequenceAfterRelease0(CharsetUtil.UTF_16);
+    }
+
+    private void testWriteCharSequenceAfterRelease0(Charset charset) {
+        releasedBuffer().writeCharSequence("x", charset);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
     public void testForEachByteAfterRelease() {
         releasedBuffer().forEachByte(new TestByteProcessor());
     }
@@ -3156,6 +3226,124 @@ public abstract class AbstractByteBufTest {
         assertEquals(1, buf.refCnt());
         assertTrue(buf.slice().release());
         assertEquals(0, buf.refCnt());
+    }
+
+    @Test
+    public void testWriteUsAsciiCharSequenceExpand() {
+        testWriteCharSequenceExpand(CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testWriteUtf8CharSequenceExpand() {
+        testWriteCharSequenceExpand(CharsetUtil.UTF_8);
+    }
+
+    @Test
+    public void testWriteIso88591CharSequenceExpand() {
+        testWriteCharSequenceExpand(CharsetUtil.ISO_8859_1);
+    }
+    @Test
+    public void testWriteUtf16CharSequenceExpand() {
+        testWriteCharSequenceExpand(CharsetUtil.UTF_16);
+    }
+
+    private void testWriteCharSequenceExpand(Charset charset) {
+        ByteBuf buf = newBuffer(1);
+        try {
+            int writerIndex = buf.capacity() - 1;
+            buf.writerIndex(writerIndex);
+            int written = buf.writeCharSequence("AB", charset);
+            assertEquals(writerIndex, buf.writerIndex() - written);
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetUsAsciiCharSequenceNoExpand() {
+        testSetCharSequenceNoExpand(CharsetUtil.US_ASCII);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetUtf8CharSequenceNoExpand() {
+        testSetCharSequenceNoExpand(CharsetUtil.UTF_8);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetIso88591CharSequenceNoExpand() {
+        testSetCharSequenceNoExpand(CharsetUtil.ISO_8859_1);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testSetUtf16CharSequenceNoExpand() {
+        testSetCharSequenceNoExpand(CharsetUtil.UTF_16);
+    }
+
+    private void testSetCharSequenceNoExpand(Charset charset) {
+        ByteBuf buf = newBuffer(1);
+        try {
+            buf.setCharSequence(0, "AB", charset);
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testSetUsAsciiCharSequence() {
+        testSetGetCharSequence(CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testSetUtf8CharSequence() {
+        testSetGetCharSequence(CharsetUtil.UTF_8);
+    }
+
+    @Test
+    public void testSetIso88591CharSequence() {
+        testSetGetCharSequence(CharsetUtil.ISO_8859_1);
+    }
+
+    @Test
+    public void testSetUtf16CharSequence() {
+        testSetGetCharSequence(CharsetUtil.UTF_16);
+    }
+
+    private void testSetGetCharSequence(Charset charset) {
+        ByteBuf buf = newBuffer(16);
+        String sequence = "AB";
+        int bytes = buf.setCharSequence(1, sequence, charset);
+        assertEquals(sequence, buf.getCharSequence(1, bytes, charset));
+        buf.release();
+    }
+
+    @Test
+    public void testWriteReadUsAsciiCharSequence() {
+        testWriteReadCharSequence(CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testWriteReadUtf8CharSequence() {
+        testWriteReadCharSequence(CharsetUtil.UTF_8);
+    }
+
+    @Test
+    public void testWriteReadIso88591CharSequence() {
+        testWriteReadCharSequence(CharsetUtil.ISO_8859_1);
+    }
+
+    @Test
+    public void testWriteReadUtf16CharSequence() {
+        testWriteReadCharSequence(CharsetUtil.UTF_16);
+    }
+
+    private void testWriteReadCharSequence(Charset charset) {
+        ByteBuf buf = newBuffer(16);
+        String sequence = "AB";
+        buf.writerIndex(1);
+        int bytes = buf.writeCharSequence(sequence, charset);
+        buf.readerIndex(1);
+        assertEquals(sequence, buf.readCharSequence(bytes, charset));
+        buf.release();
     }
 
     @Test(expected = IndexOutOfBoundsException.class)

@@ -25,10 +25,14 @@ import java.util.Collections;
 import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasToString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class HttpUtilTest {
 
@@ -130,12 +134,39 @@ public class HttpUtilTest {
     }
 
     @Test
-    public void testGetContentLengthDefaultValue() {
-        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        assertNull(message.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+    public void testGetContentLengthThrowsNumberFormatException() {
+        final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
-        assertEquals("bar", message.headers().get(HttpHeaderNames.CONTENT_LENGTH));
-        assertEquals(1L, HttpUtil.getContentLength(message, 1L));
+        try {
+            HttpUtil.getContentLength(message);
+            fail();
+        } catch (final NumberFormatException e) {
+            // a number format exception is expected here
+        }
+    }
+
+    @Test
+    public void testGetContentLengthIntDefaultValueThrowsNumberFormatException() {
+        final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
+        try {
+            HttpUtil.getContentLength(message, 1);
+            fail();
+        } catch (final NumberFormatException e) {
+            // a number format exception is expected here
+        }
+    }
+
+    @Test
+    public void testGetContentLengthLongDefaultValueThrowsNumberFormatException() {
+        final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");
+        try {
+            HttpUtil.getContentLength(message, 1L);
+            fail();
+        } catch (final NumberFormatException e) {
+            // a number format exception is expected here
+        }
     }
 
     @Test

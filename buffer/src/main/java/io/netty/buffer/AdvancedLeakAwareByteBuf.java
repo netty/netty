@@ -932,6 +932,18 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
     }
 
     @Override
+    public boolean release() {
+        leak.record();
+        return super.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        leak.record();
+        return super.release(decrement);
+    }
+
+    @Override
     public ByteBuf touch() {
         leak.record();
         return this;
