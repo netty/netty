@@ -87,7 +87,7 @@ char* netty_unix_util_parse_package_prefix(const char* libraryPathName, const ch
     packageNameEnd = packagePrefix + packagePrefixLen;
     // Package names must be sanitized, in JNI packages names are separated by '/' characters.
     for (; temp != packageNameEnd; ++temp) {
-        if (*temp == '-') {
+        if (*temp == '_') {
             *temp = '/';
         }
     }
