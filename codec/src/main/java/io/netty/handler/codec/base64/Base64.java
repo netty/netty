@@ -22,8 +22,10 @@ package io.netty.handler.codec.base64;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ByteProcessor;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
@@ -113,21 +115,19 @@ public final class Base64 {
 
     public static ByteBuf encode(
             ByteBuf src, int off, int len, boolean breakLines, Base64Dialect dialect, ByteBufAllocator allocator) {
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
+        ObjectUtil.checkNotNull(src, "src");
+        ObjectUtil.checkNotNull(dialect, "dialect");
 
+        ByteBuffer srcNio = src.internalNioBuffer(off, len);
         ByteBuf dest = allocator.buffer(encodedBufferSize(len, breakLines)).order(src.order());
+        ByteBuffer dstNio = dest.internalNioBuffer(dest.writerIndex(), dest.writableBytes());
         byte[] alphabet = alphabet(dialect);
         int d = 0;
         int e = 0;
         int len2 = len - 2;
         int lineLength = 0;
         for (; d < len2; d += 3, e += 4) {
-            encode3to4(src, d + off, 3, dest, e, alphabet);
+            encode3to4(srcNio, d + off, 3, dstNio, e, alphabet);
 
             lineLength += 4;
 
@@ -139,20 +139,20 @@ public final class Base64 {
         } // end for: each piece of array
 
         if (d < len) {
-            encode3to4(src, d + off, len - d, dest, e, alphabet);
+            encode3to4(srcNio, d + off, len - d, dstNio, e, alphabet);
             e += 4;
         } // end if: some padding needed
 
         // Remove last byte if it's a newline
-        if (e > 1 && dest.getByte(e - 1) == NEW_LINE) {
+        if (e > 1 && dstNio.get(e - 1) == NEW_LINE) {
             e--;
         }
 
-        return dest.slice(0, e);
+        return dest.setIndex(0, e);
     }
 
     private static void encode3to4(
-            ByteBuf src, int srcOffset, int numSigBytes, ByteBuf dest, int destOffset, byte[] alphabet) {
+            ByteBuffer src, int srcOffset, int numSigBytes, ByteBuffer dest, int destOffset, byte[] alphabet) {
         //           1         2         3
         // 01234567890123456789012345678901 Bit position
         // --------000000001111111122222222 Array position from threeBytes
@@ -168,13 +168,13 @@ public final class Base64 {
             final int inBuff;
             switch (numSigBytes) {
                 case 1:
-                    inBuff = toInt(src.getByte(srcOffset));
+                    inBuff = toInt(src.get(srcOffset));
                     break;
                 case 2:
                     inBuff = toIntBE(src.getShort(srcOffset));
                     break;
                 default:
-                    inBuff = numSigBytes <= 0 ? 0 : toIntBE(src.getMedium(srcOffset));
+                    inBuff = numSigBytes <= 0 ? 0 : toIntBE(getMedium(src, srcOffset));
                     break;
             }
             encode3to4BigEndian(inBuff, numSigBytes, dest, destOffset, alphabet);
@@ -182,13 +182,13 @@ public final class Base64 {
             final int inBuff;
             switch (numSigBytes) {
                 case 1:
-                    inBuff = toInt(src.getByte(srcOffset));
+                    inBuff = toInt(src.get(srcOffset));
                     break;
                 case 2:
                     inBuff = toIntLE(src.getShort(srcOffset));
                     break;
                 default:
-                    inBuff = numSigBytes <= 0 ? 0 : toIntLE(src.getMedium(srcOffset));
+                    inBuff = numSigBytes <= 0 ? 0 : toIntLE(getMedium(src, srcOffset));
                     break;
             }
             encode3to4LittleEndian(inBuff, numSigBytes, dest, destOffset, alphabet);
@@ -208,6 +208,16 @@ public final class Base64 {
         }
 
         return ret < Integer.MAX_VALUE ? (int) ret : Integer.MAX_VALUE;
+    }
+
+    private static int getMedium(ByteBuffer buffer, int index) {
+        int value = (buffer.get(index) & 0xff)     << 16 |
+                (buffer.get(index + 1) & 0xff) << 8  |
+                buffer.get(index + 2) & 0xff;
+        if ((value & 0x800000) != 0) {
+            value |= 0xff000000;
+        }
+        return value;
     }
 
     private static int toInt(byte value) {
@@ -231,23 +241,23 @@ public final class Base64 {
     }
 
     private static void encode3to4BigEndian(
-            int inBuff, int numSigBytes, ByteBuf dest, int destOffset, byte[] alphabet) {
+            int inBuff, int numSigBytes, ByteBuffer dest, int destOffset, byte[] alphabet) {
         // Packing bytes into an int to reduce bound and reference count checking.
         switch (numSigBytes) {
             case 3:
-                dest.setInt(destOffset, alphabet[inBuff >>> 18       ] << 24 |
+                dest.putInt(destOffset, alphabet[inBuff >>> 18       ] << 24 |
                                         alphabet[inBuff >>> 12 & 0x3f] << 16 |
                                         alphabet[inBuff >>>  6 & 0x3f] << 8  |
                                         alphabet[inBuff        & 0x3f]);
                 break;
             case 2:
-                dest.setInt(destOffset, alphabet[inBuff >>> 18       ] << 24 |
+                dest.putInt(destOffset, alphabet[inBuff >>> 18       ] << 24 |
                                         alphabet[inBuff >>> 12 & 0x3f] << 16 |
                                         alphabet[inBuff >>> 6  & 0x3f] << 8  |
                                         EQUALS_SIGN);
                 break;
             case 1:
-                dest.setInt(destOffset, alphabet[inBuff >>> 18       ] << 24 |
+                dest.putInt(destOffset, alphabet[inBuff >>> 18       ] << 24 |
                                         alphabet[inBuff >>> 12 & 0x3f] << 16 |
                                         EQUALS_SIGN << 8                     |
                                         EQUALS_SIGN);
@@ -259,23 +269,23 @@ public final class Base64 {
     }
 
     private static void encode3to4LittleEndian(
-            int inBuff, int numSigBytes, ByteBuf dest, int destOffset, byte[] alphabet) {
+            int inBuff, int numSigBytes, ByteBuffer dest, int destOffset, byte[] alphabet) {
         // Packing bytes into an int to reduce bound and reference count checking.
         switch (numSigBytes) {
             case 3:
-                dest.setInt(destOffset, alphabet[inBuff >>> 18       ]       |
+                dest.putInt(destOffset, alphabet[inBuff >>> 18       ]       |
                                         alphabet[inBuff >>> 12 & 0x3f] << 8  |
                                         alphabet[inBuff >>>  6 & 0x3f] << 16 |
                                         alphabet[inBuff        & 0x3f] << 24);
                 break;
             case 2:
-                dest.setInt(destOffset, alphabet[inBuff >>> 18       ]       |
+                dest.putInt(destOffset, alphabet[inBuff >>> 18       ]       |
                                         alphabet[inBuff >>> 12 & 0x3f] << 8  |
                                         alphabet[inBuff >>> 6  & 0x3f] << 16 |
                                         EQUALS_SIGN << 24);
                 break;
             case 1:
-                dest.setInt(destOffset, alphabet[inBuff >>> 18       ]      |
+                dest.putInt(destOffset, alphabet[inBuff >>> 18       ]      |
                                         alphabet[inBuff >>> 12 & 0x3f] << 8 |
                                         EQUALS_SIGN << 16                   |
                                         EQUALS_SIGN << 24);

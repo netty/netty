@@ -342,12 +342,6 @@ final class SslUtils {
      * @see Base64#encode(ByteBuf, boolean)
      */
     static ByteBuf toBase64(ByteBufAllocator allocator, ByteBuf src) {
-        if (PlatformDependent.javaVersion() >= 8) {
-            // Use Java8 provided Base64 encoder if we are running on java8+ to reduce time spend on Base64 encoding
-            // when paranoid leak detection is enabled. This is often the case when running CI jobs for netty based
-            // projects.
-            return Java8SslUtils.toBase64(src);
-        }
         ByteBuf dst = Base64.encode(src, src.readerIndex(),
                 src.readableBytes(), true, Base64Dialect.STANDARD, allocator);
         src.readerIndex(src.writerIndex());
