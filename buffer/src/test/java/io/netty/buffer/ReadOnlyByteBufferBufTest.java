@@ -15,11 +15,44 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+import org.junit.Test;
+
 import java.nio.ByteBuffer;
+
+import static org.junit.Assert.assertEquals;
 
 public class ReadOnlyByteBufferBufTest extends ReadOnlyDirectByteBufferBufTest {
     @Override
     protected ByteBuffer allocate(int size) {
         return ByteBuffer.allocate(size);
+    }
+
+    @Test
+    public void testCopyDirect() {
+        testCopy(true);
+    }
+
+    @Test
+    public void testCopyHeap() {
+        testCopy(false);
+    }
+
+    private static void testCopy(boolean direct) {
+        byte[] bytes = new byte[1024];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+
+        ByteBuffer nioBuffer = direct ? ByteBuffer.allocateDirect(bytes.length) : ByteBuffer.allocate(bytes.length);
+        nioBuffer.put(bytes).flip();
+
+        ByteBuf buf = new ReadOnlyByteBufferBuf(UnpooledByteBufAllocator.DEFAULT, nioBuffer.asReadOnlyBuffer());
+        ByteBuf copy = buf.copy();
+
+        assertEquals(buf, copy);
+        assertEquals(buf.alloc(), copy.alloc());
+        assertEquals(buf.isDirect(), copy.isDirect());
+
+        copy.release();
+        buf.release();
     }
 }
