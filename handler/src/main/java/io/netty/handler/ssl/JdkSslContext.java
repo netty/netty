@@ -236,7 +236,12 @@ public class JdkSslContext extends SslContext {
                     throw new Error("Unknown auth " + clientAuth);
             }
         }
-        return apn.wrapperFactory().wrapSslEngine(engine, alloc, apn, isServer());
+        JdkApplicationProtocolNegotiator.SslEngineWrapperFactory factory = apn.wrapperFactory();
+        if (factory instanceof JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) {
+            return ((JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) factory)
+                    .wrapSslEngine(engine, alloc, apn, isServer());
+        }
+        return factory.wrapSslEngine(engine, apn, isServer());
     }
 
     @Override

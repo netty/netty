@@ -31,7 +31,7 @@ public final class JdkNpnApplicationProtocolNegotiator extends JdkBaseApplicatio
         }
 
         @Override
-        public SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
+        public SSLEngine wrapSslEngine(SSLEngine engine,
                                        JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
             return new JettyNpnSslEngine(engine, applicationNegotiator, isServer);
         }
