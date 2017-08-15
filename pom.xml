@@ -84,6 +84,8 @@
         <!-- Skip as maven plugin not works with Java9 yet --> 
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
+        <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
       </properties>
       <activation>
         <jdk>9</jdk>
@@ -199,6 +201,7 @@
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
     <asm.version>5.1</asm.version>
+    <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
     <testJavaHome>${env.JAVA_HOME}</testJavaHome>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
@@ -576,6 +579,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${enforcer.plugin.version}</version>
         <executions>
           <execution>
             <id>enforce-tools</id>
