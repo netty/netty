@@ -491,6 +491,7 @@ public final class StringUtil {
                         }
                         // double-quote appears without being enclosed with double-quotes
                     case LINE_FEED:
+                        // fall through
                     case CARRIAGE_RETURN:
                         // special characters appears without being enclosed with double-quotes
                         throw newInvalidEscapedCsvFieldException(value, i);
