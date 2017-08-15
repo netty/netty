@@ -113,6 +113,17 @@ public final class NativeLibraryLoader {
         // Adjust expected name to support shading of native libraries.
         String name = calculatePackagePrefix().replace('.', '_') + originalName;
 
+        try {
+            // first try to load from java.library.path
+            loadLibrary(loader, name, false);
+            logger.debug("{} was loaded from java.libary.path", name);
+            return;
+        } catch (Throwable ex) {
+            logger.debug(
+                    "{} cannot be loaded from java.libary.path, "
+                    + "now trying export to -Dio.netty.native.workdir: {}", name, WORKDIR, ex);
+        }
+
         String libname = System.mapLibraryName(name);
         String path = NATIVE_RESOURCE_HOME + libname;
 
@@ -123,12 +134,6 @@ public final class NativeLibraryLoader {
             } else {
                 url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib");
             }
-        }
-
-        if (url == null) {
-            // Fall back to normal loading of JNI stuff
-            loadLibrary(loader, name, false);
-            return;
         }
 
         int index = libname.lastIndexOf('.');
