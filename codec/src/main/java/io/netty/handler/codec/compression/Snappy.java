@@ -273,6 +273,7 @@ class Snappy {
             switch (state) {
             case READY:
                 state = State.READING_PREAMBLE;
+                // fall through
             case READING_PREAMBLE:
                 int uncompressedLength = readPreamble(in);
                 if (uncompressedLength == PREAMBLE_NOT_FULL) {
@@ -286,6 +287,7 @@ class Snappy {
                 }
                 out.ensureWritable(uncompressedLength);
                 state = State.READING_TAG;
+                // fall through
             case READING_TAG:
                 if (!in.isReadable()) {
                     return;

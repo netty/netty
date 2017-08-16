@@ -440,8 +440,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         if (wakenUp.get()) {
                             selector.wakeup();
                         }
+                        // fall through
                     default:
-                        // fallthrough
                 }
 
                 cancelledKeys = 0;

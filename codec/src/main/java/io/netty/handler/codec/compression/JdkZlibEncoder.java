@@ -242,6 +242,8 @@ public class JdkZlibEncoder extends ZlibEncoder {
                 case ZLIB:
                     sizeEstimate += 2; // first two magic bytes
                     break;
+                default:
+                    // no op
             }
         }
         return ctx.alloc().heapBuffer(sizeEstimate);
