@@ -269,6 +269,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 crc.update(in.readUnsignedByte()); // operating system
 
                 gzipState = GzipState.FLG_READ;
+                // fall through
             case FLG_READ:
                 if ((flags & FEXTRA) != 0) {
                     if (in.readableBytes() < 2) {
@@ -282,6 +283,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     xlen |= xlen1 << 8 | xlen2;
                 }
                 gzipState = GzipState.XLEN_READ;
+                // fall through
             case XLEN_READ:
                 if (xlen != -1) {
                     if (in.readableBytes() < xlen) {
@@ -291,6 +293,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     in.skipBytes(xlen);
                 }
                 gzipState = GzipState.SKIP_FNAME;
+                // fall through
             case SKIP_FNAME:
                 if ((flags & FNAME) != 0) {
                     if (!in.isReadable()) {
@@ -305,6 +308,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     } while (in.isReadable());
                 }
                 gzipState = GzipState.SKIP_COMMENT;
+                // fall through
             case SKIP_COMMENT:
                 if ((flags & FCOMMENT) != 0) {
                     if (!in.isReadable()) {
@@ -319,6 +323,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     } while (in.isReadable());
                 }
                 gzipState = GzipState.PROCESS_FHCRC;
+                // fall through
             case PROCESS_FHCRC:
                 if ((flags & FHCRC) != 0) {
                     if (in.readableBytes() < 4) {
@@ -328,6 +333,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 }
                 crc.reset();
                 gzipState = GzipState.HEADER_END;
+                // fall through
             case HEADER_END:
                 return true;
             default:

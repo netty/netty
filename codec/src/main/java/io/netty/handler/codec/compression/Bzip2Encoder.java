@@ -113,9 +113,11 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
                     out.writeMedium(MAGIC_NUMBER);
                     out.writeByte('0' + streamBlockSize / BASE_BLOCK_SIZE);
                     currentState = State.INIT_BLOCK;
+                    // fall through
                 case INIT_BLOCK:
                     blockCompressor = new Bzip2BlockCompressor(writer, streamBlockSize);
                     currentState = State.WRITE_DATA;
+                    // fall through
                 case WRITE_DATA:
                     if (!in.isReadable()) {
                         return;
@@ -132,6 +134,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
                         }
                     }
                     currentState = State.CLOSE_BLOCK;
+                    // fall through
                 case CLOSE_BLOCK:
                     closeBlock(out);
                     currentState = State.INIT_BLOCK;

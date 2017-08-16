@@ -126,6 +126,7 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
                 hasChecksum = (options & 0x10) == BLOCK_WITH_CHECKSUM;
 
                 currentState = State.INIT_BLOCK_PARAMS;
+                // fall through
             case INIT_BLOCK_PARAMS:
                 if (in.readableBytes() < 2 + (isCompressed ? 2 : 0) + (hasChecksum ? 4 : 0)) {
                     break;
@@ -135,6 +136,7 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
                 originalLength = isCompressed ? in.readUnsignedShort() : chunkLength;
 
                 currentState = State.DECOMPRESS_DATA;
+                // fall through
             case DECOMPRESS_DATA:
                 final int chunkLength = this.chunkLength;
                 if (in.readableBytes() < chunkLength) {

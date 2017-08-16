@@ -140,6 +140,7 @@ public class LzfDecoder extends ByteToMessageDecoder {
                 if (type != BLOCK_TYPE_COMPRESSED) {
                     break;
                 }
+                // fall through
             case INIT_ORIGINAL_LENGTH:
                 if (in.readableBytes() < 2) {
                     break;
@@ -147,6 +148,7 @@ public class LzfDecoder extends ByteToMessageDecoder {
                 originalLength = in.readUnsignedShort();
 
                 currentState = State.DECOMPRESS_DATA;
+                // fall through
             case DECOMPRESS_DATA:
                 final int chunkLength = this.chunkLength;
                 if (in.readableBytes() < chunkLength) {
