@@ -23,6 +23,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -726,6 +728,9 @@ public class SslHandlerTest {
                             }
                             ch.pipeline().addLast(handler);
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                private boolean sentData;
+                                private Throwable writeCause;
+
                                 @Override
                                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
@@ -737,7 +742,15 @@ public class SslHandlerTest {
                                                 buf.writerIndex(buf.writerIndex() + singleComponentSize);
                                                 content.addComponent(true, buf);
                                             }
-                                            ctx.writeAndFlush(content);
+                                            ctx.writeAndFlush(content).addListener(new ChannelFutureListener() {
+                                                @Override
+                                                public void operationComplete(ChannelFuture future) throws Exception {
+                                                    writeCause = future.cause();
+                                                    if (writeCause == null) {
+                                                        sentData = true;
+                                                    }
+                                                }
+                                            });
                                         } else {
                                             donePromise.tryFailure(sslEvt.cause());
                                         }
@@ -747,12 +760,14 @@ public class SslHandlerTest {
 
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                    donePromise.tryFailure(cause);
+                                    donePromise.tryFailure(new IllegalStateException("server exception sentData: " +
+                                            sentData + " writeCause: " + writeCause, cause));
                                 }
 
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) {
-                                    donePromise.tryFailure(new IllegalStateException("server closed"));
+                                    donePromise.tryFailure(new IllegalStateException("server closed sentData: " +
+                                            sentData + " writeCause: " + writeCause));
                                 }
                             });
                         }
@@ -783,8 +798,19 @@ public class SslHandlerTest {
                                 }
 
                                 @Override
+                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                    if (evt instanceof SslHandshakeCompletionEvent) {
+                                        SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
+                                        if (!sslEvt.isSuccess()) {
+                                            donePromise.tryFailure(sslEvt.cause());
+                                        }
+                                    }
+                                }
+
+                                @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                    donePromise.tryFailure(cause);
+                                    donePromise.tryFailure(new IllegalStateException("client exception. bytesSeen: " +
+                                                                                     bytesSeen, cause));
                                 }
 
                                 @Override
