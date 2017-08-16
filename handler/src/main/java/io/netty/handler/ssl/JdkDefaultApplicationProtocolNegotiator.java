@@ -30,7 +30,7 @@ final class JdkDefaultApplicationProtocolNegotiator implements JdkApplicationPro
             new JdkDefaultApplicationProtocolNegotiator();
     private static final SslEngineWrapperFactory DEFAULT_SSL_ENGINE_WRAPPER_FACTORY = new SslEngineWrapperFactory() {
         @Override
-        public SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
+        public SSLEngine wrapSslEngine(SSLEngine engine,
                                        JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
             return engine;
         }

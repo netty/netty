@@ -107,7 +107,7 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
         super(ALPN_WRAPPER, selectorFactory, listenerFactory, protocols);
     }
 
-    private static final class FailureWrapper implements SslEngineWrapperFactory {
+    private static final class FailureWrapper extends AllocatorAwareSslEngineWrapperFactory {
         @Override
         public SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
                                        JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
@@ -118,7 +118,7 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
         }
     }
 
-    private static final class AlpnWrapper implements SslEngineWrapperFactory {
+    private static final class AlpnWrapper extends AllocatorAwareSslEngineWrapperFactory {
         @Override
         public SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
                                        JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
