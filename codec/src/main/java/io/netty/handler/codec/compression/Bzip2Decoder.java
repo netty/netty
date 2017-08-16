@@ -104,6 +104,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
 
                 streamCRC = 0;
                 currentState = State.INIT_BLOCK;
+                 // fall through
             case INIT_BLOCK:
                 if (!reader.hasReadableBytes(10)) {
                     return;
@@ -125,6 +126,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                 }
                 blockCRC = reader.readInt();
                 currentState = State.INIT_BLOCK_PARAMS;
+                // fall through
             case INIT_BLOCK_PARAMS:
                 if (!reader.hasReadableBits(25)) {
                     return;
@@ -135,12 +137,14 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                 blockDecompressor = new Bzip2BlockDecompressor(this.blockSize, blockCRC,
                                                                 blockRandomised, bwtStartPointer, reader);
                 currentState = State.RECEIVE_HUFFMAN_USED_MAP;
+                // fall through
             case RECEIVE_HUFFMAN_USED_MAP:
                 if (!reader.hasReadableBits(16)) {
                     return;
                 }
                 blockDecompressor.huffmanInUse16 = reader.readBits(16);
                 currentState = State.RECEIVE_HUFFMAN_USED_BITMAPS;
+                // fall through
             case RECEIVE_HUFFMAN_USED_BITMAPS:
                 Bzip2BlockDecompressor blockDecompressor = this.blockDecompressor;
                 final int inUse16 = blockDecompressor.huffmanInUse16;
@@ -175,6 +179,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                 }
                 huffmanStageDecoder = new Bzip2HuffmanStageDecoder(reader, totalTables, alphaSize);
                 currentState = State.RECEIVE_SELECTORS_NUMBER;
+                // fall through
             case RECEIVE_SELECTORS_NUMBER:
                 if (!reader.hasReadableBits(15)) {
                     return;
@@ -186,6 +191,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                 huffmanStageDecoder.selectors = new byte[totalSelectors];
 
                 currentState = State.RECEIVE_SELECTORS;
+                // fall through
             case RECEIVE_SELECTORS:
                 Bzip2HuffmanStageDecoder huffmanStageDecoder = this.huffmanStageDecoder;
                 byte[] selectors = huffmanStageDecoder.selectors;
@@ -209,6 +215,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                 }
 
                 currentState = State.RECEIVE_HUFFMAN_LENGTH;
+                // fall through
             case RECEIVE_HUFFMAN_LENGTH:
                 huffmanStageDecoder = this.huffmanStageDecoder;
                 totalTables = huffmanStageDecoder.totalTables;
@@ -268,6 +275,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                 // Finally create the Huffman tables
                 huffmanStageDecoder.createHuffmanDecodingTables();
                 currentState = State.DECODE_HUFFMAN_DATA;
+                // fall through
             case DECODE_HUFFMAN_DATA:
                 blockDecompressor = this.blockDecompressor;
                 final int oldReaderIndex = in.readerIndex();
