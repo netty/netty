@@ -42,6 +42,7 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -574,11 +575,17 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     public String applicationProtocol() {
         SSLSession sess = engine().getSession();
-        if (!(sess instanceof ApplicationProtocolAccessor)) {
-            return null;
+        if (sess instanceof ApplicationProtocolAccessor) {
+            return ((ApplicationProtocolAccessor) sess).getApplicationProtocol();
+        }
+        if (Java9SslUtils.supportsAlpn(engine())) {
+            String protocol = Java9SslUtils.getApplicationProtocol(engine());
+            if (!StringUtil.isNullOrEmpty(protocol)) {
+                return protocol;
+            }
         }
 
-        return ((ApplicationProtocolAccessor) sess).getApplicationProtocol();
+        return null;
     }
 
     /**
