@@ -136,7 +136,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
-    private boolean decodeWasNull;
+    private boolean decodeWasNull = true;
     private boolean first;
     /**
      * A bitmask where the bits are defined as
@@ -280,7 +280,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 }
 
                 int size = out.size();
-                decodeWasNull = !out.insertSinceRecycled();
+                // Only update decodeWasNull if we did not produce data in a previous channelRead(...) call.
+                decodeWasNull &= !out.insertSinceRecycled();
+
                 fireChannelRead(ctx, out, size);
                 out.recycle();
             }
@@ -319,7 +321,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     protected final void channelReadComplete(ChannelHandlerContext ctx, boolean readData) throws Exception {
         numReads = 0;
         discardSomeReadBytes();
-        decodeWasNull = false;
+        // Set back to true we will adjust it in channelRead(...) again if needed
+        decodeWasNull = true;
         if (readData) {
             ctx.fireChannelReadComplete();
         } else if (!ctx.channel().config().isAutoRead()) {

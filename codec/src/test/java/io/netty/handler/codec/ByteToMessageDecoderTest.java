@@ -29,6 +29,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -50,7 +51,7 @@ public class ByteToMessageDecoderTest {
             }
         });
 
-        ByteBuf buf = Unpooled.wrappedBuffer(new byte[] {'a', 'b', 'c'});
+        ByteBuf buf = wrappedBuffer(new byte[] {'a', 'b', 'c'});
         channel.writeInbound(buf.copy());
         ByteBuf b = channel.readInbound();
         assertEquals(b, buf.skipBytes(1));
@@ -77,7 +78,7 @@ public class ByteToMessageDecoderTest {
         });
 
         channel.writeInbound(buf.copy());
-        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {'b', 'c'});
+        ByteBuf expected = wrappedBuffer(new byte[] {'b', 'c'});
         ByteBuf b = channel.readInbound();
         assertEquals(expected, b);
         expected.release();
@@ -107,7 +108,7 @@ public class ByteToMessageDecoderTest {
         EmbeddedChannel channel = newInternalBufferTestChannel();
         assertTrue(channel.writeInbound(buf));
         assertTrue(channel.finish());
-        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {'b'});
+        ByteBuf expected = wrappedBuffer(new byte[] {'b'});
         ByteBuf b = channel.readInbound();
         assertEquals(expected, b);
         assertNull(channel.readInbound());
@@ -150,7 +151,7 @@ public class ByteToMessageDecoderTest {
         byte[] bytes = new byte[1024];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
 
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
+        assertTrue(channel.writeInbound(wrappedBuffer(bytes)));
         assertTrue(channel.finishAndReleaseAll());
     }
 
@@ -225,7 +226,7 @@ public class ByteToMessageDecoderTest {
             }
         });
 
-        ByteBuf buf = Unpooled.wrappedBuffer(new byte[] { 'a', 'b', 'c' });
+        ByteBuf buf = wrappedBuffer(new byte[] { 'a', 'b', 'c' });
         assertTrue(channel.writeInbound(buf.copy()));
         ByteBuf b = channel.readInbound();
         assertEquals(b, buf.skipBytes(1));
@@ -247,8 +248,8 @@ public class ByteToMessageDecoderTest {
         byte[] bytes = new byte[1024];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
 
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
-        assertBuffer(Unpooled.wrappedBuffer(bytes), (ByteBuf) channel.readInbound());
+        assertTrue(channel.writeInbound(wrappedBuffer(bytes)));
+        assertBuffer(wrappedBuffer(bytes), (ByteBuf) channel.readInbound());
         assertNull(channel.readInbound());
         assertFalse(channel.finish());
         assertNull(channel.readInbound());
@@ -279,11 +280,11 @@ public class ByteToMessageDecoderTest {
         byte[] bytes = new byte[1024];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
 
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
-        assertBuffer(Unpooled.wrappedBuffer(bytes, 0, bytes.length - 1), (ByteBuf) channel.readInbound());
+        assertTrue(channel.writeInbound(wrappedBuffer(bytes)));
+        assertBuffer(wrappedBuffer(bytes, 0, bytes.length - 1), (ByteBuf) channel.readInbound());
         assertNull(channel.readInbound());
         assertTrue(channel.finish());
-        assertBuffer(Unpooled.wrappedBuffer(bytes, bytes.length - 1, 1), (ByteBuf) channel.readInbound());
+        assertBuffer(wrappedBuffer(bytes, bytes.length - 1, 1), (ByteBuf) channel.readInbound());
         assertNull(channel.readInbound());
     }
 
@@ -304,7 +305,7 @@ public class ByteToMessageDecoderTest {
             }
         });
         assertFalse(channel.writeInbound(Unpooled.buffer(8).writeByte(1).asReadOnly()));
-        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(new byte[] { (byte) 2 })));
+        assertFalse(channel.writeInbound(wrappedBuffer(new byte[] { (byte) 2 })));
         assertFalse(channel.finish());
     }
 
@@ -329,11 +330,57 @@ public class ByteToMessageDecoderTest {
             }
         });
 
-        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {'a'})));
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {'b'})));
+        assertFalse(channel.writeInbound(wrappedBuffer(new byte[] {'a'})));
+        assertTrue(channel.writeInbound(wrappedBuffer(new byte[] {'b'})));
         ByteBuf b = channel.readInbound();
 
-        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {'a', 'b'});
+        ByteBuf expected = wrappedBuffer(new byte[] {'a', 'b'});
+        assertEquals(expected, b);
+        b.release();
+        expected.release();
+
+        assertTrue(readCompleteExpected.get());
+
+        assertFalse(channel.finish());
+
+        assertEquals(1, readCompleteCount.get());
+    }
+
+    @Test
+    public void testFireChannelReadCompleteWhenSecondProduceNoData() {
+        final AtomicBoolean readCompleteExpected = new AtomicBoolean();
+        final AtomicInteger readCompleteCount = new AtomicInteger();
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
+
+            private boolean decoded;
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                if (!decoded && in.readableBytes() > 1) {
+                    readCompleteExpected.set(true);
+                    out.add(in.readBytes(in.readableBytes()));
+                    decoded = true;
+                }
+            }
+        }, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                assertTrue(readCompleteExpected.get());
+                readCompleteCount.incrementAndGet();
+            }
+        });
+
+        channel.pipeline().fireChannelRead(wrappedBuffer(new byte[] {'a'}));
+        channel.pipeline().fireChannelReadComplete();
+        assertEquals(0, readCompleteCount.get());
+
+        channel.pipeline().fireChannelRead(wrappedBuffer(new byte[] {'b'}));
+        channel.pipeline().fireChannelRead(wrappedBuffer(new byte[] {'a'}));
+        channel.pipeline().fireChannelReadComplete();
+
+        ByteBuf b = channel.readInbound();
+
+        ByteBuf expected = wrappedBuffer(new byte[] {'a', 'b'});
         assertEquals(expected, b);
         b.release();
         expected.release();
