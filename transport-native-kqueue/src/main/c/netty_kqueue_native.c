@@ -35,6 +35,35 @@
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
 
+// Currently only macOS supports EVFILT_SOCK, and it is currently only available in internal APIs.
+// To make compiling easier we redefine the values here if they are not present.
+#ifdef __APPLE__
+#ifndef EVFILT_SOCK
+#define EVFILT_SOCK -13
+#endif /* EVFILT_SOCK */
+#ifndef NOTE_CONNRESET
+#define NOTE_CONNRESET 0x00000001
+#endif /* NOTE_CONNRESET */
+#ifndef NOTE_READCLOSED
+#define NOTE_READCLOSED 0x00000002
+#endif /* NOTE_READCLOSED */
+#ifndef NOTE_DISCONNECTED
+#define NOTE_DISCONNECTED 0x00001000
+#endif /* NOTE_DISCONNECTED */
+#else
+#ifndef EVFILT_SOCK
+#define EVFILT_SOCK 0 // Disabled
+#endif /* EVFILT_SOCK */
+#ifndef NOTE_CONNRESET
+#define NOTE_CONNRESET 0
+#endif /* NOTE_CONNRESET */
+#ifndef NOTE_READCLOSED
+#define NOTE_READCLOSED 0
+#endif /* NOTE_READCLOSED */
+#ifndef NOTE_DISCONNECTED
+#define NOTE_DISCONNECTED 0
+#endif /* NOTE_DISCONNECTED */
+#endif /* __APPLE__ */
 
 clockid_t waitClockId = 0; // initialized by netty_unix_util_initialize_wait_clock
 
@@ -162,6 +191,10 @@ static jshort netty_kqueue_native_evfiltUser(JNIEnv* env, jclass clazz) {
     return EVFILT_USER;
 }
 
+static jshort netty_kqueue_native_evfiltSock(JNIEnv* env, jclass clazz) {
+    return EVFILT_SOCK;
+}
+
 static jshort netty_kqueue_native_evAdd(JNIEnv* env, jclass clazz) {
    return EV_ADD;
 }
@@ -190,18 +223,34 @@ static jshort netty_kqueue_native_evError(JNIEnv* env, jclass clazz) {
    return EV_ERROR;
 }
 
+static jshort netty_kqueue_native_noteConnReset(JNIEnv* env, jclass clazz) {
+   return NOTE_CONNRESET;
+}
+
+static jshort netty_kqueue_native_noteReadClosed(JNIEnv* env, jclass clazz) {
+   return NOTE_READCLOSED;
+}
+
+static jshort netty_kqueue_native_noteDisconnected(JNIEnv* env, jclass clazz) {
+   return NOTE_DISCONNECTED;
+}
+
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "evfiltRead", "()S", (void *) netty_kqueue_native_evfiltRead },
   { "evfiltWrite", "()S", (void *) netty_kqueue_native_evfiltWrite },
   { "evfiltUser", "()S", (void *) netty_kqueue_native_evfiltUser },
+  { "evfiltSock", "()S", (void *) netty_kqueue_native_evfiltSock },
   { "evAdd", "()S", (void *) netty_kqueue_native_evAdd },
   { "evEnable", "()S", (void *) netty_kqueue_native_evEnable },
   { "evDisable", "()S", (void *) netty_kqueue_native_evDisable },
   { "evDelete", "()S", (void *) netty_kqueue_native_evDelete },
   { "evClear", "()S", (void *) netty_kqueue_native_evClear },
   { "evEOF", "()S", (void *) netty_kqueue_native_evEOF },
-  { "evError", "()S", (void *) netty_kqueue_native_evError }
+  { "evError", "()S", (void *) netty_kqueue_native_evError },
+  { "noteReadClosed", "()S", (void *) netty_kqueue_native_noteReadClosed },
+  { "noteConnReset", "()S", (void *) netty_kqueue_native_noteConnReset },
+  { "noteDisconnected", "()S", (void *) netty_kqueue_native_noteDisconnected }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
