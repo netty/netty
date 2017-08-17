@@ -196,6 +196,8 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
             } else if (filter == Native.EVFILT_READ) {
                 // Check READ before EOF to ensure all data is read before shutting down the input.
                 unsafe.readReady(eventList.data(i));
+            } else if (filter == Native.EVFILT_SOCK && (eventList.fflags(i) & Native.NOTE_RDHUP) != 0) {
+                unsafe.readEOF();
             }
 
             // Check if EV_EOF was set, this will notify us for connection-reset in which case
