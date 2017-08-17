@@ -31,8 +31,12 @@ import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evEOF
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evEnable;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evError;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfiltRead;
+import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfiltSock;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfiltUser;
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.evfiltWrite;
+import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.noteConnReset;
+import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.noteDisconnected;
+import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.noteReadClosed;
 import static io.netty.channel.unix.Errors.newIOException;
 
 /**
@@ -59,6 +63,12 @@ final class Native {
     static final short EV_ERROR = evError();
     static final short EV_EOF = evEOF();
 
+    static final int NOTE_READCLOSED = noteReadClosed();
+    static final int NOTE_CONNRESET = noteConnReset();
+    static final int NOTE_DISCONNECTED = noteDisconnected();
+
+    static final int NOTE_RDHUP = NOTE_READCLOSED | NOTE_CONNRESET | NOTE_DISCONNECTED;
+
     // Commonly used combinations of EV defines
     static final short EV_ADD_CLEAR_ENABLE = (short) (EV_ADD | EV_CLEAR | EV_ENABLE);
     static final short EV_DELETE_DISABLE = (short) (EV_DELETE | EV_DISABLE);
@@ -66,6 +76,7 @@ final class Native {
     static final short EVFILT_READ = evfiltRead();
     static final short EVFILT_WRITE = evfiltWrite();
     static final short EVFILT_USER = evfiltUser();
+    static final short EVFILT_SOCK = evfiltSock();
 
     static FileDescriptor newKQueue() {
         return new FileDescriptor(kqueueCreate());
