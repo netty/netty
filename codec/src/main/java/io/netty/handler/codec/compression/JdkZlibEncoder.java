@@ -242,8 +242,6 @@ public class JdkZlibEncoder extends ZlibEncoder {
                 case ZLIB:
                     sizeEstimate += 2; // first two magic bytes
                     break;
-                case ZLIB_OR_NONE:
-                case NONE:
                 default:
                     // no op    
             }
