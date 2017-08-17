@@ -278,7 +278,7 @@ jint JNI_OnLoad_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
     }
 
     char* packagePrefix = NULL;
-#ifndef NETTY_NOT_DYNAMIC
+#ifndef NETTY_BUILD_STATIC
     Dl_info dlinfo;
     jint status = 0;
     // We need to use an address of a function that is uniquely part of this library, so choose a static
@@ -292,7 +292,7 @@ jint JNI_OnLoad_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
         fprintf(stderr, "FATAL: transport-native-kqueue JNI encountered unexpected dlinfo.dli_fname: %s\n", dlinfo.dli_fname);
         return JNI_ERR;
     }
-#endif /* NETTY_NOT_DYNAMIC */
+#endif /* NETTY_BUILD_STATIC */
     jint ret = netty_kqueue_native_JNI_OnLoad(env, packagePrefix);
 
     if (packagePrefix != NULL) {
@@ -303,9 +303,11 @@ jint JNI_OnLoad_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
     return ret;
 }
 
+#ifndef NETTY_BUILD_STATIC
 jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     return JNI_OnLoad_netty_transport_native_kqueue(vm, reserved);
 }
+#endif /* NETTY_BUILD_STATIC */
 
 // Invoked by the JVM when statically linked
 void JNI_OnUnload_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
@@ -317,6 +319,8 @@ void JNI_OnUnload_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
     netty_kqueue_native_JNI_OnUnLoad(env);
 }
 
+#ifndef NETTY_BUILD_STATIC
 void JNI_OnUnload(JavaVM* vm, void* reserved) {
     return JNI_OnUnload_netty_transport_native_kqueue(vm, reserved);
 }
+#endif /* NETTY_BUILD_STATIC */
