@@ -78,7 +78,7 @@ public final class CaliperRunner {
     public static Run execute(final String name,
             final Class<? extends CaliperBench> klaz) throws Exception {
 
-        final CaliperBench booter = klaz.newInstance();
+        final CaliperBench booter = klaz.getConstructor().newInstance();
 
         final List<Map<String, String>> varsSet = product(booter);
 
