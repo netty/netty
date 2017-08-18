@@ -38,7 +38,6 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
     }
 
     private static boolean initAvailable() {
-        // TODO: Add support for ALPN when using Java9 and still be able to configure it the Netty way.
         if (PlatformDependent.javaVersion() <= 8) {
             try {
                 // Always use bootstrap class loader.
