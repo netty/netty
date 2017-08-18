@@ -573,12 +573,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * @return the protocol name or {@code null} if application-level protocol has not been negotiated
      */
     public String applicationProtocol() {
-        SSLSession sess = engine().getSession();
-        if (!(sess instanceof ApplicationProtocolAccessor)) {
+        SSLEngine engine = engine();
+        if (!(engine instanceof ApplicationProtocolAccessor)) {
             return null;
         }
 
-        return ((ApplicationProtocolAccessor) sess).getApplicationProtocol();
+        return ((ApplicationProtocolAccessor) engine).getApplicationProtocol();
     }
 
     /**

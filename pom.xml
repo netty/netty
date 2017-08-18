@@ -710,6 +710,7 @@
 
             <!-- JDK 8 -->
             <ignore>java.util.concurrent.atomic.LongAdder</ignore>
+            <ignore>java.util.function.BiFunction</ignore>
 
             <!-- Resolver -->
             <ignore>java.net.InetAddress</ignore>
