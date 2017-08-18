@@ -446,16 +446,19 @@ public final class HttpConversionUtil {
         return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
     }
 
-    private static void setHttp2Authority(String authority, Http2Headers out) {
+    // package-private for testing only
+    static void setHttp2Authority(String authority, Http2Headers out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
         if (authority != null) {
-            int endOfUserInfo = authority.indexOf('@');
-            if (endOfUserInfo < 0) {
-                out.authority(new AsciiString(authority));
-            } else if (endOfUserInfo + 1 < authority.length()) {
-                out.authority(new AsciiString(authority.substring(endOfUserInfo + 1)));
+            if (authority.isEmpty()) {
+                out.authority(EMPTY_STRING);
             } else {
-                throw new IllegalArgumentException("authority: " + authority);
+                int start = authority.indexOf('@') + 1;
+                int length = authority.length() - start;
+                if (length == 0) {
+                    throw new IllegalArgumentException("authority: " + authority);
+                }
+                out.authority(new AsciiString(authority, start, length));
             }
         }
     }
