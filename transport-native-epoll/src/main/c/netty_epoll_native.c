@@ -624,7 +624,7 @@ jint JNI_OnLoad_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
 }
 
 #ifndef NETTY_BUILD_STATIC
-jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     return JNI_OnLoad_netty_transport_native_epoll(vm, reserved);
 }
 #endif /* NETTY_BUILD_STATIC */
@@ -640,7 +640,7 @@ void JNI_OnUnload_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
 }
 
 #ifndef NETTY_BUILD_STATIC
-void JNI_OnUnload(JavaVM* vm, void* reserved) {
+JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
   JNI_OnUnload_netty_transport_native_epoll(vm, reserved);
 }
 #endif /* NETTY_BUILD_STATIC */
