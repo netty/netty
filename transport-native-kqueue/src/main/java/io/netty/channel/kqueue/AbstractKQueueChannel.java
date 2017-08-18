@@ -166,6 +166,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // Make sure we unregister our filters from kqueue!
         readFilter(false);
         writeFilter(false);
+        evSet0(Native.EVFILT_SOCK, Native.EV_DELETE, 0);
 
         ((KQueueEventLoop) eventLoop()).remove(this);
 
@@ -204,6 +205,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         if (readFilterEnabled) {
             evSet0(Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE);
         }
+        evSet0(Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP);
     }
 
     @Override
@@ -382,7 +384,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     private void evSet0(short filter, short flags) {
-        ((KQueueEventLoop) eventLoop()).evSet(this, filter, flags, 0);
+        evSet0(filter, flags, 0);
+    }
+
+    private void evSet0(short filter, short flags, int fflags) {
+        ((KQueueEventLoop) eventLoop()).evSet(this, filter, flags, fflags);
     }
 
     abstract class AbstractKQueueUnsafe extends AbstractUnsafe {
