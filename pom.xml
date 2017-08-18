@@ -699,6 +699,7 @@
 
             <!-- JDK 8 -->
             <ignore>java.util.concurrent.atomic.LongAdder</ignore>
+            <ignore>java.util.function.BiFunction</ignore>
 
             <!-- NoexecVolumeDetector -->
             <ignore>java.nio.file.attribute.PosixFilePermission</ignore>
