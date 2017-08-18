@@ -87,7 +87,7 @@ import static javax.net.ssl.SSLEngineResult.Status.OK;
  * the instance depends upon are released. Otherwise if any method of this class is called which uses the
  * the {@link ReferenceCountedOpenSslContext} JNI resources the JVM may crash.
  */
-public class ReferenceCountedOpenSslEngine extends SSLEngine implements ReferenceCounted {
+public class ReferenceCountedOpenSslEngine extends SSLEngine implements ReferenceCounted, ApplicationProtocolAccessor {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ReferenceCountedOpenSslEngine.class);
 
@@ -159,6 +159,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private boolean renegotiationPending;
     private boolean receivedShutdown;
     private volatile int destroyed;
+    private volatile String applicationProtocol;
 
     // Reference Counting
     private final ResourceLeakTracker<ReferenceCountedOpenSslEngine> leak;
@@ -1827,7 +1828,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return Java8SslUtils.checkSniHostnameMatch(matchers, hostname);
     }
 
-    private final class OpenSslSession implements SSLSession, ApplicationProtocolAccessor {
+    @Override
+    public String getApplicationProtocol() {
+        return applicationProtocol;
+    }
+
+    private final class OpenSslSession implements SSLSession {
         private final OpenSslSessionContext sessionContext;
 
         // These are guarded by synchronized(OpenSslEngine.this) as handshakeFinished() may be triggered by any
@@ -1835,7 +1841,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         private X509Certificate[] x509PeerCerts;
         private Certificate[] peerCerts;
         private String protocol;
-        private String applicationProtocol;
         private String cipher;
         private byte[] id;
         private long creationTime;
@@ -2043,14 +2048,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 case ALPN:
                     applicationProtocol = SSL.getAlpnSelected(ssl);
                     if (applicationProtocol != null) {
-                        this.applicationProtocol = selectApplicationProtocol(
+                        ReferenceCountedOpenSslEngine.this.applicationProtocol = selectApplicationProtocol(
                                 protocols, behavior, applicationProtocol);
                     }
                     break;
                 case NPN:
                     applicationProtocol = SSL.getNextProtoNegotiated(ssl);
                     if (applicationProtocol != null) {
-                        this.applicationProtocol = selectApplicationProtocol(
+                        ReferenceCountedOpenSslEngine.this.applicationProtocol = selectApplicationProtocol(
                                 protocols, behavior, applicationProtocol);
                     }
                     break;
@@ -2060,7 +2065,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         applicationProtocol = SSL.getNextProtoNegotiated(ssl);
                     }
                     if (applicationProtocol != null) {
-                        this.applicationProtocol = selectApplicationProtocol(
+                        ReferenceCountedOpenSslEngine.this.applicationProtocol = selectApplicationProtocol(
                                 protocols, behavior, applicationProtocol);
                     }
                     break;
@@ -2157,13 +2162,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
             }
             return protocol;
-        }
-
-        @Override
-        public String getApplicationProtocol() {
-            synchronized (ReferenceCountedOpenSslEngine.this) {
-                return applicationProtocol;
-            }
         }
 
         @Override
