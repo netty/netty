@@ -971,7 +971,7 @@ public class DnsNameResolverTest {
             if (cache) {
                 assertNull(nsCache.cache.get("io.", null));
                 assertNull(nsCache.cache.get("netty.io.", null));
-                List<DnsCacheEntry> entries = nsCache.cache.get("record.netty.io.", null);
+                List<? extends DnsCacheEntry> entries = nsCache.cache.get("record.netty.io.", null);
                 assertEquals(1, entries.size());
 
                 assertNull(nsCache.cache.get(hostname, null));
@@ -1159,7 +1159,8 @@ public class DnsNameResolverTest {
 
     private static final class TestDnsCache implements DnsCache {
         private final DnsCache cache;
-        final Map<String, List<DnsCacheEntry>> cacheHits = new HashMap<String, List<DnsCacheEntry>>();
+        final Map<String, List<? extends DnsCacheEntry>> cacheHits = new HashMap<String,
+                                                                                  List<? extends DnsCacheEntry>>();
 
         TestDnsCache(DnsCache cache) {
             this.cache = cache;
@@ -1176,22 +1177,22 @@ public class DnsNameResolverTest {
         }
 
         @Override
-        public List<DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
-            List<DnsCacheEntry> cacheEntries = cache.get(hostname, additionals);
+        public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+            List<? extends DnsCacheEntry> cacheEntries = cache.get(hostname, additionals);
             cacheHits.put(hostname, cacheEntries);
             return cacheEntries;
         }
 
         @Override
-        public void cache(
+        public DnsCacheEntry cache(
                 String hostname, DnsRecord[] additionals, InetAddress address, long originalTtl, EventLoop loop) {
-            cache.cache(hostname, additionals, address, originalTtl, loop);
+            return cache.cache(hostname, additionals, address, originalTtl, loop);
         }
 
         @Override
-        public void cache(
+        public DnsCacheEntry cache(
                 String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
-            cache.cache(hostname, additionals, cause, loop);
+            return cache.cache(hostname, additionals, cause, loop);
         }
     }
 

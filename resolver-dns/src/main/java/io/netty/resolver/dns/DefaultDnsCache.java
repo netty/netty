@@ -17,6 +17,7 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -38,7 +39,8 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 @UnstableApi
 public class DefaultDnsCache implements DnsCache {
 
-    private final ConcurrentMap<String, List<DnsCacheEntry>> resolveCache = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<String, List<DefaultDnsCacheEntry>> resolveCache =
+                                                            PlatformDependent.newConcurrentHashMap();
     private final int minTtl;
     private final int maxTtl;
     private final int negativeTtl;
@@ -95,8 +97,9 @@ public class DefaultDnsCache implements DnsCache {
 
     @Override
     public void clear() {
-        for (Iterator<Map.Entry<String, List<DnsCacheEntry>>> i = resolveCache.entrySet().iterator(); i.hasNext();) {
-            final Map.Entry<String, List<DnsCacheEntry>> e = i.next();
+        for (Iterator<Map.Entry<String, List<DefaultDnsCacheEntry>>> i = resolveCache.entrySet().iterator();
+             i.hasNext();) {
+            final Map.Entry<String, List<DefaultDnsCacheEntry>> e = i.next();
             i.remove();
             cancelExpiration(e.getValue());
         }
@@ -106,8 +109,9 @@ public class DefaultDnsCache implements DnsCache {
     public boolean clear(String hostname) {
         checkNotNull(hostname, "hostname");
         boolean removed = false;
-        for (Iterator<Map.Entry<String, List<DnsCacheEntry>>> i = resolveCache.entrySet().iterator(); i.hasNext();) {
-            final Map.Entry<String, List<DnsCacheEntry>> e = i.next();
+        for (Iterator<Map.Entry<String, List<DefaultDnsCacheEntry>>> i = resolveCache.entrySet().iterator();
+             i.hasNext();) {
+            final Map.Entry<String, List<DefaultDnsCacheEntry>> e = i.next();
             if (e.getKey().equals(hostname)) {
                 i.remove();
                 cancelExpiration(e.getValue());
@@ -122,7 +126,7 @@ public class DefaultDnsCache implements DnsCache {
     }
 
     @Override
-    public List<DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+    public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
         checkNotNull(hostname, "hostname");
         if (!emptyAdditionals(additionals)) {
             return null;
@@ -130,11 +134,11 @@ public class DefaultDnsCache implements DnsCache {
         return resolveCache.get(hostname);
     }
 
-    private List<DnsCacheEntry> cachedEntries(String hostname) {
-        List<DnsCacheEntry> oldEntries = resolveCache.get(hostname);
-        final List<DnsCacheEntry> entries;
+    private List<DefaultDnsCacheEntry> cachedEntries(String hostname) {
+        List<DefaultDnsCacheEntry> oldEntries = resolveCache.get(hostname);
+        final List<DefaultDnsCacheEntry> entries;
         if (oldEntries == null) {
-            List<DnsCacheEntry> newEntries = new ArrayList<DnsCacheEntry>(8);
+            List<DefaultDnsCacheEntry> newEntries = new ArrayList<DefaultDnsCacheEntry>(8);
             oldEntries = resolveCache.putIfAbsent(hostname, newEntries);
             entries = oldEntries != null? oldEntries : newEntries;
         } else {
@@ -144,21 +148,21 @@ public class DefaultDnsCache implements DnsCache {
     }
 
     @Override
-    public void cache(String hostname, DnsRecord[] additionals,
-                      InetAddress address, long originalTtl, EventLoop loop) {
+    public DnsCacheEntry cache(String hostname, DnsRecord[] additionals,
+                               InetAddress address, long originalTtl, EventLoop loop) {
         checkNotNull(hostname, "hostname");
         checkNotNull(address, "address");
         checkNotNull(loop, "loop");
+        final DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, address);
         if (maxTtl == 0 || !emptyAdditionals(additionals)) {
-            return;
+            return e;
         }
         final int ttl = Math.max(minTtl, (int) Math.min(maxTtl, originalTtl));
-        final List<DnsCacheEntry> entries = cachedEntries(hostname);
-        final DnsCacheEntry e = new DnsCacheEntry(hostname, address);
+        final List<DefaultDnsCacheEntry> entries = cachedEntries(hostname);
 
         synchronized (entries) {
             if (!entries.isEmpty()) {
-                final DnsCacheEntry firstEntry = entries.get(0);
+                final DefaultDnsCacheEntry firstEntry = entries.get(0);
                 if (firstEntry.cause() != null) {
                     assert entries.size() == 1;
                     firstEntry.cancelExpiration();
@@ -169,19 +173,20 @@ public class DefaultDnsCache implements DnsCache {
         }
 
         scheduleCacheExpiration(entries, e, ttl, loop);
+        return e;
     }
 
     @Override
-    public void cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
+    public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
         checkNotNull(hostname, "hostname");
         checkNotNull(cause, "cause");
         checkNotNull(loop, "loop");
 
+        final DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, cause);
         if (negativeTtl == 0 || !emptyAdditionals(additionals)) {
-            return;
+            return e;
         }
-        final List<DnsCacheEntry> entries = cachedEntries(hostname);
-        final DnsCacheEntry e = new DnsCacheEntry(hostname, cause);
+        final List<DefaultDnsCacheEntry> entries = cachedEntries(hostname);
 
         synchronized (entries) {
             final int numEntries = entries.size();
@@ -193,17 +198,18 @@ public class DefaultDnsCache implements DnsCache {
         }
 
         scheduleCacheExpiration(entries, e, negativeTtl, loop);
+        return e;
     }
 
-    private static void cancelExpiration(List<DnsCacheEntry> entries) {
+    private static void cancelExpiration(List<DefaultDnsCacheEntry> entries) {
         final int numEntries = entries.size();
         for (int i = 0; i < numEntries; i++) {
             entries.get(i).cancelExpiration();
         }
     }
 
-    private void scheduleCacheExpiration(final List<DnsCacheEntry> entries,
-                                         final DnsCacheEntry e,
+    private void scheduleCacheExpiration(final List<DefaultDnsCacheEntry> entries,
+                                         final DefaultDnsCacheEntry e,
                                          int ttl,
                                          EventLoop loop) {
         e.scheduleExpiration(loop, new Runnable() {
@@ -228,5 +234,59 @@ public class DefaultDnsCache implements DnsCache {
                 .append(negativeTtl).append(", cached resolved hostname=")
                 .append(resolveCache.size()).append(")")
                 .toString();
+    }
+
+    private static final class DefaultDnsCacheEntry implements DnsCacheEntry {
+        private final String hostname;
+        private final InetAddress address;
+        private final Throwable cause;
+        private volatile ScheduledFuture<?> expirationFuture;
+
+        DefaultDnsCacheEntry(String hostname, InetAddress address) {
+            this.hostname = checkNotNull(hostname, "hostname");
+            this.address = checkNotNull(address, "address");
+            cause = null;
+        }
+
+        DefaultDnsCacheEntry(String hostname, Throwable cause) {
+            this.hostname = checkNotNull(hostname, "hostname");
+            this.cause = checkNotNull(cause, "cause");
+            address = null;
+        }
+
+        @Override
+        public InetAddress address() {
+            return address;
+        }
+
+        @Override
+        public Throwable cause() {
+            return cause;
+        }
+
+        String hostname() {
+            return hostname;
+        }
+
+        void scheduleExpiration(EventLoop loop, Runnable task, long delay, TimeUnit unit) {
+            assert expirationFuture == null : "expiration task scheduled already";
+            expirationFuture = loop.schedule(task, delay, unit);
+        }
+
+        void cancelExpiration() {
+            ScheduledFuture<?> expirationFuture = this.expirationFuture;
+            if (expirationFuture != null) {
+                expirationFuture.cancel(false);
+            }
+        }
+
+        @Override
+        public String toString() {
+            if (cause != null) {
+                return hostname + '/' + cause;
+            } else {
+                return address.toString();
+            }
+        }
     }
 }

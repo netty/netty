@@ -47,21 +47,46 @@ public final class NoopDnsCache implements DnsCache {
     }
 
     @Override
-    public List<DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+    public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
         return Collections.emptyList();
     }
 
     @Override
-    public void cache(String hostname, DnsRecord[] additional,
-                      InetAddress address, long originalTtl, EventLoop loop) {
+    public DnsCacheEntry cache(String hostname, DnsRecord[] additional,
+                               InetAddress address, long originalTtl, EventLoop loop) {
+        return new NoopDnsCacheEntry(address);
     }
 
     @Override
-    public void cache(String hostname, DnsRecord[] additional, Throwable cause, EventLoop loop) {
+    public DnsCacheEntry cache(String hostname, DnsRecord[] additional, Throwable cause, EventLoop loop) {
+        return null;
     }
 
     @Override
     public String toString() {
         return NoopDnsCache.class.getSimpleName();
+    }
+
+    private static final class NoopDnsCacheEntry implements DnsCacheEntry {
+        private final InetAddress address;
+
+        NoopDnsCacheEntry(InetAddress address) {
+            this.address = address;
+        }
+
+        @Override
+        public InetAddress address() {
+            return address;
+        }
+
+        @Override
+        public Throwable cause() {
+            return null;
+        }
+
+        @Override
+        public String toString() {
+            return address.toString();
+        }
     }
 }
