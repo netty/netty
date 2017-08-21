@@ -379,12 +379,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     @Override
-    final SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
+    protected final SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
         return new SslHandler(newEngine0(alloc, null, -1, false), startTls, false);
     }
 
     @Override
-    final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
+    protected final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
         return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls, false);
     }
 

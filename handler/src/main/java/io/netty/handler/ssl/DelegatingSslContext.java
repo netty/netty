@@ -73,6 +73,20 @@ public abstract class DelegatingSslContext extends SslContext {
     }
 
     @Override
+    protected final SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
+        SslHandler handler = ctx.newHandler(alloc, startTls);
+        initHandler(handler);
+        return handler;
+    }
+
+    @Override
+    protected final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
+        SslHandler handler = ctx.newHandler(alloc, peerHost, peerPort, startTls);
+        initHandler(handler);
+        return handler;
+    }
+
+    @Override
     public final SSLSessionContext sessionContext() {
         return ctx.sessionContext();
     }
@@ -81,4 +95,12 @@ public abstract class DelegatingSslContext extends SslContext {
      * Init the {@link SSLEngine}.
      */
     protected abstract void initEngine(SSLEngine engine);
+
+    /**
+     * Init the {@link SslHandler}. This will by default call {@link #initEngine(SSLEngine)}, sub-classes may override
+     * this.
+     */
+    protected void initHandler(SslHandler handler) {
+        initEngine(handler.engine());
+    }
 }
