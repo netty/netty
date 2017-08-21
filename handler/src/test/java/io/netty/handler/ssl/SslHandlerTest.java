@@ -663,22 +663,27 @@ public class SslHandlerTest {
                 for (int j = 0; j < providers.length; ++j) {
                     SslProvider clientProvider = providers[j];
                     if (isSupported(clientProvider)) {
-                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                true, true, true);
-                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                true, true, false);
-                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                true, false, true);
-                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                true, false, false);
-                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                false, true, true);
-                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                false, true, false);
-                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                false, false, true);
-                        compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
-                                false, false, false);
+                        try {
+                            compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                    true, true, true);
+                            compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                    true, true, false);
+                            compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                    true, false, true);
+                            compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                    true, false, false);
+                            compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                    false, true, true);
+                            compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                    false, true, false);
+                            compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                    false, false, true);
+                            compositeBufSizeEstimationGuaranteesSynchronousWrite(serverProvider, clientProvider,
+                                    false, false, false);
+                        } catch (Throwable cause) {
+                            throw new RuntimeException("serverProvider: " + serverProvider + " clientProvider: " +
+                                                       clientProvider, cause);
+                        }
                     }
                 }
             }
