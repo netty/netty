@@ -909,7 +909,7 @@ public abstract class SslContext {
      * Create a new SslHandler.
      * @see #newHandler(ByteBufAllocator)
      */
-    SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
+    protected SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
         return new SslHandler(newEngine(alloc), startTls);
     }
 
@@ -947,7 +947,7 @@ public abstract class SslContext {
      * Create a new SslHandler.
      * @see #newHandler(ByteBufAllocator, String, int, boolean)
      */
-    SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
+    protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
         return new SslHandler(newEngine(alloc, peerHost, peerPort), startTls);
     }
 
