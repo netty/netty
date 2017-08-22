@@ -15,7 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.buffer.ByteBufAllocator;
 import java.util.Collections;
 import java.util.List;
 

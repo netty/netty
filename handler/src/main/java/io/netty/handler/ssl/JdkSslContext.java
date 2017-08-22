@@ -122,6 +122,7 @@ public class JdkSslContext extends SslContext {
     private final String[] protocols;
     private final String[] cipherSuites;
     private final List<String> unmodifiableCipherSuites;
+    @SuppressWarnings("deprecation")
     private final JdkApplicationProtocolNegotiator apn;
     private final ClientAuth clientAuth;
     private final SSLContext sslContext;
@@ -156,6 +157,7 @@ public class JdkSslContext extends SslContext {
         this(sslContext, isClient, ciphers, cipherFilter, toNegotiator(apn, !isClient), clientAuth, null, false);
     }
 
+    @SuppressWarnings("deprecation")
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                   JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls) {
         super(startTls);
@@ -218,6 +220,7 @@ public class JdkSslContext extends SslContext {
         return configureAndWrapEngine(context().createSSLEngine(peerHost, peerPort), alloc);
     }
 
+    @SuppressWarnings("deprecation")
     private SSLEngine configureAndWrapEngine(SSLEngine engine, ByteBufAllocator alloc) {
         engine.setEnabledCipherSuites(cipherSuites);
         engine.setEnabledProtocols(protocols);
@@ -255,6 +258,7 @@ public class JdkSslContext extends SslContext {
      * @param isServer {@code true} if a server {@code false} otherwise.
      * @return The results of the translation
      */
+    @SuppressWarnings("deprecation")
     static JdkApplicationProtocolNegotiator toNegotiator(ApplicationProtocolConfig config, boolean isServer) {
         if (config == null) {
             return JdkDefaultApplicationProtocolNegotiator.INSTANCE;
