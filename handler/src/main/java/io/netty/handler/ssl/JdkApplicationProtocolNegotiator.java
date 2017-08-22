@@ -22,7 +22,10 @@ import java.util.Set;
 
 /**
  * JDK extension methods to support {@link ApplicationProtocolNegotiator}
+ *
+ * @deprecated use {@link ApplicationProtocolConfig}
  */
+@Deprecated
 public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNegotiator {
     /**
      * Abstract factory pattern for wrapping an {@link SSLEngine} object. This is useful for NPN/APLN JDK support.
