@@ -25,7 +25,7 @@
 
   <groupId>io.netty</groupId>
   <artifactId>netty-bom</artifactId>
-  <version>4.0.51.Final</version>
+  <version>4.0.52.Final-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Netty/BOM</name>
@@ -49,7 +49,7 @@
     <url>https://github.com/netty/netty</url>
     <connection>scm:git:git://github.com/netty/netty.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
-    <tag>netty-4.0.51.Final</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <developers>
@@ -69,77 +69,77 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-buffer</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-haproxy</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-http</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-socks</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-common</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-handler</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-rxtx</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-sctp</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-udt</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-example</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-epoll</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-epoll</artifactId>
-        <version>4.0.51.Final</version>
+        <version>4.0.52.Final-SNAPSHOT</version>
         <classifier>linux-x86_64</classifier>
       </dependency>
     </dependencies>
