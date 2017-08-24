@@ -247,6 +247,13 @@ public final class PlatformDependent {
     }
 
     /**
+     * Return the reason (if any) why {@code sun.misc.Unsafe} was not available.
+     */
+    public static Throwable getUnsafeUnavailabilityCause() {
+        return PlatformDependent0.getUnsafeUnavailabilityCause();
+    }
+
+    /**
      * {@code true} if and only if the platform supports unaligned access.
      *
      * @see <a href="http://en.wikipedia.org/wiki/Segmentation_fault#Bus_error">Wikipedia on segfault</a>
@@ -966,7 +973,8 @@ public final class PlatformDependent {
             boolean hasUnsafe = PlatformDependent0.hasUnsafe();
             logger.debug("sun.misc.Unsafe: {}", hasUnsafe ? "available" : "unavailable");
             return hasUnsafe;
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            logger.trace("Could not determine if Unsafe is available", t);
             // Probably failed to initialize PlatformDependent0.
             return false;
         }
