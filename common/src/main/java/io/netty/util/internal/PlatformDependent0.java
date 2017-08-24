@@ -44,6 +44,7 @@ final class PlatformDependent0 {
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
 
+    private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
     private static final Object INTERNAL_UNSAFE;
     static final Unsafe UNSAFE;
 
@@ -64,12 +65,14 @@ final class PlatformDependent0 {
         final ByteBuffer direct;
         Field addressField = null;
         Method allocateArrayMethod = null;
+        Throwable unsafeUnavailabilityCause = null;
         Unsafe unsafe;
         Object internalUnsafe = null;
 
         if (isExplicitNoUnsafe()) {
             direct = null;
             addressField = null;
+            unsafeUnavailabilityCause = new UnsupportedOperationException("Unsafe explicitly disabled");
             unsafe = null;
             internalUnsafe = null;
         } else {
@@ -101,9 +104,10 @@ final class PlatformDependent0 {
             // is an instanceof Unsafe and reversing the if and else blocks; this is because an
             // instanceof check against Unsafe will trigger a class load and we might not have
             // the runtime permission accessClassInPackage.sun.misc
-            if (maybeUnsafe instanceof Exception) {
+            if (maybeUnsafe instanceof Throwable) {
                 unsafe = null;
-                logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", (Exception) maybeUnsafe);
+                unsafeUnavailabilityCause = (Throwable) maybeUnsafe;
+                logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", (Throwable) maybeUnsafe);
             } else {
                 unsafe = (Unsafe) maybeUnsafe;
                 logger.debug("sun.misc.Unsafe.theUnsafe: available");
@@ -134,6 +138,7 @@ final class PlatformDependent0 {
                 } else {
                     // Unsafe.copyMemory(Object, long, Object, long, long) unavailable.
                     unsafe = null;
+                    unsafeUnavailabilityCause = (Throwable) maybeException;
                     logger.debug("sun.misc.Unsafe.copyMemory: unavailable", (Throwable) maybeException);
                 }
             }
@@ -169,6 +174,7 @@ final class PlatformDependent0 {
                     addressField = (Field) maybeAddressField;
                     logger.debug("java.nio.Buffer.address: available");
                 } else {
+                    unsafeUnavailabilityCause = (Throwable) maybeAddressField;
                     logger.debug("java.nio.Buffer.address: unavailable", (Throwable) maybeAddressField);
 
                     // If we cannot access the address of a direct buffer, there's no point of using unsafe.
@@ -183,10 +189,12 @@ final class PlatformDependent0 {
                 long byteArrayIndexScale = unsafe.arrayIndexScale(byte[].class);
                 if (byteArrayIndexScale != 1) {
                     logger.debug("unsafe.arrayIndexScale is {} (expected: 1). Not using unsafe.", byteArrayIndexScale);
+                    unsafeUnavailabilityCause = new UnsupportedOperationException("Unexpected unsafe.arrayIndexScale");
                     unsafe = null;
                 }
             }
         }
+        UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause;
         UNSAFE = unsafe;
 
         if (unsafe == null) {
@@ -387,6 +395,10 @@ final class PlatformDependent0 {
 
     static boolean hasUnsafe() {
         return UNSAFE != null;
+    }
+
+    static Throwable getUnsafeUnavailabilityCause() {
+        return UNSAFE_UNAVAILABILITY_CAUSE;
     }
 
     static boolean unalignedAccess() {

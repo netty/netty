@@ -46,8 +46,11 @@ public final class KQueue {
         if (cause != null) {
             UNAVAILABILITY_CAUSE = cause;
         } else {
-            UNAVAILABILITY_CAUSE = PlatformDependent.hasUnsafe() ? null :
-                    new IllegalStateException("sun.misc.Unsafe not available");
+            UNAVAILABILITY_CAUSE = PlatformDependent.hasUnsafe()
+                    ? null
+                    : new IllegalStateException(
+                            "sun.misc.Unsafe not available",
+                            PlatformDependent.getUnsafeUnavailabilityCause());
         }
     }
 
