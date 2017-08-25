@@ -26,6 +26,7 @@ import io.netty.channel.oio.OioByteStreamChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.internal.SocketUtils;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -128,6 +129,13 @@ public class OioSocketChannel extends OioByteStreamChannel implements SocketChan
         return socket.isInputShutdown() && socket.isOutputShutdown() || !isActive();
     }
 
+    @UnstableApi
+    @Override
+    protected final void doShutdownOutput(final Throwable cause) throws Exception {
+        shutdownOutput0(voidPromise());
+        super.doShutdownOutput(cause);
+    }
+
     @Override
     public ChannelFuture shutdownOutput() {
         return shutdownOutput(newPromise());
@@ -181,8 +189,11 @@ public class OioSocketChannel extends OioByteStreamChannel implements SocketChan
     }
 
     private void shutdownOutput0() throws IOException {
-        socket.shutdownOutput();
-        ((AbstractUnsafe) unsafe()).shutdownOutput();
+        try {
+            socket.shutdownOutput();
+        } finally {
+            ((AbstractUnsafe) unsafe()).shutdownOutput();
+        }
     }
 
     @Override
