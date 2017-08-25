@@ -36,6 +36,7 @@ import io.netty.channel.unix.Socket;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -556,10 +557,27 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
+    @UnstableApi
+    @Override
+    protected final void doShutdownOutput(Throwable cause) throws Exception {
+        try {
+            // The native socket implementation may throw a NotYetConnected exception when we attempt to shut it down.
+            // However NIO doesn't propagate an exception in the same situation (write failure), and we just want to
+            // update the socket state to flag that it has been shutdown. So don't use a voidPromise but instead create
+            // a new promise and ignore the results.
+            shutdownOutput0(newPromise());
+        } finally {
+            super.doShutdownOutput(cause);
+        }
+    }
+
     protected void shutdownOutput0(final ChannelPromise promise) {
         try {
-            fd().shutdown(false, true);
-            ((AbstractUnsafe) unsafe()).shutdownOutput();
+            try {
+                fd().shutdown(false, true);
+            } finally {
+                ((AbstractUnsafe) unsafe()).shutdownOutput();
+            }
             promise.setSuccess();
         } catch (Throwable cause) {
             promise.setFailure(cause);

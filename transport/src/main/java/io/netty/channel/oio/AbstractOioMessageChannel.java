@@ -18,6 +18,7 @@ package io.netty.channel.oio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -97,6 +98,13 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             // See https://github.com/netty/netty/issues/2404
             read();
         }
+    }
+
+    @UnstableApi
+    @Override
+    protected void doShutdownOutput(Throwable cause) throws Exception {
+        super.doShutdownOutput(cause);
+        close();
     }
 
     /**

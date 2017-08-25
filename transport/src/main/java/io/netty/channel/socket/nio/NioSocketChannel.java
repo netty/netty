@@ -19,18 +19,20 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
-import io.netty.util.internal.SocketUtils;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SocketUtils;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -139,6 +141,22 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         return (InetSocketAddress) super.remoteAddress();
     }
 
+    @UnstableApi
+    @Override
+    protected final void doShutdownOutput(final Throwable cause) throws Exception {
+        ChannelFuture future = shutdownOutput();
+        if (future.isDone()) {
+            super.doShutdownOutput(cause);
+        } else {
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    NioSocketChannel.super.doShutdownOutput(cause);
+                }
+            });
+        }
+    }
+
     @Override
     public boolean isOutputShutdown() {
         return javaChannel().socket().isOutputShutdown() || !isActive();
@@ -185,12 +203,15 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     private void shutdownOutput0() throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            javaChannel().shutdownOutput();
-        } else {
-            javaChannel().socket().shutdownOutput();
+        try {
+            if (PlatformDependent.javaVersion() >= 7) {
+                javaChannel().shutdownOutput();
+            } else {
+                javaChannel().socket().shutdownOutput();
+            }
+        } finally {
+            ((AbstractUnsafe) unsafe()).shutdownOutput();
         }
-        ((AbstractUnsafe) unsafe()).shutdownOutput();
     }
 
     private void shutdownInput0(final ChannelPromise promise) {
