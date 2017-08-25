@@ -24,6 +24,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -82,6 +83,16 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     @Override
     protected Object filterOutboundMessage(Object msg) throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    @UnstableApi
+    @Override
+    protected final void doShutdownOutput(Throwable cause) throws Exception {
+        try {
+            super.doShutdownOutput(cause);
+        } finally {
+            close();
+        }
     }
 
     abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;

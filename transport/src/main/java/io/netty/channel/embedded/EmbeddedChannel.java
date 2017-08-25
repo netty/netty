@@ -33,6 +33,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -521,6 +522,13 @@ public class EmbeddedChannel extends AbstractChannel {
     @Override
     protected void doClose() throws Exception {
         state = 2;
+    }
+
+    @UnstableApi
+    @Override
+    protected final void doShutdownOutput(Throwable cause) throws Exception {
+        super.doShutdownOutput(cause);
+        close();
     }
 
     @Override
