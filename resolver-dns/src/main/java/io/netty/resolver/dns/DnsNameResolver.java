@@ -599,28 +599,39 @@ public class DnsNameResolver extends InetNameResolver {
                                     DnsRecord[] additionals,
                                     Promise<InetAddress> promise,
                                     DnsCache resolveCache) {
-        final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (cachedEntries == null || cachedEntries.isEmpty()) {
+        final Iterable<? extends DnsCacheEntry> entriesIt = resolveCache.get(hostname, additionals);
+        if (entriesIt == null) {
             return false;
         }
 
         InetAddress address = null;
         Throwable cause = null;
-        synchronized (cachedEntries) {
-            final int numEntries = cachedEntries.size();
-            assert numEntries > 0;
+        synchronized (entriesIt) {
+            Iterator<? extends DnsCacheEntry> cachedEntries = entriesIt.iterator();
+            if (!cachedEntries.hasNext()) {
+                return false;
+            }
 
-            if (cachedEntries.get(0).cause() != null) {
-                cause = cachedEntries.get(0).cause();
+            DnsCacheEntry e = cachedEntries.next();
+            if (e.cause() != null) {
+                cause = e.cause();
             } else {
                 // Find the first entry with the preferred address type.
-                for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
-                    for (int i = 0; i < numEntries; i++) {
-                        final DnsCacheEntry e = cachedEntries.get(i);
-                        if (f.addressType().isInstance(e.address())) {
-                            address = e.address();
-                            break;
-                        }
+                int i = 0;
+                InternetProtocolFamily f = resolvedInternetProtocolFamilies[i];
+                for (;;) {
+                    if (f.addressType().isInstance(e.address())) {
+                        address = e.address();
+                        break;
+                    }
+                    if (cachedEntries.hasNext()) {
+                        e = cachedEntries.next();
+                    } else if (++i < resolvedInternetProtocolFamilies.length) {
+                        f = resolvedInternetProtocolFamilies[i];
+                        cachedEntries = entriesIt.iterator();
+                        e = cachedEntries.next();
+                    } else {
+                        break;
                     }
                 }
             }
@@ -729,29 +740,41 @@ public class DnsNameResolver extends InetNameResolver {
                                        DnsRecord[] additionals,
                                        Promise<List<InetAddress>> promise,
                                        DnsCache resolveCache) {
-        final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (cachedEntries == null || cachedEntries.isEmpty()) {
+        final Iterable<? extends DnsCacheEntry> entriesIt = resolveCache.get(hostname, additionals);
+        if (entriesIt == null) {
             return false;
         }
 
         List<InetAddress> result = null;
         Throwable cause = null;
-        synchronized (cachedEntries) {
-            final int numEntries = cachedEntries.size();
-            assert numEntries > 0;
+        synchronized (entriesIt) {
+            Iterator<? extends DnsCacheEntry> cachedEntries = entriesIt.iterator();
+            if (!cachedEntries.hasNext()) {
+                return false;
+            }
 
-            if (cachedEntries.get(0).cause() != null) {
-                cause = cachedEntries.get(0).cause();
+            DnsCacheEntry e = cachedEntries.next();
+            if (e.cause() != null) {
+                cause = e.cause();
             } else {
-                for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
-                    for (int i = 0; i < numEntries; i++) {
-                        final DnsCacheEntry e = cachedEntries.get(i);
-                        if (f.addressType().isInstance(e.address())) {
-                            if (result == null) {
-                                result = new ArrayList<InetAddress>(numEntries);
-                            }
-                            result.add(e.address());
+                // Find the first entry with the preferred address type.
+                int i = 0;
+                InternetProtocolFamily f = resolvedInternetProtocolFamilies[i];
+                for (;;) {
+                    if (f.addressType().isInstance(e.address())) {
+                        if (result == null) {
+                            result = new ArrayList<InetAddress>();
                         }
+                        result.add(e.address());
+                    }
+                    if (cachedEntries.hasNext()) {
+                        e = cachedEntries.next();
+                    } else if (++i < resolvedInternetProtocolFamilies.length) {
+                        f = resolvedInternetProtocolFamilies[i];
+                        cachedEntries = entriesIt.iterator();
+                        e = cachedEntries.next();
+                    } else {
+                        break;
                     }
                 }
             }

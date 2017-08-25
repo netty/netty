@@ -49,7 +49,7 @@ public interface DnsCache {
      * @param additionals the additional records
      * @return the cached entries
      */
-    List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals);
+    Iterable<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals);
 
     /**
      * Create a new {@link DnsCacheEntry} and cache a resolved address for a given hostname.

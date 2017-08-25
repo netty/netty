@@ -45,6 +45,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -236,17 +237,20 @@ abstract class DnsNameResolverContext<T> {
             }
             idx = idx2;
 
-            List<? extends DnsCacheEntry> entries = parent.authoritativeDnsServerCache().get(hostname, additionals);
-            if (entries != null && !entries.isEmpty()) {
-                return DnsServerAddresses.sequential(new DnsCacheIterable(entries)).stream();
+            Iterable<? extends DnsCacheEntry> entries = parent.authoritativeDnsServerCache().get(hostname, additionals);
+            if (entries != null) {
+                if (((entries instanceof Collection) && !((Collection<?>) entries).isEmpty())
+                        || (entries.iterator().hasNext())) {
+                    return DnsServerAddresses.sequential(new DnsCacheIterable(entries)).stream();
+                }
             }
         }
     }
 
     private final class DnsCacheIterable implements Iterable<InetSocketAddress> {
-        private final List<? extends DnsCacheEntry> entries;
+        private final Iterable<? extends DnsCacheEntry> entries;
 
-        DnsCacheIterable(List<? extends DnsCacheEntry> entries) {
+        DnsCacheIterable(Iterable<? extends DnsCacheEntry> entries) {
             this.entries = entries;
         }
 
