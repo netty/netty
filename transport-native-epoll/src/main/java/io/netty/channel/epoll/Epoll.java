@@ -26,36 +26,40 @@ public final class Epoll {
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static  {
-        Throwable cause = null;
-        FileDescriptor epollFd = null;
-        FileDescriptor eventFd = null;
-        try {
-            epollFd = Native.newEpollCreate();
-            eventFd = Native.newEventFd();
-        } catch (Throwable t) {
-            cause = t;
-        } finally {
-            if (epollFd != null) {
-                try {
-                    epollFd.close();
-                } catch (Exception ignore) {
-                    // ignore
+        if (PlatformDependent.isLinux() && PlatformDependent.bitMode() == 64) {
+            Throwable cause = null;
+            FileDescriptor epollFd = null;
+            FileDescriptor eventFd = null;
+            try {
+                epollFd = Native.newEpollCreate();
+                eventFd = Native.newEventFd();
+            } catch (Throwable t) {
+                cause = t;
+            } finally {
+                if (epollFd != null) {
+                    try {
+                        epollFd.close();
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
+                }
+                if (eventFd != null) {
+                    try {
+                        eventFd.close();
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
                 }
             }
-            if (eventFd != null) {
-                try {
-                    eventFd.close();
-                } catch (Exception ignore) {
-                    // ignore
-                }
-            }
-        }
 
-        if (cause != null) {
-            UNAVAILABILITY_CAUSE = cause;
+            if (cause != null) {
+                UNAVAILABILITY_CAUSE = cause;
+            } else {
+                UNAVAILABILITY_CAUSE = PlatformDependent.hasUnsafe() ? null :
+                                       new IllegalStateException("sun.misc.Unsafe not available");
+            }
         } else {
-            UNAVAILABILITY_CAUSE = PlatformDependent.hasUnsafe() ? null :
-                    new IllegalStateException("sun.misc.Unsafe not available");
+            UNAVAILABILITY_CAUSE = new IllegalStateException("jvm platform is not 64bit linux");
         }
     }
 
