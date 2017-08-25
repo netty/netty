@@ -32,6 +32,7 @@ import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -289,6 +290,13 @@ public class LocalChannel extends AbstractChannel {
                 releaseInboundBuffers();
             }
         }
+    }
+
+    @UnstableApi
+    @Override
+    protected final void doShutdownOutput(Throwable cause) throws Exception {
+        super.doShutdownOutput(cause);
+        close();
     }
 
     private void tryClose(boolean isActive) {

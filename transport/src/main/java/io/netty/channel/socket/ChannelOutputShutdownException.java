@@ -29,4 +29,8 @@ public final class ChannelOutputShutdownException extends IOException {
     public ChannelOutputShutdownException(String msg) {
         super(msg);
     }
+
+    public ChannelOutputShutdownException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }
