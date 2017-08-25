@@ -70,6 +70,16 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
         throw new UnsupportedOperationException();
     }
 
+    @UnstableApi
+    @Override
+    protected final void doShutdownOutput(Throwable cause) throws Exception {
+        try {
+            super.doShutdownOutput(cause);
+        } finally {
+            close();
+        }
+    }
+
     abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
 
     @Override
