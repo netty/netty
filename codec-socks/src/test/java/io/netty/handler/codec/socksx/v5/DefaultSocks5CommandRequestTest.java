@@ -76,7 +76,7 @@ public class DefaultSocks5CommandRequestTest {
     public void testValidPortRange() {
         try {
             new DefaultSocks5CommandRequest(Socks5CommandType.BIND, Socks5AddressType.DOMAIN,
-                    "παράδειγμα.δοκιμήπαράδει", 0);
+                    "παράδειγμα.δοκιμήπαράδει", -1);
         } catch (Exception e) {
             assertTrue(e instanceof IllegalArgumentException);
         }
@@ -87,5 +87,10 @@ public class DefaultSocks5CommandRequestTest {
         } catch (Exception e) {
             assertTrue(e instanceof IllegalArgumentException);
         }
+
+        new DefaultSocks5CommandRequest(Socks5CommandType.BIND, Socks5AddressType.DOMAIN,
+                "παράδειγμα.δοκιμήπαράδει", 0);
+        new DefaultSocks5CommandRequest(Socks5CommandType.BIND, Socks5AddressType.DOMAIN,
+                "παράδειγμα.δοκιμήπαράδει", 65535);
     }
 }
