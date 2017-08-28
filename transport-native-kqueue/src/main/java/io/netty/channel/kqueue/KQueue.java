@@ -27,27 +27,31 @@ public final class KQueue {
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static  {
-        Throwable cause = null;
-        FileDescriptor kqueueFd = null;
-        try {
-            kqueueFd = Native.newKQueue();
-        } catch (Throwable t) {
-            cause = t;
-        } finally {
-            if (kqueueFd != null) {
-                try {
-                    kqueueFd.close();
-                } catch (Exception ignore) {
-                    // ignore
+        if (PlatformDependent.isOsx() && PlatformDependent.bitMode() == 64) {
+            Throwable cause = null;
+            FileDescriptor kqueueFd = null;
+            try {
+                kqueueFd = Native.newKQueue();
+            } catch (Throwable t) {
+                cause = t;
+            } finally {
+                if (kqueueFd != null) {
+                    try {
+                        kqueueFd.close();
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
                 }
             }
-        }
 
-        if (cause != null) {
-            UNAVAILABILITY_CAUSE = cause;
+            if (cause != null) {
+                UNAVAILABILITY_CAUSE = cause;
+            } else {
+                UNAVAILABILITY_CAUSE = PlatformDependent.hasUnsafe() ? null :
+                                       new IllegalStateException("sun.misc.Unsafe not available");
+            }
         } else {
-            UNAVAILABILITY_CAUSE = PlatformDependent.hasUnsafe() ? null :
-                    new IllegalStateException("sun.misc.Unsafe not available");
+            UNAVAILABILITY_CAUSE = new IllegalStateException("jvm platform is not 64bit macOS / osx");
         }
     }
 

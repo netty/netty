@@ -73,6 +73,7 @@ public final class PlatformDependent {
 
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean IS_OSX = isOsx0();
+    private static final boolean IS_LINUX = isLinux0();
 
     private static final boolean MAYBE_SUPER_USER;
 
@@ -214,6 +215,13 @@ public final class PlatformDependent {
      */
     public static boolean isOsx() {
         return IS_OSX;
+    }
+
+    /**
+     * Return {@code true} if the JVM is running on Linux
+     */
+    public static boolean isLinux() {
+        return IS_LINUX;
     }
 
     /**
@@ -941,6 +949,17 @@ public final class PlatformDependent {
             logger.debug("Platform: MacOS");
         }
         return osx;
+    }
+
+    private static boolean isLinux0() {
+        String osname = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US)
+                                          .replaceAll("[^a-z0-9]+", "");
+        boolean linux = osname.startsWith("linux");
+
+        if (linux) {
+            logger.debug("Platform: Linux");
+        }
+        return linux;
     }
 
     private static boolean maybeSuperUser0() {
