@@ -59,8 +59,8 @@ public final class DefaultSocks5CommandRequest extends AbstractSocks5Message imp
             }
         }
 
-        if (dstPort <= 0 || dstPort >= 65536) {
-            throw new IllegalArgumentException("dstPort: " + dstPort + " (expected: 1~65535)");
+        if (dstPort < 0 || dstPort > 65535) {
+            throw new IllegalArgumentException("dstPort: " + dstPort + " (expected: 0~65535)");
         }
 
         this.type = type;
