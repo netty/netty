@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec.stomp;
 
+import java.util.List;
+import java.util.Locale;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,9 +27,6 @@ import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.stomp.StompSubframeDecoder.State;
 import io.netty.util.internal.AppendableCharSequence;
-
-import java.util.List;
-import java.util.Locale;
 
 import static io.netty.buffer.ByteBufUtil.indexOf;
 import static io.netty.buffer.ByteBufUtil.readBytes;
@@ -71,6 +71,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
     private final int maxLineLength;
     private final int maxChunkSize;
+    private final boolean validateHeaders;
     private int alreadyReadChunkSize;
     private LastStompContentSubframe lastContent;
     private long contentLength = -1;
@@ -79,7 +80,15 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         this(DEFAULT_MAX_LINE_LENGTH, DEFAULT_CHUNK_SIZE);
     }
 
+    public StompSubframeDecoder(boolean validateHeaders) {
+        this(DEFAULT_MAX_LINE_LENGTH, DEFAULT_CHUNK_SIZE, validateHeaders);
+    }
+
     public StompSubframeDecoder(int maxLineLength, int maxChunkSize) {
+        this(maxLineLength, maxChunkSize, false);
+    }
+
+    public StompSubframeDecoder(int maxLineLength, int maxChunkSize, boolean validateHeaders) {
         super(State.SKIP_CONTROL_CHARACTERS);
         if (maxLineLength <= 0) {
             throw new IllegalArgumentException(
@@ -93,6 +102,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         }
         this.maxChunkSize = maxChunkSize;
         this.maxLineLength = maxLineLength;
+        this.validateHeaders = validateHeaders;
     }
 
     @Override
@@ -134,7 +144,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                     if (toRead > maxChunkSize) {
                         toRead = maxChunkSize;
                     }
-                    if (this.contentLength >= 0) {
+                    if (contentLength >= 0) {
                         int remainingLength = (int) (contentLength - alreadyReadChunkSize);
                         if (toRead > remainingLength) {
                             toRead = remainingLength;
@@ -214,11 +224,14 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                 String[] split = line.split(":");
                 if (split.length == 2) {
                     headers.add(split[0], split[1]);
+                } else if (validateHeaders) {
+                    throw new IllegalArgumentException("a header value or name contains a prohibited character ':'" +
+                            ", " + line);
                 }
             } else {
                 if (headers.contains(StompHeaders.CONTENT_LENGTH))  {
-                    this.contentLength = getContentLength(headers, 0);
-                    if (this.contentLength == 0) {
+                    contentLength = getContentLength(headers, 0);
+                    if (contentLength == 0) {
                         return State.FINALIZE_FRAME_READ;
                     }
                 }

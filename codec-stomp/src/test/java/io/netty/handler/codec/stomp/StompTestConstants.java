@@ -57,6 +57,12 @@ public final class StompTestConstants {
             '\n' +
             "body\0";
 
-    private StompTestConstants() { }
+    public static final String FRAME_WITH_INVALID_HEADER = "SEND\n" +
+            "destination:/some-destination\n" +
+            "content-type:text/plain\n" +
+            "current-time:2000-01-01T00:00:00\n" +
+            '\n' +
+            "some body\0";
 
+    private StompTestConstants() { }
 }
