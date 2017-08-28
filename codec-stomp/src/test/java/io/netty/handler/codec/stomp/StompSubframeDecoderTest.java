@@ -23,7 +23,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 public class StompSubframeDecoderTest {
 
@@ -154,5 +159,39 @@ public class StompSubframeDecoderTest {
         content2.release();
 
         assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void testValidateHeadersDecodingDisabled() {
+        ByteBuf invalidIncoming = Unpooled.buffer();
+        invalidIncoming.writeBytes(StompTestConstants.FRAME_WITH_INVALID_HEADER.getBytes());
+        channel.writeInbound(invalidIncoming);
+
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.SEND, frame.command());
+        assertTrue(frame.headers().contains("destination"));
+        assertTrue(frame.headers().contains("content-type"));
+        assertFalse(frame.headers().contains("current-time"));
+
+        StompContentSubframe content = channel.readInbound();
+        String s = content.content().toString(CharsetUtil.UTF_8);
+        assertEquals("some body", s);
+        content.release();
+    }
+
+    @Test
+    public void testValidateHeadersDecodingEnabled() {
+        EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(true));
+
+        ByteBuf invalidIncoming = Unpooled.buffer();
+        invalidIncoming.writeBytes(StompTestConstants.FRAME_WITH_INVALID_HEADER.getBytes());
+        channel.writeInbound(invalidIncoming);
+
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertTrue(frame.decoderResult().isFailure());
+        assertEquals("a header value or name contains a prohibited character ':', current-time:2000-01-01T00:00:00",
+                frame.decoderResult().cause().getMessage());
     }
 }
