@@ -164,8 +164,9 @@ public class StompSubframeDecoderTest {
     @Test
     public void testValidateHeadersDecodingDisabled() {
         ByteBuf invalidIncoming = Unpooled.buffer();
-        invalidIncoming.writeBytes(StompTestConstants.FRAME_WITH_INVALID_HEADER.getBytes());
-        channel.writeInbound(invalidIncoming);
+        invalidIncoming.writeBytes(StompTestConstants.FRAME_WITH_INVALID_HEADER.getBytes(CharsetUtil.US_ASCII));
+        boolean bufAdded = channel.writeInbound(invalidIncoming);
+        assertTrue(bufAdded);
 
         StompHeadersSubframe frame = channel.readInbound();
         assertNotNull(frame);
@@ -185,8 +186,9 @@ public class StompSubframeDecoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(true));
 
         ByteBuf invalidIncoming = Unpooled.buffer();
-        invalidIncoming.writeBytes(StompTestConstants.FRAME_WITH_INVALID_HEADER.getBytes());
-        channel.writeInbound(invalidIncoming);
+        invalidIncoming.writeBytes(StompTestConstants.FRAME_WITH_INVALID_HEADER.getBytes(CharsetUtil.US_ASCII));
+        boolean bufAdded = channel.writeInbound(invalidIncoming);
+        assertTrue(bufAdded);
 
         StompHeadersSubframe frame = channel.readInbound();
         assertNotNull(frame);

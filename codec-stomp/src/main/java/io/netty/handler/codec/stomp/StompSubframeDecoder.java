@@ -80,7 +80,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         this(DEFAULT_MAX_LINE_LENGTH, DEFAULT_CHUNK_SIZE);
     }
 
-    public StompSubframeDecoder(final boolean validateHeaders) {
+    public StompSubframeDecoder(boolean validateHeaders) {
         this(DEFAULT_MAX_LINE_LENGTH, DEFAULT_CHUNK_SIZE, validateHeaders);
     }
 
@@ -88,7 +88,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         this(maxLineLength, maxChunkSize, false);
     }
 
-    public StompSubframeDecoder(int maxLineLength, int maxChunkSize, final boolean validateHeaders) {
+    public StompSubframeDecoder(int maxLineLength, int maxChunkSize, boolean validateHeaders) {
         super(State.SKIP_CONTROL_CHARACTERS);
         if (maxLineLength <= 0) {
             throw new IllegalArgumentException(
