@@ -144,7 +144,7 @@
               <execution>
                 <id>build-native-lib</id>
                 <configuration>
-                  <name>netty_transport_native_epoll</name>
+                  <name>netty_transport_native_epoll_${os.detected.arch}</name>
                   <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
@@ -179,7 +179,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_epoll.so; osname=linux; processor=x86_64,*</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_epoll_${os.detected.arch}.so; osname=linux; processor=${os.detected.arch},*</Bundle-NativeCode>
                     </manifestEntries>
                     <index>true</index>
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
