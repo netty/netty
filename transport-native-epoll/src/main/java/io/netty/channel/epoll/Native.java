@@ -196,7 +196,8 @@ public final class Native {
         if (!name.startsWith("linux")) {
             throw new IllegalStateException("Only supported on Linux");
         }
-        NativeLibraryLoader.load("netty_transport_native_epoll", PlatformDependent.getClassLoader(Native.class));
+        NativeLibraryLoader.load("netty_transport_native_epoll_" + PlatformDependent.normalizedArch(),
+                PlatformDependent.getClassLoader(Native.class));
     }
 
     private Native() {
