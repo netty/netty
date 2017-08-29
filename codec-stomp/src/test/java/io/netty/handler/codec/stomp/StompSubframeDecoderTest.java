@@ -18,11 +18,13 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.CharsetUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import static io.netty.handler.codec.stomp.StompTestConstants.FRAME_WITH_INVALID_HEADER;
+import static io.netty.util.CharsetUtil.US_ASCII;
+import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -74,7 +76,7 @@ public class StompSubframeDecoderTest {
 
         StompContentSubframe content = channel.readInbound();
         assertTrue(content instanceof LastStompContentSubframe);
-        String s = content.content().toString(CharsetUtil.UTF_8);
+        String s = content.content().toString(UTF_8);
         assertEquals("hello, queue a!!!", s);
         content.release();
 
@@ -93,7 +95,7 @@ public class StompSubframeDecoderTest {
 
         StompContentSubframe content = channel.readInbound();
         assertTrue(content instanceof LastStompContentSubframe);
-        String s = content.content().toString(CharsetUtil.UTF_8);
+        String s = content.content().toString(UTF_8);
         assertEquals("hello, queue a!", s);
         content.release();
 
@@ -113,22 +115,22 @@ public class StompSubframeDecoderTest {
         assertEquals(StompCommand.SEND, frame.command());
 
         StompContentSubframe content = channel.readInbound();
-        String s = content.content().toString(CharsetUtil.UTF_8);
+        String s = content.content().toString(UTF_8);
         assertEquals("hello", s);
         content.release();
 
         content = channel.readInbound();
-        s = content.content().toString(CharsetUtil.UTF_8);
+        s = content.content().toString(UTF_8);
         assertEquals(", que", s);
         content.release();
 
         content = channel.readInbound();
-        s = content.content().toString(CharsetUtil.UTF_8);
+        s = content.content().toString(UTF_8);
         assertEquals("ue a!", s);
         content.release();
 
         content = channel.readInbound();
-        s = content.content().toString(CharsetUtil.UTF_8);
+        s = content.content().toString(UTF_8);
         assertEquals("!!", s);
         content.release();
 
@@ -163,7 +165,7 @@ public class StompSubframeDecoderTest {
 
     @Test
     public void testValidateHeadersDecodingDisabled() {
-        ByteBuf invalidIncoming = Unpooled.copiedBuffer(StompTestConstants.FRAME_WITH_INVALID_HEADER.getBytes(CharsetUtil.US_ASCII));
+        ByteBuf invalidIncoming = Unpooled.copiedBuffer(FRAME_WITH_INVALID_HEADER.getBytes(US_ASCII));
         assertTrue(channel.writeInbound(invalidIncoming));
 
         StompHeadersSubframe frame = channel.readInbound();
@@ -174,7 +176,7 @@ public class StompSubframeDecoderTest {
         assertFalse(frame.headers().contains("current-time"));
 
         StompContentSubframe content = channel.readInbound();
-        String s = content.content().toString(CharsetUtil.UTF_8);
+        String s = content.content().toString(UTF_8);
         assertEquals("some body", s);
         content.release();
     }
@@ -183,7 +185,7 @@ public class StompSubframeDecoderTest {
     public void testValidateHeadersDecodingEnabled() {
         channel = new EmbeddedChannel(new StompSubframeDecoder(true));
 
-        ByteBuf invalidIncoming = Unpooled.copiedBuffer(StompTestConstants.FRAME_WITH_INVALID_HEADER.getBytes(CharsetUtil.US_ASCII));
+        ByteBuf invalidIncoming = Unpooled.copiedBuffer(FRAME_WITH_INVALID_HEADER.getBytes(US_ASCII));
         assertTrue(channel.writeInbound(invalidIncoming));
 
         StompHeadersSubframe frame = channel.readInbound();
