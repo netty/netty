@@ -17,7 +17,6 @@ package io.netty.handler.codec.stomp;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Pattern;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -60,7 +59,6 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
     private static final int DEFAULT_CHUNK_SIZE = 8132;
     private static final int DEFAULT_MAX_LINE_LENGTH = 1024;
-    private static final Pattern HEADER_DELIMITER_PATTERN = Pattern.compile(":");
 
     enum State {
         SKIP_CONTROL_CHARACTERS,
@@ -223,7 +221,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         for (;;) {
             String line = readLine(buffer, maxLineLength);
             if (!line.isEmpty()) {
-                String[] split = HEADER_DELIMITER_PATTERN.split(line);
+                String[] split = line.split(":");
                 if (split.length == 2) {
                     headers.add(split[0], split[1]);
                 } else if (validateHeaders) {
