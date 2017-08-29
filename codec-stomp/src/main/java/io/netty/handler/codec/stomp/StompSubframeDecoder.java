@@ -71,10 +71,10 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
     private final int maxLineLength;
     private final int maxChunkSize;
+    private final boolean validateHeaders;
     private int alreadyReadChunkSize;
     private LastStompContentSubframe lastContent;
     private long contentLength = -1;
-    private final boolean validateHeaders;
 
     public StompSubframeDecoder() {
         this(DEFAULT_MAX_LINE_LENGTH, DEFAULT_CHUNK_SIZE);
