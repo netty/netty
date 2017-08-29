@@ -268,25 +268,29 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             } catch (Throwable t) {
                 throw new DecoderException(t);
             } finally {
-                if (cumulation != null && !cumulation.isReadable()) {
-                    numReads = 0;
-                    cumulation.release();
-                    cumulation = null;
-                } else if (++ numReads >= discardAfterReads) {
-                    // We did enough reads already try to discard some bytes so we not risk to see a OOME.
-                    // See https://github.com/netty/netty/issues/4275
-                    numReads = 0;
-                    discardSomeReadBytes();
-                }
-
-                int size = out.size();
-                decodeWasNull = !out.insertSinceRecycled();
-                fireChannelRead(ctx, out, size);
-                out.recycle();
+                afterDecode(ctx, out);
             }
         } else {
             ctx.fireChannelRead(msg);
         }
+    }
+
+    final void afterDecode(ChannelHandlerContext ctx, CodecOutputList out) {
+        if (cumulation != null && !cumulation.isReadable()) {
+            numReads = 0;
+            cumulation.release();
+            cumulation = null;
+        } else if (++ numReads >= discardAfterReads) {
+            // We did enough reads already try to discard some bytes so we not risk to see a OOME.
+            // See https://github.com/netty/netty/issues/4275
+            numReads = 0;
+            discardSomeReadBytes();
+        }
+
+        int size = out.size();
+        decodeWasNull = !out.insertSinceRecycled();
+        fireChannelRead(ctx, out, size);
+        out.recycle();
     }
 
     /**
