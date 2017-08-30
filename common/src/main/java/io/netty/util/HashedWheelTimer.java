@@ -97,8 +97,8 @@ public class HashedWheelTimer implements Timer {
     public static final int WORKER_STATE_INIT = 0;
     public static final int WORKER_STATE_STARTED = 1;
     public static final int WORKER_STATE_SHUTDOWN = 2;
-    @SuppressWarnings({ "unused", "FieldMayBeFinal", "RedundantFieldInitialization" })
-    private volatile int workerState = WORKER_STATE_INIT; // 0 - init, 1 - started, 2 - shut down
+    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
+    private volatile int workerState; // 0 - init, 1 - started, 2 - shut down
 
     private final long tickDuration;
     private final HashedWheelBucket[] wheel;
