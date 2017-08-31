@@ -190,6 +190,10 @@ public final class PlatformDependent {
         }
     }
 
+    public static boolean hasDirectBufferNoCleanerConstructor() {
+        return PlatformDependent0.hasDirectBufferNoCleanerConstructor();
+    }
+
     public static byte[] allocateUninitializedArray(int size) {
         return UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD < 0 || UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD > size ?
                 new byte[size] : PlatformDependent0.allocateUninitializedArray(size);
