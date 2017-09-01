@@ -248,7 +248,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 upgrade.upgradeRequest().headers().setInt(
                         HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), HTTP_UPGRADE_STREAM_ID);
                 InboundHttpToHttp2Adapter.handle(
-                        ctx, connection(), decoder().frameListener(), upgrade.upgradeRequest());
+                        ctx, connection(), decoder().frameListener(), upgrade.upgradeRequest().retain());
             } finally {
                 upgrade.release();
             }
