@@ -30,7 +30,9 @@ import java.nio.channels.ScatteringByteChannel;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * Big endian Java heap buffer implementation.
+ * Big endian Java heap buffer implementation. It is recommended to use
+ * {@link UnpooledByteBufAllocator#heapBuffer(int, int)}, {@link Unpooled#buffer(int)} and
+ * {@link Unpooled#wrappedBuffer(byte[])} instead of calling the constructor explicitly.
  */
 public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
@@ -44,7 +46,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
      * @param initialCapacity the initial capacity of the underlying byte array
      * @param maxCapacity the max capacity of the underlying byte array
      */
-    protected UnpooledHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+    public UnpooledHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
 
         checkNotNull(alloc, "alloc");
