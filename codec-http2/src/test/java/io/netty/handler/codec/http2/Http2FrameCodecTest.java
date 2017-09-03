@@ -24,9 +24,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
+import io.netty.handler.codec.http.HttpServerUpgradeHandler;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.logging.LogLevel;
@@ -40,6 +44,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.net.InetSocketAddress;
 import java.util.HashSet;
@@ -639,6 +645,31 @@ public class Http2FrameCodecTest {
                 });
 
         assertTrue(listenerExecuted.get());
+    }
+
+    @Test
+    public void upgradeEventNoRefCntError() throws Http2Exception {
+        frameListener.onHeadersRead(http2HandlerCtx, Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, request, 31, false);
+
+        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        final HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = mock(HttpServerUpgradeHandler.UpgradeEvent.class);
+        when(upgradeEvent.retain()).thenAnswer(new Answer<HttpServerUpgradeHandler.UpgradeEvent>() {
+            @Override
+            public HttpServerUpgradeHandler.UpgradeEvent answer(InvocationOnMock invocationOnMock) throws Throwable {
+                request.retain();
+                return upgradeEvent;
+            }
+        });
+        when(upgradeEvent.release()).thenAnswer(new Answer<Boolean>() {
+            @Override
+            public Boolean answer(InvocationOnMock invocationOnMock) throws Throwable {
+                return request.release();
+            }
+        });
+
+        when(upgradeEvent.upgradeRequest()).thenReturn(request);
+        channel.pipeline().fireUserEventTriggered(upgradeEvent);
+        assertEquals(1, request.refCnt());
     }
 
     private static ChannelPromise anyChannelPromise() {
