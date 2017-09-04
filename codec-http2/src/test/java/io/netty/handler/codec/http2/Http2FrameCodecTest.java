@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
+import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.handler.codec.http2.Http2Stream.State;
@@ -40,13 +41,14 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ReflectionUtil;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
+import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.Set;
@@ -648,28 +650,20 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void upgradeEventNoRefCntError() throws Http2Exception {
+    public void upgradeEventNoRefCntError() throws Exception {
         frameListener.onHeadersRead(http2HandlerCtx, Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, request, 31, false);
 
-        final FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-        final HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = mock(HttpServerUpgradeHandler.UpgradeEvent.class);
-        when(upgradeEvent.retain()).thenAnswer(new Answer<HttpServerUpgradeHandler.UpgradeEvent>() {
-            @Override
-            public HttpServerUpgradeHandler.UpgradeEvent answer(InvocationOnMock invocationOnMock) throws Throwable {
-                request.retain();
-                return upgradeEvent;
-            }
-        });
-        when(upgradeEvent.release()).thenAnswer(new Answer<Boolean>() {
-            @Override
-            public Boolean answer(InvocationOnMock invocationOnMock) throws Throwable {
-                return request.release();
-            }
-        });
+        // Using reflect as the constructor is package-private and the class is final.
+        Constructor<UpgradeEvent> constructor =
+                UpgradeEvent.class.getDeclaredConstructor(CharSequence.class, FullHttpRequest.class);
 
-        when(upgradeEvent.upgradeRequest()).thenReturn(request);
+        // Check if we could make it accessible which may fail on java9.
+        Assume.assumeTrue(ReflectionUtil.trySetAccessible(constructor) == null);
+
+        HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
+                "HTTP/2", new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
         channel.pipeline().fireUserEventTriggered(upgradeEvent);
-        assertEquals(1, request.refCnt());
+        assertEquals(1, upgradeEvent.refCnt());
     }
 
     private static ChannelPromise anyChannelPromise() {
