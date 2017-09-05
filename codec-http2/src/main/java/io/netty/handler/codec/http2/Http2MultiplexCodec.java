@@ -239,7 +239,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     break;
                 }
                 // fall-trough
-                DefaultHttp2StreamChannel childChannel = new DefaultHttp2StreamChannel(stream);
+                DefaultHttp2StreamChannel childChannel = new DefaultHttp2StreamChannel(stream, false);
                 ChannelFuture future = ctx.channel().eventLoop().register(childChannel);
                 if (future.isDone()) {
                     registerDone(future);
@@ -266,7 +266,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     // TODO: This is most likely not the best way to expose this, need to think more about it.
     final Http2StreamChannel newOutboundStream() {
-        return new DefaultHttp2StreamChannel(newStream());
+        return new DefaultHttp2StreamChannel(newStream(), true);
     }
 
     @Override
@@ -403,6 +403,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         private final ChannelPipeline pipeline;
         private final Http2FrameStream stream;
         private final ChannelPromise closePromise;
+        private final boolean outbound;
 
         private volatile boolean registered;
         private volatile boolean writable;
@@ -427,8 +428,9 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         // channelReadComplete(...)
         DefaultHttp2StreamChannel next;
 
-        DefaultHttp2StreamChannel(Http2FrameStream stream) {
+        DefaultHttp2StreamChannel(Http2FrameStream stream, boolean outbound) {
             this.stream = stream;
+            this.outbound = outbound;
             ((Http2MultiplexCodecStream) stream).channel = this;
             pipeline = new DefaultChannelPipeline(this) {
                 @Override
@@ -791,8 +793,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
                 registered = true;
 
-                // Add the handler to the pipeline now that we are registered.
-                pipeline().addLast(inboundStreamHandler);
+                if (!outbound) {
+                    // Add the handler to the pipeline now that we are registered.
+                    pipeline().addLast(inboundStreamHandler);
+                }
 
                 promise.setSuccess();
 
