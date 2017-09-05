@@ -32,6 +32,7 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -82,7 +83,12 @@ public class Http2MultiplexCodecBuilderTest {
         Bootstrap cb = new Bootstrap()
                 .channel(LocalChannel.class)
                 .group(group)
-                .handler(new Http2MultiplexCodecBuilder(false, new TestChannelInitializer()).build());
+                .handler(new Http2MultiplexCodecBuilder(false, new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) throws Exception {
+                        Assert.fail("Should not be called for outbound streams");
+                    }
+                }).build());
         clientChannel = cb.connect(serverAddress).sync().channel();
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
