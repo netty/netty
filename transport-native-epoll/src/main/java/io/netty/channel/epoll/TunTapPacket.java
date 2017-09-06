@@ -24,107 +24,106 @@ import io.netty.buffer.ByteBufHolder;
  */
 public final class TunTapPacket implements ByteBufHolder {
 
-    private int _protocol;
-    private ByteBuf _packetData;
+    private int protocol;
+    private ByteBuf packetData;
 
     public TunTapPacket() {
+        // Nothing to do.
     }
 
     public TunTapPacket(int protocol, ByteBuf packetData) {
         if (packetData == null) {
             throw new NullPointerException("packetData");
         }
-        _protocol = protocol;
-        _packetData = packetData;
+        this.protocol = protocol;
+        this.packetData = packetData;
     }
 
     public TunTapPacket(ByteBuf packetData) {
         if (packetData == null) {
             throw new NullPointerException("packetData");
         }
-        _protocol = inferProtocolFromIPPacket(packetData);
-        _packetData = packetData;
+        protocol = inferProtocolFromIPPacket(packetData);
+        this.packetData = packetData;
     }
 
     public int protocol() {
-        return _protocol;
+        return protocol;
     }
 
     public void setProtocol(int protocol) {
-        _protocol = protocol;
+        this.protocol = protocol;
     }
 
     public ByteBuf packetData() {
-        return _packetData;
+        return packetData;
     }
 
     public void setPacketData(ByteBuf packetData) {
-        _packetData = packetData;
+        this.packetData = packetData;
     }
 
     @Override
     public int refCnt() {
-        return _packetData.refCnt();
+        return packetData.refCnt();
     }
 
     @Override
     public boolean release() {
-        return _packetData.release();
+        return packetData.release();
     }
 
     @Override
     public boolean release(int decrement) {
-        return _packetData.release(decrement);
+        return packetData.release(decrement);
     }
 
     @Override
     public ByteBuf content() {
-        return _packetData;
+        return packetData;
     }
 
     @Override
     public TunTapPacket copy() {
-        return new TunTapPacket(_protocol, _packetData.copy());
+        return new TunTapPacket(protocol, packetData.copy());
     }
 
     @Override
     public TunTapPacket duplicate() {
-        return new TunTapPacket(_protocol, _packetData.duplicate());
+        return new TunTapPacket(protocol, packetData.duplicate());
     }
 
     @Override
     public TunTapPacket retain() {
-        _packetData.retain();
+        packetData.retain();
         return this;
     }
 
     @Override
     public TunTapPacket retain(int increment) {
-        _packetData.retain(increment);
+        packetData.retain(increment);
         return this;
     }
 
     @Override
     public TunTapPacket touch() {
-        _packetData.touch();
+        packetData.touch();
         return this;
     }
 
     @Override
     public TunTapPacket touch(Object hint) {
-        _packetData.touch(hint);
+        packetData.touch(hint);
         return this;
     }
 
     @Override
     public ByteBufHolder retainedDuplicate() {
-        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public ByteBufHolder replace(ByteBuf content) {
-        // TODO Auto-generated method stub
         return null;
     }
 

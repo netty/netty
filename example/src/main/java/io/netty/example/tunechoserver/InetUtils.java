@@ -119,13 +119,24 @@ public final class InetUtils {
     }
 
     public static final class IPHeader {
-        public int ipVersion;
-        public int protocol;
-        public byte[] sourceAddress;
-        public byte[] destAddress;
-        public int headerLength;
-        public int payloadLength;
-        public int checksum;
+        public final int ipVersion;
+        public final int protocol;
+        public final byte[] sourceAddress;
+        public final byte[] destAddress;
+        public final int headerLength;
+        public final int payloadLength;
+        public final int checksum;
+
+        public IPHeader(int ipVersion, int protocol, byte[] sourceAddress, byte[] destAddress, int headerLength,
+                int payloadLength, int checksum) {
+            this.ipVersion = ipVersion;
+            this.protocol = protocol;
+            this.sourceAddress = sourceAddress;
+            this.destAddress = destAddress;
+            this.headerLength = headerLength;
+            this.payloadLength = payloadLength;
+            this.checksum = checksum;
+        }
     }
 
     public static IPHeader decodeIPHeader(ByteBuf packetBuf) {
@@ -133,20 +144,27 @@ public final class InetUtils {
     }
 
     public static IPHeader decodeIPHeader(ByteBuf packetBuf, int ipHeaderOffset) {
-        IPHeader ipHeader = new InetUtils.IPHeader();
 
         // Fail if the packet is too small.
         if (packetBuf.readableBytes() < ipHeaderOffset + 1) {
             throw new IllegalArgumentException("IP packet too small");
         }
 
-        ipHeader.ipVersion = packetBuf.getUnsignedByte(ipHeaderOffset) & 0xF0;
+        int ipVersion;
+        int protocol;
+        byte[] sourceAddress;
+        byte[] destAddress;
+        int headerLength;
+        int payloadLength;
+        int checksum = 0;
+
+        ipVersion = packetBuf.getUnsignedByte(ipHeaderOffset) & 0xF0;
 
         // If the packet is an IPv6 packet...
-        if (ipHeader.ipVersion == IP_VERSION_6) {
+        if (ipVersion == IP_VERSION_6) {
 
             // Set the header length.
-            ipHeader.headerLength = IPV6_HEADER_LENGTH;
+            headerLength = IPV6_HEADER_LENGTH;
 
             // Fail if the packet is too small to contain the IPv6 header.
             if (packetBuf.readableBytes() < ipHeaderOffset + IPV6_HEADER_LENGTH) {
@@ -154,36 +172,35 @@ public final class InetUtils {
             }
 
             // Get the IP payload length.
-            ipHeader.payloadLength = packetBuf.getUnsignedShort(ipHeaderOffset + IPV6_HEADER_OFFSET_PAYLOAD_LENGTH);
+            payloadLength = packetBuf.getUnsignedShort(ipHeaderOffset + IPV6_HEADER_OFFSET_PAYLOAD_LENGTH);
 
             // Fail if the packet is too small, counting the payload.
-            if (packetBuf.readableBytes() < ipHeaderOffset + IPV6_HEADER_LENGTH + ipHeader.payloadLength) {
+            if (packetBuf.readableBytes() < ipHeaderOffset + IPV6_HEADER_LENGTH + payloadLength) {
                 throw new IllegalArgumentException("IP packet too small");
             }
 
             // Get the protocol.
-            ipHeader.protocol = packetBuf.getUnsignedByte(ipHeaderOffset + IPV6_HEADER_OFFSET_NEXT_HEADER);
+            protocol = packetBuf.getUnsignedByte(ipHeaderOffset + IPV6_HEADER_OFFSET_NEXT_HEADER);
 
             // Get the source and destination addresses.
-            ipHeader.sourceAddress = new byte[16];
-            ipHeader.destAddress = new byte[16];
-            packetBuf.getBytes(ipHeaderOffset + InetUtils.IPV6_HEADER_OFFSET_SOURCE_ADDR, ipHeader.sourceAddress);
-            packetBuf.getBytes(ipHeaderOffset + InetUtils.IPV6_HEADER_OFFSET_DEST_ADDR, ipHeader.destAddress);
+            sourceAddress = new byte[16];
+            destAddress = new byte[16];
+            packetBuf.getBytes(ipHeaderOffset + InetUtils.IPV6_HEADER_OFFSET_SOURCE_ADDR, sourceAddress);
+            packetBuf.getBytes(ipHeaderOffset + InetUtils.IPV6_HEADER_OFFSET_DEST_ADDR, destAddress);
 
         // Otherwise if the packet is an IPv6 packet...
-        } else if (ipHeader.ipVersion == IP_VERSION_4) {
+        } else if (ipVersion == IP_VERSION_4) {
 
             // Get the length of the header.
-            ipHeader.headerLength =
-                    (packetBuf.getUnsignedByte(ipHeaderOffset + IPV4_HEADER_OFFSET_HEADER_LENGTH) & 0x0F) * 4;
+            headerLength = (packetBuf.getUnsignedByte(ipHeaderOffset + IPV4_HEADER_OFFSET_HEADER_LENGTH) & 0x0F) * 4;
 
             // Fail if header length value is too small.
-            if (ipHeader.headerLength < IPV4_MIN_HEADER_LENGTH) {
+            if (headerLength < IPV4_MIN_HEADER_LENGTH) {
                 throw new IllegalArgumentException("Invalid IPv4 header length");
             }
 
             // Fail if the packet is too small to contain the IPv4 header.
-            if (packetBuf.readableBytes() < ipHeaderOffset + ipHeader.headerLength) {
+            if (packetBuf.readableBytes() < ipHeaderOffset + headerLength) {
                 throw new IllegalArgumentException("IP packet too small");
             }
 
@@ -196,33 +213,40 @@ public final class InetUtils {
             }
 
             // Compute the payload length
-            ipHeader.payloadLength = totalLength - ipHeader.headerLength;
+            payloadLength = totalLength - headerLength;
 
             // Get the protocol.
-            ipHeader.protocol = packetBuf.getUnsignedByte(ipHeaderOffset + IPV4_HEADER_OFFSET_PROTOCOL);
+            protocol = packetBuf.getUnsignedByte(ipHeaderOffset + IPV4_HEADER_OFFSET_PROTOCOL);
 
             // Get the source and destination addresses.
-            ipHeader.sourceAddress = new byte[4];
-            ipHeader.destAddress = new byte[4];
-            packetBuf.getBytes(ipHeaderOffset + InetUtils.IPV4_HEADER_OFFSET_SOURCE_ADDR, ipHeader.sourceAddress);
-            packetBuf.getBytes(ipHeaderOffset + InetUtils.IPV4_HEADER_OFFSET_DEST_ADDR, ipHeader.destAddress);
+            sourceAddress = new byte[4];
+            destAddress = new byte[4];
+            packetBuf.getBytes(ipHeaderOffset + InetUtils.IPV4_HEADER_OFFSET_SOURCE_ADDR, sourceAddress);
+            packetBuf.getBytes(ipHeaderOffset + InetUtils.IPV4_HEADER_OFFSET_DEST_ADDR, destAddress);
 
             // Get IP checksum.
-            ipHeader.checksum = packetBuf.getUnsignedShort(ipHeaderOffset + IPV4_HEADER_OFFSET_CHECKSUM);
+            checksum = packetBuf.getUnsignedShort(ipHeaderOffset + IPV4_HEADER_OFFSET_CHECKSUM);
 
         // Otherwise the packet type is unknown.
         } else {
             throw new UnsupportedOperationException(
-                    "IP version unsupported: " + ipVersionToString(ipHeader.ipVersion));
+                    "IP version unsupported: " + ipVersionToString(ipVersion));
         }
 
-        return ipHeader;
+        return new InetUtils.IPHeader(ipVersion, protocol, sourceAddress, destAddress, headerLength,
+                payloadLength, checksum);
     }
 
     public static final class ICMPHeader {
-        public int type;
-        public int code;
-        public int checksum;
+        public final int type;
+        public final int code;
+        public final int checksum;
+
+        public ICMPHeader(int type, int code, int checksum) {
+            this.type = type;
+            this.code = code;
+            this.checksum = checksum;
+        }
     }
 
     public static ICMPHeader decodeICMPHeader(ByteBuf packetBuf) {
@@ -235,34 +259,75 @@ public final class InetUtils {
             throw new IllegalArgumentException("ICMP packet too small");
         }
 
-        ICMPHeader icmpHeader = new InetUtils.ICMPHeader();
-        icmpHeader.type = packetBuf.getUnsignedByte(headerOffset + ICMP_HEADER_OFFSET_TYPE);
-        icmpHeader.code = packetBuf.getUnsignedByte(headerOffset + ICMP_HEADER_OFFSET_CODE);
-        icmpHeader.checksum = packetBuf.getUnsignedShort(headerOffset + ICMP_HEADER_OFFSET_CHECKSUM);
+        int type = packetBuf.getUnsignedByte(headerOffset + ICMP_HEADER_OFFSET_TYPE);
+        int code = packetBuf.getUnsignedByte(headerOffset + ICMP_HEADER_OFFSET_CODE);
+        int checksum = packetBuf.getUnsignedShort(headerOffset + ICMP_HEADER_OFFSET_CHECKSUM);
 
-        return icmpHeader;
+        return new InetUtils.ICMPHeader(type, code, checksum);
     }
 
     public static final class UDPHeader {
-        public int sourcePort;
-        public int destPort;
-        public int length;
-        public int checksum;
+        public final int sourcePort;
+        public final int destPort;
+        public final int length;
+        public final int checksum;
+
+        public UDPHeader(int sourcePort, int destPort, int length, int checksum) {
+            this.sourcePort = sourcePort;
+            this.destPort = destPort;
+            this.length = length;
+            this.checksum = checksum;
+        }
     }
 
     public static UDPHeader decodeUDPHeader(ByteBuf packetBuf, int headerOffset) {
         // Fail if the packet is too small.
         if (packetBuf.readableBytes() < headerOffset + UDP_HEADER_LENGTH) {
-            throw new IllegalArgumentException("ICMP packet too small");
+            throw new IllegalArgumentException("UDP packet too small");
         }
 
-        UDPHeader udpHeader = new InetUtils.UDPHeader();
-        udpHeader.sourcePort = packetBuf.getUnsignedShort(headerOffset + UDP_HEADER_OFFSET_SOURCE_PORT);
-        udpHeader.destPort = packetBuf.getUnsignedShort(headerOffset + UDP_HEADER_OFFSET_DEST_PORT);
-        udpHeader.length = packetBuf.getUnsignedShort(headerOffset + UDP_HEADER_OFFSET_LENGTH);
-        udpHeader.checksum = packetBuf.getUnsignedShort(headerOffset + UDP_HEADER_OFFSET_CHECKSUM);
+        int sourcePort = packetBuf.getUnsignedShort(headerOffset + UDP_HEADER_OFFSET_SOURCE_PORT);
+        int destPort = packetBuf.getUnsignedShort(headerOffset + UDP_HEADER_OFFSET_DEST_PORT);
+        int length = packetBuf.getUnsignedShort(headerOffset + UDP_HEADER_OFFSET_LENGTH);
+        int checksum = packetBuf.getUnsignedShort(headerOffset + UDP_HEADER_OFFSET_CHECKSUM);
 
-        return udpHeader;
+        return new InetUtils.UDPHeader(sourcePort, destPort, length, checksum);
+    }
+
+    public static final class TCPHeader {
+        public final int sourcePort;
+        public final int destPort;
+        public final long sequenceNum;
+        public final int flags;
+        public final int dataLength;
+        public final int checksum;
+
+        public TCPHeader(int sourcePort, int destPort, long sequenceNum, int flags, int dataLength, int checksum) {
+            this.sourcePort = sourcePort;
+            this.destPort = destPort;
+            this.sequenceNum = sequenceNum;
+            this.flags = flags;
+            this.dataLength = dataLength;
+            this.checksum = checksum;
+        }
+    }
+
+    public static TCPHeader decodeTCPHeader(ByteBuf packetBuf, int headerOffset) {
+        // Fail if the packet is too small.
+        if (packetBuf.readableBytes() < headerOffset + TCP_HEADER_LENGTH) {
+            throw new IllegalArgumentException("TCP packet too small");
+        }
+
+        int sourcePort = packetBuf.getUnsignedShort(headerOffset + TCP_HEADER_OFFSET_SOURCE_PORT);
+        int destPort = packetBuf.getUnsignedShort(headerOffset + TCP_HEADER_OFFSET_DEST_PORT);
+        long sequenceNum = packetBuf.getUnsignedInt(headerOffset + TCP_HEADER_OFFSET_SEQUENCE_NUM);
+        int dataOffsetAndFlags = packetBuf.getUnsignedShort(headerOffset + TCP_HEADER_OFFSET_DATA_OFFSET_AND_FLAGS);
+        int flags = dataOffsetAndFlags & 0x1F;
+        int dataOffset = (dataOffsetAndFlags & 0xF000) >> 12;
+        int dataLength = packetBuf.readableBytes() - headerOffset - (dataOffset * 4);
+        int checksum = packetBuf.getUnsignedShort(headerOffset + TCP_HEADER_OFFSET_CHECKSUM);
+
+        return new InetUtils.TCPHeader(sourcePort, destPort, sequenceNum, flags, dataLength, checksum);
     }
 
     public static final int IP_VERSION_4                        = 0x40;
@@ -294,7 +359,8 @@ public final class InetUtils {
     public static final int TCP_HEADER_LENGTH                   = 20;
     public static final int TCP_HEADER_OFFSET_SOURCE_PORT       = 0;
     public static final int TCP_HEADER_OFFSET_DEST_PORT         = 2;
-    public static final int TCP_HEADER_OFFSET_FLAGS             = 13;
+    public static final int TCP_HEADER_OFFSET_SEQUENCE_NUM      = 4;
+    public static final int TCP_HEADER_OFFSET_DATA_OFFSET_AND_FLAGS = 12;
     public static final int TCP_HEADER_OFFSET_CHECKSUM          = 16;
 
     public static final int UDP_HEADER_LENGTH                   = 8;

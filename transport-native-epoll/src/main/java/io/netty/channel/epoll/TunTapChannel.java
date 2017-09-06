@@ -28,7 +28,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.unix.Socket;
 
 /**
  * A {@link Channel} implementation that can be used to send or receive packets over
@@ -47,11 +46,11 @@ import io.netty.channel.unix.Socket;
  */
 public class TunTapChannel extends AbstractEpollChannel {
 
-    private boolean _isOpen = true;
-    private TunTapChannelConfig _config;
-    private TunTapAddress _localAddress;
-    private boolean _isTapChannel;
-    private static final ChannelMetadata _metadata = new ChannelMetadata(true);
+    private boolean isOpen = true;
+    private TunTapChannelConfig config;
+    private TunTapAddress boundLocalAddress;
+    private boolean isTapChannel;
+    private static final ChannelMetadata metadata = new ChannelMetadata(true);
 
     /**
      * Create a new {@link TunTapChannel} object that uses the default TUN/TAP clone device.
@@ -65,28 +64,28 @@ public class TunTapChannel extends AbstractEpollChannel {
      */
     public TunTapChannel(String cloneDevName) throws IOException {
         // Open the specified clone device and pass the fd to the base class.
-        super(Socket.openTunTapCloneDevice(cloneDevName), Native.EPOLLIN);
+        super(LinuxSocket.openTunTapCloneDevice(cloneDevName), Native.EPOLLIN);
 
-        _config = new TunTapChannelConfig(this);
+        config = new TunTapChannelConfig(this);
     }
 
     @Override
     public TunTapChannelConfig config() {
-        return _config;
+        return config;
     }
 
     @Override
     public boolean isOpen() {
-        return _isOpen;
+        return isOpen;
     }
 
     public boolean isTapChannel() {
-        return _isTapChannel;
+        return isTapChannel;
     }
 
     @Override
     public ChannelMetadata metadata() {
-        return _metadata;
+        return metadata;
     }
 
     public static String defaultCloneDeviceName() {
@@ -95,7 +94,7 @@ public class TunTapChannel extends AbstractEpollChannel {
 
     @Override
     protected SocketAddress localAddress0() {
-        return _localAddress;
+        return boundLocalAddress;
     }
 
     @Override
@@ -124,10 +123,10 @@ public class TunTapChannel extends AbstractEpollChannel {
         boolean isTapDevice = tunTapAddr.isTapAddress();
 
         // Allocate/open the specified network interface name.
-        fd().allocTunTapInterface(ifName, isTapDevice);
+        tunTapFd().allocTunTapInterface(ifName, isTapDevice);
 
-        _localAddress = tunTapAddr;
-        _isTapChannel = isTapDevice;
+        boundLocalAddress = tunTapAddr;
+        isTapChannel = isTapDevice;
 
         // Add the TUN/TAP file descriptor to the epoll set.
         // NOTE: this must happen *after* the call to allocInterface() above (see
@@ -158,12 +157,12 @@ public class TunTapChannel extends AbstractEpollChannel {
                     long memoryAddress = packetData.memoryAddress();
                     int readerIndex = packetData.readerIndex();
                     int len = packetData.readableBytes();
-                    fd().writeTunTapPacketAddress(packet.protocol(), memoryAddress, readerIndex, len);
+                    tunTapFd().writeTunTapPacketAddress(packet.protocol(), memoryAddress, readerIndex, len);
                 } else {
                     ByteBuffer nioBuf = packetData.nioBuffer();
                     int pos = nioBuf.position();
                     int limit = nioBuf.limit();
-                    fd().writeTunTapPacket(packet.protocol(), nioBuf, pos, limit - pos);
+                    tunTapFd().writeTunTapPacket(packet.protocol(), nioBuf, pos, limit - pos);
                 }
 
                 // Drop the packet from the outbound queue.
@@ -179,6 +178,10 @@ public class TunTapChannel extends AbstractEpollChannel {
         return new TunTapChannelUnsafe();
     }
 
+    final LinuxSocket tunTapFd() {
+        return (LinuxSocket) fd();
+    }
+
     final class TunTapChannelUnsafe extends AbstractEpollUnsafe {
 
         private final List<TunTapPacket> _rcvdPackets = new ArrayList<TunTapPacket>();
@@ -191,7 +194,7 @@ public class TunTapChannel extends AbstractEpollChannel {
         @Override
         void epollInReady() {
             assert eventLoop().inEventLoop();
-            if (fd().isInputShutdown()) {
+            if (tunTapFd().isInputShutdown()) {
                 clearEpollIn0();
                 return;
             }
@@ -199,17 +202,17 @@ public class TunTapChannel extends AbstractEpollChannel {
             EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
-            ByteBufAllocator allocator = _config.getAllocator();
+            ByteBufAllocator allocator = config.getAllocator();
 
             // Tell the allocator handle we're about to start another read loop.
-            allocHandle.reset(_config);
+            allocHandle.reset(config);
 
             epollInBefore();
 
             try {
                 Throwable exception = null;
                 ByteBuf packetData = null;
-                Socket tunTapFd = fd();
+                LinuxSocket tunTapFd = tunTapFd();
 
                 try {
                     // Repeatedly read packets from the interface for as long as there are
@@ -265,7 +268,6 @@ public class TunTapChannel extends AbstractEpollChannel {
                 } catch (Throwable ex) {
                     if (packetData != null) {
                         packetData.release();
-                        packetData = null;
                     }
                     exception = ex;
                 }
@@ -291,7 +293,7 @@ public class TunTapChannel extends AbstractEpollChannel {
                     pipeline.fireExceptionCaught(exception);
                 }
             } finally {
-                epollInFinally(_config);
+                epollInFinally(config);
             }
         }
     }

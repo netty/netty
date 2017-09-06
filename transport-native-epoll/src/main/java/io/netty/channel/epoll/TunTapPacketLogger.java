@@ -32,7 +32,7 @@ import io.netty.handler.logging.LoggingHandler;
  */
 public class TunTapPacketLogger extends LoggingHandler {
 
-    private boolean _logPacketData = true;
+    private boolean logPacketData = true;
 
     public TunTapPacketLogger() {
         super(LogLevel.INFO);
@@ -51,11 +51,11 @@ public class TunTapPacketLogger extends LoggingHandler {
     }
 
     public boolean logPacketData() {
-        return _logPacketData;
+        return logPacketData;
     }
 
     public void setLogPacketData(boolean logPacketData) {
-        _logPacketData = logPacketData();
+        this.logPacketData = logPacketData;
     }
 
     @Override
@@ -80,7 +80,7 @@ public class TunTapPacketLogger extends LoggingHandler {
 
     private void logPacket(TunTapPacket packet, boolean isEtherFrame, String eventName) {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, formatPacket(packet, isEtherFrame, eventName, _logPacketData));
+            logger.log(internalLevel, formatPacket(packet, isEtherFrame, eventName, logPacketData));
         }
     }
 
@@ -101,8 +101,7 @@ public class TunTapPacketLogger extends LoggingHandler {
 
             // Generally a sender doesn't specify a protocol when sending an Ethernet frame, since
             // Linux doesn't require it.  Therefore extract the protocol from the Ethernet frame data.
-            protocol = ((int) packetData.getUnsignedByte(packetData.readerIndex() + 12)) << 8 |
-                    ((int) packetData.getUnsignedByte(packetData.readerIndex() + 13));
+            protocol = packetData.getUnsignedShort(packetData.readerIndex() + 12);
 
             // Print the Ethernet header
             formatEthernetHeader(packetData, 0, protocol, formatter);

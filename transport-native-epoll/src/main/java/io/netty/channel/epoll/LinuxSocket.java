@@ -21,6 +21,9 @@ import io.netty.channel.unix.Socket;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
+
+import static io.netty.channel.unix.Errors.newIOException;
 
 /**
  * A socket which provides access Linux native methods.
@@ -144,49 +147,28 @@ final class LinuxSocket extends Socket {
         return new LinuxSocket(newSocketDomain0());
     }
 
-    public void writeTunTapPacket(int protocol, ByteBuffer buf, int pos, int maxLen) throws IOException {
-        int res = writeTunTapPacket(fd, protocol, buf, pos, maxLen);
-        if (res < 0) {
-            throw newIOException("writeTunTapPacket", res);
-        }
-    }
-
-    public void writeTunTapPacketAddress(int protocol, long addr, int pos, int maxLen) throws IOException {
-        int res = writeTunTapPacketAddress(fd, protocol, addr, pos, maxLen);
-        if (res < 0) {
-            throw newIOException("writeTunTapPacketAddress", res);
-        }
-    }
-
-    public long readTunTapPacket(ByteBuffer buf, int pos, int maxLen) throws IOException {
-        long res = readTunTapPacket(fd, buf, pos, maxLen);
-        if (res < 0) {
-            throw newIOException("readTunTapPacket", (int) res);
-        }
-        return res;
-    }
-
-    public long readTunTapPacketAddress(long addr, int pos, int maxLen) throws IOException {
-        long res = readTunTapPacketAddress(fd, addr, pos, maxLen);
-        if (res < 0) {
-            throw newIOException("readTunTapPacketAddress", (int) res);
-        }
-        return res;
-    }
-
-    public static Socket openTunTapCloneDevice(String cloneDevName) {
-        int res = openTunTapCloneDevice0(cloneDevName);
-        if (res < 0) {
-            throw new ChannelException(newIOException("openTunTapCloneDevice", res));
-        }
-        return new Socket(res);
+    public static LinuxSocket openTunTapCloneDevice(String cloneDevName) {
+        return new LinuxSocket(openTunTapCloneDevice0(cloneDevName));
     }
 
     public void allocTunTapInterface(String ifName, boolean isTapDev) {
-        int res = allocTunTapInterface(fd, ifName, isTapDev);
-        if (res < 0) {
-            throw new ChannelException(newIOException("allocTunTapInterface", res));
-        }
+        allocTunTapInterface(intValue(), ifName, isTapDev);
+    }
+
+    public long readTunTapPacket(ByteBuffer buf, int pos, int maxLen) throws IOException {
+        return readTunTapPacket(intValue(), buf, pos, maxLen);
+    }
+
+    public long readTunTapPacketAddress(long addr, int pos, int maxLen) throws IOException {
+        return readTunTapPacketAddress(intValue(), addr, pos, maxLen);
+    }
+
+    public void writeTunTapPacket(int protocol, ByteBuffer buf, int pos, int maxLen) throws IOException {
+        writeTunTapPacket(intValue(), protocol, buf, pos, maxLen);
+    }
+
+    public void writeTunTapPacketAddress(int protocol, long addr, int pos, int maxLen) throws IOException {
+        writeTunTapPacketAddress(intValue(), protocol, addr, pos, maxLen);
     }
 
     private static native int getTcpDeferAccept(int fd) throws IOException;
@@ -220,8 +202,8 @@ final class LinuxSocket extends Socket {
 
     public static native long readTunTapPacket(int fd, ByteBuffer buf, int pos, int limit) throws IOException;
     public static native long readTunTapPacketAddress(int fd, long addr, int pos, int limit) throws IOException;
-    public static native int writeTunTapPacket(
-           int fd, int protocol, ByteBuffer buf, int pos, int limit) throws IOException;
-    public static native int writeTunTapPacketAddress(
-           int fd, int protocol, long addr, int pos, int limit) throws IOException;
+    public static native void writeTunTapPacket(int fd, int protocol, ByteBuffer buf, int pos, int limit)
+            throws IOException;
+    public static native void writeTunTapPacketAddress(int fd, int protocol, long addr, int pos, int limit)
+            throws IOException;
 }

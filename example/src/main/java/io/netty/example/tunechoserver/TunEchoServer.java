@@ -164,14 +164,14 @@ import io.netty.channel.epoll.TunTapPacketLogger;
 
 public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
 
-    private static AbstractByteBufAllocator _bufAllocator = PooledByteBufAllocator.DEFAULT;
-    private static ThreadPoolExecutor _threadPool;
-    private static Logger _logger;
-    private static boolean _forceGC;
-    private static boolean _debug;
-    private static String _tunDeviceName;
-    private static int _threadPoolSize;
-    private static int _readBufSize;
+    private static AbstractByteBufAllocator bufAllocator = PooledByteBufAllocator.DEFAULT;
+    private static ThreadPoolExecutor threadPool;
+    private static Logger logger;
+    private static boolean forceGC;
+    private static boolean debug;
+    private static String tunDeviceName;
+    private static int threadPoolSize;
+    private static int readBufSize;
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
@@ -190,9 +190,9 @@ public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
 
         // If a thread pool has been configured, use it to run the handlePacket().  Otherwise call
         // handlePacket() directly on the channel thread.
-        if (_threadPool != null) {
+        if (threadPool != null) {
             inPacket.retain();
-            _threadPool.execute(
+            threadPool.execute(
                 new Runnable() {
                     @Override
                     public void run() {
@@ -283,7 +283,7 @@ public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
         }
 
         // If requested, provoke GC as an aid to detecting buffer leaks.
-        if (_forceGC) {
+        if (forceGC) {
             System.gc();
             System.runFinalization();
         }
@@ -359,11 +359,11 @@ public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
 
     private static boolean readProps() {
 
-        _tunDeviceName = System.getProperty("tun-device-name", "tun-echo-server");
+        tunDeviceName = System.getProperty("tun-device-name", "tun-echo-server");
 
         try {
-            _threadPoolSize = Integer.parseInt(System.getProperty("thread-pool-size", "0"));
-            if (_threadPoolSize < 0) {
+            threadPoolSize = Integer.parseInt(System.getProperty("thread-pool-size", "0"));
+            if (threadPoolSize < 0) {
                 throw new IllegalArgumentException();
             }
         } catch (Exception ex) {
@@ -373,8 +373,8 @@ public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
         }
 
         try {
-            _readBufSize = Integer.parseInt(System.getProperty("read-buf-size", "2048"));
-            if (_readBufSize < 1) {
+            readBufSize = Integer.parseInt(System.getProperty("read-buf-size", "2048"));
+            if (readBufSize < 1) {
                 throw new IllegalArgumentException();
             }
         } catch (Exception ex) {
@@ -384,12 +384,12 @@ public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
         }
 
         if (Boolean.parseBoolean(System.getProperty("use-unpooled", "false"))) {
-            _bufAllocator = UnpooledByteBufAllocator.DEFAULT;
+            bufAllocator = UnpooledByteBufAllocator.DEFAULT;
         }
 
-        _forceGC = Boolean.parseBoolean(System.getProperty("force-gc", "false"));
+        forceGC = Boolean.parseBoolean(System.getProperty("force-gc", "false"));
 
-        _debug = Boolean.parseBoolean(System.getProperty("debug", "true"));
+        debug = Boolean.parseBoolean(System.getProperty("debug", "true"));
 
         return true;
     }
@@ -403,11 +403,11 @@ public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
         System.out.println("TunEchoServer starting");
 
         try {
-            _logger = Logger.getLogger("");
-            _logger.setLevel(_debug ? Level.FINEST : Level.SEVERE);
+            logger = Logger.getLogger("");
+            logger.setLevel(debug ? Level.FINEST : Level.SEVERE);
 
-            if (_threadPoolSize > 0) {
-                _threadPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(_threadPoolSize);
+            if (threadPoolSize > 0) {
+                threadPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadPoolSize);
             }
 
             final TunEchoServer server = new TunEchoServer();
@@ -419,7 +419,7 @@ public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
                 public Channel newChannel() {
                     try {
                         Channel channel = new TunTapChannel();
-                        if (_debug) {
+                        if (debug) {
                             channel.pipeline().addLast(new TunTapPacketLogger());
                         }
                         return channel;
@@ -432,18 +432,18 @@ public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
             Bootstrap bootstrap = new Bootstrap()
                 .group(group)
                 .channelFactory(channelFactory)
-                .option(ChannelOption.ALLOCATOR, _bufAllocator)
-                .option(TunTapChannelOption.READ_BUF_SIZE, _readBufSize)
+                .option(ChannelOption.ALLOCATOR, bufAllocator)
+                .option(TunTapChannelOption.READ_BUF_SIZE, readBufSize)
                 .handler(server);
 
             final TunTapChannel channel =
-                    (TunTapChannel) bootstrap.bind(new TunAddress(_tunDeviceName)).sync().channel();
+                    (TunTapChannel) bootstrap.bind(new TunAddress(tunDeviceName)).sync().channel();
 
             System.out.println("TunEchoServer ready");
 
             channel.closeFuture().await();
         } catch (Exception ex) {
-            _logger.log(Level.SEVERE, "Exception in TunEchoServer", ex);
+            logger.log(Level.SEVERE, "Exception in TunEchoServer", ex);
         }
 
         System.out.println("TunEchoServer exiting");

@@ -24,17 +24,17 @@ import java.net.SocketAddress;
  */
 public abstract class TunTapAddress extends SocketAddress {
 
-    private String _ifName;
+    private String ifName;
 
     protected TunTapAddress(String ifName) {
-        this._ifName = ifName;
+        this.ifName = ifName;
     }
 
     /**
      * The name of the tun/tap device.
      */
     public String interfaceName() {
-        return this._ifName;
+        return this.ifName;
     }
 
     /**

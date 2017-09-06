@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <linux/tcp.h> // TCP_NOTSENT_LOWAT is a linux specific define
 #include <sys/ioctl.h>
@@ -269,9 +271,10 @@ static jobject netty_epoll_linuxsocket_getPeerCredentials(JNIEnv *env, jclass cl
 static jint netty_epoll_linuxsocket_openTunTapCloneDevice0(JNIEnv* env, jclass clazz, jstring cloneDevName) {
     const char* f_cloneDevName = (*env)->GetStringUTFChars(env, cloneDevName, 0);
 
+    // Open specific clone device.  Raise an IOException if an error occurs.
     int res = open(f_cloneDevName, O_RDWR|O_NONBLOCK|O_CLOEXEC);
     if (res < 0) {
-        res = -errno;
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "openTunTapCloneDevice() failed: ", errno);
     }
 
     (*env)->ReleaseStringUTFChars(env, cloneDevName, f_cloneDevName);
@@ -290,10 +293,10 @@ static jint netty_epoll_linuxsocket_allocTunTapInterface(JNIEnv *env, jclass cls
     ifr.ifr_flags = ((isTapDev) ? IFF_TAP : IFF_TUN);
     strncpy(ifr.ifr_name, f_ifName, IFNAMSIZ);
 
-    // Open/allocate the TUN/TAP device.
+    // Open/allocate the TUN/TAP device.  Raise an IOException if an error occurs.
     res = ioctl(cloneDevFD, TUNSETIFF, (void *)&ifr);
     if (res < 0) {
-        res = -errno;
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "allocTunTapInterface() failed: ", errno);
     }
 
     (*env)->ReleaseStringUTFChars(env, ifName, f_ifName);
@@ -320,9 +323,10 @@ static jlong netty_epoll_linuxsocket_readTunTapPacketAddress(JNIEnv *env, jclass
     if (res >= (jlong) sizeof(packetInfo)) {
 
         // If the packet was truncated because the receive buffer was too small,
-        // return ENOMEM to the caller.
+        // raise an IOException containing the error ENOMEM.
         if ((packetInfo.flags & TUN_PKT_STRIP) != 0) {
-            res = -ENOMEM;
+            netty_unix_errors_throwIOExceptionErrorNo(env, "readTunTapPacketAddress() failed: ", ENOMEM);
+            res = -1;
         }
 
         // Otherwise return the protocol type in the upper 16 bits and the length
@@ -335,14 +339,13 @@ static jlong netty_epoll_linuxsocket_readTunTapPacketAddress(JNIEnv *env, jclass
     }
 
     // If an error occurred, return to the caller empty-handed if the kernel signaled
-    // that no packet was available.  Otherwise, return the error code to the caller
-    // as a negative number.
+    // that no packet was available.  Otherwise, raise an IOException containing the error code.
     else if (res < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
             res = 0;
         }
         else {
-            res = -errno;
+            netty_unix_errors_throwIOExceptionErrorNo(env, "readTunTapPacketAddress() failed: ", errno);
         }
     }
 
@@ -362,7 +365,7 @@ static jlong netty_epoll_linuxsocket_readTunTapPacket(JNIEnv *env, jclass cls, j
     return netty_epoll_linuxsocket_readTunTapPacketAddress(env, cls, fd, (jlong)buf, pos, limit);
 }
 
-static jint netty_epoll_linuxsocket_writeTunTapPacketAddress(JNIEnv *env, jclass cls, jint fd, jint protocol, jlong addr, jint pos, jint limit) {
+static void netty_epoll_linuxsocket_writeTunTapPacketAddress(JNIEnv *env, jclass cls, jint fd, jint protocol, jlong addr, jint pos, jint limit) {
     jint res;
     struct iovec iov[2];
     struct tun_pi packetInfo;
@@ -381,17 +384,15 @@ static jint netty_epoll_linuxsocket_writeTunTapPacketAddress(JNIEnv *env, jclass
         res = (jint)writev((int)fd, iov, 2);
     } while (res < 0 && errno == EINTR);
 
-    // If an error occurred return the error code to the caller as a negative number.
+    // If an error occurred raise an IOException containing the error code.
     if (res < 0) {
-        res = -errno;
+        netty_unix_errors_throwIOExceptionErrorNo(env, "writeTunTapPacketAddress() failed: ", errno);
     }
-
-    return res;
 }
 
-static jint netty_epoll_linuxsocket_writeTunTapPacket(JNIEnv *env, jclass cls, jint fd, jint protocol, jobject jbuf, jint pos, jint limit) {
+static void netty_epoll_linuxsocket_writeTunTapPacket(JNIEnv *env, jclass cls, jint fd, jint protocol, jobject jbuf, jint pos, jint limit) {
     void *buf = (*env)->GetDirectBufferAddress(env, jbuf);
-    return netty_epoll_linuxsocket_writeTunTapPacketAddress(env, cls, fd, protocol, (jlong)buf, pos, limit);
+    netty_epoll_linuxsocket_writeTunTapPacketAddress(env, cls, fd, protocol, (jlong)buf, pos, limit);
 }
 
 // JNI Registered Methods End
@@ -425,8 +426,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "allocTunTapInterface", "(ILjava/lang/String;Z)I", (void *) netty_epoll_linuxsocket_allocTunTapInterface },
   { "readTunTapPacket", "(ILjava/nio/ByteBuffer;II)J", (void *) netty_epoll_linuxsocket_readTunTapPacket },
   { "readTunTapPacketAddress", "(IJII)J", (void *) netty_epoll_linuxsocket_readTunTapPacketAddress },
-  { "writeTunTapPacket", "(IILjava/nio/ByteBuffer;II)I", (void *) netty_epoll_linuxsocket_writeTunTapPacket },
-  { "writeTunTapPacketAddress", "(IIJII)I", (void *) netty_epoll_linuxsocket_writeTunTapPacketAddress },
+  { "writeTunTapPacket", "(IILjava/nio/ByteBuffer;II)V", (void *) netty_epoll_linuxsocket_writeTunTapPacket },
+  { "writeTunTapPacketAddress", "(IIJII)V", (void *) netty_epoll_linuxsocket_writeTunTapPacketAddress },
 };
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);

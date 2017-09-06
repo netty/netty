@@ -25,12 +25,12 @@ import static io.netty.channel.epoll.TunTapChannelOption.*;
 
 public class TunTapChannelConfig extends EpollChannelConfig {
 
-    private Integer _READ_BUF_SIZE    = 2048;
-    private static final RecvByteBufAllocator _DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
+    private Integer readBufSize = 2048;
+    private static final RecvByteBufAllocator defaultRcvBufAllocator = new FixedRecvByteBufAllocator(2048);
 
     public TunTapChannelConfig(AbstractEpollChannel channel) {
         super(channel);
-        setRecvByteBufAllocator(_DEFAULT_RCVBUF_ALLOCATOR);
+        setRecvByteBufAllocator(defaultRcvBufAllocator);
     }
 
     @Override
@@ -42,7 +42,7 @@ public class TunTapChannelConfig extends EpollChannelConfig {
     @Override
     public <T> T getOption(ChannelOption<T> option) {
         if (option == READ_BUF_SIZE) {
-            return (T) _READ_BUF_SIZE;
+            return (T) readBufSize;
         }
         return super.getOption(option);
     }
@@ -51,9 +51,9 @@ public class TunTapChannelConfig extends EpollChannelConfig {
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
         if (option == READ_BUF_SIZE) {
-            _READ_BUF_SIZE = (Integer) value;
+            readBufSize = (Integer) value;
             if (getRecvByteBufAllocator().getClass().equals(FixedRecvByteBufAllocator.class)) {
-                setRecvByteBufAllocator(new FixedRecvByteBufAllocator(_READ_BUF_SIZE));
+                setRecvByteBufAllocator(new FixedRecvByteBufAllocator(readBufSize));
             }
         } else {
             return super.setOption(option, value);
