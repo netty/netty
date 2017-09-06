@@ -144,6 +144,51 @@ final class LinuxSocket extends Socket {
         return new LinuxSocket(newSocketDomain0());
     }
 
+    public void writeTunTapPacket(int protocol, ByteBuffer buf, int pos, int maxLen) throws IOException {
+        int res = writeTunTapPacket(fd, protocol, buf, pos, maxLen);
+        if (res < 0) {
+            throw newIOException("writeTunTapPacket", res);
+        }
+    }
+
+    public void writeTunTapPacketAddress(int protocol, long addr, int pos, int maxLen) throws IOException {
+        int res = writeTunTapPacketAddress(fd, protocol, addr, pos, maxLen);
+        if (res < 0) {
+            throw newIOException("writeTunTapPacketAddress", res);
+        }
+    }
+
+    public long readTunTapPacket(ByteBuffer buf, int pos, int maxLen) throws IOException {
+        long res = readTunTapPacket(fd, buf, pos, maxLen);
+        if (res < 0) {
+            throw newIOException("readTunTapPacket", (int) res);
+        }
+        return res;
+    }
+
+    public long readTunTapPacketAddress(long addr, int pos, int maxLen) throws IOException {
+        long res = readTunTapPacketAddress(fd, addr, pos, maxLen);
+        if (res < 0) {
+            throw newIOException("readTunTapPacketAddress", (int) res);
+        }
+        return res;
+    }
+
+    public static Socket openTunTapCloneDevice(String cloneDevName) {
+        int res = openTunTapCloneDevice0(cloneDevName);
+        if (res < 0) {
+            throw new ChannelException(newIOException("openTunTapCloneDevice", res));
+        }
+        return new Socket(res);
+    }
+
+    public void allocTunTapInterface(String ifName, boolean isTapDev) {
+        int res = allocTunTapInterface(fd, ifName, isTapDev);
+        if (res < 0) {
+            throw new ChannelException(newIOException("allocTunTapInterface", res));
+        }
+    }
+
     private static native int getTcpDeferAccept(int fd) throws IOException;
     private static native int isTcpQuickAck(int fd) throws IOException;
     private static native int isTcpCork(int fd) throws IOException;
@@ -169,4 +214,14 @@ final class LinuxSocket extends Socket {
     private static native void setIpFreeBind(int fd, int freeBind) throws IOException;
     private static native void setIpTransparent(int fd, int transparent) throws IOException;
     private static native void setTcpMd5Sig(int fd, byte[] address, int scopeId, byte[] key) throws IOException;
+
+    private static native int openTunTapCloneDevice0(String cloneDevName);
+    private static native int allocTunTapInterface(int cloneDevFd, String ifName, boolean isTapDev);
+
+    public static native long readTunTapPacket(int fd, ByteBuffer buf, int pos, int limit) throws IOException;
+    public static native long readTunTapPacketAddress(int fd, long addr, int pos, int limit) throws IOException;
+    public static native int writeTunTapPacket(
+           int fd, int protocol, ByteBuffer buf, int pos, int limit) throws IOException;
+    public static native int writeTunTapPacketAddress(
+           int fd, int protocol, long addr, int pos, int limit) throws IOException;
 }
