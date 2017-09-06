@@ -160,15 +160,13 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
             return false;
         }
         DefaultHttp2GoAwayFrame other = (DefaultHttp2GoAwayFrame) o;
-        return super.equals(o) && errorCode == other.errorCode && content().equals(other.content())
-            && extraStreamIds == other.extraStreamIds;
+        return errorCode == other.errorCode && extraStreamIds == other.extraStreamIds && super.equals(other);
     }
 
     @Override
     public int hashCode() {
-        int hash = 237395317;
+        int hash = super.hashCode();
         hash = hash * 31 + (int) (errorCode ^ (errorCode >>> 32));
-        hash = hash * 31 + content().hashCode();
         hash = hash * 31 + extraStreamIds;
         return hash;
     }
