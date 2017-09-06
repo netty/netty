@@ -582,6 +582,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         ctx.fireExceptionCaught(cause);
     }
 
+    final boolean isWritable(DefaultHttp2FrameStream stream) {
+        Http2Stream s = stream.stream;
+        return s != null && connection().remote().flowController().isWritable(s);
+    }
+
     private final class Http2RemoteFlowControllerListener implements Http2RemoteFlowController.Listener {
         @Override
         public void writabilityChanged(Http2Stream stream) {
@@ -601,7 +606,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     static class DefaultHttp2FrameStream implements Http2FrameStream {
 
         private volatile int id = -1;
-        private volatile Http2Stream stream;
+        volatile Http2Stream stream;
 
         DefaultHttp2FrameStream setStreamAndProperty(PropertyKey streamKey, Http2Stream stream) {
             assert id == -1 || stream.id() == id;

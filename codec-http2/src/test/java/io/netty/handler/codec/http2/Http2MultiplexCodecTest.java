@@ -372,7 +372,7 @@ public class Http2MultiplexCodecTest {
         Http2StreamChannel childChannel = newOutboundStream();
         assertTrue(childChannel.isActive());
 
-        assertFalse(childChannel.isWritable());
+        assertTrue(childChannel.isWritable());
         childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
         parentChannel.flush();
 
