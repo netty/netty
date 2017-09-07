@@ -392,4 +392,8 @@ public final class InetUtils {
 
     public static final int ICMPV6_MESSAGE_TYPE_ECHO_REQUEST    = 128;
     public static final int ICMPV6_MESSAGE_TYPE_ECHO_REPLY      = 129;
+
+    private InetUtils() {
+        // Not accessible.
+    }
 }

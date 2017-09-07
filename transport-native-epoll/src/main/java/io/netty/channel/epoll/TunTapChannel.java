@@ -184,7 +184,7 @@ public class TunTapChannel extends AbstractEpollChannel {
 
     final class TunTapChannelUnsafe extends AbstractEpollUnsafe {
 
-        private final List<TunTapPacket> _rcvdPackets = new ArrayList<TunTapPacket>();
+        private final List<TunTapPacket> rcvdPackets = new ArrayList<TunTapPacket>();
 
         @Override
         public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
@@ -255,7 +255,7 @@ public class TunTapChannel extends AbstractEpollChannel {
 
                         // Allocate a TunTapPacket object containing the packet data and the protocol information.
                         TunTapPacket packet = new TunTapPacket(protocol, packetData);
-                        _rcvdPackets.add(packet);
+                        rcvdPackets.add(packet);
 
                         // Avoid releasing the packet data buffer now that its wrapped in a TunTapPacket.
                         packetData = null;
@@ -275,12 +275,12 @@ public class TunTapChannel extends AbstractEpollChannel {
                 ChannelPipeline pipeline = pipeline();
 
                 // For each received packet, fire a read event up the pipeline.
-                int packetCount = _rcvdPackets.size();
+                int packetCount = rcvdPackets.size();
                 for (int i = 0; i < packetCount; i ++) {
                     readPending = false;
-                    pipeline.fireChannelRead(_rcvdPackets.get(i));
+                    pipeline.fireChannelRead(rcvdPackets.get(i));
                 }
-                _rcvdPackets.clear();
+                rcvdPackets.clear();
 
                 // Tell the allocator handle the read is complete.
                 allocHandle.readComplete();
