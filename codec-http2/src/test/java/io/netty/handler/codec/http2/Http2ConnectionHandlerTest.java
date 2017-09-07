@@ -57,6 +57,7 @@ import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -214,6 +215,28 @@ public class Http2ConnectionHandlerTest {
     public void tearDown() throws Exception {
         if (handler != null) {
             handler.handlerRemoved(ctx);
+        }
+    }
+
+    @Test
+    public void onHttpServerUpgradeWithoutHandlerAdded() throws Exception {
+        handler = new Http2ConnectionHandlerBuilder().frameListener(new Http2FrameAdapter()).server(true).build();
+        try {
+            handler.onHttpServerUpgrade(new Http2Settings());
+            fail();
+        } catch (Http2Exception e) {
+            assertEquals(Http2Error.INTERNAL_ERROR, e.error());
+        }
+    }
+
+    @Test
+    public void onHttpClientUpgradeWithoutHandlerAdded() throws Exception {
+        handler = new Http2ConnectionHandlerBuilder().frameListener(new Http2FrameAdapter()).server(false).build();
+        try {
+            handler.onHttpClientUpgrade();
+            fail();
+        } catch (Http2Exception e) {
+            assertEquals(Http2Error.INTERNAL_ERROR, e.error());
         }
     }
 
