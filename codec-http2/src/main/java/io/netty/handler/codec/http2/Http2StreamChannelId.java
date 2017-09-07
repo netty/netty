@@ -56,7 +56,7 @@ final class Http2StreamChannelId implements ChannelId {
 
     @Override
     public int hashCode() {
-        return parentId.hashCode();
+        return id * 31 + parentId.hashCode();
     }
 
     @Override
