@@ -274,7 +274,14 @@ public final class DefaultChannelId implements ChannelId {
 
     @Override
     public boolean equals(Object obj) {
-        return this == obj || (obj instanceof DefaultChannelId && Arrays.equals(data, ((DefaultChannelId) obj).data));
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof DefaultChannelId)) {
+            return false;
+        }
+        DefaultChannelId other = (DefaultChannelId) obj;
+        return hashCode == other.hashCode && Arrays.equals(data, other.data);
     }
 
     @Override
