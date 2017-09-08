@@ -91,7 +91,7 @@ public class TunTapPacketLogger extends LoggingHandler {
         int protocol = packet.protocol();
         int ipPacketOffset = 0;
 
-        formatter.format("%s (protocol %s, len %d):\n",
+        formatter.format("%s (protocol %s, len %d):%n",
                 title,
                 TunTapPacket.getProtocolName(packet.protocol()),
                 packetData.readableBytes());
@@ -135,11 +135,11 @@ public class TunTapPacketLogger extends LoggingHandler {
         packetData.getBytes(readerIndex + headerOffset + 6, srcMACAddr);
         packetData.getBytes(readerIndex + headerOffset + 0, destMACAddr);
 
-        formatter.format("  Ethernet: src ");
+        formatter.format("%s", "  Ethernet: src ");
         formatMAC48(srcMACAddr, formatter);
-        formatter.format(", dest ");
+        formatter.format("%s", ", dest ");
         formatMAC48(destMACAddr, formatter);
-        formatter.format(", protocol %s\n", TunTapPacket.getProtocolName(protocol));
+        formatter.format(", protocol %s%n", TunTapPacket.getProtocolName(protocol));
     }
 
     private static void formatIPv4Header(ByteBuf packetData, int headerOffset, Formatter formatter) {
@@ -164,7 +164,7 @@ public class TunTapPacketLogger extends LoggingHandler {
 
         int transportProtocol = packetData.getUnsignedByte(readerIndex + headerOffset + 9);
 
-        formatter.format("  IPv4: src %s, dest %s, protocol %s\n",
+        formatter.format("  IPv4: src %s, dest %s, protocol %s%n",
                 srcAddr, destAddr, transportProtocolToString(transportProtocol));
     }
 
@@ -190,7 +190,7 @@ public class TunTapPacketLogger extends LoggingHandler {
 
         int transportProtocol = packetData.getUnsignedByte(readerIndex + headerOffset + 6);
 
-        formatter.format("  IPv6: src %s, dest %s, protocol %s\n",
+        formatter.format("  IPv6: src %s, dest %s, protocol %s%n",
                 srcAddr, destAddr, transportProtocolToString(transportProtocol));
     }
 

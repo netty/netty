@@ -347,8 +347,6 @@ public final class InetUtils {
     public static final int IPV4_HEADER_OFFSET_SOURCE_ADDR      = 12;
     public static final int IPV4_HEADER_OFFSET_DEST_ADDR        = 16;
 
-    public static final byte[] IPV6_LINK_LOCAL_PREFIX           = { (byte) 0xFE, (byte) 0x80, 0, 0, 0, 0, 0, 0 };
-
     public static final int IPV6_HEADER_LENGTH                  = 40;
     public static final int IPV6_HEADER_OFFSET_VERSION          = 0;
     public static final int IPV6_HEADER_OFFSET_PAYLOAD_LENGTH   = 4;

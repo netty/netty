@@ -157,7 +157,7 @@ import io.netty.channel.epoll.TunTapPacketLogger;
  *
  * debug=<true|false>
  *
- * Enable/disable verbose logging of server activity. Disabling debug logging is using running
+ * Enable/disable verbose logging of server activity. Disabling debug logging is useful when running
  * performance tests.  Defaults to true.
  *
  */
@@ -367,7 +367,7 @@ public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
                 throw new IllegalArgumentException();
             }
         } catch (Exception ex) {
-            System.err.println("Invalid value specified for thread-pool-size property: " +
+            logger.log(Level.SEVERE, "Invalid value specified for thread-pool-size property: " +
                     System.getProperty("thread-pool-size"));
             return false;
         }
@@ -378,7 +378,7 @@ public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
                 throw new IllegalArgumentException();
             }
         } catch (Exception ex) {
-            System.err.println("Invalid value specified for read-buf-size property: " +
+            logger.log(Level.SEVERE, "Invalid value specified for read-buf-size property: " +
                     System.getProperty("read-buf-size"));
             return false;
         }
@@ -394,59 +394,55 @@ public class TunEchoServer extends SimpleChannelInboundHandler<TunTapPacket> {
         return true;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+
+        logger = Logger.getLogger("");
+        logger.setLevel(Level.INFO);
+
+        logger.log(Level.INFO, "TunEchoServer starting");
 
         if (!readProps()) {
             return;
         }
 
-        System.out.println("TunEchoServer starting");
+        logger.setLevel(debug ? Level.INFO : Level.SEVERE);
 
-        try {
-            logger = Logger.getLogger("");
-            logger.setLevel(debug ? Level.FINEST : Level.SEVERE);
-
-            if (threadPoolSize > 0) {
-                threadPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadPoolSize);
-            }
-
-            final TunEchoServer server = new TunEchoServer();
-
-            EventLoopGroup group = new EpollEventLoopGroup(1);
-
-            ChannelFactory<Channel> channelFactory = new ChannelFactory<Channel>() {
-                @Override
-                public Channel newChannel() {
-                    try {
-                        Channel channel = new TunTapChannel();
-                        if (debug) {
-                            channel.pipeline().addLast(new TunTapPacketLogger());
-                        }
-                        return channel;
-                    } catch (Throwable t) {
-                        throw new ChannelException("Unable to create TunTapChannel", t);
-                    }
-                }
-            };
-
-            Bootstrap bootstrap = new Bootstrap()
-                .group(group)
-                .channelFactory(channelFactory)
-                .option(ChannelOption.ALLOCATOR, bufAllocator)
-                .option(TunTapChannelOption.READ_BUF_SIZE, readBufSize)
-                .handler(server);
-
-            final TunTapChannel channel =
-                    (TunTapChannel) bootstrap.bind(new TunAddress(tunDeviceName)).sync().channel();
-
-            System.out.println("TunEchoServer ready");
-
-            channel.closeFuture().await();
-        } catch (Exception ex) {
-            logger.log(Level.SEVERE, "Exception in TunEchoServer", ex);
+        if (threadPoolSize > 0) {
+            threadPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadPoolSize);
         }
 
-        System.out.println("TunEchoServer exiting");
+        final TunEchoServer server = new TunEchoServer();
+
+        EventLoopGroup group = new EpollEventLoopGroup(1);
+
+        ChannelFactory<Channel> channelFactory = new ChannelFactory<Channel>() {
+            @Override
+            public Channel newChannel() {
+                try {
+                    Channel channel = new TunTapChannel();
+                    if (debug) {
+                        channel.pipeline().addLast(new TunTapPacketLogger());
+                    }
+                    return channel;
+                } catch (Throwable t) {
+                    throw new ChannelException("Unable to create TunTapChannel", t);
+                }
+            }
+        };
+
+        Bootstrap bootstrap = new Bootstrap()
+            .group(group)
+            .channelFactory(channelFactory)
+            .option(ChannelOption.ALLOCATOR, bufAllocator)
+            .option(TunTapChannelOption.READ_BUF_SIZE, readBufSize)
+            .handler(server);
+
+        final TunTapChannel channel =
+                (TunTapChannel) bootstrap.bind(new TunAddress(tunDeviceName)).sync().channel();
+
+        logger.log(Level.INFO, "TunEchoServer ready");
+
+        channel.closeFuture().await();
     }
 
 }
