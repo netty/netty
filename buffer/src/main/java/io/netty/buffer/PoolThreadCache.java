@@ -71,10 +71,6 @@ final class PoolThreadCache {
             throw new IllegalArgumentException("maxCachedBufferCapacity: "
                     + maxCachedBufferCapacity + " (expected: >= 0)");
         }
-        if (freeSweepAllocationThreshold < 1) {
-            throw new IllegalArgumentException("freeSweepAllocationThreshold: "
-                    + freeSweepAllocationThreshold + " (expected: > 0)");
-        }
         this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
         this.heapArena = heapArena;
         this.directArena = directArena;
@@ -119,6 +115,11 @@ final class PoolThreadCache {
         // We only need to watch the thread when any cache is used.
         if (tinySubPageDirectCaches != null || smallSubPageDirectCaches != null || normalDirectCaches != null
                 || tinySubPageHeapCaches != null || smallSubPageHeapCaches != null || normalHeapCaches != null) {
+            // Only check freeSweepAllocationThreshold when there are caches in use.
+            if (freeSweepAllocationThreshold < 1) {
+                throw new IllegalArgumentException("freeSweepAllocationThreshold: "
+                        + freeSweepAllocationThreshold + " (expected: > 0)");
+            }
             freeTask = new Runnable() {
                 @Override
                 public void run() {
@@ -139,7 +140,7 @@ final class PoolThreadCache {
 
     private static <T> MemoryRegionCache<T>[] createSubPageCaches(
             int cacheSize, int numCaches, SizeClass sizeClass) {
-        if (cacheSize > 0) {
+        if (cacheSize > 0 && numCaches > 0) {
             @SuppressWarnings("unchecked")
             MemoryRegionCache<T>[] cache = new MemoryRegionCache[numCaches];
             for (int i = 0; i < cache.length; i++) {
@@ -154,7 +155,7 @@ final class PoolThreadCache {
 
     private static <T> MemoryRegionCache<T>[] createNormalCaches(
             int cacheSize, int maxCachedBufferCapacity, PoolArena<T> area) {
-        if (cacheSize > 0) {
+        if (cacheSize > 0 && maxCachedBufferCapacity > 0) {
             int max = Math.min(area.chunkSize, maxCachedBufferCapacity);
             int arraySize = Math.max(1, log2(max / area.pageSize) + 1);
 

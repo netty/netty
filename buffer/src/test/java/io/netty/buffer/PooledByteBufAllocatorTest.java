@@ -78,6 +78,24 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
+    public void testWithoutUseCacheForAllThreads() {
+        assertFalse(Thread.currentThread() instanceof FastThreadLocalThread);
+
+        PooledByteBufAllocator pool = new PooledByteBufAllocator(
+                /*preferDirect=*/ false,
+                /*nHeapArena=*/ 1,
+                /*nDirectArena=*/ 1,
+                /*pageSize=*/8192,
+                /*maxOrder=*/ 11,
+                /*tinyCacheSize=*/ 0,
+                /*smallCacheSize=*/ 0,
+                /*normalCacheSize=*/ 0,
+                /*useCacheForAllThreads=*/ false);
+        ByteBuf buf = pool.buffer(1);
+        buf.release();
+    }
+
+    @Test
     public void testArenaMetricsNoCache() {
         testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 11, 0, 0, 0), 100, 0, 100, 100);
     }
