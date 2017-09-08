@@ -15,211 +15,87 @@
  */
 package io.netty.util.internal.logging;
 
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.message.Message;
+import org.apache.logging.log4j.spi.ExtendedLoggerWrapper;
+import org.hamcrest.CoreMatchers;
+import org.junit.Assume;
+import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import io.netty.util.internal.ReflectionUtil;
 
-public class Log4J2LoggerTest {
-    private static final Exception e = new Exception();
+/**
+ * {@linkplain Log4J2Logger} extends {@linkplain ExtendedLoggerWrapper} implements {@linkplain InternalLogger}.<br>
+ * {@linkplain ExtendedLoggerWrapper} is Log4j2 wrapper class to support wrapped loggers,
+ * so There is no need to test it's method.<br>
+ * We only need to test the netty's {@linkplain InternalLogger} interface method.<br>
+ * It's meaning that we only need to test the Override method in the {@linkplain Log4J2Logger}.
+ */
+public class Log4J2LoggerTest extends AbstractInternalLoggerTest<Logger> {
 
-    @Test
-    public void testIsTraceEnabled() {
-        Logger mock = mock(Logger.class);
+    {
+        mockLog = LogManager.getLogger(loggerName);
+        logger = new Log4J2Logger(mockLog) {
+            private static final long serialVersionUID = 1L;
 
-        when(mock.getName()).thenReturn("foo");
-        when(mock.isTraceEnabled()).thenReturn(true);
-        InternalLogger logger = new Log4J2Logger(mock);
-        assertTrue(logger.isTraceEnabled());
-
-        verify(mock).getName();
-        verify(mock).isTraceEnabled();
+            @Override
+            public void logMessage(String fqcn, Level level, Marker marker, Message message, Throwable t) {
+                result.put("level", level.name());
+                result.put("t", t);
+                super.logMessage(fqcn, level, marker, message, t);
+            };
+        };
     }
 
     @Test
-    public void testIsDebugEnabled() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-        when(mock.isDebugEnabled()).thenReturn(true);
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        assertTrue(logger.isDebugEnabled());
-
-        verify(mock).getName();
-        verify(mock).isDebugEnabled();
+    public void testEXCEPTION_MESSAGE() {
+        assertEquals(getFieldValue(AbstractInternalLogger.class, "EXCEPTION_MESSAGE"),
+                getFieldValue(Log4J2Logger.class, "EXCEPTION_MESSAGE"));
     }
 
-    @Test
-    public void testIsInfoEnabled() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-        when(mock.isInfoEnabled()).thenReturn(true);
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        assertTrue(logger.isInfoEnabled());
-
-        verify(mock).getName();
-        verify(mock).isInfoEnabled();
+    @SuppressWarnings("unchecked")
+    private static <T> T getFieldValue(Class<?> clazz, String fieldName) {
+        try {
+            Field field = clazz.getDeclaredField(fieldName);
+            if (!field.isAccessible()) {
+                Assume.assumeThat(ReflectionUtil.trySetAccessible(field), CoreMatchers.nullValue());
+            }
+            return (T) field.get(AbstractInternalLogger.class);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
-    @Test
-    public void testIsWarnEnabled() {
-        Logger mock = mock(Logger.class);
+    @Override
+    protected void setLevelEnable(InternalLogLevel level, boolean enable) throws Exception {
+        Level targetLevel = Level.valueOf(level.name());
+        if (!enable) {
+            Level[] levels = Level.values();
+            Arrays.sort(levels);
+            int pos = Arrays.binarySearch(levels, targetLevel);
+            targetLevel = levels[pos - 1];
+        }
 
-        when(mock.getName()).thenReturn("foo");
-        when(mock.isWarnEnabled()).thenReturn(true);
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        assertTrue(logger.isWarnEnabled());
-
-        verify(mock).getName();
-        verify(mock).isWarnEnabled();
+        Method method = mockLog.getClass().getDeclaredMethod("setLevel", Level.class);
+        if (!method.isAccessible()) {
+            Assume.assumeThat(ReflectionUtil.trySetAccessible(method), CoreMatchers.nullValue());
+        }
+        method.invoke(mockLog, targetLevel);
     }
 
-    @Test
-    public void testIsErrorEnabled() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-        when(mock.isErrorEnabled()).thenReturn(true);
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        assertTrue(logger.isErrorEnabled());
-
-        verify(mock).getName();
-        verify(mock).isErrorEnabled();
-    }
-
-    @Test
-    public void testTrace() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        logger.trace("a");
-
-        verify(mock).getName();
-        verify(mock).trace("a");
-    }
-
-    @Test
-    public void testTraceWithException() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        logger.trace("a", e);
-
-        verify(mock).getName();
-        verify(mock).trace("a", e);
-    }
-
-    @Test
-    public void testDebug() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        logger.debug("a");
-
-        verify(mock).getName();
-        verify(mock).debug("a");
-    }
-
-    @Test
-    public void testDebugWithException() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        logger.debug("a", e);
-
-        verify(mock).getName();
-        verify(mock).debug("a", e);
-    }
-
-    @Test
-    public void testInfo() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        logger.info("a");
-
-        verify(mock).getName();
-        verify(mock).info("a");
-    }
-
-    @Test
-    public void testInfoWithException() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        logger.info("a", e);
-
-        verify(mock).getName();
-        verify(mock).info("a", e);
-    }
-
-    @Test
-    public void testWarn() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        logger.warn("a");
-
-        verify(mock).getName();
-        verify(mock).warn("a");
-    }
-
-    @Test
-    public void testWarnWithException() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        logger.warn("a", e);
-
-        verify(mock).getName();
-        verify(mock).warn("a", e);
-    }
-
-    @Test
-    public void testError() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        logger.error("a");
-
-        verify(mock).getName();
-        verify(mock).error("a");
-    }
-
-    @Test
-    public void testErrorWithException() {
-        Logger mock = mock(Logger.class);
-
-        when(mock.getName()).thenReturn("foo");
-
-        InternalLogger logger = new Log4J2Logger(mock);
-        logger.error("a", e);
-
-        verify(mock).getName();
-        verify(mock).error("a", e);
+    @Override
+    protected void assertResult(InternalLogLevel level, String format, Throwable t, Object... args) {
+        super.assertResult(level, format, t, args);
+        assertEquals(t, result.get("t"));
+        assertEquals(level.name(), result.get("level"));
     }
 }
