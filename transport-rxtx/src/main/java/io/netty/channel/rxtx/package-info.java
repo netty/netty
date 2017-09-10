@@ -16,5 +16,8 @@
 
 /**
  * A serial and parallel port communication transport based on <a href="http://rxtx.qbang.org/">RXTX</a>.
+ *
+ * @deprecated this transport will be removed in the next major version.
  */
+@Deprecated
 package io.netty.channel.rxtx;
