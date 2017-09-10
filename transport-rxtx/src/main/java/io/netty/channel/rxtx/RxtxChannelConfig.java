@@ -48,7 +48,10 @@ import io.netty.channel.RecvByteBufAllocator;
  * <td>{@link RxtxChannelOption#WAIT_TIME}</td><td>{@link #setWaitTimeMillis(int)}</td>
  * </tr>
  * </table>
+ *
+ * @deprecated this transport will be removed in the next major version.
  */
+@Deprecated
 public interface RxtxChannelConfig extends ChannelConfig {
     enum Stopbits {
         /**

@@ -28,7 +28,10 @@ import static io.netty.channel.rxtx.RxtxChannelOption.*;
 
 /**
  * A channel to a serial device using the RXTX library.
+ *
+ * @deprecated this transport will be removed in the next major version.
  */
+@Deprecated
 public class RxtxChannel extends OioByteStreamChannel {
 
     private static final RxtxDeviceAddress LOCAL_ADDRESS = new RxtxDeviceAddress("localhost");
