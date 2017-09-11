@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -26,7 +26,7 @@ import java.util.Map;
 import org.junit.Test;
 
 /**
- * We only need to test the netty's {@linkplain InternalLogger} interface method.
+ * We only need to test methods defined by {@link InternaLogger}.
  */
 public abstract class AbstractInternalLoggerTest<T> {
     protected String loggerName = "foo";
