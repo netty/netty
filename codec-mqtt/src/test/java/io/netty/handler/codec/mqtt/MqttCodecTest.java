@@ -121,6 +121,17 @@ public class MqttCodecTest {
     }
 
     @Test
+    public void testConnectMessageNoPassword() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(MqttVersion.MQTT_3_1_1, null, PASSWORD);
+
+        try {
+            ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
+        } catch (Exception cause) {
+            assertTrue(cause instanceof DecoderException);
+        }
+    }
+
+    @Test
     public void testConnAckMessage() throws Exception {
         final MqttConnAckMessage message = createConnAckMessage();
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
@@ -313,11 +324,15 @@ public class MqttCodecTest {
     }
 
     private static MqttConnectMessage createConnectMessage(MqttVersion mqttVersion) {
+        return createConnectMessage(mqttVersion, USER_NAME, PASSWORD);
+    }
+
+    private static MqttConnectMessage createConnectMessage(MqttVersion mqttVersion, String username, String password) {
         return MqttMessageBuilders.connect()
                 .clientId(CLIENT_ID)
                 .protocolVersion(mqttVersion)
-                .username(USER_NAME)
-                .password(PASSWORD)
+                .username(username)
+                .password(password)
                 .willRetain(true)
                 .willQoS(MqttQoS.AT_LEAST_ONCE)
                 .willFlag(true)
