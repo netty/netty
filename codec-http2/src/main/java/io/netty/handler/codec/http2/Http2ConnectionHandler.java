@@ -156,8 +156,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (connection().isServer()) {
             throw connectionError(PROTOCOL_ERROR, "Client-side HTTP upgrade requested for a server");
         }
-        if (prefaceSent() || decoder.prefaceReceived()) {
-            throw connectionError(PROTOCOL_ERROR, "HTTP upgrade must occur before HTTP/2 preface is sent or received");
+        if (!prefaceSent()) {
+            // If the preface was not sent yet it most likely means the handler was not added to the pipeline before
+            // calling this method.
+            throw connectionError(INTERNAL_ERROR, "HTTP upgrade must occur after preface was sent");
+        }
+        if (decoder.prefaceReceived()) {
+            throw connectionError(PROTOCOL_ERROR, "HTTP upgrade must occur before HTTP/2 preface is received");
         }
 
         // Create a local stream used for the HTTP cleartext upgrade.
@@ -172,8 +177,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (!connection().isServer()) {
             throw connectionError(PROTOCOL_ERROR, "Server-side HTTP upgrade requested for a client");
         }
-        if (prefaceSent() || decoder.prefaceReceived()) {
-            throw connectionError(PROTOCOL_ERROR, "HTTP upgrade must occur before HTTP/2 preface is sent or received");
+        if (!prefaceSent()) {
+            // If the preface was not sent yet it most likely means the handler was not added to the pipeline before
+            // calling this method.
+            throw connectionError(INTERNAL_ERROR, "HTTP upgrade must occur after preface was sent");
+        }
+        if (decoder.prefaceReceived()) {
+            throw connectionError(PROTOCOL_ERROR, "HTTP upgrade must occur before HTTP/2 preface is received");
         }
 
         // Apply the settings but no ACK is necessary.
