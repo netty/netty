@@ -126,7 +126,7 @@ public class MqttCodecTest {
 
         try {
             ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
-        } catch(Exception cause) {
+        } catch (Exception cause) {
             assertTrue(cause instanceof DecoderException);
         }
     }
