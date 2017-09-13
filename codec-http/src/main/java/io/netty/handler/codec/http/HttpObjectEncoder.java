@@ -92,12 +92,16 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             buf = ctx.alloc().buffer((int) headersEncodedSizeAccumulator);
             // Encode the message.
             encodeInitialLine(buf, m);
-            encodeHeaders(m.headers(), buf);
-            headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
-                                            HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
-            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
             state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
                     HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
+
+            sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
+
+            encodeHeaders(m.headers(), buf);
+            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+
+            headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
+                                            HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
         }
 
         // Bypass the encoder in case of an empty buffer, so that the following idiom works:
@@ -208,6 +212,13 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             // IllegalStateException will be thrown
             out.add(EMPTY_BUFFER);
         }
+    }
+
+    /**
+     * Allows to sanitize headers of the message before encoding these.
+     */
+    protected void sanitizeHeadersBeforeEncode(@SuppressWarnings("unused") H msg, boolean isAlwaysEmpty) {
+        // noop
     }
 
     /**

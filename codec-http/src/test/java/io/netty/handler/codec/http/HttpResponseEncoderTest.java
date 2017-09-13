@@ -195,4 +195,111 @@ public class HttpResponseEncoderTest {
 
         assertFalse(channel.finish());
     }
+
+    @Test
+    public void testStatusNoContent() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        assertEmptyResponse(channel, HttpResponseStatus.NO_CONTENT, null, false);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testStatusNoContentContentLength() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        assertEmptyResponse(channel, HttpResponseStatus.NO_CONTENT, HttpHeaderNames.CONTENT_LENGTH, true);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testStatusNoContentTransferEncoding() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        assertEmptyResponse(channel, HttpResponseStatus.NO_CONTENT, HttpHeaderNames.TRANSFER_ENCODING, true);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testStatusNotModified() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        assertEmptyResponse(channel, HttpResponseStatus.NOT_MODIFIED, null, false);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testStatusNotModifiedContentLength() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        assertEmptyResponse(channel, HttpResponseStatus.NOT_MODIFIED, HttpHeaderNames.CONTENT_LENGTH, false);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testStatusNotModifiedTransferEncoding() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        assertEmptyResponse(channel, HttpResponseStatus.NOT_MODIFIED, HttpHeaderNames.TRANSFER_ENCODING, false);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testStatusInformational() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        for (int code = 100; code < 200; code++) {
+            HttpResponseStatus status = HttpResponseStatus.valueOf(code);
+            assertEmptyResponse(channel, status, null, false);
+        }
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testStatusInformationalContentLength() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        for (int code = 100; code < 200; code++) {
+            HttpResponseStatus status = HttpResponseStatus.valueOf(code);
+            assertEmptyResponse(channel, status, HttpHeaderNames.CONTENT_LENGTH, code != 101);
+        }
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testStatusInformationalTransferEncoding() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        for (int code = 100; code < 200; code++) {
+            HttpResponseStatus status = HttpResponseStatus.valueOf(code);
+            assertEmptyResponse(channel, status, HttpHeaderNames.TRANSFER_ENCODING, code != 101);
+        }
+        assertFalse(channel.finish());
+    }
+
+    private static void assertEmptyResponse(EmbeddedChannel channel, HttpResponseStatus status,
+                                            CharSequence headerName, boolean headerStripped) {
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+        if (HttpHeaderNames.CONTENT_LENGTH.contentEquals(headerName)) {
+            response.headers().set(headerName, "0");
+        } else if (HttpHeaderNames.TRANSFER_ENCODING.contentEquals(headerName)) {
+            response.headers().set(headerName, HttpHeaderValues.CHUNKED);
+        }
+
+        assertTrue(channel.writeOutbound(response));
+        assertTrue(channel.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+
+        ByteBuf buffer = channel.readOutbound();
+        StringBuilder responseText = new StringBuilder();
+        responseText.append(HttpVersion.HTTP_1_1.toString()).append(' ').append(status.toString()).append("\r\n");
+        if (!headerStripped && headerName != null) {
+            responseText.append(headerName).append(": ");
+
+            if (HttpHeaderNames.CONTENT_LENGTH.contentEquals(headerName)) {
+                responseText.append('0');
+            } else {
+                responseText.append(HttpHeaderValues.CHUNKED.toString());
+            }
+            responseText.append("\r\n");
+        }
+        responseText.append("\r\n");
+
+        assertEquals(responseText.toString(), buffer.toString(CharsetUtil.US_ASCII));
+
+        buffer.release();
+
+        buffer = channel.readOutbound();
+        buffer.release();
+    }
 }
