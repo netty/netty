@@ -53,12 +53,6 @@ public abstract class AbstractInternalLoggerTest<T> {
         testLevel(InternalLogLevel.ERROR);
     }
 
-    /**
-     * <h5>when {@linkplain #logger}'s level is disable</h5> test is`level`Enabled() == false<br>
-     * test all logMethod(trace, info, ...) of the level, has no {@linkplain #result}<br>
-     * <h5>when {@linkplain #logger}'s level is enable</h5> test is`level`Enabled() == true<br>
-     * test all logMethod(trace, info, ...) of the level, the {@linkplain #result} is expected.<br>
-     */
     protected void testLevel(InternalLogLevel level) throws Exception {
         result.clear();
 

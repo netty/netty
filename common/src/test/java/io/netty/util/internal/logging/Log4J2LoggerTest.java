@@ -16,7 +16,6 @@
 package io.netty.util.internal.logging;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -27,6 +26,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.message.Message;
+import org.apache.logging.log4j.spi.ExtendedLoggerWrapper;
+import org.hamcrest.CoreMatchers;
+import org.junit.Assume;
 import org.junit.Test;
 
 import io.netty.util.internal.ReflectionUtil;
@@ -65,11 +67,11 @@ public class Log4J2LoggerTest extends AbstractInternalLoggerTest<Logger> {
         try {
             Field field = clazz.getDeclaredField(fieldName);
             if (!field.isAccessible()) {
-                assertNull(ReflectionUtil.trySetAccessible(field));
+                Assume.assumeThat(ReflectionUtil.trySetAccessible(field), CoreMatchers.nullValue());
             }
             return (T) field.get(AbstractInternalLogger.class);
         } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
         }
     }
 
@@ -85,7 +87,7 @@ public class Log4J2LoggerTest extends AbstractInternalLoggerTest<Logger> {
 
         Method method = mockLog.getClass().getDeclaredMethod("setLevel", Level.class);
         if (!method.isAccessible()) {
-            assertNull(ReflectionUtil.trySetAccessible(method));
+            Assume.assumeThat(ReflectionUtil.trySetAccessible(method), CoreMatchers.nullValue());
         }
         method.invoke(mockLog, targetLevel);
     }
