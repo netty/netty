@@ -37,4 +37,42 @@ public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
         response.getStatus().encode(buf);
         buf.writeBytes(CRLF);
     }
+
+    @Override
+    protected void sanitizeHeadersBeforeEncode(HttpResponse msg, boolean isAlwaysEmpty) {
+        if (isAlwaysEmpty) {
+            int status = msg.getStatus().code();
+            if ((status >= 100 && status <= 199) ||
+                    status == HttpResponseStatus.NO_CONTENT.code()) {
+
+                // Stripping Content-Length:
+                // See https://tools.ietf.org/html/rfc7230#section-3.3.2
+                msg.headers().remove(HttpHeaders.Names.CONTENT_LENGTH);
+
+                // Stripping Transfer-Encoding:
+                // See https://tools.ietf.org/html/rfc7230#section-3.3.1
+                msg.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
+            }
+        }
+    }
+
+    @Override
+    protected boolean isContentAlwaysEmpty(HttpResponse msg) {
+        // Correctly handle special cases as stated in:
+        // https://tools.ietf.org/html/rfc7230#section-3.3.3
+        int status = msg.getStatus().code();
+
+        if (status >= 100 && status <= 199) {
+
+            if (status == HttpResponseStatus.SWITCHING_PROTOCOLS.code()) {
+                // We need special handling for WebSockets version 00 as it will include an body.
+                // Fortunally this version should not really be used in the wild very often.
+                // See https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00#section-1.2
+                return msg.headers().contains(HttpHeaders.Names.SEC_WEBSOCKET_VERSION);
+            }
+            return true;
+        }
+        return status == HttpResponseStatus.NO_CONTENT.code() ||
+                status == HttpResponseStatus.NOT_MODIFIED.code();
+    }
 }

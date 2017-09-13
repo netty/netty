@@ -102,9 +102,25 @@ public final class HttpServerCodec
 
     private final class HttpServerResponseEncoder extends HttpResponseEncoder {
 
+        private HttpMethod method;
+
         @Override
-        boolean isContentAlwaysEmpty(@SuppressWarnings("unused") HttpResponse msg) {
-            return HttpMethod.HEAD.equals(queue.poll());
+        protected void sanitizeHeadersBeforeEncode(HttpResponse msg, boolean isAlwaysEmpty) {
+            int code = msg.getStatus().code();
+            if (!isAlwaysEmpty && method == HttpMethod.CONNECT && code >= 200 && code <= 299) {
+                // Stripping Transfer-Encoding:
+                // See https://tools.ietf.org/html/rfc7230#section-3.3.1
+                msg.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
+                return;
+            }
+
+            super.sanitizeHeadersBeforeEncode(msg, isAlwaysEmpty);
+        }
+
+        @Override
+        protected boolean isContentAlwaysEmpty(@SuppressWarnings("unused") HttpResponse msg) {
+            method = queue.poll();
+            return HttpMethod.HEAD.equals(method) || super.isContentAlwaysEmpty(msg);
         }
     }
 }

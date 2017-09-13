@@ -86,12 +86,16 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             buf = ctx.alloc().buffer((int) headersEncodedSizeAccumulator);
             // Encode the message.
             encodeInitialLine(buf, m);
-            encodeHeaders(m.headers(), buf);
-            headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
-                                            HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
-            buf.writeBytes(CRLF);
             state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
                     HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
+
+            sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
+
+            encodeHeaders(m.headers(), buf);
+            buf.writeBytes(CRLF);
+
+            headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
+                                            HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
         }
 
         // Bypass the encoder in case of an empty buffer, so that the following idiom works:
@@ -199,7 +203,21 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
     }
 
-    boolean isContentAlwaysEmpty(@SuppressWarnings("unused") H msg) {
+    /**
+     * Allows to sanitize headers of the message before encoding these.
+     */
+    protected void sanitizeHeadersBeforeEncode(@SuppressWarnings("unused") H msg, boolean isAlwaysEmpty) {
+        // noop
+    }
+
+    /**
+     * Determine whether a message has a content or not. Some message may have headers indicating
+     * a content without having an actual content, e.g the response to an HEAD or CONNECT request.
+     *
+     * @param msg the message to test
+     * @return {@code true} to signal the message has no content
+     */
+    protected boolean isContentAlwaysEmpty(@SuppressWarnings("unused") H msg) {
         return false;
     }
 
