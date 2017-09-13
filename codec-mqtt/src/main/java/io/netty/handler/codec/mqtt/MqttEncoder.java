@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.EmptyArrays;
@@ -101,6 +102,11 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         MqttConnectPayload payload = message.payload();
         MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(variableHeader.name(),
                 (byte) variableHeader.version());
+
+        // as MQTT 3.1 & 3.1.1 spec, If the User Name Flag is set to 0, the Password Flag MUST be set to 0
+        if (!variableHeader.hasUserName() && variableHeader.hasPassword()) {
+            throw new DecoderException("Without a username, the password MUST be not set");
+        }
 
         // Client id
         String clientIdentifier = payload.clientIdentifier();
