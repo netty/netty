@@ -167,4 +167,22 @@ public class LineBasedFrameDecoderTest {
         buf.release();
         buf2.release();
     }
+
+    @Test
+    public void testEmptyLine() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, true, false));
+
+        assertTrue(ch.writeInbound(copiedBuffer("\nabcna\r\n", CharsetUtil.US_ASCII)));
+
+        ByteBuf buf = ch.readInbound();
+        assertEquals("", buf.toString(CharsetUtil.US_ASCII));
+
+        ByteBuf buf2 = ch.readInbound();
+        assertEquals("abcna", buf2.toString(CharsetUtil.US_ASCII));
+
+        assertFalse(ch.finishAndReleaseAll());
+
+        buf.release();
+        buf2.release();
+    }
 }
