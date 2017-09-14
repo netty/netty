@@ -15,166 +15,116 @@
  */
 package io.netty.util.internal.logging;
 
-import org.apache.logging.log4j.Logger;
+import java.io.ObjectStreamException;
 
-final class Log4J2Logger extends AbstractInternalLogger {
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.spi.AbstractLogger;
+import org.apache.logging.log4j.spi.ExtendedLogger;
+import org.apache.logging.log4j.spi.ExtendedLoggerWrapper;
+
+/**
+ * see {@linkplain AbstractLogger}: <blockquote>
+ * Base implementation of a Logger.
+ * It is highly recommended that any Logger implementation extend this class.</blockquote>
+ * And {@linkplain AbstractLogger#FQCN}
+ * <blockquote>private static final String FQCN = AbstractLogger.class.getName()</blockquote>
+ * so if log the right FQCN when logging, your Logger must be extend from AbstractLogger.
+ * <blockquote>class AbstractLogger implements ExtendedLogger, Serializable</blockquote>
+ * so new Log4J2Logger(Logger) The code won't throw ClassCastException in here.
+ */
+class Log4J2Logger extends ExtendedLoggerWrapper implements InternalLogger {
 
     private static final long serialVersionUID = 5485418394879791397L;
 
-    private final transient Logger logger;
+    /** {@linkplain io.netty.util.internal.logging.AbstractInternalLogger#EXCEPTION_MESSAGE} */
+    private static final String EXCEPTION_MESSAGE = "Unexpected exception:";
 
     Log4J2Logger(Logger logger) {
-        super(logger.getName());
-        this.logger = logger;
+        super((ExtendedLogger) logger, logger.getName(), logger.getMessageFactory());
     }
 
     @Override
-    public boolean isTraceEnabled() {
-        return logger.isTraceEnabled();
+    public String name() {
+        return getName();
     }
 
     @Override
-    public void trace(String msg) {
-        logger.trace(msg);
+    public void trace(Throwable t) {
+        log(Level.TRACE, EXCEPTION_MESSAGE, t);
     }
 
     @Override
-    public void trace(String format, Object arg) {
-        logger.trace(format, arg);
+    public void debug(Throwable t) {
+        log(Level.DEBUG, EXCEPTION_MESSAGE, t);
     }
 
     @Override
-    public void trace(String format, Object argA, Object argB) {
-        logger.trace(format, argA, argB);
+    public void info(Throwable t) {
+        log(Level.INFO, EXCEPTION_MESSAGE, t);
     }
 
     @Override
-    public void trace(String format, Object... arguments) {
-        logger.trace(format, arguments);
+    public void warn(Throwable t) {
+        log(Level.WARN, EXCEPTION_MESSAGE, t);
     }
 
     @Override
-    public void trace(String msg, Throwable t) {
-        logger.trace(msg, t);
+    public void error(Throwable t) {
+        log(Level.ERROR, EXCEPTION_MESSAGE, t);
     }
 
     @Override
-    public boolean isDebugEnabled() {
-        return logger.isDebugEnabled();
+    public boolean isEnabled(InternalLogLevel level) {
+        return isEnabled(toLevel(level));
     }
 
     @Override
-    public void debug(String msg) {
-        logger.debug(msg);
+    public void log(InternalLogLevel level, String msg) {
+        log(toLevel(level), msg);
     }
 
     @Override
-    public void debug(String format, Object arg) {
-        logger.debug(format, arg);
+    public void log(InternalLogLevel level, String format, Object arg) {
+        log(toLevel(level), format, arg);
     }
 
     @Override
-    public void debug(String format, Object argA, Object argB) {
-        logger.debug(format, argA, argB);
+    public void log(InternalLogLevel level, String format, Object argA, Object argB) {
+        log(toLevel(level), format, argA, argB);
     }
 
     @Override
-    public void debug(String format, Object... arguments) {
-        logger.debug(format, arguments);
+    public void log(InternalLogLevel level, String format, Object... arguments) {
+        log(toLevel(level), format, arguments);
     }
 
     @Override
-    public void debug(String msg, Throwable t) {
-        logger.debug(msg, t);
+    public void log(InternalLogLevel level, String msg, Throwable t) {
+        log(toLevel(level), msg, t);
     }
 
     @Override
-    public boolean isInfoEnabled() {
-        return logger.isInfoEnabled();
+    public void log(InternalLogLevel level, Throwable t) {
+        log(toLevel(level), EXCEPTION_MESSAGE, t);
     }
 
-    @Override
-    public void info(String msg) {
-        logger.info(msg);
+    protected Level toLevel(InternalLogLevel level) {
+        if (InternalLogLevel.TRACE == level) {
+            return Level.TRACE;
+        } else if (InternalLogLevel.DEBUG == level) {
+            return Level.DEBUG;
+        } else if (InternalLogLevel.INFO == level) {
+            return Level.INFO;
+        } else if (InternalLogLevel.WARN == level) {
+            return Level.WARN;
+        } else if (InternalLogLevel.ERROR == level) {
+            return Level.ERROR;
+        }
+        throw new Error();
     }
 
-    @Override
-    public void info(String format, Object arg) {
-        logger.info(format, arg);
-    }
-
-    @Override
-    public void info(String format, Object argA, Object argB) {
-        logger.info(format, argA, argB);
-    }
-
-    @Override
-    public void info(String format, Object... arguments) {
-        logger.info(format, arguments);
-    }
-
-    @Override
-    public void info(String msg, Throwable t) {
-        logger.info(msg, t);
-    }
-
-    @Override
-    public boolean isWarnEnabled() {
-        return logger.isWarnEnabled();
-    }
-
-    @Override
-    public void warn(String msg) {
-        logger.warn(msg);
-    }
-
-    @Override
-    public void warn(String format, Object arg) {
-        logger.warn(format, arg);
-    }
-
-    @Override
-    public void warn(String format, Object... arguments) {
-        logger.warn(format, arguments);
-    }
-
-    @Override
-    public void warn(String format, Object argA, Object argB) {
-        logger.warn(format, argA, argB);
-    }
-
-    @Override
-    public void warn(String msg, Throwable t) {
-        logger.warn(msg, t);
-    }
-
-    @Override
-    public boolean isErrorEnabled() {
-        return logger.isErrorEnabled();
-    }
-
-    @Override
-    public void error(String msg) {
-        logger.error(msg);
-    }
-
-    @Override
-    public void error(String format, Object arg) {
-        logger.error(format, arg);
-    }
-
-    @Override
-    public void error(String format, Object argA, Object argB) {
-        logger.error(format, argA, argB);
-    }
-
-    @Override
-    public void error(String format, Object... arguments) {
-        logger.error(format, arguments);
-    }
-
-    @Override
-    public void error(String msg, Throwable t) {
-        logger.error(msg, t);
+    protected Object readResolve() throws ObjectStreamException {
+        return InternalLoggerFactory.getInstance(name());
     }
 }
