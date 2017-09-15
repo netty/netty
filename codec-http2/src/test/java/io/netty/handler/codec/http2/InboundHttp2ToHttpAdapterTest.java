@@ -498,6 +498,7 @@ public class InboundHttp2ToHttpAdapterTest {
             assertEquals(request, capturedRequests.get(0));
 
             final Http2Headers http2Headers = new DefaultHttp2Headers().status(new AsciiString("200"));
+            // The PUSH_PROMISE frame includes a header block that contains a
             // complete set of request header fields that the server attributes to
             // the request.
             // https://tools.ietf.org/html/rfc7540#section-8.2.1
