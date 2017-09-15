@@ -27,6 +27,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.ConcurrentMap;
 
+import static io.netty.util.internal.EmptyArrays.EMPTY_OBJECTS;
 import static io.netty.util.internal.StringUtil.EMPTY_STRING;
 import static io.netty.util.internal.StringUtil.NEWLINE;
 import static io.netty.util.internal.StringUtil.simpleClassName;
@@ -116,7 +117,6 @@ public class ResourceLeakDetector<T> {
         }
     }
 
-    // Should be power of two.
     static final int DEFAULT_SAMPLING_INTERVAL = 128;
 
     /**
@@ -329,7 +329,7 @@ public class ResourceLeakDetector<T> {
     private final class DefaultResourceLeak extends PhantomReference<Object> implements ResourceLeakTracker<T>,
             ResourceLeak {
         private final String creationRecord;
-        private final Deque<String> lastRecords = new ArrayDeque<String>();
+        private final Deque<String> lastRecords;
         private final int trackedHash;
 
         private int removedRecords;
@@ -347,8 +347,10 @@ public class ResourceLeakDetector<T> {
             Level level = getLevel();
             if (level.ordinal() >= Level.ADVANCED.ordinal()) {
                 creationRecord = newRecord(null, 3);
+                lastRecords = new ArrayDeque<String>();
             } else {
                 creationRecord = null;
+                lastRecords = null;
             }
             allLeaks.put(this, LeakEntry.INSTANCE);
         }
@@ -407,9 +409,14 @@ public class ResourceLeakDetector<T> {
 
             final Object[] array;
             final int removedRecords;
-            synchronized (lastRecords) {
-                array = lastRecords.toArray();
-                removedRecords = this.removedRecords;
+            if (lastRecords != null) {
+                synchronized (lastRecords) {
+                    array = lastRecords.toArray();
+                    removedRecords = this.removedRecords;
+                }
+            } else {
+                removedRecords = 0;
+                array = EMPTY_OBJECTS;
             }
 
             StringBuilder buf = new StringBuilder(16384).append(NEWLINE);
