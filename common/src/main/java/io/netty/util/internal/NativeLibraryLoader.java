@@ -79,7 +79,6 @@ public final class NativeLibraryLoader {
         for (String name : names) {
             try {
                 load(name, loader);
-                logger.debug("Successfully loaded the library: {}", name);
                 return;
             } catch (Throwable t) {
                 logger.debug("Unable to load the library '{}', trying next name...", name, t);
@@ -116,7 +115,6 @@ public final class NativeLibraryLoader {
         try {
             // first try to load from java.library.path
             loadLibrary(loader, name, false);
-            logger.debug("{} was loaded from java.libary.path", name);
             return;
         } catch (Throwable ex) {
             logger.debug(
@@ -200,6 +198,7 @@ public final class NativeLibraryLoader {
             // Make sure the helper is belong to the target ClassLoader.
             final Class<?> newHelper = tryToLoadClass(loader, NativeLibraryUtil.class);
             loadLibraryByHelper(newHelper, name, absolute);
+            logger.debug("Successfully loaded the library {}", name);
             return;
         } catch (UnsatisfiedLinkError e) { // Should by pass the UnsatisfiedLinkError here!
             logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
@@ -207,6 +206,7 @@ public final class NativeLibraryLoader {
             logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
         }
         NativeLibraryUtil.loadLibrary(name, absolute);  // Fallback to local helper class.
+        logger.debug("Successfully loaded the library {}", name);
     }
 
     private static void loadLibraryByHelper(final Class<?> helper, final String name, final boolean absolute)
