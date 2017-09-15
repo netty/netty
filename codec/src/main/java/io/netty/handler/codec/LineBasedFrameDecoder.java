@@ -71,7 +71,6 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
         this.maxLength = maxLength;
         this.failFast = failFast;
         this.stripDelimiter = stripDelimiter;
-        this.offset = 0;
     }
 
     @Override
