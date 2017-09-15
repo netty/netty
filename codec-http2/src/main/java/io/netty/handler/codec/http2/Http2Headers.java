@@ -91,6 +91,13 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
     Iterator<Entry<CharSequence, CharSequence>> iterator();
 
     /**
+     * Equivalent to {@link #getAll(Object)} but no intermediate list is generated.
+     * @param name the name of the header to retrieve
+     * @return an {@link Iterator} of header values corresponding to {@code name}.
+     */
+    Iterator<CharSequence> valueIterator(CharSequence name);
+
+    /**
      * Sets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header
      */
     Http2Headers method(CharSequence value);

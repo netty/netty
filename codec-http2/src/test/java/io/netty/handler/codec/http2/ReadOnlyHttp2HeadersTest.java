@@ -20,9 +20,14 @@ import org.junit.Test;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import static io.netty.handler.codec.http2.DefaultHttp2HeadersTest.verifyPseudoHeadersFirst;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ReadOnlyHttp2HeadersTest {
     @Test(expected = IllegalArgumentException.class)
@@ -148,6 +153,56 @@ public class ReadOnlyHttp2HeadersTest {
                    headers.get(Http2Headers.PseudoHeaderName.PATH.value())));
         assertNull(headers.get(Http2Headers.PseudoHeaderName.STATUS.value()));
         assertNull(headers.get("a missing header"));
+    }
+
+    @Test
+    public void testClientOtherValueIterator() {
+        testValueIteratorSingleValue(newClientHeaders(), "name2", "value2");
+    }
+
+    @Test
+    public void testClientPsuedoValueIterator() {
+        testValueIteratorSingleValue(newClientHeaders(), ":path", "/foo");
+    }
+
+    @Test
+    public void testServerPsuedoValueIterator() {
+        testValueIteratorSingleValue(newServerHeaders(), ":status", "200");
+    }
+
+    @Test
+    public void testEmptyValueIterator() {
+        Http2Headers headers = newServerHeaders();
+        Iterator<CharSequence> itr = headers.valueIterator("foo");
+        assertFalse(itr.hasNext());
+        try {
+            itr.next();
+            fail();
+        } catch (NoSuchElementException ignored) {
+            // ignored
+        }
+    }
+
+    @Test
+    public void testIteratorMultipleValues() {
+        Http2Headers headers = ReadOnlyHttp2Headers.serverHeaders(false, new AsciiString("200"), new AsciiString[] {
+                new AsciiString("name2"), new AsciiString("value1"),
+                new AsciiString("name1"), new AsciiString("value2"),
+                new AsciiString("name2"), new AsciiString("value3")
+        });
+        Iterator<CharSequence> itr = headers.valueIterator("name2");
+        assertTrue(itr.hasNext());
+        assertTrue(AsciiString.contentEqualsIgnoreCase("value1", itr.next()));
+        assertTrue(itr.hasNext());
+        assertTrue(AsciiString.contentEqualsIgnoreCase("value3", itr.next()));
+        assertFalse(itr.hasNext());
+    }
+
+    private void testValueIteratorSingleValue(Http2Headers headers, CharSequence name, CharSequence value) {
+        Iterator<CharSequence> itr = headers.valueIterator(name);
+        assertTrue(itr.hasNext());
+        assertTrue(AsciiString.contentEqualsIgnoreCase(value, itr.next()));
+        assertFalse(itr.hasNext());
     }
 
     private void testIteratorReadOnly(Http2Headers headers) {

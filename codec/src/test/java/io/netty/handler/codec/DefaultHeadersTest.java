@@ -16,6 +16,7 @@ package io.netty.handler.codec;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Tests for {@link DefaultHeaders}.
@@ -100,6 +102,41 @@ public class DefaultHeadersTest {
         List<CharSequence> values = headers.getAll(of("name"));
         assertEquals(3, values.size());
         assertTrue(values.containsAll(asList(of("value1"), of("value2"), of("value3"))));
+    }
+
+    @Test
+    public void multipleValuesPerNameIterator() {
+        TestDefaultHeaders headers = newInstance();
+        headers.add(of("name"), of("value1"));
+        headers.add(of("name"), of("value2"));
+        headers.add(of("name"), of("value3"));
+        assertEquals(3, headers.size());
+
+        List<CharSequence> values = new ArrayList<CharSequence>();
+        Iterator<CharSequence> itr = headers.valueIterator(of("name"));
+        while (itr.hasNext()) {
+            values.add(itr.next());
+        }
+        assertEquals(3, values.size());
+        assertTrue(values.containsAll(asList(of("value1"), of("value2"), of("value3"))));
+    }
+
+    @Test
+    public void multipleValuesPerNameIteratorEmpty() {
+        TestDefaultHeaders headers = newInstance();
+
+        List<CharSequence> values = new ArrayList<CharSequence>();
+        Iterator<CharSequence> itr = headers.valueIterator(of("name"));
+        while (itr.hasNext()) {
+            values.add(itr.next());
+        }
+        assertEquals(0, values.size());
+        try {
+            itr.next();
+            fail();
+        } catch (NoSuchElementException ignored) {
+            // ignored
+        }
     }
 
     @Test
