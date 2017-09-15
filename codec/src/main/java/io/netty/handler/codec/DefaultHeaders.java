@@ -30,8 +30,8 @@ import java.util.Set;
 import static io.netty.util.HashingStrategy.JAVA_HASHER;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static java.lang.Math.min;
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 /**
  * Default implementation of {@link Headers};
@@ -172,6 +172,15 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             e = e.next;
         }
         return values;
+    }
+
+    /**
+     * Equivalent to {@link #getAll(Object)} but no intermediate list is generated.
+     * @param name the name of the header to retrieve
+     * @return an {@link Iterator} of header values corresponding to {@code name}.
+     */
+    public Iterator<V> valueIterator(K name) {
+        return new ValueIterator(name);
     }
 
     @Override
@@ -975,6 +984,49 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         @Override
         public void remove() {
             throw new UnsupportedOperationException("read only");
+        }
+    }
+
+    private final class ValueIterator implements Iterator<V> {
+        private final K name;
+        private final int hash;
+        private HeaderEntry<K, V> next;
+
+        ValueIterator(K name) {
+            this.name = checkNotNull(name, "name");
+            hash = hashingStrategy.hashCode(name);
+            calculateNext(entries[index(hash)]);
+        }
+
+        @Override
+        public boolean hasNext() {
+            return next != null;
+        }
+
+        @Override
+        public V next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            HeaderEntry<K, V> current = next;
+            calculateNext(next.next);
+            return current.value;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        private void calculateNext(HeaderEntry<K, V> entry) {
+            while (entry != null) {
+                if (entry.hash == hash && hashingStrategy.equals(name, entry.key)) {
+                    next = entry;
+                    return;
+                }
+                entry = entry.next;
+            }
+            next = null;
         }
     }
 
