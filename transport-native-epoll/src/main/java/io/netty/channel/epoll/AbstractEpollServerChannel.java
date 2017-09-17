@@ -75,12 +75,8 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
 
     @UnstableApi
     @Override
-    protected final void doShutdownOutput(Throwable cause) throws Exception {
-        try {
-            super.doShutdownOutput(cause);
-        } finally {
-            close();
-        }
+    protected final void doShutdownOutput() throws Exception {
+        doClose();
     }
 
     abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;

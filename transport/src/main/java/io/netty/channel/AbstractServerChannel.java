@@ -62,12 +62,8 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
 
     @UnstableApi
     @Override
-    protected final void doShutdownOutput(Throwable cause) throws Exception {
-        try {
-            super.doShutdownOutput(cause);
-        } finally {
-            close();
-        }
+    protected final void doShutdownOutput() throws Exception {
+        doClose();
     }
 
     @Override

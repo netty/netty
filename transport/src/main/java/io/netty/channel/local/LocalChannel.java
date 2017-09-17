@@ -294,9 +294,8 @@ public class LocalChannel extends AbstractChannel {
 
     @UnstableApi
     @Override
-    protected final void doShutdownOutput(Throwable cause) throws Exception {
-        super.doShutdownOutput(cause);
-        close();
+    protected final void doShutdownOutput() throws Exception {
+        doClose();
     }
 
     private void tryClose(boolean isActive) {

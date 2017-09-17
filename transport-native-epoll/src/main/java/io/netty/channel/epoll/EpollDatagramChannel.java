@@ -31,7 +31,6 @@ import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -421,16 +420,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return true;
         }
         return false;
-    }
-
-    @UnstableApi
-    @Override
-    protected void doShutdownOutput(Throwable cause) throws Exception {
-        // UDP sockets are not connected. A write failure may just be temporary or disconnect was called.
-        ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-        if (channelOutboundBuffer != null) {
-            channelOutboundBuffer.remove(cause);
-        }
     }
 
     @Override

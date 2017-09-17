@@ -155,7 +155,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                     }
                     break;
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 if (continueOnWriteError()) {
                     in.remove(e);
                 } else {
@@ -182,9 +182,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
     @UnstableApi
     @Override
-    protected void doShutdownOutput(Throwable cause) throws Exception {
-        super.doShutdownOutput(cause);
-        close();
+    protected void doShutdownOutput() throws Exception {
+        doClose();
     }
 
     /**

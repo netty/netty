@@ -150,17 +150,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @UnstableApi
     @Override
-    protected final void doShutdownOutput(final Throwable cause) throws Exception {
-        ChannelFuture future = shutdownOutput();
-        if (future.isDone()) {
-            super.doShutdownOutput(cause);
+    protected final void doShutdownOutput() throws Exception {
+        if (PlatformDependent.javaVersion() >= 7) {
+            javaChannel().shutdownOutput();
         } else {
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    NioSocketChannel.super.doShutdownOutput(cause);
-                }
-            });
+            javaChannel().socket().shutdownOutput();
         }
     }
 
@@ -171,26 +165,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        Executor closeExecutor = ((NioSocketChannelUnsafe) unsafe()).prepareToClose();
-        if (closeExecutor != null) {
-            closeExecutor.execute(new Runnable() {
+        final EventLoop loop = eventLoop();
+        if (loop.inEventLoop()) {
+            ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
+        } else {
+            loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    shutdownOutput0(promise);
+                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
                 }
             });
-        } else {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                shutdownOutput0(promise);
-            } else {
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        shutdownOutput0(promise);
-                    }
-                });
-            }
         }
         return promise;
     }
@@ -207,26 +191,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     public ChannelFuture shutdownInput(final ChannelPromise promise) {
-        Executor closeExecutor = ((NioSocketChannelUnsafe) unsafe()).prepareToClose();
-        if (closeExecutor != null) {
-            closeExecutor.execute(new Runnable() {
+        EventLoop loop = eventLoop();
+        if (loop.inEventLoop()) {
+            shutdownInput0(promise);
+        } else {
+            loop.execute(new Runnable() {
                 @Override
                 public void run() {
                     shutdownInput0(promise);
                 }
             });
-        } else {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                shutdownInput0(promise);
-            } else {
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        shutdownInput0(promise);
-                    }
-                });
-            }
         }
         return promise;
     }
@@ -238,51 +212,51 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     public ChannelFuture shutdown(final ChannelPromise promise) {
-        Executor closeExecutor = ((NioSocketChannelUnsafe) unsafe()).prepareToClose();
-        if (closeExecutor != null) {
-            closeExecutor.execute(new Runnable() {
+        ChannelFuture shutdownOutputFuture = shutdownOutput();
+        if (shutdownOutputFuture.isDone()) {
+            shutdownOutputDone(shutdownOutputFuture, promise);
+        } else {
+            shutdownOutputFuture.addListener(new ChannelFutureListener() {
                 @Override
-                public void run() {
-                    shutdown0(promise);
+                public void operationComplete(final ChannelFuture shutdownOutputFuture) throws Exception {
+                    shutdownOutputDone(shutdownOutputFuture, promise);
                 }
             });
-        } else {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                shutdown0(promise);
-            } else {
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        shutdown0(promise);
-                    }
-                });
-            }
         }
         return promise;
     }
 
-    private void shutdownOutput0(final ChannelPromise promise) {
-        try {
-            shutdownOutput0();
-            promise.setSuccess();
-        } catch (Throwable t) {
-            promise.setFailure(t);
+    private void shutdownOutputDone(final ChannelFuture shutdownOutputFuture, final ChannelPromise promise) {
+        ChannelFuture shutdownInputFuture = shutdownInput();
+        if (shutdownInputFuture.isDone()) {
+            shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
+        } else {
+            shutdownInputFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture shutdownInputFuture) throws Exception {
+                    shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
+                }
+            });
         }
     }
 
-    private void shutdownOutput0() throws Exception {
-        try {
-            if (PlatformDependent.javaVersion() >= 7) {
-                javaChannel().shutdownOutput();
-            } else {
-                javaChannel().socket().shutdownOutput();
+    private static void shutdownDone(ChannelFuture shutdownOutputFuture,
+                                     ChannelFuture shutdownInputFuture,
+                                     ChannelPromise promise) {
+        Throwable shutdownOutputCause = shutdownOutputFuture.cause();
+        Throwable shutdownInputCause = shutdownInputFuture.cause();
+        if (shutdownOutputCause != null) {
+            if (shutdownInputCause != null) {
+                logger.debug("Exception suppressed because a previous exception occurred.",
+                        shutdownInputCause);
             }
-        } finally {
-            ((AbstractUnsafe) unsafe()).shutdownOutput();
+            promise.setFailure(shutdownOutputCause);
+        } else if (shutdownInputCause != null) {
+            promise.setFailure(shutdownInputCause);
+        } else {
+            promise.setSuccess();
         }
     }
-
     private void shutdownInput0(final ChannelPromise promise) {
         try {
             shutdownInput0();
@@ -297,31 +271,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             javaChannel().shutdownInput();
         } else {
             javaChannel().socket().shutdownInput();
-        }
-    }
-
-    private void shutdown0(final ChannelPromise promise) {
-        Throwable cause = null;
-        try {
-            shutdownOutput0();
-        } catch (Throwable t) {
-            cause = t;
-        }
-        try {
-            shutdownInput0();
-        } catch (Throwable t) {
-            if (cause == null) {
-                promise.setFailure(t);
-            } else {
-                logger.debug("Exception suppressed because a previous exception occurred.", t);
-                promise.setFailure(cause);
-            }
-            return;
-        }
-        if (cause == null) {
-            promise.setSuccess();
-        } else {
-            promise.setFailure(cause);
         }
     }
 

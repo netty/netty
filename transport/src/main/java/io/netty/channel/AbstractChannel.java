@@ -616,8 +616,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
          */
         @UnstableApi
-        public final void shutdownOutput() {
-            shutdownOutput(null);
+        public final void shutdownOutput(final ChannelPromise promise) {
+            assertEventLoop();
+            shutdownOutput(promise, null);
         }
 
         /**
@@ -625,15 +626,60 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
          * @param cause The cause which may provide rational for the shutdown.
          */
-        final void shutdownOutput(Throwable cause) {
+        private void shutdownOutput(final ChannelPromise promise, Throwable cause) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
             final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
+                promise.setFailure(CLOSE_CLOSED_CHANNEL_EXCEPTION);
                 return;
             }
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
-            ChannelOutputShutdownException e = new ChannelOutputShutdownException("Channel output shutdown", cause);
-            outboundBuffer.failFlushed(e, false);
-            outboundBuffer.close(e, true);
+
+            final Throwable shutdownCause = cause == null ?
+                    new ChannelOutputShutdownException("Channel output shutdown") :
+                    new ChannelOutputShutdownException("Channel output shutdown", cause);
+            Executor closeExecutor = prepareToClose();
+            if (closeExecutor != null) {
+                closeExecutor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            // Execute the shutdown.
+                            doShutdownOutput();
+                            promise.setSuccess();
+                        } catch (Throwable err) {
+                            promise.setFailure(err);
+                        } finally {
+                            // Dispatch to the EventLoop
+                            eventLoop().execute(new Runnable() {
+                                @Override
+                                public void run() {
+                                    closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause);
+                                }
+                            });
+                        }
+                    }
+                });
+            } else {
+                try {
+                    // Execute the shutdown.
+                    doShutdownOutput();
+                    promise.setSuccess();
+                } catch (Throwable err) {
+                    promise.setFailure(err);
+                } finally {
+                    closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause);
+                }
+            }
+        }
+
+        private void closeOutboundBufferForShutdown(
+                ChannelPipeline pipeline, ChannelOutboundBuffer buffer, Throwable cause) {
+            buffer.failFlushed(cause, false);
+            buffer.close(cause, true);
             pipeline.fireUserEventTriggered(ChannelOutputShutdownEvent.INSTANCE);
         }
 
@@ -899,7 +945,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     close(voidPromise(), t, FLUSH0_CLOSED_CHANNEL_EXCEPTION, false);
                 } else {
                     try {
-                        doShutdownOutput(t);
+                        shutdownOutput(voidPromise(), t);
                     } catch (Throwable t2) {
                         close(voidPromise(), t2, FLUSH0_CLOSED_CHANNEL_EXCEPTION, false);
                     }
@@ -1039,12 +1085,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     /**
      * Called when conditions justify shutting down the output portion of the channel. This may happen if a write
      * operation throws an exception.
-     * @param cause The cause for the shutdown.
      */
     @UnstableApi
-    protected void doShutdownOutput(Throwable cause) throws Exception {
-        ((AbstractUnsafe) unsafe).shutdownOutput(cause);
-    }
+    protected void doShutdownOutput() throws Exception { }
 
     /**
      * Deregister the {@link Channel} from its {@link EventLoop}.
