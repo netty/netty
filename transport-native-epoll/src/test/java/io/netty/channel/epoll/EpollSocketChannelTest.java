@@ -204,4 +204,22 @@ public class EpollSocketChannelTest {
             ctx.close();
         }
     }
+
+    // See https://github.com/netty/netty/issues/7159
+    @Test
+    public void testSoLingerNoAssertError() throws Exception {
+        EventLoopGroup group = new EpollEventLoopGroup(1);
+
+        try {
+            Bootstrap bootstrap = new Bootstrap();
+            EpollSocketChannel ch = (EpollSocketChannel) bootstrap.group(group)
+                    .channel(EpollSocketChannel.class)
+                    .option(ChannelOption.SO_LINGER, 10)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+            ch.close().syncUninterruptibly();
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
 }

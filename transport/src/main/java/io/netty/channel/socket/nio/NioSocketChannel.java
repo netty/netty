@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
@@ -143,17 +142,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @UnstableApi
     @Override
-    protected final void doShutdownOutput(final Throwable cause) throws Exception {
-        ChannelFuture future = shutdownOutput();
-        if (future.isDone()) {
-            super.doShutdownOutput(cause);
+    protected final void doShutdownOutput() throws Exception {
+        if (PlatformDependent.javaVersion() >= 7) {
+            javaChannel().shutdownOutput();
         } else {
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    NioSocketChannel.super.doShutdownOutput(cause);
-                }
-            });
+            javaChannel().socket().shutdownOutput();
         }
     }
 
@@ -169,66 +162,18 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        Executor closeExecutor = ((NioSocketChannelUnsafe) unsafe()).prepareToClose();
-        if (closeExecutor != null) {
-            closeExecutor.execute(new Runnable() {
+        final EventLoop loop = eventLoop();
+        if (loop.inEventLoop()) {
+            ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
+        } else {
+            loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    shutdownOutput0(promise);
+                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
                 }
             });
-        } else {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                shutdownOutput0(promise);
-            } else {
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        shutdownOutput0(promise);
-                    }
-                });
-            }
         }
         return promise;
-    }
-
-    private void shutdownOutput0(final ChannelPromise promise) {
-        try {
-            shutdownOutput0();
-            promise.setSuccess();
-        } catch (Throwable t) {
-            promise.setFailure(t);
-        }
-    }
-
-    private void shutdownOutput0() throws Exception {
-        try {
-            if (PlatformDependent.javaVersion() >= 7) {
-                javaChannel().shutdownOutput();
-            } else {
-                javaChannel().socket().shutdownOutput();
-            }
-        } finally {
-            ((AbstractUnsafe) unsafe()).shutdownOutput();
-        }
-    }
-
-    private void shutdownInput0(final ChannelPromise promise) {
-        try {
-            shutdownInput0();
-            promise.setSuccess();
-        } catch (Throwable t) {
-            promise.setFailure(t);
-        }
-    }
-
-    private void shutdownInput0() throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            javaChannel().shutdownInput();
-        } else {
-            javaChannel().socket().shutdownInput();
-        }
     }
 
     @Override
