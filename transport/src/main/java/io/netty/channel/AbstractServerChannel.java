@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.util.internal.UnstableApi;
-
 import java.net.SocketAddress;
 
 /**
@@ -59,16 +57,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     @Override
     protected void doDisconnect() throws Exception {
         throw new UnsupportedOperationException();
-    }
-
-    @UnstableApi
-    @Override
-    protected final void doShutdownOutput(Throwable cause) throws Exception {
-        try {
-            super.doShutdownOutput(cause);
-        } finally {
-            close();
-        }
     }
 
     @Override
