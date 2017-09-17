@@ -545,47 +545,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @UnstableApi
     @Override
-    protected final void doShutdownOutput(Throwable cause) throws Exception {
-        try {
-            // The native socket implementation may throw a NotYetConnected exception when we attempt to shut it down.
-            // However NIO doesn't propagate an exception in the same situation (write failure), and we just want to
-            // update the socket state to flag that it has been shutdown. So don't use a voidPromise but instead create
-            // a new promise and ignore the results.
-            shutdownOutput0(newPromise());
-        } finally {
-            super.doShutdownOutput(cause);
-        }
-    }
-
-    private void shutdownOutput0(final ChannelPromise promise) {
-        try {
-            try {
-                socket.shutdown(false, true);
-            } finally {
-                ((AbstractUnsafe) unsafe()).shutdownOutput();
-            }
-            promise.setSuccess();
-        } catch (Throwable cause) {
-            promise.setFailure(cause);
-        }
+    protected final void doShutdownOutput() throws Exception {
+        socket.shutdown(false, true);
     }
 
     private void shutdownInput0(final ChannelPromise promise) {
         try {
             socket.shutdown(true, false);
-            promise.setSuccess();
-        } catch (Throwable cause) {
-            promise.setFailure(cause);
-        }
-    }
-
-    private void shutdown0(final ChannelPromise promise) {
-        try {
-            try {
-                socket.shutdown(true, true);
-            } finally {
-                ((AbstractUnsafe) unsafe()).shutdownOutput();
-            }
             promise.setSuccess();
         } catch (Throwable cause) {
             promise.setFailure(cause);
@@ -614,27 +580,18 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        Executor closeExecutor = ((EpollStreamUnsafe) unsafe()).prepareToClose();
-        if (closeExecutor != null) {
-            closeExecutor.execute(new Runnable() {
+        EventLoop loop = eventLoop();
+        if (loop.inEventLoop()) {
+            ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
+        } else {
+            loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    shutdownOutput0(promise);
+                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
                 }
             });
-        } else {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                shutdownOutput0(promise);
-            } else {
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        shutdownOutput0(promise);
-                    }
-                });
-            }
         }
+
         return promise;
     }
 
@@ -676,28 +633,50 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     public ChannelFuture shutdown(final ChannelPromise promise) {
-        Executor closeExecutor = ((EpollStreamUnsafe) unsafe()).prepareToClose();
-        if (closeExecutor != null) {
-            closeExecutor.execute(new Runnable() {
+        ChannelFuture shutdownOutputFuture = shutdownOutput();
+        if (shutdownOutputFuture.isDone()) {
+            shutdownOutputDone(shutdownOutputFuture, promise);
+        } else {
+            shutdownOutputFuture.addListener(new ChannelFutureListener() {
                 @Override
-                public void run() {
-                    shutdown0(promise);
+                public void operationComplete(final ChannelFuture shutdownOutputFuture) throws Exception {
+                    shutdownOutputDone(shutdownOutputFuture, promise);
                 }
             });
-        } else {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                shutdown0(promise);
-            } else {
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        shutdown0(promise);
-                    }
-                });
-            }
         }
         return promise;
+    }
+
+    private void shutdownOutputDone(final ChannelFuture shutdownOutputFuture, final ChannelPromise promise) {
+        ChannelFuture shutdownInputFuture = shutdownInput();
+        if (shutdownInputFuture.isDone()) {
+            shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
+        } else {
+            shutdownInputFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture shutdownInputFuture) throws Exception {
+                    shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
+                }
+            });
+        }
+    }
+
+    private static void shutdownDone(ChannelFuture shutdownOutputFuture,
+                              ChannelFuture shutdownInputFuture,
+                              ChannelPromise promise) {
+        Throwable shutdownOutputCause = shutdownOutputFuture.cause();
+        Throwable shutdownInputCause = shutdownInputFuture.cause();
+        if (shutdownOutputCause != null) {
+            if (shutdownInputCause != null) {
+                logger.debug("Exception suppressed because a previous exception occurred.",
+                        shutdownInputCause);
+            }
+            promise.setFailure(shutdownOutputCause);
+        } else if (shutdownInputCause != null) {
+            promise.setFailure(shutdownInputCause);
+        } else {
+            promise.setSuccess();
+        }
     }
 
     @Override

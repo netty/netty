@@ -696,13 +696,6 @@ public class EmbeddedChannel extends AbstractChannel {
         state = State.CLOSED;
     }
 
-    @UnstableApi
-    @Override
-    protected final void doShutdownOutput(Throwable cause) throws Exception {
-        super.doShutdownOutput(cause);
-        close();
-    }
-
     @Override
     protected void doBeginRead() throws Exception {
         // NOOP

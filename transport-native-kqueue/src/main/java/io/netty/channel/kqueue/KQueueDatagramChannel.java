@@ -397,16 +397,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
         return false;
     }
 
-    @UnstableApi
-    @Override
-    protected void doShutdownOutput(Throwable cause) throws Exception {
-        // UDP sockets are not connected. A write failure may just be temporary or {@link #doDisconnect()} was called.
-        ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-        if (channelOutboundBuffer != null) {
-            channelOutboundBuffer.remove(cause);
-        }
-    }
-
     @Override
     protected void doClose() throws Exception {
         super.doClose();
