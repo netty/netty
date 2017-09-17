@@ -184,7 +184,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                         public void run() {
                             try {
                                 doDeregister();
-                            } catch (Exception cause) {
+                            } catch (Throwable cause) {
                                 pipeline().fireExceptionCaught(cause);
                             }
                         }

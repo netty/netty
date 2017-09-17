@@ -21,7 +21,6 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.PortUnreachableException;
@@ -178,12 +177,6 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         return cause instanceof IOException &&
                 !(cause instanceof PortUnreachableException) &&
                 !(this instanceof ServerChannel);
-    }
-
-    @UnstableApi
-    @Override
-    protected void doShutdownOutput() throws Exception {
-        doClose();
     }
 
     /**

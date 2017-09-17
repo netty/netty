@@ -20,7 +20,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
 import io.netty.util.internal.UnstableApi;
@@ -68,12 +67,6 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
     @Override
     protected Object filterOutboundMessage(Object msg) throws Exception {
         throw new UnsupportedOperationException();
-    }
-
-    @UnstableApi
-    @Override
-    protected final void doShutdownOutput() throws Exception {
-        doClose();
     }
 
     abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;

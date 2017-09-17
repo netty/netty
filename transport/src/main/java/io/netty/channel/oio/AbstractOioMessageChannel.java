@@ -19,7 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -102,12 +101,6 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             // should execute read() again because no data may have been read.
             read();
         }
-    }
-
-    @UnstableApi
-    @Override
-    protected void doShutdownOutput() throws Exception {
-        doClose();
     }
 
     /**

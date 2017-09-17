@@ -153,7 +153,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                         public void run() {
                             try {
                                 doDeregister();
-                            } catch (Exception cause) {
+                            } catch (Throwable cause) {
                                 pipeline().fireExceptionCaught(cause);
                             }
                         }

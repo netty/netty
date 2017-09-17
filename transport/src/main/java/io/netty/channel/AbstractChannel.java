@@ -1087,7 +1087,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * operation throws an exception.
      */
     @UnstableApi
-    protected void doShutdownOutput() throws Exception { }
+    protected void doShutdownOutput() throws Exception {
+        doClose();
+    }
 
     /**
      * Deregister the {@link Channel} from its {@link EventLoop}.
