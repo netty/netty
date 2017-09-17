@@ -32,7 +32,6 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -199,16 +198,6 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         socket.disconnect();
     }
 
-    @UnstableApi
-    @Override
-    protected final void doShutdownOutput(Throwable cause) throws Exception {
-        // UDP sockets are not connected. A write failure may just be temporary or {@link #doDisconnect()} was called.
-        ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-        if (channelOutboundBuffer != null) {
-            channelOutboundBuffer.remove(cause);
-        }
-    }
-
     @Override
     protected void doClose() throws Exception {
         socket.close();
@@ -293,7 +282,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 }
                 socket.send(tmpPacket);
                 in.remove();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // Continue on write error as a DatagramChannel can write to multiple remote peers
                 //
                 // See https://github.com/netty/netty/issues/2665

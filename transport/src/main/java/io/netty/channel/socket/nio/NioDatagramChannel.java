@@ -235,16 +235,6 @@ public final class NioDatagramChannel
         javaChannel().close();
     }
 
-    @UnstableApi
-    @Override
-    protected void doShutdownOutput(Throwable cause) throws Exception {
-        // UDP sockets are not connected. A write failure may just be temporary or doDisconnect() was called.
-        ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-        if (channelOutboundBuffer != null) {
-            channelOutboundBuffer.remove(cause);
-        }
-    }
-
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
