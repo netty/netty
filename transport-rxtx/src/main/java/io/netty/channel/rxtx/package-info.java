@@ -19,5 +19,4 @@
  *
  * @deprecated this transport will be removed in the next major version.
  */
-@Deprecated
 package io.netty.channel.rxtx;
