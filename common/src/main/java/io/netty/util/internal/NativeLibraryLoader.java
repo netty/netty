@@ -21,6 +21,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -125,22 +126,28 @@ public final class NativeLibraryLoader {
         String libname = System.mapLibraryName(name);
         String path = NATIVE_RESOURCE_HOME + libname;
 
-        URL url = loader.getResource(path);
-        if (url == null && PlatformDependent.isOsx()) {
-            if (path.endsWith(".jnilib")) {
-                url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".dynlib");
-            } else {
-                url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib");
-            }
-        }
-
-        int index = libname.lastIndexOf('.');
-        String prefix = libname.substring(0, index);
-        String suffix = libname.substring(index, libname.length());
         InputStream in = null;
         OutputStream out = null;
         File tmpFile = null;
+        URL url = loader.getResource(path);
         try {
+            if (url == null) {
+                if (PlatformDependent.isOsx()) {
+                    String fileName = path.endsWith(".jnilib") ? NATIVE_RESOURCE_HOME + "lib" + name + ".dynlib" :
+                            NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib";
+                    url = loader.getResource(fileName);
+                    if (url == null) {
+                        throw new FileNotFoundException(fileName);
+                    }
+                } else {
+                    throw new FileNotFoundException(path);
+                }
+            }
+
+            int index = libname.lastIndexOf('.');
+            String prefix = libname.substring(0, index);
+            String suffix = libname.substring(index, libname.length());
+
             tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
             in = url.openStream();
             out = new FileOutputStream(tmpFile);
