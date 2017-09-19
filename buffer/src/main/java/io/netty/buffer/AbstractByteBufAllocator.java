@@ -30,6 +30,10 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     static final int DEFAULT_MAX_COMPONENTS = 16;
     static final int CALCULATE_THRESHOLD = 1048576 * 4; // 4 MiB page
 
+    static {
+        ResourceLeakDetector.addExclusions(AbstractByteBufAllocator.class, "toLeakAwareBuffer");
+    }
+
     protected static ByteBuf toLeakAwareBuffer(ByteBuf buf) {
         ResourceLeakTracker<ByteBuf> leak;
         switch (ResourceLeakDetector.getLevel()) {
