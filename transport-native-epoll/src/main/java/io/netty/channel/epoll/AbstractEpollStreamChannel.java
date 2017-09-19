@@ -559,29 +559,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @UnstableApi
     @Override
-    protected final void doShutdownOutput(Throwable cause) throws Exception {
-        try {
-            // The native socket implementation may throw a NotYetConnected exception when we attempt to shut it down.
-            // However NIO doesn't propagate an exception in the same situation (write failure), and we just want to
-            // update the socket state to flag that it has been shutdown. So don't use a voidPromise but instead create
-            // a new promise and ignore the results.
-            shutdownOutput0(newPromise());
-        } finally {
-            super.doShutdownOutput(cause);
-        }
-    }
-
-    protected void shutdownOutput0(final ChannelPromise promise) {
-        try {
-            try {
-                fd().shutdown(false, true);
-            } finally {
-                ((AbstractUnsafe) unsafe()).shutdownOutput();
-            }
-            promise.setSuccess();
-        } catch (Throwable cause) {
-            promise.setFailure(cause);
-        }
+    protected final void doShutdownOutput() throws Exception {
+        fd().shutdown(false, true);
     }
 
     @Override
@@ -601,27 +580,18 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        Executor closeExecutor = ((EpollStreamUnsafe) unsafe()).prepareToClose();
-        if (closeExecutor != null) {
-            closeExecutor.execute(new Runnable() {
+        EventLoop loop = eventLoop();
+        if (loop.inEventLoop()) {
+            ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
+        } else {
+            loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    shutdownOutput0(promise);
+                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
                 }
             });
-        } else {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                shutdownOutput0(promise);
-            } else {
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        shutdownOutput0(promise);
-                    }
-                });
-            }
         }
+
         return promise;
     }
 

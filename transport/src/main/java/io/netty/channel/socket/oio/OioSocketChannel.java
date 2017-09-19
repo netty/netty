@@ -128,9 +128,8 @@ public class OioSocketChannel extends OioByteStreamChannel
 
     @UnstableApi
     @Override
-    protected final void doShutdownOutput(final Throwable cause) throws Exception {
-        shutdownOutput0(voidPromise());
-        super.doShutdownOutput(cause);
+    protected final void doShutdownOutput() throws Exception {
+        shutdownOutput0();
     }
 
     @Override
@@ -176,36 +175,7 @@ public class OioSocketChannel extends OioByteStreamChannel
     }
 
     private void shutdownOutput0() throws IOException {
-        try {
-            socket.shutdownOutput();
-        } finally {
-            ((AbstractUnsafe) unsafe()).shutdownOutput();
-        }
-    }
-
-    private void shutdown0(ChannelPromise promise) {
-        Throwable cause = null;
-        try {
-            shutdownOutput0();
-        } catch (Throwable t) {
-            cause = t;
-        }
-        try {
-            socket.shutdownInput();
-        } catch (Throwable t) {
-            if (cause == null) {
-                promise.setFailure(t);
-            } else {
-                logger.debug("Exception suppressed because a previous exception occurred.", t);
-                promise.setFailure(cause);
-            }
-            return;
-        }
-        if (cause == null) {
-            promise.setSuccess();
-        } else {
-            promise.setFailure(cause);
-        }
+        socket.shutdownOutput();
     }
 
     @Override
