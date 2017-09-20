@@ -360,6 +360,20 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     /**
+     * Default thread caching behavior - System Property: io.netty.allocator.useCacheForAllThreads - default true
+     */
+    public static boolean defaultUseCacheForAllThreads() {
+        return DEFAULT_USE_CACHE_FOR_ALL_THREADS;
+    }
+
+    /**
+     * Default prefer direct - System Property: io.netty.noPreferDirect - default false
+     */
+    public static boolean defaultPreferDirect() {
+        return PlatformDependent.directBufferPreferred();
+    }
+
+    /**
      * Default tiny cache size - System Property: io.netty.allocator.tinyCacheSize - default 512
      */
     public static int defaultTinyCacheSize() {
