@@ -100,11 +100,11 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     @Override
     public void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse)
             throws Exception {
-        // Reserve local stream 1 for the response.
-        connectionHandler.onHttpClientUpgrade();
-
         // Add the handler to the pipeline.
         ctx.pipeline().addAfter(ctx.name(), handlerName, upgradeToHandler);
+
+        // Reserve local stream 1 for the response.
+        connectionHandler.onHttpClientUpgrade();
     }
 
     /**
