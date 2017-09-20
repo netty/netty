@@ -66,6 +66,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile SocketAddress remoteAddress;
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
+    private boolean closeInitiated;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -610,16 +611,75 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             close(promise, CLOSE_CLOSED_CHANNEL_EXCEPTION, CLOSE_CLOSED_CHANNEL_EXCEPTION, false);
         }
 
+        /**
+         * Shutdown the output portion of the corresponding {@link Channel}.
+         * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
+         */
         @UnstableApi
-        public void shutdownOutput() {
+        public final void shutdownOutput(final ChannelPromise promise) {
+            assertEventLoop();
+            shutdownOutput(promise, null);
+        }
+
+        /**
+         * Shutdown the output portion of the corresponding {@link Channel}.
+         * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
+         * @param cause The cause which may provide rational for the shutdown.
+         */
+        private void shutdownOutput(final ChannelPromise promise, Throwable cause) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
+
             final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
+                promise.setFailure(CLOSE_CLOSED_CHANNEL_EXCEPTION);
                 return;
             }
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
-            ChannelOutputShutdownException e = new ChannelOutputShutdownException("Channel output explicitly shutdown");
-            outboundBuffer.failFlushed(e, false);
-            outboundBuffer.close(e, true);
+
+            final Throwable shutdownCause = cause == null ?
+                    new ChannelOutputShutdownException("Channel output shutdown") :
+                    new ChannelOutputShutdownException("Channel output shutdown", cause);
+            Executor closeExecutor = prepareToClose();
+            if (closeExecutor != null) {
+                closeExecutor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            // Execute the shutdown.
+                            doShutdownOutput();
+                            promise.setSuccess();
+                        } catch (Throwable err) {
+                            promise.setFailure(err);
+                        } finally {
+                            // Dispatch to the EventLoop
+                            eventLoop().execute(new Runnable() {
+                                @Override
+                                public void run() {
+                                    closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause);
+                                }
+                            });
+                        }
+                    }
+                });
+            } else {
+                try {
+                    // Execute the shutdown.
+                    doShutdownOutput();
+                    promise.setSuccess();
+                } catch (Throwable err) {
+                    promise.setFailure(err);
+                } finally {
+                    closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause);
+                }
+            }
+        }
+
+        private void closeOutboundBufferForShutdown(
+                ChannelPipeline pipeline, ChannelOutboundBuffer buffer, Throwable cause) {
+            buffer.failFlushed(cause, false);
+            buffer.close(cause, true);
             pipeline.fireUserEventTriggered(ChannelOutputShutdownEvent.INSTANCE);
         }
 
@@ -629,10 +689,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
-            if (outboundBuffer == null) {
-                // Only needed if no VoidChannelPromise.
-                if (!(promise instanceof VoidChannelPromise)) {
+            if (closeInitiated) {
+                if (closeFuture.isDone()) {
+                    // Closed already.
+                    safeSetSuccess(promise);
+                } else if (!(promise instanceof VoidChannelPromise)) { // Only needed if no VoidChannelPromise.
                     // This means close() was called before so we just register a listener and return
                     closeFuture.addListener(new ChannelFutureListener() {
                         @Override
@@ -644,13 +705,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            if (closeFuture.isDone()) {
-                // Closed already.
-                safeSetSuccess(promise);
-                return;
-            }
+            closeInitiated = true;
 
             final boolean wasActive = isActive();
+            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
             Executor closeExecutor = prepareToClose();
             if (closeExecutor != null) {
@@ -665,9 +723,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             invokeLater(new Runnable() {
                                 @Override
                                 public void run() {
-                                    // Fail all the queued messages
-                                    outboundBuffer.failFlushed(cause, notify);
-                                    outboundBuffer.close(closeCause);
+                                    if (outboundBuffer != null) {
+                                        // Fail all the queued messages
+                                        outboundBuffer.failFlushed(cause, notify);
+                                        outboundBuffer.close(closeCause);
+                                    }
                                     fireChannelInactiveAndDeregister(wasActive);
                                 }
                             });
@@ -679,9 +739,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // Close the channel and fail the queued messages in all cases.
                     doClose0(promise);
                 } finally {
-                    // Fail all the queued messages.
-                    outboundBuffer.failFlushed(cause, notify);
-                    outboundBuffer.close(closeCause);
+                    if (outboundBuffer != null) {
+                        // Fail all the queued messages.
+                        outboundBuffer.failFlushed(cause, notify);
+                        outboundBuffer.close(closeCause);
+                    }
                 }
                 if (inFlush0) {
                     invokeLater(new Runnable() {
@@ -882,7 +944,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                      */
                     close(voidPromise(), t, FLUSH0_CLOSED_CHANNEL_EXCEPTION, false);
                 } else {
-                    outboundBuffer.failFlushed(t, true);
+                    try {
+                        shutdownOutput(voidPromise(), t);
+                    } catch (Throwable t2) {
+                        close(voidPromise(), t2, FLUSH0_CLOSED_CHANNEL_EXCEPTION, false);
+                    }
                 }
             } finally {
                 inFlush0 = false;
@@ -1015,6 +1081,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Close the {@link Channel}
      */
     protected abstract void doClose() throws Exception;
+
+    /**
+     * Called when conditions justify shutting down the output portion of the channel. This may happen if a write
+     * operation throws an exception.
+     */
+    @UnstableApi
+    protected void doShutdownOutput() throws Exception {
+        doClose();
+    }
 
     /**
      * Deregister the {@link Channel} from its {@link EventLoop}.

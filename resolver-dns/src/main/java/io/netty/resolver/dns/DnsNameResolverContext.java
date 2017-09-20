@@ -236,7 +236,7 @@ abstract class DnsNameResolverContext<T> {
             }
             idx = idx2;
 
-            List<DnsCacheEntry> entries = parent.authoritativeDnsServerCache().get(hostname, additionals);
+            List<? extends DnsCacheEntry> entries = parent.authoritativeDnsServerCache().get(hostname, additionals);
             if (entries != null && !entries.isEmpty()) {
                 return DnsServerAddresses.sequential(new DnsCacheIterable(entries)).stream();
             }
@@ -244,16 +244,16 @@ abstract class DnsNameResolverContext<T> {
     }
 
     private final class DnsCacheIterable implements Iterable<InetSocketAddress> {
-        private final List<DnsCacheEntry> entries;
+        private final List<? extends DnsCacheEntry> entries;
 
-        DnsCacheIterable(List<DnsCacheEntry> entries) {
+        DnsCacheIterable(List<? extends DnsCacheEntry> entries) {
             this.entries = entries;
         }
 
         @Override
         public Iterator<InetSocketAddress> iterator() {
             return new Iterator<InetSocketAddress>() {
-                Iterator<DnsCacheEntry> entryIterator = entries.iterator();
+                Iterator<? extends DnsCacheEntry> entryIterator = entries.iterator();
 
                 @Override
                 public boolean hasNext() {
@@ -484,9 +484,8 @@ abstract class DnsNameResolverContext<T> {
                 resolvedEntries = new ArrayList<DnsCacheEntry>(8);
             }
 
-            final DnsCacheEntry e = new DnsCacheEntry(hostname, resolved);
-            resolveCache.cache(hostname, additionals, resolved, r.timeToLive(), parent.ch.eventLoop());
-            resolvedEntries.add(e);
+            resolvedEntries.add(
+                    resolveCache.cache(hostname, additionals, resolved, r.timeToLive(), parent.ch.eventLoop()));
             found = true;
 
             // Note that we do not break from the loop here, so we decode/cache all A/AAAA records.

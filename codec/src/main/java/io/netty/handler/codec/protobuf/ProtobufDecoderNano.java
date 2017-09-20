@@ -82,7 +82,7 @@ public class ProtobufDecoderNano extends MessageToMessageDecoder<ByteBuf> {
             msg.getBytes(msg.readerIndex(), array, 0, length);
             offset = 0;
         }
-        MessageNano prototype = clazz.newInstance();
+        MessageNano prototype = clazz.getConstructor().newInstance();
         out.add(MessageNano.mergeFrom(prototype, array, offset, length));
     }
 }

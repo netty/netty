@@ -22,12 +22,38 @@ import java.util.Set;
 
 /**
  * JDK extension methods to support {@link ApplicationProtocolNegotiator}
+ *
+ * @deprecated use {@link ApplicationProtocolConfig}
  */
+@Deprecated
 public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNegotiator {
     /**
      * Abstract factory pattern for wrapping an {@link SSLEngine} object. This is useful for NPN/APLN JDK support.
      */
     interface SslEngineWrapperFactory {
+        /**
+         * Abstract factory pattern for wrapping an {@link SSLEngine} object. This is useful for NPN/APLN support.
+         *
+         * @param engine The engine to wrap.
+         * @param applicationNegotiator The application level protocol negotiator
+         * @param isServer <ul>
+         * <li>{@code true} if the engine is for server side of connections</li>
+         * <li>{@code false} if the engine is for client side of connections</li>
+         * </ul>
+         * @return The resulting wrapped engine. This may just be {@code engine}.
+         */
+        SSLEngine wrapSslEngine(
+                SSLEngine engine, JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer);
+    }
+
+    abstract class AllocatorAwareSslEngineWrapperFactory implements SslEngineWrapperFactory {
+
+        @Override
+        public final SSLEngine wrapSslEngine(SSLEngine engine,
+                                       JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
+            return wrapSslEngine(engine, ByteBufAllocator.DEFAULT, applicationNegotiator, isServer);
+        }
+
         /**
          * Abstract factory pattern for wrapping an {@link SSLEngine} object. This is useful for NPN/APLN support.
          *
@@ -40,8 +66,8 @@ public interface JdkApplicationProtocolNegotiator extends ApplicationProtocolNeg
          * </ul>
          * @return The resulting wrapped engine. This may just be {@code engine}.
          */
-        SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
-                JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer);
+        abstract SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
+                                JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer);
     }
 
     /**

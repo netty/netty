@@ -24,6 +24,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -32,6 +33,7 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -73,7 +75,34 @@ public class Http2MultiplexCodecBuilderTest {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         serverConnectedChannel = ch;
-                        ch.pipeline().addLast(new Http2MultiplexCodecBuilder(true, serverLastInboundHandler).build());
+                        ch.pipeline().addLast(new Http2MultiplexCodecBuilder(true, new ChannelInitializer<Channel>() {
+
+                            @Override
+                            protected void initChannel(Channel ch) throws Exception {
+                                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                    private boolean writable;
+
+                                    @Override
+                                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                                        writable |= ctx.channel().isWritable();
+                                        super.channelActive(ctx);
+                                    }
+
+                                    @Override
+                                    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+                                        writable |= ctx.channel().isWritable();
+                                        super.channelWritabilityChanged(ctx);
+                                    }
+
+                                    @Override
+                                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                                        assertTrue(writable);
+                                        super.channelInactive(ctx);
+                                    }
+                                });
+                                ch.pipeline().addLast(serverLastInboundHandler);
+                            }
+                        }).build());
                         serverChannelLatch.countDown();
                     }
                 });
@@ -82,7 +111,12 @@ public class Http2MultiplexCodecBuilderTest {
         Bootstrap cb = new Bootstrap()
                 .channel(LocalChannel.class)
                 .group(group)
-                .handler(new Http2MultiplexCodecBuilder(false, new TestChannelInitializer()).build());
+                .handler(new Http2MultiplexCodecBuilder(false, new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) throws Exception {
+                        Assert.fail("Should not be called for outbound streams");
+                    }
+                }).build());
         clientChannel = cb.connect(serverAddress).sync().channel();
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
@@ -114,7 +148,7 @@ public class Http2MultiplexCodecBuilderTest {
     }
 
     @Test
-    public void multipleOutboundStreams() {
+    public void multipleOutboundStreams() throws Exception {
         Http2StreamChannel childChannel1 = newOutboundStream(new TestChannelInitializer());
         assertTrue(childChannel1.isActive());
         assertFalse(isStreamIdValid(childChannel1.stream().id()));
@@ -142,10 +176,12 @@ public class Http2MultiplexCodecBuilderTest {
 
         childChannel1.close();
         childChannel2.close();
+
+        serverLastInboundHandler.checkException();
     }
 
     @Test
-    public void createOutboundStream() {
+    public void createOutboundStream() throws Exception {
         Channel childChannel = newOutboundStream(new TestChannelInitializer());
         assertTrue(childChannel.isRegistered());
         assertTrue(childChannel.isActive());
@@ -172,10 +208,13 @@ public class Http2MultiplexCodecBuilderTest {
         Http2ResetFrame rstFrame = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(rstFrame);
         assertEquals(3, rstFrame.stream().id());
+
+        serverLastInboundHandler.checkException();
     }
 
     @Sharable
     private static class SharableLastInboundHandler extends LastInboundHandler {
+
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelActive();

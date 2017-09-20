@@ -29,6 +29,7 @@ import io.netty.util.internal.UnstableApi;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -296,6 +297,14 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
             Http2Headers headers, int padding) throws Http2Exception {
         // A push promise should not be allowed to add headers to an existing stream
         Http2Stream promisedStream = connection.stream(promisedStreamId);
+        if (headers.status() == null) {
+            // A PUSH_PROMISE frame has no Http response status.
+            // https://tools.ietf.org/html/rfc7540#section-8.2.1
+            // Server push is semantically equivalent to a server responding to a
+            // request; however, in this case, that request is also sent by the
+            // server, as a PUSH_PROMISE frame.
+            headers.status(OK.codeAsText());
+        }
         FullHttpMessage msg = processHeadersBegin(ctx, promisedStream, headers, false, false, false);
         if (msg == null) {
             throw connectionError(PROTOCOL_ERROR, "Push Promise Frame received for pre-existing stream id %d",

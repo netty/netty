@@ -24,9 +24,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
+import io.netty.handler.codec.http.HttpServerUpgradeHandler;
+import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.logging.LogLevel;
@@ -36,11 +41,14 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ReflectionUtil;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.Set;
@@ -639,6 +647,23 @@ public class Http2FrameCodecTest {
                 });
 
         assertTrue(listenerExecuted.get());
+    }
+
+    @Test
+    public void upgradeEventNoRefCntError() throws Exception {
+        frameListener.onHeadersRead(http2HandlerCtx, Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, request, 31, false);
+
+        // Using reflect as the constructor is package-private and the class is final.
+        Constructor<UpgradeEvent> constructor =
+                UpgradeEvent.class.getDeclaredConstructor(CharSequence.class, FullHttpRequest.class);
+
+        // Check if we could make it accessible which may fail on java9.
+        Assume.assumeTrue(ReflectionUtil.trySetAccessible(constructor) == null);
+
+        HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
+                "HTTP/2", new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+        channel.pipeline().fireUserEventTriggered(upgradeEvent);
+        assertEquals(1, upgradeEvent.refCnt());
     }
 
     private static ChannelPromise anyChannelPromise() {

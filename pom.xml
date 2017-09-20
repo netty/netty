@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.15.Final-SNAPSHOT</version>
+  <version>4.1.16.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -84,6 +84,8 @@
         <!-- Skip as maven plugin not works with Java9 yet --> 
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
+        <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
       </properties>
       <activation>
         <jdk>9</jdk>
@@ -188,7 +190,7 @@
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>2.0.5.Final</tcnative.version>
+    <tcnative.version>2.0.6.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -199,6 +201,7 @@
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
     <asm.version>5.1</asm.version>
+    <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
     <testJavaHome>${env.JAVA_HOME}</testJavaHome>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
@@ -370,7 +373,7 @@
       <dependency>
         <groupId>org.jctools</groupId>
         <artifactId>jctools-core</artifactId>
-        <version>2.0.2</version>
+        <version>2.1.0</version>
       </dependency>
 
       <dependency>
@@ -576,6 +579,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${enforcer.plugin.version}</version>
         <executions>
           <execution>
             <id>enforce-tools</id>
@@ -706,6 +710,7 @@
 
             <!-- JDK 8 -->
             <ignore>java.util.concurrent.atomic.LongAdder</ignore>
+            <ignore>java.util.function.BiFunction</ignore>
 
             <!-- Resolver -->
             <ignore>java.net.InetAddress</ignore>

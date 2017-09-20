@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,71 +13,28 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.resolver.dns;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
-import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
-import java.util.concurrent.TimeUnit;
 
 /**
- * Entry in {@link DnsCache}.
+ * Represents the results from a previous DNS query which can be cached.
  */
 @UnstableApi
-public final class DnsCacheEntry {
+public interface DnsCacheEntry {
+    /**
+     * Get the resolved address.
+     * <p>
+     * This may be null if the resolution failed, and in that case {@link #cause()} will describe the failure.
+     * @return the resolved address.
+     */
+    InetAddress address();
 
-    private final String hostname;
-    private final InetAddress address;
-    private final Throwable cause;
-    private volatile ScheduledFuture<?> expirationFuture;
-
-    public DnsCacheEntry(String hostname, InetAddress address) {
-        this.hostname = checkNotNull(hostname, "hostname");
-        this.address = checkNotNull(address, "address");
-        cause = null;
-    }
-
-    public DnsCacheEntry(String hostname, Throwable cause) {
-        this.hostname = checkNotNull(hostname, "hostname");
-        this.cause = checkNotNull(cause, "cause");
-        address = null;
-    }
-
-    public String hostname() {
-        return hostname;
-    }
-
-    public InetAddress address() {
-        return address;
-    }
-
-    public Throwable cause() {
-        return cause;
-    }
-
-    void scheduleExpiration(EventLoop loop, Runnable task, long delay, TimeUnit unit) {
-        assert expirationFuture == null: "expiration task scheduled already";
-        expirationFuture = loop.schedule(task, delay, unit);
-    }
-
-    void cancelExpiration() {
-        ScheduledFuture<?> expirationFuture = this.expirationFuture;
-        if (expirationFuture != null) {
-            expirationFuture.cancel(false);
-        }
-    }
-
-    @Override
-    public String toString() {
-        if (cause != null) {
-            return hostname + '/' + cause;
-        } else {
-            return address.toString();
-        }
-    }
+    /**
+     * If the DNS query failed this will provide the rational.
+     * @return the rational for why the DNS query failed, or {@code null} if the query hasn't failed.
+     */
+    Throwable cause();
 }

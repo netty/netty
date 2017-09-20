@@ -715,6 +715,11 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     }
 
     @Override
+    public Iterator<CharSequence> valueIterator(CharSequence name) {
+        return new ReadOnlyValueIterator(name);
+    }
+
+    @Override
     public Http2Headers method(CharSequence value) {
         throw new UnsupportedOperationException("read only");
     }
@@ -774,6 +779,58 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
             separator = ", ";
         }
         return builder.append(']').toString();
+    }
+
+    private final class ReadOnlyValueIterator implements Iterator<CharSequence> {
+        private int i;
+        private final int nameHash;
+        private final CharSequence name;
+        private AsciiString[] current = pseudoHeaders.length != 0 ? pseudoHeaders : otherHeaders;
+        private AsciiString next;
+
+        ReadOnlyValueIterator(CharSequence name) {
+            nameHash = AsciiString.hashCode(name);
+            this.name = name;
+            calculateNext();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return next != null;
+        }
+
+        @Override
+        public CharSequence next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            CharSequence current = next;
+            calculateNext();
+            return current;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        private void calculateNext() {
+            for (; i < current.length; i += 2) {
+                AsciiString roName = current[i];
+                if (roName.hashCode() == nameHash && roName.contentEqualsIgnoreCase(name)) {
+                    next = current[i + 1];
+                    i += 2;
+                    return;
+                }
+            }
+            if (i >= current.length && current == pseudoHeaders) {
+                i = 0;
+                current = otherHeaders;
+                calculateNext();
+            } else {
+                next = null;
+            }
+        }
     }
 
     private final class ReadOnlyIterator implements Map.Entry<CharSequence, CharSequence>,

@@ -183,8 +183,16 @@ static int socket_type(JNIEnv* env) {
         }
         return AF_INET6;
     } else {
+        // Explicitly try to bind to ::1 to ensure IPV6 can really be used.
+        // See https://github.com/netty/netty/issues/7021.
+        struct sockaddr_in6 addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin6_family = AF_INET6;
+        addr.sin6_addr.s6_addr[15] = 1; /* [::1]:0 */
+        int res = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
+
         close(fd);
-        return AF_INET6;
+        return res == 0 ? AF_INET6 : AF_INET;
     }
 }
 

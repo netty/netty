@@ -150,7 +150,7 @@ public final class MqttMessageBuilders {
         }
 
         public ConnectBuilder username(String username) {
-            this.hasUser = true;
+            this.hasUser = username != null;
             this.username = username;
             return this;
         }
@@ -165,7 +165,7 @@ public final class MqttMessageBuilders {
         }
 
         public ConnectBuilder password(byte[] password) {
-            this.hasPassword = true;
+            this.hasPassword = password != null;
             this.password = password;
             return this;
         }

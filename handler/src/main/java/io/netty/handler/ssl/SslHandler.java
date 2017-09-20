@@ -573,12 +573,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * @return the protocol name or {@code null} if application-level protocol has not been negotiated
      */
     public String applicationProtocol() {
-        SSLSession sess = engine().getSession();
-        if (!(sess instanceof ApplicationProtocolAccessor)) {
+        SSLEngine engine = engine();
+        if (!(engine instanceof ApplicationProtocolAccessor)) {
             return null;
         }
 
-        return ((ApplicationProtocolAccessor) sess).getApplicationProtocol();
+        return ((ApplicationProtocolAccessor) engine).getApplicationProtocol();
     }
 
     /**
@@ -1167,15 +1167,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        // Discard bytes of the cumulation buffer if needed.
+        discardSomeReadBytes();
+
         flushIfNeeded(ctx);
-        boolean readData = firedChannelRead;
+        readIfNeeded(ctx);
+
         firedChannelRead = false;
-        // if readData is false channelReadComplete(....) will take care of calling read.
-        if (readData && !handshakePromise.isDone() && !ctx.channel().config().isAutoRead()) {
-            // If handshake is not finished yet, we need more data.
-            ctx.read();
-        }
-        channelReadComplete(ctx, readData);
+        ctx.fireChannelReadComplete();
     }
 
     private void readIfNeeded(ChannelHandlerContext ctx) {

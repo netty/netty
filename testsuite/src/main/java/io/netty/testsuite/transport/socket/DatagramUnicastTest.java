@@ -146,57 +146,65 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     private void testSimpleSend0(Bootstrap sb, Bootstrap cb, ByteBuf buf, boolean bindClient,
                                 final byte[] bytes, int count, WrapType wrapType)
             throws Throwable {
-        cb.handler(new SimpleChannelInboundHandler<Object>() {
-            @Override
-            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
-                // Nothing will be sent.
+        Channel sc = null;
+        Channel cc = null;
+
+        try {
+            cb.handler(new SimpleChannelInboundHandler<Object>() {
+                @Override
+                public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+                    // Nothing will be sent.
+                }
+            });
+
+            final CountDownLatch latch = new CountDownLatch(count);
+            sc = setupServerChannel(sb, bytes, latch);
+            if (bindClient) {
+                cc = cb.bind(newSocketAddress()).sync().channel();
+            } else {
+                cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
+                cc = cb.register().sync().channel();
             }
-        });
-
-        final CountDownLatch latch = new CountDownLatch(count);
-        Channel sc = setupServerChannel(sb, bytes, latch);
-
-        Channel cc;
-        if (bindClient) {
-            cc = cb.bind(newSocketAddress()).sync().channel();
-        } else {
-            cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
-            cc = cb.register().sync().channel();
-        }
-        InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
-        for (int i = 0; i < count; i++) {
-            switch (wrapType) {
-                case DUP:
-                    cc.write(new DatagramPacket(buf.retainedDuplicate(), addr));
-                    break;
-                case SLICE:
-                    cc.write(new DatagramPacket(buf.retainedSlice(), addr));
-                    break;
-                case READ_ONLY:
-                    cc.write(new DatagramPacket(buf.retain().asReadOnly(), addr));
-                    break;
-                case NONE:
-                    cc.write(new DatagramPacket(buf.retain(), addr));
-                    break;
-                default:
-                    throw new Error("unknown wrap type: " + wrapType);
+            InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
+            for (int i = 0; i < count; i++) {
+                switch (wrapType) {
+                    case DUP:
+                        cc.write(new DatagramPacket(buf.retainedDuplicate(), addr));
+                        break;
+                    case SLICE:
+                        cc.write(new DatagramPacket(buf.retainedSlice(), addr));
+                        break;
+                    case READ_ONLY:
+                        cc.write(new DatagramPacket(buf.retain().asReadOnly(), addr));
+                        break;
+                    case NONE:
+                        cc.write(new DatagramPacket(buf.retain(), addr));
+                        break;
+                    default:
+                        throw new Error("unknown wrap type: " + wrapType);
+                }
             }
-        }
-        // release as we used buf.retain() before
-        buf.release();
-        cc.flush();
-        assertTrue(latch.await(10, TimeUnit.SECONDS));
+            // release as we used buf.retain() before
+            cc.flush();
+            assertTrue(latch.await(10, TimeUnit.SECONDS));
+        } finally {
+            // release as we used buf.retain() before
+            buf.release();
 
-        sc.close().sync();
-        cc.close().sync();
+            closeChannel(cc);
+            closeChannel(sc);
+        }
     }
 
     private void testSimpleSendWithConnect(Bootstrap sb, Bootstrap cb, ByteBuf buf, final byte[] bytes, int count)
             throws Throwable {
-        for (WrapType type: WrapType.values()) {
-            testSimpleSendWithConnect0(sb, cb, buf.retain(), bytes, count, type);
+        try {
+            for (WrapType type : WrapType.values()) {
+                testSimpleSendWithConnect0(sb, cb, buf.retain(), bytes, count, type);
+            }
+        } finally {
+            assertTrue(buf.release());
         }
-        assertTrue(buf.release());
     }
 
     private void testSimpleSendWithConnect0(Bootstrap sb, Bootstrap cb, ByteBuf buf, final byte[] bytes, int count,
@@ -208,10 +216,11 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             }
         });
 
-        final CountDownLatch latch = new CountDownLatch(count);
-        Channel sc = setupServerChannel(sb, bytes, latch);
+        Channel sc = null;
         DatagramChannel cc = null;
         try {
+            final CountDownLatch latch = new CountDownLatch(count);
+            sc = setupServerChannel(sb, bytes, latch);
             cc = (DatagramChannel) cb.connect(sc.localAddress()).sync().channel();
 
             for (int i = 0; i < count; i++) {
@@ -243,15 +252,14 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
             ChannelFuture future = cc.writeAndFlush(
                     buf.retain().duplicate()).awaitUninterruptibly();
-            assertTrue(future.cause() instanceof NotYetConnectedException);
+            assertTrue("NotYetConnectedException expected, got: " + future.cause(),
+                    future.cause() instanceof NotYetConnectedException);
         } finally {
             // release as we used buf.retain() before
             buf.release();
 
-            sc.close().sync();
-            if (cc != null) {
-                cc.close().sync();
-            }
+            closeChannel(cc);
+            closeChannel(sc);
         }
     }
 
@@ -275,5 +283,11 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             }
         });
         return sb.bind(newSocketAddress()).sync().channel();
+    }
+
+    private static void closeChannel(Channel channel) throws Exception {
+        if (channel != null) {
+            channel.close().sync();
+        }
     }
 }

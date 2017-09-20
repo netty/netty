@@ -36,7 +36,7 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     private final boolean logNotifyFailure;
 
     public DelegatingChannelPromiseNotifier(ChannelPromise delegate) {
-        this(delegate, true);
+        this(delegate, !(delegate instanceof VoidChannelPromise));
     }
 
     public DelegatingChannelPromiseNotifier(ChannelPromise delegate, boolean logNotifyFailure) {

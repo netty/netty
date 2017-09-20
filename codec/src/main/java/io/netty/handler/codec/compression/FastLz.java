@@ -90,6 +90,7 @@ final class FastLz {
      *
      * If the input is not compressible, the return value might be larger than length (input buffer size).
      */
+    @SuppressWarnings("IdentityBinaryExpression")
     static int compress(final byte[] input, final int inOffset, final int inLength,
                         final byte[] output, final int outOffset, final int proposedLevel) {
         final int level;

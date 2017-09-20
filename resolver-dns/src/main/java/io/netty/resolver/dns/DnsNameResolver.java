@@ -599,7 +599,7 @@ public class DnsNameResolver extends InetNameResolver {
                                     DnsRecord[] additionals,
                                     Promise<InetAddress> promise,
                                     DnsCache resolveCache) {
-        final List<DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
+        final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
         if (cachedEntries == null || cachedEntries.isEmpty()) {
             return false;
         }
@@ -729,7 +729,7 @@ public class DnsNameResolver extends InetNameResolver {
                                        DnsRecord[] additionals,
                                        Promise<List<InetAddress>> promise,
                                        DnsCache resolveCache) {
-        final List<DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
+        final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
         if (cachedEntries == null || cachedEntries.isEmpty()) {
             return false;
         }

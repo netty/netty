@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import org.junit.Assert;
 import org.junit.Test;
@@ -97,5 +98,23 @@ public class EpollSocketChannelTest {
         Assert.assertTrue(info.rcvRtt() >= 0);
         Assert.assertTrue(info.rcvSpace() >= 0);
         Assert.assertTrue(info.totalRetrans() >= 0);
+    }
+
+    // See https://github.com/netty/netty/issues/7159
+    @Test
+    public void testSoLingerNoAssertError() throws Exception {
+        EventLoopGroup group = new EpollEventLoopGroup(1);
+
+        try {
+            Bootstrap bootstrap = new Bootstrap();
+            EpollSocketChannel ch = (EpollSocketChannel) bootstrap.group(group)
+                    .channel(EpollSocketChannel.class)
+                    .option(ChannelOption.SO_LINGER, 10)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+            ch.close().syncUninterruptibly();
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 }

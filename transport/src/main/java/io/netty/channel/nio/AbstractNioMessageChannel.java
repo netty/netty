@@ -154,7 +154,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                     }
                     break;
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 if (continueOnWriteError()) {
                     in.remove(e);
                 } else {

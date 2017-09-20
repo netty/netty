@@ -133,12 +133,9 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     }
 
     private int kqueueWait(boolean oldWakeup) throws IOException {
-        // TODO(scott): do we need to loop here ... we already loop in keventWait to ensure we wait the expected time.
-        // We also do the same thing in EPOLL ... do we need to loop there?
-
         // If a task was submitted when wakenUp value was 1, the task didn't get a chance to produce wakeup event.
-        // So we need to check task queue again before calling epoll_wait. If we don't, the task might be pended
-        // until epoll_wait was timed out. It might be pended until idle timeout if IdleStateHandler existed
+        // So we need to check task queue again before calling kqueueWait. If we don't, the task might be pended
+        // until kqueueWait was timed out. It might be pended until idle timeout if IdleStateHandler existed
         // in pipeline.
         if (oldWakeup && hasTasks()) {
             return kqueueWaitNow();
@@ -196,6 +193,8 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
             } else if (filter == Native.EVFILT_READ) {
                 // Check READ before EOF to ensure all data is read before shutting down the input.
                 unsafe.readReady(eventList.data(i));
+            } else if (filter == Native.EVFILT_SOCK && (eventList.fflags(i) & Native.NOTE_RDHUP) != 0) {
+                unsafe.readEOF();
             }
 
             // Check if EV_EOF was set, this will notify us for connection-reset in which case

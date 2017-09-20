@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.WriteBufferWaterMark;
@@ -193,6 +194,52 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
     }
 
+    @Test(timeout = 30000)
+    public void testShutdownOutputSoLingerNoAssertError() throws Throwable {
+        run();
+    }
+
+    public void testShutdownOutputSoLingerNoAssertError(Bootstrap cb) throws Throwable {
+        testShutdownSoLingerNoAssertError0(cb, true);
+    }
+
+    @Test(timeout = 30000)
+    public void testShutdownSoLingerNoAssertError() throws Throwable {
+        run();
+    }
+
+    public void testShutdownSoLingerNoAssertError(Bootstrap cb) throws Throwable {
+        testShutdownSoLingerNoAssertError0(cb, false);
+    }
+
+    private void testShutdownSoLingerNoAssertError0(Bootstrap cb, boolean output) throws Throwable {
+        ServerSocket ss = new ServerSocket();
+        Socket s = null;
+
+        ChannelFuture cf = null;
+        try {
+            ss.bind(newSocketAddress());
+            cf = cb.option(ChannelOption.SO_LINGER, 1).handler(new ChannelInboundHandlerAdapter())
+                    .connect(ss.getLocalSocketAddress()).sync();
+            s = ss.accept();
+
+            cf.sync();
+
+            if (output) {
+                ((SocketChannel) cf.channel()).shutdownOutput().sync();
+            } else {
+                ((SocketChannel) cf.channel()).shutdown().sync();
+            }
+        } finally {
+            if (s != null) {
+                s.close();
+            }
+            if (cf != null) {
+                cf.channel().close();
+            }
+            ss.close();
+        }
+    }
     private static void checkThrowable(Throwable cause) throws Throwable {
         // Depending on OIO / NIO both are ok
         if (!(cause instanceof ClosedChannelException) && !(cause instanceof SocketException)) {
