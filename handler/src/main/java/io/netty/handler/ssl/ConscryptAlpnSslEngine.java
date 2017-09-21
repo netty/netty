@@ -67,11 +67,11 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
         // Alternatively, if an allocator is provided, no internal buffer will be created and direct buffers will be
         // retrieved from the allocator on-demand.
         if (USE_BUFFER_ALLOCATOR) {
-            Conscrypt.Engines.setBufferAllocator(engine, new BufferAllocatorAdapter(alloc));
+            Conscrypt.setBufferAllocator(engine, new BufferAllocatorAdapter(alloc));
         }
 
         // Set the list of supported ALPN protocols on the engine.
-        Conscrypt.Engines.setAlpnProtocols(engine, protocols.toArray(new String[protocols.size()]));
+        Conscrypt.setApplicationProtocols(engine, protocols.toArray(new String[protocols.size()]));
     }
 
     /**
@@ -84,13 +84,13 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
      */
     final int calculateOutNetBufSize(int plaintextBytes, int numBuffers) {
         // Assuming a max of one frame per component in a composite buffer.
-        long maxOverhead = (long) Conscrypt.Engines.maxSealOverhead(getWrappedEngine()) * numBuffers;
+        long maxOverhead = (long) Conscrypt.maxSealOverhead(getWrappedEngine()) * numBuffers;
         // TODO(nmittler): update this to use MAX_ENCRYPTED_PACKET_LENGTH instead of Integer.MAX_VALUE
         return (int) min(Integer.MAX_VALUE, plaintextBytes + maxOverhead);
     }
 
     final SSLEngineResult unwrap(ByteBuffer[] srcs, ByteBuffer[] dests) throws SSLException {
-        return Conscrypt.Engines.unwrap(getWrappedEngine(), srcs, dests);
+        return Conscrypt.unwrap(getWrappedEngine(), srcs, dests);
     }
 
     private static final class ClientEngine extends ConscryptAlpnSslEngine {
@@ -100,7 +100,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
                 JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine, alloc, applicationNegotiator.protocols());
             // Register for completion of the handshake.
-            Conscrypt.Engines.setHandshakeListener(engine, new HandshakeListener() {
+            Conscrypt.setHandshakeListener(engine, new HandshakeListener() {
                 @Override
                 public void onHandshakeFinished() throws SSLException {
                     selectProtocol();
@@ -113,7 +113,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
         }
 
         private void selectProtocol() throws SSLException {
-            String protocol = Conscrypt.Engines.getAlpnSelectedProtocol(getWrappedEngine());
+            String protocol = Conscrypt.getApplicationProtocol(getWrappedEngine());
             try {
                 protocolListener.selected(protocol);
             } catch (Throwable e) {
@@ -130,7 +130,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
             super(engine, alloc, applicationNegotiator.protocols());
 
             // Register for completion of the handshake.
-            Conscrypt.Engines.setHandshakeListener(engine, new HandshakeListener() {
+            Conscrypt.setHandshakeListener(engine, new HandshakeListener() {
                 @Override
                 public void onHandshakeFinished() throws SSLException {
                     selectProtocol();
@@ -145,7 +145,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
 
         private void selectProtocol() throws SSLException {
             try {
-                String protocol = Conscrypt.Engines.getAlpnSelectedProtocol(getWrappedEngine());
+                String protocol = Conscrypt.getApplicationProtocol(getWrappedEngine());
                 protocolSelector.select(protocol != null ? Collections.singletonList(protocol)
                         : Collections.<String>emptyList());
             } catch (Throwable e) {
