@@ -126,15 +126,15 @@ public abstract class SSLEngineTest {
 
     private static final String CLIENT_X509_CERT_PEM =
             "-----BEGIN CERTIFICATE-----\n" +
-                    "MIIBlzCCAQACAQEwDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0\n" +
-                    "MB4XDTE2MDkyMDE5NTIyMFoXDTE3MDkyMDE5NTIyMFowFDESMBAGA1UEAwwJdGxz\n" +
-                    "Y2xpZW50MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDB19iXOYtyPp6cMJiG\n" +
-                    "9C9QNw/ro6SWpv9H0wPcPBhWRrPBJvXppVWxMMxYuJFSKC8cGRqpK+k0h9omn2l+\n" +
-                    "c1ReKFEMi0csZRZMGjkUYv0/ol6tlz0CFvQOU5lRxkh1JWI/P1/b36zJCTvyNEV4\n" +
-                    "upjAV1eAu27twS8hBrPK2+pIqwIDAQABMA0GCSqGSIb3DQEBCwUAA4GBAMa35kuy\n" +
-                    "WzuHLg7iwnDVX4ZT/4iTJg1fZDms2dTqFWH+RYlxsytePUkY3ksGHl+VJgoDBK3X\n" +
-                    "G6/dqNa5BQDyFF0/dDQ2XYTrj5Yd0MsLA00AkFdSow5RyhWXJXzVHgKE48ZFW5Bt\n" +
-                    "NW9uXaerRzFR1mG2+0AghxCNMhuWxIblW7L0\n" +
+                    "MIIBmTCCAQICAQEwDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0\n" +
+                    "MCAXDTE3MDkyMTAzNDUwMVoYDzIxMTcwOTIyMDM0NTAxWjAUMRIwEAYDVQQDEwl0\n" +
+                    "bHNjbGllbnQwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMHX2Jc5i3I+npww\n" +
+                    "mIb0L1A3D+ujpJam/0fTA9w8GFZGs8Em9emlVbEwzFi4kVIoLxwZGqkr6TSH2iaf\n" +
+                    "aX5zVF4oUQyLRyxlFkwaORRi/T+iXq2XPQIW9A5TmVHGSHUlYj8/X9vfrMkJO/I0\n" +
+                    "RXi6mMBXV4C7bu3BLyEGs8rb6kirAgMBAAEwDQYJKoZIhvcNAQELBQADgYEAYLYI\n" +
+                    "5wvUaGRqJn7pA4xR9nEhsNpQbza3bJayQvyiJsB5rn9yBJsk5ch3tBBCfh/MA6PW\n" +
+                    "xcy2hS5rhZUTve6FK3Kr2GiUYy+keYmbna1UJPKPgIR3BX66g+Ev5RUinmbieC2J\n" +
+                    "eE0EtFfLq3uzj8HjakuxOGJz9h+bnCGBhgWWOBo=\n" +
                     "-----END CERTIFICATE-----\n";
 
     private static final String CLIENT_PRIVATE_KEY_PEM =
