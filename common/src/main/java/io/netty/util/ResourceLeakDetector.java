@@ -266,7 +266,7 @@ public class ResourceLeakDetector<T> {
             if (ref == null) {
                 break;
             }
-            ref.close();
+            ref.dispose();
         }
     }
 
@@ -284,9 +284,7 @@ public class ResourceLeakDetector<T> {
                 break;
             }
 
-            ref.clear();
-
-            if (!ref.close()) {
+            if (!ref.dispose()) {
                 continue;
             }
 
@@ -392,6 +390,11 @@ public class ResourceLeakDetector<T> {
                     }
                 }
             }
+        }
+
+        boolean dispose() {
+            clear();
+            return allLeaks.remove(this, LeakEntry.INSTANCE);
         }
 
         @Override
