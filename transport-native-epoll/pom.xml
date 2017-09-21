@@ -91,7 +91,7 @@
                       <files>
                         <file>/etc/redhat-release</file>
                       </files>
-                      <content>release 6.8</content>
+                      <content>release 6.9</content>
                     </requireFilesContent>
                   </rules>
                 </configuration>
