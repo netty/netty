@@ -28,6 +28,10 @@
 
   <name>Netty/Codec/HTTP</name>
 
+  <properties>
+    <javaModuleName>io.netty.codec.http</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

@@ -28,6 +28,10 @@
 
   <name>Netty/Codec</name>
 
+  <properties>
+    <javaModuleName>io.netty.codec</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

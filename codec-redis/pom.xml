@@ -28,6 +28,10 @@
 
   <name>Netty/Codec/Redis</name>
 
+  <properties>
+    <javaModuleName>io.netty.codec.redis</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

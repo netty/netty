@@ -28,6 +28,10 @@
 
   <name>Netty/Codec/HAProxy</name>
 
+  <properties>
+    <javaModuleName>io.netty.codec.haproxy</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
