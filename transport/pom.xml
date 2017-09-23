@@ -28,6 +28,10 @@
 
   <name>Netty/Transport</name>
 
+  <properties>
+    <javaModuleName>io.netty.transport</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

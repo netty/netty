@@ -28,6 +28,10 @@
 
   <name>Netty/Buffer</name>
 
+  <properties>
+    <javaModuleName>io.netty.buffer</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
