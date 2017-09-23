@@ -28,6 +28,10 @@
 
   <name>Netty/Resolver</name>
 
+  <properties>
+    <javaModuleName>io.netty.resolver</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

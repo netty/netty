@@ -29,6 +29,10 @@
 
   <name>Netty/Transport/UDT</name>
 
+  <properties>
+    <javaModuleName>io.netty.transport.udt</javaModuleName>
+  </properties>
+
   <dependencies>
 
     <!-- MAIN -->

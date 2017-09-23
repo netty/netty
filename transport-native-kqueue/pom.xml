@@ -353,6 +353,7 @@
   </profiles>
 
   <properties>
+    <javaModuleName>io.netty.transport.kqueue</javaModuleName>
     <!-- Needed by the native transport as we need the memoryAddress of the ByteBuffer -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED</argLine.java9.extras>
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>

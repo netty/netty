@@ -28,6 +28,10 @@
 
   <name>Netty/Codec/SMTP</name>
 
+  <properties>
+    <javaModuleName>io.netty.codec.smtp</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

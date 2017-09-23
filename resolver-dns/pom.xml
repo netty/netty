@@ -28,6 +28,10 @@
 
   <name>Netty/Resolver/DNS</name>
 
+  <properties>
+    <javaModuleName>io.netty.resolver.dns</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
