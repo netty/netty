@@ -59,18 +59,12 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         return retain0(checkPositive(increment, "increment"));
     }
 
-    private ByteBuf retain0(int increment) {
-        for (;;) {
-            int refCnt = this.refCnt;
-            final int nextCnt = refCnt + increment;
-
-            // Ensure we not resurrect (which means the refCnt was 0) and also that we encountered an overflow.
-            if (nextCnt <= increment) {
-                throw new IllegalReferenceCountException(refCnt, increment);
-            }
-            if (refCntUpdater.compareAndSet(this, refCnt, nextCnt)) {
-                break;
-            }
+    private ByteBuf retain0(final int increment) {
+        int oldRef = refCntUpdater.getAndAdd(this, increment);
+        if (oldRef <= 0 || oldRef + increment < oldRef) {
+            // Ensure we don't resurrect (which means the refCnt was 0) and also that we encountered an overflow.
+            refCntUpdater.getAndAdd(this, -increment);
+            throw new IllegalReferenceCountException(oldRef, increment);
         }
         return this;
     }
@@ -96,20 +90,16 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     private boolean release0(int decrement) {
-        for (;;) {
-            int refCnt = this.refCnt;
-            if (refCnt < decrement) {
-                throw new IllegalReferenceCountException(refCnt, -decrement);
-            }
-
-            if (refCntUpdater.compareAndSet(this, refCnt, refCnt - decrement)) {
-                if (refCnt == decrement) {
-                    deallocate();
-                    return true;
-                }
-                return false;
-            }
+        int oldRef = refCntUpdater.getAndAdd(this, -decrement);
+        if (oldRef == decrement) {
+            deallocate();
+            return true;
+        } else if (oldRef < decrement || oldRef - decrement > oldRef) {
+            // Ensure we don't over-release, and avoid underflow.
+            refCntUpdater.getAndAdd(this, decrement);
+            throw new IllegalReferenceCountException(oldRef, decrement);
         }
+        return false;
     }
     /**
      * Called once {@link #refCnt()} is equals 0.
