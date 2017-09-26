@@ -19,6 +19,9 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -44,6 +47,8 @@ import static io.netty.channel.unix.Errors.newIOException;
  * <p><strong>Internal usage only!</strong>
  */
 final class Native {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
+
     static {
         try {
             // First, try calling a side-effect free JNI method to see if the library was already
@@ -111,8 +116,20 @@ final class Native {
         if (!name.startsWith("mac") && !name.contains("bsd") && !name.startsWith("darwin")) {
             throw new IllegalStateException("Only supported on BSD");
         }
-        NativeLibraryLoader.load("netty_transport_native_kqueue_" + PlatformDependent.normalizedArch(),
-                PlatformDependent.getClassLoader(Native.class));
+        String staticLibName = "netty_transport_native_kqueue";
+        String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
+        ClassLoader cl = PlatformDependent.getClassLoader(Native.class);
+        try {
+            NativeLibraryLoader.load(sharedLibName, cl);
+        } catch (UnsatisfiedLinkError e1) {
+            try {
+                NativeLibraryLoader.load(staticLibName, cl);
+                logger.debug("Failed to load {}", sharedLibName, e1);
+            } catch (UnsatisfiedLinkError e2) {
+                ThrowableUtil.addSuppressed(e1, e2);
+                throw e1;
+            }
+        }
     }
 
     private Native() {

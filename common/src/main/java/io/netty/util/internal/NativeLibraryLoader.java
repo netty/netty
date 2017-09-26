@@ -30,8 +30,10 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -77,16 +79,20 @@ public final class NativeLibraryLoader {
      *         if none of the given libraries load successfully.
      */
     public static void loadFirstAvailable(ClassLoader loader, String... names) {
+        List<Throwable> suppressed = new ArrayList<Throwable>();
         for (String name : names) {
             try {
                 load(name, loader);
                 return;
             } catch (Throwable t) {
+                suppressed.add(t);
                 logger.debug("Unable to load the library '{}', trying next name...", name, t);
             }
         }
-        throw new IllegalArgumentException("Failed to load any of the given libraries: "
-                                           + Arrays.toString(names));
+        IllegalArgumentException iae =
+                new IllegalArgumentException("Failed to load any of the given libraries: " + Arrays.toString(names));
+        ThrowableUtil.addSuppressedAndClear(iae, suppressed);
+        throw iae;
     }
 
     /**
@@ -112,12 +118,13 @@ public final class NativeLibraryLoader {
     public static void load(String originalName, ClassLoader loader) {
         // Adjust expected name to support shading of native libraries.
         String name = calculatePackagePrefix().replace('.', '_') + originalName;
-
+        List<Throwable> suppressed = new ArrayList<Throwable>();
         try {
             // first try to load from java.library.path
             loadLibrary(loader, name, false);
             return;
         } catch (Throwable ex) {
+            suppressed.add(ex);
             logger.debug(
                     "{} cannot be loaded from java.libary.path, "
                     + "now trying export to -Dio.netty.native.workdir: {}", name, WORKDIR, ex);
@@ -137,10 +144,14 @@ public final class NativeLibraryLoader {
                             NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib";
                     url = loader.getResource(fileName);
                     if (url == null) {
-                        throw new FileNotFoundException(fileName);
+                        FileNotFoundException fnf = new FileNotFoundException(fileName);
+                        ThrowableUtil.addSuppressedAndClear(fnf, suppressed);
+                        throw fnf;
                     }
                 } else {
-                    throw new FileNotFoundException(path);
+                    FileNotFoundException fnf = new FileNotFoundException(path);
+                    ThrowableUtil.addSuppressedAndClear(fnf, suppressed);
+                    throw fnf;
                 }
             }
 
@@ -175,13 +186,17 @@ public final class NativeLibraryLoader {
                                 tmpFile.getPath());
                 }
             } catch (Throwable t) {
+                suppressed.add(t);
                 logger.debug("Error checking if {} is on a file store mounted with noexec", tmpFile, t);
             }
             // Re-throw to fail the load
+            ThrowableUtil.addSuppressedAndClear(e, suppressed);
             throw e;
         } catch (Exception e) {
-            throw (UnsatisfiedLinkError) new UnsatisfiedLinkError(
-                    "could not load a native library: " + name).initCause(e);
+            UnsatisfiedLinkError ule = new UnsatisfiedLinkError("could not load a native library: " + name);
+            ule.initCause(e);
+            ThrowableUtil.addSuppressedAndClear(ule, suppressed);
+            throw ule;
         } finally {
             closeQuietly(in);
             closeQuietly(out);
@@ -201,19 +216,29 @@ public final class NativeLibraryLoader {
      * @param absolute - Whether the native library will be loaded by path or by name
      */
     private static void loadLibrary(final ClassLoader loader, final String name, final boolean absolute) {
+        Throwable suppressed = null;
         try {
-            // Make sure the helper is belong to the target ClassLoader.
-            final Class<?> newHelper = tryToLoadClass(loader, NativeLibraryUtil.class);
-            loadLibraryByHelper(newHelper, name, absolute);
+            try {
+                // Make sure the helper is belong to the target ClassLoader.
+                final Class<?> newHelper = tryToLoadClass(loader, NativeLibraryUtil.class);
+                loadLibraryByHelper(newHelper, name, absolute);
+                logger.debug("Successfully loaded the library {}", name);
+                return;
+            } catch (UnsatisfiedLinkError e) { // Should by pass the UnsatisfiedLinkError here!
+                suppressed = e;
+                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
+            } catch (Exception e) {
+                suppressed = e;
+                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
+            }
+            NativeLibraryUtil.loadLibrary(name, absolute);  // Fallback to local helper class.
             logger.debug("Successfully loaded the library {}", name);
-            return;
-        } catch (UnsatisfiedLinkError e) { // Should by pass the UnsatisfiedLinkError here!
-            logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
-        } catch (Exception e) {
-            logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
+        } catch (UnsatisfiedLinkError ule) {
+            if (suppressed != null) {
+                ThrowableUtil.addSuppressed(ule, suppressed);
+            }
+            throw ule;
         }
-        NativeLibraryUtil.loadLibrary(name, absolute);  // Fallback to local helper class.
-        logger.debug("Successfully loaded the library {}", name);
     }
 
     private static void loadLibraryByHelper(final Class<?> helper, final String name, final boolean absolute)
@@ -233,16 +258,15 @@ public final class NativeLibraryLoader {
             }
         });
         if (ret instanceof Throwable) {
-            Throwable error = (Throwable) ret;
-            Throwable cause = error.getCause();
-            if (cause != null) {
-                if (cause instanceof UnsatisfiedLinkError) {
-                    throw (UnsatisfiedLinkError) cause;
-                } else {
-                    throw new UnsatisfiedLinkError(cause.getMessage());
-                }
+            Throwable t = (Throwable) ret;
+            assert !(t instanceof UnsatisfiedLinkError) : t + " should be a wrapper throwable";
+            Throwable cause = t.getCause();
+            if (cause instanceof UnsatisfiedLinkError) {
+                throw (UnsatisfiedLinkError) cause;
             }
-            throw new UnsatisfiedLinkError(error.getMessage());
+            UnsatisfiedLinkError ule = new UnsatisfiedLinkError(t.getMessage());
+            ule.initCause(t);
+            throw ule;
         }
     }
 
@@ -257,25 +281,36 @@ public final class NativeLibraryLoader {
             throws ClassNotFoundException {
         try {
             return loader.loadClass(helper.getName());
-        } catch (ClassNotFoundException e) {
-            // The helper class is NOT found in target ClassLoader, we have to define the helper class.
-            final byte[] classBinary = classToByteArray(helper);
-            return AccessController.doPrivileged(new PrivilegedAction<Class<?>>() {
-                @Override
-                public Class<?> run() {
-                    try {
-                        // Define the helper class in the target ClassLoader,
-                        //  then we can call the helper to load the native library.
-                        Method defineClass = ClassLoader.class.getDeclaredMethod("defineClass", String.class,
-                                byte[].class, int.class, int.class);
-                        defineClass.setAccessible(true);
-                        return (Class<?>) defineClass.invoke(loader, helper.getName(), classBinary, 0,
-                                classBinary.length);
-                    } catch (Exception e) {
-                        throw new IllegalStateException("Define class failed!", e);
+        } catch (ClassNotFoundException e1) {
+            try {
+                // The helper class is NOT found in target ClassLoader, we have to define the helper class.
+                final byte[] classBinary = classToByteArray(helper);
+                return AccessController.doPrivileged(new PrivilegedAction<Class<?>>() {
+                    @Override
+                    public Class<?> run() {
+                        try {
+                            // Define the helper class in the target ClassLoader,
+                            //  then we can call the helper to load the native library.
+                            Method defineClass = ClassLoader.class.getDeclaredMethod("defineClass", String.class,
+                                    byte[].class, int.class, int.class);
+                            defineClass.setAccessible(true);
+                            return (Class<?>) defineClass.invoke(loader, helper.getName(), classBinary, 0,
+                                    classBinary.length);
+                        } catch (Exception e) {
+                            throw new IllegalStateException("Define class failed!", e);
+                        }
                     }
-                }
-            });
+                });
+            } catch (ClassNotFoundException e2) {
+                ThrowableUtil.addSuppressed(e2, e1);
+                throw e2;
+            } catch (RuntimeException e2) {
+                ThrowableUtil.addSuppressed(e2, e1);
+                throw e2;
+            } catch (Error e2) {
+                ThrowableUtil.addSuppressed(e2, e1);
+                throw e2;
+            }
         }
     }
 
