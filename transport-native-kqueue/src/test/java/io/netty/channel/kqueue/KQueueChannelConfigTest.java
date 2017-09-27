@@ -15,9 +15,15 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.net.InetSocketAddress;
 
 import static org.junit.Assert.fail;
 
@@ -50,6 +56,24 @@ public class KQueueChannelConfigTest {
             fail();
         } catch (ChannelException e) {
             // expected
+        }
+    }
+
+    // See https://github.com/netty/netty/issues/7159
+    @Test
+    public void testSoLingerNoAssertError() throws Exception {
+        EventLoopGroup group = new KQueueEventLoopGroup(1);
+
+        try {
+            Bootstrap bootstrap = new Bootstrap();
+            KQueueSocketChannel ch = (KQueueSocketChannel) bootstrap.group(group)
+                    .channel(KQueueSocketChannel.class)
+                    .option(ChannelOption.SO_LINGER, 10)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+            ch.close().syncUninterruptibly();
+        } finally {
+            group.shutdownGracefully();
         }
     }
 }

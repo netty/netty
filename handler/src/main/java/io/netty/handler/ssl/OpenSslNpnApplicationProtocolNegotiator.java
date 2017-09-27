@@ -23,7 +23,7 @@ import java.util.List;
 /**
  * OpenSSL {@link ApplicationProtocolNegotiator} for NPN.
  *
- * @deprecated use {@link OpenSslDefaultApplicationProtocolNegotiator}
+ * @deprecated use {@link ApplicationProtocolConfig}
  */
 @Deprecated
 public final class OpenSslNpnApplicationProtocolNegotiator implements OpenSslApplicationProtocolNegotiator {

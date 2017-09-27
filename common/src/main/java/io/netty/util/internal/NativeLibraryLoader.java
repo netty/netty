@@ -21,6 +21,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,7 +32,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -43,13 +43,10 @@ public final class NativeLibraryLoader {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NativeLibraryLoader.class);
 
     private static final String NATIVE_RESOURCE_HOME = "META-INF/native/";
-    private static final String OSNAME;
     private static final File WORKDIR;
     private static final boolean DELETE_NATIVE_LIB_AFTER_LOADING;
 
     static {
-        OSNAME = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "");
-
         String workdir = SystemPropertyUtil.get("io.netty.native.workdir");
         if (workdir != null) {
             File f = new File(workdir);
@@ -64,99 +61,12 @@ public final class NativeLibraryLoader {
             WORKDIR = f;
             logger.debug("-Dio.netty.native.workdir: " + WORKDIR);
         } else {
-            WORKDIR = tmpdir();
+            WORKDIR = PlatformDependent.tmpdir();
             logger.debug("-Dio.netty.native.workdir: " + WORKDIR + " (io.netty.tmpdir)");
         }
 
         DELETE_NATIVE_LIB_AFTER_LOADING = SystemPropertyUtil.getBoolean(
                 "io.netty.native.deleteLibAfterLoading", true);
-    }
-
-    private static File tmpdir() {
-        File f;
-        try {
-            f = toDirectory(SystemPropertyUtil.get("io.netty.tmpdir"));
-            if (f != null) {
-                logger.debug("-Dio.netty.tmpdir: " + f);
-                return f;
-            }
-
-            f = toDirectory(SystemPropertyUtil.get("java.io.tmpdir"));
-            if (f != null) {
-                logger.debug("-Dio.netty.tmpdir: " + f + " (java.io.tmpdir)");
-                return f;
-            }
-
-            // This shouldn't happen, but just in case ..
-            if (isWindows()) {
-                f = toDirectory(System.getenv("TEMP"));
-                if (f != null) {
-                    logger.debug("-Dio.netty.tmpdir: " + f + " (%TEMP%)");
-                    return f;
-                }
-
-                String userprofile = System.getenv("USERPROFILE");
-                if (userprofile != null) {
-                    f = toDirectory(userprofile + "\\AppData\\Local\\Temp");
-                    if (f != null) {
-                        logger.debug("-Dio.netty.tmpdir: " + f + " (%USERPROFILE%\\AppData\\Local\\Temp)");
-                        return f;
-                    }
-
-                    f = toDirectory(userprofile + "\\Local Settings\\Temp");
-                    if (f != null) {
-                        logger.debug("-Dio.netty.tmpdir: " + f + " (%USERPROFILE%\\Local Settings\\Temp)");
-                        return f;
-                    }
-                }
-            } else {
-                f = toDirectory(System.getenv("TMPDIR"));
-                if (f != null) {
-                    logger.debug("-Dio.netty.tmpdir: " + f + " ($TMPDIR)");
-                    return f;
-                }
-            }
-        } catch (Exception ignored) {
-            // Environment variable inaccessible
-        }
-
-        // Last resort.
-        if (isWindows()) {
-            f = new File("C:\\Windows\\Temp");
-        } else {
-            f = new File("/tmp");
-        }
-
-        logger.warn("Failed to get the temporary directory; falling back to: " + f);
-        return f;
-    }
-
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    private static File toDirectory(String path) {
-        if (path == null) {
-            return null;
-        }
-
-        File f = new File(path);
-        f.mkdirs();
-
-        if (!f.isDirectory()) {
-            return null;
-        }
-
-        try {
-            return f.getAbsoluteFile();
-        } catch (Exception ignored) {
-            return f;
-        }
-    }
-
-    private static boolean isWindows() {
-        return OSNAME.startsWith("windows");
-    }
-
-    private static boolean isOSX() {
-        return OSNAME.startsWith("macosx") || OSNAME.startsWith("osx");
     }
 
     /**
@@ -170,7 +80,6 @@ public final class NativeLibraryLoader {
         for (String name : names) {
             try {
                 load(name, loader);
-                logger.debug("Successfully loaded the library: {}", name);
                 return;
             } catch (Throwable t) {
                 logger.debug("Unable to load the library '{}', trying next name...", name, t);
@@ -202,33 +111,43 @@ public final class NativeLibraryLoader {
      */
     public static void load(String originalName, ClassLoader loader) {
         // Adjust expected name to support shading of native libraries.
-        String name = calculatePackagePrefix().replace('.', '-') + originalName;
+        String name = calculatePackagePrefix().replace('.', '_') + originalName;
+
+        try {
+            // first try to load from java.library.path
+            loadLibrary(loader, name, false);
+            return;
+        } catch (Throwable ex) {
+            logger.debug(
+                    "{} cannot be loaded from java.libary.path, "
+                    + "now trying export to -Dio.netty.native.workdir: {}", name, WORKDIR, ex);
+        }
 
         String libname = System.mapLibraryName(name);
         String path = NATIVE_RESOURCE_HOME + libname;
 
-        URL url = loader.getResource(path);
-        if (url == null && isOSX()) {
-            if (path.endsWith(".jnilib")) {
-                url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".dynlib");
-            } else {
-                url = loader.getResource(NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib");
-            }
-        }
-
-        if (url == null) {
-            // Fall back to normal loading of JNI stuff
-            loadLibrary(loader, name, false);
-            return;
-        }
-
-        int index = libname.lastIndexOf('.');
-        String prefix = libname.substring(0, index);
-        String suffix = libname.substring(index, libname.length());
         InputStream in = null;
         OutputStream out = null;
         File tmpFile = null;
+        URL url = loader.getResource(path);
         try {
+            if (url == null) {
+                if (PlatformDependent.isOsx()) {
+                    String fileName = path.endsWith(".jnilib") ? NATIVE_RESOURCE_HOME + "lib" + name + ".dynlib" :
+                            NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib";
+                    url = loader.getResource(fileName);
+                    if (url == null) {
+                        throw new FileNotFoundException(fileName);
+                    }
+                } else {
+                    throw new FileNotFoundException(path);
+                }
+            }
+
+            int index = libname.lastIndexOf('.');
+            String prefix = libname.substring(0, index);
+            String suffix = libname.substring(index, libname.length());
+
             tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
             in = url.openStream();
             out = new FileOutputStream(tmpFile);
@@ -286,6 +205,7 @@ public final class NativeLibraryLoader {
             // Make sure the helper is belong to the target ClassLoader.
             final Class<?> newHelper = tryToLoadClass(loader, NativeLibraryUtil.class);
             loadLibraryByHelper(newHelper, name, absolute);
+            logger.debug("Successfully loaded the library {}", name);
             return;
         } catch (UnsatisfiedLinkError e) { // Should by pass the UnsatisfiedLinkError here!
             logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
@@ -293,6 +213,7 @@ public final class NativeLibraryLoader {
             logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
         }
         NativeLibraryUtil.loadLibrary(name, absolute);  // Fallback to local helper class.
+        logger.debug("Successfully loaded the library {}", name);
     }
 
     private static void loadLibraryByHelper(final Class<?> helper, final String name, final boolean absolute)

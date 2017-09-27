@@ -29,7 +29,6 @@ import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.DefaultDatagramChannelConfig;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -69,7 +68,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             StringUtil.simpleClassName(ByteBuf.class) + ')';
 
     private final MulticastSocket socket;
-    private final DatagramChannelConfig config;
+    private final OioDatagramChannelConfig config;
     private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0);
 
     private static MulticastSocket newSocket() {
@@ -110,7 +109,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         }
 
         this.socket = socket;
-        config = new DefaultDatagramChannelConfig(this, socket);
+        config = new DefaultOioDatagramChannelConfig(this, socket);
     }
 
     @Override
@@ -118,7 +117,13 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         return METADATA;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * This can be safetly cast to {@link OioDatagramChannelConfig}.
+     */
     @Override
+    // TODO: Change return type to OioDatagramChannelConfig in next major release
     public DatagramChannelConfig config() {
         return config;
     }
@@ -206,6 +211,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         ByteBuf data = config.getAllocator().heapBuffer(allocHandle.guess());
         boolean free = true;
         try {
+            // Ensure we null out the address which may have been set before.
+            tmpPacket.setAddress(null);
             tmpPacket.setData(data.array(), data.arrayOffset(), data.capacity());
             socket.receive(tmpPacket);
 
@@ -263,6 +270,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                         // NioDatagramChannel
                         throw new NotYetConnectedException();
                     }
+                    // Ensure we null out the address which may have been set before.
+                    tmpPacket.setAddress(null);
                 }
                 if (data.hasArray()) {
                     tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
@@ -273,7 +282,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 }
                 socket.send(tmpPacket);
                 in.remove();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // Continue on write error as a DatagramChannel can write to multiple remote peers
                 //
                 // See https://github.com/netty/netty/issues/2665

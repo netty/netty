@@ -102,7 +102,7 @@ public enum HttpStatusClass {
     HttpStatusClass(int min, int max, String defaultReasonPhrase) {
         this.min = min;
         this.max = max;
-        this.defaultReasonPhrase = new AsciiString(defaultReasonPhrase);
+        this.defaultReasonPhrase = AsciiString.cached(defaultReasonPhrase);
     }
 
     /**

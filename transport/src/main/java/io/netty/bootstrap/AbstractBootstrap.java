@@ -78,7 +78,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * The {@link EventLoopGroup} which is used to handle all the events for the to-be-created
      * {@link Channel}
      */
-    @SuppressWarnings("unchecked")
     public B group(EventLoopGroup group) {
         if (group == null) {
             throw new NullPointerException("group");
@@ -87,6 +86,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             throw new IllegalStateException("group set already");
         }
         this.group = group;
+        return self();
+    }
+
+    @SuppressWarnings("unchecked")
+    private B self() {
         return (B) this;
     }
 
@@ -106,7 +110,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * @deprecated Use {@link #channelFactory(io.netty.channel.ChannelFactory)} instead.
      */
     @Deprecated
-    @SuppressWarnings("unchecked")
     public B channelFactory(ChannelFactory<? extends C> channelFactory) {
         if (channelFactory == null) {
             throw new NullPointerException("channelFactory");
@@ -116,7 +119,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
 
         this.channelFactory = channelFactory;
-        return (B) this;
+        return self();
     }
 
     /**
@@ -134,10 +137,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * The {@link SocketAddress} which is used to bind the local "end" to.
      */
-    @SuppressWarnings("unchecked")
     public B localAddress(SocketAddress localAddress) {
         this.localAddress = localAddress;
-        return (B) this;
+        return self();
     }
 
     /**
@@ -165,7 +167,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they got
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
-    @SuppressWarnings("unchecked")
     public <T> B option(ChannelOption<T> option, T value) {
         if (option == null) {
             throw new NullPointerException("option");
@@ -179,14 +180,13 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
                 options.put(option, value);
             }
         }
-        return (B) this;
+        return self();
     }
 
     /**
      * Allow to specify an initial attribute of the newly created {@link Channel}.  If the {@code value} is
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
-    @SuppressWarnings("unchecked")
     public <T> B attr(AttributeKey<T> key, T value) {
         if (key == null) {
             throw new NullPointerException("key");
@@ -200,14 +200,13 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
                 attrs.put(key, value);
             }
         }
-        return (B) this;
+        return self();
     }
 
     /**
      * Validate all the parameters. Sub-classes may override this, but should
      * call the super method in that case.
      */
-    @SuppressWarnings("unchecked")
     public B validate() {
         if (group == null) {
             throw new IllegalStateException("group not set");
@@ -215,7 +214,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         if (channelFactory == null) {
             throw new IllegalStateException("channel or channelFactory not set");
         }
-        return (B) this;
+        return self();
     }
 
     /**
@@ -373,13 +372,12 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * the {@link ChannelHandler} to use for serving the requests.
      */
-    @SuppressWarnings("unchecked")
     public B handler(ChannelHandler handler) {
         if (handler == null) {
             throw new NullPointerException("handler");
         }
         this.handler = handler;
-        return (B) this;
+        return self();
     }
 
     /**

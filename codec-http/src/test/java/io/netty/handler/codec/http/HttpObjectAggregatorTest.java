@@ -371,6 +371,23 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
+    public void testValidRequestWith100ContinueAndDecoder() {
+        EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(100));
+        embedder.writeInbound(Unpooled.copiedBuffer(
+            "GET /upload HTTP/1.1\r\n" +
+                "Expect: 100-continue\r\n" +
+                "Content-Length: 0\r\n\r\n", CharsetUtil.US_ASCII));
+
+        FullHttpResponse response = embedder.readOutbound();
+        assertEquals(HttpResponseStatus.CONTINUE, response.status());
+        FullHttpRequest request = embedder.readInbound();
+        assertFalse(request.headers().contains(HttpHeaderNames.EXPECT));
+        request.release();
+        response.release();
+        assertFalse(embedder.finish());
+    }
+
+    @Test
     public void testOversizedRequestWith100ContinueAndDecoder() {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(4));
         embedder.writeInbound(Unpooled.copiedBuffer(

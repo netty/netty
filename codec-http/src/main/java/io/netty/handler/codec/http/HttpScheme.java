@@ -38,7 +38,7 @@ public final class HttpScheme {
 
     private HttpScheme(int port, String name) {
         this.port = port;
-        this.name = new AsciiString(name);
+        this.name = AsciiString.cached(name);
     }
 
     public AsciiString name() {

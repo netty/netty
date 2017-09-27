@@ -28,15 +28,19 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.util.UncheckedBooleanSupplier;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class SocketHalfClosedTest extends AbstractSocketTest {
@@ -50,8 +54,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         testAllDataReadAfterHalfClosure(false, sb, cb);
     }
 
-    public void testAllDataReadAfterHalfClosure(final boolean autoRead,
-                                                ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    private static void testAllDataReadAfterHalfClosure(final boolean autoRead,
+                                                        ServerBootstrap sb, Bootstrap cb) throws Throwable {
         final int totalServerBytesWritten = 1024 * 16;
         final int numReadsPerReadLoop = 2;
         final CountDownLatch serverInitializedLatch = new CountDownLatch(1);
@@ -151,6 +155,200 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     @Test
+    public void testAutoCloseFalseDoesShutdownOutput() throws Throwable {
+        run();
+    }
+
+    public void testAutoCloseFalseDoesShutdownOutput(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testAutoCloseFalseDoesShutdownOutput(false, false, sb, cb);
+        testAutoCloseFalseDoesShutdownOutput(false, true, sb, cb);
+        testAutoCloseFalseDoesShutdownOutput(true, false, sb, cb);
+        testAutoCloseFalseDoesShutdownOutput(true, true, sb, cb);
+    }
+
+    private static void testAutoCloseFalseDoesShutdownOutput(boolean allowHalfClosed,
+                                                             final boolean clientIsLeader,
+                                                             ServerBootstrap sb,
+                                                             Bootstrap cb) throws InterruptedException {
+        final int expectedBytes = 100;
+        final CountDownLatch serverReadExpectedLatch = new CountDownLatch(1);
+        final CountDownLatch doneLatch = new CountDownLatch(1);
+        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        try {
+            cb.option(ChannelOption.ALLOW_HALF_CLOSURE, allowHalfClosed)
+                    .option(ChannelOption.AUTO_CLOSE, false)
+                    .option(ChannelOption.SO_LINGER, 0);
+            sb.childOption(ChannelOption.ALLOW_HALF_CLOSURE, allowHalfClosed)
+                    .childOption(ChannelOption.AUTO_CLOSE, false)
+                    .childOption(ChannelOption.SO_LINGER, 0);
+
+            final SimpleChannelInboundHandler<ByteBuf> leaderHandler = new AutoCloseFalseLeader(expectedBytes,
+                    serverReadExpectedLatch, doneLatch, causeRef);
+            final SimpleChannelInboundHandler<ByteBuf> followerHandler = new AutoCloseFalseFollower(expectedBytes,
+                    serverReadExpectedLatch, doneLatch, causeRef);
+            sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addLast(clientIsLeader ? followerHandler :leaderHandler);
+                }
+            });
+
+            cb.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addLast(clientIsLeader ? leaderHandler : followerHandler);
+                }
+            });
+
+            serverChannel = sb.bind().sync().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+
+            doneLatch.await();
+            assertNull(causeRef.get());
+        } finally {
+            if (clientChannel != null) {
+                clientChannel.close().sync();
+            }
+            if (serverChannel != null) {
+                serverChannel.close().sync();
+            }
+        }
+    }
+
+    private static final class AutoCloseFalseFollower extends SimpleChannelInboundHandler<ByteBuf> {
+        private final int expectedBytes;
+        private final CountDownLatch followerCloseLatch;
+        private final CountDownLatch doneLatch;
+        private final AtomicReference<Throwable> causeRef;
+        private int bytesRead;
+
+        AutoCloseFalseFollower(int expectedBytes, CountDownLatch followerCloseLatch, CountDownLatch doneLatch,
+                               AtomicReference<Throwable> causeRef) {
+            this.expectedBytes = expectedBytes;
+            this.followerCloseLatch = followerCloseLatch;
+            this.doneLatch = doneLatch;
+            this.causeRef = causeRef;
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) {
+            checkPrematureClose();
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            ctx.close();
+            checkPrematureClose();
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+            bytesRead += msg.readableBytes();
+            if (bytesRead >= expectedBytes) {
+                // We write a reply and immediately close our end of the socket.
+                ByteBuf buf = ctx.alloc().buffer(expectedBytes);
+                buf.writerIndex(buf.writerIndex() + expectedBytes);
+                ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        future.channel().close().addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                followerCloseLatch.countDown();
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
+        private void checkPrematureClose() {
+            if (bytesRead < expectedBytes) {
+                causeRef.set(new IllegalStateException("follower premature close"));
+                doneLatch.countDown();
+            }
+        }
+    }
+
+    private static final class AutoCloseFalseLeader extends SimpleChannelInboundHandler<ByteBuf> {
+        private final int expectedBytes;
+        private final CountDownLatch followerCloseLatch;
+        private final CountDownLatch doneLatch;
+        private final AtomicReference<Throwable> causeRef;
+        private int bytesRead;
+        private boolean seenOutputShutdown;
+
+        AutoCloseFalseLeader(int expectedBytes, CountDownLatch followerCloseLatch, CountDownLatch doneLatch,
+                             AtomicReference<Throwable> causeRef) {
+            this.expectedBytes = expectedBytes;
+            this.followerCloseLatch = followerCloseLatch;
+            this.doneLatch = doneLatch;
+            this.causeRef = causeRef;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ByteBuf buf = ctx.alloc().buffer(expectedBytes);
+            buf.writerIndex(buf.writerIndex() + expectedBytes);
+            ctx.writeAndFlush(buf.retainedDuplicate());
+
+            // We wait here to ensure that we write before we have a chance to process the outbound
+            // shutdown event.
+            followerCloseLatch.await();
+
+            // This write should fail, but we should still be allowed to read the peer's data
+            ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (future.cause() == null) {
+                        causeRef.set(new IllegalStateException("second write should have failed!"));
+                        doneLatch.countDown();
+                    }
+                }
+            });
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+            bytesRead += msg.readableBytes();
+            if (bytesRead >= expectedBytes) {
+                if (!seenOutputShutdown) {
+                    causeRef.set(new IllegalStateException(
+                            ChannelOutputShutdownEvent.class.getSimpleName() + " event was not seen"));
+                }
+                doneLatch.countDown();
+            }
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            if (evt instanceof ChannelOutputShutdownEvent) {
+                seenOutputShutdown = true;
+            }
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) {
+            checkPrematureClose();
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            ctx.close();
+            checkPrematureClose();
+        }
+
+        private void checkPrematureClose() {
+            if (bytesRead < expectedBytes || !seenOutputShutdown) {
+                causeRef.set(new IllegalStateException("leader premature close"));
+                doneLatch.countDown();
+            }
+        }
+    }
+
+    @Test
     public void testAllDataReadClosure() throws Throwable {
         run();
     }
@@ -162,8 +360,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         testAllDataReadClosure(false, true, sb, cb);
     }
 
-    public void testAllDataReadClosure(final boolean autoRead, final boolean allowHalfClosed,
-                                       ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    private static void testAllDataReadClosure(final boolean autoRead, final boolean allowHalfClosed,
+                                               ServerBootstrap sb, Bootstrap cb) throws Throwable {
         final int totalServerBytesWritten = 1024 * 16;
         final int numReadsPerReadLoop = 2;
         final CountDownLatch serverInitializedLatch = new CountDownLatch(1);

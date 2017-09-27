@@ -21,8 +21,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -31,6 +33,7 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -39,15 +42,15 @@ import java.util.concurrent.CountDownLatch;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Unit tests for {@link Http2Codec}.
+ * Unit tests for {@link Http2MultiplexCodec}.
  */
-public class Http2CodecTest {
+public class Http2MultiplexCodecBuilderTest {
 
     private static EventLoopGroup group;
     private Channel serverChannel;
@@ -72,7 +75,34 @@ public class Http2CodecTest {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         serverConnectedChannel = ch;
-                        ch.pipeline().addLast(new Http2CodecBuilder(true, serverLastInboundHandler).build());
+                        ch.pipeline().addLast(new Http2MultiplexCodecBuilder(true, new ChannelInitializer<Channel>() {
+
+                            @Override
+                            protected void initChannel(Channel ch) throws Exception {
+                                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                    private boolean writable;
+
+                                    @Override
+                                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                                        writable |= ctx.channel().isWritable();
+                                        super.channelActive(ctx);
+                                    }
+
+                                    @Override
+                                    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+                                        writable |= ctx.channel().isWritable();
+                                        super.channelWritabilityChanged(ctx);
+                                    }
+
+                                    @Override
+                                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                                        assertTrue(writable);
+                                        super.channelInactive(ctx);
+                                    }
+                                });
+                                ch.pipeline().addLast(serverLastInboundHandler);
+                            }
+                        }).build());
                         serverChannelLatch.countDown();
                     }
                 });
@@ -81,7 +111,12 @@ public class Http2CodecTest {
         Bootstrap cb = new Bootstrap()
                 .channel(LocalChannel.class)
                 .group(group)
-                .handler(new Http2CodecBuilder(false, new TestChannelInitializer()).build());
+                .handler(new Http2MultiplexCodecBuilder(false, new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) throws Exception {
+                        Assert.fail("Should not be called for outbound streams");
+                    }
+                }).build());
         clientChannel = cb.connect(serverAddress).sync().channel();
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
@@ -108,17 +143,18 @@ public class Http2CodecTest {
         }
     }
 
-    @Test
-    public void multipleOutboundStreams() {
-        Http2StreamChannelBootstrap b = new Http2StreamChannelBootstrap();
-        b.parentChannel(clientChannel).handler(new TestChannelInitializer());
+    private Http2StreamChannel newOutboundStream(ChannelHandler handler) {
+        return new Http2StreamChannelBootstrap(clientChannel).handler(handler).open().syncUninterruptibly().getNow();
+    }
 
-        Channel childChannel1 = b.connect().syncUninterruptibly().channel();
+    @Test
+    public void multipleOutboundStreams() throws Exception {
+        Http2StreamChannel childChannel1 = newOutboundStream(new TestChannelInitializer());
         assertTrue(childChannel1.isActive());
-        assertFalse(isStreamIdValid(((AbstractHttp2StreamChannel) childChannel1).streamId()));
-        Channel childChannel2 = b.connect().channel();
+        assertFalse(isStreamIdValid(childChannel1.stream().id()));
+        Http2StreamChannel childChannel2 = newOutboundStream(new TestChannelInitializer());
         assertTrue(childChannel2.isActive());
-        assertFalse(isStreamIdValid(((AbstractHttp2StreamChannel) childChannel2).streamId()));
+        assertFalse(isStreamIdValid(childChannel2.stream().id()));
 
         Http2Headers headers1 = new DefaultHttp2Headers();
         Http2Headers headers2 = new DefaultHttp2Headers();
@@ -129,40 +165,40 @@ public class Http2CodecTest {
 
         Http2HeadersFrame headersFrame2 = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(headersFrame2);
-        assertEquals(3, headersFrame2.streamId());
+        assertEquals(3, headersFrame2.stream().id());
 
         Http2HeadersFrame headersFrame1 = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(headersFrame1);
-        assertEquals(5, headersFrame1.streamId());
+        assertEquals(5, headersFrame1.stream().id());
 
-        assertEquals(3, ((AbstractHttp2StreamChannel) childChannel2).streamId());
-        assertEquals(5, ((AbstractHttp2StreamChannel) childChannel1).streamId());
+        assertEquals(3, childChannel2.stream().id());
+        assertEquals(5, childChannel1.stream().id());
 
         childChannel1.close();
         childChannel2.close();
+
+        serverLastInboundHandler.checkException();
     }
 
     @Test
-    public void createOutboundStream() {
-        Http2StreamChannelBootstrap b = new Http2StreamChannelBootstrap();
-        Channel childChannel = b.parentChannel(clientChannel).handler(new TestChannelInitializer())
-                                       .connect().syncUninterruptibly().channel();
+    public void createOutboundStream() throws Exception {
+        Channel childChannel = newOutboundStream(new TestChannelInitializer());
         assertTrue(childChannel.isRegistered());
         assertTrue(childChannel.isActive());
 
         Http2Headers headers = new DefaultHttp2Headers();
-        childChannel.write(new DefaultHttp2HeadersFrame(headers));
+        childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
         ByteBuf data = Unpooled.buffer(100).writeZero(100);
         childChannel.writeAndFlush(new DefaultHttp2DataFrame(data, true));
 
         Http2HeadersFrame headersFrame = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(headersFrame);
-        assertEquals(3, headersFrame.streamId());
+        assertEquals(3, headersFrame.stream().id());
         assertEquals(headers, headersFrame.headers());
 
         Http2DataFrame dataFrame = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(dataFrame);
-        assertEquals(3, dataFrame.streamId());
+        assertEquals(3, dataFrame.stream().id());
         assertEquals(data.resetReaderIndex(), dataFrame.content());
         assertTrue(dataFrame.isEndStream());
         dataFrame.release();
@@ -171,11 +207,14 @@ public class Http2CodecTest {
 
         Http2ResetFrame rstFrame = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(rstFrame);
-        assertEquals(3, rstFrame.streamId());
+        assertEquals(3, rstFrame.stream().id());
+
+        serverLastInboundHandler.checkException();
     }
 
     @Sharable
     private static class SharableLastInboundHandler extends LastInboundHandler {
+
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelActive();

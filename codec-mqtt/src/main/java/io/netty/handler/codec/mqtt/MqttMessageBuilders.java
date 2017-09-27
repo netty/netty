@@ -125,7 +125,7 @@ public final class MqttMessageBuilders {
          */
         @Deprecated
         public ConnectBuilder willMessage(String willMessage) {
-            willMessage(willMessage.getBytes(CharsetUtil.UTF_8));
+            willMessage(willMessage == null ? null : willMessage.getBytes(CharsetUtil.UTF_8));
             return this;
         }
 
@@ -150,7 +150,7 @@ public final class MqttMessageBuilders {
         }
 
         public ConnectBuilder username(String username) {
-            this.hasUser = true;
+            this.hasUser = username != null;
             this.username = username;
             return this;
         }
@@ -160,12 +160,12 @@ public final class MqttMessageBuilders {
          */
         @Deprecated
         public ConnectBuilder password(String password) {
-            password(password.getBytes(CharsetUtil.UTF_8));
+            password(password == null ? null : password.getBytes(CharsetUtil.UTF_8));
             return this;
         }
 
         public ConnectBuilder password(byte[] password) {
-            this.hasPassword = true;
+            this.hasPassword = password != null;
             this.password = password;
             return this;
         }

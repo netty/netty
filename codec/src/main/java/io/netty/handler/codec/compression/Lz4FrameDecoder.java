@@ -202,6 +202,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                 this.currentChecksum = currentChecksum;
 
                 currentState = State.DECOMPRESS_DATA;
+                // fall through
             case DECOMPRESS_DATA:
                 blockType = this.blockType;
                 compressedLength = this.compressedLength;

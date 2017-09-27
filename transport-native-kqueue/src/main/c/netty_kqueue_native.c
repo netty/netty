@@ -35,6 +35,35 @@
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
 
+// Currently only macOS supports EVFILT_SOCK, and it is currently only available in internal APIs.
+// To make compiling easier we redefine the values here if they are not present.
+#ifdef __APPLE__
+#ifndef EVFILT_SOCK
+#define EVFILT_SOCK -13
+#endif /* EVFILT_SOCK */
+#ifndef NOTE_CONNRESET
+#define NOTE_CONNRESET 0x00000001
+#endif /* NOTE_CONNRESET */
+#ifndef NOTE_READCLOSED
+#define NOTE_READCLOSED 0x00000002
+#endif /* NOTE_READCLOSED */
+#ifndef NOTE_DISCONNECTED
+#define NOTE_DISCONNECTED 0x00001000
+#endif /* NOTE_DISCONNECTED */
+#else
+#ifndef EVFILT_SOCK
+#define EVFILT_SOCK 0 // Disabled
+#endif /* EVFILT_SOCK */
+#ifndef NOTE_CONNRESET
+#define NOTE_CONNRESET 0
+#endif /* NOTE_CONNRESET */
+#ifndef NOTE_READCLOSED
+#define NOTE_READCLOSED 0
+#endif /* NOTE_READCLOSED */
+#ifndef NOTE_DISCONNECTED
+#define NOTE_DISCONNECTED 0
+#endif /* NOTE_DISCONNECTED */
+#endif /* __APPLE__ */
 
 clockid_t waitClockId = 0; // initialized by netty_unix_util_initialize_wait_clock
 
@@ -80,11 +109,10 @@ static jint netty_kqueue_native_keventWait(JNIEnv* env, jclass clazz, jint kqueu
     timeoutTs.tv_sec = tvSec;
     timeoutTs.tv_nsec = tvNsec;
 
-    // Negatives = wait indefinitely, Zeros = poll (aka return immediately).
-    if ((tvSec == 0 && tvNsec == 0) || tvSec < 0 || tvNsec < 0) {
-        const struct timespec* fixedTs = (tvSec == 0 && tvNsec == 0) ? &timeoutTs : NULL;
+    if (tvSec == 0 && tvNsec == 0) {
+        // Zeros = poll (aka return immediately).
         for (;;) {
-            result = kevent(kqueueFd, changeList, changeListLength, eventList, eventListLength, fixedTs);
+            result = kevent(kqueueFd, changeList, changeListLength, eventList, eventListLength, &timeoutTs);
             if (result >= 0) {
                 return result;
             }
@@ -162,6 +190,10 @@ static jshort netty_kqueue_native_evfiltUser(JNIEnv* env, jclass clazz) {
     return EVFILT_USER;
 }
 
+static jshort netty_kqueue_native_evfiltSock(JNIEnv* env, jclass clazz) {
+    return EVFILT_SOCK;
+}
+
 static jshort netty_kqueue_native_evAdd(JNIEnv* env, jclass clazz) {
    return EV_ADD;
 }
@@ -190,18 +222,34 @@ static jshort netty_kqueue_native_evError(JNIEnv* env, jclass clazz) {
    return EV_ERROR;
 }
 
+static jshort netty_kqueue_native_noteConnReset(JNIEnv* env, jclass clazz) {
+   return NOTE_CONNRESET;
+}
+
+static jshort netty_kqueue_native_noteReadClosed(JNIEnv* env, jclass clazz) {
+   return NOTE_READCLOSED;
+}
+
+static jshort netty_kqueue_native_noteDisconnected(JNIEnv* env, jclass clazz) {
+   return NOTE_DISCONNECTED;
+}
+
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "evfiltRead", "()S", (void *) netty_kqueue_native_evfiltRead },
   { "evfiltWrite", "()S", (void *) netty_kqueue_native_evfiltWrite },
   { "evfiltUser", "()S", (void *) netty_kqueue_native_evfiltUser },
+  { "evfiltSock", "()S", (void *) netty_kqueue_native_evfiltSock },
   { "evAdd", "()S", (void *) netty_kqueue_native_evAdd },
   { "evEnable", "()S", (void *) netty_kqueue_native_evEnable },
   { "evDisable", "()S", (void *) netty_kqueue_native_evDisable },
   { "evDelete", "()S", (void *) netty_kqueue_native_evDelete },
   { "evClear", "()S", (void *) netty_kqueue_native_evClear },
   { "evEOF", "()S", (void *) netty_kqueue_native_evEOF },
-  { "evError", "()S", (void *) netty_kqueue_native_evError }
+  { "evError", "()S", (void *) netty_kqueue_native_evError },
+  { "noteReadClosed", "()S", (void *) netty_kqueue_native_noteReadClosed },
+  { "noteConnReset", "()S", (void *) netty_kqueue_native_noteConnReset },
+  { "noteDisconnected", "()S", (void *) netty_kqueue_native_noteDisconnected }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
@@ -278,7 +326,7 @@ jint JNI_OnLoad_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
     }
 
     char* packagePrefix = NULL;
-#ifndef NETTY_NOT_DYNAMIC
+#ifndef NETTY_BUILD_STATIC
     Dl_info dlinfo;
     jint status = 0;
     // We need to use an address of a function that is uniquely part of this library, so choose a static
@@ -287,12 +335,12 @@ jint JNI_OnLoad_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
         fprintf(stderr, "FATAL: transport-native-kqueue JNI call to dladdr failed!\n");
         return JNI_ERR;
     }
-    packagePrefix = netty_unix_util_parse_package_prefix(dlinfo.dli_fname, "netty-transport-native-kqueue", &status);
+    packagePrefix = netty_unix_util_parse_package_prefix(dlinfo.dli_fname, "netty_transport_native_kqueue", &status);
     if (status == JNI_ERR) {
         fprintf(stderr, "FATAL: transport-native-kqueue JNI encountered unexpected dlinfo.dli_fname: %s\n", dlinfo.dli_fname);
         return JNI_ERR;
     }
-#endif /* NETTY_NOT_DYNAMIC */
+#endif /* NETTY_BUILD_STATIC */
     jint ret = netty_kqueue_native_JNI_OnLoad(env, packagePrefix);
 
     if (packagePrefix != NULL) {
@@ -303,9 +351,11 @@ jint JNI_OnLoad_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
     return ret;
 }
 
-jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+#ifndef NETTY_BUILD_STATIC
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     return JNI_OnLoad_netty_transport_native_kqueue(vm, reserved);
 }
+#endif /* NETTY_BUILD_STATIC */
 
 // Invoked by the JVM when statically linked
 void JNI_OnUnload_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
@@ -317,6 +367,8 @@ void JNI_OnUnload_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
     netty_kqueue_native_JNI_OnUnLoad(env);
 }
 
-void JNI_OnUnload(JavaVM* vm, void* reserved) {
+#ifndef NETTY_BUILD_STATIC
+JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
     return JNI_OnUnload_netty_transport_native_kqueue(vm, reserved);
 }
+#endif /* NETTY_BUILD_STATIC */

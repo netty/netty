@@ -16,30 +16,34 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * This event is emitted by the {@link Http2FrameCodec} when a stream becomes active.
+ * The default {@link Http2SettingsFrame} implementation.
  */
 @UnstableApi
-public class Http2StreamActiveEvent extends AbstractHttp2StreamStateEvent {
+public class DefaultHttp2SettingsFrame implements Http2SettingsFrame {
 
-    private final Http2HeadersFrame headers;
+    private final Http2Settings settings;
 
-    public Http2StreamActiveEvent(int streamId) {
-        this(streamId, null);
+    public DefaultHttp2SettingsFrame(Http2Settings settings) {
+        this.settings = ObjectUtil.checkNotNull(settings, "settings");
     }
 
-    public Http2StreamActiveEvent(int streamId, Http2HeadersFrame headers) {
-        super(streamId);
-        this.headers = headers;
+    @Override
+    public Http2Settings settings() {
+        return settings;
     }
 
-    /**
-     * For outbound streams, this method returns the <em>same</em> {@link Http2HeadersFrame} object as the one that
-     * made the stream active. For inbound streams, this method returns {@code null}.
-     */
-    public Http2HeadersFrame headers() {
-        return headers;
+    @Override
+    public String name() {
+        return "SETTINGS";
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) + "(settings=" + settings + ')';
     }
 }

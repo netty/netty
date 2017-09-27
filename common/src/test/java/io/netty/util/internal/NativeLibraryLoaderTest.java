@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,13 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http2;
+package io.netty.util.internal;
 
-import io.netty.util.internal.UnstableApi;
+import org.junit.Test;
 
-@UnstableApi
-public class Http2StreamClosedEvent extends AbstractHttp2StreamStateEvent {
-    public Http2StreamClosedEvent(int streamId) {
-        super(streamId);
+import java.io.FileNotFoundException;
+import java.util.UUID;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class NativeLibraryLoaderTest {
+
+    @Test
+    public void testFileNotFound() {
+        try {
+            NativeLibraryLoader.load(UUID.randomUUID().toString(), NativeLibraryLoaderTest.class.getClassLoader());
+            fail();
+        } catch (UnsatisfiedLinkError error) {
+            assertTrue(error.getCause() instanceof FileNotFoundException);
+        }
     }
 }

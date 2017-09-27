@@ -60,7 +60,8 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     private void setUpServerChannel() {
         frameListener = mock(Http2FrameListener.class);
 
-        http2ConnectionHandler = new Http2ConnectionHandlerBuilder().frameListener(frameListener).build();
+        http2ConnectionHandler = new Http2ConnectionHandlerBuilder()
+                .frameListener(frameListener).build();
 
         UpgradeCodecFactory upgradeCodecFactory = new UpgradeCodecFactory() {
             @Override
@@ -138,6 +139,21 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         Http2Stream stream = http2ConnectionHandler.connection().stream(1);
         assertEquals(State.HALF_CLOSED_REMOTE, stream.state());
         assertFalse(stream.isHeadersSent());
+
+        String expectedHttpResponse = "HTTP/1.1 101 Switching Protocols\r\n" +
+                "connection: upgrade\r\n" +
+                "upgrade: h2c\r\n" +
+                "content-length: 0\r\n\r\n";
+        ByteBuf responseBuffer = channel.readOutbound();
+        assertEquals(expectedHttpResponse, responseBuffer.toString(CharsetUtil.UTF_8));
+        responseBuffer.release();
+
+        // Check that the preface was send (a.k.a the settings frame)
+        ByteBuf settingsBuffer = channel.readOutbound();
+        assertNotNull(settingsBuffer);
+        settingsBuffer.release();
+
+        assertNull(channel.readOutbound());
     }
 
     @Test
@@ -184,8 +200,8 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     }
 
     @Test
-    public void usedHttp2Codec() throws Exception {
-        final Http2Codec http2Codec = new Http2CodecBuilder(true, new ChannelInitializer<Channel>() {
+    public void usedHttp2MultiplexCodec() throws Exception {
+        final Http2MultiplexCodec http2Codec = new Http2MultiplexCodecBuilder(true, new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
             }
@@ -196,7 +212,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
                 return new Http2ServerUpgradeCodec(http2Codec);
             }
         };
-        http2ConnectionHandler = http2Codec.frameCodec().connectionHandler();
+        http2ConnectionHandler = http2Codec;
 
         userEvents = new ArrayList<Object>();
 

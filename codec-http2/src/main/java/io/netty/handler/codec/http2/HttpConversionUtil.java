@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -99,7 +100,7 @@ public final class HttpConversionUtil {
      * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a> states the path must not
      * be empty, and instead should be {@code /}.
      */
-    private static final AsciiString EMPTY_REQUEST_PATH = new AsciiString("/");
+    private static final AsciiString EMPTY_REQUEST_PATH = AsciiString.cached("/");
 
     private HttpConversionUtil() {
     }
@@ -154,7 +155,7 @@ public final class HttpConversionUtil {
         private final AsciiString text;
 
         ExtensionHeaderNames(String text) {
-            this.text = new AsciiString(text);
+            this.text = AsciiString.cached(text);
         }
 
         public AsciiString text() {
@@ -198,8 +199,8 @@ public final class HttpConversionUtil {
      * @return A new response object which represents headers/data
      * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers, FullHttpMessage, boolean)}
      */
-    public static FullHttpResponse toHttpResponse(int streamId, Http2Headers http2Headers, ByteBufAllocator alloc,
-                                                  boolean validateHttpHeaders)
+    public static FullHttpResponse toFullHttpResponse(int streamId, Http2Headers http2Headers, ByteBufAllocator alloc,
+                                                      boolean validateHttpHeaders)
                     throws Http2Exception {
         HttpResponseStatus status = parseStatus(http2Headers.status());
         // HTTP/2 does not define a way to carry the version or reason phrase that is included in an
@@ -279,6 +280,36 @@ public final class HttpConversionUtil {
         } catch (Http2Exception e) {
             throw e;
         } catch (Throwable t) {
+            throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
+        }
+        return msg;
+    }
+
+    /**
+     * Create a new object to contain the response data.
+     *
+     * @param streamId The stream associated with the response
+     * @param http2Headers The initial set of HTTP/2 headers to create the response with
+     * @param validateHttpHeaders <ul>
+     *        <li>{@code true} to validate HTTP headers in the http-codec</li>
+     *        <li>{@code false} not to validate HTTP headers in the http-codec</li>
+     *        </ul>
+     * @return A new response object which represents headers for a chunked response
+     * @throws Http2Exception see {@link #addHttp2ToHttpHeaders(int, Http2Headers,
+     *         HttpHeaders, HttpVersion, boolean, boolean)}
+     */
+    public static HttpResponse toHttpResponse(final int streamId,
+                                              final Http2Headers http2Headers,
+                                              final boolean validateHttpHeaders) throws Http2Exception {
+        final HttpResponseStatus status = parseStatus(http2Headers.status());
+        // HTTP/2 does not define a way to carry the version or reason phrase that is included in an
+        // HTTP/1.1 status line.
+        final HttpResponse msg = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, validateHttpHeaders);
+        try {
+            addHttp2ToHttpHeaders(streamId, http2Headers, msg.headers(), msg.protocolVersion(), false, true);
+        } catch (final Http2Exception e) {
+            throw e;
+        } catch (final Throwable t) {
             throw streamError(streamId, PROTOCOL_ERROR, t, "HTTP/2 to HTTP/1.x headers conversion error");
         }
         return msg;
@@ -446,16 +477,19 @@ public final class HttpConversionUtil {
         return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
     }
 
-    private static void setHttp2Authority(String authority, Http2Headers out) {
+    // package-private for testing only
+    static void setHttp2Authority(String authority, Http2Headers out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
         if (authority != null) {
-            int endOfUserInfo = authority.indexOf('@');
-            if (endOfUserInfo < 0) {
-                out.authority(new AsciiString(authority));
-            } else if (endOfUserInfo + 1 < authority.length()) {
-                out.authority(new AsciiString(authority.substring(endOfUserInfo + 1)));
+            if (authority.isEmpty()) {
+                out.authority(EMPTY_STRING);
             } else {
-                throw new IllegalArgumentException("authority: " + authority);
+                int start = authority.indexOf('@') + 1;
+                int length = authority.length() - start;
+                if (length == 0) {
+                    throw new IllegalArgumentException("authority: " + authority);
+                }
+                out.authority(new AsciiString(authority, start, length));
             }
         }
     }

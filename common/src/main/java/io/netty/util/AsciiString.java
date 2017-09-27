@@ -45,7 +45,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * {@link #arrayChanged()} so the state of this class can be reset.
  */
 public final class AsciiString implements CharSequence, Comparable<CharSequence> {
-    public static final AsciiString EMPTY_STRING = new AsciiString("");
+    public static final AsciiString EMPTY_STRING = cached("");
     private static final char MAX_CHAR_VALUE = 255;
 
     public static final int INDEX_NOT_FOUND = -1;
@@ -1121,10 +1121,12 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      */
     @Override
     public int hashCode() {
-        if (hash == 0) {
-            hash = PlatformDependent.hashCodeAscii(value, offset, length);
+        int h = hash;
+        if (h == 0) {
+            h = PlatformDependent.hashCodeAscii(value, offset, length);
+            hash = h;
         }
-        return hash;
+        return h;
     }
 
     @Override
@@ -1148,11 +1150,12 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      */
     @Override
     public String toString() {
-        if (string != null) {
-            return string;
+        String cache = string;
+        if (cache == null) {
+            cache = toString(0);
+            string = cache;
         }
-        string = toString(0);
-        return string;
+        return cache;
     }
 
     /**
@@ -1382,6 +1385,18 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      */
     public static AsciiString of(CharSequence string) {
         return string.getClass() == AsciiString.class ? (AsciiString) string : new AsciiString(string);
+    }
+
+    /**
+     * Returns an {@link AsciiString} containing the given string and retains/caches the input
+     * string for later use in {@link #toString()}.
+     * Used for the constants (which already stored in the JVM's string table) and in cases
+     * where the guaranteed use of the {@link #toString()} method.
+     */
+    public static AsciiString cached(String string) {
+        AsciiString asciiString = new AsciiString(string);
+        asciiString.string = string;
+        return asciiString;
     }
 
     /**

@@ -107,12 +107,12 @@ final class HpackStaticTable {
     /* 61 */ newEmptyHeaderField("www-authenticate")
     );
 
-    private static HpackHeaderField newEmptyHeaderField(CharSequence name) {
-        return newHeaderField(name, AsciiString.EMPTY_STRING);
+    private static HpackHeaderField newEmptyHeaderField(String name) {
+        return new HpackHeaderField(AsciiString.cached(name), AsciiString.EMPTY_STRING);
     }
 
-    private static HpackHeaderField newHeaderField(CharSequence name, CharSequence value) {
-        return new HpackHeaderField(AsciiString.of(name), AsciiString.of(value));
+    private static HpackHeaderField newHeaderField(String name, String value) {
+        return new HpackHeaderField(AsciiString.cached(name), AsciiString.cached(value));
     }
 
     private static final CharSequenceMap<Integer> STATIC_INDEX_BY_NAME = createMap();

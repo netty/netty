@@ -29,12 +29,12 @@ public interface Http2HeadersFrame extends Http2StreamFrame {
     Http2Headers headers();
 
     /**
-     * {@code true} if this frame is the last one in this direction of the stream.
-     */
-    boolean isEndStream();
-
-    /**
      * Frame padding to use. Must be non-negative and less than 256.
      */
     int padding();
+
+    /**
+     * Returns {@code true} if the END_STREAM flag ist set.
+     */
+    boolean isEndStream();
 }

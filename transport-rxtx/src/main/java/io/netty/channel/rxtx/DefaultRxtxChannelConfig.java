@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
+import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
@@ -35,7 +36,10 @@ import static io.netty.channel.rxtx.RxtxChannelOption.WAIT_TIME;
 
 /**
  * Default configuration class for RXTX device connections.
+ *
+ * @deprecated this transport will be removed in the next major version.
  */
+@Deprecated
 final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements RxtxChannelConfig {
 
     private volatile int baudrate = 115200;
@@ -49,6 +53,7 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
 
     DefaultRxtxChannelConfig(RxtxChannel channel) {
         super(channel);
+        setAllocator(new PreferHeapByteBufAllocator(getAllocator()));
     }
 
     @Override

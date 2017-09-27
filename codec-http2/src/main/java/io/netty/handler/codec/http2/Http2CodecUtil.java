@@ -35,6 +35,8 @@ import static io.netty.handler.codec.http2.Http2Exception.headerListSizeError;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
@@ -43,7 +45,7 @@ import static java.lang.Math.min;
 public final class Http2CodecUtil {
     public static final int CONNECTION_STREAM_ID = 0;
     public static final int HTTP_UPGRADE_STREAM_ID = 1;
-    public static final CharSequence HTTP_UPGRADE_SETTINGS_HEADER = new AsciiString("HTTP2-Settings");
+    public static final CharSequence HTTP_UPGRADE_SETTINGS_HEADER = AsciiString.cached("HTTP2-Settings");
     public static final CharSequence HTTP_UPGRADE_PROTOCOL_NAME = "h2c";
     public static final CharSequence TLS_UPGRADE_PROTOCOL_NAME = ApplicationProtocolNames.HTTP_2;
 
@@ -131,6 +133,8 @@ public final class Http2CodecUtil {
         // This is equivalent to `maxHeaderListSize * 1.25` but we avoid floating point multiplication.
         return maxHeaderListSize + (maxHeaderListSize >>> 2);
     }
+
+    public static final long DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = MILLISECONDS.convert(30, SECONDS);
 
     /**
      * Returns {@code true} if the stream is an outbound stream.

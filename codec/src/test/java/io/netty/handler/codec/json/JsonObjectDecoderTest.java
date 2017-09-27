@@ -72,35 +72,73 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testStreamJsonArrayOverMultipleWrites() {
+    public void testStreamJsonArrayOverMultipleWrites1() {
+        String[] array = new String[] {
+                "   [{\"test",
+                "case\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"",
+                "  }\n\n    , ",
+                "{\"testcase\" : \"Streaming string me",
+                "ssage\"} ]      "
+                };
+        String[] result = new String[] {
+                "{\"testcase\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"  }",
+                "{\"testcase\" : \"Streaming string message\"}"
+                };
+        doTestStreamJsonArrayOverMultipleWrites(2, array, result);
+    }
+
+    @Test
+    public void testStreamJsonArrayOverMultipleWrites2() {
+        String[] array = new String[] {
+                "   [{\"test",
+                "case\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"",
+                "  }\n\n    , {\"test",
+                "case\" : \"Streaming string me",
+                "ssage\"} ]      "
+                };
+        String[] result = new String[] {
+                "{\"testcase\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"  }",
+                "{\"testcase\" : \"Streaming string message\"}"
+                };
+        doTestStreamJsonArrayOverMultipleWrites(2, array, result);
+    }
+
+    @Test
+    public void testStreamJsonArrayOverMultipleWrites3() {
+        String[] array = new String[] {
+                "   [{\"test",
+                "case\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"",
+                "  }\n\n    , [{\"test",
+                "case\" : \"Streaming string me",
+                "ssage\"}] ]      "
+                };
+        String[] result = new String[] {
+                "{\"testcase\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"  }",
+                "[{\"testcase\" : \"Streaming string message\"}]"
+                };
+        doTestStreamJsonArrayOverMultipleWrites(2, array, result);
+    }
+
+    private static void doTestStreamJsonArrayOverMultipleWrites(int indexDataAvailable,
+            String[] array, String[] result) {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(true));
 
-        String arrayPart1 = "[{\"test";
-        String arrayPart2 = "case\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"";
-        String arrayPart3 = "  }\n\n    , ";
-        String arrayPart4 = "{\"testcase\" : \"Streaming string me";
-        String arrayPart5 = "ssage\"} ]";
+        boolean dataAvailable = false;
+        for (String part : array) {
+            dataAvailable = ch.writeInbound(Unpooled.copiedBuffer(part, CharsetUtil.UTF_8));
+            if (indexDataAvailable > 0) {
+                assertFalse(dataAvailable);
+            } else {
+                assertTrue(dataAvailable);
+            }
+            indexDataAvailable--;
+        }
 
-        // Test array
-        boolean dataAvailable = ch.writeInbound(Unpooled.copiedBuffer("   " + arrayPart1, CharsetUtil.UTF_8));
-        assertFalse(dataAvailable);
-        dataAvailable = ch.writeInbound(Unpooled.copiedBuffer(arrayPart2, CharsetUtil.UTF_8));
-        assertFalse(dataAvailable);
-        dataAvailable = ch.writeInbound(Unpooled.copiedBuffer(arrayPart3, CharsetUtil.UTF_8));
-        assertTrue(dataAvailable);
-        dataAvailable = ch.writeInbound(Unpooled.copiedBuffer(arrayPart4, CharsetUtil.UTF_8));
-        assertTrue(dataAvailable);
-        dataAvailable = ch.writeInbound(Unpooled.copiedBuffer(arrayPart5 + "      ", CharsetUtil.UTF_8));
-        assertTrue(dataAvailable);
-
-        ByteBuf res = ch.readInbound();
-        assertEquals("{\"testcase\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"  }",
-                res.toString(CharsetUtil.UTF_8));
-        res.release();
-
-        res = ch.readInbound();
-        assertEquals("{\"testcase\" : \"Streaming string message\"}", res.toString(CharsetUtil.UTF_8));
-        res.release();
+        for (String part : result) {
+            ByteBuf res = ch.readInbound();
+            assertEquals(part, res.toString(CharsetUtil.UTF_8));
+            res.release();
+        }
 
         assertFalse(ch.finish());
     }

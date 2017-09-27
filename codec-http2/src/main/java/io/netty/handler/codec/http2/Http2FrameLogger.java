@@ -62,19 +62,19 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
 
     public void logData(Direction direction, ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
             boolean endStream) {
-        logger.log(level, "{} {} PRIORITY: streamId={} padding={} endStream={} length={} bytes={}", ctx.channel(),
+        logger.log(level, "{} {} DATA: streamId={} padding={} endStream={} length={} bytes={}", ctx.channel(),
                 direction.name(), streamId, padding, endStream, data.readableBytes(), toString(data));
     }
 
     public void logHeaders(Direction direction, ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int padding, boolean endStream) {
-        logger.log(level, "{} {} PRIORITY: streamId={} headers={} padding={} endStream={}", ctx.channel(),
+        logger.log(level, "{} {} HEADERS: streamId={} headers={} padding={} endStream={}", ctx.channel(),
                 direction.name(), streamId, headers, padding, endStream);
     }
 
     public void logHeaders(Direction direction, ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int streamDependency, short weight, boolean exclusive, int padding, boolean endStream) {
-        logger.log(level, "{} {} PRIORITY: streamId={} headers={} streamDependency={} weight={} exclusive={} " +
+        logger.log(level, "{} {} HEADERS: streamId={} headers={} streamDependency={} weight={} exclusive={} " +
                         "padding={} endStream={}", ctx.channel(),
                 direction.name(), streamId, headers, streamDependency, weight, exclusive, padding, endStream);
     }

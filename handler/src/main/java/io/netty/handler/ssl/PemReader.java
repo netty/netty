@@ -111,7 +111,7 @@ final class PemReader {
                 safeClose(in);
             }
         } catch (FileNotFoundException e) {
-            throw new KeyException("could not fine key file: " + file);
+            throw new KeyException("could not find key file: " + file);
         }
     }
 

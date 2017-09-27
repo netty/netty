@@ -28,6 +28,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
 
     private final UnpooledByteBufAllocatorMetric metric = new UnpooledByteBufAllocatorMetric();
     private final boolean disableLeakDetector;
+    private final boolean noCleaner;
 
     /**
      * Default instance which uses leak-detection for direct buffers.
@@ -55,8 +56,25 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
      *                            direct buffers when not explicit released.
      */
     public UnpooledByteBufAllocator(boolean preferDirect, boolean disableLeakDetector) {
+        this(preferDirect, disableLeakDetector, PlatformDependent.useDirectBufferNoCleaner());
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param preferDirect {@code true} if {@link #buffer(int)} should try to allocate a direct buffer rather than
+     *                     a heap buffer
+     * @param disableLeakDetector {@code true} if the leak-detection should be disabled completely for this
+     *                            allocator. This can be useful if the user just want to depend on the GC to handle
+     *                            direct buffers when not explicit released.
+     * @param tryNoCleaner {@code true} if we should try to use {@link PlatformDependent#allocateDirectNoCleaner(int)}
+     *                            to allocate direct memory.
+     */
+    public UnpooledByteBufAllocator(boolean preferDirect, boolean disableLeakDetector, boolean tryNoCleaner) {
         super(preferDirect);
         this.disableLeakDetector = disableLeakDetector;
+        noCleaner = tryNoCleaner && PlatformDependent.hasUnsafe()
+                && PlatformDependent.hasDirectBufferNoCleanerConstructor();
     }
 
     @Override
@@ -70,8 +88,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
         final ByteBuf buf;
         if (PlatformDependent.hasUnsafe()) {
-            buf = PlatformDependent.useDirectBufferNoCleaner() ?
-                    new InstrumentedUnpooledUnsafeNoCleanerDirectByteBuf(this, initialCapacity, maxCapacity) :
+            buf = noCleaner ? new InstrumentedUnpooledUnsafeNoCleanerDirectByteBuf(this, initialCapacity, maxCapacity) :
                     new InstrumentedUnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
         } else {
             buf = new InstrumentedUnpooledDirectByteBuf(this, initialCapacity, maxCapacity);

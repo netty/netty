@@ -33,7 +33,7 @@ public final class SmtpRequests {
     private static final SmtpRequest RSET = new DefaultSmtpRequest(SmtpCommand.RSET);
     private static final SmtpRequest HELP_NO_ARG = new DefaultSmtpRequest(SmtpCommand.HELP);
     private static final SmtpRequest QUIT = new DefaultSmtpRequest(SmtpCommand.QUIT);
-    private static final AsciiString FROM_NULL_SENDER = new AsciiString("FROM:<>");
+    private static final AsciiString FROM_NULL_SENDER = AsciiString.cached("FROM:<>");
 
     /**
      * Creates a {@code HELO} request.
