@@ -86,11 +86,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             throw new IllegalStateException("group set already");
         }
         this.group = group;
-        return thisBootstrap();
+        return self();
     }
 
     @SuppressWarnings("unchecked")
-    private B thisBootstrap() {
+    private B self() {
         return (B) this;
     }
 
@@ -119,7 +119,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
 
         this.channelFactory = channelFactory;
-        return thisBootstrap();
+        return self();
     }
 
     /**
@@ -139,7 +139,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     public B localAddress(SocketAddress localAddress) {
         this.localAddress = localAddress;
-        return thisBootstrap();
+        return self();
     }
 
     /**
@@ -180,7 +180,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
                 options.put(option, value);
             }
         }
-        return thisBootstrap();
+        return self();
     }
 
     /**
@@ -200,7 +200,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
                 attrs.put(key, value);
             }
         }
-        return thisBootstrap();
+        return self();
     }
 
     /**
@@ -214,7 +214,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         if (channelFactory == null) {
             throw new IllegalStateException("channel or channelFactory not set");
         }
-        return thisBootstrap();
+        return self();
     }
 
     /**
@@ -377,7 +377,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             throw new NullPointerException("handler");
         }
         this.handler = handler;
-        return thisBootstrap();
+        return self();
     }
 
     /**
