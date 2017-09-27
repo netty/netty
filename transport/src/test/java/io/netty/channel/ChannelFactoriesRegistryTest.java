@@ -213,7 +213,7 @@ public class ChannelFactoriesRegistryTest {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            logger.info(String.format("Received message: %s", msg));
+            logger.info("Received message: {}", msg);
             ReferenceCountUtil.safeRelease(msg);
         }
     }
