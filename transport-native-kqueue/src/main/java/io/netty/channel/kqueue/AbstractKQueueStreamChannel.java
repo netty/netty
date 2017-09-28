@@ -532,6 +532,10 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                         byteBuf.release();
                         byteBuf = null;
                         close = allocHandle.lastBytesRead() < 0;
+                        if (close) {
+                            // There is nothing left to read as we received an EOF.
+                            readPending = false;
+                        }
                         break;
                     }
                     allocHandle.incMessagesRead(1);
