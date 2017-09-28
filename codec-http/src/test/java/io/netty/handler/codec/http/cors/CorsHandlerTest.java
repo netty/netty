@@ -124,6 +124,7 @@ public class CorsHandlerTest {
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
         assertThat(response.headers().get("CustomHeader"), equalTo("somevalue"));
         assertThat(response.headers().get(VARY), equalTo(ORIGIN));
+        assertThat(response.headers().get(CONTENT_LENGTH), is("0"));
     }
 
     @Test
@@ -231,6 +232,7 @@ public class CorsHandlerTest {
         final CorsConfig config = CorsConfig.withOrigin("http://localhost:8080").shortCurcuit().build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
         assertThat(response.getStatus(), is(FORBIDDEN));
+        assertThat(response.headers().get(CONTENT_LENGTH), is("0"));
     }
 
     @Test

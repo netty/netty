@@ -75,6 +75,9 @@ public class CorsHandler extends ChannelDuplexHandler {
             setMaxAge(response);
             setPreflightHeaders(response);
         }
+        if (!response.headers().contains(CONTENT_LENGTH)) {
+            response.headers().set(CONTENT_LENGTH, "0");
+        }
         release(request);
         respond(ctx, request, response);
     }
@@ -201,8 +204,10 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {
-        respond(ctx, request, new DefaultFullHttpResponse(request.getProtocolVersion(), FORBIDDEN));
+        HttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), FORBIDDEN);
+        response.headers().set(CONTENT_LENGTH, "0");
         release(request);
+        respond(ctx, request, response);
     }
 
     private static void respond(
