@@ -26,6 +26,8 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import javax.net.ssl.SSLParameters;
+
 /**
  * <p>Enables <a href="https://tools.ietf.org/html/rfc3546#section-3.1">SNI
  * (Server Name Indication)</a> extension for server side SSL. For clients
@@ -37,6 +39,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
     private static final Selection EMPTY_SELECTION = new Selection(null, null);
 
     protected final AsyncMapping<String, SslContext> mapping;
+    private SSLParameters sslParameters;
 
     private volatile Selection selection = EMPTY_SELECTION;
 
@@ -69,6 +72,14 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
     @SuppressWarnings("unchecked")
     public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping) {
         this.mapping = (AsyncMapping<String, SslContext>) ObjectUtil.checkNotNull(mapping, "mapping");
+    }
+
+    /**
+     * Sets sslParameters to be used by SSL Engine
+     * @param sslParameters
+     */
+    public void setSslParameters(SSLParameters sslParameters) {
+        this.sslParameters = sslParameters;
     }
 
     /**
@@ -126,6 +137,10 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
         SslHandler sslHandler = null;
         try {
             sslHandler = sslContext.newHandler(ctx.alloc());
+            if (sslParameters != null) {
+                sslHandler.engine().setSSLParameters(sslParameters);
+            }
+
             ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
             sslHandler = null;
         } finally {
