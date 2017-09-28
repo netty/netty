@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -80,6 +81,9 @@ public class CorsHandler extends ChannelDuplexHandler {
             setAllowCredentials(response);
             setMaxAge(response);
             setPreflightHeaders(response);
+        }
+        if (!response.headers().contains(HttpHeaderNames.CONTENT_LENGTH)) {
+            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
         }
         release(request);
         respond(ctx, request, response);
@@ -205,8 +209,10 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {
+        HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), FORBIDDEN);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
         release(request);
-        respond(ctx, request, new DefaultFullHttpResponse(request.protocolVersion(), FORBIDDEN));
+        respond(ctx, request, response);
     }
 
     private static void respond(
