@@ -26,5 +26,5 @@ interface ApplicationProtocolAccessor {
      * @return the application-level protocol name or
      *         {@code null} if the negotiation failed or the client does not have ALPN/NPN extension
      */
-    String getApplicationProtocol();
+    String getNegotiatedApplicationProtocol();
 }
