@@ -137,14 +137,14 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
 
         @Override
         public void unsupported() {
-            engineWrapper.setApplicationProtocol(null);
+            engineWrapper.setNegotiatedApplicationProtocol(null);
         }
 
         @Override
         public String select(List<String> protocols) throws Exception {
             for (String p : supportedProtocols) {
                 if (protocols.contains(p)) {
-                    engineWrapper.setApplicationProtocol(p);
+                    engineWrapper.setNegotiatedApplicationProtocol(p);
                     return p;
                 }
             }
@@ -152,7 +152,7 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
         }
 
         public String noSelectMatchFound() throws Exception {
-            engineWrapper.setApplicationProtocol(null);
+            engineWrapper.setNegotiatedApplicationProtocol(null);
             return null;
         }
     }
@@ -179,13 +179,13 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
 
         @Override
         public void unsupported() {
-            engineWrapper.setApplicationProtocol(null);
+            engineWrapper.setNegotiatedApplicationProtocol(null);
         }
 
         @Override
         public void selected(String protocol) throws Exception {
             if (supportedProtocols.contains(protocol)) {
-                engineWrapper.setApplicationProtocol(protocol);
+                engineWrapper.setNegotiatedApplicationProtocol(protocol);
             } else {
                 noSelectedMatchFound(protocol);
             }

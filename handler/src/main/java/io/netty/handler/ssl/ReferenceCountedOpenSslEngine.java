@@ -1829,7 +1829,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     @Override
-    public String getApplicationProtocol() {
+    public String getNegotiatedApplicationProtocol() {
         return applicationProtocol;
     }
 
