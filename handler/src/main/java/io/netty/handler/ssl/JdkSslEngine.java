@@ -33,11 +33,11 @@ class JdkSslEngine extends SSLEngine implements ApplicationProtocolAccessor {
     }
 
     @Override
-    public String getApplicationProtocol() {
+    public String getNegotiatedApplicationProtocol() {
         return applicationProtocol;
     }
 
-    void setApplicationProtocol(String applicationProtocol) {
+    void setNegotiatedApplicationProtocol(String applicationProtocol) {
         this.applicationProtocol = applicationProtocol;
     }
 

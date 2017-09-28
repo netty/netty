@@ -42,6 +42,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -991,10 +992,8 @@ public abstract class SSLEngineTest {
         try {
             writeAndVerifyReceived(clientMessage.retain(), clientChannel, serverLatch, serverReceiver);
             writeAndVerifyReceived(serverMessage.retain(), serverConnectedChannel, clientLatch, clientReceiver);
-            if (expectedApplicationProtocol != null) {
-                verifyApplicationLevelProtocol(clientChannel, expectedApplicationProtocol);
-                verifyApplicationLevelProtocol(serverConnectedChannel, expectedApplicationProtocol);
-            }
+            verifyApplicationLevelProtocol(clientChannel, expectedApplicationProtocol);
+            verifyApplicationLevelProtocol(serverConnectedChannel, expectedApplicationProtocol);
         } finally {
             clientMessage.release();
             serverMessage.release();
@@ -1006,6 +1005,14 @@ public abstract class SSLEngineTest {
         assertNotNull(handler);
         String appProto = handler.applicationProtocol();
         assertEquals(appProto, expectedApplicationProtocol);
+
+        SSLEngine engine = handler.engine();
+        if (engine instanceof Java9SslEngine) {
+            // Also verify the Java9 exposed method.
+            Java9SslEngine java9SslEngine = (Java9SslEngine) engine;
+            assertEquals(expectedApplicationProtocol == null ? StringUtil.EMPTY_STRING : expectedApplicationProtocol,
+                    java9SslEngine.getApplicationProtocol());
+        }
     }
 
     private static void writeAndVerifyReceived(ByteBuf message, Channel sendChannel, CountDownLatch receiverLatch,
