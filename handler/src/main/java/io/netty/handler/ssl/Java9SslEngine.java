@@ -150,17 +150,25 @@ final class Java9SslEngine extends JdkSslEngine {
     }
 
     @Override
-    void setApplicationProtocol(String applicationProtocol) {
+    void setNegotiatedApplicationProtocol(String applicationProtocol) {
         // Do nothing as this is handled internally by the Java9 implementation of SSLEngine.
     }
 
     @Override
-    public String getApplicationProtocol() {
-        return Java9SslUtils.getApplicationProtocol(getWrappedEngine());
+    public String getNegotiatedApplicationProtocol() {
+        String protocol = getApplicationProtocol();
+        if (protocol != null) {
+            return protocol.isEmpty() ? null : protocol;
+        }
+        return protocol;
     }
 
     // These methods will override the methods defined by Java 9. As we compile with Java8 we can not add
     // @Override annotations here.
+    public String getApplicationProtocol() {
+        return Java9SslUtils.getApplicationProtocol(getWrappedEngine());
+    }
+
     public String getHandshakeApplicationProtocol() {
         return Java9SslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
     }

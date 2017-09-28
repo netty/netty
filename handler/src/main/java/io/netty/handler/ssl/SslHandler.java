@@ -66,7 +66,6 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
 
 import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
@@ -578,7 +577,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             return null;
         }
 
-        return ((ApplicationProtocolAccessor) engine).getApplicationProtocol();
+        return ((ApplicationProtocolAccessor) engine).getNegotiatedApplicationProtocol();
     }
 
     /**
