@@ -15,10 +15,17 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.base64.Base64;
+import io.netty.handler.codec.base64.Base64Dialect;
+
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLParameters;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -83,5 +90,13 @@ final class Java8SslUtils {
             return false;
         }
         return true;
+    }
+
+    static ByteBuf toBase64(ByteBuf src) {
+        ByteBuffer srcBuffer = src.internalNioBuffer(src.readerIndex(), src.readableBytes());
+        int remaining = srcBuffer.remaining();
+        ByteBuffer encodedBuffer = java.util.Base64.getEncoder().encode(srcBuffer);
+        src.skipBytes(remaining - srcBuffer.remaining());
+        return Unpooled.wrappedBuffer(encodedBuffer);
     }
 }
