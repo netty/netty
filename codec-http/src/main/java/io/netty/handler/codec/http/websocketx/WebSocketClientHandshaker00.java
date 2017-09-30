@@ -24,7 +24,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 
@@ -178,9 +177,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      */
     @Override
     protected void verify(FullHttpResponse response) {
-        final HttpResponseStatus status = new HttpResponseStatus(101, "WebSocket Protocol Handshake");
-
-        if (!response.status().equals(status)) {
+        if (response.status().code() != 101) {
             throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
         }
 
