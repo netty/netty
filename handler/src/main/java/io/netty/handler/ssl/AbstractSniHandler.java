@@ -234,8 +234,10 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                             onLookupComplete(ctx, hostname, future);
                         } catch (DecoderException err) {
                             ctx.fireExceptionCaught(err);
-                        } catch (Throwable cause) {
+                        } catch (Exception cause) {
                             ctx.fireExceptionCaught(new DecoderException(cause));
+                        } catch (Throwable cause) {
+                            ctx.fireExceptionCaught(cause);
                         }
                     } finally {
                         if (readPending) {
