@@ -418,7 +418,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
             }
         } catch (DecoderException e) {
             throw e;
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             throw new DecoderException(cause);
         }
     }

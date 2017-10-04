@@ -22,9 +22,6 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -242,7 +239,7 @@ public class SniHandler extends ByteToMessageDecoder {
                             break loop;
                     }
                 }
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 // unexpected encoding, ignore sni and use default
                 if (logger.isDebugEnabled()) {
                     logger.debug("Unexpected client hello packet: " + ByteBufUtil.hexDump(in), e);
