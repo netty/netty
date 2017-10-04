@@ -355,16 +355,16 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
         fail(ctx, "header length (" + length + ") exceeds the allowed maximum (" + maxLength + ')', null);
     }
 
-    private void fail(final ChannelHandlerContext ctx, String errMsg, Throwable t) {
+    private void fail(final ChannelHandlerContext ctx, String errMsg, Exception e) {
         finished = true;
         ctx.close(); // drop connection immediately per spec
         HAProxyProtocolException ppex;
-        if (errMsg != null && t != null) {
-            ppex = new HAProxyProtocolException(errMsg, t);
+        if (errMsg != null && e != null) {
+            ppex = new HAProxyProtocolException(errMsg, e);
         } else if (errMsg != null) {
             ppex = new HAProxyProtocolException(errMsg);
-        } else if (t != null) {
-            ppex = new HAProxyProtocolException(t);
+        } else if (e != null) {
+            ppex = new HAProxyProtocolException(e);
         } else {
             ppex = new HAProxyProtocolException();
         }
