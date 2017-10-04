@@ -100,7 +100,11 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
     protected final void onLookupComplete(ChannelHandlerContext ctx,
                                           String hostname, Future<SslContext> future) throws Exception {
         if (!future.isSuccess()) {
-            throw new DecoderException("failed to get the SslContext for " + hostname, future.cause());
+            final Throwable cause = future.cause();
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            throw new DecoderException("failed to get the SslContext for " + hostname, cause);
         }
 
         SslContext sslContext = future.getNow();
