@@ -85,6 +85,36 @@ import static org.junit.Assume.assumeTrue;
 
 public class SslHandlerTest {
 
+    @Test(expected = SSLException.class, timeout = 3000)
+    public void testClientHandshakeTimeout() throws Exception {
+        testHandshakeTimeout(true);
+    }
+
+    @Test(expected = SSLException.class, timeout = 3000)
+    public void testServerHandshakeTimeout() throws Exception {
+        testHandshakeTimeout(false);
+    }
+
+    private static void testHandshakeTimeout(boolean client) throws Exception {
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        engine.setUseClientMode(client);
+        SslHandler handler = new SslHandler(engine);
+        handler.setHandshakeTimeoutMillis(1);
+
+        EmbeddedChannel ch = new EmbeddedChannel(handler);
+        try {
+            while (!handler.handshakeFuture().isDone()) {
+                Thread.sleep(10);
+                // We need to run all pending tasks as the handshake timeout is scheduled on the EventLoop.
+                ch.runPendingTasks();
+            }
+
+            handler.handshakeFuture().syncUninterruptibly();
+        } finally {
+            ch.finishAndReleaseAll();
+        }
+    }
+
     @Test
     public void testTruncatedPacket() throws Exception {
         SSLEngine engine = SSLContext.getDefault().createSSLEngine();
