@@ -1536,11 +1536,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
 
-        if (ctx.channel().isActive() && engine.getUseClientMode()) {
-            // Begin the initial handshake.
-            // channelActive() event has been fired already, which means this.channelActive() will
-            // not be invoked. We have to initialize here instead.
-            handshake(null);
+        if (ctx.channel().isActive()) {
+            if (engine.getUseClientMode()) {
+                // Begin the initial handshake.
+                // channelActive() event has been fired already, which means this.channelActive() will
+                // not be invoked. We have to initialize here instead.
+                handshake(null);
+            } else {
+                applyHandshakeTimeout(null);
+            }
         } else {
             // channelActive() event has not been fired yet.  this.channelOpen() will be invoked
             // and initialization will occur there.
@@ -1635,17 +1639,21 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         } finally {
            forceFlush(ctx);
         }
+        applyHandshakeTimeout(p);
+    }
 
+    private void applyHandshakeTimeout(Promise<Channel> p) {
+        final Promise<Channel> promise = p == null ? handshakePromise : p;
         // Set timeout if necessary.
         final long handshakeTimeoutMillis = this.handshakeTimeoutMillis;
-        if (handshakeTimeoutMillis <= 0 || p.isDone()) {
+        if (handshakeTimeoutMillis <= 0 || promise.isDone()) {
             return;
         }
 
         final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
-                if (p.isDone()) {
+                if (promise.isDone()) {
                     return;
                 }
                 notifyHandshakeFailure(HANDSHAKE_TIMED_OUT);
@@ -1653,7 +1661,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        p.addListener(new FutureListener<Channel>() {
+        promise.addListener(new FutureListener<Channel>() {
             @Override
             public void operationComplete(Future<Channel> f) throws Exception {
                 timeoutFuture.cancel(false);
@@ -1671,9 +1679,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-        if (!startTls && engine.getUseClientMode()) {
-            // Begin the initial handshake
-            handshake(null);
+        if (!startTls) {
+            if (engine.getUseClientMode()) {
+                // Begin the initial handshake.
+                handshake(null);
+            } else {
+                applyHandshakeTimeout(null);
+            }
         }
         ctx.fireChannelActive();
     }
