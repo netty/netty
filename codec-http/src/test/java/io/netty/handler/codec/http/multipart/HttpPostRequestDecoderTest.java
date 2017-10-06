@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import java.net.URLEncoder;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 
@@ -489,6 +490,140 @@ public class HttpPostRequestDecoderTest {
         } finally {
             decoder.destroy();
             content.release();
+        }
+    }
+
+    // https://github.com/netty/netty/pull/7265
+    @Test
+    public void testDecodeContentDispositionFieldParameters() throws Exception {
+
+        final String boundary = "74e78d11b0214bdcbc2f86491eeb4902";
+
+        String encoding = "utf-8";
+        String filename = "attached_файл.txt";
+        String filenameEncoded = URLEncoder.encode(filename, encoding);
+
+        final String body = "--" + boundary + "\r\n" +
+          "Content-Disposition: form-data; name=\"file\"; filename*=" + encoding + "''" + filenameEncoded + "\r\n" +
+          "\r\n" +
+          "foo\r\n" +
+          "\r\n" +
+          "--" + boundary + "--";
+
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                                                                      HttpMethod.POST,
+                                                                      "http://localhost",
+                                                                      Unpooled.wrappedBuffer(body.getBytes()));
+
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
+        assertTrue("the item should be a FileUpload", part1 instanceof FileUpload);
+        FileUpload fileUpload = (FileUpload) part1;
+        assertEquals("the filename should be decoded", filename, fileUpload.getFilename());
+        decoder.destroy();
+        req.release();
+    }
+
+    // https://github.com/netty/netty/pull/7265
+    @Test
+    public void testDecodeWithLanguageContentDispositionFieldParameters() throws Exception {
+
+        final String boundary = "74e78d11b0214bdcbc2f86491eeb4902";
+
+        String encoding = "utf-8";
+        String filename = "attached_файл.txt";
+        String language = "anything";
+        String filenameEncoded = URLEncoder.encode(filename, encoding);
+
+        final String body = "--" + boundary + "\r\n" +
+          "Content-Disposition: form-data; name=\"file\"; filename*=" +
+              encoding + "'" + language + "'" + filenameEncoded + "\r\n" +
+          "\r\n" +
+          "foo\r\n" +
+          "\r\n" +
+          "--" + boundary + "--";
+
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                                                                      HttpMethod.POST,
+                                                                      "http://localhost",
+                                                                      Unpooled.wrappedBuffer(body.getBytes()));
+
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
+        assertTrue("the item should be a FileUpload", part1 instanceof FileUpload);
+        FileUpload fileUpload = (FileUpload) part1;
+        assertEquals("the filename should be decoded", filename, fileUpload.getFilename());
+        decoder.destroy();
+        req.release();
+    }
+
+    // https://github.com/netty/netty/pull/7265
+    @Test
+    public void testDecodeMalformedNotEncodedContentDispositionFieldParameters() throws Exception {
+
+        final String boundary = "74e78d11b0214bdcbc2f86491eeb4902";
+
+        final String body = "--" + boundary + "\r\n" +
+          "Content-Disposition: form-data; name=\"file\"; filename*=not-encoded\r\n" +
+          "\r\n" +
+          "foo\r\n" +
+          "\r\n" +
+          "--" + boundary + "--";
+
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                                                                      HttpMethod.POST,
+                                                                      "http://localhost",
+                                                                      Unpooled.wrappedBuffer(body.getBytes()));
+
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+
+        try {
+            new HttpPostRequestDecoder(inMemoryFactory, req);
+            fail("Was expecting an ErrorDataDecoderException");
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            assertTrue(e.getCause() instanceof ArrayIndexOutOfBoundsException);
+        } finally {
+            req.release();
+        }
+    }
+
+    // https://github.com/netty/netty/pull/7265
+    @Test
+    public void testDecodeMalformedBadCharsetContentDispositionFieldParameters() throws Exception {
+
+        final String boundary = "74e78d11b0214bdcbc2f86491eeb4902";
+
+        final String body = "--" + boundary + "\r\n" +
+          "Content-Disposition: form-data; name=\"file\"; filename*=not-a-charset''filename\r\n" +
+          "\r\n" +
+          "foo\r\n" +
+          "\r\n" +
+          "--" + boundary + "--";
+
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                                                                      HttpMethod.POST,
+                                                                      "http://localhost",
+                                                                      Unpooled.wrappedBuffer(body.getBytes()));
+
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+
+        try {
+            new HttpPostRequestDecoder(inMemoryFactory, req);
+            fail("Was expecting an ErrorDataDecoderException");
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            assertTrue(e.getCause() instanceof UnsupportedCharsetException);
+        } finally {
+            req.release();
         }
     }
 }
