@@ -102,30 +102,6 @@
             </configuration>
           </execution>
         </executions>
-        <!-- Needed to support JDK9 -->
-        <!-- See https://github.com/netty/netty/issues/6100 -->
-        <dependencies>
-          <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm</artifactId>
-            <version>${asm.version}</version>
-          </dependency>
-          <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-commons</artifactId>
-            <version>${asm.version}</version>
-          </dependency>
-          <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-analysis</artifactId>
-            <version>${asm.version}</version>
-          </dependency>
-          <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-util</artifactId>
-            <version>${asm.version}</version>
-          </dependency>
-        </dependencies>
       </plugin>
       <!-- Add generated collection sources. -->
       <plugin>
