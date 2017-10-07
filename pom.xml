@@ -77,10 +77,6 @@
         <argLine.java9>--add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java9 supports alpn out of the box -->
         <argLine.alpnAgent />
-        <!-- This is needed as earlier ASM versions not support java9 -->
-        <!-- https://issues.apache.org/jira/browse/MSHADE-242 -->
-        <!-- https://github.com/netty/netty/issues/6100 -->
-        <asm.version>6.0_BETA</asm.version>
         <!-- Skip as maven plugin not works with Java9 yet --> 
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
@@ -200,7 +196,6 @@
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
-    <asm.version>5.1</asm.version>
     <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
     <testJavaHome>${env.JAVA_HOME}</testJavaHome>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
@@ -641,15 +636,7 @@
              be used even when compiling with java 1.7+ -->
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.11</version>
-        <dependencies>
-          <!-- Upgrade ASM and support Java 8 bytecode -->
-          <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-all</artifactId>
-            <version>${asm.version}</version>
-          </dependency>
-        </dependencies>
+        <version>1.16</version>
         <configuration>
           <signature>
             <groupId>org.codehaus.mojo.signature</groupId>
@@ -703,6 +690,9 @@
             <!-- Compression -->
             <ignore>java.util.zip.CRC32</ignore>
             <ignore>java.util.zip.Adler32</ignore>
+
+            <!-- NioDatagramChannel implementation -->
+            <ignore>java.net.ProtocolFamily</ignore>
 
             <!-- JDK 9 -->
             <ignore>java.nio.ByteBuffer</ignore>
@@ -1160,7 +1150,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>2.4.3</version>
+          <version>3.1.0</version>
         </plugin>
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
