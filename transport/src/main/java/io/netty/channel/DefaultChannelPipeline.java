@@ -1243,6 +1243,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Reached end of the pipeline for handlers : {}.",
+                        ctx.pipeline().names());
+            }
             onUnhandledInboundMessage(msg);
         }
 
