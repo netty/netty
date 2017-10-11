@@ -733,7 +733,7 @@ abstract class DnsNameResolverContext<T> {
         DnsQuestion cnameQuestion = null;
         if (parent.supportsARecords()) {
             try {
-                if ((cnameQuestion = newQuestion(hostname, DnsRecordType.A)) == null) {
+                if ((cnameQuestion = newQuestion(cname, DnsRecordType.A)) == null) {
                     return;
                 }
             } catch (Throwable cause) {
@@ -744,7 +744,7 @@ abstract class DnsNameResolverContext<T> {
         }
         if (parent.supportsAAAARecords()) {
             try {
-                if ((cnameQuestion = newQuestion(hostname, DnsRecordType.AAAA)) == null) {
+                if ((cnameQuestion = newQuestion(cname, DnsRecordType.AAAA)) == null) {
                     return;
                 }
             } catch (Throwable cause) {
