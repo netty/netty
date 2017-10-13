@@ -776,20 +776,24 @@ public final class ByteBufUtil {
 
     /**
      * Copies the all content of {@code src} to a {@link ByteBuf} using {@link ByteBuf#writeBytes(byte[], int, int)}.
-     * @param src The source of the data to copy.
-     * @param dst the destination byte array.
+     *
+     * @param src the source string to copy
+     * @param dst the destination buffer
      */
     public static void copy(AsciiString src, ByteBuf dst) {
         copy(src, 0, dst, src.length());
     }
 
     /**
-     * Copies the content of {@code src} to a {@link ByteBuf} using {@link ByteBuf#writeBytes(byte[], int, int)}.
-     * @param src The source of the data to copy.
-     * @param srcIdx the starting offset of characters to copy.
-     * @param dst the destination byte array.
-     * @param dstIdx the starting offset in the destination byte array.
-     * @param length the number of characters to copy.
+     * Copies the content of {@code src} to a {@link ByteBuf} using {@link ByteBuf#setBytes(int, byte[], int, int)}.
+     * Unlike the {@link #copy(AsciiString, ByteBuf)} and {@link #copy(AsciiString, int, ByteBuf, int)} methods,
+     * this method do not increase a {@code writerIndex} of {@code dst} buffer.
+     *
+     * @param src the source string to copy
+     * @param srcIdx the starting offset of characters to copy
+     * @param dst the destination buffer
+     * @param dstIdx the starting offset in the destination buffer
+     * @param length the number of characters to copy
      */
     public static void copy(AsciiString src, int srcIdx, ByteBuf dst, int dstIdx, int length) {
         if (isOutOfBounds(srcIdx, length, src.length())) {
@@ -802,10 +806,11 @@ public final class ByteBufUtil {
 
     /**
      * Copies the content of {@code src} to a {@link ByteBuf} using {@link ByteBuf#writeBytes(byte[], int, int)}.
-     * @param src The source of the data to copy.
-     * @param srcIdx the starting offset of characters to copy.
-     * @param dst the destination byte array.
-     * @param length the number of characters to copy.
+     *
+     * @param src the source string to copy
+     * @param srcIdx the starting offset of characters to copy
+     * @param dst the destination buffer
+     * @param length the number of characters to copy
      */
     public static void copy(AsciiString src, int srcIdx, ByteBuf dst, int length) {
         if (isOutOfBounds(srcIdx, length, src.length())) {
