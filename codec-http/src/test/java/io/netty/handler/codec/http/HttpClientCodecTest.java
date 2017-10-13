@@ -282,4 +282,34 @@ public class HttpClientCodecTest {
             return receivedCount;
         }
     }
+
+    @Test
+    public void testDecodesFinalResponseAfterSwitchingProtocols() {
+        String SWITCHING_PROTOCOLS_RESPONSE = "HTTP/1.1 101 Switching Protocols\r\n" +
+                "Connection: Upgrade\r\n" +
+                "Upgrade: TLS/1.2, HTTP/1.1\r\n\r\n";
+
+        HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
+        EmbeddedChannel ch = new EmbeddedChannel(codec, new HttpObjectAggregator(1024));
+
+        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/");
+        request.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
+        request.headers().set(HttpHeaderNames.UPGRADE, "TLS/1.2");
+        assertTrue("Channel outbound write failed.", ch.writeOutbound(request));
+
+        assertTrue("Channel inbound write failed.",
+                ch.writeInbound(Unpooled.copiedBuffer(SWITCHING_PROTOCOLS_RESPONSE, CharsetUtil.ISO_8859_1)));
+        Object switchingProtocolsResponse = ch.readInbound();
+        assertNotNull("No response received", switchingProtocolsResponse);
+        assertThat("Response was not decoded", switchingProtocolsResponse, instanceOf(FullHttpResponse.class));
+        ((FullHttpResponse) switchingProtocolsResponse).release();
+
+        assertTrue("Channel inbound write failed",
+                ch.writeInbound(Unpooled.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1)));
+        Object finalResponse = ch.readInbound();
+        assertNotNull("No response received", finalResponse);
+        assertThat("Response was not decoded", finalResponse, instanceOf(FullHttpResponse.class));
+        ((FullHttpResponse) finalResponse).release();
+        assertTrue("Channel finish failed", ch.finishAndReleaseAll());
+    }
 }
