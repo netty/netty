@@ -173,8 +173,8 @@ public final class HttpClientCodec
         @Override
         protected boolean isContentAlwaysEmpty(HttpMessage msg) {
             final int statusCode = ((HttpResponse) msg).getStatus().code();
-            if (statusCode == 100) {
-                // 100-continue response should be excluded from paired comparison.
+            if (statusCode == 100 || statusCode == 101) {
+                // 100-continue and 101 switching protocols response should be excluded from paired comparison.
                 return true;
             }
 
