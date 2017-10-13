@@ -485,6 +485,20 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     /**
+     * Returns true if the server switched to a different protocol than HTTP/1.0 or HTTP/1.1, e.g. HTTP/2 or Websocket.
+     * Returns false if the upgrade happened in a different layer, e.g. upgrade from HTTP/1.1 to HTTP/1.1 over TLS.
+     */
+    protected boolean isSwitchingToNonHttp1Protocol(HttpResponse msg) {
+        if (msg.status().code() != HttpResponseStatus.SWITCHING_PROTOCOLS.code()) {
+            return false;
+        }
+        String newProtocol = msg.headers().get(HttpHeaderNames.UPGRADE);
+        return newProtocol == null ||
+                !newProtocol.contains(HttpVersion.HTTP_1_0.text()) &&
+                !newProtocol.contains(HttpVersion.HTTP_1_1.text());
+    }
+
+    /**
      * Resets the state of the decoder so that it is ready to decode a new message.
      * This method is useful for handling a rejected request with {@code Expect: 100-continue} header.
      */
@@ -503,7 +517,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         trailer = null;
         if (!isDecodingRequest()) {
             HttpResponse res = (HttpResponse) message;
-            if (res != null && res.status().code() == 101) {
+            if (res != null && isSwitchingToNonHttp1Protocol(res)) {
                 currentState = State.UPGRADED;
                 return;
             }
