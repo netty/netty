@@ -25,6 +25,7 @@ import io.netty.util.internal.PriorityQueueNode;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -399,7 +400,9 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
      *     <li>Stream ID (higher stream ID is higher priority - used for tie breaker)</li>
      * </ul>
      */
-    private static final class StateOnlyComparator implements Comparator<State> {
+    private static final class StateOnlyComparator implements Comparator<State>, Serializable {
+        private static final long serialVersionUID = -4806936913002105966L;
+
         static final StateOnlyComparator INSTANCE = new StateOnlyComparator();
 
         private StateOnlyComparator() {
@@ -426,7 +429,9 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         }
     }
 
-    private static final class StatePseudoTimeComparator implements Comparator<State> {
+    private static final class StatePseudoTimeComparator implements Comparator<State>, Serializable {
+        private static final long serialVersionUID = -1437548640227161828L;
+
         static final StatePseudoTimeComparator INSTANCE = new StatePseudoTimeComparator();
 
         private StatePseudoTimeComparator() {
