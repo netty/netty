@@ -98,7 +98,7 @@ public class NettyRuntimeTests {
         assertNull(secondRefernce.get());
     }
 
-    private Runnable getRunnable(
+    private static Runnable getRunnable(
             final NettyRuntime.AvailableProcessorsHolder holder,
             final CyclicBarrier barrier,
             final AtomicReference<IllegalStateException> reference) {

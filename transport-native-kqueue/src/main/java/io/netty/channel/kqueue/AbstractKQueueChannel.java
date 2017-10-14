@@ -351,7 +351,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
     }
 
-    final boolean isAllowHalfClosure(ChannelConfig config) {
+    private static boolean isAllowHalfClosure(ChannelConfig config) {
         return config instanceof KQueueSocketChannelConfig &&
                 ((KQueueSocketChannelConfig) config).isAllowHalfClosure();
     }

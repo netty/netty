@@ -198,39 +198,39 @@ public class ReadOnlyHttp2HeadersTest {
         assertFalse(itr.hasNext());
     }
 
-    private void testValueIteratorSingleValue(Http2Headers headers, CharSequence name, CharSequence value) {
+    private static void testValueIteratorSingleValue(Http2Headers headers, CharSequence name, CharSequence value) {
         Iterator<CharSequence> itr = headers.valueIterator(name);
         assertTrue(itr.hasNext());
         assertTrue(AsciiString.contentEqualsIgnoreCase(value, itr.next()));
         assertFalse(itr.hasNext());
     }
 
-    private void testIteratorReadOnly(Http2Headers headers) {
+    private static void testIteratorReadOnly(Http2Headers headers) {
         Iterator<Map.Entry<CharSequence, CharSequence>> itr = headers.iterator();
         assertTrue(itr.hasNext());
         itr.remove();
     }
 
-    private void testIteratorEntryReadOnly(Http2Headers headers) {
+    private static void testIteratorEntryReadOnly(Http2Headers headers) {
         Iterator<Map.Entry<CharSequence, CharSequence>> itr = headers.iterator();
         assertTrue(itr.hasNext());
         itr.next().setValue("foo");
     }
 
-    private ReadOnlyHttp2Headers newServerHeaders() {
+    private static ReadOnlyHttp2Headers newServerHeaders() {
         return ReadOnlyHttp2Headers.serverHeaders(false, new AsciiString("200"), otherHeaders());
     }
 
-    private ReadOnlyHttp2Headers newClientHeaders() {
+    private static ReadOnlyHttp2Headers newClientHeaders() {
         return ReadOnlyHttp2Headers.clientHeaders(false, new AsciiString("meth"), new AsciiString("/foo"),
                 new AsciiString("schemer"), new AsciiString("respect_my_authority"), otherHeaders());
     }
 
-    private ReadOnlyHttp2Headers newTrailers() {
+    private static ReadOnlyHttp2Headers newTrailers() {
         return ReadOnlyHttp2Headers.trailers(false, otherHeaders());
     }
 
-    private AsciiString[] otherHeaders() {
+    private static AsciiString[] otherHeaders() {
         return new AsciiString[] {
                 new AsciiString("name1"), new AsciiString("value1"),
                 new AsciiString("name2"), new AsciiString("value2"),

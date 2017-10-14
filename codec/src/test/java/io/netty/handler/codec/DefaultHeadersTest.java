@@ -45,7 +45,7 @@ public class DefaultHeadersTest {
         }
     }
 
-    private TestDefaultHeaders newInstance() {
+    private static TestDefaultHeaders newInstance() {
         return new TestDefaultHeaders();
     }
 

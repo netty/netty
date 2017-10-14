@@ -246,25 +246,26 @@ public class SearchDomainTest {
         assertNotResolve(resolver, "host2");
     }
 
-    private void assertNotResolve(DnsNameResolver resolver, String inetHost) throws InterruptedException {
+    private static void assertNotResolve(DnsNameResolver resolver, String inetHost) throws InterruptedException {
         Future<InetAddress> fut = resolver.resolve(inetHost);
         assertTrue(fut.await(10, TimeUnit.SECONDS));
         assertFalse(fut.isSuccess());
     }
 
-    private void assertNotResolveAll(DnsNameResolver resolver, String inetHost) throws InterruptedException {
+    private static void assertNotResolveAll(DnsNameResolver resolver, String inetHost) throws InterruptedException {
         Future<List<InetAddress>> fut = resolver.resolveAll(inetHost);
         assertTrue(fut.await(10, TimeUnit.SECONDS));
         assertFalse(fut.isSuccess());
     }
 
-    private String assertResolve(DnsNameResolver resolver, String inetHost) throws InterruptedException {
+    private static String assertResolve(DnsNameResolver resolver, String inetHost) throws InterruptedException {
         Future<InetAddress> fut = resolver.resolve(inetHost);
         assertTrue(fut.await(10, TimeUnit.SECONDS));
         return fut.getNow().getHostAddress();
     }
 
-    private List<String> assertResolveAll(DnsNameResolver resolver, String inetHost) throws InterruptedException {
+    private static List<String> assertResolveAll(DnsNameResolver resolver,
+                                                 String inetHost) throws InterruptedException {
         Future<List<InetAddress>> fut = resolver.resolveAll(inetHost);
         assertTrue(fut.await(10, TimeUnit.SECONDS));
         List<String> list = new ArrayList<String>();

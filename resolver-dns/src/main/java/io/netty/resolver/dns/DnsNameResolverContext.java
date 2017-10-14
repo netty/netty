@@ -765,7 +765,7 @@ abstract class DnsNameResolverContext<T> {
         return true;
     }
 
-    private DnsQuestion newQuestion(String hostname, DnsRecordType type) {
+    private static DnsQuestion newQuestion(String hostname, DnsRecordType type) {
         try {
             return new DefaultDnsQuestion(hostname, type);
         } catch (IllegalArgumentException e) {

@@ -116,7 +116,7 @@ public class DefaultPriorityQueueTest {
         testRemoval(true);
     }
 
-    private void testRemoval(boolean typed) {
+    private static void testRemoval(boolean typed) {
         PriorityQueue<TestElement> queue = new DefaultPriorityQueue<TestElement>(TestElementComparator.INSTANCE, 4);
         assertEmptyQueue(queue);
 
