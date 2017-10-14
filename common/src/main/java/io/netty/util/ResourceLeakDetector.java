@@ -539,6 +539,7 @@ public class ResourceLeakDetector<T> {
     }
 
     private static final class Record extends Throwable {
+        private static final long serialVersionUID = 6065153674892850720L;
 
         private static final Record BOTTOM = new Record();
 

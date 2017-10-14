@@ -153,6 +153,8 @@ abstract class DnsNameResolverContext<T> {
     }
 
     private static final class SearchDomainUnknownHostException extends UnknownHostException {
+        private static final long serialVersionUID = -8573510133644997085L;
+
         SearchDomainUnknownHostException(Throwable cause, String originalHostname) {
             super("Search domain query failed. Original hostname: '" + originalHostname + "' " + cause.getMessage());
             setStackTrace(cause.getStackTrace());
