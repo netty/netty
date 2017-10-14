@@ -53,6 +53,8 @@ public class CompatibleObjectEncoderTest {
     }
 
     private static final class TestSerializable implements Serializable {
+        private static final long serialVersionUID = 2235771472534930360L;
+
         public final int x;
         public final int y;
 

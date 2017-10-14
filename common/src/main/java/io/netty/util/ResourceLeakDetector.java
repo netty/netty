@@ -507,8 +507,10 @@ public class ResourceLeakDetector<T> {
     }
 
     private static final class Record extends Throwable {
+        private static final long serialVersionUID = 6065153674892850720L;
 
         private static final Set<String> STACK_TRACE_ELEMENT_EXCLUSIONS = new HashSet<String>();
+
         static {
             STACK_TRACE_ELEMENT_EXCLUSIONS.add("io.netty.util.ReferenceCountUtil.touch");
             STACK_TRACE_ELEMENT_EXCLUSIONS.add("io.netty.buffer.AdvancedLeakAwareByteBuf.touch");
