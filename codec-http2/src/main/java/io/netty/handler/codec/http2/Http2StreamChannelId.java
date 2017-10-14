@@ -21,6 +21,7 @@ import io.netty.channel.ChannelId;
  * ChannelId implementation which is used by our {@link Http2StreamChannel} implementation.
  */
 final class Http2StreamChannelId implements ChannelId {
+    private static final long serialVersionUID = -6642338822166867585L;
 
     private final int id;
     private final ChannelId parentId;

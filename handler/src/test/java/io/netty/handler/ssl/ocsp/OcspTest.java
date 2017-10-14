@@ -494,6 +494,8 @@ public class OcspTest {
     }
 
     private static final class OcspTestException extends IllegalStateException {
+        private static final long serialVersionUID = 4516426833250228159L;
+
         public OcspTestException(String message) {
             super(message);
         }
