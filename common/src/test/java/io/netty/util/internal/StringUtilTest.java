@@ -440,7 +440,7 @@ public class StringUtilTest {
         assertEscapeCsvAndUnEscapeCsv("\n");
     }
 
-    private void assertEscapeCsvAndUnEscapeCsv(String value) {
+    private static void assertEscapeCsvAndUnEscapeCsv(String value) {
         assertEquals(value, unescapeCsv(StringUtil.escapeCsv(value)));
     }
 

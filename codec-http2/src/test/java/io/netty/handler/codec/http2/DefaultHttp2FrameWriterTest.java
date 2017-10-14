@@ -265,7 +265,7 @@ public class DefaultHttp2FrameWriterTest {
         }
     }
 
-    private Http2Headers dummyHeaders(Http2Headers headers, int times) {
+    private static Http2Headers dummyHeaders(Http2Headers headers, int times) {
         final String largeValue = repeat("dummy-value", 100);
         for (int i = 0; i < times; i++) {
             headers.add(String.format("dummy-%d", i), largeValue);
@@ -273,7 +273,7 @@ public class DefaultHttp2FrameWriterTest {
         return headers;
     }
 
-    private String repeat(String str, int count) {
+    private static String repeat(String str, int count) {
         return String.format(String.format("%%%ds", count), " ").replace(" ", str);
     }
 }

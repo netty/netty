@@ -390,7 +390,7 @@ public class DefaultHttp2FrameReaderTest {
         }
     }
 
-    private void writePriorityFrame(
+    private static void writePriorityFrame(
             ByteBuf output, int streamId, int streamDependency, int weight) {
         writeFrameHeader(output, 5, PRIORITY, new Http2Flags(), streamId);
         output.writeInt(streamDependency);
