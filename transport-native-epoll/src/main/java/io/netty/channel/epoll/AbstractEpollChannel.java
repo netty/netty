@@ -238,7 +238,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
     }
 
-    final boolean isAllowHalfClosure(ChannelConfig config) {
+    private static boolean isAllowHalfClosure(ChannelConfig config) {
         return config instanceof EpollSocketChannelConfig &&
                 ((EpollSocketChannelConfig) config).isAllowHalfClosure();
     }

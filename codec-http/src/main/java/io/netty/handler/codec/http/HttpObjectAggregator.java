@@ -159,7 +159,7 @@ public class HttpObjectAggregator
         }
     }
 
-    private Object continueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
+    private static Object continueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
         if (HttpUtil.isUnsupportedExpectation(start)) {
             // if the request contains an unsupported expectation, we return 417
             pipeline.fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);

@@ -215,7 +215,7 @@ public class HttpUtilTest {
         run100ContinueTest(message, false);
     }
 
-    private void run100ContinueTest(final HttpVersion version, final String expectations, boolean expect) {
+    private static void run100ContinueTest(final HttpVersion version, final String expectations, boolean expect) {
         final HttpMessage message = new DefaultFullHttpRequest(version, HttpMethod.GET, "/");
         if (expectations != null) {
             message.headers().set(HttpHeaderNames.EXPECT, expectations);
@@ -223,7 +223,7 @@ public class HttpUtilTest {
         run100ContinueTest(message, expect);
     }
 
-    private void run100ContinueTest(final HttpMessage message, final boolean expected) {
+    private static void run100ContinueTest(final HttpMessage message, final boolean expected) {
         assertEquals(expected, HttpUtil.is100ContinueExpected(message));
         ReferenceCountUtil.release(message);
     }
@@ -242,7 +242,8 @@ public class HttpUtilTest {
         runUnsupportedExpectationTest(message, false);
     }
 
-    private void runUnsupportedExpectationTest(final HttpVersion version, final String expectations, boolean expect) {
+    private static void runUnsupportedExpectationTest(final HttpVersion version,
+                                                      final String expectations, boolean expect) {
         final HttpMessage message = new DefaultFullHttpRequest(version, HttpMethod.GET, "/");
         if (expectations != null) {
             message.headers().set("Expect", expectations);
@@ -250,7 +251,7 @@ public class HttpUtilTest {
         runUnsupportedExpectationTest(message, expect);
     }
 
-    private void runUnsupportedExpectationTest(final HttpMessage message, final boolean expected) {
+    private static void runUnsupportedExpectationTest(final HttpMessage message, final boolean expected) {
         assertEquals(expected, HttpUtil.isUnsupportedExpectation(message));
         ReferenceCountUtil.release(message);
     }
