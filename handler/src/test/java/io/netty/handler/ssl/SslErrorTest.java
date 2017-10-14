@@ -247,6 +247,7 @@ public class SslErrorTest {
     }
 
     private static final class TestCertificateException extends CertificateException {
+        private static final long serialVersionUID = -5816338303868751410L;
 
         public TestCertificateException(Throwable cause) {
             super(cause);

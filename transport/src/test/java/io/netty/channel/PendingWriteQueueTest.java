@@ -377,5 +377,7 @@ public class PendingWriteQueueTest {
         }
     }
 
-    private static final class TestException extends Exception { }
+    private static final class TestException extends Exception {
+        private static final long serialVersionUID = -9018570103039458401L;
+    }
 }
