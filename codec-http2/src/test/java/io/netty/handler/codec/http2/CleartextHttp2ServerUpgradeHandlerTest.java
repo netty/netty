@@ -142,8 +142,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
         String expectedHttpResponse = "HTTP/1.1 101 Switching Protocols\r\n" +
                 "connection: upgrade\r\n" +
-                "upgrade: h2c\r\n" +
-                "content-length: 0\r\n\r\n";
+                "upgrade: h2c\r\n\r\n";
         ByteBuf responseBuffer = channel.readOutbound();
         assertEquals(expectedHttpResponse, responseBuffer.toString(CharsetUtil.UTF_8));
         responseBuffer.release();
