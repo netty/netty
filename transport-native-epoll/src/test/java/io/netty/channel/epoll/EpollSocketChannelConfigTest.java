@@ -56,11 +56,11 @@ public class EpollSocketChannelConfigTest {
         }
     }
 
-    private long randLong(long min, long max) {
+    private static long randLong(long min, long max) {
         return min + nextLong(max - min + 1);
     }
 
-    private long nextLong(long n) {
+    private static long nextLong(long n) {
         long bits, val;
         do {
            bits = (rand.nextLong() << 1) >>> 1;

@@ -230,8 +230,8 @@ public class DefaultPromiseTest {
         }
     }
 
-    private void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,
-                                                  boolean runTestInExecutorThread)
+    private static void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,
+                                                         boolean runTestInExecutorThread)
             throws InterruptedException {
         final Promise<Void>[] p = new DefaultPromise[promiseChainLength];
         final CountDownLatch latch = new CountDownLatch(promiseChainLength);
@@ -253,8 +253,8 @@ public class DefaultPromiseTest {
         }
     }
 
-    private void testStackOverFlowChainedFuturesA(EventExecutor executor, final Promise<Void>[] p,
-                                                  final CountDownLatch latch) {
+    private static void testStackOverFlowChainedFuturesA(EventExecutor executor, final Promise<Void>[] p,
+                                                         final CountDownLatch latch) {
         for (int i = 0; i < p.length; i ++) {
             final int finalI = i;
             p[i] = new DefaultPromise<Void>(executor);
@@ -272,8 +272,8 @@ public class DefaultPromiseTest {
         p[0].setSuccess(null);
     }
 
-    private void testStackOverFlowChainedFuturesB(int promiseChainLength, final EventExecutor executor,
-                                                  boolean runTestInExecutorThread)
+    private static void testStackOverFlowChainedFuturesB(int promiseChainLength, final EventExecutor executor,
+                                                         boolean runTestInExecutorThread)
             throws InterruptedException {
         final Promise<Void>[] p = new DefaultPromise[promiseChainLength];
         final CountDownLatch latch = new CountDownLatch(promiseChainLength);
@@ -295,8 +295,8 @@ public class DefaultPromiseTest {
         }
     }
 
-    private void testStackOverFlowChainedFuturesB(EventExecutor executor, final Promise<Void>[] p,
-                                                  final CountDownLatch latch) {
+    private static void testStackOverFlowChainedFuturesB(EventExecutor executor, final Promise<Void>[] p,
+                                                         final CountDownLatch latch) {
         for (int i = 0; i < p.length; i ++) {
             final int finalI = i;
             p[i] = new DefaultPromise<Void>(executor);
