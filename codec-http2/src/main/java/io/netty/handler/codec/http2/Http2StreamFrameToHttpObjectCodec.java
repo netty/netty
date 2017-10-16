@@ -20,23 +20,27 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpMessage;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
@@ -51,6 +55,7 @@ import java.util.List;
  * is a single header.
  */
 @UnstableApi
+@Sharable
 public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Http2StreamFrame, HttpObject> {
     private final boolean isServer;
     private final boolean validateHeaders;
@@ -80,8 +85,18 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
             Http2HeadersFrame headersFrame = (Http2HeadersFrame) frame;
             Http2Headers headers = headersFrame.headers();
 
+            final CharSequence status = headers.status();
+
+            // 100-continue response is a special case where Http2HeadersFrame#isEndStream=false
+            // but we need to decode it as a FullHttpResponse to play nice with HttpObjectAggregator.
+            if (null != status && HttpResponseStatus.CONTINUE.codeAsText().contentEquals(status)) {
+                final FullHttpMessage fullMsg = newFullMessage(id, headers, ctx.alloc());
+                out.add(fullMsg);
+                return;
+            }
+
             if (headersFrame.isEndStream()) {
-                if (headers.method() == null && headers.status() == null) {
+                if (headers.method() == null && status == null) {
                     LastHttpContent last = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
                     HttpConversionUtil.addHttp2ToHttpHeaders(id, headers, last.trailingHeaders(),
                                                              HttpVersion.HTTP_1_1, true, true);
@@ -118,8 +133,36 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
         }
     }
 
+    /**
+     * Encode from an {@link HttpObject} to an {@link Http2StreamFrame}. This method will
+     * be called for each written message that can be handled by this encoder.
+     *
+     * NOTE: 100-Continue responses that are NOT {@link FullHttpResponse} will be rejected.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this handler belongs to
+     * @param obj           the {@link HttpObject} message to encode
+     * @param out           the {@link List} into which the encoded msg should be added
+     *                      needs to do some kind of aggregation
+     * @throws Exception    is thrown if an error occurs
+     */
     @Override
     protected void encode(ChannelHandlerContext ctx, HttpObject obj, List<Object> out) throws Exception {
+        // 100-continue is typically a FullHttpResponse, but the decoded
+        // Http2HeadersFrame should not be marked as endStream=true
+        if (obj instanceof HttpResponse) {
+            final HttpResponse res = (HttpResponse) obj;
+            if (res.status().equals(HttpResponseStatus.CONTINUE)) {
+                if (res instanceof FullHttpResponse) {
+                    final Http2Headers headers = toHttp2Headers(res);
+                    out.add(new DefaultHttp2HeadersFrame(headers, false));
+                    return;
+                } else {
+                    throw new EncoderException(
+                            HttpResponseStatus.CONTINUE.toString() + " must be a FullHttpResponse");
+                }
+            }
+        }
+
         if (obj instanceof HttpMessage) {
             Http2Headers headers = toHttp2Headers((HttpMessage) obj);
             boolean noMoreFrames = false;
