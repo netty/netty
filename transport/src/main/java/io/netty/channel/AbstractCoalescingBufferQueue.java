@@ -161,7 +161,7 @@ public abstract class AbstractCoalescingBufferQueue {
         readableBytes -= originalBytes - bytes;
         assert readableBytes >= 0;
 
-        decrementPendingOutboundBytes(originalBytes - bytes);
+        decrementPendingOutboundBytes((long) originalBytes - bytes);
 
         return toReturn;
     }
@@ -201,9 +201,9 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param ctx The context to write all elements to.
      */
     public final void writeAndRemoveAll(ChannelHandlerContext ctx) {
-        readableBytes = 0;
-
         decrementPendingOutboundBytes(readableBytes);
+
+        readableBytes = 0;
 
         Throwable pending = null;
         ByteBuf previousBuf = null;
@@ -270,9 +270,9 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     private void releaseAndCompleteAll(ChannelFuture future) {
-        readableBytes = 0;
-
         decrementPendingOutboundBytes(readableBytes);
+
+        readableBytes = 0;
 
         Throwable pending = null;
         for (;;) {

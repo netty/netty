@@ -14,6 +14,9 @@
  */
 package io.netty.channel;
 
+import io.netty.util.internal.UnstableApi;
+
+@UnstableApi
 public final class PendingWritesTrackerFactory {
 
     private PendingWritesTrackerFactory() {
@@ -89,6 +92,7 @@ public final class PendingWritesTrackerFactory {
         }
     }
 
+    @UnstableApi
     public interface PendingWritesTracker extends MessageSizeEstimator.Handle {
         void incrementPendingOutboundBytes(long bytes);
         void decrementPendingOutboundBytes(long bytes);
