@@ -32,6 +32,8 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
+import io.netty.channel.PendingWritesTrackerFactory;
+import io.netty.channel.PendingWritesTrackerFactory.PendingWritesTracker;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.ReferenceCounted;
@@ -352,7 +354,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private boolean sentFirstMessage;
     private boolean flushedBeforeHandshake;
     private boolean readDuringHandshake;
-    private final SslHandlerCoalescingBufferQueue pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(16);
+    private SslHandlerCoalescingBufferQueue pendingUnencryptedWrites;
+    private volatile int wrapDataSize = MAX_PLAINTEXT_LENGTH;
     private Promise<Channel> handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslClosePromise = new LazyChannelPromise();
 
@@ -474,7 +477,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @UnstableApi
     public final void setWrapDataSize(int wrapDataSize) {
-        pendingUnencryptedWrites.wrapDataSize = wrapDataSize;
+        this.wrapDataSize = wrapDataSize;
+        if (this.pendingUnencryptedWrites != null) {
+            this.pendingUnencryptedWrites.wrapDataSize = wrapDataSize;
+        }
     }
 
     /**
@@ -1535,6 +1541,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     @Override
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
+        this.pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(16, ctx);
+        this.pendingUnencryptedWrites.wrapDataSize = this.wrapDataSize;
 
         if (ctx.channel().isActive() && engine.getUseClientMode()) {
             // Begin the initial handshake.
@@ -1794,11 +1802,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * goodput by aggregating the plaintext in chunks of {@link #wrapDataSize}. If many small chunks are written
      * this can increase goodput, decrease the amount of calls to SSL_write, and decrease overall encryption operations.
      */
-    private static final class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQueue {
-        volatile int wrapDataSize = MAX_PLAINTEXT_LENGTH;
+    static final class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQueue {
+        volatile int wrapDataSize;
+        private final PendingWritesTracker tracker;
 
-        SslHandlerCoalescingBufferQueue(int initSize) {
+        SslHandlerCoalescingBufferQueue(int initSize, ChannelHandlerContext ctx) {
             super(initSize);
+            this.tracker = PendingWritesTrackerFactory.newPendingWritesTracker(ctx);
         }
 
         @Override
@@ -1853,6 +1863,16 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 return true;
             }
             return false;
+        }
+
+        @Override
+        protected void incrementPendingOutboundBytes(long bytes) {
+            this.tracker.incrementPendingOutboundBytes(bytes);
+        }
+
+        @Override
+        protected void decrementPendingOutboundBytes(long bytes) {
+            this.tracker.decrementPendingOutboundBytes(bytes);
         }
     }
 

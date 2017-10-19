@@ -41,6 +41,7 @@ public abstract class AbstractCoalescingBufferQueue {
      */
     public final void addFirst(ByteBuf buf) {
         incrementReadableBytes(buf.readableBytes());
+        incrementPendingOutboundBytes(buf.readableBytes());
         // Listener would be added here, but since it is null there is no need. The assumption is there is already a
         // listener at the front of the queue, or there is a buffer at the front of the queue, which was spliced from
         // buf via remove().
@@ -76,6 +77,7 @@ public abstract class AbstractCoalescingBufferQueue {
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
         incrementReadableBytes(buf.readableBytes());
+        incrementPendingOutboundBytes(buf.readableBytes());
         bufAndListenerPairs.add(buf);
         if (listener != null) {
             bufAndListenerPairs.add(listener);
@@ -97,6 +99,8 @@ public abstract class AbstractCoalescingBufferQueue {
 
         readableBytes -= result.readableBytes();
         assert readableBytes >= 0;
+
+        decrementPendingOutboundBytes(result.readableBytes());
 
         entry = bufAndListenerPairs.peek();
         if (entry instanceof ChannelFutureListener) {
@@ -156,6 +160,9 @@ public abstract class AbstractCoalescingBufferQueue {
         }
         readableBytes -= originalBytes - bytes;
         assert readableBytes >= 0;
+
+        decrementPendingOutboundBytes((long) originalBytes - bytes);
+
         return toReturn;
     }
 
@@ -194,7 +201,10 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param ctx The context to write all elements to.
      */
     public final void writeAndRemoveAll(ChannelHandlerContext ctx) {
+        decrementPendingOutboundBytes(readableBytes);
+
         readableBytes = 0;
+
         Throwable pending = null;
         ByteBuf previousBuf = null;
         for (;;) {
@@ -260,7 +270,10 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     private void releaseAndCompleteAll(ChannelFuture future) {
+        decrementPendingOutboundBytes(readableBytes);
+
         readableBytes = 0;
+
         Throwable pending = null;
         for (;;) {
             Object entry = bufAndListenerPairs.poll();
@@ -292,5 +305,13 @@ public abstract class AbstractCoalescingBufferQueue {
             throw new IllegalStateException("buffer queue length overflow: " + readableBytes + " + " + increment);
         }
         readableBytes = nextReadableBytes;
+    }
+
+    protected void incrementPendingOutboundBytes(long bytes) {
+        // no-op
+    }
+
+    protected void decrementPendingOutboundBytes(long bytes) {
+        // no-op
     }
 }
