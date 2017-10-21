@@ -289,7 +289,7 @@
       <dependency>
         <groupId>com.google.protobuf.nano</groupId>
         <artifactId>protobuf-javanano</artifactId>
-        <version>3.0.0-alpha-5</version>
+        <version>3.1.0</version>
       </dependency>
 
       <!-- Our own Tomcat Native fork - completely optional, used for accelerating SSL with OpenSSL. -->
