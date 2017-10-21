@@ -77,7 +77,7 @@
         <argLine.java9>--add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java9 supports alpn out of the box -->
         <argLine.alpnAgent />
-        <!-- Skip as maven plugin not works with Java9 yet --> 
+        <!-- Skip as maven plugin not works with Java9 yet -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
@@ -325,7 +325,7 @@
         <optional>true</optional>
       </dependency>
 
-      <!-- 
+      <!--
         Completely optional and only needed for OCSP stapling to construct and
         parse OCSP requests and responses.
       -->
@@ -464,7 +464,7 @@
       <dependency>
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-classic</artifactId>
-        <version>1.1.7</version>
+        <version>1.2.3</version>
         <scope>test</scope>
       </dependency>
 
