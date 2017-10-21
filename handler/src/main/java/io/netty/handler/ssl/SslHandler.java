@@ -352,7 +352,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private boolean sentFirstMessage;
     private boolean flushedBeforeHandshake;
     private boolean readDuringHandshake;
-    private final SslHandlerCoalescingBufferQueue pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(16);
+    private SslHandlerCoalescingBufferQueue pendingUnencryptedWrites;
     private Promise<Channel> handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslClosePromise = new LazyChannelPromise();
 
@@ -375,6 +375,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private volatile long handshakeTimeoutMillis = 10000;
     private volatile long closeNotifyFlushTimeoutMillis = 3000;
     private volatile long closeNotifyReadTimeoutMillis;
+    volatile int wrapDataSize = MAX_PLAINTEXT_LENGTH;
 
     /**
      * Creates a new instance.
@@ -474,7 +475,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @UnstableApi
     public final void setWrapDataSize(int wrapDataSize) {
-        pendingUnencryptedWrites.wrapDataSize = wrapDataSize;
+        this.wrapDataSize = wrapDataSize;
     }
 
     /**
@@ -742,7 +743,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ByteBufAllocator alloc = ctx.alloc();
         boolean needUnwrap = false;
         try {
-            final int wrapDataSize = pendingUnencryptedWrites.wrapDataSize;
+            final int wrapDataSize = this.wrapDataSize;
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
             while (!ctx.isRemoved()) {
@@ -1536,6 +1537,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
 
+        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(ctx.channel(), 16);
         if (ctx.channel().isActive()) {
             if (engine.getUseClientMode()) {
                 // Begin the initial handshake.
@@ -1545,9 +1547,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             } else {
                 applyHandshakeTimeout(null);
             }
-        } else {
-            // channelActive() event has not been fired yet.  this.channelOpen() will be invoked
-            // and initialization will occur there.
         }
     }
 
@@ -1806,16 +1805,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * goodput by aggregating the plaintext in chunks of {@link #wrapDataSize}. If many small chunks are written
      * this can increase goodput, decrease the amount of calls to SSL_write, and decrease overall encryption operations.
      */
-    private static final class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQueue {
-        volatile int wrapDataSize = MAX_PLAINTEXT_LENGTH;
+    private final class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQueue {
 
-        SslHandlerCoalescingBufferQueue(int initSize) {
-            super(initSize);
+        SslHandlerCoalescingBufferQueue(Channel channel, int initSize) {
+            super(channel, initSize);
         }
 
         @Override
         protected ByteBuf compose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
-            final int wrapDataSize = this.wrapDataSize;
+            final int wrapDataSize = SslHandler.this.wrapDataSize;
             if (cumulation instanceof CompositeByteBuf) {
                 CompositeByteBuf composite = (CompositeByteBuf) cumulation;
                 int numComponents = composite.numComponents();
@@ -1849,23 +1847,23 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         protected ByteBuf removeEmptyValue() {
             return null;
         }
+    }
 
-        private static boolean attemptCopyToCumulation(ByteBuf cumulation, ByteBuf next, int wrapDataSize) {
-            final int inReadableBytes = next.readableBytes();
-            final int cumulationCapacity = cumulation.capacity();
-            if (wrapDataSize - cumulation.readableBytes() >= inReadableBytes &&
-                    // Avoid using the same buffer if next's data would make cumulation exceed the wrapDataSize.
-                    // Only copy if there is enough space available and the capacity is large enough, and attempt to
-                    // resize if the capacity is small.
-                    (cumulation.isWritable(inReadableBytes) && cumulationCapacity >= wrapDataSize ||
-                            cumulationCapacity < wrapDataSize &&
-                                    ensureWritableSuccess(cumulation.ensureWritable(inReadableBytes, false)))) {
-                cumulation.writeBytes(next);
-                next.release();
-                return true;
-            }
-            return false;
+    private static boolean attemptCopyToCumulation(ByteBuf cumulation, ByteBuf next, int wrapDataSize) {
+        final int inReadableBytes = next.readableBytes();
+        final int cumulationCapacity = cumulation.capacity();
+        if (wrapDataSize - cumulation.readableBytes() >= inReadableBytes &&
+                // Avoid using the same buffer if next's data would make cumulation exceed the wrapDataSize.
+                // Only copy if there is enough space available and the capacity is large enough, and attempt to
+                // resize if the capacity is small.
+                (cumulation.isWritable(inReadableBytes) && cumulationCapacity >= wrapDataSize ||
+                        cumulationCapacity < wrapDataSize &&
+                                ensureWritableSuccess(cumulation.ensureWritable(inReadableBytes, false)))) {
+            cumulation.writeBytes(next);
+            next.release();
+            return true;
         }
+        return false;
     }
 
     private final class LazyChannelPromise extends DefaultPromise<Channel> {
