@@ -124,16 +124,15 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         // Get path
         URI wsURL = uri();
         String path = rawPath(wsURL);
-        int wsPort = websocketPort(wsURL);
-        String host = wsURL.getHost();
 
         // Format request
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
+
         headers.add(HttpHeaders.Names.UPGRADE, HttpHeaders.Values.WEBSOCKET)
                .add(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE)
                .add(HttpHeaders.Names.HOST, websocketHostValue(wsURL))
-               .add(HttpHeaders.Names.ORIGIN, websocketOriginValue(host, wsPort))
+               .add(HttpHeaders.Names.ORIGIN, websocketOriginValue(wsURL))
                .add(HttpHeaders.Names.SEC_WEBSOCKET_KEY1, key1)
                .add(HttpHeaders.Names.SEC_WEBSOCKET_KEY2, key2);
 
