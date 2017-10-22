@@ -90,7 +90,7 @@
         </dependency>
       </dependencies>
     </profile>
-    
+
     <!-- The linux profile will only include the native jar for epol to the all jar.
          If you want to also include the native jar for kqueue use -Puber.
     -->
@@ -213,7 +213,7 @@
                     <groupId>com.puppycrawl.tools</groupId>
                     <artifactId>checkstyle</artifactId>
                   </exclusion>
-                </exclusions> 
+                </exclusions>
               </dependency>
               <dependency>
                 <groupId>com.puppycrawl.tools</groupId>
@@ -245,7 +245,7 @@
               <detectJavaApiLink>false</detectJavaApiLink>
               <additionalparam>
                 -link http://docs.oracle.com/javase/7/docs/api/
-                -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
+                -link https://developers.google.com/protocol-buffers/docs/reference/java/
                 -link http://docs.oracle.com/javaee/6/api/
                 -link http://www.slf4j.org/apidocs/
                 -link https://commons.apache.org/proper/commons-logging/apidocs/
