@@ -240,10 +240,12 @@ public class ResourceLeakDetector<T> {
      *
      * @return the {@link ResourceLeakTracker} or {@code null}
      */
+    @SuppressWarnings("unchecked")
     public final ResourceLeakTracker<T> track(T obj) {
         return track0(obj);
     }
 
+    @SuppressWarnings("unchecked")
     private DefaultResourceLeak track0(T obj) {
         Level level = ResourceLeakDetector.level;
         if (level == Level.DISABLED) {
