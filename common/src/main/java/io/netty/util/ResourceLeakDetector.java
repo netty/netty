@@ -22,7 +22,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.ref.PhantomReference;
+import java.lang.ref.WeakReference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -336,7 +336,7 @@ public class ResourceLeakDetector<T> {
 
     @SuppressWarnings("deprecation")
     private static final class DefaultResourceLeak<T>
-            extends PhantomReference<Object> implements ResourceLeakTracker<T>, ResourceLeak {
+            extends WeakReference<Object> implements ResourceLeakTracker<T>, ResourceLeak {
 
         @SuppressWarnings("unchecked") // generics and updaters do not mix.
         private static final AtomicReferenceFieldUpdater<DefaultResourceLeak<?>, Record> headUpdater =
@@ -366,7 +366,7 @@ public class ResourceLeakDetector<T> {
 
             // Store the hash of the tracked object to later assert it in the close(...) method.
             // It's important that we not store a reference to the referent as this would disallow it from
-            // be collected via the PhantomReference.
+            // be collected via the WeakReference.
             trackedHash = System.identityHashCode(referent);
             allLeaks.put(this, LeakEntry.INSTANCE);
             headUpdater.set(this, Record.BOTTOM);
