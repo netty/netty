@@ -231,7 +231,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      */
     @Override
     public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt instanceof Http2ConnectionPrefaceWrittenEvent) {
+        if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
             // The user event implies that we are on the client.
             tryExpandConnectionFlowControlWindow(connection());
         } else if (evt instanceof UpgradeEvent) {
