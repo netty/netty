@@ -364,15 +364,20 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
             prefaceSent = true;
 
-            if (!connection().isServer()) {
+            final boolean isClient = !connection().isServer();
+            if (isClient) {
                 // Clients must send the preface string as the first bytes on the connection.
                 ctx.write(connectionPrefaceBuf()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-                ctx.fireUserEventTriggered(Http2ConnectionPrefaceWrittenEvent.INSTANCE);
             }
 
             // Both client and server must send their initial settings.
             encoder.writeSettings(ctx, initialSettings, ctx.newPromise()).addListener(
                     ChannelFutureListener.CLOSE_ON_FAILURE);
+
+            if (isClient) {
+                ctx.fireUserEventTriggered(
+                        Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE);
+            }
         }
     }
 
