@@ -126,6 +126,16 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         byteBuf.release();
                         byteBuf = null;
                         close = allocHandle.lastBytesRead() < 0;
+                        if (close) {
+                            // Based upon the Javadocs it is possible that NIO may have spurious wake ups [1]. In this
+                            // case we should be more cautious and only set readPending to false if data was actually
+                            // read.
+                            // [1] https://docs.oracle.com/javase/7/docs/api/java/nio/channels/SelectionKey.html
+                            // That a selection key's ready set indicates that its channel is ready for some operation
+                            // category is a hint, but not a guarantee, that an operation in such a category may be
+                            // performed by a thread without causing the thread to block.
+                            readPending = false;
+                        }
                         break;
                     }
 
