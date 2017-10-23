@@ -506,8 +506,9 @@ public class Http2MultiplexCodecTest {
         }
 
         @Override
-        void onBytesConsumed(ChannelHandlerContext ctx, Http2FrameStream stream, int bytes) {
+        boolean onBytesConsumed(ChannelHandlerContext ctx, Http2FrameStream stream, int bytes) {
             writer.write(new DefaultHttp2WindowUpdateFrame(bytes).stream(stream), ctx.newPromise());
+            return true;
         }
 
         @Override
