@@ -310,9 +310,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         localFlow.initialWindowSize(targetConnectionWindow);
     }
 
-    final void consumeBytes(int streamId, int bytes) throws Http2Exception {
+    final boolean consumeBytes(int streamId, int bytes) throws Http2Exception {
         Http2Stream stream = connection().stream(streamId);
-        connection().local().flowController().consumeBytes(stream, bytes);
+        return connection().local().flowController().consumeBytes(stream, bytes);
     }
 
     private void writeGoAwayFrame(ChannelHandlerContext ctx, Http2GoAwayFrame frame, ChannelPromise promise) {
