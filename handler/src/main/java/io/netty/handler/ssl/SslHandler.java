@@ -742,13 +742,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ChannelPromise promise = null;
         ByteBufAllocator alloc = ctx.alloc();
         boolean needUnwrap = false;
+        ByteBuf buf = null;
         try {
             final int wrapDataSize = this.wrapDataSize;
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
             while (!ctx.isRemoved()) {
                 promise = ctx.newPromise();
-                ByteBuf buf = wrapDataSize > 0 ?
+                buf = wrapDataSize > 0 ?
                         pendingUnencryptedWrites.remove(alloc, wrapDataSize, promise) :
                         pendingUnencryptedWrites.removeFirst(promise);
                 if (buf == null) {
@@ -763,6 +764,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                 if (result.getStatus() == Status.CLOSED) {
                     buf.release();
+                    buf = null;
                     promise.tryFailure(SSLENGINE_CLOSED);
                     promise = null;
                     // SSLEngine has been closed already.
@@ -775,6 +777,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     } else {
                         buf.release();
                     }
+                    buf = null;
 
                     switch (result.getHandshakeStatus()) {
                         case NEED_TASK:
@@ -801,6 +804,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
             }
         } finally {
+            // Ownership of buffer was not transferred, release it.
+            if (buf != null) {
+                buf.release();
+            }
             finishWrap(ctx, out, promise, inUnwrap, needUnwrap);
         }
     }
