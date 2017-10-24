@@ -40,7 +40,11 @@ public final class CoalescingBufferQueue extends AbstractCoalescingBufferQueue {
     }
 
     public CoalescingBufferQueue(Channel channel, int initSize) {
-        super(initSize);
+        this(channel, initSize, false);
+    }
+
+    public CoalescingBufferQueue(Channel channel, int initSize, boolean updateWritability) {
+        super(updateWritability ? channel : null, initSize);
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
     }
 
