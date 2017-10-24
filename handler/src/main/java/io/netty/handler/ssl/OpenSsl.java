@@ -406,15 +406,17 @@ public final class OpenSsl {
         String arch = PlatformDependent.normalizedArch();
 
         Set<String> libNames = new LinkedHashSet<String>(4);
+        String staticLibName = "netty_tcnative";
+
         // First, try loading the platform-specific library. Platform-specific
         // libraries will be available if using a tcnative uber jar.
-        libNames.add("netty_tcnative_" + os + '_' + arch);
+        libNames.add(staticLibName + "_" + os + '_' + arch);
         if ("linux".equalsIgnoreCase(os)) {
             // Fedora SSL lib so naming (libssl.so.10 vs libssl.so.1.0.0)..
-            libNames.add("netty_tcnative_" + os + '_' + arch + "_fedora");
+            libNames.add(staticLibName + "_" + os + '_' + arch + "_fedora");
         }
-        // finally the default library.
-        libNames.add("netty_tcnative");
+        libNames.add(staticLibName + "_" + arch);
+        libNames.add(staticLibName);
 
         NativeLibraryLoader.loadFirstAvailable(SSL.class.getClassLoader(),
             libNames.toArray(new String[libNames.size()]));
