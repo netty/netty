@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.TransferEncodingMechanism;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
@@ -691,18 +692,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                         String[] values = contents[i].split("=", 2);
                         Attribute attribute;
                         try {
-                            String name = cleanString(values[0]);
-                            String value = values[1];
-
-                            // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html
-                            if (HttpHeaderValues.FILENAME.contentEquals(name)) {
-                                // filename value is quoted string so strip them
-                                value = value.substring(1, value.length() - 1);
-                            } else {
-                                // otherwise we need to clean the value
-                                value = cleanString(value);
-                            }
-                            attribute = factory.createAttribute(request, name, value);
+                            attribute = getContentDispositionAttribute(values);
                         } catch (NullPointerException e) {
                             throw new ErrorDataDecoderException(e);
                         } catch (IllegalArgumentException e) {
@@ -803,6 +793,38 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 throw new ErrorDataDecoderException("Filename not found");
             }
         }
+    }
+
+    private static final String FILENAME_ENCODED = HttpHeaderValues.FILENAME.toString() + '*';
+
+    private Attribute getContentDispositionAttribute(String... values) {
+        String name = cleanString(values[0]);
+        String value = values[1];
+
+        // Filename can be token, quoted or encoded. See https://tools.ietf.org/html/rfc5987
+        if (HttpHeaderValues.FILENAME.contentEquals(name)) {
+            // Value is quoted or token. Strip if quoted:
+            int last = value.length() - 1;
+            if (last > 0 &&
+              value.charAt(0) == HttpConstants.DOUBLE_QUOTE &&
+              value.charAt(last) == HttpConstants.DOUBLE_QUOTE) {
+                value = value.substring(1, last);
+            }
+        } else if (FILENAME_ENCODED.equals(name)) {
+            try {
+                name = HttpHeaderValues.FILENAME.toString();
+                String[] split = value.split("'", 3);
+                value = QueryStringDecoder.decodeComponent(split[2], Charset.forName(split[0]));
+            } catch (ArrayIndexOutOfBoundsException e) {
+                 throw new ErrorDataDecoderException(e);
+            } catch (UnsupportedCharsetException e) {
+                throw new ErrorDataDecoderException(e);
+            }
+        } else {
+            // otherwise we need to clean the value
+            value = cleanString(value);
+        }
+        return factory.createAttribute(request, name, value);
     }
 
     /**
