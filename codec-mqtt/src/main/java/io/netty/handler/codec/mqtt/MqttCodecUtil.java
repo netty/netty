@@ -43,7 +43,7 @@ final class MqttCodecUtil {
             return clientId != null && clientId.length() >= MIN_CLIENT_ID_LENGTH &&
                 clientId.length() <= MAX_CLIENT_ID_LENGTH;
         }
-        if (mqttVersion == MqttVersion.MQTT_3_1_1) {
+        if (mqttVersion == MqttVersion.MQTT_3_1_1 || mqttVersion == MqttVersion.MQTT_5) {
             // In 3.1.3.1 Client Identifier of MQTT 3.1.1 specification, The Server MAY allow ClientId’s
             // that contain more than 23 encoded bytes. And, The Server MAY allow zero-length ClientId.
             return clientId != null;
