@@ -81,6 +81,7 @@ public final class MqttMessageBuilders {
         private byte[] willMessage;
         private String username;
         private byte[] password;
+        private MqttProperties properties;
 
         ConnectBuilder() {
         }
@@ -170,6 +171,11 @@ public final class MqttMessageBuilders {
             return this;
         }
 
+        public ConnectBuilder properties(MqttProperties properties) {
+            this.properties = properties;
+            return this;
+        }
+
         public MqttConnectMessage build() {
             MqttFixedHeader mqttFixedHeader =
                     new MqttFixedHeader(MqttMessageType.CONNECT, false, MqttQoS.AT_MOST_ONCE, false, 0);
@@ -183,7 +189,8 @@ public final class MqttMessageBuilders {
                             willQos.value(),
                             willFlag,
                             cleanSession,
-                            keepAliveSecs);
+                            keepAliveSecs,
+                            properties);
             MqttConnectPayload mqttConnectPayload =
                     new MqttConnectPayload(clientId, willTopic, willMessage, username, password);
             return new MqttConnectMessage(mqttFixedHeader, mqttConnectVariableHeader, mqttConnectPayload);

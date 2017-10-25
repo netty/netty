@@ -32,6 +32,7 @@ public final class MqttConnectVariableHeader {
     private final boolean isWillFlag;
     private final boolean isCleanSession;
     private final int keepAliveTimeSeconds;
+    private MqttProperties properties;
 
     public MqttConnectVariableHeader(
             String name,
@@ -42,7 +43,8 @@ public final class MqttConnectVariableHeader {
             int willQos,
             boolean isWillFlag,
             boolean isCleanSession,
-            int keepAliveTimeSeconds) {
+            int keepAliveTimeSeconds,
+            MqttProperties properties) {
         this.name = name;
         this.version = version;
         this.hasUserName = hasUserName;
@@ -52,6 +54,7 @@ public final class MqttConnectVariableHeader {
         this.isWillFlag = isWillFlag;
         this.isCleanSession = isCleanSession;
         this.keepAliveTimeSeconds = keepAliveTimeSeconds;
+        this.properties = properties;
     }
 
     public String name() {
@@ -88,6 +91,10 @@ public final class MqttConnectVariableHeader {
 
     public int keepAliveTimeSeconds() {
         return keepAliveTimeSeconds;
+    }
+
+    public MqttProperties properties() {
+        return properties;
     }
 
     @Override
