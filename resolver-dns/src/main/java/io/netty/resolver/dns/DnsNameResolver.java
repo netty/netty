@@ -115,20 +115,23 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     static {
-        String[] searchDomains;
-        try {
-            Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
-            Method open = configClass.getMethod("open");
-            Method nameservers = configClass.getMethod("searchlist");
-            Object instance = open.invoke(null);
+        String[] searchDomains = EmptyArrays.EMPTY_STRINGS;
+        if (!PlatformDependent.reflectionMaybeRestricted()) {
+            // Only allowed in java version < 9 by default.
+            try {
+                Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
+                Method open = configClass.getMethod("open");
+                Method nameservers = configClass.getMethod("searchlist");
+                Object instance = open.invoke(null);
 
-            @SuppressWarnings("unchecked")
-            List<String> list = (List<String>) nameservers.invoke(instance);
-            searchDomains = list.toArray(new String[list.size()]);
-        } catch (Exception ignore) {
-            // Failed to get the system name search domain list.
-            searchDomains = EmptyArrays.EMPTY_STRINGS;
+                @SuppressWarnings("unchecked")
+                List<String> list = (List<String>) nameservers.invoke(instance);
+                searchDomains = list.toArray(new String[list.size()]);
+            } catch (Exception ignore) {
+                // Failed to get the system name search domain list.
+            }
         }
+
         DEFAULT_SEARCH_DOMAINS = searchDomains;
 
         int ndots;

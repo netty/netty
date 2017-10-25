@@ -16,6 +16,7 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.NetUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -93,7 +94,7 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
             // Will try reflection if this fails.
         }
 
-        if (defaultNameServers.isEmpty()) {
+        if (defaultNameServers.isEmpty() && !PlatformDependent.reflectionMaybeRestricted()) {
             try {
                 Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
                 Method open = configClass.getMethod("open");

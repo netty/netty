@@ -42,6 +42,7 @@ final class PlatformDependent0 {
     private static final boolean IS_EXPLICIT_NO_UNSAFE = explicitNoUnsafe0();
     private static final Method ALLOCATE_ARRAY_METHOD;
     private static final int JAVA_VERSION = javaVersion0();
+    private static final boolean REFLECTION_MAY_BE_RESTRICTED = reflectionMaybeRestricted0();
     private static final boolean IS_ANDROID = isAndroid0();
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
@@ -204,94 +205,100 @@ final class PlatformDependent0 {
             DIRECT_BUFFER_CONSTRUCTOR = null;
             ALLOCATE_ARRAY_METHOD = null;
         } else {
-            Constructor<?> directBufferConstructor;
-            long address = -1;
-            try {
-                final Object maybeDirectBufferConstructor =
-                        AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                            @Override
-                            public Object run() {
-                                try {
-                                    final Constructor<?> constructor =
-                                            direct.getClass().getDeclaredConstructor(long.class, int.class);
-                                    Throwable cause = ReflectionUtil.trySetAccessible(constructor);
-                                    if (cause != null) {
-                                        return cause;
-                                    }
-                                    return constructor;
-                                } catch (NoSuchMethodException e) {
-                                    return e;
-                                } catch (SecurityException e) {
-                                    return e;
-                                }
-                            }
-                        });
+            boolean unaligned;
 
-                if (maybeDirectBufferConstructor instanceof Constructor<?>) {
-                    address = UNSAFE.allocateMemory(1);
-                    // try to use the constructor now
-                    try {
-                        ((Constructor<?>) maybeDirectBufferConstructor).newInstance(address, 1);
-                        directBufferConstructor = (Constructor<?>) maybeDirectBufferConstructor;
-                        logger.debug("direct buffer constructor: available");
-                    } catch (InstantiationException e) {
-                        directBufferConstructor = null;
-                    } catch (IllegalAccessException e) {
-                        directBufferConstructor = null;
-                    } catch (InvocationTargetException e) {
+            Constructor<?> directBufferConstructor;
+            if (reflectionMaybeRestricted()) {
+                directBufferConstructor = null;
+                logger.debug("direct buffer constructor: unavailable");
+                unaligned = unaligned0();
+                logger.debug("java.nio.Bits.unaligned: unavailable {}", unaligned);
+            } else {
+                long address = -1;
+                try {
+                    final Object maybeDirectBufferConstructor =
+                            AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                                @Override
+                                public Object run() {
+                                    try {
+                                        final Constructor<?> constructor =
+                                                direct.getClass().getDeclaredConstructor(long.class, int.class);
+                                        Throwable cause = ReflectionUtil.trySetAccessible(constructor);
+                                        if (cause != null) {
+                                            return cause;
+                                        }
+                                        return constructor;
+                                    } catch (NoSuchMethodException e) {
+                                        return e;
+                                    } catch (SecurityException e) {
+                                        return e;
+                                    }
+                                }
+                            });
+
+                    if (maybeDirectBufferConstructor instanceof Constructor<?>) {
+                        address = UNSAFE.allocateMemory(1);
+                        // try to use the constructor now
+                        try {
+                            ((Constructor<?>) maybeDirectBufferConstructor).newInstance(address, 1);
+                            directBufferConstructor = (Constructor<?>) maybeDirectBufferConstructor;
+                            logger.debug("direct buffer constructor: available");
+                        } catch (InstantiationException e) {
+                            directBufferConstructor = null;
+                        } catch (IllegalAccessException e) {
+                            directBufferConstructor = null;
+                        } catch (InvocationTargetException e) {
+                            directBufferConstructor = null;
+                        }
+                    } else {
+                        logger.debug(
+                                "direct buffer constructor: unavailable",
+                                (Throwable) maybeDirectBufferConstructor);
                         directBufferConstructor = null;
                     }
-                } else {
-                    logger.debug(
-                            "direct buffer constructor: unavailable",
-                            (Throwable) maybeDirectBufferConstructor);
-                    directBufferConstructor = null;
+                } finally {
+                    if (address != -1) {
+                        UNSAFE.freeMemory(address);
+                    }
                 }
-            } finally {
-                if (address != -1) {
-                    UNSAFE.freeMemory(address);
+                Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                    @Override
+                    public Object run() {
+                        try {
+                            Class<?> bitsClass =
+                                    Class.forName("java.nio.Bits", false, getSystemClassLoader());
+                            Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
+                            Throwable cause = ReflectionUtil.trySetAccessible(unalignedMethod);
+                            if (cause != null) {
+                                return cause;
+                            }
+                            return unalignedMethod.invoke(null);
+                        } catch (NoSuchMethodException e) {
+                            return e;
+                        } catch (SecurityException e) {
+                            return e;
+                        } catch (IllegalAccessException e) {
+                            return e;
+                        } catch (ClassNotFoundException e) {
+                            return e;
+                        } catch (InvocationTargetException e) {
+                            return e;
+                        }
+                    }
+                });
+
+                if (maybeUnaligned instanceof Boolean) {
+                    unaligned = (Boolean) maybeUnaligned;
+                    logger.debug("java.nio.Bits.unaligned: available, {}", unaligned);
+                } else {
+                    unaligned = unaligned0();
+                    logger.debug("java.nio.Bits.unaligned: unavailable {}", unaligned, (Throwable) maybeUnaligned);
                 }
             }
+
             DIRECT_BUFFER_CONSTRUCTOR = directBufferConstructor;
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
             BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
-            boolean unaligned;
-            Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    try {
-                        Class<?> bitsClass =
-                                Class.forName("java.nio.Bits", false, getSystemClassLoader());
-                        Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
-                        Throwable cause = ReflectionUtil.trySetAccessible(unalignedMethod);
-                        if (cause != null) {
-                            return cause;
-                        }
-                        return unalignedMethod.invoke(null);
-                    } catch (NoSuchMethodException e) {
-                        return e;
-                    } catch (SecurityException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
-                        return e;
-                    } catch (ClassNotFoundException e) {
-                        return e;
-                    } catch (InvocationTargetException e) {
-                        return e;
-                    }
-                }
-            });
-
-            if (maybeUnaligned instanceof Boolean) {
-                unaligned = (Boolean) maybeUnaligned;
-                logger.debug("java.nio.Bits.unaligned: available, {}", unaligned);
-            } else {
-                String arch = SystemPropertyUtil.get("os.arch", "");
-                //noinspection DynamicRegexReplaceableByCompiledPattern
-                unaligned = arch.matches("^(i[3-6]86|x86(_64)?|x64|amd64)$");
-                Throwable t = (Throwable) maybeUnaligned;
-                logger.debug("java.nio.Bits.unaligned: unavailable {}", unaligned, t);
-            }
 
             UNALIGNED = unaligned;
 
@@ -358,6 +365,12 @@ final class PlatformDependent0 {
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, int): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
+    }
+
+    private static boolean unaligned0() {
+        String arch = SystemPropertyUtil.get("os.arch", "");
+        //noinspection DynamicRegexReplaceableByCompiledPattern
+        return arch.matches("^(i[3-6]86|x86(_64)?|x64|amd64)$");
     }
 
     static boolean isExplicitNoUnsafe() {
@@ -791,6 +804,14 @@ final class PlatformDependent0 {
             logger.debug("Platform: Android");
         }
         return android;
+    }
+
+    private static boolean reflectionMaybeRestricted0() {
+        return javaVersion() >= 9 && SystemPropertyUtil.getBoolean("io.netty.reflectionMaybeRestricted", true);
+    }
+
+    static boolean reflectionMaybeRestricted() {
+        return REFLECTION_MAY_BE_RESTRICTED;
     }
 
     static int javaVersion() {

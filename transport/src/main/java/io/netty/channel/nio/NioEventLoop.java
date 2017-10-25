@@ -158,7 +158,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
         SelectorTuple(Selector unwrappedSelector) {
             this.unwrappedSelector = unwrappedSelector;
-            this.selector = unwrappedSelector;
+            selector = unwrappedSelector;
         }
 
         SelectorTuple(Selector unwrappedSelector, Selector selector) {
@@ -175,7 +175,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             throw new ChannelException("failed to open a new selector", e);
         }
 
-        if (DISABLE_KEYSET_OPTIMIZATION) {
+        if (DISABLE_KEYSET_OPTIMIZATION || PlatformDependent.reflectionMaybeRestricted()) {
             return new SelectorTuple(unwrappedSelector);
         }
 

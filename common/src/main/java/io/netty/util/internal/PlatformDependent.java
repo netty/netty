@@ -238,6 +238,13 @@ public final class PlatformDependent {
     }
 
     /**
+     * Returns {@code true} if reflective access may be restricted due module constraints introduced in java9.
+     */
+    public static boolean reflectionMaybeRestricted() {
+        return PlatformDependent0.reflectionMaybeRestricted();
+    }
+
+    /**
      * Returns {@code true} if and only if it is fine to enable TCP_NODELAY socket option by default.
      */
     public static boolean canEnableTcpNoDelayByDefault() {
