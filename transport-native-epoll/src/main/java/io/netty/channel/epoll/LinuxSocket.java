@@ -55,6 +55,14 @@ final class LinuxSocket extends Socket {
         setTcpFastOpen(intValue(), tcpFastopenBacklog);
     }
 
+    void setTcpFastOpenConnect(boolean tcpFastOpenConnect) throws IOException {
+        setTcpFastOpenConnect(intValue(), tcpFastOpenConnect ? 1 : 0);
+    }
+
+    boolean isTcpFastOpenConnect() throws IOException {
+        return isTcpFastOpenConnect(intValue()) != 0;
+    }
+
     void setTcpKeepIdle(int seconds) throws IOException {
         setTcpKeepIdle(intValue(), seconds);
     }
@@ -156,12 +164,14 @@ final class LinuxSocket extends Socket {
     private static native int isIpTransparent(int fd) throws IOException;
     private static native void getTcpInfo(int fd, long[] array) throws IOException;
     private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
+    private static native int isTcpFastOpenConnect(int fd) throws IOException;
 
     private static native void setTcpDeferAccept(int fd, int deferAccept) throws IOException;
     private static native void setTcpQuickAck(int fd, int quickAck) throws IOException;
     private static native void setTcpCork(int fd, int tcpCork) throws IOException;
     private static native void setTcpNotSentLowAt(int fd, int tcpNotSentLowAt) throws IOException;
     private static native void setTcpFastOpen(int fd, int tcpFastopenBacklog) throws IOException;
+    private static native void setTcpFastOpenConnect(int fd, int tcpFastOpenConnect) throws IOException;
     private static native void setTcpKeepIdle(int fd, int seconds) throws IOException;
     private static native void setTcpKeepIntvl(int fd, int seconds) throws IOException;
     private static native void setTcpKeepCnt(int fd, int probes) throws IOException;
