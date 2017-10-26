@@ -136,13 +136,22 @@ public final class NativeLibraryLoader {
         InputStream in = null;
         OutputStream out = null;
         File tmpFile = null;
-        URL url = loader.getResource(path);
+        URL url;
+        if (loader == null) {
+            url = ClassLoader.getSystemResource(path);
+        } else {
+            url = loader.getResource(path);
+        }
         try {
             if (url == null) {
                 if (PlatformDependent.isOsx()) {
                     String fileName = path.endsWith(".jnilib") ? NATIVE_RESOURCE_HOME + "lib" + name + ".dynlib" :
                             NATIVE_RESOURCE_HOME + "lib" + name + ".jnilib";
-                    url = loader.getResource(fileName);
+                    if (loader == null) {
+                        url = ClassLoader.getSystemResource(fileName);
+                    } else {
+                        url = loader.getResource(fileName);
+                    }
                     if (url == null) {
                         FileNotFoundException fnf = new FileNotFoundException(fileName);
                         ThrowableUtil.addSuppressedAndClear(fnf, suppressed);
@@ -280,8 +289,12 @@ public final class NativeLibraryLoader {
     private static Class<?> tryToLoadClass(final ClassLoader loader, final Class<?> helper)
             throws ClassNotFoundException {
         try {
-            return loader.loadClass(helper.getName());
+            return Class.forName(helper.getName(), false, loader);
         } catch (ClassNotFoundException e1) {
+            if (loader == null) {
+                // cannot defineClass inside bootstrap class loader
+                throw e1;
+            }
             try {
                 // The helper class is NOT found in target ClassLoader, we have to define the helper class.
                 final byte[] classBinary = classToByteArray(helper);
