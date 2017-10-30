@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
+import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
