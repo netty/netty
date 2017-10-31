@@ -66,6 +66,7 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSession;
 
 import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
@@ -1223,6 +1224,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         final int originalLength = length;
         boolean wrapLater = false;
         boolean notifyClosure = false;
+        int overflowReadableBytes = -1;
         ByteBuf decodeOut = allocate(ctx, length);
         try {
             // Only continue to loop if the handler was not removed in the meantime.
@@ -1240,7 +1242,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                 switch (status) {
                 case BUFFER_OVERFLOW:
-                    int readableBytes = decodeOut.readableBytes();
+                    final int readableBytes = decodeOut.readableBytes();
+                    final int previousOverflowReadableBytes = overflowReadableBytes;
+                    overflowReadableBytes = readableBytes;
                     int bufferSize = engine.getSession().getApplicationBufferSize() - readableBytes;
                     if (readableBytes > 0) {
                         firedChannelRead = true;
@@ -1260,6 +1264,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         decodeOut.release();
                         decodeOut = null;
                     }
+                    if (readableBytes == 0 && previousOverflowReadableBytes == 0) {
+                        // If there is two consecutive loops where we overflow and are not able to consume any data,
+                        // assume the amount of data exceeds the maximum amount for the engine and bail
+                        throw new IllegalStateException("Two consecutive overflows but no content was consumed. " +
+                                 SSLSession.class.getSimpleName() + " getApplicationBufferSize: " +
+                                 engine.getSession().getApplicationBufferSize() + " maybe too small.");
+                    }
                     // Allocate a new buffer which can hold all the rest data and loop again.
                     // TODO: We may want to reconsider how we calculate the length here as we may
                     // have more then one ssl message to decode.
@@ -1268,8 +1279,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 case CLOSED:
                     // notify about the CLOSED state of the SSLEngine. See #137
                     notifyClosure = true;
+                    overflowReadableBytes = -1;
                     break;
                 default:
+                    overflowReadableBytes = -1;
                     break;
                 }
 
