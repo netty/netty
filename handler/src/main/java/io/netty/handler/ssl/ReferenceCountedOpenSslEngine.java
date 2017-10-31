@@ -58,15 +58,18 @@ import javax.net.ssl.SSLSessionContext;
 import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.OpenSsl.memoryAddress;
-import static io.netty.util.internal.EmptyArrays.EMPTY_CERTIFICATES;
-import static io.netty.util.internal.EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2_HELLO;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V3;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_1;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
+import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
+import static io.netty.internal.tcnative.SSL.SSL_MAX_PLAINTEXT_LENGTH;
+import static io.netty.internal.tcnative.SSL.SSL_MAX_RECORD_LENGTH;
+import static io.netty.util.internal.EmptyArrays.EMPTY_CERTIFICATES;
+import static io.netty.util.internal.EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
@@ -119,7 +122,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     /**
      * Depends upon tcnative ... only use if tcnative is available!
      */
-    static final int MAX_PLAINTEXT_LENGTH = SSL.SSL_MAX_PLAINTEXT_LENGTH;
+    static final int MAX_PLAINTEXT_LENGTH = SSL_MAX_PLAINTEXT_LENGTH;
+    /**
+     * Depends upon tcnative ... only use if tcnative is available!
+     */
+    private static final int MAX_RECORD_SIZE = SSL_MAX_RECORD_LENGTH;
 
     private static final AtomicIntegerFieldUpdater<ReferenceCountedOpenSslEngine> DESTROYED_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(ReferenceCountedOpenSslEngine.class, "destroyed");
@@ -944,7 +951,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             // are multiple records or partial records this may reduce thrashing events through the pipeline.
             // [1] https://docs.oracle.com/javase/7/docs/api/javax/net/ssl/SSLEngine.html
             if (jdkCompatibilityMode) {
-                if (len < SslUtils.SSL_RECORD_HEADER_LENGTH) {
+                if (len < SSL_RECORD_HEADER_LENGTH) {
                     return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
                 }
 
@@ -953,15 +960,27 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     throw new NotSslRecordException("not an SSL/TLS record");
                 }
 
-                if (packetLength - SslUtils.SSL_RECORD_HEADER_LENGTH > capacity) {
-                    // No enough space in the destination buffer so signal the caller
-                    // that the buffer needs to be increased.
+                final int packetLengthDataOnly = packetLength - SSL_RECORD_HEADER_LENGTH;
+                if (packetLengthDataOnly > capacity) {
+                    // Not enough space in the destination buffer so signal the caller that the buffer needs to be
+                    // increased.
+                    if (packetLengthDataOnly > MAX_RECORD_SIZE) {
+                        // The packet length MUST NOT exceed 2^14 [1]. However we do accommodate more data to support
+                        // legacy use cases which may violate this condition (e.g. OpenJDK's SslEngineImpl). If the max
+                        // length is exceeded we fail fast here to avoid an infinite loop due to the fact that we
+                        // won't allocate a buffer large enough.
+                        // [1] https://tools.ietf.org/html/rfc5246#section-6.2.1
+                        throw new SSLException("Illegal packet length: " + packetLengthDataOnly + " > " +
+                                                session.getApplicationBufferSize());
+                    } else {
+                        session.tryExpandApplicationBufferSize(packetLengthDataOnly);
+                    }
                     return newResultMayFinishHandshake(BUFFER_OVERFLOW, status, 0, 0);
                 }
 
                 if (len < packetLength) {
-                    // We either have no enough data to read the packet length at all or not enough for reading
-                    // the whole packet.
+                    // We either don't have enough data to read the packet length or not enough for reading the whole
+                    // packet.
                     return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
                 }
             } else if (len == 0 && sslPending <= 0) {
@@ -1018,10 +1037,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             }
 
                             int bytesRead = readPlaintextData(dst);
-                            // We are directly using the ByteBuffer memory for the write, and so we only know what
-                            // has been consumed after we let SSL decrypt the data. At this point we should update
-                            // the number of bytes consumed, update the ByteBuffer position, and release temp
-                            // ByteBuf.
+                            // We are directly using the ByteBuffer memory for the write, and so we only know what has
+                            // been consumed after we let SSL decrypt the data. At this point we should update the
+                            // number of bytes consumed, update the ByteBuffer position, and release temp ByteBuf.
                             int localBytesConsumed = pendingEncryptedBytes - SSL.bioLengthByteBuffer(networkBIO);
                             bytesConsumed += localBytesConsumed;
                             packetLength -= localBytesConsumed;
@@ -1040,12 +1058,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                                 newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status,
                                                                             bytesConsumed, bytesProduced);
                                     }
-                                } else if (packetLength == 0) {
-                                    // We read everything return now.
+                                } else if (packetLength == 0 || jdkCompatibilityMode) {
+                                    // We either consumed all data or we are in jdkCompatibilityMode and have consumed
+                                    // a single TLS packet and should stop consuming until this method is called again.
                                     break srcLoop;
-                                } else if (jdkCompatibilityMode) {
-                                    // try to write again to the BIO. stop reading from it by break out of the readLoop.
-                                    break;
                                 }
                             } else {
                                 int sslError = SSL.getError(ssl, bytesRead);
@@ -1847,6 +1863,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         private String cipher;
         private byte[] id;
         private long creationTime;
+        private volatile int applicationBufferSize = MAX_PLAINTEXT_LENGTH;
 
         // lazy init for memory reasons
         private Map<String, Object> values;
@@ -2184,7 +2201,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public int getApplicationBufferSize() {
-            return MAX_PLAINTEXT_LENGTH;
+            return applicationBufferSize;
+        }
+
+        /**
+         * Expand (or increase) the value returned by {@link #getApplicationBufferSize()} if necessary.
+         * <p>
+         * This is only called in a synchronized block, so no need to use atomic operations.
+         * @param packetLengthDataOnly The packet size which exceeds the current {@link #getApplicationBufferSize()}.
+         */
+        void tryExpandApplicationBufferSize(int packetLengthDataOnly) {
+            if (packetLengthDataOnly > MAX_PLAINTEXT_LENGTH && applicationBufferSize != MAX_RECORD_SIZE) {
+                applicationBufferSize = MAX_RECORD_SIZE;
+            }
         }
     }
 }
