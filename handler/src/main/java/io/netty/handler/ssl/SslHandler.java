@@ -234,6 +234,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 int sslPending = ((ReferenceCountedOpenSslEngine) handler.engine).sslPending();
                 return sslPending > 0 ? sslPending : guess;
             }
+
+            @Override
+            boolean jdkCompatibilityMode(SSLEngine engine) {
+                return ((ReferenceCountedOpenSslEngine) engine).jdkCompatibilityMode;
+            }
         },
         CONSCRYPT(true, COMPOSITE_CUMULATOR) {
             @Override
@@ -271,6 +276,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             int calculatePendingData(SslHandler handler, int guess) {
                 return guess;
             }
+
+            @Override
+            boolean jdkCompatibilityMode(SSLEngine engine) {
+                return true;
+            }
         },
         JDK(false, MERGE_CUMULATOR) {
             @Override
@@ -291,6 +301,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             @Override
             int calculatePendingData(SslHandler handler, int guess) {
                 return guess;
+            }
+
+            @Override
+            boolean jdkCompatibilityMode(SSLEngine engine) {
+                return true;
             }
         };
 
@@ -314,6 +329,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         abstract int calculateWrapBufferCapacity(SslHandler handler, int pendingBytes, int numComponents);
 
         abstract int calculatePendingData(SslHandler handler, int guess);
+
+        abstract boolean jdkCompatibilityMode(SSLEngine engine);
 
         // BEGIN Platform-dependent flags
 
@@ -411,14 +428,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @Deprecated
     public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
-        this(engine, startTls, true, delegatedTaskExecutor);
-    }
-
-    SslHandler(SSLEngine engine, boolean startTls, boolean jdkCompatibilityMode) {
-        this(engine, startTls, jdkCompatibilityMode, ImmediateExecutor.INSTANCE);
-    }
-
-    SslHandler(SSLEngine engine, boolean startTls, boolean jdkCompatibilityMode, Executor delegatedTaskExecutor) {
         if (engine == null) {
             throw new NullPointerException("engine");
         }
@@ -429,7 +438,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         engineType = SslEngineType.forEngine(engine);
         this.delegatedTaskExecutor = delegatedTaskExecutor;
         this.startTls = startTls;
-        this.jdkCompatibilityMode = jdkCompatibilityMode;
+        this.jdkCompatibilityMode = engineType.jdkCompatibilityMode(engine);
         setCumulator(engineType.cumulator);
     }
 
