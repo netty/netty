@@ -201,7 +201,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private boolean isInboundDone;
     private boolean outboundClosed;
 
-    private final boolean jdkCompatibilityMode;
+    final boolean jdkCompatibilityMode;
     private final boolean clientMode;
     private final ByteBufAllocator alloc;
     private final OpenSslEngineMap engineMap;

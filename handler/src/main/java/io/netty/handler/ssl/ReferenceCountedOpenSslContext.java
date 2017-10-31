@@ -380,12 +380,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     @Override
     protected final SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
-        return new SslHandler(newEngine0(alloc, null, -1, false), startTls, false);
+        return new SslHandler(newEngine0(alloc, null, -1, false), startTls);
     }
 
     @Override
     protected final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
-        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls, false);
+        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls);
     }
 
     SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
