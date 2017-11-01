@@ -18,7 +18,6 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -85,25 +84,6 @@ public class MqttCodecTest {
     @Test
     public void testConnectMessageForMqtt311() throws Exception {
         final MqttConnectMessage message = createConnectMessage(MqttVersion.MQTT_3_1_1);
-        ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
-
-        final List<Object> out = new LinkedList<Object>();
-        mqttDecoder.decode(ctx, byteBuf, out);
-
-        assertEquals("Expected one object but got " + out.size(), 1, out.size());
-
-        final MqttConnectMessage decodedMessage = (MqttConnectMessage) out.get(0);
-
-        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
-        validateConnectVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
-        validateConnectPayload(message.payload(), decodedMessage.payload());
-    }
-
-    @Test
-    public void testConnectMessageForMqtt5() throws Exception {
-        MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(0x11, 10)); //session expiry interval
-        final MqttConnectMessage message = createConnectV5Message(props);
         ByteBuf byteBuf = MqttEncoder.doEncode(ALLOCATOR, message);
 
         final List<Object> out = new LinkedList<Object>();
@@ -363,11 +343,11 @@ public class MqttCodecTest {
                 .build();
     }
 
-    private static MqttConnectMessage createConnectV5Message(MqttProperties properties) {
+    static MqttConnectMessage createConnectV5Message(MqttProperties properties) {
         return createConnectV5Message(USER_NAME, PASSWORD, properties);
     }
 
-    private static MqttConnectMessage createConnectV5Message(String username, String password, MqttProperties properties) {
+    static MqttConnectMessage createConnectV5Message(String username, String password, MqttProperties properties) {
         return MqttMessageBuilders.connect()
                 .clientId(CLIENT_ID)
                 .protocolVersion(MqttVersion.MQTT_5)
@@ -439,12 +419,12 @@ public class MqttCodecTest {
     // Helper methods to compare expected and actual
     // MQTT messages
 
-    private static void validateFixedHeaders(MqttFixedHeader expected, MqttFixedHeader actual) {
+    static void validateFixedHeaders(MqttFixedHeader expected, MqttFixedHeader actual) {
         assertEquals("MqttFixedHeader MqttMessageType mismatch ", expected.messageType(), actual.messageType());
         assertEquals("MqttFixedHeader Qos mismatch ", expected.qosLevel(), actual.qosLevel());
     }
 
-    private static void validateConnectVariableHeader(
+    static void validateConnectVariableHeader(
             MqttConnectVariableHeader expected,
             MqttConnectVariableHeader actual) {
         assertEquals("MqttConnectVariableHeader Name mismatch ", expected.name(), actual.name());
@@ -468,7 +448,7 @@ public class MqttCodecTest {
                 actual.isWillRetain());
     }
 
-    private static void validateConnectPayload(MqttConnectPayload expected, MqttConnectPayload actual) {
+    static void validateConnectPayload(MqttConnectPayload expected, MqttConnectPayload actual) {
         assertEquals(
                 "MqttConnectPayload ClientIdentifier mismatch ",
                 expected.clientIdentifier(),

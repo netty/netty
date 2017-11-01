@@ -36,10 +36,10 @@ import static io.netty.handler.codec.mqtt.MqttCodecUtil.*;
 public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
     static class PacketSection {
-        private final int bufferSize;
-        private final ByteBuf byteBuf;
+        final int bufferSize;
+        final ByteBuf byteBuf;
 
-        public PacketSection(int bufferSize, ByteBuf buf) {
+        PacketSection(int bufferSize, ByteBuf buf) {
             this.bufferSize = bufferSize;
             this.byteBuf = buf;
         }
@@ -138,11 +138,8 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(variableHeader.name(),
                 (byte) variableHeader.version());
 
-        PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader, mqttVersion);
-
         byte[] protocolNameBytes = mqttVersion.protocolNameBytes();
         int variableHeaderBufferSize = 2 + protocolNameBytes.length + 4;
-        variableHeaderBufferSize += propertiesSection.bufferSize;
         int variablePartSize = variableHeaderBufferSize + payloadSize;
 
         ByteBuf buf = byteBufAllocator.buffer(variableHeaderBufferSize);
@@ -155,82 +152,11 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         buf.writeByte(EncodersUtils.getConnVariableHeaderFlag(variableHeader));
         buf.writeShort(variableHeader.keepAliveTimeSeconds());
 
-        // write the properties
-        buf.writeBytes(propertiesSection.byteBuf);
-
         return new PacketSection(variableHeaderBufferSize, buf);
     }
 
-
-    private static PacketSection encodeProperties(ByteBufAllocator byteBufAllocator,
-                                                  MqttConnectVariableHeader variableHeader,
-                                                  MqttVersion mqttVersion) {
-        ByteBuf propertiesHeaderBuf = byteBufAllocator.buffer();
-        if (mqttVersion == MqttVersion.MQTT_5) {
-            // encode also the Properties part
-            MqttProperties mqttProperties = variableHeader.properties();
-            ByteBuf propertiesBuf = byteBufAllocator.buffer();
-            for (MqttProperties.MqttProperty property : mqttProperties.listAll()) {
-                EncodersUtils.writeVariableLengthInt(propertiesBuf, property.propertyId);
-                switch (property.propertyId) {
-                    case 0x01: // Payload Format Indicator => Byte
-                    case 0x17: // Request Problem Information
-                    case 0x19: // Request Response Information
-                    case 0x24: // Maximum QoS
-                    case 0x25: // Retain Available
-                    case 0x28: // Wildcard Subscription Available
-                    case 0x29: // Subscription Identifier Available
-                    case 0x2A: // Shared Subscription Available
-                        final byte bytePropValue = ((MqttProperties.IntegerProperty) property).value.byteValue();
-                        propertiesBuf.writeByte(bytePropValue);
-                        break;
-                    case 0x13: // Server Keep Alive => Two Byte Integer
-                    case 0x21: // Receive Maximum
-                    case 0x22: // Topic Alias Maximum
-                    case 0x23: // Topic Alias
-                        final short twoBytesInPropValue = ((MqttProperties.IntegerProperty) property).value.shortValue();
-                        propertiesBuf.writeShort(twoBytesInPropValue);
-                        break;
-                    case 0x02: // Publication Expiry Interval => Four Byte Integer
-                    case 0x11: // Session Expiry Interval
-                    case 0x18: // Will Delay Interval
-                    case 0x27: // Maximum Packet Size
-                        final int fourBytesIntPropValue = ((MqttProperties.IntegerProperty) property).value;
-                        propertiesBuf.writeInt(fourBytesIntPropValue);
-                        break;
-                    case 0x0B: // Subscription Identifier => Variable Byte Integer
-                        final int vbi = ((MqttProperties.IntegerProperty) property).value;
-                        EncodersUtils.writeVariableLengthInt(propertiesBuf, vbi);
-                        break;
-                    case 0x03: // Content Type => UTF-8 Encoded String
-                    case 0x08: // Response Topic
-                    case 0x12: // Assigned Client Identifier
-                    case 0x15: // Authentication Method
-                    case 0x1A: // Response Information
-                    case 0x1C: // Server Reference
-                    case 0x1F: // Reason String
-                    case 0x26: // User Property
-                        final String strPropValue = ((MqttProperties.StringProperty) property).value;
-                        EncodersUtils.writeUTF8String(propertiesBuf, strPropValue);
-                        break;
-                    case 0x09: // Correlation Data => Binary Data
-                    case 0x16: // Authentication Data
-                        final byte[] binaryPropValue = ((MqttProperties.BinaryProperty) property).value;
-                        propertiesBuf.writeShort(binaryPropValue.length);
-                        propertiesBuf.writeBytes(binaryPropValue, 0, binaryPropValue.length);
-                        break;
-                }
-            }
-            EncodersUtils.writeVariableLengthInt(propertiesHeaderBuf, propertiesBuf.readableBytes());
-            propertiesHeaderBuf.writeBytes(propertiesBuf);
-        }
-
-        int propertiesHeaderSize = propertiesHeaderBuf.readableBytes();
-        return new PacketSection(propertiesHeaderSize, propertiesHeaderBuf);
-    }
-
-    private static PacketSection encodePayload(MqttConnectMessage message,
-                                               ByteBufAllocator byteBufAllocator) {
+    static PacketSection encodePayload(MqttConnectMessage message,
+                                       ByteBufAllocator byteBufAllocator) {
         MqttConnectVariableHeader variableHeader = message.variableHeader();
         MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(variableHeader.name(),
                 (byte) variableHeader.version());
