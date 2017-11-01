@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.MessageToMessageEncoder;
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.EmptyArrays;
 
 import java.util.List;
@@ -35,6 +34,16 @@ import static io.netty.handler.codec.mqtt.MqttCodecUtil.*;
  */
 @ChannelHandler.Sharable
 public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
+
+    static class PacketSection {
+        private final int bufferSize;
+        private final ByteBuf byteBuf;
+
+        public PacketSection(int bufferSize, ByteBuf buf) {
+            this.bufferSize = bufferSize;
+            this.byteBuf = buf;
+        }
+    }
 
     public static final MqttEncoder INSTANCE = new MqttEncoder();
 
@@ -95,61 +104,74 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
     private static ByteBuf encodeConnectMessage(
             ByteBufAllocator byteBufAllocator,
             MqttConnectMessage message) {
-        int payloadBufferSize = 0;
 
         MqttFixedHeader mqttFixedHeader = message.fixedHeader();
         MqttConnectVariableHeader variableHeader = message.variableHeader();
-        MqttConnectPayload payload = message.payload();
-        MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(variableHeader.name(),
-                (byte) variableHeader.version());
 
         // as MQTT 3.1 & 3.1.1 spec, If the User Name Flag is set to 0, the Password Flag MUST be set to 0
         if (!variableHeader.hasUserName() && variableHeader.hasPassword()) {
             throw new DecoderException("Without a username, the password MUST be not set");
         }
 
-        // Client id
-        String clientIdentifier = payload.clientIdentifier();
-        if (!isValidClientId(mqttVersion, clientIdentifier)) {
-            throw new MqttIdentifierRejectedException("invalid clientIdentifier: " + clientIdentifier);
-        }
-        byte[] clientIdentifierBytes = encodeStringUtf8(clientIdentifier);
-        payloadBufferSize += 2 + clientIdentifierBytes.length;
+        PacketSection payloadSection = encodePayload(message, byteBufAllocator);
 
-        // Will topic and message
-        String willTopic = payload.willTopic();
-        byte[] willTopicBytes = willTopic != null ? encodeStringUtf8(willTopic) : EmptyArrays.EMPTY_BYTES;
-        byte[] willMessage = payload.willMessageInBytes();
-        byte[] willMessageBytes = willMessage != null ? willMessage : EmptyArrays.EMPTY_BYTES;
-        if (variableHeader.isWillFlag()) {
-            payloadBufferSize += 2 + willTopicBytes.length;
-            payloadBufferSize += 2 + willMessageBytes.length;
-        }
-
-        String userName = payload.userName();
-        byte[] userNameBytes = userName != null ? encodeStringUtf8(userName) : EmptyArrays.EMPTY_BYTES;
-        if (variableHeader.hasUserName()) {
-            payloadBufferSize += 2 + userNameBytes.length;
-        }
-
-        byte[] password = payload.passwordInBytes();
-        byte[] passwordBytes = password != null ? password : EmptyArrays.EMPTY_BYTES;
-        if (variableHeader.hasPassword()) {
-            payloadBufferSize += 2 + passwordBytes.length;
-        }
+        // Variable header
+        PacketSection variableHeaderSection = encodeVariableHeader(byteBufAllocator, variableHeader,
+                payloadSection.bufferSize);
+        int variablePartSize = variableHeaderSection.bufferSize + payloadSection.bufferSize;
 
         // Fixed header
+        int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variablePartSize);
+        ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(mqttFixedHeader));
+
+        buf.writeBytes(variableHeaderSection.byteBuf);
+
+        // Payload
+        buf.writeBytes(payloadSection.byteBuf);
+        return buf;
+    }
+
+    private static PacketSection encodeVariableHeader(ByteBufAllocator byteBufAllocator,
+                                                      MqttConnectVariableHeader variableHeader,
+                                                      int payloadSize) {
+        MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(variableHeader.name(),
+                (byte) variableHeader.version());
+
+        PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader, mqttVersion);
+
         byte[] protocolNameBytes = mqttVersion.protocolNameBytes();
         int variableHeaderBufferSize = 2 + protocolNameBytes.length + 4;
+        variableHeaderBufferSize += propertiesSection.bufferSize;
+        int variablePartSize = variableHeaderBufferSize + payloadSize;
 
-        // calculate the properties section of Variable header
+        ByteBuf buf = byteBufAllocator.buffer(variableHeaderBufferSize);
+        EncodersUtils.writeVariableLengthInt(buf, variablePartSize);
+
+        buf.writeShort(protocolNameBytes.length);
+        buf.writeBytes(protocolNameBytes);
+
+        buf.writeByte(variableHeader.version());
+        buf.writeByte(EncodersUtils.getConnVariableHeaderFlag(variableHeader));
+        buf.writeShort(variableHeader.keepAliveTimeSeconds());
+
+        // write the properties
+        buf.writeBytes(propertiesSection.byteBuf);
+
+        return new PacketSection(variableHeaderBufferSize, buf);
+    }
+
+
+    private static PacketSection encodeProperties(ByteBufAllocator byteBufAllocator,
+                                                  MqttConnectVariableHeader variableHeader,
+                                                  MqttVersion mqttVersion) {
         ByteBuf propertiesHeaderBuf = byteBufAllocator.buffer();
         if (mqttVersion == MqttVersion.MQTT_5) {
             // encode also the Properties part
             MqttProperties mqttProperties = variableHeader.properties();
             ByteBuf propertiesBuf = byteBufAllocator.buffer();
             for (MqttProperties.MqttProperty property : mqttProperties.listAll()) {
-                writeVariableLengthInt(propertiesBuf, property.propertyId);
+                EncodersUtils.writeVariableLengthInt(propertiesBuf, property.propertyId);
                 switch (property.propertyId) {
                     case 0x01: // Payload Format Indicator => Byte
                     case 0x17: // Request Problem Information
@@ -178,7 +200,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                         break;
                     case 0x0B: // Subscription Identifier => Variable Byte Integer
                         final int vbi = ((MqttProperties.IntegerProperty) property).value;
-                        writeVariableLengthInt(propertiesBuf, vbi);
+                        EncodersUtils.writeVariableLengthInt(propertiesBuf, vbi);
                         break;
                     case 0x03: // Content Type => UTF-8 Encoded String
                     case 0x08: // Response Topic
@@ -189,7 +211,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                     case 0x1F: // Reason String
                     case 0x26: // User Property
                         final String strPropValue = ((MqttProperties.StringProperty) property).value;
-                        writeUTF8String(propertiesBuf, strPropValue);
+                        EncodersUtils.writeUTF8String(propertiesBuf, strPropValue);
                         break;
                     case 0x09: // Correlation Data => Binary Data
                     case 0x16: // Authentication Data
@@ -199,77 +221,78 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                         break;
                 }
             }
-            writeVariableLengthInt(propertiesHeaderBuf, propertiesBuf.readableBytes());
+            EncodersUtils.writeVariableLengthInt(propertiesHeaderBuf, propertiesBuf.readableBytes());
             propertiesHeaderBuf.writeBytes(propertiesBuf);
-//            propertiesHeaderBuf = byteBufAllocator.compositeBuffer()
-//                    .addComponents(propsLengthBuf, propertiesBuf);
         }
 
         int propertiesHeaderSize = propertiesHeaderBuf.readableBytes();
-        variableHeaderBufferSize += propertiesHeaderSize;
-
-        int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
-        int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
-        ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
-        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
-        writeVariableLengthInt(buf, variablePartSize);
-
-        buf.writeShort(protocolNameBytes.length);
-        buf.writeBytes(protocolNameBytes);
-
-        buf.writeByte(variableHeader.version());
-        buf.writeByte(getConnVariableHeaderFlag(variableHeader));
-        buf.writeShort(variableHeader.keepAliveTimeSeconds());
-
-        // write the properties
-        buf.writeBytes(propertiesHeaderBuf);
-
-        // Payload
-        buf.writeShort(clientIdentifierBytes.length);
-        buf.writeBytes(clientIdentifierBytes, 0, clientIdentifierBytes.length);
-        if (variableHeader.isWillFlag()) {
-            buf.writeShort(willTopicBytes.length);
-            buf.writeBytes(willTopicBytes, 0, willTopicBytes.length);
-            buf.writeShort(willMessageBytes.length);
-            buf.writeBytes(willMessageBytes, 0, willMessageBytes.length);
-        }
-        if (variableHeader.hasUserName()) {
-            buf.writeShort(userNameBytes.length);
-            buf.writeBytes(userNameBytes, 0, userNameBytes.length);
-        }
-        if (variableHeader.hasPassword()) {
-            buf.writeShort(passwordBytes.length);
-            buf.writeBytes(passwordBytes, 0, passwordBytes.length);
-        }
-        return buf;
+        return new PacketSection(propertiesHeaderSize, propertiesHeaderBuf);
     }
 
-    private static int getConnVariableHeaderFlag(MqttConnectVariableHeader variableHeader) {
-        int flagByte = 0;
+    private static PacketSection encodePayload(MqttConnectMessage message,
+                                               ByteBufAllocator byteBufAllocator) {
+        MqttConnectVariableHeader variableHeader = message.variableHeader();
+        MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(variableHeader.name(),
+                (byte) variableHeader.version());
+        MqttConnectPayload payload = message.payload();
+        int payloadBufferSize = 0;
+        // Client id
+        String clientIdentifier = payload.clientIdentifier();
+        if (!isValidClientId(mqttVersion, clientIdentifier)) {
+            throw new MqttIdentifierRejectedException("invalid clientIdentifier: " + clientIdentifier);
+        }
+        byte[] clientIdentifierBytes = EncodersUtils.encodeStringUtf8(clientIdentifier);
+        payloadBufferSize += 2 + clientIdentifierBytes.length;
+
+        // Will topic and message
+        String willTopic = payload.willTopic();
+        byte[] willTopicBytes = willTopic != null ? EncodersUtils.encodeStringUtf8(willTopic) : EmptyArrays.EMPTY_BYTES;
+        byte[] willMessage = payload.willMessageInBytes();
+        byte[] willMessageBytes = willMessage != null ? willMessage : EmptyArrays.EMPTY_BYTES;
+        if (variableHeader.isWillFlag()) {
+            payloadBufferSize += 2 + willTopicBytes.length;
+            payloadBufferSize += 2 + willMessageBytes.length;
+        }
+
+        String userName = payload.userName();
+        byte[] userNameBytes = userName != null ? EncodersUtils.encodeStringUtf8(userName) : EmptyArrays.EMPTY_BYTES;
         if (variableHeader.hasUserName()) {
-            flagByte |= 0x80;
+            payloadBufferSize += 2 + userNameBytes.length;
+        }
+
+        byte[] password = payload.passwordInBytes();
+        byte[] passwordBytes = password != null ? password : EmptyArrays.EMPTY_BYTES;
+        if (variableHeader.hasPassword()) {
+            payloadBufferSize += 2 + passwordBytes.length;
+        }
+
+        // fill the buf with data
+        ByteBuf paylodBuf = byteBufAllocator.buffer(payloadBufferSize);
+        paylodBuf.writeShort(clientIdentifierBytes.length);
+        paylodBuf.writeBytes(clientIdentifierBytes, 0, clientIdentifierBytes.length);
+        if (variableHeader.isWillFlag()) {
+            paylodBuf.writeShort(willTopicBytes.length);
+            paylodBuf.writeBytes(willTopicBytes, 0, willTopicBytes.length);
+            paylodBuf.writeShort(willMessageBytes.length);
+            paylodBuf.writeBytes(willMessageBytes, 0, willMessageBytes.length);
+        }
+        if (variableHeader.hasUserName()) {
+            paylodBuf.writeShort(userNameBytes.length);
+            paylodBuf.writeBytes(userNameBytes, 0, userNameBytes.length);
         }
         if (variableHeader.hasPassword()) {
-            flagByte |= 0x40;
+            paylodBuf.writeShort(passwordBytes.length);
+            paylodBuf.writeBytes(passwordBytes, 0, passwordBytes.length);
         }
-        if (variableHeader.isWillRetain()) {
-            flagByte |= 0x20;
-        }
-        flagByte |= (variableHeader.willQos() & 0x03) << 3;
-        if (variableHeader.isWillFlag()) {
-            flagByte |= 0x04;
-        }
-        if (variableHeader.isCleanSession()) {
-            flagByte |= 0x02;
-        }
-        return flagByte;
+
+        return new PacketSection(payloadBufferSize, paylodBuf);
     }
 
     private static ByteBuf encodeConnAckMessage(
             ByteBufAllocator byteBufAllocator,
             MqttConnAckMessage message) {
         ByteBuf buf = byteBufAllocator.buffer(4);
-        buf.writeByte(getFixedHeaderByte1(message.fixedHeader()));
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(message.fixedHeader()));
         buf.writeByte(2);
         buf.writeByte(message.variableHeader().isSessionPresent() ? 0x01 : 0x00);
         buf.writeByte(message.variableHeader().connectReturnCode().byteValue());
@@ -289,17 +312,17 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
         for (MqttTopicSubscription topic : payload.topicSubscriptions()) {
             String topicName = topic.topicName();
-            byte[] topicNameBytes = encodeStringUtf8(topicName);
+            byte[] topicNameBytes = EncodersUtils.encodeStringUtf8(topicName);
             payloadBufferSize += 2 + topicNameBytes.length;
             payloadBufferSize += 1;
         }
 
         int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
-        int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
+        int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variablePartSize);
 
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
-        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
-        writeVariableLengthInt(buf, variablePartSize);
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(mqttFixedHeader));
+        EncodersUtils.writeVariableLengthInt(buf, variablePartSize);
 
         // Variable Header
         int messageId = variableHeader.messageId();
@@ -308,7 +331,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         // Payload
         for (MqttTopicSubscription topic : payload.topicSubscriptions()) {
             String topicName = topic.topicName();
-            writeUTF8String(buf, topicName);
+            EncodersUtils.writeUTF8String(buf, topicName);
             buf.writeByte(topic.qualityOfService().value());
         }
 
@@ -326,16 +349,16 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         MqttUnsubscribePayload payload = message.payload();
 
         for (String topicName : payload.topics()) {
-            byte[] topicNameBytes = encodeStringUtf8(topicName);
+            byte[] topicNameBytes = EncodersUtils.encodeStringUtf8(topicName);
             payloadBufferSize += 2 + topicNameBytes.length;
         }
 
         int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
-        int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
+        int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variablePartSize);
 
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
-        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
-        writeVariableLengthInt(buf, variablePartSize);
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(mqttFixedHeader));
+        EncodersUtils.writeVariableLengthInt(buf, variablePartSize);
 
         // Variable Header
         int messageId = variableHeader.messageId();
@@ -343,16 +366,10 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
         // Payload
         for (String topicName : payload.topics()) {
-            writeUTF8String(buf, topicName);
+            EncodersUtils.writeUTF8String(buf, topicName);
         }
 
         return buf;
-    }
-
-    private static void writeUTF8String(ByteBuf buf, String s) {
-        byte[] sBytes = encodeStringUtf8(s);
-        buf.writeShort(sBytes.length);
-        buf.writeBytes(sBytes, 0, sBytes.length);
     }
 
     private static ByteBuf encodeSubAckMessage(
@@ -361,10 +378,10 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         int variableHeaderBufferSize = 2;
         int payloadBufferSize = message.payload().grantedQoSLevels().size();
         int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
-        int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
+        int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variablePartSize);
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
-        buf.writeByte(getFixedHeaderByte1(message.fixedHeader()));
-        writeVariableLengthInt(buf, variablePartSize);
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(message.fixedHeader()));
+        EncodersUtils.writeVariableLengthInt(buf, variablePartSize);
         buf.writeShort(message.variableHeader().messageId());
         for (int qos : message.payload().grantedQoSLevels()) {
             buf.writeByte(qos);
@@ -381,17 +398,17 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         ByteBuf payload = message.payload().duplicate();
 
         String topicName = variableHeader.topicName();
-        byte[] topicNameBytes = encodeStringUtf8(topicName);
+        byte[] topicNameBytes = EncodersUtils.encodeStringUtf8(topicName);
 
         int variableHeaderBufferSize = 2 + topicNameBytes.length +
                 (mqttFixedHeader.qosLevel().value() > 0 ? 2 : 0);
         int payloadBufferSize = payload.readableBytes();
         int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
-        int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
+        int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variablePartSize);
 
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
-        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
-        writeVariableLengthInt(buf, variablePartSize);
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(mqttFixedHeader));
+        EncodersUtils.writeVariableLengthInt(buf, variablePartSize);
         buf.writeShort(topicNameBytes.length);
         buf.writeBytes(topicNameBytes);
         if (mqttFixedHeader.qosLevel().value() > 0) {
@@ -410,10 +427,10 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         int msgId = variableHeader.messageId();
 
         int variableHeaderBufferSize = 2; // variable part only has a message id
-        int fixedHeaderBufferSize = 1 + getVariableLengthInt(variableHeaderBufferSize);
+        int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variableHeaderBufferSize);
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variableHeaderBufferSize);
-        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
-        writeVariableLengthInt(buf, variableHeaderBufferSize);
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(mqttFixedHeader));
+        EncodersUtils.writeVariableLengthInt(buf, variableHeaderBufferSize);
         buf.writeShort(msgId);
 
         return buf;
@@ -424,46 +441,9 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             MqttMessage message) {
         MqttFixedHeader mqttFixedHeader = message.fixedHeader();
         ByteBuf buf = byteBufAllocator.buffer(2);
-        buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(mqttFixedHeader));
         buf.writeByte(0);
 
         return buf;
-    }
-
-    private static int getFixedHeaderByte1(MqttFixedHeader header) {
-        int ret = 0;
-        ret |= header.messageType().value() << 4;
-        if (header.isDup()) {
-            ret |= 0x08;
-        }
-        ret |= header.qosLevel().value() << 1;
-        if (header.isRetain()) {
-            ret |= 0x01;
-        }
-        return ret;
-    }
-
-    private static void writeVariableLengthInt(ByteBuf buf, int num) {
-        do {
-            int digit = num % 128;
-            num /= 128;
-            if (num > 0) {
-                digit |= 0x80;
-            }
-            buf.writeByte(digit);
-        } while (num > 0);
-    }
-
-    private static int getVariableLengthInt(int num) {
-        int count = 0;
-        do {
-            num /= 128;
-            count++;
-        } while (num > 0);
-        return count;
-    }
-
-    private static byte[] encodeStringUtf8(String s) {
-      return s.getBytes(CharsetUtil.UTF_8);
     }
 }
