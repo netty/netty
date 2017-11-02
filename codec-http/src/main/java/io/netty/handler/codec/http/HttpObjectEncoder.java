@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Iterator;
@@ -109,10 +110,12 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         //
         // See https://github.com/netty/netty/issues/2983 for more information.
-
-        if (msg instanceof ByteBuf && !((ByteBuf) msg).isReadable()) {
-            out.add(EMPTY_BUFFER);
-            return;
+        if (msg instanceof ByteBuf) {
+            final ByteBuf potentialEmptyBuf = (ByteBuf) msg;
+            if (!potentialEmptyBuf.isReadable()) {
+                out.add(potentialEmptyBuf.retain());
+                return;
+            }
         }
 
         if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
@@ -210,7 +213,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         } else if (contentLength == 0) {
             // Need to produce some output otherwise an
             // IllegalStateException will be thrown
-            out.add(EMPTY_BUFFER);
+            out.add(ReferenceCountUtil.retain(msg));
         }
     }
 
