@@ -17,11 +17,18 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.IllegalReferenceCountException;
 import org.junit.Test;
 
 import java.nio.charset.Charset;
+import java.util.concurrent.ExecutionException;
 
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  */
@@ -102,5 +109,30 @@ public class HttpRequestEncoderTest {
         String req = buffer.toString(Charset.forName("US-ASCII"));
         assertEquals("GET /?url=http://example.com HTTP/1.1\r\n", req);
         buffer.release();
+    }
+
+    @Test
+    public void testEmptyReleasedBufferShouldNotWriteEmptyBufferToChannel() throws Exception {
+        HttpRequestEncoder encoder = new HttpRequestEncoder();
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        ByteBuf buf = Unpooled.buffer();
+        buf.release();
+        try {
+            channel.writeAndFlush(buf).get();
+            fail();
+        } catch (ExecutionException e) {
+            assertThat(e.getCause().getCause(), is(instanceOf(IllegalReferenceCountException.class)));
+        }
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testEmptydBufferShouldPassThrough() throws Exception {
+        HttpRequestEncoder encoder = new HttpRequestEncoder();
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        ByteBuf buffer = Unpooled.buffer();
+        channel.writeAndFlush(buffer).get();
+        channel.finishAndReleaseAll();
+        assertEquals(0, buffer.refCnt());
     }
 }
