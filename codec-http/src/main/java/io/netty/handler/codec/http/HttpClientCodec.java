@@ -175,7 +175,8 @@ public final class HttpClientCodec
             final int statusCode = ((HttpResponse) msg).getStatus().code();
             if (statusCode == 100 || statusCode == 101) {
                 // 100-continue and 101 switching protocols response should be excluded from paired comparison.
-                return true;
+                // Just delegate to super method which has all the needed handling.
+                return super.isContentAlwaysEmpty(msg);
             }
 
             // Get the getMethod of the HTTP request that corresponds to the
@@ -186,7 +187,7 @@ public final class HttpClientCodec
             switch (firstChar) {
             case 'H':
                 // According to 4.3, RFC2616:
-                // All responses to the HEAD request getMethod MUST NOT include a
+                // All responses to the HEAD request method MUST NOT include a
                 // message-body, even though the presence of entity-header fields
                 // might lead one to believe they do.
                 if (HttpMethod.HEAD.equals(method)) {
