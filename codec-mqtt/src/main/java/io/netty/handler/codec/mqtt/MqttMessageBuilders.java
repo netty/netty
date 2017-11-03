@@ -261,6 +261,7 @@ public final class MqttMessageBuilders {
 
         private MqttConnectReturnCode returnCode;
         private boolean sessionPresent;
+        private MqttProperties properties;
 
         ConnAckBuilder() {
         }
@@ -279,8 +280,13 @@ public final class MqttMessageBuilders {
             MqttFixedHeader mqttFixedHeader =
                     new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
             MqttConnAckVariableHeader mqttConnAckVariableHeader =
-                    new MqttConnAckVariableHeader(returnCode, sessionPresent);
+                    new MqttConnAckVariableHeader(returnCode, sessionPresent, properties);
             return new MqttConnAckMessage(mqttFixedHeader, mqttConnAckVariableHeader);
+        }
+
+        public ConnAckBuilder properties(MqttProperties properties) {
+            this.properties = properties;
+            return this;
         }
     }
 

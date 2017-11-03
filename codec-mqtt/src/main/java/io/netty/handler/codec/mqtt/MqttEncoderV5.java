@@ -38,6 +38,9 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
             case CONNECT:
                 return encodeConnectMessage(byteBufAllocator, (MqttConnectMessage) message);
 
+            case CONNACK:
+                return encodeConnAckMessage(byteBufAllocator, (MqttConnAckMessage) message);
+
             default:
                 throw new IllegalArgumentException(
                         "Unknown message type: " + message.fixedHeader().messageType().value());
@@ -81,7 +84,7 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
         MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(variableHeader.name(),
                 (byte) variableHeader.version());
 
-        MqttEncoder.PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader);
+        MqttEncoder.PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader.properties());
 
         byte[] protocolNameBytes = mqttVersion.protocolNameBytes();
         int variableHeaderBufferSize = 2 + protocolNameBytes.length + 4;
@@ -105,10 +108,9 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
     }
 
     private static MqttEncoder.PacketSection encodeProperties(ByteBufAllocator byteBufAllocator,
-                                                              MqttConnectVariableHeader variableHeader) {
+                                                              MqttProperties mqttProperties) {
         ByteBuf propertiesHeaderBuf = byteBufAllocator.buffer();
         // encode also the Properties part
-        MqttProperties mqttProperties = variableHeader.properties();
         ByteBuf propertiesBuf = byteBufAllocator.buffer();
         for (MqttProperties.MqttProperty property : mqttProperties.listAll()) {
             EncodersUtils.writeVariableLengthInt(propertiesBuf, property.propertyId);
@@ -166,5 +168,19 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
 
         int propertiesHeaderSize = propertiesHeaderBuf.readableBytes();
         return new MqttEncoder.PacketSection(propertiesHeaderSize, propertiesHeaderBuf);
+    }
+
+    private static ByteBuf encodeConnAckMessage(ByteBufAllocator byteBufAllocator, MqttConnAckMessage message) {
+        MqttEncoder.PacketSection propertiesSection = encodeProperties(byteBufAllocator,
+                message.variableHeader().properties());
+
+        ByteBuf buf = byteBufAllocator.buffer(4 + propertiesSection.bufferSize);
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(message.fixedHeader()));
+//        buf.writeByte(2);
+        EncodersUtils.writeVariableLengthInt(buf, 2 +propertiesSection.bufferSize);
+        buf.writeByte(message.variableHeader().isSessionPresent() ? 0x01 : 0x00);
+        buf.writeByte(message.variableHeader().connectReturnCode().byteValue());
+        buf.writeBytes(propertiesSection.byteBuf);
+        return buf;
     }
 }

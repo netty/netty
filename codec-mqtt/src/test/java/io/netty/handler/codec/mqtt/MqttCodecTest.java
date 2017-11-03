@@ -56,7 +56,7 @@ public class MqttCodecTest {
     @Mock
     private final Channel channel = mock(Channel.class);
 
-    private final MqttDecoder mqttDecoder = new MqttDecoder();
+    private final MqttDecoder mqttDecoder = new MqttDecoder(new VariableHeaderDecoderV3());
 
     @Before
     public void setup() {
@@ -343,27 +343,6 @@ public class MqttCodecTest {
                 .build();
     }
 
-    static MqttConnectMessage createConnectV5Message(MqttProperties properties) {
-        return createConnectV5Message(USER_NAME, PASSWORD, properties);
-    }
-
-    static MqttConnectMessage createConnectV5Message(String username, String password, MqttProperties properties) {
-        return MqttMessageBuilders.connect()
-                .clientId(CLIENT_ID)
-                .protocolVersion(MqttVersion.MQTT_5)
-                .username(username)
-                .password(password.getBytes(CharsetUtil.UTF_8))
-                .willRetain(true)
-                .willQoS(MqttQoS.AT_LEAST_ONCE)
-                .willFlag(true)
-                .willTopic(WILL_TOPIC)
-                .willMessage(WILL_MESSAGE)
-                .cleanSession(true)
-                .keepAlive(KEEP_ALIVE_SECONDS)
-                .properties(properties)
-                .build();
-    }
-
     private static MqttConnAckMessage createConnAckMessage() {
         return MqttMessageBuilders.connAck()
                 .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
@@ -465,7 +444,7 @@ public class MqttCodecTest {
         assertEquals("MqttConnectPayload WillTopic mismatch ", expected.willTopic(), actual.willTopic());
     }
 
-    private static void validateConnAckVariableHeader(
+    static void validateConnAckVariableHeader(
             MqttConnAckVariableHeader expected,
             MqttConnAckVariableHeader actual) {
         assertEquals(
