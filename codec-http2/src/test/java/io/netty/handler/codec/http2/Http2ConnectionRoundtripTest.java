@@ -36,6 +36,7 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.Future;
 import org.junit.After;
 import org.junit.Before;
@@ -48,6 +49,7 @@ import org.mockito.stubbing.Answer;
 import java.io.ByteArrayOutputStream;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
@@ -60,12 +62,14 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -647,6 +651,79 @@ public class Http2ConnectionRoundtripTest {
         // Wait for the close to occur.
         assertTrue(closeLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
         assertFalse(clientChannel.isOpen());
+    }
+
+    private enum WriteEmptyBufferMode {
+        SINGLE_END_OF_STREAM,
+        SECOND_END_OF_STREAM,
+        SINGLE_WITH_TRAILERS,
+        SECOND_WITH_TRAILERS
+    }
+
+    @Test
+    public void writeOfEmptyReleasedBufferSingleBufferQueuedInFlowControllerShouldFail() throws Exception {
+        writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(WriteEmptyBufferMode.SINGLE_END_OF_STREAM);
+    }
+
+    @Test
+    public void writeOfEmptyReleasedBufferSingleBufferTrailersQueuedInFlowControllerShouldFail() throws Exception {
+        writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(WriteEmptyBufferMode.SINGLE_WITH_TRAILERS);
+    }
+
+    @Test
+    public void writeOfEmptyReleasedBufferMultipleBuffersQueuedInFlowControllerShouldFail() throws Exception {
+        writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(WriteEmptyBufferMode.SECOND_END_OF_STREAM);
+    }
+
+    @Test
+    public void writeOfEmptyReleasedBufferMultipleBuffersTrailersQueuedInFlowControllerShouldFail() throws Exception {
+        writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(WriteEmptyBufferMode.SECOND_WITH_TRAILERS);
+    }
+
+    public void writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(final WriteEmptyBufferMode mode)
+            throws Exception {
+        bootstrapEnv(1, 1, 2, 1);
+
+        final ChannelPromise emptyDataPromise = newPromise();
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false,
+                        newPromise());
+                ByteBuf emptyBuf = Unpooled.buffer();
+                emptyBuf.release();
+                switch (mode) {
+                    case SINGLE_END_OF_STREAM:
+                        http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, true, emptyDataPromise);
+                        break;
+                    case SECOND_END_OF_STREAM:
+                        http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, false, emptyDataPromise);
+                        http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, true, newPromise());
+                        break;
+                    case SINGLE_WITH_TRAILERS:
+                        http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, false, emptyDataPromise);
+                        http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0,
+                                (short) 16, false, 0, true, newPromise());
+                        break;
+                    case SECOND_WITH_TRAILERS:
+                        http2Client.encoder().writeData(ctx(), 3, emptyBuf, 0, false, emptyDataPromise);
+                        http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, false, newPromise());
+                        http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0,
+                                (short) 16, false, 0, true, newPromise());
+                        break;
+                    default:
+                        throw new Error();
+                }
+                http2Client.flush(ctx());
+            }
+        });
+
+        try {
+            emptyDataPromise.get();
+            fail();
+        } catch (ExecutionException e) {
+            assertThat(e.getCause(), is(instanceOf(IllegalReferenceCountException.class)));
+        }
     }
 
     @Test
