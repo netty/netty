@@ -133,8 +133,11 @@ final class VariableHeaderDecoderV5  implements IVariableHeaderDecoder {
             messageId = decodedMessageId.value;
             numberOfBytesConsumed += decodedMessageId.numberOfBytesConsumed;
         }
+        final Result<MqttProperties> properties = decodeProperties(buffer);
+        numberOfBytesConsumed += properties.numberOfBytesConsumed;
+
         final MqttPublishVariableHeader mqttPublishVariableHeader =
-                new MqttPublishVariableHeader(decodedTopic.value, messageId);
+                new MqttPublishVariableHeader(decodedTopic.value, messageId, properties.value);
         return new Result<MqttPublishVariableHeader>(mqttPublishVariableHeader, numberOfBytesConsumed);
     }
 

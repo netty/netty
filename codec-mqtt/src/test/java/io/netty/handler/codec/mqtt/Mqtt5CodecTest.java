@@ -2,6 +2,7 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -67,28 +68,6 @@ public class Mqtt5CodecTest {
         validateConnectPayload(message.payload(), decodedMessage.payload());
     }
 
-    @Test
-    public void testConnAckMessage() throws Exception {
-        MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(0x11, 10)); //session expiry interval
-        final MqttConnAckMessage message = createConnAckMessage(props);
-        ByteBuf byteBuf = MqttEncoderV5.doEncode(ALLOCATOR, message);
-
-        final List<Object> out = new LinkedList<Object>();
-
-        mqttDecoder.decode(ctx, byteBuf, out);
-
-        assertEquals("Expected one object but got " + out.size(), 1, out.size());
-
-        final MqttConnAckMessage decodedMessage = (MqttConnAckMessage) out.get(0);
-        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
-        validateConnAckVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
-
-        final MqttProperties expected = message.variableHeader().properties();
-        final MqttProperties actual = decodedMessage.variableHeader().properties();
-        assertEquals(expected.listAll().iterator().next().value, actual.listAll().iterator().next().value);
-    }
-
     private static MqttConnectMessage createConnectV5Message(MqttProperties properties) {
         return createConnectV5Message(USER_NAME, PASSWORD, properties);
     }
@@ -110,11 +89,66 @@ public class Mqtt5CodecTest {
                 .build();
     }
 
+    @Test
+    public void testConnAckMessage() throws Exception {
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(0x11, 10)); //session expiry interval
+        final MqttConnAckMessage message = createConnAckMessage(props);
+        ByteBuf byteBuf = MqttEncoderV5.doEncode(ALLOCATOR, message);
+
+        final List<Object> out = new LinkedList<Object>();
+
+        mqttDecoder.decode(ctx, byteBuf, out);
+
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
+
+        final MqttConnAckMessage decodedMessage = (MqttConnAckMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validateConnAckVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
+    }
+
+    static void validateConnAckVariableHeader(
+            MqttConnAckVariableHeader expected,
+            MqttConnAckVariableHeader actual) {
+        MqttCodecTest.validateConnAckVariableHeader(expected, actual);
+        final MqttProperties expectedProps = expected.properties();
+        final MqttProperties actualProps = actual.properties();
+        assertEquals(expectedProps.listAll().iterator().next().value, actualProps.listAll().iterator().next().value);
+    }
+
     private static MqttConnAckMessage createConnAckMessage(MqttProperties properties) {
         return MqttMessageBuilders.connAck()
                 .returnCode(MqttConnectReturnCode.CONNECTION_ACCEPTED)
                 .sessionPresent(true)
                 .properties(properties)
                 .build();
+    }
+
+    @Test
+    public void testPublish() throws Exception {
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(0x01, 6)); //Payload Format Indicator
+        final MqttPublishMessage message = createPublishMessage(props);
+        ByteBuf byteBuf = MqttEncoderV5.doEncode(ALLOCATOR, message);
+
+        final List<Object> out = new LinkedList<Object>();
+
+        mqttDecoder.decode(ctx, byteBuf, out);
+
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
+
+        final MqttPublishMessage decodedMessage = (MqttPublishMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validatePublishVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
+    }
+
+    private static void validatePublishVariableHeader(
+            MqttPublishVariableHeader expected,
+            MqttPublishVariableHeader actual) {
+        MqttCodecTest.validatePublishVariableHeader(expected, actual);
+
+        final MqttProperties expectedProps = expected.properties();
+        final MqttProperties actualProps = actual.properties();
+        assertEquals(expectedProps.listAll().iterator().next().value, actualProps.listAll().iterator().next().value);
     }
 }

@@ -323,26 +323,38 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         MqttPublishVariableHeader variableHeader = message.variableHeader();
         ByteBuf payload = message.payload().duplicate();
 
-        String topicName = variableHeader.topicName();
-        byte[] topicNameBytes = EncodersUtils.encodeStringUtf8(topicName);
+        PacketSection variableHeaderSection = encodeVariableHeader(byteBufAllocator, mqttFixedHeader, variableHeader);
 
-        int variableHeaderBufferSize = 2 + topicNameBytes.length +
-                (mqttFixedHeader.qosLevel().value() > 0 ? 2 : 0);
         int payloadBufferSize = payload.readableBytes();
-        int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
+        int variablePartSize = variableHeaderSection.bufferSize + payloadBufferSize;
         int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variablePartSize);
 
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
         buf.writeByte(EncodersUtils.getFixedHeaderByte1(mqttFixedHeader));
         EncodersUtils.writeVariableLengthInt(buf, variablePartSize);
-        buf.writeShort(topicNameBytes.length);
-        buf.writeBytes(topicNameBytes);
-        if (mqttFixedHeader.qosLevel().value() > 0) {
-            buf.writeShort(variableHeader.messageId());
-        }
+
+        buf.writeBytes(variableHeaderSection.byteBuf);
+
         buf.writeBytes(payload);
 
         return buf;
+    }
+
+    private static PacketSection encodeVariableHeader(ByteBufAllocator byteBufAllocator,
+                                                      MqttFixedHeader mqttFixedHeader,
+                                                      MqttPublishVariableHeader variableHeader) {
+        String topicName = variableHeader.topicName();
+        byte[] topicNameBytes = EncodersUtils.encodeStringUtf8(topicName);
+
+        int variableHeaderBufferSize = 2 + topicNameBytes.length +
+                (mqttFixedHeader.qosLevel().value() > 0 ? 2 : 0);
+        ByteBuf variableHeaderBuf = byteBufAllocator.buffer(variableHeaderBufferSize);
+        variableHeaderBuf.writeShort(topicNameBytes.length);
+        variableHeaderBuf.writeBytes(topicNameBytes);
+        if (mqttFixedHeader.qosLevel().value() > 0) {
+            variableHeaderBuf.writeShort(variableHeader.messageId());
+        }
+        return new PacketSection(variableHeaderBufferSize, variableHeaderBuf);
     }
 
     private static ByteBuf encodeMessageWithOnlySingleByteFixedHeaderAndMessageId(

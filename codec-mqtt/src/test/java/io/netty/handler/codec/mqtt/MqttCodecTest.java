@@ -350,10 +350,15 @@ public class MqttCodecTest {
                 .build();
     }
 
-    private static MqttPublishMessage createPublishMessage() {
+    static MqttPublishMessage createPublishMessage() {
+        return createPublishMessage(MqttProperties.NO_PROPERTIES);
+    }
+
+    static MqttPublishMessage createPublishMessage(MqttProperties properties) {
         MqttFixedHeader mqttFixedHeader =
                 new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.AT_LEAST_ONCE, true, 0);
-        MqttPublishVariableHeader mqttPublishVariableHeader = new MqttPublishVariableHeader("/abc", 1234);
+        MqttPublishVariableHeader mqttPublishVariableHeader =
+                new MqttPublishVariableHeader("/abc", 1234, properties);
         ByteBuf payload =  ALLOCATOR.buffer();
         payload.writeBytes("whatever".getBytes(CharsetUtil.UTF_8));
         return new MqttPublishMessage(mqttFixedHeader, mqttPublishVariableHeader, payload);
@@ -453,7 +458,7 @@ public class MqttCodecTest {
                 actual.connectReturnCode());
     }
 
-    private static void validatePublishVariableHeader(
+    static void validatePublishVariableHeader(
             MqttPublishVariableHeader expected,
             MqttPublishVariableHeader actual) {
         assertEquals("MqttPublishVariableHeader TopicName mismatch ", expected.topicName(), actual.topicName());

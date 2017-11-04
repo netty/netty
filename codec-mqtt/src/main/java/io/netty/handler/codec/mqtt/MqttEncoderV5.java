@@ -41,6 +41,9 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
             case CONNACK:
                 return encodeConnAckMessage(byteBufAllocator, (MqttConnAckMessage) message);
 
+            case PUBLISH:
+                return encodePublishMessage(byteBufAllocator, (MqttPublishMessage) message);
+
             default:
                 throw new IllegalArgumentException(
                         "Unknown message type: " + message.fixedHeader().messageType().value());
@@ -182,5 +185,55 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
         buf.writeByte(message.variableHeader().connectReturnCode().byteValue());
         buf.writeBytes(propertiesSection.byteBuf);
         return buf;
+    }
+
+    private static ByteBuf encodePublishMessage(
+            ByteBufAllocator byteBufAllocator,
+            MqttPublishMessage message) {
+        MqttFixedHeader mqttFixedHeader = message.fixedHeader();
+        MqttPublishVariableHeader variableHeader = message.variableHeader();
+        ByteBuf payload = message.payload().duplicate();
+
+        MqttEncoder.PacketSection variableHeaderSection = encodeVariableHeaderWithPropeties(byteBufAllocator,
+                mqttFixedHeader, variableHeader);
+
+        int payloadBufferSize = payload.readableBytes();
+        int variablePartSize = variableHeaderSection.bufferSize + payloadBufferSize;
+        int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variablePartSize);
+
+        ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(mqttFixedHeader));
+        EncodersUtils.writeVariableLengthInt(buf, variablePartSize);
+
+        buf.writeBytes(variableHeaderSection.byteBuf);
+
+        buf.writeBytes(payload);
+
+        return buf;
+    }
+
+    private static MqttEncoder.PacketSection encodeVariableHeaderWithPropeties(ByteBufAllocator byteBufAllocator,
+                                                                               MqttFixedHeader mqttFixedHeader,
+                                                                               MqttPublishVariableHeader variableHeader) {
+        String topicName = variableHeader.topicName();
+        byte[] topicNameBytes = EncodersUtils.encodeStringUtf8(topicName);
+
+        MqttEncoder.PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader.properties());
+
+        int variableHeaderBufferSize = 2 + topicNameBytes.length +
+                (mqttFixedHeader.qosLevel().value() > 0 ? 2 : 0);
+        variableHeaderBufferSize += propertiesSection.bufferSize;
+
+        ByteBuf variableHeaderBuf = byteBufAllocator.buffer(variableHeaderBufferSize);
+        variableHeaderBuf.writeShort(topicNameBytes.length);
+        variableHeaderBuf.writeBytes(topicNameBytes);
+        if (mqttFixedHeader.qosLevel().value() > 0) {
+            variableHeaderBuf.writeShort(variableHeader.messageId());
+        }
+
+        // write the properties
+        variableHeaderBuf.writeBytes(propertiesSection.byteBuf);
+
+        return new MqttEncoder.PacketSection(variableHeaderBufferSize, variableHeaderBuf);
     }
 }
