@@ -15,7 +15,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -386,10 +385,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             if (!endOfStream) {
                 if (queuedData == 0) {
                     // There's no need to write any data frames because there are only empty data frames in the queue
-                    // and it is not end of stream yet. Just complete their promises by writing an empty buffer.
+                    // and it is not end of stream yet. Just complete their promises by getting the buffer corresponding
+                    // to 0 bytes and writing it to the channel (to preserve notification order).
                     ChannelPromise writePromise = ctx.newPromise().addListener(this);
-                    queue.remove(0, writePromise).release();
-                    ctx.write(Unpooled.EMPTY_BUFFER, writePromise);
+                    ctx.write(queue.remove(0, writePromise), writePromise);
                     return;
                 }
 

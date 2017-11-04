@@ -1852,13 +1852,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
                 return composite;
             }
-            if (attemptCopyToCumulation(cumulation, next, wrapDataSize)) {
-                return cumulation;
-            }
-            CompositeByteBuf composite = alloc.compositeDirectBuffer(size() + 2);
-            composite.addComponent(true, cumulation);
-            composite.addComponent(true, next);
-            return composite;
+            return attemptCopyToCumulation(cumulation, next, wrapDataSize) ? cumulation :
+                    composeIntoComposite(alloc, cumulation, next);
         }
 
         @Override
@@ -1866,7 +1861,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (first instanceof CompositeByteBuf) {
                 CompositeByteBuf composite = (CompositeByteBuf) first;
                 first = allocator.directBuffer(composite.readableBytes());
-                first.writeBytes(composite);
+                try {
+                    first.writeBytes(composite);
+                } catch (Throwable cause) {
+                    first.release();
+                    PlatformDependent.throwException(cause);
+                }
                 composite.release();
             }
             return first;
