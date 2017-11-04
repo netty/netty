@@ -173,13 +173,18 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 }
             } while (!lastFrame);
         } catch (Throwable t) {
-            if (needToReleaseHeaders) {
-                header.release();
+            try {
+                if (needToReleaseHeaders) {
+                    header.release();
+                }
+                if (needToReleaseData) {
+                    data.release();
+                }
+            } finally {
+                promiseAggregator.setFailure(t);
+                promiseAggregator.doneAllocatingPromises();
             }
-            if (needToReleaseData) {
-                data.release();
-            }
-            promiseAggregator.setFailure(t);
+            return promiseAggregator;
         }
         return promiseAggregator.doneAllocatingPromises();
     }
@@ -264,27 +269,35 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data,
-            ChannelPromise promise) {
-        boolean releaseData = true;
-        SimpleChannelPromiseAggregator promiseAggregator =
+    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data, ChannelPromise promise) {
+        final SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
         try {
             verifyPingPayload(data);
             Http2Flags flags = ack ? new Http2Flags().ack(true) : new Http2Flags();
+            int payloadLength = data.readableBytes();
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
-            writeFrameHeaderInternal(buf, data.readableBytes(), PING, flags, 0);
+            // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
+            // in the catch block.
+            writeFrameHeaderInternal(buf, payloadLength, PING, flags, 0);
             ctx.write(buf, promiseAggregator.newPromise());
+        } catch (Throwable t) {
+            try {
+                data.release();
+            } finally {
+                promiseAggregator.setFailure(t);
+                promiseAggregator.doneAllocatingPromises();
+            }
+            return promiseAggregator;
+        }
 
+        try {
             // Write the debug data.
-            releaseData = false;
             ctx.write(data, promiseAggregator.newPromise());
         } catch (Throwable t) {
-            if (releaseData) {
-                data.release();
-            }
             promiseAggregator.setFailure(t);
         }
+
         return promiseAggregator.doneAllocatingPromises();
     }
 
@@ -349,7 +362,6 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     @Override
     public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
             ByteBuf debugData, ChannelPromise promise) {
-        boolean releaseData = true;
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
         try {
@@ -358,17 +370,25 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             int payloadLength = 8 + debugData.readableBytes();
             ByteBuf buf = ctx.alloc().buffer(GO_AWAY_FRAME_HEADER_LENGTH);
+            // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
+            // in the catch block.
             writeFrameHeaderInternal(buf, payloadLength, GO_AWAY, new Http2Flags(), 0);
             buf.writeInt(lastStreamId);
             buf.writeInt((int) errorCode);
             ctx.write(buf, promiseAggregator.newPromise());
+        } catch (Throwable t) {
+            try {
+                debugData.release();
+            } finally {
+                promiseAggregator.setFailure(t);
+                promiseAggregator.doneAllocatingPromises();
+            }
+            return promiseAggregator;
+        }
 
-            releaseData = false;
+        try {
             ctx.write(debugData, promiseAggregator.newPromise());
         } catch (Throwable t) {
-            if (releaseData) {
-                debugData.release();
-            }
             promiseAggregator.setFailure(t);
         }
         return promiseAggregator.doneAllocatingPromises();
@@ -393,21 +413,27 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     @Override
     public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
             Http2Flags flags, ByteBuf payload, ChannelPromise promise) {
-        boolean releaseData = true;
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
         try {
             verifyStreamOrConnectionId(streamId, STREAM_ID);
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
+            // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
+            // in the catch block.
             writeFrameHeaderInternal(buf, payload.readableBytes(), frameType, flags, streamId);
             ctx.write(buf, promiseAggregator.newPromise());
-
-            releaseData = false;
+        } catch (Throwable t) {
+            try {
+                payload.release();
+            } finally {
+                promiseAggregator.setFailure(t);
+                promiseAggregator.doneAllocatingPromises();
+            }
+            return promiseAggregator;
+        }
+        try {
             ctx.write(payload, promiseAggregator.newPromise());
         } catch (Throwable t) {
-            if (releaseData) {
-                payload.release();
-            }
             promiseAggregator.setFailure(t);
         }
         return promiseAggregator.doneAllocatingPromises();
