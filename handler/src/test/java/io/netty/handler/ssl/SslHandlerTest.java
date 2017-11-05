@@ -51,6 +51,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -69,6 +70,44 @@ import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 public class SslHandlerTest {
+
+    @Test
+    public void testNoSslHandshakeEventWhenNoHandshake() throws Exception {
+        final AtomicBoolean inActive = new AtomicBoolean(false);
+
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        EmbeddedChannel ch = new EmbeddedChannel(false, false, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                // Not forward the event to the SslHandler but just close the Channel.
+                ctx.close();
+            }
+        }, new SslHandler(engine) {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                // We want to override what Channel.isActive() will return as otherwise it will
+                // return true and so trigger an handshake.
+                inActive.set(true);
+                super.handlerAdded(ctx);
+                inActive.set(false);
+            }
+        }, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                if (evt instanceof SslHandshakeCompletionEvent) {
+                    throw (Exception) ((SslHandshakeCompletionEvent) evt).cause();
+                }
+            }
+        }) {
+            @Override
+            public boolean isActive() {
+                return !inActive.get() && super.isActive();
+            }
+        };
+
+        ch.register();
+        assertFalse(ch.finishAndReleaseAll());
+    }
 
     @Test(expected = SSLException.class, timeout = 3000)
     public void testClientHandshakeTimeout() throws Exception {

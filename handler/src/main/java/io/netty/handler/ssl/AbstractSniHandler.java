@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,15 +18,18 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.DecoderException;
 import io.netty.util.CharsetUtil;
-import io.netty.util.DomainNameMapping;
-import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.net.IDN;
+import java.net.SocketAddress;
 import java.util.List;
 import java.util.Locale;
 
@@ -35,56 +38,23 @@ import java.util.Locale;
  * (Server Name Indication)</a> extension for server side SSL. For clients
  * support SNI, the server could have multiple host name bound on a single IP.
  * The client will send host name in the handshake data so server could decide
- * which certificate to choose for the host name. </p>
+ * which certificate to choose for the host name.</p>
  */
-public class SniHandler extends ByteToMessageDecoder {
+public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder implements ChannelOutboundHandler {
 
     // Maximal number of ssl records to inspect before fallback to the default SslContext.
     private static final int MAX_SSL_RECORDS = 4;
 
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(SniHandler.class);
-
-    private static final Selection EMPTY_SELECTION = new Selection(null, null);
-
-    private final DomainNameMapping<SslContext> mapping;
+            InternalLoggerFactory.getInstance(AbstractSniHandler.class);
 
     private boolean handshakeFailed;
-
-    private volatile Selection selection = EMPTY_SELECTION;
-
-    /**
-     * Create a SNI detection handler with configured {@link SslContext}
-     * maintained by {@link DomainNameMapping}
-     *
-     * @param mapping the mapping of domain name to {@link SslContext}
-     */
-    @SuppressWarnings("unchecked")
-    public SniHandler(DomainNameMapping<? extends SslContext> mapping) {
-        if (mapping == null) {
-            throw new NullPointerException("mapping");
-        }
-
-        this.mapping = (DomainNameMapping<SslContext>) mapping;
-    }
-
-    /**
-     * @return the selected hostname
-     */
-    public String hostname() {
-        return selection.hostname;
-    }
-
-    /**
-     * @return the selected sslcontext
-     */
-    public SslContext sslContext() {
-        return selection.context;
-    }
+    private boolean suppressRead;
+    private boolean readPending;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        if (!handshakeFailed) {
+        if (!suppressRead && !handshakeFailed) {
             final int writerIndex = in.writerIndex();
             try {
                 loop:
@@ -215,11 +185,10 @@ public class SniHandler extends ByteToMessageDecoder {
                                             }
 
                                             final String hostname = in.toString(offset, serverNameLength,
-                                                                                CharsetUtil.UTF_8);
+                                                                                CharsetUtil.US_ASCII);
 
                                             try {
-                                                select(ctx, IDN.toASCII(hostname,
-                                                                        IDN.ALLOW_UNASSIGNED).toLowerCase(Locale.US));
+                                                select(ctx, hostname.toLowerCase(Locale.US));
                                             } catch (Throwable t) {
                                                 PlatformDependent.throwException(t);
                                             }
@@ -239,7 +208,7 @@ public class SniHandler extends ByteToMessageDecoder {
                             break loop;
                     }
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 // unexpected encoding, ignore sni and use default
                 if (logger.isDebugEnabled()) {
                     logger.debug("Unexpected client hello packet: " + ByteBufUtil.hexDump(in), e);
@@ -250,32 +219,95 @@ public class SniHandler extends ByteToMessageDecoder {
         }
     }
 
-    private void select(ChannelHandlerContext ctx, String hostname) {
-        SslHandler sslHandler = null;
-        SslContext selectedContext = mapping.map(hostname);
-        selection = new Selection(selectedContext, hostname);
-        try {
-            sslHandler = selection.context.newHandler(ctx.alloc());
-            ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
-        } catch (Throwable cause) {
-            selection = EMPTY_SELECTION;
-            // Since the SslHandler was not inserted into the pipeline the ownership of the SSLEngine was not
-            // transferred to the SslHandler.
-            // See https://github.com/netty/netty/issues/5678
-            if (sslHandler != null) {
-                ReferenceCountUtil.safeRelease(sslHandler.engine());
-            }
-            PlatformDependent.throwException(cause);
+    private void select(final ChannelHandlerContext ctx, final String hostname) throws Exception {
+        Future<T> future = lookup(ctx, hostname);
+        if (future.isDone()) {
+            onLookupComplete(ctx, hostname, future);
+        } else {
+            suppressRead = true;
+            future.addListener(new FutureListener<T>() {
+                @Override
+                public void operationComplete(Future<T> future) throws Exception {
+                    try {
+                        suppressRead = false;
+                        try {
+                            onLookupComplete(ctx, hostname, future);
+                        } catch (DecoderException err) {
+                            ctx.fireExceptionCaught(err);
+                        } catch (Exception cause) {
+                            ctx.fireExceptionCaught(new DecoderException(cause));
+                        } catch (Throwable cause) {
+                            ctx.fireExceptionCaught(cause);
+                        }
+                    } finally {
+                        if (readPending) {
+                            readPending = false;
+                            ctx.read();
+                        }
+                    }
+                }
+            });
         }
     }
 
-    private static final class Selection {
-        final SslContext context;
-        final String hostname;
+    /**
+     * Kicks off a lookup for the given SNI value and returns a {@link Future} which in turn will
+     * notify the {@link #onLookupComplete(ChannelHandlerContext, String, Future)} on completion.
+     *
+     * @see #onLookupComplete(ChannelHandlerContext, String, Future)
+     */
+    protected abstract Future<T> lookup(ChannelHandlerContext ctx, String hostname) throws Exception;
 
-        Selection(SslContext context, String hostname) {
-            this.context = context;
-            this.hostname = hostname;
+    /**
+     * Called upon completion of the {@link #lookup(ChannelHandlerContext, String)} {@link Future}.
+     *
+     * @see #lookup(ChannelHandlerContext, String)
+     */
+    protected abstract void onLookupComplete(ChannelHandlerContext ctx,
+                                             String hostname, Future<T> future) throws Exception;
+
+    @Override
+    public void read(ChannelHandlerContext ctx) throws Exception {
+        if (suppressRead) {
+            readPending = true;
+        } else {
+            ctx.read();
         }
+    }
+
+    @Override
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        ctx.bind(localAddress, promise);
+    }
+
+    @Override
+    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+                        ChannelPromise promise) throws Exception {
+        ctx.connect(remoteAddress, localAddress, promise);
+    }
+
+    @Override
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.disconnect(promise);
+    }
+
+    @Override
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.close(promise);
+    }
+
+    @Override
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.deregister(promise);
+    }
+
+    @Override
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        ctx.write(msg, promise);
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 }
