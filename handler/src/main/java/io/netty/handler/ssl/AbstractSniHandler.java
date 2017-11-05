@@ -81,7 +81,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                                         "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
                                 in.skipBytes(in.readableBytes());
 
-                                SslUtils.notifyHandshakeFailure(ctx, e);
+                                SslUtils.notifyHandshakeFailure(ctx, e, true);
                                 throw e;
                             }
                             if (len == SslUtils.NOT_ENOUGH_DATA ||
