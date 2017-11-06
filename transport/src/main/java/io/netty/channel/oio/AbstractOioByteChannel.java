@@ -80,6 +80,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
             RecvByteBufAllocator.Handle allocHandle) {
         if (byteBuf != null) {
             if (byteBuf.isReadable()) {
+                readPending = false;
                 pipeline.fireChannelRead(byteBuf);
             } else {
                 byteBuf.release();
@@ -101,6 +102,9 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
             // during the same read loop readPending was set to false.
             return;
         }
+        // In OIO we should set readPending to false even if the read was not successful so we can schedule
+        // another read on the event loop if no reads are done.
+        readPending = false;
 
         final ChannelPipeline pipeline = pipeline();
         final ByteBufAllocator allocator = config.getAllocator();
@@ -113,7 +117,6 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         try {
             byteBuf = allocHandle.allocate(allocator);
             do {
-                readPending = false;
                 allocHandle.lastBytesRead(doReadBytes(byteBuf));
                 if (allocHandle.lastBytesRead() <= 0) {
                     if (!byteBuf.isReadable()) { // nothing was read. release the buffer.
@@ -137,6 +140,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     final int maxCapacity = byteBuf.maxCapacity();
                     if (capacity == maxCapacity) {
                         allocHandle.incMessagesRead(1);
+                        readPending = false;
                         pipeline.fireChannelRead(byteBuf);
                         byteBuf = allocHandle.allocate(allocator);
                     } else {
@@ -154,6 +158,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 // It is possible we allocated a buffer because the previous one was not writable, but then didn't use
                 // it because allocHandle.continueReading() returned false.
                 if (byteBuf.isReadable()) {
+                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                 } else {
                     byteBuf.release();
