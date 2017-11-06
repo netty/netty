@@ -386,15 +386,21 @@ public class ResourceLeakDetector<T> {
         /**
          * This method works by exponentially backing off as more records are present in the stack. Each record has a
          * 1 / 2^n chance of dropping the top most record and replacing it with itself. This has a number of convenient
-         * properties. First, the first record is always recorded. Second, the very last access will always be
-         * recorded. Third, an arbitrary number of accesses can be accepted, rather than just the last few. Fourth,
-         * it is easy to keep a precise record of the number of elements in the stack, since each element has to know
-         * how tall the stack is.
+         * properties:
+         *
+         * <ol>
+         * <li>  The current record is always recorded. This is due to the compare and swap dropping the top most
+         *       record, rather than the to-be-pushed record.
+         * <li>  The very last access will always be recorded. This comes as a property of 1.
+         * <li>  It is possible to retain more records than the target, based upon the probability distribution.
+         * <li>  It is easy to keep a precise record of the number of elements in the stack, since each element has to
+         *     know how tall the stack is.
+         * </ol>
          *
          * In this particular implementation, there are also some advantages. A thread local random is used to decide
          * if something should be recorded. This means that if there is a deterministic access pattern, it is now
-         * possible to see what other accesses occur, rather than always dropping them. Second, there is roughly a
-         * linear ramp up to {@link #TARGET_RECORDS}, after which backoff occurs. This matches typical access patterns,
+         * possible to see what other accesses occur, rather than always dropping them. Second, after
+         * {@link #TARGET_RECORDS} accesses, backoff occurs. This matches typical access patterns,
          * where there are either a high number of accesses (i.e. a cached buffer), or low (an ephemeral buffer), but
          * not many in between.
          *
@@ -415,9 +421,14 @@ public class ResourceLeakDetector<T> {
                         // already closed.
                         return;
                     }
-                    int numElements = oldHead.pos + 1;
-                    if (dropped = PlatformDependent.threadLocalRandom().nextInt(1 << numElements) >= TARGET_RECORDS) {
-                        prevHead = oldHead.next;
+                    final int numElements = oldHead.pos + 1;
+                    if (numElements >= TARGET_RECORDS) {
+                        final int backOffFactor = Math.min(numElements - TARGET_RECORDS, 30);
+                        if (dropped = PlatformDependent.threadLocalRandom().nextInt(1 << backOffFactor) != 0) {
+                            prevHead = oldHead.next;
+                        }
+                    } else {
+                        dropped = false;
                     }
                     newHead = hint != null ? new Record(prevHead, hint) : new Record(prevHead);
                 } while (!headUpdater.compareAndSet(this, oldHead, newHead));
@@ -458,10 +469,7 @@ public class ResourceLeakDetector<T> {
 
         @Override
         public String toString() {
-            Record oldHead;
-            do {
-                oldHead = headUpdater.get(this);
-            } while (!headUpdater.compareAndSet(this, oldHead, null));
+            Record oldHead = headUpdater.getAndSet(this, null);
             if (oldHead == null) {
                 // Already closed
                 return EMPTY_STRING;
