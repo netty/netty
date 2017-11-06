@@ -526,7 +526,6 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                     // we use a direct buffer here as the native implementations only be able
                     // to handle direct buffers.
                     byteBuf = allocHandle.allocate(allocator);
-                    readPending = false;
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read, release the buffer.
@@ -536,6 +535,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                         break;
                     }
                     allocHandle.incMessagesRead(1);
+                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
 
@@ -572,6 +572,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                                          KQueueRecvByteAllocatorHandle allocHandle) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
+                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                 } else {
                     byteBuf.release();

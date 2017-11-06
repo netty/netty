@@ -727,6 +727,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 EpollRecvByteAllocatorHandle allocHandle) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
+                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                 } else {
                     byteBuf.release();
@@ -783,7 +784,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     // we use a direct buffer here as the native implementations only be able
                     // to handle direct buffers.
                     byteBuf = allocHandle.allocate(allocator);
-                    readPending = false;
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read, release the buffer.
@@ -793,6 +793,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         break;
                     }
                     allocHandle.incMessagesRead(1);
+                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
 
