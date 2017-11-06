@@ -122,6 +122,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         byteBuf.release();
                         byteBuf = null;
                         close = localReadAmount < 0;
+                        if (close) {
+                            // There is nothing left to read as we received an EOF.
+                            setReadPending(false);
+                        }
                         break;
                     }
                     if (!readPendingReset) {
