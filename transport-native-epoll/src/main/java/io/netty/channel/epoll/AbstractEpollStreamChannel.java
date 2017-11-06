@@ -715,6 +715,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         // not was read release the buffer
                         byteBuf.release();
                         close = localReadAmount < 0;
+                        if (close) {
+                            // There is nothing left to read as we received an EOF.
+                            readPending = false;
+                        }
                         break;
                     }
                     readPending = false;
