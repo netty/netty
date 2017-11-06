@@ -34,6 +34,7 @@ import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
@@ -621,6 +622,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // Check if queue is not empty first because create a new ChannelException is expensive
             pendingUnencryptedWrites.removeAndFailAll(new ChannelException("Pending write on removal of SslHandler"));
         }
+        pendingUnencryptedWrites = null;
         if (engine instanceof ReferenceCounted) {
             ((ReferenceCounted) engine).release();
         }
@@ -663,13 +665,22 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ctx.read();
     }
 
+    private static IllegalStateException newPendingWritesNullException() {
+        return new IllegalStateException("pendingUnencryptedWrites is null, handlerRemoved0 called?");
+    }
+
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (!(msg instanceof ByteBuf)) {
-            promise.setFailure(new UnsupportedMessageTypeException(msg, ByteBuf.class));
-            return;
+            UnsupportedMessageTypeException exception = new UnsupportedMessageTypeException(msg, ByteBuf.class);
+            ReferenceCountUtil.safeRelease(msg);
+            promise.setFailure(exception);
+        } else if (pendingUnencryptedWrites == null) {
+            ReferenceCountUtil.safeRelease(msg);
+            promise.setFailure(newPendingWritesNullException());
+        } else {
+            pendingUnencryptedWrites.add(msg, promise);
         }
-        pendingUnencryptedWrites.add(msg, promise);
     }
 
     @Override
@@ -1455,8 +1466,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
             notifyHandshakeFailure(cause);
         } finally {
-            // Ensure we remove and fail all pending writes in all cases and so release memory quickly.
-            pendingUnencryptedWrites.removeAndFailAll(cause);
+            if (pendingUnencryptedWrites != null) {
+                // Ensure we remove and fail all pending writes in all cases and so release memory quickly.
+                pendingUnencryptedWrites.removeAndFailAll(cause);
+            }
         }
     }
 
@@ -1510,7 +1523,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, promise);
+        if (pendingUnencryptedWrites != null) {
+            pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, promise);
+        } else {
+            promise.setFailure(newPendingWritesNullException());
+        }
         flush(ctx);
     }
 
