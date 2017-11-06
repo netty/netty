@@ -645,6 +645,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         private boolean handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
+                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                 } else {
                     byteBuf.release();
@@ -709,7 +710,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     // to handle direct buffers.
                     byteBuf = allocHandle.allocate(allocator);
                     int writable = byteBuf.writableBytes();
-                    readPending = false;
                     int localReadAmount = doReadBytes(byteBuf);
                     if (localReadAmount <= 0) {
                         // not was read release the buffer
@@ -717,6 +717,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         close = localReadAmount < 0;
                         break;
                     }
+                    readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
 
