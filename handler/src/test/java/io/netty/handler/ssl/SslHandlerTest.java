@@ -42,6 +42,7 @@ import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -141,6 +142,33 @@ public class SslHandlerTest {
             // The pushed message is invalid, so it should raise an exception if it decoded the message correctly.
             assertThat(e.getCause(), is(instanceOf(SSLProtocolException.class)));
         }
+    }
+
+    @Test
+    public void testNonByteBufWriteIsReleased() throws Exception {
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        engine.setUseClientMode(false);
+
+        EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
+
+        AbstractReferenceCounted referenceCounted = new AbstractReferenceCounted() {
+            @Override
+            public ReferenceCounted touch(Object hint) {
+                return this;
+            }
+
+            @Override
+            protected void deallocate() {
+            }
+        };
+        try {
+            ch.write(referenceCounted).get();
+            fail();
+        } catch (ExecutionException e) {
+            assertThat(e.getCause(), is(instanceOf(UnsupportedMessageTypeException.class)));
+        }
+        assertEquals(0, referenceCounted.refCnt());
+        assertTrue(ch.finishAndReleaseAll());
     }
 
     @Test(expected = UnsupportedMessageTypeException.class)
