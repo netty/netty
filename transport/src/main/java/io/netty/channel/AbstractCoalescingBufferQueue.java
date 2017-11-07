@@ -48,15 +48,20 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     /**
-     * Add a buffer to the front of the queue.
+     * Add a buffer to the front of the queue and associate a promise with it that should be completed when
+     * all the buffer's bytes have been consumed from the queue and written.
+     * @param buf to add to the head of the queue
+     * @param promise to complete when all the bytes have been consumed and written, can be void.
      */
     public final void addFirst(ByteBuf buf, ChannelPromise promise) {
-        // Listener would be added here, but since it is null there is no need. The assumption is there is already a
-        // listener at the front of the queue, or there is a buffer at the front of the queue, which was spliced from
-        // buf via remove().
-        bufAndListenerPairs.addFirst(new DelegatingChannelPromiseNotifier(promise));
-        bufAndListenerPairs.addFirst(buf);
+        addFirst(buf, toChannelFutureListener(promise));
+    }
 
+    private void addFirst(ByteBuf buf, ChannelFutureListener listener) {
+        if (listener != null) {
+            bufAndListenerPairs.addFirst(listener);
+        }
+        bufAndListenerPairs.addFirst(buf);
         incrementReadableBytes(buf.readableBytes());
     }
 
@@ -69,14 +74,14 @@ public abstract class AbstractCoalescingBufferQueue {
 
     /**
      * Add a buffer to the end of the queue and associate a promise with it that should be completed when
-     * all the buffers bytes have been consumed from the queue and written.
+     * all the buffer's bytes have been consumed from the queue and written.
      * @param buf to add to the tail of the queue
      * @param promise to complete when all the bytes have been consumed and written, can be void.
      */
     public final void add(ByteBuf buf, ChannelPromise promise) {
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
-        add(buf, promise.isVoid() ? null : (ChannelFutureListener) new DelegatingChannelPromiseNotifier(promise));
+        add(buf, toChannelFutureListener(promise));
     }
 
     /**
@@ -342,5 +347,9 @@ public abstract class AbstractCoalescingBufferQueue {
         if (tracker != null) {
             tracker.decrementPendingOutboundBytes(decrement);
         }
+    }
+
+    private static ChannelFutureListener toChannelFutureListener(ChannelPromise promise) {
+        return promise.isVoid() ? null : new DelegatingChannelPromiseNotifier(promise);
     }
 }

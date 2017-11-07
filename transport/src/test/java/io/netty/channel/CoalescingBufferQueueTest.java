@@ -73,6 +73,48 @@ public class CoalescingBufferQueueTest {
     }
 
     @Test
+    public void testAddFirstPromiseRetained() {
+        writeQueue.add(cat, catPromise);
+        assertQueueSize(3, false);
+        writeQueue.add(mouse, mouseListener);
+        assertQueueSize(8, false);
+        ChannelPromise aggregatePromise = newPromise();
+        assertEquals("catmous", dequeue(7, aggregatePromise));
+        ByteBuf remainder = Unpooled.wrappedBuffer("mous".getBytes(CharsetUtil.US_ASCII));
+        writeQueue.addFirst(remainder, aggregatePromise);
+        ChannelPromise aggregatePromise2 = newPromise();
+        assertEquals("mouse", dequeue(5, aggregatePromise2));
+        aggregatePromise2.setSuccess();
+        assertTrue(catPromise.isSuccess());
+        assertTrue(mouseSuccess);
+        assertEquals(0, cat.refCnt());
+        assertEquals(0, mouse.refCnt());
+    }
+
+    @Test
+    public void testAddFirstVoidPromise() {
+        writeQueue.add(cat, catPromise);
+        assertQueueSize(3, false);
+        writeQueue.add(mouse, mouseListener);
+        assertQueueSize(8, false);
+        ChannelPromise aggregatePromise = newPromise();
+        assertEquals("catmous", dequeue(7, aggregatePromise));
+        ByteBuf remainder = Unpooled.wrappedBuffer("mous".getBytes(CharsetUtil.US_ASCII));
+        writeQueue.addFirst(remainder, voidPromise);
+        ChannelPromise aggregatePromise2 = newPromise();
+        assertEquals("mouse", dequeue(5, aggregatePromise2));
+        aggregatePromise2.setSuccess();
+        // Because we used a void promise above, we shouldn't complete catPromise until aggregatePromise is completed.
+        assertFalse(catPromise.isSuccess());
+        assertTrue(mouseSuccess);
+        aggregatePromise.setSuccess();
+        assertTrue(catPromise.isSuccess());
+        assertTrue(mouseSuccess);
+        assertEquals(0, cat.refCnt());
+        assertEquals(0, mouse.refCnt());
+    }
+
+    @Test
     public void testAggregateWithFullRead() {
         writeQueue.add(cat, catPromise);
         assertQueueSize(3, false);
