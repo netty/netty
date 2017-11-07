@@ -290,6 +290,39 @@ public final class MqttMessageBuilders {
         }
     }
 
+    public static final class PubAckBuilder {
+
+        private short packetId;
+        private byte reasonCode;
+        private MqttProperties properties;
+
+        PubAckBuilder() {
+        }
+
+        public PubAckBuilder reasonCode(byte reasonCode) {
+            this.reasonCode = reasonCode;
+            return this;
+        }
+
+        public PubAckBuilder packetId(short packetId) {
+            this.packetId = packetId;
+            return this;
+        }
+
+        public PubAckBuilder properties(MqttProperties properties) {
+            this.properties = properties;
+            return this;
+        }
+
+        public MqttMessage build() {
+            MqttFixedHeader mqttFixedHeader =
+                    new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
+            MqttPubReplyMessageVariableHeader mqttPubAckVariableHeader =
+                    new MqttPubReplyMessageVariableHeader(packetId, reasonCode, properties);
+            return new MqttMessage(mqttFixedHeader, mqttPubAckVariableHeader);
+        }
+    }
+
     public static ConnectBuilder connect() {
         return new ConnectBuilder();
     }
@@ -308,6 +341,10 @@ public final class MqttMessageBuilders {
 
     public static UnsubscribeBuilder unsubscribe() {
         return new UnsubscribeBuilder();
+    }
+
+    public static PubAckBuilder pubAck() {
+        return new PubAckBuilder();
     }
 
     private MqttMessageBuilders() {

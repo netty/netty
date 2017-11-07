@@ -30,11 +30,13 @@ final class VariableHeaderDecoderV5  implements IVariableHeaderDecoder {
             case UNSUBSCRIBE:
             case SUBACK:
             case UNSUBACK:
+                return decodeMessageIdVariableHeader(buffer);
+
             case PUBACK:
             case PUBREC:
             case PUBCOMP:
             case PUBREL:
-                return decodeMessageIdVariableHeader(buffer);
+                return decodePubReplyMessage(buffer);
 
             case PUBLISH:
                 return decodePublishVariableHeader(buffer, mqttFixedHeader);
@@ -215,5 +217,17 @@ final class VariableHeaderDecoderV5  implements IVariableHeaderDecoder {
             throw new DecoderException("invalid messageId: " + messageId.value);
         }
         return messageId;
+    }
+
+    private static Result<MqttPubReplyMessageVariableHeader> decodePubReplyMessage(ByteBuf buffer) {
+        final Result<Integer> packetId = decodeMessageId(buffer);
+        final byte reasonCode = (byte) buffer.readUnsignedByte();
+        final Result<MqttProperties> properties = decodeProperties(buffer);
+        final MqttPubReplyMessageVariableHeader mqttPubAckVariableHeader =
+                new MqttPubReplyMessageVariableHeader(packetId.value, reasonCode, properties.value);
+
+        return new Result<MqttPubReplyMessageVariableHeader>(
+                mqttPubAckVariableHeader,
+                packetId.numberOfBytesConsumed + 1 + properties.numberOfBytesConsumed);
     }
 }

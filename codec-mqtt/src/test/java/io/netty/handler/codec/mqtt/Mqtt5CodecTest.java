@@ -151,4 +151,42 @@ public class Mqtt5CodecTest {
         final MqttProperties actualProps = actual.properties();
         assertEquals(expectedProps.listAll().iterator().next().value, actualProps.listAll().iterator().next().value);
     }
+
+    @Test
+    public void testPubAck() throws Exception {
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(0x01, 6)); //Payload Format Indicator
+        final MqttMessage message = createPubAckMessage((byte) 0x87, props);
+        ByteBuf byteBuf = MqttEncoderV5.doEncode(ALLOCATOR, message);
+
+        final List<Object> out = new LinkedList<Object>();
+
+        mqttDecoder.decode(ctx, byteBuf, out);
+
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
+
+        final MqttMessage decodedMessage = (MqttMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validatePubAckVariableHeader(((MqttPubReplyMessageVariableHeader) message.variableHeader()),
+                ((MqttPubReplyMessageVariableHeader) decodedMessage.variableHeader()));
+    }
+
+    private MqttMessage createPubAckMessage(byte reasonCode, MqttProperties properties) {
+        return MqttMessageBuilders.pubAck()
+                .packetId((short) 1)
+                .reasonCode(reasonCode)
+                .properties(properties)
+                .build();
+    }
+
+    private static void validatePubAckVariableHeader(
+            MqttPubReplyMessageVariableHeader expected,
+            MqttPubReplyMessageVariableHeader actual) {
+        assertEquals("MqttPubReplyMessageVariableHeader MessageId mismatch ", expected.messageId(), actual.messageId());
+        assertEquals("MqttPubReplyMessageVariableHeader reasonCode mismatch ", expected.reasonCode(), actual.reasonCode());
+
+        final MqttProperties expectedProps = expected.properties();
+        final MqttProperties actualProps = actual.properties();
+        assertEquals(expectedProps.listAll().iterator().next().value, actualProps.listAll().iterator().next().value);
+    }
 }
