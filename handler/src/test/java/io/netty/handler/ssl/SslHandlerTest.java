@@ -30,6 +30,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -57,6 +58,7 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.BlockingQueue;
@@ -183,6 +185,22 @@ public class SslHandlerTest {
         } finally {
             ch.finishAndReleaseAll();
         }
+    }
+
+    @Test
+    public void testIncompleteWriteDoesNotCompletePromisePrematurely() throws NoSuchAlgorithmException {
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        engine.setUseClientMode(false);
+
+        EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
+
+        ChannelPromise promise = ch.newPromise();
+        ByteBuf buf = Unpooled.buffer(10).writeZero(10);
+        ch.writeAndFlush(buf, promise);
+        assertFalse(promise.isDone());
+        assertTrue(ch.finishAndReleaseAll());
+        assertTrue(promise.isDone());
+        assertThat(promise.cause(), is(instanceOf(SSLException.class)));
     }
 
     @Test

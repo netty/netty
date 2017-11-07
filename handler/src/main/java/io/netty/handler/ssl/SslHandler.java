@@ -794,7 +794,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     return;
                 } else {
                     if (buf.isReadable()) {
-                        pendingUnencryptedWrites.addFirst(buf);
+                        pendingUnencryptedWrites.addFirst(buf, promise);
+                        // When we add the buffer/promise pair back we need to be sure we don't complete the promise
+                        // later in finishWrap. We only complete the promise if the buffer is completely consumed.
+                        promise = null;
                     } else {
                         buf.release();
                     }
@@ -1515,9 +1518,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             notifyHandshakeFailure(cause);
         } finally {
             // Ensure we remove and fail all pending writes in all cases and so release memory quickly.
-            if (pendingUnencryptedWrites != null) {
-                pendingUnencryptedWrites.releaseAndFailAll(ctx, cause);
-            }
+            releaseAndFailAll(cause);
+        }
+    }
+
+    private void releaseAndFailAll(Throwable cause) {
+        if (pendingUnencryptedWrites != null) {
+            pendingUnencryptedWrites.releaseAndFailAll(ctx, cause);
         }
     }
 
@@ -1701,7 +1708,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (promise.isDone()) {
                     return;
                 }
-                notifyHandshakeFailure(HANDSHAKE_TIMED_OUT);
+                try {
+                    notifyHandshakeFailure(HANDSHAKE_TIMED_OUT);
+                } finally {
+                    releaseAndFailAll(HANDSHAKE_TIMED_OUT);
+                }
             }
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
