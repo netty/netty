@@ -50,10 +50,11 @@ public abstract class AbstractCoalescingBufferQueue {
     /**
      * Add a buffer to the front of the queue.
      */
-    public final void addFirst(ByteBuf buf) {
+    public final void addFirst(ByteBuf buf, ChannelPromise promise) {
         // Listener would be added here, but since it is null there is no need. The assumption is there is already a
         // listener at the front of the queue, or there is a buffer at the front of the queue, which was spliced from
         // buf via remove().
+        bufAndListenerPairs.addFirst(new DelegatingChannelPromiseNotifier(promise));
         bufAndListenerPairs.addFirst(buf);
 
         incrementReadableBytes(buf.readableBytes());
