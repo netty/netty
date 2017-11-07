@@ -26,11 +26,13 @@ final class VariableHeaderDecoderV5  implements IVariableHeaderDecoder {
             case CONNACK:
                 return decodeConnAckVariableHeader(buffer);
 
-            case SUBSCRIBE:
             case UNSUBSCRIBE:
+                return decodeMessageIdVariableHeader(buffer);
+
+            case SUBSCRIBE:
             case SUBACK:
             case UNSUBACK:
-                return decodeMessageIdVariableHeader(buffer);
+                return decodeMessageIdPlusPropertiesVariableHeader(buffer);
 
             case PUBACK:
             case PUBREC:
@@ -229,5 +231,16 @@ final class VariableHeaderDecoderV5  implements IVariableHeaderDecoder {
         return new Result<MqttPubReplyMessageVariableHeader>(
                 mqttPubAckVariableHeader,
                 packetId.numberOfBytesConsumed + 1 + properties.numberOfBytesConsumed);
+    }
+
+    private Result<MqttMessageIdPlusPropertiesVariableHeader> decodeMessageIdPlusPropertiesVariableHeader(
+            ByteBuf buffer) {
+        final Result<Integer> packetId = decodeMessageId(buffer);
+        final Result<MqttProperties> properties = decodeProperties(buffer);
+        final MqttMessageIdPlusPropertiesVariableHeader mqttVariableHeader =
+                new MqttMessageIdPlusPropertiesVariableHeader(packetId.value, properties.value);
+
+        return new Result<MqttMessageIdPlusPropertiesVariableHeader>(mqttVariableHeader,
+                packetId.numberOfBytesConsumed + properties.numberOfBytesConsumed);
     }
 }

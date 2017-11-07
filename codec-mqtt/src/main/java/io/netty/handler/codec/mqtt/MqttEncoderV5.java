@@ -45,6 +45,9 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
             case PUBLISH:
                 return encodePublishMessage(byteBufAllocator, (MqttPublishMessage) message);
 
+            case SUBACK:
+                return encodeSubAckMessage(byteBufAllocator, (MqttSubAckMessage) message);
+
             case PUBACK:
             case PUBREC:
             case PUBREL:
@@ -261,6 +264,32 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
         buf.writeShort(msgId);
         buf.writeByte(variableHeader.reasonCode());
         buf.writeBytes(propertiesSection.byteBuf);
+
+        return buf;
+    }
+
+    private static ByteBuf encodeSubAckMessage(
+            ByteBufAllocator byteBufAllocator,
+            MqttSubAckMessage message) {
+        final MqttMessageIdPlusPropertiesVariableHeader variableHeader =
+                ((MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader());
+
+        final PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader.properties());
+
+        int variableHeaderBufferSize = 2;
+        int payloadBufferSize = message.payload().grantedQoSLevels().size();
+        int variablePartSize = variableHeaderBufferSize + payloadBufferSize + propertiesSection.bufferSize;
+        int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variablePartSize);
+        ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(message.fixedHeader()));
+        EncodersUtils.writeVariableLengthInt(buf, variablePartSize);
+        buf.writeShort(variableHeader.messageId());
+
+        buf.writeBytes(propertiesSection.byteBuf);
+
+        for (int qos : message.payload().grantedQoSLevels()) {
+            buf.writeByte(qos);
+        }
 
         return buf;
     }

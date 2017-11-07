@@ -189,4 +189,40 @@ public class Mqtt5CodecTest {
         final MqttProperties actualProps = actual.properties();
         assertEquals(expectedProps.listAll().iterator().next().value, actualProps.listAll().iterator().next().value);
     }
+
+    @Test
+    public void testSubAck() throws Exception {
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(0x01, 6)); //Payload Format Indicator
+        final MqttSubAckMessage message = createSubAckMessage(props);
+        ByteBuf byteBuf = MqttEncoderV5.doEncode(ALLOCATOR, message);
+
+        final List<Object> out = new LinkedList<Object>();
+
+        mqttDecoder.decode(ctx, byteBuf, out);
+
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
+
+        final MqttSubAckMessage decodedMessage = (MqttSubAckMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validateSubAckVariableHeader((MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader(),
+                (MqttMessageIdPlusPropertiesVariableHeader) decodedMessage.variableHeader());
+    }
+
+    private MqttSubAckMessage createSubAckMessage(MqttProperties properties) {
+        return MqttMessageBuilders.subAck()
+                .packetId((short) 1)
+                .addGrantedQos(MqttQoS.AT_LEAST_ONCE)
+                .properties(properties)
+                .build();
+    }
+
+    private void validateSubAckVariableHeader(MqttMessageIdPlusPropertiesVariableHeader expected,
+                                              MqttMessageIdPlusPropertiesVariableHeader actual) {
+        assertEquals("MqttMessageIdVariableHeader MessageId mismatch ", expected.messageId(), actual.messageId());
+
+        final MqttProperties expectedProps = expected.properties();
+        final MqttProperties actualProps = actual.properties();
+        assertEquals(expectedProps.listAll().iterator().next().value, actualProps.listAll().iterator().next().value);
+    }
 }

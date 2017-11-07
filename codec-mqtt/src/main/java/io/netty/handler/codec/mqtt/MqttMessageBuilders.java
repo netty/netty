@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public final class MqttMessageBuilders {
@@ -323,6 +324,53 @@ public final class MqttMessageBuilders {
         }
     }
 
+
+    public static final class SubAckBuilder {
+        private short packetId;
+        private MqttProperties properties;
+        private final List<MqttQoS> grantedQoses = new ArrayList<MqttQoS>();
+
+        SubAckBuilder() {
+        }
+
+        public SubAckBuilder packetId(short packetId) {
+            this.packetId = packetId;
+            return this;
+        }
+
+        public SubAckBuilder properties(MqttProperties properties) {
+            this.properties = properties;
+            return this;
+        }
+
+        public SubAckBuilder addGrantedQos(MqttQoS qos) {
+            this.grantedQoses.add(qos);
+            return this;
+        }
+
+        public SubAckBuilder addGrantedQoses(MqttQoS... qoses) {
+            this.grantedQoses.addAll(Arrays.asList(qoses));
+            return this;
+        }
+
+        public MqttSubAckMessage build() {
+            MqttFixedHeader mqttFixedHeader =
+                    new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
+            MqttMessageIdPlusPropertiesVariableHeader mqttSubAckVariableHeader =
+                    new MqttMessageIdPlusPropertiesVariableHeader(packetId, properties);
+
+            //transform to primitive types
+            int[] grantedQoses = new int[this.grantedQoses.size()];
+            int i = 0;
+            for (MqttQoS grantedQos : this.grantedQoses) {
+                grantedQoses[i++] = grantedQos.value();
+            }
+
+            MqttSubAckPayload subAckPayload = new MqttSubAckPayload(grantedQoses);
+            return new MqttSubAckMessage(mqttFixedHeader, mqttSubAckVariableHeader, subAckPayload);
+        }
+    }
+
     public static ConnectBuilder connect() {
         return new ConnectBuilder();
     }
@@ -345,6 +393,10 @@ public final class MqttMessageBuilders {
 
     public static PubAckBuilder pubAck() {
         return new PubAckBuilder();
+    }
+
+    public static SubAckBuilder subAck() {
+        return new SubAckBuilder();
     }
 
     private MqttMessageBuilders() {
