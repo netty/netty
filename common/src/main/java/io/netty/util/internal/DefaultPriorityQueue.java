@@ -78,6 +78,11 @@ public final class DefaultPriorityQueue<T extends PriorityQueueNode> extends Abs
     }
 
     @Override
+    public void clearIgnoringIndexes() {
+        size = 0;
+    }
+
+    @Override
     public boolean offer(T e) {
         if (e.priorityQueueIndex(this) != INDEX_NOT_IN_QUEUE) {
             throw new IllegalArgumentException("e.priorityQueueIndex(): " + e.priorityQueueIndex(this) +
