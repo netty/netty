@@ -23,6 +23,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -224,5 +225,34 @@ public class Http2MultiplexCodecBuilderTest {
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelInactive();
         }
+    }
+
+    private static class SharableChannelHandler1 extends ChannelHandlerAdapter {
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+    }
+
+    @Sharable
+    private static class SharableChannelHandler2 extends ChannelHandlerAdapter {
+    }
+
+    private static class UnsharableChannelHandler extends ChannelHandlerAdapter {
+        @Override
+        public boolean isSharable() {
+            return false;
+        }
+    }
+
+    @Test
+    public void testSharableCheck() {
+        assertNotNull(Http2MultiplexCodecBuilder.forServer(new SharableChannelHandler1()));
+        assertNotNull(Http2MultiplexCodecBuilder.forServer(new SharableChannelHandler2()));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testUnsharableHandler() {
+        Http2MultiplexCodecBuilder.forServer(new UnsharableChannelHandler());
     }
 }
