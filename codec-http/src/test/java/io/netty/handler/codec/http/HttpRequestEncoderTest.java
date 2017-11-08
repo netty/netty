@@ -26,9 +26,7 @@ import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 /**
  */
@@ -127,12 +125,49 @@ public class HttpRequestEncoderTest {
     }
 
     @Test
-    public void testEmptydBufferShouldPassThrough() throws Exception {
+    public void testEmptyBufferShouldPassThrough() throws Exception {
         HttpRequestEncoder encoder = new HttpRequestEncoder();
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         ByteBuf buffer = Unpooled.buffer();
         channel.writeAndFlush(buffer).get();
         channel.finishAndReleaseAll();
         assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
+    public void testEmptyContentChunked() throws Exception {
+        testEmptyContent(true);
+    }
+
+    @Test
+    public void testEmptyContentNotChunked() throws Exception {
+        testEmptyContent(false);
+    }
+
+    private void testEmptyContent(boolean chunked) throws Exception {
+        HttpRequestEncoder encoder = new HttpRequestEncoder();
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        if (chunked) {
+            HttpHeaders.setTransferEncodingChunked(request);
+        }
+        assertTrue(channel.writeOutbound(request));
+
+        ByteBuf contentBuffer = Unpooled.buffer();
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(contentBuffer)));
+
+        ByteBuf lastContentBuffer = Unpooled.buffer();
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(lastContentBuffer)));
+
+        // Ensure we only produce ByteBuf instances.
+        ByteBuf head = (ByteBuf) channel.readOutbound();
+        assertTrue(head.release());
+
+        ByteBuf content = (ByteBuf) channel.readOutbound();
+        content.release();
+
+        ByteBuf lastContent = (ByteBuf) channel.readOutbound();
+        lastContent.release();
+        assertFalse(channel.finish());
     }
 }
