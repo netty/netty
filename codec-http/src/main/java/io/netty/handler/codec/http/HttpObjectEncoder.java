@@ -17,18 +17,17 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http.HttpConstants.CR;
@@ -142,6 +141,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
                         break;
                     }
+
                     // fall-through!
                 case ST_CONTENT_ALWAYS_EMPTY:
 
@@ -150,8 +150,13 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                         out.add(buf);
                     } else {
                         // Need to produce some output otherwise an
-                        // IllegalStateException will be thrown
-                        out.add(EMPTY_BUFFER);
+                        // IllegalStateException will be thrown as we did not write anything
+                        // Its ok to just write an EMPTY_BUFFER as if there are reference count issues these will be
+                        // propagated as the caller of the encode(...) method will release the original
+                        // buffer.
+                        // Writing an empty buffer will not actually write anything on the wire, so if there is a user
+                        // error with msg it will not be visible externally
+                        out.add(Unpooled.EMPTY_BUFFER);
                     }
 
                     break;
@@ -213,7 +218,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         } else if (contentLength == 0) {
             // Need to produce some output otherwise an
             // IllegalStateException will be thrown
-            out.add(ReferenceCountUtil.retain(msg));
+            out.add(encodeAndRetain(msg));
         }
     }
 
