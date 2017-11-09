@@ -1333,7 +1333,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
-        ByteBuf dst = Unpooled.buffer(length);
+        ByteBuf dst = allocBuffer(length);
         if (length != 0) {
             copyTo(index, length, toComponentIndex(index), dst);
         }
