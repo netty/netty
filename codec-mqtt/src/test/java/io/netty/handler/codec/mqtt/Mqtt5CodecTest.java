@@ -16,6 +16,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static io.netty.handler.codec.mqtt.MqttCodecTest.*;
+import static io.netty.handler.codec.mqtt.MqttQoS.AT_LEAST_ONCE;
+import static io.netty.handler.codec.mqtt.SubscriptionOption.RetainedHandlingPolicy.SEND_AT_SUBSCRIBE_IF_NOT_YET_EXISTS;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -41,7 +43,7 @@ public class Mqtt5CodecTest {
     @Mock
     private final Channel channel = mock(Channel.class);
 
-    private final MqttDecoder mqttDecoder = new MqttDecoder(new VariableHeaderDecoderV5());
+    private final MqttDecoder mqttDecoder = new MqttDecoderV5(new VariableHeaderDecoderV5());
 
     @Before
     public void setup() {
@@ -79,7 +81,7 @@ public class Mqtt5CodecTest {
                 .username(username)
                 .password(password.getBytes(CharsetUtil.UTF_8))
                 .willRetain(true)
-                .willQoS(MqttQoS.AT_LEAST_ONCE)
+                .willQoS(AT_LEAST_ONCE)
                 .willFlag(true)
                 .willTopic(WILL_TOPIC)
                 .willMessage(WILL_MESSAGE)
@@ -205,24 +207,51 @@ public class Mqtt5CodecTest {
 
         final MqttSubAckMessage decodedMessage = (MqttSubAckMessage) out.get(0);
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
-        validateSubAckVariableHeader((MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader(),
+        validatePacketIdPlusPropertiesVariableHeader((MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader(),
                 (MqttMessageIdPlusPropertiesVariableHeader) decodedMessage.variableHeader());
     }
 
     private MqttSubAckMessage createSubAckMessage(MqttProperties properties) {
         return MqttMessageBuilders.subAck()
                 .packetId((short) 1)
-                .addGrantedQos(MqttQoS.AT_LEAST_ONCE)
+                .addGrantedQos(AT_LEAST_ONCE)
                 .properties(properties)
                 .build();
     }
 
-    private void validateSubAckVariableHeader(MqttMessageIdPlusPropertiesVariableHeader expected,
-                                              MqttMessageIdPlusPropertiesVariableHeader actual) {
+    private void validatePacketIdPlusPropertiesVariableHeader(MqttMessageIdPlusPropertiesVariableHeader expected,
+                                                              MqttMessageIdPlusPropertiesVariableHeader actual) {
         assertEquals("MqttMessageIdVariableHeader MessageId mismatch ", expected.messageId(), actual.messageId());
 
         final MqttProperties expectedProps = expected.properties();
         final MqttProperties actualProps = actual.properties();
         assertEquals(expectedProps.listAll().iterator().next().value, actualProps.listAll().iterator().next().value);
+    }
+
+    @Test
+    public void testSubscribe() throws Exception {
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(0x01, 6)); //Payload Format Indicator
+        final MqttSubscribeMessage message = MqttMessageBuilders.subscribe()
+                .messageId((short) 1)
+                .properties(props)
+                .addSubscription("/topic", new SubscriptionOption(AT_LEAST_ONCE, true, true,
+                        SEND_AT_SUBSCRIBE_IF_NOT_YET_EXISTS))
+                .build();
+        ByteBuf byteBuf = MqttEncoderV5.doEncode(ALLOCATOR, message);
+
+        final List<Object> out = new LinkedList<Object>();
+
+        mqttDecoder.decode(ctx, byteBuf, out);
+
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
+        final MqttSubscribeMessage decodedMessage = (MqttSubscribeMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        final MqttMessageIdPlusPropertiesVariableHeader expectedHeader =
+                (MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader();
+        final MqttMessageIdPlusPropertiesVariableHeader actualHeader =
+                (MqttMessageIdPlusPropertiesVariableHeader) decodedMessage.variableHeader();
+        validatePacketIdPlusPropertiesVariableHeader(expectedHeader, actualHeader);
+        validateSubscribePayload(message.payload(), decodedMessage.payload());
     }
 }

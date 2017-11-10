@@ -45,6 +45,9 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
             case PUBLISH:
                 return encodePublishMessage(byteBufAllocator, (MqttPublishMessage) message);
 
+            case SUBSCRIBE:
+                return encodeSubscribeMessage(byteBufAllocator, (MqttSubscribeMessage) message);
+
             case SUBACK:
                 return encodeSubAckMessage(byteBufAllocator, (MqttSubAckMessage) message);
 
@@ -289,6 +292,63 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
 
         for (int qos : message.payload().grantedQoSLevels()) {
             buf.writeByte(qos);
+        }
+
+        return buf;
+    }
+
+
+    private static ByteBuf encodeSubscribeMessage(
+            ByteBufAllocator byteBufAllocator,
+            MqttSubscribeMessage message) {
+        int variableHeaderBufferSize = 2;
+        int payloadBufferSize = 0;
+
+        final MqttMessageIdPlusPropertiesVariableHeader variableHeader =
+                ((MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader());
+
+        final PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader.properties());
+
+        MqttFixedHeader mqttFixedHeader = message.fixedHeader();
+        MqttSubscribePayload payload = message.payload();
+
+        for (MqttTopicSubscription topic : payload.topicSubscriptions()) {
+            String topicName = topic.topicName();
+            byte[] topicNameBytes = EncodersUtils.encodeStringUtf8(topicName);
+            payloadBufferSize += 2 + topicNameBytes.length;
+            payloadBufferSize += 1;
+        }
+
+        int variablePartSize = variableHeaderBufferSize + payloadBufferSize + propertiesSection.bufferSize;
+        int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variablePartSize);
+
+        ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(mqttFixedHeader));
+        EncodersUtils.writeVariableLengthInt(buf, variablePartSize);
+
+        // Variable Header
+        int messageId = variableHeader.messageId();
+        buf.writeShort(messageId);
+        buf.writeBytes(propertiesSection.byteBuf);
+
+        // Payload
+        for (MqttTopicSubscription topic : payload.topicSubscriptions()) {
+            String topicName = topic.topicName();
+            EncodersUtils.writeUTF8String(buf, topicName);
+
+            final SubscriptionOption option = topic.option();
+
+            int ret = 0;
+            ret |= option.retainHandling().value() << 4;
+            if (option.isRetainAsPublished()) {
+                ret |= 0x08;
+            }
+            if (option.isNoLocal()) {
+                ret |= 0x04;
+            }
+            ret |= option.qos().value();
+
+            buf.writeByte(ret);
         }
 
         return buf;

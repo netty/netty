@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import static io.netty.handler.codec.mqtt.SubscriptionOption.onlyFromQos;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -370,9 +371,9 @@ public class MqttCodecTest {
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
 
         List<MqttTopicSubscription> topicSubscriptions = new LinkedList<MqttTopicSubscription>();
-        topicSubscriptions.add(new MqttTopicSubscription("/abc", MqttQoS.AT_LEAST_ONCE));
-        topicSubscriptions.add(new MqttTopicSubscription("/def", MqttQoS.AT_LEAST_ONCE));
-        topicSubscriptions.add(new MqttTopicSubscription("/xyz", MqttQoS.EXACTLY_ONCE));
+        topicSubscriptions.add(new MqttTopicSubscription("/abc", onlyFromQos(MqttQoS.AT_LEAST_ONCE)));
+        topicSubscriptions.add(new MqttTopicSubscription("/def", onlyFromQos(MqttQoS.AT_LEAST_ONCE)));
+        topicSubscriptions.add(new MqttTopicSubscription("/xyz", onlyFromQos(MqttQoS.EXACTLY_ONCE)));
 
         MqttSubscribePayload mqttSubscribePayload = new MqttSubscribePayload(topicSubscriptions);
         return new MqttSubscribeMessage(mqttFixedHeader, mqttMessageIdVariableHeader, mqttSubscribePayload);
@@ -475,7 +476,7 @@ public class MqttCodecTest {
         assertEquals("MqttMessageIdVariableHeader MessageId mismatch ", expected.messageId(), actual.messageId());
     }
 
-    private static void validateSubscribePayload(MqttSubscribePayload expected, MqttSubscribePayload actual) {
+    static void validateSubscribePayload(MqttSubscribePayload expected, MqttSubscribePayload actual) {
         List<MqttTopicSubscription> expectedTopicSubscriptions = expected.topicSubscriptions();
         List<MqttTopicSubscription> actualTopicSubscriptions = actual.topicSubscriptions();
 
@@ -496,6 +497,7 @@ public class MqttCodecTest {
                 "MqttTopicSubscription Qos mismatch ",
                 expected.qualityOfService(),
                 actual.qualityOfService());
+        assertEquals(expected.option(), actual.option());
     }
 
     private static void validateSubAckPayload(MqttSubAckPayload expected, MqttSubAckPayload actual) {

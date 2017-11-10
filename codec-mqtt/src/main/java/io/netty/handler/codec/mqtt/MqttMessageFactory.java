@@ -38,7 +38,7 @@ public final class MqttMessageFactory {
             case SUBSCRIBE:
                 return new MqttSubscribeMessage(
                         mqttFixedHeader,
-                        (MqttMessageIdVariableHeader) variableHeader,
+                        (MqttMessageIdPlusPropertiesVariableHeader) variableHeader,
                         (MqttSubscribePayload) payload);
 
             case SUBACK:

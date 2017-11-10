@@ -202,16 +202,28 @@ public final class MqttMessageBuilders {
 
         private List<MqttTopicSubscription> subscriptions;
         private int messageId;
+        private MqttProperties properties;
 
         SubscribeBuilder() {
         }
 
         public SubscribeBuilder addSubscription(MqttQoS qos, String topic) {
+            existsSubscriptions();
+            subscriptions.add(new MqttTopicSubscription(topic, new SubscriptionOption(qos, false, false,
+                            SubscriptionOption.RetainedHandlingPolicy.SEND_AT_SUBSCRIBE_IF_NOT_YET_EXISTS)));
+            return this;
+        }
+
+        public SubscribeBuilder addSubscription(String topic, SubscriptionOption option) {
+            existsSubscriptions();
+            subscriptions.add(new MqttTopicSubscription(topic, option));
+            return this;
+        }
+
+        private void existsSubscriptions() {
             if (subscriptions == null) {
                 subscriptions = new ArrayList<MqttTopicSubscription>(5);
             }
-            subscriptions.add(new MqttTopicSubscription(topic, qos));
-            return this;
         }
 
         public SubscribeBuilder messageId(int messageId) {
@@ -219,10 +231,16 @@ public final class MqttMessageBuilders {
             return this;
         }
 
+        public SubscribeBuilder properties(MqttProperties props) {
+            this.properties = props;
+            return this;
+        }
+
         public MqttSubscribeMessage build() {
             MqttFixedHeader mqttFixedHeader =
                     new MqttFixedHeader(MqttMessageType.SUBSCRIBE, false, MqttQoS.AT_LEAST_ONCE, false, 0);
-            MqttMessageIdVariableHeader mqttVariableHeader = MqttMessageIdVariableHeader.from(messageId);
+            MqttMessageIdPlusPropertiesVariableHeader mqttVariableHeader =
+                    new MqttMessageIdPlusPropertiesVariableHeader(messageId, this.properties);
             MqttSubscribePayload mqttSubscribePayload = new MqttSubscribePayload(subscriptions);
             return new MqttSubscribeMessage(mqttFixedHeader, mqttVariableHeader, mqttSubscribePayload);
         }
