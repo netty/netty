@@ -81,9 +81,14 @@ public interface ByteProcessor {
     ByteProcessor FIND_NON_LF = new IndexNotOfProcessor((byte) '\n');
 
     /**
-     * Aborts on a {@code CR (';')}.
+     * Aborts on a semicolon {@code (';')}.
      */
     ByteProcessor FIND_SEMI_COLON = new IndexOfProcessor((byte) ';');
+
+    /**
+     * Aborts on a comma {@code (',')}.
+     */
+    ByteProcessor FIND_COMMA = new IndexOfProcessor((byte) ',');
 
     /**
      * Aborts on a {@code CR ('\r')} or a {@code LF ('\n')}.

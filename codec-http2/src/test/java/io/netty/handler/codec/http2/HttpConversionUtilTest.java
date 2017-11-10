@@ -15,6 +15,10 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AsciiString;
 import org.junit.Test;
 
@@ -54,5 +58,47 @@ public class HttpConversionUtilTest {
     @Test(expected = IllegalArgumentException.class)
     public void setHttp2AuthorityWithEmptyAuthority() {
         HttpConversionUtil.setHttp2Authority("info@", new DefaultHttp2Headers());
+    }
+
+    @Test
+    public void stripTEHeaders() {
+        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(HttpHeaderNames.TE, HttpHeaderValues.GZIP);
+        Http2Headers out = new DefaultHttp2Headers();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertTrue(out.isEmpty());
+    }
+
+    @Test
+    public void stripTEHeadersExcludingTrailers() {
+        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(HttpHeaderNames.TE, HttpHeaderValues.GZIP);
+        inHeaders.add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS);
+        Http2Headers out = new DefaultHttp2Headers();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertSame(HttpHeaderValues.TRAILERS, out.get(HttpHeaderNames.TE));
+    }
+
+    @Test
+    public void stripConnectionHeadersAndNominees() {
+        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(HttpHeaderNames.CONNECTION, "foo");
+        inHeaders.add("foo", "bar");
+        Http2Headers out = new DefaultHttp2Headers();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertTrue(out.isEmpty());
+    }
+
+    @Test
+    public void stripConnectionNomineesWithCsv() {
+        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(HttpHeaderNames.CONNECTION, "foo,  bar");
+        inHeaders.add("foo", "baz");
+        inHeaders.add("bar", "qux");
+        inHeaders.add("hello", "world");
+        Http2Headers out = new DefaultHttp2Headers();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertEquals(1, out.size());
+        assertSame("world", out.get("hello"));
     }
 }
