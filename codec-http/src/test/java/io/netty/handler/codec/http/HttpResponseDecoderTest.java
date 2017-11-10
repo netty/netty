@@ -333,6 +333,28 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void testResetContentResponseWithTransferEncoding() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(
+                "HTTP/1.1 205 Reset Content\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "\r\n" +
+                "0\r\n" +
+                "\r\n",
+                CharsetUtil.US_ASCII)));
+
+        HttpResponse res = (HttpResponse) ch.readInbound();
+        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.getStatus(), is(HttpResponseStatus.RESET_CONTENT));
+
+        LastHttpContent lastContent = (LastHttpContent) ch.readInbound();
+        assertThat(lastContent.content().isReadable(), is(false));
+        lastContent.release();
+
+        assertThat(ch.finish(), is(false));
+    }
+
+    @Test
     public void testLastResponseWithTrailingHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer(
