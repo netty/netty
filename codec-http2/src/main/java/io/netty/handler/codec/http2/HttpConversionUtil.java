@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.codec.UnsupportedValueConverter;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -37,7 +38,9 @@ import io.netty.util.internal.UnstableApi;
 
 import java.net.URI;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpScheme.HTTP;
 import static io.netty.handler.codec.http.HttpScheme.HTTPS;
@@ -47,6 +50,7 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.AsciiString.EMPTY_STRING;
+import static io.netty.util.ByteProcessor.FIND_COMMA;
 import static io.netty.util.ByteProcessor.FIND_SEMI_COLON;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
@@ -410,19 +414,52 @@ public final class HttpConversionUtil {
         return out;
     }
 
+    private static CharSequenceMap<AsciiString> toLowercaseMap(List<String> values) {
+        UnsupportedValueConverter<AsciiString> valueConverter = UnsupportedValueConverter.<AsciiString>instance();
+        CharSequenceMap<AsciiString> result =
+            new CharSequenceMap<AsciiString>(true, valueConverter, values.size());
+
+        // we iterate because the underlying list is probably a linked list
+        for (CharSequence value : values) {
+            AsciiString lowerCased = AsciiString.of(value).toLowerCase();
+            try {
+                int index = lowerCased.forEachByte(FIND_COMMA);
+                if (index != -1) {
+                    int start = 0;
+                    do {
+                        result.add(lowerCased.subSequence(start, index, false).trim(), EMPTY_STRING);
+                        start = index + 1;
+                    } while (start < lowerCased.length() &&
+                             (index = lowerCased.forEachByte(start, value.length() - start, FIND_COMMA)) != -1);
+                    result.add(lowerCased.subSequence(start, lowerCased.length(), false).trim(), EMPTY_STRING);
+                } else {
+                    result.add(lowerCased.trim(), EMPTY_STRING);
+                }
+            } catch (Exception e) {
+                // This is not expect to happen because FIND_COMMA never throws but must be caught
+                // because of the ByteProcessor interface.
+                throw new IllegalStateException(e);
+            }
+        }
+        return result;
+    }
+
     public static void toHttp2Headers(HttpHeaders inHeaders, Http2Headers out) {
         Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
+            new CharSequenceMap<AsciiString>();
+        CharSequenceMap<AsciiString> connectionBlacklist =
+            toLowercaseMap(inHeaders.getAll(HttpHeaderNames.CONNECTION));
         while (iter.hasNext()) {
             Entry<CharSequence, CharSequence> entry = iter.next();
             final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
-            if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName)) {
+            if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName) &&
+                !connectionBlacklist.contains(aName)) {
                 // https://tools.ietf.org/html/rfc7540#section-8.1.2.2 makes a special exception for TE
-                if (aName.contentEqualsIgnoreCase(HttpHeaderNames.TE) &&
-                    !AsciiString.contentEqualsIgnoreCase(entry.getValue(), HttpHeaderValues.TRAILERS)) {
-                    throw new IllegalArgumentException("Invalid value for " + HttpHeaderNames.TE + ": " +
-                                                        entry.getValue());
-                }
-                if (aName.contentEqualsIgnoreCase(HttpHeaderNames.COOKIE)) {
+                if (aName.contentEqualsIgnoreCase(HttpHeaderNames.TE)) {
+                    if (AsciiString.containsIgnoreCase(entry.getValue(), HttpHeaderValues.TRAILERS)) {
+                        out.add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS);
+                    }
+                } else if (aName.contentEqualsIgnoreCase(HttpHeaderNames.COOKIE)) {
                     AsciiString value = AsciiString.of(entry.getValue());
                     // split up cookies to allow for better compression
                     // https://tools.ietf.org/html/rfc7540#section-8.1.2.5

@@ -1006,7 +1006,8 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
-     * Copies this string removing white space characters from the beginning and end of the string.
+     * Duplicates this string removing white space characters from the beginning and end of the
+     * string, without copying.
      *
      * @return a new string with characters {@code <= \\u0020} removed from the beginning and the end.
      */
