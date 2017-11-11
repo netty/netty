@@ -65,6 +65,10 @@ public final class MqttMessageFactoryV5 extends AbstractMessageFactory {
 
             case PUBACK:
                 return new MqttPubAckMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
+
+            case DISCONNECT:
+                return new MqttDisconnectMessage(mqttFixedHeader, (MqttDisconnectVariableHeader) variableHeader);
+
             case PUBREC:
             case PUBREL:
             case PUBCOMP:
@@ -72,7 +76,6 @@ public final class MqttMessageFactoryV5 extends AbstractMessageFactory {
 
             case PINGREQ:
             case PINGRESP:
-            case DISCONNECT:
                 return new MqttMessage(mqttFixedHeader);
 
             default:

@@ -18,6 +18,7 @@ package io.netty.handler.codec.mqtt;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
+import sun.plugin2.main.client.DisconnectedExecutionContext;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -428,6 +429,33 @@ public final class MqttMessageBuilders {
         }
     }
 
+    public static final class DisconnectBuilder {
+        private MqttProperties properties;
+        private short reasonCode;
+
+        DisconnectBuilder() {
+        }
+
+        public DisconnectBuilder properties(MqttProperties properties) {
+            this.properties = properties;
+            return this;
+        }
+
+        public DisconnectBuilder reasonCode(short reasonCode) {
+            this.reasonCode = reasonCode;
+            return this;
+        }
+
+        public MqttDisconnectMessage build() {
+            MqttFixedHeader mqttFixedHeader =
+                    new MqttFixedHeader(MqttMessageType.DISCONNECT, false, MqttQoS.AT_MOST_ONCE, false, 0);
+            MqttDisconnectVariableHeader mqttDisconnectVariableHeader =
+                    new MqttDisconnectVariableHeader(reasonCode, properties);
+
+            return new MqttDisconnectMessage(mqttFixedHeader, mqttDisconnectVariableHeader);
+        }
+    }
+
     public static ConnectBuilder connect() {
         return new ConnectBuilder();
     }
@@ -458,6 +486,10 @@ public final class MqttMessageBuilders {
 
     public static UnsubAckBuilder unsubAck() {
         return new UnsubAckBuilder();
+    }
+
+    public static DisconnectBuilder disconnect() {
+        return new DisconnectBuilder();
     }
 
     private MqttMessageBuilders() {

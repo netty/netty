@@ -60,6 +60,9 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
             case PUBCOMP:
                 return encodePubReplyMessage(byteBufAllocator, message);
 
+            case DISCONNECT:
+                return encodeDisconnectMessage(byteBufAllocator, (MqttDisconnectMessage) message);
+
             default:
                 throw new IllegalArgumentException(
                         "Unknown message type: " + message.fixedHeader().messageType().value());
@@ -379,6 +382,27 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
 
             buf.writeByte(ret);
         }
+
+        return buf;
+    }
+
+    private static ByteBuf encodeDisconnectMessage(ByteBufAllocator byteBufAllocator, MqttDisconnectMessage message) {
+        final MqttDisconnectVariableHeader variableHeader = message.variableHeader();
+
+        final PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader.properties());
+
+        MqttFixedHeader mqttFixedHeader = message.fixedHeader();
+
+        int variablePartSize = 1 + propertiesSection.bufferSize;
+        int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variablePartSize);
+
+        ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variablePartSize);
+        buf.writeByte(EncodersUtils.getFixedHeaderByte1(mqttFixedHeader));
+        EncodersUtils.writeVariableLengthInt(buf, variablePartSize);
+
+        // Variable Header
+        buf.writeByte(variableHeader.reasonCode());
+        buf.writeBytes(propertiesSection.byteBuf);
 
         return buf;
     }

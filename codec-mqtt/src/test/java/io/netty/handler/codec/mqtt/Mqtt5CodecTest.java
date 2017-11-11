@@ -222,10 +222,13 @@ public class Mqtt5CodecTest {
     private void validatePacketIdPlusPropertiesVariableHeader(MqttMessageIdPlusPropertiesVariableHeader expected,
                                                               MqttMessageIdPlusPropertiesVariableHeader actual) {
         assertEquals("MqttMessageIdVariableHeader MessageId mismatch ", expected.messageId(), actual.messageId());
-
         final MqttProperties expectedProps = expected.properties();
         final MqttProperties actualProps = actual.properties();
-        assertEquals(expectedProps.listAll().iterator().next().value, actualProps.listAll().iterator().next().value);
+        validateProperties(expectedProps, actualProps);
+    }
+
+    private void validateProperties(MqttProperties expected, MqttProperties actual) {
+        assertEquals(expected.listAll().iterator().next().value, actual.listAll().iterator().next().value);
     }
 
     @Test
@@ -278,5 +281,27 @@ public class Mqtt5CodecTest {
                 (MqttMessageIdPlusPropertiesVariableHeader) decodedMessage.variableHeader());
         assertEquals("Reason code list doesn't match", message.payload().unsubscribeReasonCodes(),
                 decodedMessage.payload().unsubscribeReasonCodes());
+    }
+
+    @Test
+    public void testDisconnect() throws Exception {
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(0x11, 6)); //Session Expiry Interval
+        final MqttDisconnectMessage message = MqttMessageBuilders.disconnect()
+                .reasonCode((short) 0x96) // Message rate too high
+                .properties(props)
+                .build();
+        ByteBuf byteBuf = MqttEncoderV5.doEncode(ALLOCATOR, message);
+
+        final List<Object> out = new LinkedList<Object>();
+
+        mqttDecoder.decode(ctx, byteBuf, out);
+
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
+        final MqttDisconnectMessage decodedMessage = (MqttDisconnectMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        assertEquals("Reason code maust match (0x96)",
+                message.variableHeader().reasonCode(), decodedMessage.variableHeader().reasonCode());
+        validateProperties(message.variableHeader().properties(), decodedMessage.variableHeader().properties());
     }
 }

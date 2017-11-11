@@ -43,9 +43,11 @@ final class VariableHeaderDecoderV5  implements IVariableHeaderDecoder {
             case PUBLISH:
                 return decodePublishVariableHeader(buffer, mqttFixedHeader);
 
+            case DISCONNECT:
+                return decodeDisconnectVariableHeader(buffer);
+
             case PINGREQ:
             case PINGRESP:
-            case DISCONNECT:
                 // Empty variable header
                 return new Result<Object>(null, 0);
         }
@@ -242,5 +244,16 @@ final class VariableHeaderDecoderV5  implements IVariableHeaderDecoder {
 
         return new Result<MqttMessageIdPlusPropertiesVariableHeader>(mqttVariableHeader,
                 packetId.numberOfBytesConsumed + properties.numberOfBytesConsumed);
+    }
+
+    private static Result<MqttDisconnectVariableHeader> decodeDisconnectVariableHeader(ByteBuf buffer) {
+        final short reasonCode = buffer.readUnsignedByte();
+        final Result<MqttProperties> properties = decodeProperties(buffer);
+        final MqttDisconnectVariableHeader mqttDisconnecrVariableHeader =
+                new MqttDisconnectVariableHeader(reasonCode, properties.value);
+
+        return new Result<MqttDisconnectVariableHeader>(
+                mqttDisconnecrVariableHeader,
+                 1 + properties.numberOfBytesConsumed);
     }
 }
