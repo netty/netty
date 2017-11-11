@@ -1,11 +1,11 @@
 package io.netty.handler.codec.mqtt;
 
 /**
- * MQTT Disconnect message
+ * MQTT Auth message
  */
-public final class MqttDisconnectMessage extends MqttMessage {
+public final class MqttAuthMessage extends MqttMessage {
 
-    public MqttDisconnectMessage(
+    public MqttAuthMessage(
             MqttFixedHeader mqttFixedHeader,
             MqttReasonCodePlusPropertiesVariableHeader variableHeader) {
         super(mqttFixedHeader, variableHeader);

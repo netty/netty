@@ -21,13 +21,13 @@ import io.netty.util.internal.StringUtil;
 /**
  * Variable Header for the {@link MqttDisconnectMessage}
  */
-public final class MqttDisconnectVariableHeader {
+public final class MqttReasonCodePlusPropertiesVariableHeader {
 
     private final short reasonCode;
     private final MqttProperties properties;
 
-    public MqttDisconnectVariableHeader(short reasonCode,
-            MqttProperties properties) {
+    public MqttReasonCodePlusPropertiesVariableHeader(short reasonCode,
+                                                      MqttProperties properties) {
         this.reasonCode = reasonCode;
         this.properties = properties;
     }

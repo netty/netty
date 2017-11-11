@@ -67,7 +67,12 @@ public final class MqttMessageFactoryV5 extends AbstractMessageFactory {
                 return new MqttPubAckMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
 
             case DISCONNECT:
-                return new MqttDisconnectMessage(mqttFixedHeader, (MqttDisconnectVariableHeader) variableHeader);
+                return new MqttDisconnectMessage(mqttFixedHeader,
+                        (MqttReasonCodePlusPropertiesVariableHeader) variableHeader);
+
+            case AUTH:
+                return new MqttAuthMessage(mqttFixedHeader,
+                        (MqttReasonCodePlusPropertiesVariableHeader) variableHeader);
 
             case PUBREC:
             case PUBREL:

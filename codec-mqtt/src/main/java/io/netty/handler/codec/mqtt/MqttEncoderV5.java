@@ -61,7 +61,12 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
                 return encodePubReplyMessage(byteBufAllocator, message);
 
             case DISCONNECT:
-                return encodeDisconnectMessage(byteBufAllocator, (MqttDisconnectMessage) message);
+                return encodeReasonCodePlusPropertiesMessage(byteBufAllocator, message.fixedHeader(),
+                        ((MqttDisconnectMessage) message).variableHeader());
+
+            case AUTH:
+                return encodeReasonCodePlusPropertiesMessage(byteBufAllocator, message.fixedHeader(),
+                        ((MqttAuthMessage) message).variableHeader());
 
             default:
                 throw new IllegalArgumentException(
@@ -386,12 +391,12 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
         return buf;
     }
 
-    private static ByteBuf encodeDisconnectMessage(ByteBufAllocator byteBufAllocator, MqttDisconnectMessage message) {
-        final MqttDisconnectVariableHeader variableHeader = message.variableHeader();
+    private static ByteBuf encodeReasonCodePlusPropertiesMessage(
+            ByteBufAllocator byteBufAllocator,
+            MqttFixedHeader mqttFixedHeader,
+            MqttReasonCodePlusPropertiesVariableHeader variableHeader) {
 
         final PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader.properties());
-
-        MqttFixedHeader mqttFixedHeader = message.fixedHeader();
 
         int variablePartSize = 1 + propertiesSection.bufferSize;
         int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variablePartSize);

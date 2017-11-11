@@ -2,7 +2,6 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -109,7 +108,7 @@ public class Mqtt5CodecTest {
         validateConnAckVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
     }
 
-    static void validateConnAckVariableHeader(
+    private static void validateConnAckVariableHeader(
             MqttConnAckVariableHeader expected,
             MqttConnAckVariableHeader actual) {
         MqttCodecTest.validateConnAckVariableHeader(expected, actual);
@@ -300,7 +299,29 @@ public class Mqtt5CodecTest {
         assertEquals("Expected one object but got " + out.size(), 1, out.size());
         final MqttDisconnectMessage decodedMessage = (MqttDisconnectMessage) out.get(0);
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
-        assertEquals("Reason code maust match (0x96)",
+        assertEquals("Reason code must match (0x96)",
+                message.variableHeader().reasonCode(), decodedMessage.variableHeader().reasonCode());
+        validateProperties(message.variableHeader().properties(), decodedMessage.variableHeader().properties());
+    }
+
+    @Test
+    public void testAuth() throws Exception {
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(0x11, 6)); // Identifier of the Authentication Data
+        final MqttAuthMessage message = MqttMessageBuilders.auth()
+                .reasonCode((short) 0x18) // Continue authentication
+                .properties(props)
+                .build();
+        ByteBuf byteBuf = MqttEncoderV5.doEncode(ALLOCATOR, message);
+
+        final List<Object> out = new LinkedList<Object>();
+
+        mqttDecoder.decode(ctx, byteBuf, out);
+
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
+        final MqttAuthMessage decodedMessage = (MqttAuthMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        assertEquals("Reason code must match (0x18)",
                 message.variableHeader().reasonCode(), decodedMessage.variableHeader().reasonCode());
         validateProperties(message.variableHeader().properties(), decodedMessage.variableHeader().properties());
     }
