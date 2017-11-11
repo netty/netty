@@ -147,10 +147,14 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
      * @param buffer the buffer to decode from
      * @return the fixed header
      */
-    private static MqttFixedHeader decodeFixedHeader(ByteBuf buffer) {
+    protected MqttFixedHeader decodeFixedHeader(ByteBuf buffer) {
         short b1 = buffer.readUnsignedByte();
+        final int type = b1 >> 4;
+        if (type > MqttMessageType.DISCONNECT.value()) {
+            throw new IllegalArgumentException("unknown message type: " + type);
+        }
 
-        MqttMessageType messageType = MqttMessageType.valueOf(b1 >> 4);
+        MqttMessageType messageType = MqttMessageType.valueOf(type);
         boolean dupFlag = (b1 & 0x08) == 0x08;
         int qosLevel = (b1 & 0x06) >> 1;
         boolean retain = (b1 & 0x01) != 0;

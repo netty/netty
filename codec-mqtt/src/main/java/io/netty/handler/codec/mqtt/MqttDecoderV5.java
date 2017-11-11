@@ -45,6 +45,29 @@ public final class MqttDecoderV5 extends MqttDecoder {
         super(maxBytesInMessage, headerDecoder, new MqttMessageFactoryV5());
     }
 
+    @Override
+    protected MqttFixedHeader decodeFixedHeader(ByteBuf buffer) {
+        short b1 = buffer.readUnsignedByte();
+        final int type = b1 >> 4;
+        if (type > MqttMessageType.AUTH.value()) {
+            throw new IllegalArgumentException("unknown message type: " + type);
+        }
+
+        MqttMessageType messageType = MqttMessageType.valueOf(type);
+        boolean dupFlag = (b1 & 0x08) == 0x08;
+        int qosLevel = (b1 & 0x06) >> 1;
+        boolean retain = (b1 & 0x01) != 0;
+
+        Result<Integer> remainingLength = decodeVariableByteInteger(buffer);
+        // MQTT protocol limits Remaining Length to 4 bytes
+        if (remainingLength == null) {
+            throw new DecoderException("remaining length exceeds 4 digits (" + messageType + ')');
+        }
+        MqttFixedHeader decodedFixedHeader =
+                new MqttFixedHeader(messageType, dupFlag, MqttQoS.valueOf(qosLevel), retain, remainingLength.value);
+        return validateFixedHeader(resetUnusedFields(decodedFixedHeader));
+    }
+
     /**
      * Decodes the payload.
      *
