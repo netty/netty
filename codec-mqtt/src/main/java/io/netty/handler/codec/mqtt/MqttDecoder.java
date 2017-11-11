@@ -59,15 +59,18 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private final int maxBytesInMessage;
 
     private final IVariableHeaderDecoder headerDecoder;
+    private final AbstractMessageFactory messageFactory;
 
-    public MqttDecoder(IVariableHeaderDecoder headerDecoder) {
-      this(DEFAULT_MAX_BYTES_IN_MESSAGE, headerDecoder);
+    public MqttDecoder(IVariableHeaderDecoder headerDecoder, AbstractMessageFactory messageFactory) {
+      this(DEFAULT_MAX_BYTES_IN_MESSAGE, headerDecoder, messageFactory);
     }
 
-    public MqttDecoder(int maxBytesInMessage, IVariableHeaderDecoder headerDecoder) {
+    public MqttDecoder(int maxBytesInMessage, IVariableHeaderDecoder headerDecoder,
+                       AbstractMessageFactory messageFactory) {
         super(DecoderState.READ_FIXED_HEADER);
         this.maxBytesInMessage = maxBytesInMessage;
         this.headerDecoder = headerDecoder;
+        this.messageFactory = messageFactory;
     }
 
     @Override
@@ -111,7 +114,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
                                     bytesRemainingInVariablePart + " (" + mqttFixedHeader.messageType() + ')');
                 }
                 checkpoint(DecoderState.READ_FIXED_HEADER);
-                MqttMessage message = MqttMessageFactory.newMessage(
+                MqttMessage message = this.messageFactory.newMessage(
                         mqttFixedHeader, variableHeader, decodedPayload.value);
                 mqttFixedHeader = null;
                 variableHeader = null;
@@ -135,7 +138,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
     private MqttMessage invalidMessage(Throwable cause) {
       checkpoint(DecoderState.BAD_MESSAGE);
-      return MqttMessageFactory.newInvalidMessage(cause);
+      return this.messageFactory.newInvalidMessage(cause);
     }
 
     /**
@@ -190,7 +193,7 @@ public class MqttDecoder extends ReplayingDecoder<DecoderState> {
      * @param variableHeader variable header of the same message
      * @return the payload
      */
-    private Result<?> decodePayload(
+    protected Result<?> decodePayload(
             ByteBuf buffer,
             MqttMessageType messageType,
             int bytesRemainingInVariablePart,

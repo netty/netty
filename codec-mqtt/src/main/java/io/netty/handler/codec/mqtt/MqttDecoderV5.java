@@ -38,11 +38,54 @@ import static io.netty.handler.codec.mqtt.SubscriptionOption.onlyFromQos;
 public final class MqttDecoderV5 extends MqttDecoder {
 
     public MqttDecoderV5(IVariableHeaderDecoder headerDecoder) {
-        super(headerDecoder);
+        super(headerDecoder, new MqttMessageFactoryV5());
     }
 
     public MqttDecoderV5(int maxBytesInMessage, IVariableHeaderDecoder headerDecoder) {
-        super(maxBytesInMessage, headerDecoder);
+        super(maxBytesInMessage, headerDecoder, new MqttMessageFactoryV5());
+    }
+
+    /**
+     * Decodes the payload.
+     *
+     * @param buffer the buffer to decode from
+     * @param messageType  type of the message being decoded
+     * @param bytesRemainingInVariablePart bytes remaining
+     * @param variableHeader variable header of the same message
+     * @return the payload
+     */
+    @Override
+    protected Result<?> decodePayload(
+            ByteBuf buffer,
+            MqttMessageType messageType,
+            int bytesRemainingInVariablePart,
+            Object variableHeader) {
+        switch (messageType) {
+            case CONNECT:
+            case SUBSCRIBE:
+            case SUBACK:
+            case UNSUBSCRIBE:
+            case PUBLISH:
+                return super.decodePayload(buffer, messageType, bytesRemainingInVariablePart, variableHeader);
+            case UNSUBACK:
+                return decodeUnsubAckPayload(buffer, bytesRemainingInVariablePart);
+
+            default:
+                // unknown payload , no byte consumed
+                return new Result<Object>(null, 0);
+        }
+    }
+
+    private Result<MqttUnsubAckPayload> decodeUnsubAckPayload(ByteBuf buffer,
+                                                              int bytesRemainingInVariablePart) {
+        final List<Short> reasonCodes = new ArrayList<Short>();
+        int numberOfBytesConsumed = 0;
+        while (numberOfBytesConsumed < bytesRemainingInVariablePart) {
+            short reasonCode = buffer.readUnsignedByte();
+            numberOfBytesConsumed++;
+            reasonCodes.add(reasonCode);
+        }
+        return new Result<MqttUnsubAckPayload>(new MqttUnsubAckPayload(reasonCodes), numberOfBytesConsumed);
     }
 
     @Override

@@ -57,7 +57,7 @@ public class MqttCodecTest {
     @Mock
     private final Channel channel = mock(Channel.class);
 
-    private final MqttDecoder mqttDecoder = new MqttDecoder(new VariableHeaderDecoderV3());
+    private final MqttDecoder mqttDecoder = new MqttDecoder(new VariableHeaderDecoderV3(), new MqttMessageFactory());
 
     @Before
     public void setup() {

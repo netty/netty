@@ -17,12 +17,11 @@
 package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.DecoderResult;
 
 /**
  * Utility class with factory methods to create different types of MQTT messages.
  */
-public final class MqttMessageFactory extends AbstractMessageFactory {
+public final class MqttMessageFactoryV5 extends AbstractMessageFactory {
 
     public MqttMessage newMessage(MqttFixedHeader mqttFixedHeader, Object variableHeader, Object payload) {
         switch (mqttFixedHeader.messageType()) {
@@ -38,7 +37,7 @@ public final class MqttMessageFactory extends AbstractMessageFactory {
             case SUBSCRIBE:
                 return new MqttSubscribeMessage(
                         mqttFixedHeader,
-                        (MqttMessageIdVariableHeader) variableHeader,
+                        (MqttMessageIdPlusPropertiesVariableHeader) variableHeader,
                         (MqttSubscribePayload) payload);
 
             case SUBACK:
@@ -50,7 +49,7 @@ public final class MqttMessageFactory extends AbstractMessageFactory {
             case UNSUBACK:
                 return new MqttUnsubAckMessage(
                         mqttFixedHeader,
-                        (MqttMessageIdVariableHeader) variableHeader, null);
+                        (MqttMessageIdVariableHeader) variableHeader, (MqttUnsubAckPayload) payload);
 
             case UNSUBSCRIBE:
                 return new MqttUnsubscribeMessage(

@@ -389,6 +389,45 @@ public final class MqttMessageBuilders {
         }
     }
 
+    public static final class UnsubAckBuilder {
+        private short packetId;
+        private MqttProperties properties;
+        private final List<Short> reasonCodes = new ArrayList<Short>();
+
+        UnsubAckBuilder() {
+        }
+
+        public UnsubAckBuilder packetId(short packetId) {
+            this.packetId = packetId;
+            return this;
+        }
+
+        public UnsubAckBuilder properties(MqttProperties properties) {
+            this.properties = properties;
+            return this;
+        }
+
+        public UnsubAckBuilder addReasonCode(short reasonCode) {
+            this.reasonCodes.add(reasonCode);
+            return this;
+        }
+
+        public UnsubAckBuilder addReasonCodes(Short... reasonCodes) {
+            this.reasonCodes.addAll(Arrays.asList(reasonCodes));
+            return this;
+        }
+
+        public MqttUnsubAckMessage build() {
+            MqttFixedHeader mqttFixedHeader =
+                    new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
+            MqttMessageIdPlusPropertiesVariableHeader mqttSubAckVariableHeader =
+                    new MqttMessageIdPlusPropertiesVariableHeader(packetId, properties);
+
+            MqttUnsubAckPayload subAckPayload = new MqttUnsubAckPayload(reasonCodes);
+            return new MqttUnsubAckMessage(mqttFixedHeader, mqttSubAckVariableHeader, subAckPayload);
+        }
+    }
+
     public static ConnectBuilder connect() {
         return new ConnectBuilder();
     }
@@ -415,6 +454,10 @@ public final class MqttMessageBuilders {
 
     public static SubAckBuilder subAck() {
         return new SubAckBuilder();
+    }
+
+    public static UnsubAckBuilder unsubAck() {
+        return new UnsubAckBuilder();
     }
 
     private MqttMessageBuilders() {

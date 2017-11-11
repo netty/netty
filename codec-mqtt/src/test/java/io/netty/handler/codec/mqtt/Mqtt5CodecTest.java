@@ -254,4 +254,29 @@ public class Mqtt5CodecTest {
         validatePacketIdPlusPropertiesVariableHeader(expectedHeader, actualHeader);
         validateSubscribePayload(message.payload(), decodedMessage.payload());
     }
+
+    @Test
+    public void testUnsubAck() throws Exception {
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(0x01, 6)); //Payload Format Indicator
+        final MqttUnsubAckMessage message = MqttMessageBuilders.unsubAck()
+                .packetId((short) 1)
+                .properties(props)
+                .addReasonCode((short) 0x83)
+                .build();
+        ByteBuf byteBuf = MqttEncoderV5.doEncode(ALLOCATOR, message);
+
+        final List<Object> out = new LinkedList<Object>();
+
+        mqttDecoder.decode(ctx, byteBuf, out);
+
+        assertEquals("Expected one object but got " + out.size(), 1, out.size());
+
+        final MqttUnsubAckMessage decodedMessage = (MqttUnsubAckMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validatePacketIdPlusPropertiesVariableHeader((MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader(),
+                (MqttMessageIdPlusPropertiesVariableHeader) decodedMessage.variableHeader());
+        assertEquals("Reason code list doesn't match", message.payload().unsubscribeReasonCodes(),
+                decodedMessage.payload().unsubscribeReasonCodes());
+    }
 }
