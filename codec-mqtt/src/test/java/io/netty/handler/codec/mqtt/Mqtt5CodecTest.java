@@ -232,16 +232,16 @@ public class Mqtt5CodecTest {
     private void validateProperties(MqttProperties expected, MqttProperties actual) {
         for (MqttProperty expectedProperty : expected.listAll()) {
             MqttProperty actualProperty = actual.getProperty(expectedProperty.propertyId);
-            switch (expectedProperty.propertyId) {
+            switch (MqttProperties.MqttPropertyType.valueOf(expectedProperty.propertyId)) {
                 // one byte value integer property
-                case 0x01: // Payload Format Indicator => Byte
-                case 0x17: // Request Problem Information
-                case 0x19: // Request Response Information
-                case 0x24: // Maximum QoS
-                case 0x25: // Retain Available
-                case 0x28: // Wildcard Subscription Available
-                case 0x29: // Subscription Identifier Available
-                case 0x2A: // Shared Subscription Available
+                case PAYLOAD_FORMAT_INDICATOR:
+                case REQUEST_PROBLEM_INFORMATION:
+                case REQUEST_RESPONSE_INFORMATION:
+                case MAXIMUM_QOS:
+                case RETAIN_AVAILABLE:
+                case WILDCARD_SUBSCRIPTION_AVAILABLE:
+                case SUBSCRIPTION_IDENTIFIER_AVAILABLE:
+                case SHARED_SUBSCRIPTION_AVAILABLE:
                 {
                     final Integer expectedValue = ((MqttProperties.IntegerProperty) expectedProperty).value;
                     final Integer actualValue = ((MqttProperties.IntegerProperty) actualProperty).value;
@@ -249,10 +249,10 @@ public class Mqtt5CodecTest {
                     break;
                 }
                 // two byte value integer property
-                case 0x13: // Server Keep Alive => Two Byte Integer
-                case 0x21: // Receive Maximum
-                case 0x22: // Topic Alias Maximum
-                case 0x23: // Topic Alias
+                case SERVER_KEEP_ALIVE:
+                case RECEIVE_MAXIMUM:
+                case TOPIC_ALIAS_MAXIMUM:
+                case TOPIC_ALIAS:
                 {
                     final Integer expectedValue = ((MqttProperties.IntegerProperty) expectedProperty).value;
                     final Integer actualValue = ((MqttProperties.IntegerProperty) actualProperty).value;
@@ -260,10 +260,10 @@ public class Mqtt5CodecTest {
                     break;
                 }
                 // four byte value integer property
-                case 0x02: // Publication Expiry Interval => Four Byte Integer
-                case 0x11: // Session Expiry Interval
-                case 0x18: // Will Delay Interval
-                case 0x27: // Maximum Packet Size
+                case PUBLICATION_EXPIRY_INTERVAL:
+                case SESSION_EXPIRY_INTERVAL:
+                case WILL_DELAY_INTERVAL:
+                case MAXIMUM_PACKET_SIZE:
                 {
                     final Integer expectedValue = ((MqttProperties.IntegerProperty) expectedProperty).value;
                     final Integer actualValue = ((MqttProperties.IntegerProperty) actualProperty).value;
@@ -271,7 +271,7 @@ public class Mqtt5CodecTest {
                     break;
                 }
                 // four byte value integer property
-                case 0x0B: // Subscription Identifier => Variable Byte Integer
+                case SUBSCRIPTION_IDENTIFIER:
                 {
                     final Integer expectedValue = ((MqttProperties.IntegerProperty) expectedProperty).value;
                     final Integer actualValue = ((MqttProperties.IntegerProperty) actualProperty).value;
@@ -279,14 +279,14 @@ public class Mqtt5CodecTest {
                     break;
                 }
                 // UTF-8 string value integer property
-                case 0x03: // Content Type => UTF-8 Encoded String
-                case 0x08: // Response Topic
-                case 0x12: // Assigned Client Identifier
-                case 0x15: // Authentication Method
-                case 0x1A: // Response Information
-                case 0x1C: // Server Reference
-                case 0x1F: // Reason String
-                case 0x26: // User Property
+                case CONTENT_TYPE:
+                case RESPONSE_TOPIC:
+                case ASSIGNED_CLIENT_IDENTIFIER:
+                case AUTHENTICATION_METHOD:
+                case RESPONSE_INFORMATION:
+                case SERVER_REFERENCE:
+                case REASON_STRING:
+                case USER_PROPERTY:
                 {
                     final String expectedValue = ((MqttProperties.StringProperty) expectedProperty).value;
                     final String actualValue = ((MqttProperties.StringProperty) actualProperty).value;
@@ -294,8 +294,8 @@ public class Mqtt5CodecTest {
                     break;
                 }
                 // byte[] property
-                case 0x09: // Correlation Data => Binary Data
-                case 0x16: // Authentication Data
+                case CORRELATION_DATA:
+                case AUTHENTICATION_DATA:
                 {
                     final byte[] expectedValue = ((MqttProperties.BinaryProperty) expectedProperty).value;
                     final byte[] actualValue = ((MqttProperties.BinaryProperty) actualProperty).value;

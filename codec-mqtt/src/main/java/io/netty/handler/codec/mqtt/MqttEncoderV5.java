@@ -7,6 +7,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.mqtt.MqttEncoder.PacketSection;
+import io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType;
 
 import java.util.List;
 
@@ -141,49 +142,49 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
         ByteBuf propertiesBuf = byteBufAllocator.buffer();
         for (MqttProperties.MqttProperty property : mqttProperties.listAll()) {
             EncodersUtils.writeVariableLengthInt(propertiesBuf, property.propertyId);
-            switch (property.propertyId) {
-                case 0x01: // Payload Format Indicator => Byte
-                case 0x17: // Request Problem Information
-                case 0x19: // Request Response Information
-                case 0x24: // Maximum QoS
-                case 0x25: // Retain Available
-                case 0x28: // Wildcard Subscription Available
-                case 0x29: // Subscription Identifier Available
-                case 0x2A: // Shared Subscription Available
+            switch (MqttPropertyType.valueOf(property.propertyId)) {
+                case PAYLOAD_FORMAT_INDICATOR:
+                case REQUEST_PROBLEM_INFORMATION:
+                case REQUEST_RESPONSE_INFORMATION:
+                case MAXIMUM_QOS:
+                case RETAIN_AVAILABLE:
+                case WILDCARD_SUBSCRIPTION_AVAILABLE:
+                case SUBSCRIPTION_IDENTIFIER_AVAILABLE:
+                case SHARED_SUBSCRIPTION_AVAILABLE:
                     final byte bytePropValue = ((MqttProperties.IntegerProperty) property).value.byteValue();
                     propertiesBuf.writeByte(bytePropValue);
                     break;
-                case 0x13: // Server Keep Alive => Two Byte Integer
-                case 0x21: // Receive Maximum
-                case 0x22: // Topic Alias Maximum
-                case 0x23: // Topic Alias
+                case SERVER_KEEP_ALIVE:
+                case RECEIVE_MAXIMUM:
+                case TOPIC_ALIAS_MAXIMUM:
+                case TOPIC_ALIAS:
                     final short twoBytesInPropValue = ((MqttProperties.IntegerProperty) property).value.shortValue();
                     propertiesBuf.writeShort(twoBytesInPropValue);
                     break;
-                case 0x02: // Publication Expiry Interval => Four Byte Integer
-                case 0x11: // Session Expiry Interval
-                case 0x18: // Will Delay Interval
-                case 0x27: // Maximum Packet Size
+                case PUBLICATION_EXPIRY_INTERVAL:
+                case SESSION_EXPIRY_INTERVAL:
+                case WILL_DELAY_INTERVAL:
+                case MAXIMUM_PACKET_SIZE:
                     final int fourBytesIntPropValue = ((MqttProperties.IntegerProperty) property).value;
                     propertiesBuf.writeInt(fourBytesIntPropValue);
                     break;
-                case 0x0B: // Subscription Identifier => Variable Byte Integer
+                case SUBSCRIPTION_IDENTIFIER:
                     final int vbi = ((MqttProperties.IntegerProperty) property).value;
                     EncodersUtils.writeVariableLengthInt(propertiesBuf, vbi);
                     break;
-                case 0x03: // Content Type => UTF-8 Encoded String
-                case 0x08: // Response Topic
-                case 0x12: // Assigned Client Identifier
-                case 0x15: // Authentication Method
-                case 0x1A: // Response Information
-                case 0x1C: // Server Reference
-                case 0x1F: // Reason String
-                case 0x26: // User Property
+                case CONTENT_TYPE:
+                case RESPONSE_TOPIC:
+                case ASSIGNED_CLIENT_IDENTIFIER:
+                case AUTHENTICATION_METHOD:
+                case RESPONSE_INFORMATION:
+                case SERVER_REFERENCE:
+                case REASON_STRING:
+                case USER_PROPERTY:
                     final String strPropValue = ((MqttProperties.StringProperty) property).value;
                     EncodersUtils.writeUTF8String(propertiesBuf, strPropValue);
                     break;
-                case 0x09: // Correlation Data => Binary Data
-                case 0x16: // Authentication Data
+                case CORRELATION_DATA:
+                case AUTHENTICATION_DATA:
                     final byte[] binaryPropValue = ((MqttProperties.BinaryProperty) property).value;
                     propertiesBuf.writeShort(binaryPropValue.length);
                     propertiesBuf.writeBytes(binaryPropValue, 0, binaryPropValue.length);
@@ -203,7 +204,6 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
 
         ByteBuf buf = byteBufAllocator.buffer(4 + propertiesSection.bufferSize);
         buf.writeByte(EncodersUtils.getFixedHeaderByte1(message.fixedHeader()));
-//        buf.writeByte(2);
         EncodersUtils.writeVariableLengthInt(buf, 2 +propertiesSection.bufferSize);
         buf.writeByte(message.variableHeader().isSessionPresent() ? 0x01 : 0x00);
         buf.writeByte(message.variableHeader().connectReturnCode().byteValue());

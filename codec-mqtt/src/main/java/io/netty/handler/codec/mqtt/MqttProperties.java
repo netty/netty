@@ -9,6 +9,68 @@ import java.util.Map;
  * */
 public class MqttProperties {
 
+    public enum MqttPropertyType {
+
+        // single byte properties
+        PAYLOAD_FORMAT_INDICATOR(0x01),
+        REQUEST_PROBLEM_INFORMATION(0x17),
+        REQUEST_RESPONSE_INFORMATION(0x19),
+        MAXIMUM_QOS(0x24),
+        RETAIN_AVAILABLE(0x25),
+        WILDCARD_SUBSCRIPTION_AVAILABLE(0x28),
+        SUBSCRIPTION_IDENTIFIER_AVAILABLE(0x29),
+        SHARED_SUBSCRIPTION_AVAILABLE(0x2A),
+
+        // two bytes properties
+        SERVER_KEEP_ALIVE(0x13),
+        RECEIVE_MAXIMUM(0x21),
+        TOPIC_ALIAS_MAXIMUM(0x22),
+        TOPIC_ALIAS(0x23),
+
+        // four bytes properties
+        PUBLICATION_EXPIRY_INTERVAL(0x02),
+        SESSION_EXPIRY_INTERVAL(0x11),
+        WILL_DELAY_INTERVAL(0x18),
+        MAXIMUM_PACKET_SIZE(0x27),
+
+        // Variable Byte Integer
+        SUBSCRIPTION_IDENTIFIER(0x0B),
+
+        // UTF-8 Encoded String properties
+        CONTENT_TYPE(0x03),
+        RESPONSE_TOPIC(0x08),
+        ASSIGNED_CLIENT_IDENTIFIER(0x12),
+        AUTHENTICATION_METHOD(0x15),
+        RESPONSE_INFORMATION(0x1A),
+        SERVER_REFERENCE(0x1C),
+        REASON_STRING(0x1F),
+        USER_PROPERTY(0x26),
+
+        // Binary Data
+        CORRELATION_DATA(0x09),
+        AUTHENTICATION_DATA(0x16);
+
+        private final int value;
+
+        MqttPropertyType(int value) {
+            this.value = value;
+        }
+
+        public int value() {
+            return value;
+        }
+
+        public static MqttPropertyType valueOf(int type) {
+            for (MqttPropertyType t : values()) {
+                if (t.value == type) {
+                    return t;
+                }
+            }
+            throw new IllegalArgumentException("unknown property type: " + type);
+        }
+
+    }
+
     public static final MqttProperties NO_PROPERTIES = new MqttProperties();
 
     public static abstract class MqttProperty<T> {
