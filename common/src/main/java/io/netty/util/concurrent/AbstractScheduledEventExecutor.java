@@ -54,7 +54,9 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue() {
         if (scheduledTaskQueue == null) {
             scheduledTaskQueue = new DefaultPriorityQueue<ScheduledFutureTask<?>>(
-                    SCHEDULED_FUTURE_TASK_COMPARATOR, 11);
+                    SCHEDULED_FUTURE_TASK_COMPARATOR,
+                    // Use same initial capacity as java.util.PriorityQueue
+                    11);
         }
         return scheduledTaskQueue;
     }
