@@ -15,9 +15,11 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PriorityQueue;
 
-import java.util.PriorityQueue;
+import java.util.Comparator;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
@@ -28,7 +30,15 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class AbstractScheduledEventExecutor extends AbstractEventExecutor {
 
-    Queue<ScheduledFutureTask<?>> scheduledTaskQueue;
+    private static final Comparator<ScheduledFutureTask<?>> SCHEDULED_FUTURE_TASK_COMPARATOR =
+            new Comparator<ScheduledFutureTask<?>>() {
+                @Override
+                public int compare(ScheduledFutureTask<?> o1, ScheduledFutureTask<?> o2) {
+                    return o1.compareTo(o2);
+                }
+            };
+
+    PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue;
 
     protected AbstractScheduledEventExecutor() {
     }
@@ -41,14 +51,17 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         return ScheduledFutureTask.nanoTime();
     }
 
-    Queue<ScheduledFutureTask<?>> scheduledTaskQueue() {
+    PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue() {
         if (scheduledTaskQueue == null) {
-            scheduledTaskQueue = new PriorityQueue<ScheduledFutureTask<?>>();
+            scheduledTaskQueue = new DefaultPriorityQueue<ScheduledFutureTask<?>>(
+                    SCHEDULED_FUTURE_TASK_COMPARATOR,
+                    // Use same initial capacity as java.util.PriorityQueue
+                    11);
         }
         return scheduledTaskQueue;
     }
 
-    private static  boolean isNullOrEmpty(Queue<ScheduledFutureTask<?>> queue) {
+    private static boolean isNullOrEmpty(Queue<ScheduledFutureTask<?>> queue) {
         return queue == null || queue.isEmpty();
     }
 
@@ -59,7 +72,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      */
     protected void cancelScheduledTasks() {
         assert inEventLoop();
-        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
+        PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         if (isNullOrEmpty(scheduledTaskQueue)) {
             return;
         }
@@ -71,7 +84,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
             task.cancelWithoutRemove(false);
         }
 
-        scheduledTaskQueue.clear();
+        scheduledTaskQueue.clearIgnoringIndexes();
     }
 
     /**
@@ -205,7 +218,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     final void removeScheduled(final ScheduledFutureTask<?> task) {
         if (inEventLoop()) {
-            scheduledTaskQueue().remove(task);
+            scheduledTaskQueue().removeTyped(task);
         } else {
             execute(new Runnable() {
                 @Override
