@@ -2,9 +2,11 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.mqtt.MqttProperties.MqttProperty;
 import io.netty.util.CharsetUtil;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,6 +20,7 @@ import static io.netty.handler.codec.mqtt.MqttCodecTest.*;
 import static io.netty.handler.codec.mqtt.MqttQoS.AT_LEAST_ONCE;
 import static io.netty.handler.codec.mqtt.SubscriptionOption.RetainedHandlingPolicy.SEND_AT_SUBSCRIBE_IF_NOT_YET_EXISTS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -227,7 +230,84 @@ public class Mqtt5CodecTest {
     }
 
     private void validateProperties(MqttProperties expected, MqttProperties actual) {
-        assertEquals(expected.listAll().iterator().next().value, actual.listAll().iterator().next().value);
+        for (MqttProperty expectedProperty : expected.listAll()) {
+            MqttProperty actualProperty = actual.getProperty(expectedProperty.propertyId);
+            switch (expectedProperty.propertyId) {
+                // one byte value integer property
+                case 0x01: // Payload Format Indicator => Byte
+                case 0x17: // Request Problem Information
+                case 0x19: // Request Response Information
+                case 0x24: // Maximum QoS
+                case 0x25: // Retain Available
+                case 0x28: // Wildcard Subscription Available
+                case 0x29: // Subscription Identifier Available
+                case 0x2A: // Shared Subscription Available
+                {
+                    final Integer expectedValue = ((MqttProperties.IntegerProperty) expectedProperty).value;
+                    final Integer actualValue = ((MqttProperties.IntegerProperty) actualProperty).value;
+                    assertEquals("one byte property doesn't match", expectedValue, actualValue);
+                    break;
+                }
+                // two byte value integer property
+                case 0x13: // Server Keep Alive => Two Byte Integer
+                case 0x21: // Receive Maximum
+                case 0x22: // Topic Alias Maximum
+                case 0x23: // Topic Alias
+                {
+                    final Integer expectedValue = ((MqttProperties.IntegerProperty) expectedProperty).value;
+                    final Integer actualValue = ((MqttProperties.IntegerProperty) actualProperty).value;
+                    assertEquals("two byte property doesn't match", expectedValue, actualValue);
+                    break;
+                }
+                // four byte value integer property
+                case 0x02: // Publication Expiry Interval => Four Byte Integer
+                case 0x11: // Session Expiry Interval
+                case 0x18: // Will Delay Interval
+                case 0x27: // Maximum Packet Size
+                {
+                    final Integer expectedValue = ((MqttProperties.IntegerProperty) expectedProperty).value;
+                    final Integer actualValue = ((MqttProperties.IntegerProperty) actualProperty).value;
+                    assertEquals("four byte property doesn't match", expectedValue, actualValue);
+                    break;
+                }
+                // four byte value integer property
+                case 0x0B: // Subscription Identifier => Variable Byte Integer
+                {
+                    final Integer expectedValue = ((MqttProperties.IntegerProperty) expectedProperty).value;
+                    final Integer actualValue = ((MqttProperties.IntegerProperty) actualProperty).value;
+                    assertEquals("variable byte integer property doesn't match", expectedValue, actualValue);
+                    break;
+                }
+                // UTF-8 string value integer property
+                case 0x03: // Content Type => UTF-8 Encoded String
+                case 0x08: // Response Topic
+                case 0x12: // Assigned Client Identifier
+                case 0x15: // Authentication Method
+                case 0x1A: // Response Information
+                case 0x1C: // Server Reference
+                case 0x1F: // Reason String
+                case 0x26: // User Property
+                {
+                    final String expectedValue = ((MqttProperties.StringProperty) expectedProperty).value;
+                    final String actualValue = ((MqttProperties.StringProperty) actualProperty).value;
+                    assertEquals("String property doesn't match", expectedValue, actualValue);
+                    break;
+                }
+                // byte[] property
+                case 0x09: // Correlation Data => Binary Data
+                case 0x16: // Authentication Data
+                {
+                    final byte[] expectedValue = ((MqttProperties.BinaryProperty) expectedProperty).value;
+                    final byte[] actualValue = ((MqttProperties.BinaryProperty) actualProperty).value;
+                    final String expectedHexDump = ByteBufUtil.hexDump(expectedValue);
+                    final String actualHexDump = ByteBufUtil.hexDump(actualValue);
+                    assertEquals("byte[] property doesn't match", expectedHexDump, actualHexDump);
+                    break;
+                }
+                default:
+                    fail("Property Id not recognized " + Integer.toHexString(expectedProperty.propertyId));
+            }
+        }
     }
 
     @Test
@@ -307,7 +387,7 @@ public class Mqtt5CodecTest {
     @Test
     public void testAuth() throws Exception {
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(0x11, 6)); // Identifier of the Authentication Data
+        props.add(new MqttProperties.BinaryProperty(0x16, "secret".getBytes())); // Identifier of the Authentication Data
         final MqttAuthMessage message = MqttMessageBuilders.auth()
                 .reasonCode((short) 0x18) // Continue authentication
                 .properties(props)

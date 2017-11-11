@@ -51,4 +51,8 @@ public class MqttProperties {
     public Collection<MqttProperty> listAll() {
         return props.values();
     }
+
+    public MqttProperty getProperty(int propertyId) {
+        return props.get(propertyId);
+    }
 }
