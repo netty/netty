@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 
 import static io.netty.util.AsciiString.contentEquals;
 import static org.junit.Assert.assertEquals;
@@ -299,5 +300,31 @@ public class CombinedHttpHeadersTest {
 
         HttpHeaders copiedHeaders = newCombinedHttpHeaders().add(headers);
         assertEquals(Arrays.asList("a", "", "b", "", "c, d"), copiedHeaders.getAll(HEADER_NAME));
+    }
+
+    @Test
+    public void valueIterator() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        headers.set(HEADER_NAME, Arrays.asList("\ta", "   ", "  b ", "\t \t"));
+        headers.add(HEADER_NAME, " c, d \t");
+
+        assertFalse(headers.valueStringIterator("foo").hasNext());
+        assertValueIterator(headers.valueStringIterator(HEADER_NAME));
+        assertFalse(headers.valueCharSequenceIterator("foo").hasNext());
+        assertValueIterator(headers.valueCharSequenceIterator(HEADER_NAME));
+    }
+
+    private static void assertValueIterator(Iterator<? extends CharSequence> strItr) {
+        assertTrue(strItr.hasNext());
+        assertEquals("a", strItr.next());
+        assertTrue(strItr.hasNext());
+        assertEquals("", strItr.next());
+        assertTrue(strItr.hasNext());
+        assertEquals("b", strItr.next());
+        assertTrue(strItr.hasNext());
+        assertEquals("", strItr.next());
+        assertTrue(strItr.hasNext());
+        assertEquals("c, d", strItr.next());
+        assertFalse(strItr.hasNext());
     }
 }
