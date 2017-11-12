@@ -1006,6 +1006,34 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
+     * Copies this string removing white space characters from the beginning and end of the string, and tries not to
+     * copy if possible.
+     *
+     * @param c The {@link CharSequence} to trim.
+     * @return a new string with characters {@code <= \\u0020} removed from the beginning and the end.
+     */
+    public static CharSequence trim(CharSequence c) {
+        if (c.getClass() == AsciiString.class) {
+            return ((AsciiString) c).trim();
+        }
+        if (c instanceof String) {
+            return ((String) c).trim();
+        }
+        int start = 0, last = c.length() - 1;
+        int end = last;
+        while (start <= end && c.charAt(start) <= ' ') {
+            start++;
+        }
+        while (end >= start && c.charAt(end) <= ' ') {
+            end--;
+        }
+        if (start == 0 && end == last) {
+            return c;
+        }
+        return c.subSequence(start, end);
+    }
+
+    /**
      * Duplicates this string removing white space characters from the beginning and end of the
      * string, without copying.
      *
