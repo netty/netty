@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static java.lang.Math.min;
@@ -77,6 +78,9 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     };
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
+
+    // See http://man7.org/linux/man-pages/man2/timerfd_create.2.html.
+    static final long MAX_SCHEDULED_DAYS = TimeUnit.SECONDS.toDays(999999999);
 
     EpollEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
                    SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
@@ -447,6 +451,14 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             // release native memory
             iovArray.release();
             events.free();
+        }
+    }
+
+    @Override
+    protected void validateScheduled(long amount, TimeUnit unit) {
+        long days = unit.toDays(amount);
+        if (days > MAX_SCHEDULED_DAYS) {
+            throw new IllegalArgumentException("days: " + days + " (expected: < " + MAX_SCHEDULED_DAYS + ')');
         }
     }
 }
