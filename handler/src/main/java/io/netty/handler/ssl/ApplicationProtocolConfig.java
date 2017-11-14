@@ -15,12 +15,13 @@
  */
 package io.netty.handler.ssl;
 
-import javax.net.ssl.SSLEngine;
 import java.util.Collections;
 import java.util.List;
 
-import static io.netty.handler.ssl.ApplicationProtocolUtil.*;
-import static io.netty.util.internal.ObjectUtil.*;
+import javax.net.ssl.SSLEngine;
+
+import static io.netty.handler.ssl.ApplicationProtocolUtil.toList;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Provides an {@link SSLEngine} agnostic way to configure a {@link ApplicationProtocolNegotiator}.
@@ -105,14 +106,53 @@ public final class ApplicationProtocolConfig {
      * Defines the most common behaviors for the peer that selects the application protocol.
      */
     public enum SelectorFailureBehavior {
-        FATAL_ALERT, NO_ADVERTISE, CHOOSE_MY_LAST_PROTOCOL
+        /**
+         * If the peer who selects the application protocol doesn't find a match this will result in the failing the
+         * handshake with a fatal alert.
+         * <p>
+         * For example in the case of ALPN this will result in a
+         * <a herf="https://tools.ietf.org/html/rfc7301#section-3.2">no_application_protocol(120)</a> alert.
+         */
+        FATAL_ALERT,
+        /**
+         * If the peer who selects the application protocol doesn't find a match it will pretend no to support
+         * the TLS extension by not advertising support for the TLS extension in the handshake. This is used in cases
+         * where a "best effort" is desired to talk even if there is no matching protocol.
+         */
+        NO_ADVERTISE,
+        /**
+         * If the peer who selects the application protocol doesn't find a match it will just select the last protocol
+         * it advertised support for. This is used in cases where a "best effort" is desired to talk even if there
+         * is no matching protocol, and the assumption is the "most general" fallback protocol is typically listed last.
+         * <p>
+         * This may be <a href="https://tools.ietf.org/html/rfc7301#section-3.2">illegal for some RFCs</a> but was
+         * observed behavior by some SSL implementations, and is supported for flexibility/compatibility.
+         */
+        CHOOSE_MY_LAST_PROTOCOL
     }
 
     /**
      * Defines the most common behaviors for the peer which is notified of the selected protocol.
      */
     public enum SelectedListenerFailureBehavior {
-        ACCEPT, FATAL_ALERT, CHOOSE_MY_LAST_PROTOCOL
+        /**
+         * If the peer who is notified what protocol was selected determines the selection was not matched, or the peer
+         * didn't advertise support for the TLS extension then the handshake will continue and the application protocol
+         * is assumed to be accepted.
+         */
+        ACCEPT,
+        /**
+         * If the peer who is notified what protocol was selected determines the selection was not matched, or the peer
+         * didn't advertise support for the TLS extension then the handshake will be failed with a fatal alert.
+         */
+        FATAL_ALERT,
+        /**
+         * If the peer who is notified what protocol was selected determines the selection was not matched, or the peer
+         * didn't advertise support for the TLS extension then the handshake will continue assuming the last protocol
+         * supported by this peer is used. This is used in cases where a "best effort" is desired to talk even if there
+         * is no matching protocol, and the assumption is the "most general" fallback protocol is typically listed last.
+         */
+        CHOOSE_MY_LAST_PROTOCOL
     }
 
     /**
