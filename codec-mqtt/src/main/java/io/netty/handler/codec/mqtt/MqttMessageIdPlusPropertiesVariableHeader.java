@@ -33,7 +33,6 @@ public final class MqttMessageIdPlusPropertiesVariableHeader extends MqttMessage
         this.properties = properties;
     }
 
-
     public MqttProperties properties() {
         return properties;
     }

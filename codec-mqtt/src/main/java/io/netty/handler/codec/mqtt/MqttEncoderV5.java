@@ -1,3 +1,18 @@
+/*
+ * Copyright 2014 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.mqtt;
 
 import io.netty.buffer.ByteBuf;
@@ -106,9 +121,10 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
         return buf;
     }
 
-    private static PacketSection encodeVariableHeaderWithProperties(ByteBufAllocator byteBufAllocator,
-                                                                                MqttConnectVariableHeader variableHeader,
-                                                                                int payloadSize) {
+    private static PacketSection encodeVariableHeaderWithProperties(
+            ByteBufAllocator byteBufAllocator,
+            MqttConnectVariableHeader variableHeader,
+            int payloadSize) {
         MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(variableHeader.name(),
                 (byte) variableHeader.version());
 
@@ -136,7 +152,7 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
     }
 
     private static PacketSection encodeProperties(ByteBufAllocator byteBufAllocator,
-                                                              MqttProperties mqttProperties) {
+                                                  MqttProperties mqttProperties) {
         ByteBuf propertiesHeaderBuf = byteBufAllocator.buffer();
         // encode also the Properties part
         ByteBuf propertiesBuf = byteBufAllocator.buffer();
@@ -204,7 +220,7 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
 
         ByteBuf buf = byteBufAllocator.buffer(4 + propertiesSection.bufferSize);
         buf.writeByte(EncodersUtils.getFixedHeaderByte1(message.fixedHeader()));
-        EncodersUtils.writeVariableLengthInt(buf, 2 +propertiesSection.bufferSize);
+        EncodersUtils.writeVariableLengthInt(buf, 2 + propertiesSection.bufferSize);
         buf.writeByte(message.variableHeader().isSessionPresent() ? 0x01 : 0x00);
         buf.writeByte(message.variableHeader().connectReturnCode().byteValue());
         buf.writeBytes(propertiesSection.byteBuf);
@@ -236,9 +252,10 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
         return buf;
     }
 
-    private static PacketSection encodeVariableHeaderWithPropeties(ByteBufAllocator byteBufAllocator,
-                                                                               MqttFixedHeader mqttFixedHeader,
-                                                                               MqttPublishVariableHeader variableHeader) {
+    private static PacketSection encodeVariableHeaderWithPropeties(
+            ByteBufAllocator byteBufAllocator,
+            MqttFixedHeader mqttFixedHeader,
+            MqttPublishVariableHeader variableHeader) {
         String topicName = variableHeader.topicName();
         byte[] topicNameBytes = EncodersUtils.encodeStringUtf8(topicName);
 
@@ -270,7 +287,7 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
 
         final PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader.properties());
 
-        int variableHeaderBufferSize = 3 + propertiesSection.bufferSize; // variable part only has a message id, reason code and properties
+        int variableHeaderBufferSize = 3 + propertiesSection.bufferSize;
         int fixedHeaderBufferSize = 1 + EncodersUtils.getVariableLengthInt(variableHeaderBufferSize);
         ByteBuf buf = byteBufAllocator.buffer(fixedHeaderBufferSize + variableHeaderBufferSize);
         buf.writeByte(EncodersUtils.getFixedHeaderByte1(mqttFixedHeader));
@@ -286,7 +303,7 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
             ByteBufAllocator byteBufAllocator,
             MqttSubAckMessage message) {
         final MqttMessageIdPlusPropertiesVariableHeader variableHeader =
-                ((MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader());
+                (MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader();
 
         final PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader.properties());
 
@@ -312,7 +329,7 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
             ByteBufAllocator byteBufAllocator,
             MqttUnsubAckMessage message) {
         final MqttMessageIdPlusPropertiesVariableHeader variableHeader =
-                ((MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader());
+                (MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader();
 
         final PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader.properties());
 
@@ -334,7 +351,6 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
         return buf;
     }
 
-
     private static ByteBuf encodeSubscribeMessage(
             ByteBufAllocator byteBufAllocator,
             MqttSubscribeMessage message) {
@@ -342,7 +358,7 @@ public final class MqttEncoderV5 extends MessageToMessageEncoder<MqttMessage> {
         int payloadBufferSize = 0;
 
         final MqttMessageIdPlusPropertiesVariableHeader variableHeader =
-                ((MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader());
+                (MqttMessageIdPlusPropertiesVariableHeader) message.variableHeader();
 
         final PacketSection propertiesSection = encodeProperties(byteBufAllocator, variableHeader.properties());
 
