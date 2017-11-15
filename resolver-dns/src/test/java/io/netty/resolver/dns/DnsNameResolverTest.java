@@ -1322,4 +1322,51 @@ public class DnsNameResolverTest {
             return rm.getEntry();
         }
     }
+
+    @Test(timeout = 3000)
+    public void testTimeoutNotCached() {
+        DnsCache cache = new DnsCache() {
+            @Override
+            public void clear() {
+                // NOOP
+            }
+
+            @Override
+            public boolean clear(String hostname) {
+                return false;
+            }
+
+            @Override
+            public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+                return Collections.emptyList();
+            }
+
+            @Override
+            public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, InetAddress address,
+                                       long originalTtl, EventLoop loop) {
+                fail("Should not be cached");
+                return null;
+            }
+
+            @Override
+            public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
+                fail("Should not be cached");
+                return null;
+            }
+        };
+        DnsNameResolverBuilder builder = newResolver();
+        builder.queryTimeoutMillis(100)
+                .authoritativeDnsServerCache(cache)
+                .resolveCache(cache)
+                .nameServerProvider(new SingletonDnsServerAddressStreamProvider(
+                        new InetSocketAddress(NetUtil.LOCALHOST, 12345)));
+        DnsNameResolver resolver = builder.build();
+        Future<InetAddress> result = resolver.resolve("doesnotexist.netty.io").awaitUninterruptibly();
+        Throwable cause = result.cause();
+        assertTrue(cause instanceof UnknownHostException);
+        assertTrue(cause.getCause() instanceof DnsNameResolverTimeoutException);
+        assertTrue(DnsNameResolver.isTimeoutError(cause));
+        assertTrue(DnsNameResolver.isTransportOrTimeoutError(cause));
+        resolver.close();
+    }
 }
