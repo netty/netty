@@ -371,6 +371,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private boolean sentFirstMessage;
     private boolean flushedBeforeHandshake;
     private boolean readDuringHandshake;
+    private boolean handshakeStarted;
     private SslHandlerCoalescingBufferQueue pendingUnencryptedWrites;
     private Promise<Channel> handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslClosePromise = new LazyChannelPromise();
@@ -864,7 +865,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     /**
      * This method will not call
-     * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable, boolean)} or
+     * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable, boolean, boolean)} or
      * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable)}.
      * @return {@code true} if this method ends on {@link SSLEngineResult.HandshakeStatus#NOT_HANDSHAKING}.
      */
@@ -1001,7 +1002,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         // Make sure to release SSLEngine,
         // and notify the handshake future if the connection has been closed during handshake.
-        setHandshakeFailure(ctx, CHANNEL_CLOSED, !outboundClosed);
+        setHandshakeFailure(ctx, CHANNEL_CLOSED, !outboundClosed, handshakeStarted);
 
         // Ensure we always notify the sslClosePromise as well
         notifyClosePromise(CHANNEL_CLOSED);
@@ -1489,13 +1490,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Notify all the handshake futures about the failure during the handshake.
      */
     private void setHandshakeFailure(ChannelHandlerContext ctx, Throwable cause) {
-        setHandshakeFailure(ctx, cause, true);
+        setHandshakeFailure(ctx, cause, true, true);
     }
 
     /**
      * Notify all the handshake futures about the failure during the handshake.
      */
-    private void setHandshakeFailure(ChannelHandlerContext ctx, Throwable cause, boolean closeInbound) {
+    private void setHandshakeFailure(ChannelHandlerContext ctx, Throwable cause, boolean closeInbound, boolean notify) {
         try {
             // Release all resources such as internal buffers that SSLEngine
             // is managing.
@@ -1515,7 +1516,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     }
                 }
             }
-            notifyHandshakeFailure(cause);
+            notifyHandshakeFailure(cause, notify);
         } finally {
             // Ensure we remove and fail all pending writes in all cases and so release memory quickly.
             releaseAndFailAll(cause);
@@ -1528,9 +1529,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
     }
 
-    private void notifyHandshakeFailure(Throwable cause) {
+    private void notifyHandshakeFailure(Throwable cause, boolean notify) {
         if (handshakePromise.tryFailure(cause)) {
-            SslUtils.notifyHandshakeFailure(ctx, cause);
+            SslUtils.notifyHandshakeFailure(ctx, cause, notify);
         }
     }
 
@@ -1592,14 +1593,19 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(ctx.channel(), 16);
         if (ctx.channel().isActive()) {
-            if (engine.getUseClientMode()) {
-                // Begin the initial handshake.
-                // channelActive() event has been fired already, which means this.channelActive() will
-                // not be invoked. We have to initialize here instead.
-                handshake(null);
-            } else {
-                applyHandshakeTimeout(null);
-            }
+            startHandshakeProcessing();
+        }
+    }
+
+    private void startHandshakeProcessing() {
+        handshakeStarted = true;
+        if (engine.getUseClientMode()) {
+            // Begin the initial handshake.
+            // channelActive() event has been fired already, which means this.channelActive() will
+            // not be invoked. We have to initialize here instead.
+            handshake(null);
+        } else {
+            applyHandshakeTimeout(null);
         }
     }
 
@@ -1709,7 +1715,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     return;
                 }
                 try {
-                    notifyHandshakeFailure(HANDSHAKE_TIMED_OUT);
+                    notifyHandshakeFailure(HANDSHAKE_TIMED_OUT, true);
                 } finally {
                     releaseAndFailAll(HANDSHAKE_TIMED_OUT);
                 }
@@ -1736,12 +1742,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         if (!startTls) {
-            if (engine.getUseClientMode()) {
-                // Begin the initial handshake.
-                handshake(null);
-            } else {
-                applyHandshakeTimeout(null);
-            }
+            startHandshakeProcessing();
         }
         ctx.fireChannelActive();
     }
