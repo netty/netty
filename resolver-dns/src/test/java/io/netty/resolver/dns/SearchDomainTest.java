@@ -104,8 +104,10 @@ public class SearchDomainTest {
         // "host2" not resolved
         assertNotResolve(resolver, "host2");
 
-        // "host3" does not contain a dot or is not absolute
-        assertNotResolve(resolver, "host3");
+        // "host3" does not contain a dot nor it's absolute but it should still be resolved after search list have
+        // been checked
+        resolved = assertResolve(resolver, "host3");
+        assertEquals(store.getAddress("host3"), resolved);
 
         // "host3." does not contain a dot but is absolute
         resolved = assertResolve(resolver, "host3.");
@@ -152,8 +154,10 @@ public class SearchDomainTest {
         // "host2" not resolved
         assertNotResolveAll(resolver, "host2");
 
-        // "host3" does not contain a dot or is not absolute
-        assertNotResolveAll(resolver, "host3");
+        // "host3" does not contain a dot nor it's absolute but it should still be resolved after search list have
+        // been checked
+        resolved = assertResolveAll(resolver, "host3");
+        assertEquals(store.getAddresses("host3"), resolved);
 
         // "host3." does not contain a dot but is absolute
         resolved = assertResolveAll(resolver, "host3.");
@@ -281,7 +285,7 @@ public class SearchDomainTest {
         dnsServer = new TestDnsServer(store);
         dnsServer.start();
 
-        resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).ndots(2).build();
+        resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).ndots(1).build();
 
         Future<InetAddress> fut = resolver.resolve("unknown.hostname");
         assertTrue(fut.await(10, TimeUnit.SECONDS));
@@ -293,12 +297,12 @@ public class SearchDomainTest {
     }
 
     @Test
-    public void testExceptionMsgDoesNotContainSearchDomainIfNdotsNotHighEnough() throws Exception {
+    public void testExceptionMsgDoesNotContainSearchDomainIfNdotsIsNotReached() throws Exception {
         TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.<String>emptySet());
         dnsServer = new TestDnsServer(store);
         dnsServer.start();
 
-        resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).ndots(1).build();
+        resolver = newResolver().searchDomains(Collections.singletonList("foo.com")).ndots(2).build();
 
         Future<InetAddress> fut = resolver.resolve("unknown.hostname");
         assertTrue(fut.await(10, TimeUnit.SECONDS));
