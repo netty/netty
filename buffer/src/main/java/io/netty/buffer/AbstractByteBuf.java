@@ -686,6 +686,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf readSlice(int length) {
+        checkReadableBytes(length);
         ByteBuf slice = slice(readerIndex, length);
         readerIndex += length;
         return slice;

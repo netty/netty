@@ -81,7 +81,12 @@ public class SimpleLeakAwareCompositeByteBufTest extends WrappedCompositeByteBuf
 
     @Test
     public void testWrapReadSlice() {
-        assertWrapped(newBuffer(8).readSlice(1));
+        ByteBuf buffer = newBuffer(8);
+        if (buffer.isReadable()) {
+            assertWrapped(buffer.readSlice(1));
+        } else {
+            assertTrue(buffer.release());
+        }
     }
 
     @Test

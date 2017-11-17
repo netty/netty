@@ -2719,6 +2719,18 @@ public abstract class AbstractByteBufTest {
         assertEquals(0, buf.refCnt());
     }
 
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testReadSliceOutOfBounds() {
+        ByteBuf buf = newBuffer(100);
+        try {
+            buf.writeZero(50);
+            buf.readSlice(51);
+            fail();
+        } finally {
+            buf.release();
+        }
+    }
+
     @Test
     public void testDuplicateRelease() {
         ByteBuf buf = newBuffer(8);
