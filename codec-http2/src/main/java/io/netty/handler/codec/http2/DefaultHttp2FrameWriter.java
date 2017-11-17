@@ -641,7 +641,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 prevPadding = padding;
                 flags.paddingPresent(padding > 0);
                 flags.endOfStream(endOfStream);
-                frameHeader = buffer.readSlice(DATA_FRAME_HEADER_LENGTH).writerIndex(0);
+                frameHeader = buffer.slice(buffer.readerIndex(), DATA_FRAME_HEADER_LENGTH).writerIndex(0);
+                buffer.setIndex(buffer.readerIndex() + DATA_FRAME_HEADER_LENGTH,
+                                buffer.writerIndex() + DATA_FRAME_HEADER_LENGTH);
 
                 int payloadLength = data + padding;
                 writeFrameHeaderInternal(frameHeader, payloadLength, DATA, flags, streamId);
