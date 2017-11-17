@@ -3286,6 +3286,31 @@ public abstract class AbstractByteBufTest {
         assertEquals(0, buf.refCnt());
     }
 
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testReadSliceOutOfBounds() {
+        testReadSliceOutOfBounds(false);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testReadRetainedSliceOutOfBounds() {
+        testReadSliceOutOfBounds(true);
+    }
+
+    private void testReadSliceOutOfBounds(boolean retainedSlice) {
+        ByteBuf buf = newBuffer(100);
+        try {
+            buf.writeZero(50);
+            if (retainedSlice) {
+                buf.readRetainedSlice(51);
+            } else {
+                buf.readSlice(51);
+            }
+            fail();
+        } finally {
+            buf.release();
+        }
+    }
+
     @Test
     public void testWriteUsAsciiCharSequenceExpand() {
         testWriteCharSequenceExpand(CharsetUtil.US_ASCII);
