@@ -40,7 +40,6 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpScheme.HTTP;
 import static io.netty.handler.codec.http.HttpScheme.HTTPS;
@@ -446,7 +445,6 @@ public final class HttpConversionUtil {
 
     public static void toHttp2Headers(HttpHeaders inHeaders, Http2Headers out) {
         Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
-            new CharSequenceMap<AsciiString>();
         CharSequenceMap<AsciiString> connectionBlacklist =
             toLowercaseMap(inHeaders.getAll(HttpHeaderNames.CONNECTION));
         while (iter.hasNext()) {
