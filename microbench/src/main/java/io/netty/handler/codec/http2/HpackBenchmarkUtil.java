@@ -38,8 +38,8 @@ import java.util.Map;
 /**
  * Utility methods for hpack tests.
  */
-public final class HpackUtil {
-    private HpackUtil() {
+public final class HpackBenchmarkUtil {
+    private HpackBenchmarkUtil() {
     }
 
     /**
