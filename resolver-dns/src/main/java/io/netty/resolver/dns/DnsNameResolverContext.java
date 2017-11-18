@@ -125,31 +125,41 @@ abstract class DnsNameResolverContext<T> {
     }
 
     void resolve(final Promise<T> promise) {
-        if (parent.searchDomains().length == 0 || parent.ndots() == 0 || StringUtil.endsWith(hostname, '.')) {
+        final String[] searchDomains = parent.searchDomains();
+        if (searchDomains.length == 0 || parent.ndots() == 0 || StringUtil.endsWith(hostname, '.')) {
             internalResolve(promise);
         } else {
-            int dots = 0;
-            for (int idx = hostname.length() - 1; idx >= 0; idx--) {
-                if (hostname.charAt(idx) == '.' && ++dots >= parent.ndots()) {
-                    internalResolve(promise);
-                    return;
-                }
-            }
+            final boolean startWithoutSearchDomain = hasNDots();
+            final String initialHostname = startWithoutSearchDomain ? hostname : hostname + '.' + searchDomains[0];
+            final int initialSearchDomainIdx = startWithoutSearchDomain ? 0 : 1;
 
-            doSearchDomainQuery(0, new FutureListener<T>() {
-                private int count = 1;
+            doSearchDomainQuery(initialHostname, new FutureListener<T>() {
+                private int searchDomainIdx = initialSearchDomainIdx;
                 @Override
                 public void operationComplete(Future<T> future) throws Exception {
                     if (future.isSuccess()) {
                         promise.trySuccess(future.getNow());
-                    } else if (count < parent.searchDomains().length) {
-                        doSearchDomainQuery(count++, this);
+                    } else if (searchDomainIdx < searchDomains.length) {
+                        doSearchDomainQuery(hostname + '.' + searchDomains[searchDomainIdx++], this);
                     } else {
-                        promise.tryFailure(new SearchDomainUnknownHostException(future.cause(), hostname));
+                        if (!startWithoutSearchDomain) {
+                            internalResolve(promise);
+                        } else {
+                            promise.tryFailure(new SearchDomainUnknownHostException(future.cause(), hostname));
+                        }
                     }
                 }
             });
         }
+    }
+
+    private boolean hasNDots() {
+        for (int idx = hostname.length() - 1, dots = 0; idx >= 0; idx--) {
+            if (hostname.charAt(idx) == '.' && ++dots >= parent.ndots()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static final class SearchDomainUnknownHostException extends UnknownHostException {
@@ -166,12 +176,9 @@ abstract class DnsNameResolverContext<T> {
         }
     }
 
-    private void doSearchDomainQuery(int count, FutureListener<T> listener) {
-        DnsNameResolverContext<T> nextContext = newResolverContext(parent,
-                                                                   hostname + '.' + parent.searchDomains()[count],
-                                                                   additionals,
-                                                                   resolveCache,
-                                                                   nameServerAddrs);
+    private void doSearchDomainQuery(String hostname, FutureListener<T> listener) {
+        DnsNameResolverContext<T> nextContext = newResolverContext(parent, hostname, additionals, resolveCache,
+                nameServerAddrs);
         Promise<T> nextPromise = parent.executor().newPromise();
         nextContext.internalResolve(nextPromise);
         nextPromise.addListener(listener);
