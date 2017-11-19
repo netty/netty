@@ -286,4 +286,55 @@ public class HttpResponseEncoderTest {
         buffer = (ByteBuf) channel.readOutbound();
         buffer.release();
     }
+
+    @Test
+    public void testEmptyContentsChunked() throws Exception {
+        testEmptyContents(true, false);
+    }
+
+    @Test
+    public void testEmptyContentsChunkedWithTrailers() throws Exception {
+        testEmptyContents(true, true);
+    }
+
+    @Test
+    public void testEmptyContentsNotChunked() throws Exception {
+        testEmptyContents(false, false);
+    }
+
+    @Test
+    public void testEmptyContentNotsChunkedWithTrailers() throws Exception {
+        testEmptyContents(false, true);
+    }
+
+    private void testEmptyContents(boolean chunked, boolean trailers) throws Exception {
+        HttpResponseEncoder encoder = new HttpResponseEncoder();
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        HttpResponse request = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        if (chunked) {
+            HttpHeaders.setTransferEncodingChunked(request);
+        }
+        assertTrue(channel.writeOutbound(request));
+
+        ByteBuf contentBuffer = Unpooled.buffer();
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(contentBuffer)));
+
+        ByteBuf lastContentBuffer = Unpooled.buffer();
+        LastHttpContent last = new DefaultLastHttpContent(lastContentBuffer);
+        if (trailers) {
+            last.trailingHeaders().set("X-Netty-Test", "true");
+        }
+        assertTrue(channel.writeOutbound(last));
+
+        // Ensure we only produce ByteBuf instances.
+        ByteBuf head = (ByteBuf) channel.readOutbound();
+        assertTrue(head.release());
+
+        ByteBuf content = (ByteBuf) channel.readOutbound();
+        content.release();
+
+        ByteBuf lastContent = (ByteBuf) channel.readOutbound();
+        lastContent.release();
+        assertFalse(channel.finish());
+    }
 }
