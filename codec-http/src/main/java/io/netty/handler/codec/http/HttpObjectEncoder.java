@@ -206,6 +206,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 buf.writeBytes(CRLF);
                 trailersEncodedSizeAccumulator = TRAILERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
                                                  TRAILERS_WEIGHT_HISTORICAL * trailersEncodedSizeAccumulator;
+                out.add(buf);
             }
         } else if (contentLength == 0) {
             // Need to produce some output otherwise an
