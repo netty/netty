@@ -38,7 +38,6 @@ import io.netty.util.internal.UnstableApi;
 
 import java.net.URI;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map.Entry;
 
 import static io.netty.handler.codec.http.HttpScheme.HTTP;
@@ -413,14 +412,13 @@ public final class HttpConversionUtil {
         return out;
     }
 
-    private static CharSequenceMap<AsciiString> toLowercaseMap(List<String> values) {
+    private static CharSequenceMap<AsciiString> toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
+                                                               int arraySizeHint) {
         UnsupportedValueConverter<AsciiString> valueConverter = UnsupportedValueConverter.<AsciiString>instance();
-        CharSequenceMap<AsciiString> result =
-            new CharSequenceMap<AsciiString>(true, valueConverter, values.size());
+        CharSequenceMap<AsciiString> result = new CharSequenceMap<AsciiString>(true, valueConverter, arraySizeHint);
 
-        // we iterate because the underlying list is probably a linked list
-        for (CharSequence value : values) {
-            AsciiString lowerCased = AsciiString.of(value).toLowerCase();
+        while (valuesIter.hasNext()) {
+            AsciiString lowerCased = AsciiString.of(valuesIter.next()).toLowerCase();
             try {
                 int index = lowerCased.forEachByte(FIND_COMMA);
                 if (index != -1) {
@@ -429,7 +427,7 @@ public final class HttpConversionUtil {
                         result.add(lowerCased.subSequence(start, index, false).trim(), EMPTY_STRING);
                         start = index + 1;
                     } while (start < lowerCased.length() &&
-                             (index = lowerCased.forEachByte(start, value.length() - start, FIND_COMMA)) != -1);
+                             (index = lowerCased.forEachByte(start, lowerCased.length() - start, FIND_COMMA)) != -1);
                     result.add(lowerCased.subSequence(start, lowerCased.length(), false).trim(), EMPTY_STRING);
                 } else {
                     result.add(lowerCased.trim(), EMPTY_STRING);
@@ -445,8 +443,10 @@ public final class HttpConversionUtil {
 
     public static void toHttp2Headers(HttpHeaders inHeaders, Http2Headers out) {
         Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
+        // Choose 8 as a default size because it is unlikely we will see more than 4 Connection headers values, but
+        // still allowing for "enough" space in the map to reduce the chance of hash code collision.
         CharSequenceMap<AsciiString> connectionBlacklist =
-            toLowercaseMap(inHeaders.getAll(HttpHeaderNames.CONNECTION));
+            toLowercaseMap(inHeaders.valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
         while (iter.hasNext()) {
             Entry<CharSequence, CharSequence> entry = iter.next();
             final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
