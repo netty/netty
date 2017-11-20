@@ -318,7 +318,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         // upgraded requests are ineligible for stream control
         if (streamId == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
             Boolean upgraded = stream.getProperty(upgradeKey);
-            if (upgraded != null && upgraded) {
+            if (Boolean.TRUE.equals(upgraded)) {
                 return true;
             }
         }
