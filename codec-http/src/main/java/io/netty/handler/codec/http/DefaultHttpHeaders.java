@@ -277,6 +277,32 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     @Override
+    public Iterator<String> valueStringIterator(CharSequence name) {
+        final Iterator<CharSequence> itr = valueCharSequenceIterator(name);
+        return new Iterator<String>() {
+            @Override
+            public boolean hasNext() {
+                return itr.hasNext();
+            }
+
+            @Override
+            public String next() {
+                return itr.next().toString();
+            }
+
+            @Override
+            public void remove() {
+                itr.remove();
+            }
+        };
+    }
+
+    @Override
+    public Iterator<CharSequence> valueCharSequenceIterator(CharSequence name) {
+        return headers.valueIterator(name);
+    }
+
+    @Override
     public boolean contains(String name) {
         return contains((CharSequence) name);
     }
