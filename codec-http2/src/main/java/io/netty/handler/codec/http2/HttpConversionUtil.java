@@ -24,7 +24,6 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
@@ -38,8 +37,13 @@ import io.netty.util.internal.UnstableApi;
 
 import java.net.URI;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderNames.COOKIE;
+import static io.netty.handler.codec.http.HttpHeaderNames.TE;
+import static io.netty.handler.codec.http.HttpHeaderValues.TRAILERS;
 import static io.netty.handler.codec.http.HttpScheme.HTTP;
 import static io.netty.handler.codec.http.HttpScheme.HTTPS;
 import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
@@ -48,11 +52,15 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.AsciiString.EMPTY_STRING;
+import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
+import static io.netty.util.AsciiString.indexOf;
+import static io.netty.util.AsciiString.trim;
 import static io.netty.util.ByteProcessor.FIND_COMMA;
 import static io.netty.util.ByteProcessor.FIND_SEMI_COLON;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.StringUtil.length;
+import static io.netty.util.internal.StringUtil.unescapeCsvFields;
 
 /**
  * Provides utility methods and constants for the HTTP/2 to HTTP conversion
@@ -65,7 +73,7 @@ public final class HttpConversionUtil {
     private static final CharSequenceMap<AsciiString> HTTP_TO_HTTP2_HEADER_BLACKLIST =
             new CharSequenceMap<AsciiString>();
     static {
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.CONNECTION, EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(CONNECTION, EMPTY_STRING);
         @SuppressWarnings("deprecation")
         AsciiString keepAlive = HttpHeaderNames.KEEP_ALIVE;
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(keepAlive, EMPTY_STRING);
@@ -441,23 +449,43 @@ public final class HttpConversionUtil {
         return result;
     }
 
+    /**
+     * Filter the {@link HttpHeaderNames#TE} header according to the
+     * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.2">special rules in the HTTP/2 RFC</a>.
+     * @param entry An entry whose name is {@link HttpHeaderNames#TE}.
+     * @param out the resulting HTTP/2 headers.
+     */
+    private static void toHttp2HeadersFilterTE(Entry<CharSequence, CharSequence> entry,
+                                               Http2Headers out) {
+        if (indexOf(entry.getValue(), ',', 0) == -1) {
+            if (contentEqualsIgnoreCase(trim(entry.getValue()), TRAILERS)) {
+                out.add(TE, TRAILERS);
+            }
+        } else {
+            List<CharSequence> teValues = unescapeCsvFields(entry.getValue());
+            for (CharSequence teValue : teValues) {
+                if (contentEqualsIgnoreCase(trim(teValue), TRAILERS)) {
+                    out.add(TE, TRAILERS);
+                    break;
+                }
+            }
+        }
+    }
+
     public static void toHttp2Headers(HttpHeaders inHeaders, Http2Headers out) {
         Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
         // Choose 8 as a default size because it is unlikely we will see more than 4 Connection headers values, but
         // still allowing for "enough" space in the map to reduce the chance of hash code collision.
         CharSequenceMap<AsciiString> connectionBlacklist =
-            toLowercaseMap(inHeaders.valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
+            toLowercaseMap(inHeaders.valueCharSequenceIterator(CONNECTION), 8);
         while (iter.hasNext()) {
             Entry<CharSequence, CharSequence> entry = iter.next();
             final AsciiString aName = AsciiString.of(entry.getKey()).toLowerCase();
-            if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName) &&
-                !connectionBlacklist.contains(aName)) {
+            if (!HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName) && !connectionBlacklist.contains(aName)) {
                 // https://tools.ietf.org/html/rfc7540#section-8.1.2.2 makes a special exception for TE
-                if (aName.contentEqualsIgnoreCase(HttpHeaderNames.TE)) {
-                    if (AsciiString.containsIgnoreCase(entry.getValue(), HttpHeaderValues.TRAILERS)) {
-                        out.add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS);
-                    }
-                } else if (aName.contentEqualsIgnoreCase(HttpHeaderNames.COOKIE)) {
+                if (aName.contentEqualsIgnoreCase(TE)) {
+                    toHttp2HeadersFilterTE(entry, out);
+                } else if (aName.contentEqualsIgnoreCase(COOKIE)) {
                     AsciiString value = AsciiString.of(entry.getValue());
                     // split up cookies to allow for better compression
                     // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
@@ -466,7 +494,7 @@ public final class HttpConversionUtil {
                         if (index != -1) {
                             int start = 0;
                             do {
-                                out.add(HttpHeaderNames.COOKIE, value.subSequence(start, index, false));
+                                out.add(COOKIE, value.subSequence(start, index, false));
                                 // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
                                 start = index + 2;
                             } while (start < value.length() &&
@@ -474,9 +502,9 @@ public final class HttpConversionUtil {
                             if (start >= value.length()) {
                                 throw new IllegalArgumentException("cookie value is of unexpected format: " + value);
                             }
-                            out.add(HttpHeaderNames.COOKIE, value.subSequence(start, value.length(), false));
+                            out.add(COOKIE, value.subSequence(start, value.length(), false));
                         } else {
-                            out.add(HttpHeaderNames.COOKIE, value);
+                            out.add(COOKIE, value);
                         }
                     } catch (Exception e) {
                         // This is not expect to happen because FIND_SEMI_COLON never throws but must be caught
@@ -604,11 +632,11 @@ public final class HttpConversionUtil {
                     throw streamError(streamId, PROTOCOL_ERROR,
                             "Invalid HTTP/2 header '%s' encountered in translation to HTTP/1.x", name);
                 }
-                if (HttpHeaderNames.COOKIE.equals(name)) {
+                if (COOKIE.equals(name)) {
                     // combine the cookie values into 1 header entry.
                     // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
-                    String existingCookie = output.get(HttpHeaderNames.COOKIE);
-                    output.set(HttpHeaderNames.COOKIE,
+                    String existingCookie = output.get(COOKIE);
+                    output.set(COOKIE,
                                (existingCookie != null) ? (existingCookie + "; " + value) : value);
                 } else {
                     output.add(name, value);
