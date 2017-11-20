@@ -17,12 +17,18 @@ package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AsciiString;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderNames.TE;
+import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
+import static io.netty.handler.codec.http.HttpHeaderValues.TRAILERS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 public class HttpConversionUtilTest {
     @Test
@@ -63,7 +69,7 @@ public class HttpConversionUtilTest {
     @Test
     public void stripTEHeaders() {
         HttpHeaders inHeaders = new DefaultHttpHeaders();
-        inHeaders.add(HttpHeaderNames.TE, HttpHeaderValues.GZIP);
+        inHeaders.add(TE, GZIP);
         Http2Headers out = new DefaultHttp2Headers();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertTrue(out.isEmpty());
@@ -72,17 +78,53 @@ public class HttpConversionUtilTest {
     @Test
     public void stripTEHeadersExcludingTrailers() {
         HttpHeaders inHeaders = new DefaultHttpHeaders();
-        inHeaders.add(HttpHeaderNames.TE, HttpHeaderValues.GZIP);
-        inHeaders.add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS);
+        inHeaders.add(TE, GZIP);
+        inHeaders.add(TE, TRAILERS);
         Http2Headers out = new DefaultHttp2Headers();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
-        assertSame(HttpHeaderValues.TRAILERS, out.get(HttpHeaderNames.TE));
+        assertSame(TRAILERS, out.get(TE));
+    }
+
+    @Test
+    public void stripTEHeadersCsvSeparatedExcludingTrailers() {
+        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(TE, GZIP + "," + TRAILERS);
+        Http2Headers out = new DefaultHttp2Headers();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertSame(TRAILERS, out.get(TE));
+    }
+
+    @Test
+    public void stripTEHeadersCsvSeparatedAccountsForValueSimilarToTrailers() {
+        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(TE, GZIP + "," + TRAILERS + "foo");
+        Http2Headers out = new DefaultHttp2Headers();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertFalse(out.contains(TE));
+    }
+
+    @Test
+    public void stripTEHeadersAccountsForValueSimilarToTrailers() {
+        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(TE, TRAILERS + "foo");
+        Http2Headers out = new DefaultHttp2Headers();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertFalse(out.contains(TE));
+    }
+
+    @Test
+    public void stripTEHeadersAccountsForOWS() {
+        HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(TE, " " + TRAILERS + " ");
+        Http2Headers out = new DefaultHttp2Headers();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertSame(TRAILERS, out.get(TE));
     }
 
     @Test
     public void stripConnectionHeadersAndNominees() {
         HttpHeaders inHeaders = new DefaultHttpHeaders();
-        inHeaders.add(HttpHeaderNames.CONNECTION, "foo");
+        inHeaders.add(CONNECTION, "foo");
         inHeaders.add("foo", "bar");
         Http2Headers out = new DefaultHttp2Headers();
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
@@ -92,7 +134,7 @@ public class HttpConversionUtilTest {
     @Test
     public void stripConnectionNomineesWithCsv() {
         HttpHeaders inHeaders = new DefaultHttpHeaders();
-        inHeaders.add(HttpHeaderNames.CONNECTION, "foo,  bar");
+        inHeaders.add(CONNECTION, "foo,  bar");
         inHeaders.add("foo", "baz");
         inHeaders.add("bar", "qux");
         inHeaders.add("hello", "world");
