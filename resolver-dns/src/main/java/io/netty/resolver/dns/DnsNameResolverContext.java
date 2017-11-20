@@ -141,12 +141,10 @@ abstract class DnsNameResolverContext<T> {
                         promise.trySuccess(future.getNow());
                     } else if (searchDomainIdx < searchDomains.length) {
                         doSearchDomainQuery(hostname + '.' + searchDomains[searchDomainIdx++], this);
+                    } else if (!startWithoutSearchDomain) {
+                        internalResolve(promise);
                     } else {
-                        if (!startWithoutSearchDomain) {
-                            internalResolve(promise);
-                        } else {
-                            promise.tryFailure(new SearchDomainUnknownHostException(future.cause(), hostname));
-                        }
+                        promise.tryFailure(new SearchDomainUnknownHostException(future.cause(), hostname));
                     }
                 }
             });
