@@ -65,6 +65,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,13 +84,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class DnsNameResolverTest {
 
@@ -1046,8 +1041,10 @@ public class DnsNameResolverTest {
             if (cache) {
                 assertNull(nsCache.cache.get("io.", null));
                 assertNull(nsCache.cache.get("netty.io.", null));
-                List<? extends DnsCacheEntry> entries = nsCache.cache.get("record.netty.io.", null);
-                assertEquals(1, entries.size());
+                Iterator<? extends DnsCacheEntry> entries = nsCache.cache.get("record.netty.io.", null).iterator();
+                assertTrue(entries.hasNext());
+                entries.next();
+                assertFalse(entries.hasNext());
 
                 assertNull(nsCache.cache.get(hostname, null));
 
@@ -1234,8 +1231,8 @@ public class DnsNameResolverTest {
 
     private static final class TestDnsCache implements DnsCache {
         private final DnsCache cache;
-        final Map<String, List<? extends DnsCacheEntry>> cacheHits = new HashMap<String,
-                                                                                  List<? extends DnsCacheEntry>>();
+        final Map<String, Iterable<? extends DnsCacheEntry>> cacheHits = new HashMap<String,
+                Iterable<? extends DnsCacheEntry>>();
 
         TestDnsCache(DnsCache cache) {
             this.cache = cache;
@@ -1252,8 +1249,8 @@ public class DnsNameResolverTest {
         }
 
         @Override
-        public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
-            List<? extends DnsCacheEntry> cacheEntries = cache.get(hostname, additionals);
+        public Iterable<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+            Iterable<? extends DnsCacheEntry> cacheEntries = cache.get(hostname, additionals);
             cacheHits.put(hostname, cacheEntries);
             return cacheEntries;
         }
