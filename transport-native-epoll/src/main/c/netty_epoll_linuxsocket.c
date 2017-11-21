@@ -256,9 +256,8 @@ static jint netty_epoll_linuxsocket_isTcpQuickAck(JNIEnv* env, jclass clazz, jin
 
 static jint netty_epoll_linuxsocket_isTcpFastOpenConnect(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
-    int optlen = sizeof(optval);
-    // We call getsockopt directly so we can handle ENOPROTOOPT by ourself.
-    if (getsockopt(fd, IPPROTO_TCP, TCP_FASTOPEN_CONNECT, &optval, &optlen) == -1) {
+    // We call netty_unix_socket_getOption0 directly so we can handle ENOPROTOOPT by ourself.
+    if (netty_unix_socket_getOption0(fd, IPPROTO_TCP, TCP_FASTOPEN_CONNECT, &optval, sizeof(optval)) == -1) {
         if (errno == ENOPROTOOPT) {
             // Not supported by the system, so just return 0.
             return 0;
