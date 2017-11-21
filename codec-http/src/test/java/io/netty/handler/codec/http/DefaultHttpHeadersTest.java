@@ -209,6 +209,26 @@ public class DefaultHttpHeadersTest {
         assertDefaultValues(headers, HeaderValue.THREE);
     }
 
+    @Test
+    public void toStringOnEmptyHeaders() {
+        assertEquals("DefaultHttpHeaders[]", newDefaultDefaultHttpHeaders().toString());
+    }
+
+    @Test
+    public void toStringOnSingleHeader() {
+        assertEquals("DefaultHttpHeaders[foo: bar]", newDefaultDefaultHttpHeaders()
+                .add("foo", "bar")
+                .toString());
+    }
+
+    @Test
+    public void toStringOnMultipleHeaders() {
+        assertEquals("DefaultHttpHeaders[foo: bar, baz: qix]", newDefaultDefaultHttpHeaders()
+                .add("foo", "bar")
+                .add("baz", "qix")
+                .toString());
+    }
+
     private static void assertDefaultValues(final DefaultHttpHeaders headers, final HeaderValue headerValue) {
         assertTrue(contentEquals(headerValue.asList().get(0), headers.get(HEADER_NAME)));
         List<CharSequence> expected = headerValue.asList();
