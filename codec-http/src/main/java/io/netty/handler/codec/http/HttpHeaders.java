@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.Headers;
+import io.netty.handler.codec.HeadersUtils;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
@@ -1686,5 +1687,10 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     public boolean contains(CharSequence name, CharSequence value, boolean ignoreCase) {
         return contains(name.toString(), value.toString(), ignoreCase);
+    }
+
+    @Override
+    public String toString() {
+        return HeadersUtils.toString(getClass(), iteratorCharSequence(), size());
     }
 }

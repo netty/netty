@@ -889,17 +889,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append('[');
-        String separator = "";
-        for (K name : names()) {
-            List<V> values = getAll(name);
-            for (int i = 0; i < values.size(); ++i) {
-                builder.append(separator);
-                builder.append(name).append(": ").append(values.get(i));
-                separator = ", ";
-            }
-        }
-        return builder.append(']').toString();
+        return HeadersUtils.toString(getClass(), iterator(), size());
     }
 
     protected HeaderEntry<K, V> newHeaderEntry(int h, K name, V value, HeaderEntry<K, V> next) {
