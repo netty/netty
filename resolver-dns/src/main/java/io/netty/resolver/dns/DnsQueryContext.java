@@ -213,13 +213,12 @@ final class DnsQueryContext {
            .append(" (no stack trace available)");
 
         final DnsNameResolverException e;
-        if (cause == null) {
-            // This was caused by an timeout so use DnsNameResolverTimeoutException to allow the user to
-            // handle it special (like retry the query).
-            e = new DnsNameResolverTimeoutException(nameServerAddr, question(), buf.toString());
-        } else {
+        if (cause != null) {
             e = new DnsNameResolverException(nameServerAddr, question(), buf.toString(), cause);
+        } else {
+            e = new DnsNameResolverException(nameServerAddr, question(), buf.toString());
         }
+
         promise.tryFailure(e);
     }
 }
