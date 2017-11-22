@@ -73,6 +73,31 @@ public final class HeadersUtils {
     }
 
     /**
+     * Helper for implementing toString for {@link DefaultHeaders} and wrappers such as DefaultHttpHeaders.
+     * @param headersClass the class of headers
+     * @param headersIt the iterator on the actual headers
+     * @param size the size of the iterator
+     * @return a String representation of the headers
+     */
+    public static <K, V> String toString(Class<?> headersClass, Iterator<Entry<K, V>> headersIt, int size) {
+        String simpleName = headersClass.getSimpleName();
+        if (size == 0) {
+            return simpleName + "[]";
+        } else {
+            // original capacity assumes 20 chars per headers
+            StringBuilder sb = new StringBuilder(simpleName.length() + 2 + size * 20)
+                    .append(simpleName)
+                    .append('[');
+            while (headersIt.hasNext()) {
+                Entry<?, ?> header = headersIt.next();
+                sb.append(header.getKey()).append(": ").append(header.getValue()).append(", ");
+            }
+            sb.setLength(sb.length() - 2);
+            return sb.append(']').toString();
+        }
+    }
+
+    /**
      * {@link Headers#names()} and convert each element of {@link Set} to a {@link String}.
      * @param headers the headers to get the names from
      * @return a {@link Set} of header values or an empty {@link Set} if no values are found.
