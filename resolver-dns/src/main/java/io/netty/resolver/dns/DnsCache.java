@@ -65,8 +65,6 @@ public interface DnsCache {
 
     /**
      * Cache the resolution failure for a given hostname.
-     * Be aware this <strong>won't</strong> be called with timeout / cancel / transport exceptions.
-      *
      * @param hostname the hostname
      * @param additionals the additional records
      * @param cause the resolution failure
