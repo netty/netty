@@ -90,12 +90,10 @@ final class PlatformDependent0 {
                         }
                         // the unsafe instance
                         return unsafeField.get(null);
-                    } catch (NoSuchFieldException e) {
-                        return e;
-                    } catch (SecurityException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
-                        return e;
+                        // There are many non-obvious things that can go wrong,
+                        // including NoClassDefFoundError, so be ready for anything
+                    } catch (Throwable t) {
+                        return t;
                     }
                 }
             });
