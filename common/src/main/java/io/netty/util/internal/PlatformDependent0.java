@@ -96,6 +96,10 @@ final class PlatformDependent0 {
                         return e;
                     } catch (IllegalAccessException e) {
                         return e;
+                    } catch (NoClassDefFoundError e) {
+                        // Also catch NoClassDefFoundError in case someone uses for example OSGI and it made
+                        // Unsafe unloadable.
+                        return e;
                     }
                 }
             });
