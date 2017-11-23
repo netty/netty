@@ -42,12 +42,12 @@ import java.util.List;
  * <td>The maximum length of the initial line
  *     (e.g. {@code "GET / HTTP/1.0"} or {@code "HTTP/1.0 200 OK"})
  *     If the length of the initial line exceeds this value, a
- *     {@link TooLongFrameException} will be raised.</td>
+ *     {@link HttpInitialLineTooLargeException} will be raised.</td>
  * </tr>
  * <tr>
  * <td>{@code maxHeaderSize}</td>
  * <td>The maximum length of all headers.  If the sum of the length of each
- *     header exceeds this value, a {@link TooLongFrameException} will be raised.</td>
+ *     header exceeds this value, a {@link HttpHeadersTooLargeException} will be raised.</td>
  * </tr>
  * <tr>
  * <td>{@code maxChunkSize}</td>
@@ -836,7 +836,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         protected TooLongFrameException newException(int maxLength) {
-            return new TooLongFrameException("HTTP header is larger than " + maxLength + " bytes.");
+            return new HttpHeadersTooLargeException("HTTP header is larger than " + maxLength + " bytes.");
         }
     }
 
@@ -854,7 +854,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         @Override
         protected TooLongFrameException newException(int maxLength) {
-            return new TooLongFrameException("An HTTP line is larger than " + maxLength + " bytes.");
+            return new HttpInitialLineTooLargeException("An HTTP line is larger than " + maxLength + " bytes.");
         }
     }
 }
