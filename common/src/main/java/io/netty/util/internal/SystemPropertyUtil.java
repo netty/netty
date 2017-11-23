@@ -103,7 +103,7 @@ public final class SystemPropertyUtil {
 
         value = value.trim().toLowerCase();
         if (value.isEmpty()) {
-            return true;
+            return def;
         }
 
         if ("true".equals(value) || "yes".equals(value) || "1".equals(value)) {
