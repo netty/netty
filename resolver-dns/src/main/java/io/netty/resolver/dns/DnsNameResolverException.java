@@ -26,7 +26,7 @@ import java.net.InetSocketAddress;
  * A {@link RuntimeException} raised when {@link DnsNameResolver} failed to perform a successful query.
  */
 @UnstableApi
-public final class DnsNameResolverException extends RuntimeException {
+public class DnsNameResolverException extends RuntimeException {
 
     private static final long serialVersionUID = -8826717909627131850L;
 

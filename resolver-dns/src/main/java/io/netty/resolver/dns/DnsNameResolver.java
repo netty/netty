@@ -891,6 +891,24 @@ public class DnsNameResolver extends InetNameResolver {
         return query0(nameServerAddr, question, toArray(additionals, false), promise);
     }
 
+    /**
+     * Returns {@code true} if the {@link Throwable} was caused by an timeout or transport error.
+     * These methods can be used on the {@link Future#cause()} that is returned by the various methods exposed by this
+     * {@link DnsNameResolver}.
+     */
+    public static boolean isTransportOrTimeoutError(Throwable cause) {
+        return cause != null && cause.getCause() instanceof DnsNameResolverException;
+    }
+
+    /**
+     * Returns {@code true} if the {@link Throwable} was caused by an timeout.
+     * These methods can be used on the {@link Future#cause()} that is returned by the various methods exposed by this
+     * {@link DnsNameResolver}.
+     */
+    public static boolean isTimeoutError(Throwable cause) {
+        return cause != null && cause.getCause() instanceof DnsNameResolverTimeoutException;
+    }
+
     final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query0(
             InetSocketAddress nameServerAddr, DnsQuestion question,
             DnsRecord[] additionals,
