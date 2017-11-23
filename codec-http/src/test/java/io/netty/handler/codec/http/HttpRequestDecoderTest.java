@@ -293,4 +293,30 @@ public class HttpRequestDecoderTest {
         cnt.release();
         assertFalse(channel.finishAndReleaseAll());
     }
+
+    @Test
+    public void testTooLargeInitialLine() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(10, 1024, 1024));
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Host: localhost1\r\n\r\n";
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertTrue(request.decoderResult().cause() instanceof HttpInitialLineTooLargeException);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testTooLargeHeaders() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(1024, 10, 1024));
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Host: localhost1\r\n\r\n";
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertTrue(request.decoderResult().cause() instanceof HttpHeadersTooLargeException);
+        assertFalse(channel.finish());
+    }
 }
