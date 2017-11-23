@@ -38,17 +38,21 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     private final File f;
     private final long position;
     private final long count;
+    private final boolean closeFileChannel;
+
     private long transferred;
     private FileChannel file;
 
     /**
      * Create a new instance
      *
-     * @param file      the {@link FileChannel} which should be transfered
-     * @param position  the position from which the transfer should start
-     * @param count     the number of bytes to transfer
+     * @param file              the {@link FileChannel} which should be transfered
+     * @param position          the position from which the transfer should start
+     * @param count             the number of bytes to transfer
+     * @param closeFileChannel  if {@code true} {@link FileChannel#close()} is called once the reference-count became
+     *                          {@code 0}. If {@code false} the user is responsible to call {@link FileChannel#close()}.
      */
-    public DefaultFileRegion(FileChannel file, long position, long count) {
+    public DefaultFileRegion(FileChannel file, long position, long count, boolean closeFileChannel) {
         if (file == null) {
             throw new NullPointerException("file");
         }
@@ -61,7 +65,19 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         this.file = file;
         this.position = position;
         this.count = count;
+        this.closeFileChannel = closeFileChannel;
         f = null;
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param file      the {@link FileChannel} which should be transfered
+     * @param position  the position from which the transfer should start
+     * @param count     the number of bytes to transfer
+     */
+    public DefaultFileRegion(FileChannel file, long position, long count) {
+        this(file, position, count, true);
     }
 
     /**
@@ -84,6 +100,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         }
         this.position = position;
         this.count = count;
+        closeFileChannel = true;
         this.f = f;
     }
 
@@ -158,11 +175,13 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         }
         this.file = null;
 
-        try {
-            file.close();
-        } catch (IOException e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Failed to close a file.", e);
+        if (closeFileChannel) {
+            try {
+                file.close();
+            } catch (IOException e) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Failed to close a file.", e);
+                }
             }
         }
     }
