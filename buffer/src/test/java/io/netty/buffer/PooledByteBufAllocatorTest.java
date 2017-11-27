@@ -243,31 +243,51 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     // The ThreadDeathWatcher sleeps 1s, give it double that time.
     @Test (timeout = 2000)
     public void testThreadCacheDestroyedByThreadDeathWatcher() {
+        testThreadCacheDestroyedByThreadDeathWatcher(false);
+    }
+
+    @Test (timeout = 2000)
+    public void testThreadCacheDestroyedAfterExitRun() {
+        testThreadCacheDestroyedByThreadDeathWatcher(true);
+    }
+
+    private static void testThreadCacheDestroyedByThreadDeathWatcher(boolean useRunnable) {
         int numArenas = 11;
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
 
         final AtomicBoolean threadCachesCreated = new AtomicBoolean(true);
 
-        for (int i = 0; i < numArenas; i++) {
-            new FastThreadLocalThread(new Runnable() {
-                @Override
-                public void run() {
-                    ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
-                    for (int i = 0; i < buf.capacity(); i++) {
-                        buf.writeByte(0);
-                    }
-
-                    // Make sure that thread caches are actually created,
-                    // so that down below we are not testing for zero
-                    // thread caches without any of them ever having been initialized.
-                    if (allocator.metric().numThreadLocalCaches() == 0) {
-                        threadCachesCreated.set(false);
-                    }
-
-                    buf.release();
+        final Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
+                for (int i = 0; i < buf.capacity(); i++) {
+                    buf.writeByte(0);
                 }
-            }).start();
+
+                // Make sure that thread caches are actually created,
+                // so that down below we are not testing for zero
+                // thread caches without any of them ever having been initialized.
+                if (allocator.metric().numThreadLocalCaches() == 0) {
+                    threadCachesCreated.set(false);
+                }
+
+                buf.release();
+            }
+        };
+
+        for (int i = 0; i < numArenas; i++) {
+            if (useRunnable) {
+                new FastThreadLocalThread(task).start();
+            } else {
+                new FastThreadLocalThread() {
+                    @Override
+                    public void run() {
+                        task.run();
+                    }
+                };
+            }
         }
 
         // Wait for the ThreadDeathWatcher to have destroyed all thread caches
