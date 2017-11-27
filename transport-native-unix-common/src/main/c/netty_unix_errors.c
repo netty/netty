@@ -78,6 +78,10 @@ void netty_unix_errors_throwOutOfMemoryError(JNIEnv* env) {
 }
 
 // JNI Registered Methods Begin
+static jint netty_unix_errors_errnoENOENT(JNIEnv* env, jclass clazz) {
+    return ENOENT;
+}
+
 static jint netty_unix_errors_errnoENOTCONN(JNIEnv* env, jclass clazz) {
     return ENOTCONN;
 }
@@ -129,6 +133,7 @@ static jstring netty_unix_errors_strError(JNIEnv* env, jclass clazz, jint error)
 
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
+  { "errnoENOENT", "()I", (void *) netty_unix_errors_errnoENOENT },
   { "errnoENOTCONN", "()I", (void *) netty_unix_errors_errnoENOTCONN },
   { "errnoEBADF", "()I", (void *) netty_unix_errors_errnoEBADF },
   { "errnoEPIPE", "()I", (void *) netty_unix_errors_errnoEPIPE },

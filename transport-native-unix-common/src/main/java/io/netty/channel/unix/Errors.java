@@ -17,6 +17,7 @@ package io.netty.channel.unix;
 
 import io.netty.util.internal.EmptyArrays;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.NoRouteToHostException;
@@ -33,6 +34,7 @@ import static io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.*;
  */
 public final class Errors {
     // As all our JNI methods return -errno on error we need to compare with the negative errno codes.
+    public static final int ERRNO_ENOENT_NEGATIVE = -errnoENOENT();
     public static final int ERRNO_ENOTCONN_NEGATIVE = -errnoENOTCONN();
     public static final int ERRNO_EBADF_NEGATIVE = -errnoEBADF();
     public static final int ERRNO_EPIPE_NEGATIVE = -errnoEPIPE();
@@ -104,6 +106,9 @@ public final class Errors {
         if (err == ERROR_EISCONN_NEGATIVE) {
             throw new AlreadyConnectedException();
         }
+        if (err == ERRNO_ENOENT_NEGATIVE) {
+            throw new FileNotFoundException();
+        }
         throw new ConnectException(method + "(..) failed: " + ERRORS[-err]);
     }
 
@@ -131,6 +136,9 @@ public final class Errors {
         }
         if (err == ERRNO_ENOTCONN_NEGATIVE) {
             throw new NotYetConnectedException();
+        }
+        if (err == ERRNO_ENOENT_NEGATIVE) {
+            throw new FileNotFoundException();
         }
 
         // TODO: We could even go further and use a pre-instantiated IOException for the other error codes, but for
