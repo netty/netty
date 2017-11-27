@@ -439,12 +439,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             boolean fastThread = current instanceof FastThreadLocalThread;
             if (useCacheForAllThreads || current instanceof FastThreadLocalThread) {
                 // If our FastThreadLocalThread will call FastThreadLocal.removeAll() we not need to use
-                // the ThreadDeathWatcher to release memory from the PoolThreadCache once the Thread dies.
-                boolean useTheadWatcher = fastThread ?
+                // a finalizer to release memory from the PoolThreadCache once the Thread dies.
+                boolean useFinalizer = fastThread ?
                         !((FastThreadLocalThread) current).willCleanupFastThreadLocals() : true;
                 return new PoolThreadCache(
                         heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
-                        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL, useTheadWatcher);
+                        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL, useFinalizer);
             }
             // No caching for non FastThreadLocalThreads.
             return new PoolThreadCache(heapArena, directArena, 0, 0, 0, 0, 0, false);
