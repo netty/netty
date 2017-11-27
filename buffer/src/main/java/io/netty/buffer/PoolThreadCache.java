@@ -20,7 +20,6 @@ package io.netty.buffer;
 import io.netty.buffer.PoolArena.SizeClass;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
-import io.netty.util.ThreadDeathWatcher;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -56,8 +55,9 @@ final class PoolThreadCache {
     private final int numShiftsNormalHeap;
     private final int freeSweepAllocationThreshold;
 
-    private final Thread deathWatchThread;
-    private final Runnable freeTask;
+    // This Object
+    @SuppressWarnings("unused")
+    private final PoolThreadCacheFinalizer finalizerTask;
 
     private int allocations;
 
@@ -67,7 +67,7 @@ final class PoolThreadCache {
     PoolThreadCache(PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
                     int tinyCacheSize, int smallCacheSize, int normalCacheSize,
                     int maxCachedBufferCapacity, int freeSweepAllocationThreshold,
-                    boolean useThreadDeathWatcher) {
+                    boolean needFinalizer) {
         if (maxCachedBufferCapacity < 0) {
             throw new IllegalArgumentException("maxCachedBufferCapacity: "
                     + maxCachedBufferCapacity + " (expected: >= 0)");
@@ -121,24 +121,10 @@ final class PoolThreadCache {
                     + freeSweepAllocationThreshold + " (expected: > 0)");
         }
 
-        if (useThreadDeathWatcher) {
-
-            freeTask = new Runnable() {
-                @Override
-                public void run() {
-                    free0();
-                }
-            };
-
-            deathWatchThread = Thread.currentThread();
-
-            // The thread-local cache will keep a list of pooled buffers which must be returned to
-            // the pool when the thread is not alive anymore.
-            ThreadDeathWatcher.watch(deathWatchThread, freeTask);
-        } else {
-            freeTask = null;
-            deathWatchThread = null;
-        }
+        // If we are not sure we call free() when the FastThreadLocalThread is removed we need to use a finalizer
+        // to ensure all cached memory is returned to the PoolArena. While this is not awesome its the only way to
+        // ensure this is done when the Thread dies that has a reference to the PoolThreadCache via a ThreadLocal.
+        finalizerTask = needFinalizer ? new PoolThreadCacheFinalizer() : null;
     }
 
     private static <T> MemoryRegionCache<T>[] createSubPageCaches(
@@ -247,14 +233,6 @@ final class PoolThreadCache {
      *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
      */
     void free() {
-        if (freeTask != null) {
-            assert deathWatchThread != null;
-            ThreadDeathWatcher.unwatch(deathWatchThread, freeTask);
-        }
-        free0();
-    }
-
-    private void free0() {
         int numFreed = free(tinySubPageDirectCaches) +
                 free(smallSubPageDirectCaches) +
                 free(normalDirectCaches) +
@@ -507,5 +485,17 @@ final class PoolThreadCache {
                 return new Entry(handle);
             }
         };
+    }
+
+    // We create an instanceof this if we need to call free() as part of the GC of the cache.
+    private final class PoolThreadCacheFinalizer {
+        @Override
+        protected void finalize() throws Throwable {
+            try {
+                free();
+            } finally {
+                super.finalize();
+            }
+        }
     }
 }

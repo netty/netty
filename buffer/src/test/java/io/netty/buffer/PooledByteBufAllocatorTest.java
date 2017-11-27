@@ -290,8 +290,9 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
             }
         }
 
-        // Wait for the ThreadDeathWatcher to have destroyed all thread caches
+        // Wait for the GC to have destroyed all thread caches
         while (allocator.metric().numThreadLocalCaches() > 0) {
+            System.gc();
             LockSupport.parkNanos(MILLISECONDS.toNanos(100));
         }
 
