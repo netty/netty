@@ -190,7 +190,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         encoder.remoteSettings(settings);
 
         // Create a stream in the half-closed state.
-        connection().remote().createStream(HTTP_UPGRADE_STREAM_ID, true);
+        decoder.flowController().designateCleartextUpgradeConnection();
+        Http2Stream stream = connection().remote().createStream(HTTP_UPGRADE_STREAM_ID, true);
     }
 
     @Override

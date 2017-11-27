@@ -320,6 +320,11 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
 
         @Override
+        public void designateCleartextUpgradeConnection() {
+            flowController.designateCleartextUpgradeConnection();
+        }
+
+        @Override
         public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
                 boolean endOfStream) throws Http2Exception {
             flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
