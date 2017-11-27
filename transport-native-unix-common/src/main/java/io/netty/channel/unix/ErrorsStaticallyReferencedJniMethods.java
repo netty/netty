@@ -30,6 +30,7 @@ final class ErrorsStaticallyReferencedJniMethods {
 
     private ErrorsStaticallyReferencedJniMethods() { }
 
+    static native int errnoENOENT();
     static native int errnoEBADF();
     static native int errnoEPIPE();
     static native int errnoECONNRESET();
