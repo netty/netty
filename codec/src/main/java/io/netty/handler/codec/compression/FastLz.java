@@ -168,7 +168,7 @@ final class FastLz {
                         readU16(input, inOffset + ip - 1) == readU16(input, inOffset + ip + 1)) {
                     distance = 1;
                     ip += 3;
-                    ref = anchor - 1 + 3;
+                    ref = anchor + (3 - 1);
 
                     /*
                      * goto match;
