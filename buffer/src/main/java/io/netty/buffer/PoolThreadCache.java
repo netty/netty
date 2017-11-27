@@ -66,7 +66,8 @@ final class PoolThreadCache {
 
     PoolThreadCache(PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
                     int tinyCacheSize, int smallCacheSize, int normalCacheSize,
-                    int maxCachedBufferCapacity, int freeSweepAllocationThreshold) {
+                    int maxCachedBufferCapacity, int freeSweepAllocationThreshold,
+                    boolean useThreadDeathWatcher) {
         if (maxCachedBufferCapacity < 0) {
             throw new IllegalArgumentException("maxCachedBufferCapacity: "
                     + maxCachedBufferCapacity + " (expected: >= 0)");
@@ -112,14 +113,16 @@ final class PoolThreadCache {
             numShiftsNormalHeap = -1;
         }
 
-        // We only need to watch the thread when any cache is used.
-        if (tinySubPageDirectCaches != null || smallSubPageDirectCaches != null || normalDirectCaches != null
-                || tinySubPageHeapCaches != null || smallSubPageHeapCaches != null || normalHeapCaches != null) {
-            // Only check freeSweepAllocationThreshold when there are caches in use.
-            if (freeSweepAllocationThreshold < 1) {
-                throw new IllegalArgumentException("freeSweepAllocationThreshold: "
-                        + freeSweepAllocationThreshold + " (expected: > 0)");
-            }
+        // Only check if there are caches in use.
+        if ((tinySubPageDirectCaches != null || smallSubPageDirectCaches != null || normalDirectCaches != null
+                || tinySubPageHeapCaches != null || smallSubPageHeapCaches != null || normalHeapCaches != null)
+                && freeSweepAllocationThreshold < 1) {
+            throw new IllegalArgumentException("freeSweepAllocationThreshold: "
+                    + freeSweepAllocationThreshold + " (expected: > 0)");
+        }
+
+        if (useThreadDeathWatcher) {
+
             freeTask = new Runnable() {
                 @Override
                 public void run() {

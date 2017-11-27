@@ -435,13 +435,19 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             final PoolArena<byte[]> heapArena = leastUsedArena(heapArenas);
             final PoolArena<ByteBuffer> directArena = leastUsedArena(directArenas);
 
-            if (useCacheForAllThreads || Thread.currentThread() instanceof FastThreadLocalThread) {
+            Thread current = Thread.currentThread();
+            boolean fastThread = current instanceof FastThreadLocalThread;
+            if (useCacheForAllThreads || current instanceof FastThreadLocalThread) {
+                // If our FastThreadLocalThread will call FastThreadLocal.removeAll() we not need to use
+                // the ThreadDeathWatcher to release memory from the PoolThreadCache once the Thread dies.
+                boolean useTheadWatcher = fastThread ?
+                        !((FastThreadLocalThread) current).willCleanupFastThreadLocals() : true;
                 return new PoolThreadCache(
                         heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
-                        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
+                        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL, useTheadWatcher);
             }
             // No caching for non FastThreadLocalThreads.
-            return new PoolThreadCache(heapArena, directArena, 0, 0, 0, 0, 0);
+            return new PoolThreadCache(heapArena, directArena, 0, 0, 0, 0, 0, false);
         }
 
         @Override
@@ -594,7 +600,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     final PoolThreadCache threadCache() {
-        return threadCache.get();
+        PoolThreadCache cache =  threadCache.get();
+        assert cache != null;
+        return cache;
     }
 
     /**
