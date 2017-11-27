@@ -240,19 +240,28 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         assertFalse(lists.get(5).iterator().hasNext());
     }
 
-    // The ThreadDeathWatcher sleeps 1s, give it double that time.
-    @Test (timeout = 2000)
-    public void testThreadCacheDestroyedByThreadDeathWatcher() {
+    @Test (timeout = 4000)
+    public void testThreadCacheDestroyedByThreadDeathWatcher() throws InterruptedException {
+        testThreadCacheDestroyedByThreadDeathWatcher(false);
+    }
+
+    @Test (timeout = 4000)
+    public void testThreadCacheDestroyedAfterExitRun() throws InterruptedException {
+        testThreadCacheDestroyedByThreadDeathWatcher(true);
+    }
+
+    private static void testThreadCacheDestroyedByThreadDeathWatcher(boolean useRunnable) throws InterruptedException {
         int numArenas = 11;
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
 
         final AtomicBoolean threadCachesCreated = new AtomicBoolean(true);
+        final CountDownLatch latch = new CountDownLatch(numArenas);
 
-        for (int i = 0; i < numArenas; i++) {
-            new FastThreadLocalThread(new Runnable() {
-                @Override
-                public void run() {
+        final Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                try {
                     ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
                     for (int i = 0; i < buf.capacity(); i++) {
                         buf.writeByte(0);
@@ -266,9 +275,30 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
                     }
 
                     buf.release();
+                } finally {
+                    latch.countDown();
                 }
-            }).start();
+            }
+        };
+
+        for (int i = 0; i < numArenas; i++) {
+            final FastThreadLocalThread thread;
+            if (useRunnable) {
+                thread = new FastThreadLocalThread(task);
+                assertTrue(thread.willCleanupFastThreadLocals());
+            } else {
+                thread = new FastThreadLocalThread() {
+                    @Override
+                    public void run() {
+                        task.run();
+                    }
+                };
+                assertFalse(thread.willCleanupFastThreadLocals());
+            }
+            thread.start();
         }
+
+        latch.await();
 
         // Wait for the ThreadDeathWatcher to have destroyed all thread caches
         while (allocator.metric().numThreadLocalCaches() > 0) {
