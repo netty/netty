@@ -28,6 +28,10 @@
 
   <name>Netty/Codec/MQTT</name>
 
+  <properties>
+    <javaModuleName>io.netty.codec.mqtt</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

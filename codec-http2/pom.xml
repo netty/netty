@@ -28,6 +28,10 @@
 
   <name>Netty/Codec/HTTP2</name>
 
+  <properties>
+    <javaModuleName>io.netty.codec.http2</javaModuleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

@@ -30,6 +30,8 @@
   </description>
 
   <properties>
+    <javaModuleName>io.netty.transport.unix.common</javaModuleName>
+
     <exe.make>make</exe.make>
     <exe.compiler>gcc</exe.compiler>
     <exe.archiver>ar</exe.archiver>
