@@ -162,8 +162,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         buf.writeByte(0); // marks end of name field
     }
 
-    // Package private so it can be reused in the test.
-    static byte padWithZeros(byte b, int lowOrderBitsToPreserve) {
+    private static byte padWithZeros(byte b, int lowOrderBitsToPreserve) {
         switch (lowOrderBitsToPreserve) {
         case 0:
             return 0;
