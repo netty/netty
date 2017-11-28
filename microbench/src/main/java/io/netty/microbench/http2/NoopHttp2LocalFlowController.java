@@ -67,6 +67,10 @@ public final class NoopHttp2LocalFlowController implements Http2LocalFlowControl
     }
 
     @Override
+    public void designateCleartextUpgradeConnection() {
+    }
+
+    @Override
     public void channelHandlerContext(ChannelHandlerContext ctx) throws Http2Exception {
     }
 
