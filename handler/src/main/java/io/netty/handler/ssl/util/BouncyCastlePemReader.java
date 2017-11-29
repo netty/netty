@@ -51,12 +51,12 @@ public final class BouncyCastlePemReader {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastlePemReader.class);
     private static Boolean available;
 
-    public static boolean isBcAvailable() {
-        tryLoadingBc();
+    public static boolean isAvailable() {
+        tryLoading();
         return available;
     }
 
-    private static void tryLoadingBc() {
+    private static void tryLoading() {
         if (available != null) {
             return;
         }
@@ -74,7 +74,7 @@ public final class BouncyCastlePemReader {
                     logger.debug("Bouncy Castle provider available");
                     return Boolean.TRUE;
                 } catch (Exception e) {
-                    logger.debug("Cannot load Bouncy Castle provider");
+                    logger.debug("Cannot load Bouncy Castle provider", e);
                     return Boolean.FALSE;
                 }
             }
@@ -82,23 +82,23 @@ public final class BouncyCastlePemReader {
     }
 
     static {
-        isBcAvailable();
+        tryLoading();
     }
 
     public static PrivateKey getPrivateKey(InputStream keyInputStream, String keyPassword) {
         try {
-            return getPrivateKey(getParser(keyInputStream), keyPassword);
+            return getPrivateKey(newParser(keyInputStream), keyPassword);
         } catch (Exception e) {
-            logger.debug("Unable to extract private key due to " + e);
+            logger.debug("Unable to extract private key", e);
             return null;
         }
     }
 
     public static PrivateKey getPrivateKey(File keyFile, String keyPassword) {
         try {
-            return getPrivateKey(getParser(keyFile), keyPassword);
+            return getPrivateKey(newParser(keyFile), keyPassword);
         } catch (Exception e) {
-            logger.debug("Unable to extract private key due to " + e);
+            logger.debug("Unable to extract private key", e);
             return null;
         }
     }
@@ -148,18 +148,18 @@ public final class BouncyCastlePemReader {
             if (pemParser != null) {
                 try {
                     pemParser.close();
-                } catch (Exception e) {
+                } catch (Exception ignored) {
                     // ignore
                 }
             }
         }
     }
 
-    private static PEMParser getParser(File keyFile) throws FileNotFoundException {
+    private static PEMParser newParser(File keyFile) throws FileNotFoundException {
         return new PEMParser(new FileReader(keyFile));
     }
 
-    private static PEMParser getParser(InputStream keyInputStream) {
+    private static PEMParser newParser(InputStream keyInputStream) {
         return new PEMParser(new InputStreamReader(keyInputStream, CharsetUtil.US_ASCII));
     }
 

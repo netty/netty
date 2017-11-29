@@ -1015,7 +1015,7 @@ public abstract class SslContext {
 
         // try BC first, if this fail fallback to original key extraction
         // process
-        if (BouncyCastlePemReader.isBcAvailable()) {
+        if (BouncyCastlePemReader.isAvailable()) {
             PrivateKey pk;
             if ((pk = BouncyCastlePemReader.getPrivateKey(keyFile, keyPassword)) != null) {
                 return pk;
@@ -1035,7 +1035,7 @@ public abstract class SslContext {
 
         // try BC first, if this fail fallback to original key extraction
         // process
-        if (BouncyCastlePemReader.isBcAvailable()) {
+        if (BouncyCastlePemReader.isAvailable()) {
             PrivateKey pk;
             if ((pk = BouncyCastlePemReader.getPrivateKey(keyInputStream, keyPassword)) != null) {
                 return pk;
