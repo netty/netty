@@ -29,10 +29,10 @@ import java.io.InputStreamReader;
 import java.security.AccessController;
 import java.security.PrivateKey;
 import java.security.PrivilegedAction;
+import java.security.Provider;
 import java.security.Security;
 
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMDecryptorProvider;
 import org.bouncycastle.openssl.PEMEncryptedKeyPair;
 import org.bouncycastle.openssl.PEMException;
@@ -65,10 +65,11 @@ public final class BouncyCastlePemReader {
             @Override
             public Boolean run() {
                 try {
-                    Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider", true, this.getClass()
-                            .getClassLoader());
+                    Class<Provider> bcProviderClass
+                      = (Class<Provider>) Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider"
+                              , true, this.getClass().getClassLoader());
                     if (Security.getProvider("BC") == null) {
-                        Security.addProvider(new BouncyCastleProvider());
+                        Security.addProvider(bcProviderClass.newInstance());
                     }
                     logger.debug("Bouncy Castle provider available");
                     return Boolean.TRUE;
