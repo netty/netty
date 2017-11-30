@@ -237,7 +237,9 @@ public class LocalChannel extends AbstractChannel {
                 state = State.CLOSED;
 
                 // Preserve order of event and force a read operation now before the close operation is processed.
-                finishPeerRead(this);
+                if (writeInProgress && peer != null) {
+                    finishPeerRead(peer);
+                }
 
                 ChannelPromise promise = connectPromise;
                 if (promise != null) {
