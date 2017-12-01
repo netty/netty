@@ -40,8 +40,6 @@ static jclass datagramSocketAddressClass = NULL;
 static jmethodID datagramSocketAddrMethodId = NULL;
 static jmethodID inetSocketAddrMethodId = NULL;
 static jclass inetSocketAddressClass = NULL;
-static jclass netUtilClass = NULL;
-static jmethodID netUtilClassIpv4PreferredMethodId = NULL;
 static int socketType;
 static const char* ip4prefix = "::ffff:";
 static const unsigned char wildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -169,9 +167,7 @@ static jbyteArray createInetSocketAddressArray(JNIEnv* env, const struct sockadd
     return bArray;
 }
 
-static int socket_type(JNIEnv* env) {
-    jboolean ipv4Preferred = (*env)->CallStaticBooleanMethod(env, netUtilClass, netUtilClassIpv4PreferredMethodId);
-
+static int socket_type(JNIEnv* env, jboolean ipv4Preferred) {
     if (ipv4Preferred) {
         // User asked to use ipv4 explicitly.
         return AF_INET;
@@ -1001,27 +997,27 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
         netty_unix_errors_throwRuntimeException(env, "failed to get method ID: InetSocketAddress.<init>(String, int)");
         return JNI_ERR;
     }
-    nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/util/NetUtil");
-    jclass localNetUtilClass = (*env)->FindClass(env, nettyClassName);
-    free(nettyClassName);
-    nettyClassName = NULL;
-    if (localNetUtilClass == NULL) {
+
+    // We retrieve java.net.preferIPv4Stack directly via Boolean.getBoolean(...) and not via NetUtil to ensure
+    // we not run into deadlocks while trying to load classes that may depend on each other.
+    // See https://github.com/netty/netty/issues/7458
+    jclass booleanClass = (*env)->FindClass(env, "java/lang/Boolean");
+    if (booleanClass == NULL) {
         // pending exception...
         return JNI_ERR;
     }
-    netUtilClass = (jclass) (*env)->NewGlobalRef(env, localNetUtilClass);
-    if (netUtilClass == NULL) {
-        // out-of-memory!
-        netty_unix_errors_throwOutOfMemoryError(env);
-        return JNI_ERR;
-    }
-    netUtilClassIpv4PreferredMethodId = (*env)->GetStaticMethodID(env, netUtilClass, "isIpV4StackPreferred", "()Z" );
-    if (netUtilClassIpv4PreferredMethodId == NULL) {
-        // position method was not found.. something is wrong so bail out
-        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: NetUild.isIpV4StackPreferred()");
+
+    jmethodID booleanClassGetBooleanMethodId = (*env)->GetStaticMethodID(env, booleanClass, "getBoolean", "(Ljava/lang/String;)Z");
+    if (booleanClassGetBooleanMethodId == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: Boolean.getBoolean(String)");
         return JNI_ERR;
     }
 
+    jboolean preferIPv4Stack = (*env)->CallStaticBooleanMethod(env, booleanClass, booleanClassGetBooleanMethodId, "java.net.preferIPv4Stack");
+    if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
+        // Boolean.getBoolean(...) produced an exception.
+        return JNI_ERR;
+    }
     void* mem = malloc(1);
     if (mem == NULL) {
         netty_unix_errors_throwOutOfMemoryError(env);
@@ -1042,7 +1038,7 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     }
     free(mem);
 
-    socketType = socket_type(env);
+    socketType = socket_type(env, preferIPv4Stack);
     return NETTY_JNI_VERSION;
 }
 
@@ -1054,9 +1050,5 @@ void netty_unix_socket_JNI_OnUnLoad(JNIEnv* env) {
     if (inetSocketAddressClass != NULL) {
         (*env)->DeleteGlobalRef(env, inetSocketAddressClass);
         inetSocketAddressClass = NULL;
-    }
-    if (netUtilClass != NULL) {
-        (*env)->DeleteGlobalRef(env, netUtilClass);
-        netUtilClass = NULL;
     }
 }
