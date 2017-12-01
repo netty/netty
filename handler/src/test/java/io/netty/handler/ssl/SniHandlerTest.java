@@ -24,6 +24,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultEventLoopGroup;
@@ -56,15 +57,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLEngine;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
@@ -157,8 +156,18 @@ public class SniHandlerTest {
                     .add("chat4.leancloud.cn", leanContext2)
                     .build();
 
+            final AtomicReference<SniCompletionEvent> evtRef = new AtomicReference<SniCompletionEvent>();
             SniHandler handler = new SniHandler(mapping);
-            EmbeddedChannel ch = new EmbeddedChannel(handler);
+            EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    if (evt instanceof SniCompletionEvent) {
+                        assertTrue(evtRef.compareAndSet(null, (SniCompletionEvent) evt));
+                    } else {
+                        ctx.fireUserEventTriggered(evt);
+                    }
+                }
+            });
 
             try {
                 // hex dump of a client hello packet, which contains hostname "CHAT4.LEANCLOUD.CN"
@@ -180,6 +189,12 @@ public class SniHandlerTest {
 
                 assertThat(handler.hostname(), is("chat4.leancloud.cn"));
                 assertThat(handler.sslContext(), is(leanContext));
+
+                SniCompletionEvent evt = evtRef.get();
+                assertNotNull(evt);
+                assertEquals("chat4.leancloud.cn", evt.hostname());
+                assertTrue(evt.isSuccess());
+                assertNull(evt.cause());
             } finally {
                 ch.finishAndReleaseAll();
             }
