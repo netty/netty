@@ -285,7 +285,7 @@ public abstract class Recycler<T> {
         static WeakOrderQueue allocate(Stack<?> stack, Thread thread) {
             // We allocated a Link so reserve the space
             return reserveSpace(stack.availableSharedCapacity, LINK_CAPACITY)
-                    ? WeakOrderQueue.newQueue(stack, thread) : null;
+                    ? newQueue(stack, thread) : null;
         }
 
         private static boolean reserveSpace(AtomicInteger availableSharedCapacity, int space) {
