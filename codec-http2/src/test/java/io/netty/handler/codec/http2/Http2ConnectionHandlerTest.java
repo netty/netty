@@ -43,6 +43,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -55,6 +56,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
 import static io.netty.util.CharsetUtil.US_ASCII;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -63,9 +65,9 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -442,6 +444,21 @@ public class Http2ConnectionHandlerTest {
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
                 any(Http2Headers.class), eq(padding), eq(true), eq(promise));
         verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+    }
+
+    @Test
+    public void prefaceUserEventProcessed() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(1);
+        handler = new Http2ConnectionHandler(decoder, encoder, new Http2Settings()) {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
+                    latch.countDown();
+                }
+            }
+        };
+        handler.handlerAdded(ctx);
+        assertTrue(latch.await(5, SECONDS));
     }
 
     @Test

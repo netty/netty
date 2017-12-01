@@ -233,7 +233,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         private ByteBuf clientPrefaceString;
         private boolean prefaceSent;
 
-        public PrefaceDecoder(ChannelHandlerContext ctx) {
+        public PrefaceDecoder(ChannelHandlerContext ctx) throws Exception {
             clientPrefaceString = clientPrefaceString(encoder.connection());
             // This handler was just added to the context. In case it was handled after
             // the connection became active, send the connection preface now.
@@ -357,7 +357,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         /**
          * Sends the HTTP/2 connection preface upon establishment of the connection, if not already sent.
          */
-        private void sendPreface(ChannelHandlerContext ctx) {
+        private void sendPreface(ChannelHandlerContext ctx) throws Exception {
             if (prefaceSent || !ctx.channel().isActive()) {
                 return;
             }
@@ -375,8 +375,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                     ChannelFutureListener.CLOSE_ON_FAILURE);
 
             if (isClient) {
-                ctx.fireUserEventTriggered(
-                        Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE);
+                // If this handler is extended by the user and we directly fire the userEvent from this context then
+                // the user will not see the event. We should fire the event starting with this handler so this class
+                // (and extending classes) have a chance to process the event.
+                userEventTriggered(ctx, Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE);
             }
         }
     }
