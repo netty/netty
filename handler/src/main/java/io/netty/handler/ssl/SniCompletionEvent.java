@@ -15,39 +15,37 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
 
-public abstract class SslCompletionEvent {
+/**
+ * Event that is fired once we did a selection of a {@link SslContext} based on the {@code SNI hostname},
+ * which may be because it was successful or there was an error.
+ */
+@UnstableApi
+public final class SniCompletionEvent extends SslCompletionEvent {
+    private final String hostname;
 
-    private final Throwable cause;
-
-    SslCompletionEvent() {
-        cause = null;
+    SniCompletionEvent(String hostname) {
+        this.hostname = hostname;
     }
 
-    SslCompletionEvent(Throwable cause) {
-        this.cause = ObjectUtil.checkNotNull(cause, "cause");
+    SniCompletionEvent(Throwable cause) {
+        super(cause);
+        hostname = null;
     }
 
     /**
-     * Return {@code true} if the completion was successful
+     * Returns the SNI hostname send by the client of {@link #isSuccess()} is {@code true} otherwise
+     * it returns {@code null}.
      */
-    public final boolean isSuccess() {
-        return cause == null;
-    }
-
-    /**
-     * Return the {@link Throwable} if {@link #isSuccess()} returns {@code false}
-     * and so the completion failed.
-     */
-    public final Throwable cause() {
-        return cause;
+    public String hostname() {
+        return hostname;
     }
 
     @Override
     public  String toString() {
         final Throwable cause = cause();
-        return cause == null? getClass().getSimpleName() + "(SUCCESS)" :
+        return cause == null ? getClass().getSimpleName() + "(SUCCESS='"  + hostname + "'\")":
                 getClass().getSimpleName() +  '(' + cause + ')';
     }
 }

@@ -80,7 +80,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                                 NotSslRecordException e = new NotSslRecordException(
                                         "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
                                 in.skipBytes(in.readableBytes());
-
+                                ctx.fireUserEventTriggered(new SniCompletionEvent(e));
                                 SslUtils.notifyHandshakeFailure(ctx, e, true);
                                 throw e;
                             }
@@ -222,6 +222,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
     private void select(final ChannelHandlerContext ctx, final String hostname) throws Exception {
         Future<T> future = lookup(ctx, hostname);
         if (future.isDone()) {
+            fireSniCompletionEvent(ctx, hostname, future);
             onLookupComplete(ctx, hostname, future);
         } else {
             suppressRead = true;
@@ -231,6 +232,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                     try {
                         suppressRead = false;
                         try {
+                            fireSniCompletionEvent(ctx, hostname, future);
                             onLookupComplete(ctx, hostname, future);
                         } catch (DecoderException err) {
                             ctx.fireExceptionCaught(err);
@@ -247,6 +249,15 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                     }
                 }
             });
+        }
+    }
+
+    private void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<T> future) {
+        Throwable cause = future.cause();
+        if (cause == null) {
+            ctx.fireUserEventTriggered(new SniCompletionEvent(hostname));
+        } else {
+            ctx.fireUserEventTriggered(new SniCompletionEvent(cause));
         }
     }
 
