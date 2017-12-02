@@ -86,7 +86,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         }
 
         @Override
-        public final void lastBytesRead(int bytes) {
+        public void lastBytesRead(int bytes) {
             lastBytesRead = bytes;
             if (bytes > 0) {
                 totalBytesRead += bytes;
