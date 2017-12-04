@@ -1882,7 +1882,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 return composite;
             }
             return attemptCopyToCumulation(cumulation, next, wrapDataSize) ? cumulation :
-                    composeIntoComposite(alloc, cumulation, next);
+                    copyAndCompose(alloc, cumulation, next);
         }
 
         @Override
