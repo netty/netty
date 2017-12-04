@@ -53,7 +53,6 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     private ChannelHandlerContext ctx;
     private float windowUpdateRatio;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
-    private boolean cleartextUpgradeConnection;
 
     public DefaultHttp2LocalFlowController(Http2Connection connection) {
         this(connection, DEFAULT_WINDOW_UPDATE_RATIO, false);
@@ -180,9 +179,6 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         if (numBytes == 0) {
             return false;
         }
-        if (cleartextUpgradeConnection && stream.id() == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
-            return false;
-        }
 
         // Streams automatically consume all remaining bytes when they are closed, so just ignore
         // if already closed.
@@ -281,11 +277,6 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
             // Immediately consume the bytes for the connection window.
             connectionState.consumeBytes(dataLength);
         }
-    }
-
-    @Override
-    public void designateCleartextUpgradeConnection() {
-        cleartextUpgradeConnection = true;
     }
 
     private FlowState connectionState() {

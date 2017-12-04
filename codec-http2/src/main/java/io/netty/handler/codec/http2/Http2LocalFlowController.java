@@ -51,12 +51,6 @@ public interface Http2LocalFlowController extends Http2FlowController {
                                     boolean endOfStream) throws Http2Exception;
 
     /**
-     * Designates a connection as an h2c upgrade stream, so that the upgrade stream is ineligible
-     * for flow control.
-     */
-    void designateCleartextUpgradeConnection();
-
-    /**
      * Indicates that the application has consumed a number of bytes for the given stream and is therefore ready to
      * receive more data from the remote endpoint. The application must consume any bytes that it receives or the flow
      * control window will collapse. Consuming bytes enables the flow controller to send {@code WINDOW_UPDATE} to
@@ -66,9 +60,8 @@ public interface Http2LocalFlowController extends Http2FlowController {
      * Http2Stream.State#CLOSED}), calling this method has no effect.
      *
      * @param stream the stream for which window space should be freed. The connection stream object must not be used.
-     * If {@code stream} is {@code null}, closed (i.e. {@link Http2Stream#state()} method returns {@link
-     * Http2Stream.State#CLOSED}), or the stream has already been designated an upgrade stream,
-     * calling this method has no effect.
+     * If {@code stream} is {@code null} or closed (i.e. {@link Http2Stream#state()} method returns {@link
+     * Http2Stream.State#CLOSED}), calling this method has no effect.
      * @param numBytes the number of bytes to be returned to the flow control window.
      * @return true if a {@code WINDOW_UPDATE} was sent, false otherwise.
      * @throws Http2Exception if the number of bytes returned exceeds the {@link #unconsumedBytes(Http2Stream)} for the
