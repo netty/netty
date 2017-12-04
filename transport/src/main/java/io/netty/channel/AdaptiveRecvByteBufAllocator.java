@@ -195,4 +195,10 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
     public Handle newHandle() {
         return new HandleImpl(minIndex, maxIndex, initial);
     }
+
+    @Override
+    public AdaptiveRecvByteBufAllocator respectMaybeMoreData(boolean respectMaybeMoreData) {
+        super.respectMaybeMoreData(respectMaybeMoreData);
+        return this;
+    }
 }
