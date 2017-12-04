@@ -319,7 +319,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         if (streamId == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
             Boolean upgraded = stream.getProperty(upgradeKey);
             if (Boolean.TRUE.equals(upgraded)) {
-                return true;
+                return false;
             }
         }
 
