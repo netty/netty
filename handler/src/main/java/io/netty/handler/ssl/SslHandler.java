@@ -1506,13 +1506,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 try {
                     engine.closeInbound();
                 } catch (SSLException e) {
-                    // only log in debug mode as it most likely harmless and latest chrome still trigger
-                    // this all the time.
-                    //
-                    // See https://github.com/netty/netty/issues/1340
-                    String msg = e.getMessage();
-                    if (msg == null || !msg.contains("possible truncation attack")) {
-                        logger.debug("{} SSLEngine.closeInbound() raised an exception.", ctx.channel(), e);
+                    if (logger.isDebugEnabled()) {
+                        // only log in debug mode as it most likely harmless and latest chrome still trigger
+                        // this all the time.
+                        //
+                        // See https://github.com/netty/netty/issues/1340
+                        String msg = e.getMessage();
+                        if (msg == null || !msg.contains("possible truncation attack")) {
+                            logger.debug("{} SSLEngine.closeInbound() raised an exception.", ctx.channel(), e);
+                        }
                     }
                 }
             }
