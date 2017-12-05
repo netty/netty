@@ -23,6 +23,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -30,6 +31,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.DecoderException;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.ReferenceCountUtil;
@@ -44,12 +46,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
@@ -124,6 +125,42 @@ public class SniHandlerTest {
 
     public SniHandlerTest(SslProvider provider) {
         this.provider = provider;
+    }
+
+    @Test
+    public void testNonSslRecord() throws Exception {
+        SslContext nettyContext = makeSslContext(provider, false);
+        try {
+            final AtomicReference<SslHandshakeCompletionEvent> evtRef =
+                    new AtomicReference<SslHandshakeCompletionEvent>();
+            SniHandler handler = new SniHandler(new DomainNameMappingBuilder<SslContext>(nettyContext).build());
+            EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    if (evt instanceof SslHandshakeCompletionEvent) {
+                        assertTrue(evtRef.compareAndSet(null, (SslHandshakeCompletionEvent) evt));
+                    }
+                }
+            });
+
+            try {
+                byte[] bytes = new byte[1024];
+                bytes[0] = SslUtils.SSL_CONTENT_TYPE_ALERT;
+
+                try {
+                    ch.writeInbound(Unpooled.wrappedBuffer(bytes));
+                    fail();
+                } catch (DecoderException e) {
+                    assertTrue(e.getCause() instanceof NotSslRecordException);
+                }
+                assertFalse(ch.finish());
+            } finally {
+                ch.finishAndReleaseAll();
+            }
+            assertTrue(evtRef.get().cause() instanceof NotSslRecordException);
+        } finally {
+            releaseAll(nettyContext);
+        }
     }
 
     @Test

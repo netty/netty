@@ -239,6 +239,9 @@ public class SniHandler extends ByteToMessageDecoder {
                             break loop;
                     }
                 }
+            } catch (NotSslRecordException e) {
+                // Just rethrow as in this case we also closed the channel and this is consistent with SslHandler.
+                throw e;
             } catch (Exception e) {
                 // unexpected encoding, ignore sni and use default
                 if (logger.isDebugEnabled()) {
