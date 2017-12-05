@@ -98,7 +98,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                             // SSLv3 or TLS
                             if (majorVersion == 3) {
                                 final int packetLength = in.getUnsignedShort(readerIndex + 3) +
-                                                         SslUtils.SSL_RECORD_HEADER_LENGTH;
+                                        SslUtils.SSL_RECORD_HEADER_LENGTH;
 
                                 if (readableBytes < packetLength) {
                                     // client hello incomplete; try again to decode once more data is ready.
@@ -185,7 +185,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                                             }
 
                                             final String hostname = in.toString(offset, serverNameLength,
-                                                                                CharsetUtil.US_ASCII);
+                                                    CharsetUtil.US_ASCII);
 
                                             try {
                                                 select(ctx, hostname.toLowerCase(Locale.US));
@@ -208,7 +208,10 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                             break loop;
                     }
                 }
-            } catch (Throwable e) {
+            } catch (NotSslRecordException e) {
+                // Just rethrow as in this case we also closed the channel and this is consistent with SslHandler.
+                throw e;
+            } catch (Exception e) {
                 // unexpected encoding, ignore sni and use default
                 if (logger.isDebugEnabled()) {
                     logger.debug("Unexpected client hello packet: " + ByteBufUtil.hexDump(in), e);
