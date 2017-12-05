@@ -141,6 +141,42 @@ public class SniHandlerTest {
     }
 
     @Test
+    public void testNonSslRecord() throws Exception {
+        SslContext nettyContext = makeSslContext(provider, false);
+        try {
+            final AtomicReference<SslHandshakeCompletionEvent> evtRef =
+                    new AtomicReference<SslHandshakeCompletionEvent>();
+            SniHandler handler = new SniHandler(new DomainNameMappingBuilder<SslContext>(nettyContext).build());
+            EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    if (evt instanceof SslHandshakeCompletionEvent) {
+                        assertTrue(evtRef.compareAndSet(null, (SslHandshakeCompletionEvent) evt));
+                    }
+                }
+            });
+
+            try {
+                byte[] bytes = new byte[1024];
+                bytes[0] = SslUtils.SSL_CONTENT_TYPE_ALERT;
+
+                try {
+                    ch.writeInbound(Unpooled.wrappedBuffer(bytes));
+                    fail();
+                } catch (DecoderException e) {
+                    assertTrue(e.getCause() instanceof NotSslRecordException);
+                }
+                assertFalse(ch.finish());
+            } finally {
+                ch.finishAndReleaseAll();
+            }
+            assertTrue(evtRef.get().cause() instanceof NotSslRecordException);
+        } finally {
+            releaseAll(nettyContext);
+        }
+    }
+
+    @Test
     public void testServerNameParsing() throws Exception {
         SslContext nettyContext = makeSslContext(provider, false);
         SslContext leanContext = makeSslContext(provider, false);
