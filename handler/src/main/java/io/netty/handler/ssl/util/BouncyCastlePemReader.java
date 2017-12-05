@@ -30,7 +30,6 @@ import java.security.AccessController;
 import java.security.PrivateKey;
 import java.security.PrivilegedAction;
 import java.security.Provider;
-import java.security.Security;
 
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.openssl.PEMDecryptorProvider;
@@ -49,6 +48,7 @@ import org.bouncycastle.pkcs.PKCSException;
 public final class BouncyCastlePemReader {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastlePemReader.class);
+    private static Provider bcProvider;
     private static Boolean available;
 
     static {
@@ -67,9 +67,7 @@ public final class BouncyCastlePemReader {
                     Class<Provider> bcProviderClass
                       = (Class<Provider>) Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider",
                               true, this.getClass().getClassLoader());
-                    if (Security.getProvider("BC") == null) {
-                        Security.addProvider(bcProviderClass.newInstance());
-                    }
+                    bcProvider = bcProviderClass.newInstance();
                     logger.debug("Bouncy Castle provider available");
                     return Boolean.TRUE;
                 } catch (Exception e) {
@@ -104,7 +102,7 @@ public final class BouncyCastlePemReader {
             Object object = pemParser.readObject();
             logger.debug("Parsed PEM object of type " + object.getClass().getName() + " and assume key is "
                     + (keyPassword == null ? "not " : "") + "encrypted");
-            JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
+            JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider(bcProvider);
             PrivateKey pk = null;
 
             if (keyPassword == null) {
@@ -121,10 +119,12 @@ public final class BouncyCastlePemReader {
                 // assume private key is encrypted
                 if (object instanceof PEMEncryptedKeyPair) {
                     PEMDecryptorProvider decProv = new JcePEMDecryptorProviderBuilder()
+                            .setProvider(bcProvider)
                             .build(keyPassword.toCharArray());
                     pk = converter.getKeyPair(((PEMEncryptedKeyPair) object).decryptKeyPair(decProv)).getPrivate();
                 } else if (object instanceof PKCS8EncryptedPrivateKeyInfo) {
                     InputDecryptorProvider pkcs8InputDecryptorProvider = new JceOpenSSLPKCS8DecryptorProviderBuilder()
+                            .setProvider(bcProvider)
                             .build(keyPassword.toCharArray());
                     pk = converter.getPrivateKey(((PKCS8EncryptedPrivateKeyInfo) object)
                             .decryptPrivateKeyInfo(pkcs8InputDecryptorProvider));
