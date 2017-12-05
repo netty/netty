@@ -51,23 +51,22 @@ public final class BouncyCastlePemReader {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastlePemReader.class);
     private static Boolean available;
 
-    public static boolean isAvailable() {
+    static {
         tryLoading();
+    }
+
+    public static boolean isAvailable() {
         return available;
     }
 
     private static void tryLoading() {
-        if (available != null) {
-            return;
-        }
-
         available = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
             @Override
             public Boolean run() {
                 try {
                     Class<Provider> bcProviderClass
-                      = (Class<Provider>) Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider"
-                              , true, this.getClass().getClassLoader());
+                      = (Class<Provider>) Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider",
+                              true, this.getClass().getClassLoader());
                     if (Security.getProvider("BC") == null) {
                         Security.addProvider(bcProviderClass.newInstance());
                     }
@@ -79,10 +78,6 @@ public final class BouncyCastlePemReader {
                 }
             }
         });
-    }
-
-    static {
-        tryLoading();
     }
 
     public static PrivateKey getPrivateKey(InputStream keyInputStream, String keyPassword) {
@@ -105,7 +100,6 @@ public final class BouncyCastlePemReader {
 
     private static PrivateKey getPrivateKey(PEMParser pemParser, String keyPassword) throws PEMException, IOException,
             PKCSException, OperatorCreationException {
-
         try {
             Object object = pemParser.readObject();
             logger.debug("Parsed PEM object of type " + object.getClass().getName() + " and assume key is "
