@@ -257,7 +257,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
         if (cause == null) {
             ctx.fireUserEventTriggered(new SniCompletionEvent(hostname));
         } else {
-            ctx.fireUserEventTriggered(new SniCompletionEvent(cause));
+            ctx.fireUserEventTriggered(new SniCompletionEvent(hostname, cause));
         }
     }
 

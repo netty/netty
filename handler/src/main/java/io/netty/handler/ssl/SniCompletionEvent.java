@@ -29,21 +29,24 @@ public final class SniCompletionEvent extends SslCompletionEvent {
         this.hostname = hostname;
     }
 
-    SniCompletionEvent(Throwable cause) {
+    SniCompletionEvent(String hostname, Throwable cause) {
         super(cause);
-        hostname = null;
+        this.hostname = hostname;
+    }
+
+    SniCompletionEvent(Throwable cause) {
+        this(null, cause);
     }
 
     /**
-     * Returns the SNI hostname send by the client of {@link #isSuccess()} is {@code true} otherwise
-     * it returns {@code null}.
+     * Returns the SNI hostname send by the client if we were able to parse it, {@code null} otherwise.
      */
     public String hostname() {
         return hostname;
     }
 
     @Override
-    public  String toString() {
+    public String toString() {
         final Throwable cause = cause();
         return cause == null ? getClass().getSimpleName() + "(SUCCESS='"  + hostname + "'\")":
                 getClass().getSimpleName() +  '(' + cause + ')';
