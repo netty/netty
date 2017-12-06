@@ -17,6 +17,7 @@ package io.netty.channel.unix;
 
 import io.netty.channel.ChannelException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
 
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -26,6 +27,7 @@ import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERROR_ECONNREFUSED_NEGATIVE;
@@ -381,6 +383,14 @@ public final class Socket extends FileDescriptor {
                 '}';
     }
 
+    private static final AtomicBoolean INITIALIZED = new AtomicBoolean();
+
+    public static void initialize() {
+        if (INITIALIZED.compareAndSet(false, true)) {
+            initialize(NetUtil.isIpV4StackPreferred());
+        }
+    }
+
     public static Socket newSocketStream() {
         int res = newSocketStreamFd();
         if (res < 0) {
@@ -453,4 +463,5 @@ public final class Socket extends FileDescriptor {
     private static native void setSoLinger(int fd, int soLinger) throws IOException;
     private static native void setTcpDeferAccept(int fd, int deferAccept) throws IOException;
     private static native void setTcpQuickAck(int fd, int quickAck) throws IOException;
+    private static native void initialize(boolean ipv4Preferred);
 }
