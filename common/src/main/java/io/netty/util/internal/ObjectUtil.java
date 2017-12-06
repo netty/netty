@@ -34,7 +34,7 @@ public final class ObjectUtil {
     }
 
     /**
-     * Checks that the given argument is strictly positive. If it is, throws {@link IllegalArgumentException}.
+     * Checks that the given argument is strictly positive. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
     public static int checkPositive(int i, String name) {
@@ -45,7 +45,7 @@ public final class ObjectUtil {
     }
 
     /**
-     * Checks that the given argument is strictly positive. If it is, throws {@link IllegalArgumentException}.
+     * Checks that the given argument is strictly positive. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
     public static long checkPositive(long i, String name) {
@@ -56,7 +56,7 @@ public final class ObjectUtil {
     }
 
     /**
-     * Checks that the given argument is positive or zero. If it is, throws {@link IllegalArgumentException}.
+     * Checks that the given argument is positive or zero. If it is not , throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
     public static int checkPositiveOrZero(int i, String name) {
@@ -67,7 +67,7 @@ public final class ObjectUtil {
     }
 
     /**
-     * Checks that the given argument is positive or zero. If it is, throws {@link IllegalArgumentException}.
+     * Checks that the given argument is positive or zero. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
     public static long checkPositiveOrZero(long i, String name) {
