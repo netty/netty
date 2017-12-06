@@ -17,11 +17,12 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.unix.Errors.NativeIoException;
+import io.netty.channel.unix.NativeInetAddress;
+import io.netty.channel.unix.Socket;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.NativeInetAddress;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -67,6 +68,7 @@ public final class Native {
             // The library was not previously loaded, load it now.
             loadNativeLibrary();
         }
+        Socket.initialize();
     }
 
     // EventLoop operations and constants

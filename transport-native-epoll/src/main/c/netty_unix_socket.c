@@ -40,9 +40,7 @@ static jmethodID datagramSocketAddrMethodId = NULL;
 static jmethodID inetSocketAddrMethodId = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
 static jclass inetSocketAddressClass = NULL;
-static jclass netUtilClass = NULL;
-static jmethodID netUtilClassIpv4PreferredMethodId = NULL;
-static int socketType;
+static int socketType = AF_INET;
 static const char* ip4prefix = "::ffff:";
 static const unsigned char wildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 static const unsigned char ipv4MappedWildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 };
@@ -155,30 +153,26 @@ static jbyteArray createInetSocketAddressArray(JNIEnv* env, const struct sockadd
     return bArray;
 }
 
-static int socket_type(JNIEnv* env) {
-    jboolean ipv4Preferred = (*env)->CallStaticBooleanMethod(env, netUtilClass, netUtilClassIpv4PreferredMethodId);
-
+static void netty_unix_socket_initialize(JNIEnv* env, jclass clazz, jboolean ipv4Preferred) {
     if (ipv4Preferred) {
         // User asked to use ipv4 explicitly.
-        return AF_INET;
-    }
-    int fd = socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0);
-    if (fd == -1) {
-        if (errno == EAFNOSUPPORT) {
-            return AF_INET;
-        }
-        return AF_INET6;
+        socketType = AF_INET;
     } else {
-        // Explicitly try to bind to ::1 to ensure IPV6 can really be used.
-        // See https://github.com/netty/netty/issues/7021.
-        struct sockaddr_in6 addr;
-        memset(&addr, 0, sizeof(addr));
-        addr.sin6_family = AF_INET6;
-        addr.sin6_addr.s6_addr[15] = 1; /* [::1]:0 */
-        int res = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
+        int fd = socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0);
+        if (fd == -1) {
+            socketType = errno == EAFNOSUPPORT ? AF_INET : AF_INET6;
+        } else {
+            // Explicitly try to bind to ::1 to ensure IPV6 can really be used.
+            // See https://github.com/netty/netty/issues/7021.
+            struct sockaddr_in6 addr;
+            memset(&addr, 0, sizeof(addr));
+            addr.sin6_family = AF_INET6;
+            addr.sin6_addr.s6_addr[15] = 1; /* [::1]:0 */
+            int res = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
 
-        close(fd);
-        return res == 0 ? AF_INET6 : AF_INET;
+            close(fd);
+            socketType = res == 0 ? AF_INET6 : AF_INET;
+        }
     }
 }
 
@@ -746,7 +740,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "getSoLinger", "(I)I", (void *) netty_unix_socket_getSoLinger },
   { "getSoError", "(I)I", (void *) netty_unix_socket_getSoError },
   { "getTcpDeferAccept", "(I)I", (void *) netty_unix_socket_getTcpDeferAccept },
-  { "isTcpQuickAck", "(I)I", (void *) netty_unix_socket_isTcpQuickAck }
+  { "isTcpQuickAck", "(I)I", (void *) netty_unix_socket_isTcpQuickAck },
+  { "initialize", "(Z)V", (void *) netty_unix_socket_initialize }
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
@@ -835,26 +830,6 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
         netty_unix_errors_throwRuntimeException(env, "failed to get method ID: InetSocketAddress.<init>(String, int)");
         return JNI_ERR;
     }
-    nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/util/NetUtil");
-    jclass localNetUtilClass = (*env)->FindClass(env, nettyClassName);
-    free(nettyClassName);
-    nettyClassName = NULL;
-    if (localNetUtilClass == NULL) {
-        // pending exception...
-        return JNI_ERR;
-    }
-    netUtilClass = (jclass) (*env)->NewGlobalRef(env, localNetUtilClass);
-    if (netUtilClass == NULL) {
-        // out-of-memory!
-        netty_unix_errors_throwOutOfMemoryError(env);
-        return JNI_ERR;
-    }
-    netUtilClassIpv4PreferredMethodId = (*env)->GetStaticMethodID(env, netUtilClass, "isIpV4StackPreferred", "()Z" );
-    if (netUtilClassIpv4PreferredMethodId == NULL) {
-        // position method was not found.. something is wrong so bail out
-        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: NetUild.isIpV4StackPreferred()");
-        return JNI_ERR;
-    }
     
     nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/unix/PeerCredentials");
     jclass localPeerCredsClass = (*env)->FindClass(env, nettyClassName);
@@ -896,7 +871,6 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     }
     free(mem);
 
-    socketType = socket_type(env);
     return JNI_VERSION_1_6;
 }
 
@@ -908,10 +882,6 @@ void netty_unix_socket_JNI_OnUnLoad(JNIEnv* env) {
     if (inetSocketAddressClass != NULL) {
         (*env)->DeleteGlobalRef(env, inetSocketAddressClass);
         inetSocketAddressClass = NULL;
-    }
-    if (netUtilClass != NULL) {
-        (*env)->DeleteGlobalRef(env, netUtilClass);
-        netUtilClass = NULL;
     }
     if (peerCredentialsClass != NULL) {
         (*env)->DeleteGlobalRef(env, peerCredentialsClass);
