@@ -67,7 +67,12 @@ public interface FileRegion extends ReferenceCounted {
 
     /**
      * Returns the bytes which was transfered already.
+     *
+     * @deprecated Will be removed in the next minor release of netty. Please use the new methods added in
+     *             {@link FileChannelBasedFileRegion} instead and they will be moved to this interface in the next minor
+     *             release.
      */
+    @Deprecated
     long transferred();
 
     /**
@@ -84,7 +89,11 @@ public interface FileRegion extends ReferenceCounted {
      *                  transfer start from {@link #position()}th byte and
      *                  <tt>{@link #count()} - 1</tt> will make the last
      *                  byte of the region transferred.
+     * @deprecated Will be removed in the next minor release of netty. Please use the new methods added in
+     *             {@link FileChannelBasedFileRegion} instead and they will be moved to this interface in the next minor
+     *             release.
      */
+    @Deprecated
     long transferTo(WritableByteChannel target, long position) throws IOException;
 
     @Override

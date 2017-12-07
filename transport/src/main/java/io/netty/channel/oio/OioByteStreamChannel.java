@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.SliceableFileRegion;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -128,18 +129,41 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
             outChannel = Channels.newChannel(os);
         }
 
-        long written = 0;
-        for (;;) {
-            long localWritten = region.transferTo(outChannel, written);
-            if (localWritten == -1) {
-                checkEOF(region);
-                return;
+        if (region instanceof SliceableFileRegion) {
+            SliceableFileRegion r = (SliceableFileRegion) region;
+            for (;;) {
+                long localWritten = r.transferBytesTo(outChannel, r.transferableBytes());
+                if (localWritten == -1) {
+                    checkEOF(r);
+                    return;
+                }
+                if (!r.isTransferable()) {
+                    return;
+                }
             }
-            written += localWritten;
+        } else {
+            // TODO: consider remove this branch once we move the methods in SliceableFileRegion
+            // into FileRegion in the next minor release.
+            long written = 0;
+            for (;;) {
+                long localWritten = region.transferTo(outChannel, written);
+                if (localWritten == -1) {
+                    checkEOF(region);
+                    return;
+                }
+                written += localWritten;
 
-            if (written >= region.count()) {
-                return;
+                if (written >= region.count()) {
+                    return;
+                }
             }
+        }
+    }
+
+    private static void checkEOF(SliceableFileRegion region) throws IOException {
+        if (region.transferIndex() < region.count()) {
+            throw new EOFException("Expected to be able to write " + region.count() + " bytes, " +
+                                   "but only wrote " + region.transferIndex());
         }
     }
 
