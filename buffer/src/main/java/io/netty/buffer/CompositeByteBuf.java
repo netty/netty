@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.MathUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,7 +49,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     private final ByteBufAllocator alloc;
     private final boolean direct;
-    private final List<Component> components;
+    private final Components components;
     private final int maxNumComponents;
 
     private boolean freed;
@@ -61,7 +62,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        components = newList(maxNumComponents);
+        components = new Components(maxNumComponents);
     }
 
     public CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf... buffers) {
@@ -82,7 +83,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        components = newList(maxNumComponents);
+        components = new Components(maxNumComponents);
 
         addComponents0(false, 0, buffers, offset, len);
         consolidateIfNeeded();
@@ -103,15 +104,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        components = newList(maxNumComponents);
+        components = new Components(maxNumComponents);
 
         addComponents0(false, 0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
-    }
-
-    private static List<Component> newList(int maxNumComponents) {
-        return new ArrayList<Component>(Math.min(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents));
     }
 
     // Special constructor used by WrappedCompositeByteBuf
@@ -120,7 +117,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         direct = false;
         maxNumComponents = 0;
-        components = Collections.emptyList();
+        components = new Components(0);
     }
 
     /**
@@ -1576,10 +1573,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Discard everything if (readerIndex = writerIndex = capacity).
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
-            for (Component c: components) {
-                c.freeIfNecessary();
-            }
-            components.clear();
+            components.freeAll();
             setIndex(0, 0);
             adjustMarkers(readerIndex);
             return this;
@@ -1930,12 +1924,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         freed = true;
-        int size = components.size();
-        // We're not using foreach to avoid creating an iterator.
-        // see https://github.com/netty/netty/issues/2642
-        for (int i = 0; i < size; i++) {
-            components.get(i).freeIfNecessary();
-        }
+        components.freeAll();
     }
 
     @Override
@@ -1970,6 +1959,63 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         @Override
         public void remove() {
             throw new UnsupportedOperationException("Read-Only");
+        }
+    }
+
+    final class Components {
+
+        private Component[] components;
+        private int head;
+        private int tail;
+
+        Components(int capacity) {
+            components = new Component[MathUtil.findNextPositivePowerOfTwo(capacity)];
+        }
+
+        private void increaseStorage() {
+
+        }
+
+        void add(Component component) {
+            components[tail] = component;
+            tail = (tail + 1) & mask();
+            if (tail == head) {
+                increaseStorage();
+            }
+        }
+
+        void set(int index, Component component) {
+            int idx = idx(index);
+            assert components[idx] != null;
+            components[idx] = component;
+        }
+
+        private int idx(int index) {
+            return (head + index) & mask();
+        }
+
+        Component get(int index) {
+            return components[idx(index)];
+        }
+
+        int size() {
+            return (tail - head) & mask();
+
+        }
+
+        boolean isEmpty() {
+            return head == tail;
+        }
+
+        void freeAll() {
+            for (int i = head; i < tail; i = (i + 1 & mask())) {
+                components[i].freeIfNecessary();
+                components[i] = null;
+            }
+        }
+
+        private int mask() {
+            return components.length - 1;
         }
     }
 }
