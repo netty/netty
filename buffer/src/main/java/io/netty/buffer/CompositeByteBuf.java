@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.RandomAccessCircularDeque;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,7 +32,6 @@ import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -48,7 +48,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     private final ByteBufAllocator alloc;
     private final boolean direct;
-    private final List<Component> components;
+    private final RandomAccessCircularDeque<Component> components;
     private final int maxNumComponents;
 
     private boolean freed;
@@ -61,7 +61,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        components = newList(maxNumComponents);
+        components = newQueue(maxNumComponents);
     }
 
     public CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf... buffers) {
@@ -82,7 +82,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        components = newList(maxNumComponents);
+        components = newQueue(maxNumComponents);
 
         addComponents0(false, 0, buffers, offset, len);
         consolidateIfNeeded();
@@ -103,15 +103,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        components = newList(maxNumComponents);
+        components = newQueue(maxNumComponents);
 
         addComponents0(false, 0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
     }
 
-    private static List<Component> newList(int maxNumComponents) {
-        return new ArrayList<Component>(Math.min(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents));
+    private static RandomAccessCircularDeque<Component> newQueue(int maxNumComponents) {
+        return new RandomAccessCircularDeque<Component>(Math.min(
+                AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents));
     }
 
     // Special constructor used by WrappedCompositeByteBuf
@@ -120,7 +121,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         direct = false;
         maxNumComponents = 0;
-        components = Collections.emptyList();
+        components = null;
     }
 
     /**
@@ -465,8 +466,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      */
     public CompositeByteBuf removeComponent(int cIndex) {
         checkComponentIndex(cIndex);
-        Component comp = components.remove(cIndex);
+
+        Component comp = components.get(cIndex);
         comp.freeIfNecessary();
+        components.remove(cIndex);
         if (comp.length > 0) {
             // Only need to call updateComponentOffsets if the length was > 0
             updateComponentOffsets(cIndex);
@@ -486,15 +489,17 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         if (numComponents == 0) {
             return this;
         }
-        List<Component> toRemove = components.subList(cIndex, cIndex + numComponents);
+        int endIndex = cIndex + numComponents;
         boolean needsUpdate = false;
-        for (Component c: toRemove) {
+        for (int i = cIndex; i < endIndex; i++) {
+            Component c = components.get(i);
             if (c.length > 0) {
                 needsUpdate = true;
             }
             c.freeIfNecessary();
         }
-        toRemove.clear();
+
+        components.remove(cIndex, numComponents);
 
         if (needsUpdate) {
             // Only need to call updateComponentOffsets if the length was > 0
@@ -663,11 +668,14 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             }
         } else if (newCapacity < oldCapacity) {
             int bytesToTrim = oldCapacity - newCapacity;
-            for (ListIterator<Component> i = components.listIterator(components.size()); i.hasPrevious();) {
-                Component c = i.previous();
+
+            for (;;) {
+                Component c = components.pollLast();
+                if (c == null) {
+                    break;
+                }
                 if (bytesToTrim >= c.length) {
                     bytesToTrim -= c.length;
-                    i.remove();
                     continue;
                 }
 
@@ -675,10 +683,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 Component newC = new Component(c.buf.slice(0, c.length - bytesToTrim));
                 newC.offset = c.offset;
                 newC.endOffset = newC.offset + newC.length;
-                i.set(newC);
+                components.add(newC);
                 break;
             }
-
             if (readerIndex() > newCapacity) {
                 setIndex(newCapacity, newCapacity);
             } else if (writerIndex() > newCapacity) {
@@ -1557,7 +1564,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             c.freeIfNecessary();
         }
 
-        components.subList(cIndex + 1, endCIndex).clear();
+        components.remove(cIndex + 1, numComponents - 1);
         components.set(cIndex, new Component(consolidated));
         updateComponentOffsets(cIndex);
         return this;
@@ -1590,7 +1597,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         for (int i = 0; i < firstComponentId; i ++) {
             components.get(i).freeIfNecessary();
         }
-        components.subList(0, firstComponentId).clear();
+        components.remove(0, firstComponentId);
 
         // Update indexes and markers.
         Component first = components.get(0);
@@ -1624,16 +1631,15 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Remove read components.
         int firstComponentId = toComponentIndex(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
-            components.get(i).freeIfNecessary();
+             components.poll().freeIfNecessary();
         }
-        components.subList(0, firstComponentId).clear();
 
         // Remove or replace the first readable component with a new slice.
         Component c = components.get(0);
         int adjustment = readerIndex - c.offset;
         if (adjustment == c.length) {
             // new slice would be empty, so remove instead
-            components.remove(0);
+            components.poll();
         } else {
             Component newC = new Component(c.buf.slice(adjustment, c.length - adjustment));
             components.set(0, newC);
@@ -1930,11 +1936,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         freed = true;
-        int size = components.size();
-        // We're not using foreach to avoid creating an iterator.
-        // see https://github.com/netty/netty/issues/2642
-        for (int i = 0; i < size; i++) {
-            components.get(i).freeIfNecessary();
+        for (int i = 0; i < components.size(); i++) {
+            Component c = components.get(i);
+            c.freeIfNecessary();
         }
     }
 
