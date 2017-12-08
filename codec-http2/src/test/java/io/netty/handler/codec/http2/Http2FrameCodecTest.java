@@ -21,6 +21,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -37,6 +38,7 @@ import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.AsciiString;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -664,6 +666,47 @@ public class Http2FrameCodecTest {
                 "HTTP/2", new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
         channel.pipeline().fireUserEventTriggered(upgradeEvent);
         assertEquals(1, upgradeEvent.refCnt());
+    }
+
+    @Test
+    public void upgradeWithoutFlowControlling() throws Exception {
+        channel.pipeline().addAfter(http2HandlerCtx.name(), null, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+                if (msg instanceof Http2DataFrame) {
+                    // Simulate consuming the frame and update the flow-controller.
+                    Http2DataFrame data = (Http2DataFrame) msg;
+                    ctx.writeAndFlush(new DefaultHttp2WindowUpdateFrame(data.initialFlowControlledBytes())
+                            .stream(data.stream())).addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            Throwable cause = future.cause();
+                            if (cause != null) {
+                                ctx.fireExceptionCaught(cause);
+                            }
+                        }
+                    });
+                }
+                ReferenceCountUtil.release(msg);
+            }
+        });
+
+        frameListener.onHeadersRead(http2HandlerCtx, Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, request, 31, false);
+
+        // Using reflect as the constructor is package-private and the class is final.
+        Constructor<UpgradeEvent> constructor =
+                UpgradeEvent.class.getDeclaredConstructor(CharSequence.class, FullHttpRequest.class);
+
+        // Check if we could make it accessible which may fail on java9.
+        Assume.assumeTrue(ReflectionUtil.trySetAccessible(constructor) == null);
+
+        String longString = new String(new char[70000]).replace("\0", "*");
+        DefaultFullHttpRequest request =
+            new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/", bb(longString));
+
+        HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
+            "HTTP/2", request);
+        channel.pipeline().fireUserEventTriggered(upgradeEvent);
     }
 
     private static ChannelPromise anyChannelPromise() {
