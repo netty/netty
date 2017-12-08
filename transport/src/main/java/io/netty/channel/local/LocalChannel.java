@@ -91,7 +91,6 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalAddress remoteAddress;
     private volatile ChannelPromise connectPromise;
     private volatile boolean readInProgress;
-    private volatile boolean registerInProgress;
     private volatile boolean writeInProgress;
     private volatile Future<?> finishReadFuture;
 
@@ -172,13 +171,8 @@ public class LocalChannel extends AbstractChannel {
         // See https://github.com/netty/netty/issues/2400
         if (peer != null && parent() != null) {
             // Store the peer in a local variable as it may be set to null if doClose() is called.
-            // Because of this we also set registerInProgress to true as we check for this in doClose() and make sure
-            // we delay the fireChannelInactive() to be fired after the fireChannelActive() and so keep the correct
-            // order of events.
-            //
             // See https://github.com/netty/netty/issues/2144
             final LocalChannel peer = this.peer;
-            registerInProgress = true;
             state = State.CONNECTED;
 
             peer.remoteAddress = parent() == null ? null : parent().localAddress();
@@ -191,7 +185,6 @@ public class LocalChannel extends AbstractChannel {
             peer.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    registerInProgress = false;
                     ChannelPromise promise = peer.connectPromise;
 
                     // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
@@ -237,7 +230,9 @@ public class LocalChannel extends AbstractChannel {
                 state = State.CLOSED;
 
                 // Preserve order of event and force a read operation now before the close operation is processed.
-                finishPeerRead(this);
+                if (writeInProgress && peer != null) {
+                    finishPeerRead(peer);
+                }
 
                 ChannelPromise promise = connectPromise;
                 if (promise != null) {
@@ -249,34 +244,29 @@ public class LocalChannel extends AbstractChannel {
 
             if (peer != null) {
                 this.peer = null;
-                // Need to execute the close in the correct EventLoop (see https://github.com/netty/netty/issues/1777).
-                // Also check if the registration was not done yet. In this case we submit the close to the EventLoop
-                // to make sure its run after the registration completes
-                // (see https://github.com/netty/netty/issues/2144).
+                // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
+                // This ensures that if both channels are on the same event loop, the peer's channelInActive
+                // event is triggered *after* this peer's channelInActive event
                 EventLoop peerEventLoop = peer.eventLoop();
                 final boolean peerIsActive = peer.isActive();
-                if (peerEventLoop.inEventLoop() && !registerInProgress) {
-                    peer.tryClose(peerIsActive);
-                } else {
-                    try {
-                        peerEventLoop.execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                peer.tryClose(peerIsActive);
-                            }
-                        });
-                    } catch (Throwable cause) {
-                        logger.warn("Releasing Inbound Queues for channels {}-{} because exception occurred!",
-                                this, peer, cause);
-                        if (peerEventLoop.inEventLoop()) {
-                            peer.releaseInboundBuffers();
-                        } else {
-                            // inboundBuffers is a SPSC so we may leak if the event loop is shutdown prematurely or
-                            // rejects the close Runnable but give a best effort.
-                            peer.close();
+                try {
+                    peerEventLoop.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            peer.tryClose(peerIsActive);
                         }
-                        PlatformDependent.throwException(cause);
+                    });
+                } catch (Throwable cause) {
+                    logger.warn("Releasing Inbound Queues for channels {}-{} because exception occurred!",
+                            this, peer, cause);
+                    if (peerEventLoop.inEventLoop()) {
+                        peer.releaseInboundBuffers();
+                    } else {
+                        // inboundBuffers is a SPSC so we may leak if the event loop is shutdown prematurely or
+                        // rejects the close Runnable but give a best effort.
+                        peer.close();
                     }
+                    PlatformDependent.throwException(cause);
                 }
             }
         } finally {
