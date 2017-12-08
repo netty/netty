@@ -265,6 +265,13 @@ public class DefaultChannelConfig implements ChannelConfig {
             throw new IllegalArgumentException(
                     "writeSpinCount must be a positive integer.");
         }
+        // Integer.MAX_VALUE is used as a special value in the channel implementations to indicate the channel cannot
+        // accept any more data, and results in the writeOp being set on the selector (or execute a runnable which tries
+        // to flush later because the writeSpinCount quantum has been exhausted). This strategy prevents additional
+        // conditional logic in the channel implementations, and shouldn't be noticeable in practice.
+        if (writeSpinCount == Integer.MAX_VALUE) {
+            --writeSpinCount;
+        }
         this.writeSpinCount = writeSpinCount;
         return this;
     }

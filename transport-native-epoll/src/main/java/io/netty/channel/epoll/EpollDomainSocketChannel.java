@@ -103,14 +103,14 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
     }
 
     @Override
-    protected boolean doWriteSingle(ChannelOutboundBuffer in, int writeSpinCount) throws Exception {
+    protected int doWriteSingle(ChannelOutboundBuffer in) throws Exception {
         Object msg = in.current();
         if (msg instanceof FileDescriptor && socket.sendFd(((FileDescriptor) msg).intValue()) > 0) {
             // File descriptor was written, so remove it.
             in.remove();
-            return true;
+            return 1;
         }
-        return super.doWriteSingle(in, writeSpinCount);
+        return super.doWriteSingle(in);
     }
 
     @Override

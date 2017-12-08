@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
-#include <sys/sendfile.h>
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -66,11 +65,6 @@ struct mmsghdr {
 #endif
 
 // Those are initialized in the init(...) method and cached for performance reasons
-jfieldID fileChannelFieldId = NULL;
-jfieldID transferredFieldId = NULL;
-jfieldID fdFieldId = NULL;
-jfieldID fileDescriptorFieldId = NULL;
-
 jfieldID packetAddrFieldId = NULL;
 jfieldID packetScopeIdFieldId = NULL;
 jfieldID packetPortFieldId = NULL;
@@ -278,39 +272,6 @@ static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, job
     return (jint) res;
 }
 
-static jlong netty_epoll_native_sendfile0(JNIEnv* env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
-    jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
-    if (fileChannel == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
-        return -1;
-    }
-    jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
-    if (fileDescriptor == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
-        return -1;
-    }
-    jint srcFd = (*env)->GetIntField(env, fileDescriptor, fdFieldId);
-    if (srcFd == -1) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get FileDescriptor.fd");
-        return -1;
-    }
-    ssize_t res;
-    off_t offset = base_off + off;
-    int err;
-    do {
-      res = sendfile(fd, srcFd, &offset, (size_t) len);
-    } while (res == -1 && ((err = errno) == EINTR));
-    if (res < 0) {
-        return -err;
-    }
-    if (res > 0) {
-        // update the transferred field in DefaultFileRegion
-        (*env)->SetLongField(env, fileRegion, transferredFieldId, off + res);
-    }
-
-    return res;
-}
-
 static jstring netty_epoll_native_kernelVersion(JNIEnv* env, jclass clazz) {
     struct utsname name;
 
@@ -425,7 +386,6 @@ static const JNINativeMethod fixed_method_table[] = {
   { "epollCtlMod0", "(III)I", (void *) netty_epoll_native_epollCtlMod0 },
   { "epollCtlDel0", "(II)I", (void *) netty_epoll_native_epollCtlDel0 },
   // "sendmmsg0" has a dynamic signature
-  // "sendFile0" has a dynamic signature
   { "sizeofEpollEvent", "()I", (void *) netty_epoll_native_sizeofEpollEvent },
   { "offsetofEpollData", "()I", (void *) netty_epoll_native_offsetofEpollData },
   { "splice0", "(IJIJJ)I", (void *) netty_epoll_native_splice0 }
@@ -433,7 +393,7 @@ static const JNINativeMethod fixed_method_table[] = {
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
 static jint dynamicMethodsTableSize() {
-    return fixed_method_table_size + 2;
+    return fixed_method_table_size + 1; // 1 is for the dynamic method signatures.
 }
 
 static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
@@ -444,13 +404,6 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     dynamicMethod->name = "sendmmsg0";
     dynamicMethod->signature = netty_unix_util_prepend("(I[L", dynamicTypeName);
     dynamicMethod->fnPtr = (void *) netty_epoll_native_sendmmsg0;
-    free(dynamicTypeName);
-
-    ++dynamicMethod;
-    dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/DefaultFileRegion;JJJ)J");
-    dynamicMethod->name = "sendfile0";
-    dynamicMethod->signature = netty_unix_util_prepend("(IL", dynamicTypeName);
-    dynamicMethod->fnPtr = (void *) netty_epoll_native_sendfile0;
     free(dynamicTypeName);
     return dynamicMethods;
 }
@@ -504,47 +457,7 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     }
 
     // Initialize this module
-    char* nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/DefaultFileRegion");
-    jclass fileRegionCls = (*env)->FindClass(env, nettyClassName);
-    free(nettyClassName);
-    nettyClassName = NULL;
-    if (fileRegionCls == NULL) {
-        return JNI_ERR;
-    }
-    fileChannelFieldId = (*env)->GetFieldID(env, fileRegionCls, "file", "Ljava/nio/channels/FileChannel;");
-    if (fileChannelFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.file");
-        return JNI_ERR;
-    }
-    transferredFieldId = (*env)->GetFieldID(env, fileRegionCls, "transferred", "J");
-    if (transferredFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.transferred");
-        return JNI_ERR;
-    }
-
-    jclass fileChannelCls = (*env)->FindClass(env, "sun/nio/ch/FileChannelImpl");
-    if (fileChannelCls == NULL) {
-        // pending exception...
-        return JNI_ERR;
-    }
-    fileDescriptorFieldId = (*env)->GetFieldID(env, fileChannelCls, "fd", "Ljava/io/FileDescriptor;");
-    if (fileDescriptorFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: FileChannelImpl.fd");
-        return JNI_ERR;
-    }
-
-    jclass fileDescriptorCls = (*env)->FindClass(env, "java/io/FileDescriptor");
-    if (fileDescriptorCls == NULL) {
-        // pending exception...
-        return JNI_ERR;
-    }
-    fdFieldId = (*env)->GetFieldID(env, fileDescriptorCls, "fd", "I");
-    if (fdFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: FileDescriptor.fd");
-        return JNI_ERR;
-    }
-
-    nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket");
+    char* nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket");
     jclass nativeDatagramPacketCls = (*env)->FindClass(env, nettyClassName);
     free(nettyClassName);
     nettyClassName = NULL;
