@@ -37,7 +37,6 @@ public final class RandomAccessCircularDeque<E> extends AbstractList<E> implemen
     private int head;
     private int tail;
 
-    @SuppressWarnings("unchecked")
     public RandomAccessCircularDeque(int initialCapacity) {
         elements = new Object[Math.max(MathUtil.safeFindNextPositivePowerOfTwo(initialCapacity), 2)];
     }
@@ -145,7 +144,6 @@ public final class RandomAccessCircularDeque<E> extends AbstractList<E> implemen
     }
 
     @SuppressWarnings("unchecked")
-
     private E elementAt(int index) {
         return (E) elements[index];
     }
@@ -531,7 +529,6 @@ public final class RandomAccessCircularDeque<E> extends AbstractList<E> implemen
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
-            @SuppressWarnings("unchecked")
             E result = elementAt(idx);
             if (tail != end) {
                 // Seems like we had some concurrent modification...
@@ -563,7 +560,6 @@ public final class RandomAccessCircularDeque<E> extends AbstractList<E> implemen
                 throw new NoSuchElementException();
             }
             idx = decrementIdx(idx);
-            @SuppressWarnings("unchecked")
             E result = elementAt(idx);
             if (head != end) {
                 // Seems like we had some concurrent modification...
