@@ -29,6 +29,7 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
@@ -49,6 +50,8 @@ import java.nio.channels.WritableByteChannel;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 
+import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
+import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.FileDescriptor.pipe;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -67,7 +70,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     private static final ClosedChannelException FAIL_SPLICE_IF_CLOSED_CLOSED_CHANNEL_EXCEPTION =
             ThrowableUtil.unknownStackTrace(new ClosedChannelException(),
             AbstractEpollStreamChannel.class, "failSpliceIfClosed(...)");
-
+    private final Runnable flushTask = new Runnable() {
+        @Override
+        public void run() {
+            flush();
+        }
+    };
     private Queue<SpliceInTask> spliceQueue;
 
     // Lazy init these if we need to splice(...)
@@ -241,291 +249,282 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     /**
      * Write bytes form the given {@link ByteBuf} to the underlying {@link java.nio.channels.Channel}.
-     * @param buf           the {@link ByteBuf} from which the bytes should be written
+     * @param in the collection which contains objects to write.
+     * @param buf the {@link ByteBuf} from which the bytes should be written
+     * @return The value that should be decremented from the write quantum which starts at
+     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * <ul>
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     is encountered</li>
+     *     <li>1 - if a single call to write data was made to the OS</li>
+     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     no data was accepted</li>
+     * </ul>
      */
-    private boolean writeBytes(ChannelOutboundBuffer in, ByteBuf buf, int writeSpinCount) throws Exception {
+    private int writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
         int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
             in.remove();
-            return true;
+            return 0;
         }
 
         if (buf.hasMemoryAddress() || buf.nioBufferCount() == 1) {
-            int writtenBytes = doWriteBytes(buf, writeSpinCount);
-            in.removeBytes(writtenBytes);
-            return writtenBytes == readableBytes;
+            return doWriteBytes(in, buf);
         } else {
             ByteBuffer[] nioBuffers = buf.nioBuffers();
-            return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes, writeSpinCount);
+            return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
+                    config().getMaxBytesPerGatheringWrite());
         }
     }
 
-    private boolean writeBytesMultiple(
-            ChannelOutboundBuffer in, IovArray array, int writeSpinCount) throws IOException {
+    private void adjustMaxBytesPerGatheringWrite(long attempted, long written, long oldMaxBytesPerGatheringWrite) {
+        // By default we track the SO_SNDBUF when ever it is explicitly set. However some OSes may dynamically change
+        // SO_SNDBUF (and other characteristics that determine how much data can be written at once) so we should try
+        // make a best effort to adjust as OS behavior changes.
+        if (attempted == written) {
+            if (attempted << 1 > oldMaxBytesPerGatheringWrite) {
+                config().setMaxBytesPerGatheringWrite(attempted << 1);
+            }
+        } else if (attempted > MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD && written < attempted >>> 1) {
+            config().setMaxBytesPerGatheringWrite(attempted >>> 1);
+        }
+    }
 
-        long expectedWrittenBytes = array.size();
-        final long initialExpectedWrittenBytes = expectedWrittenBytes;
-
-        int cnt = array.count();
-
+    /**
+     * Write multiple bytes via {@link IovArray}.
+     * @param in the collection which contains objects to write.
+     * @param array The array which contains the content to write.
+     * @return The value that should be decremented from the write quantum which starts at
+     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * <ul>
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     is encountered</li>
+     *     <li>1 - if a single call to write data was made to the OS</li>
+     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     no data was accepted</li>
+     * </ul>
+     * @throws IOException If an I/O exception occurs during write.
+     */
+    private int writeBytesMultiple(ChannelOutboundBuffer in, IovArray array) throws IOException {
+        final long expectedWrittenBytes = array.size();
         assert expectedWrittenBytes != 0;
+        final int cnt = array.count();
         assert cnt != 0;
 
-        boolean done = false;
-        int offset = 0;
-        int end = offset + cnt;
-        for (int i = writeSpinCount; i > 0; --i) {
-            long localWrittenBytes = socket.writevAddresses(array.memoryAddress(offset), cnt);
-            if (localWrittenBytes == 0) {
-                break;
-            }
-            expectedWrittenBytes -= localWrittenBytes;
-
-            if (expectedWrittenBytes == 0) {
-                // Written everything, just break out here (fast-path)
-                done = true;
-                break;
-            }
-
-            do {
-                long bytes = array.processWritten(offset, localWrittenBytes);
-                if (bytes == -1) {
-                    // incomplete write
-                    break;
-                } else {
-                    offset++;
-                    cnt--;
-                    localWrittenBytes -= bytes;
-                }
-            } while (offset < end && localWrittenBytes > 0);
+        final long localWrittenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
+        if (localWrittenBytes > 0) {
+            adjustMaxBytesPerGatheringWrite(expectedWrittenBytes, localWrittenBytes, array.maxBytes());
+            in.removeBytes(localWrittenBytes);
+            return 1;
         }
-        in.removeBytes(initialExpectedWrittenBytes - expectedWrittenBytes);
-        return done;
+        return WRITE_STATUS_SNDBUF_FULL;
     }
 
-    private boolean writeBytesMultiple(
-            ChannelOutboundBuffer in, ByteBuffer[] nioBuffers,
-            int nioBufferCnt, long expectedWrittenBytes, int writeSpinCount) throws IOException {
-
+    /**
+     * Write multiple bytes via {@link ByteBuffer} array.
+     * @param in the collection which contains objects to write.
+     * @param nioBuffers The buffers to write.
+     * @param nioBufferCnt The number of buffers to write.
+     * @param expectedWrittenBytes The number of bytes we expect to write.
+     * @param maxBytesPerGatheringWrite The maximum number of bytes we should attempt to write.
+     * @return The value that should be decremented from the write quantum which starts at
+     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * <ul>
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     is encountered</li>
+     *     <li>1 - if a single call to write data was made to the OS</li>
+     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     no data was accepted</li>
+     * </ul>
+     * @throws IOException If an I/O exception occurs during write.
+     */
+    private int writeBytesMultiple(
+            ChannelOutboundBuffer in, ByteBuffer[] nioBuffers, int nioBufferCnt, long expectedWrittenBytes,
+            long maxBytesPerGatheringWrite) throws IOException {
         assert expectedWrittenBytes != 0;
-        final long initialExpectedWrittenBytes = expectedWrittenBytes;
-
-        boolean done = false;
-        int offset = 0;
-        int end = offset + nioBufferCnt;
-        for (int i = writeSpinCount; i > 0; --i) {
-            long localWrittenBytes = socket.writev(nioBuffers, offset, nioBufferCnt);
-            if (localWrittenBytes == 0) {
-                break;
-            }
-            expectedWrittenBytes -= localWrittenBytes;
-
-            if (expectedWrittenBytes == 0) {
-                // Written everything, just break out here (fast-path)
-                done = true;
-                break;
-            }
-            do {
-                ByteBuffer buffer = nioBuffers[offset];
-                int pos = buffer.position();
-                int bytes = buffer.limit() - pos;
-                if (bytes > localWrittenBytes) {
-                    buffer.position(pos + (int) localWrittenBytes);
-                    // incomplete write
-                    break;
-                } else {
-                    offset++;
-                    nioBufferCnt--;
-                    localWrittenBytes -= bytes;
-                }
-            } while (offset < end && localWrittenBytes > 0);
+        if (expectedWrittenBytes > maxBytesPerGatheringWrite) {
+            expectedWrittenBytes = maxBytesPerGatheringWrite;
         }
 
-        in.removeBytes(initialExpectedWrittenBytes - expectedWrittenBytes);
-        return done;
+        final long localWrittenBytes = socket.writev(nioBuffers, 0, nioBufferCnt, expectedWrittenBytes);
+        if (localWrittenBytes > 0) {
+            adjustMaxBytesPerGatheringWrite(expectedWrittenBytes, localWrittenBytes, maxBytesPerGatheringWrite);
+            in.removeBytes(localWrittenBytes);
+            return 1;
+        }
+        return WRITE_STATUS_SNDBUF_FULL;
     }
 
     /**
      * Write a {@link DefaultFileRegion}
-     *
-     * @param region        the {@link DefaultFileRegion} from which the bytes should be written
-     * @return amount       the amount of written bytes
+     * @param in the collection which contains objects to write.
+     * @param region the {@link DefaultFileRegion} from which the bytes should be written
+     * @return The value that should be decremented from the write quantum which starts at
+     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * <ul>
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     is encountered</li>
+     *     <li>1 - if a single call to write data was made to the OS</li>
+     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     no data was accepted</li>
+     * </ul>
      */
-    private boolean writeDefaultFileRegion(
-            ChannelOutboundBuffer in, DefaultFileRegion region, int writeSpinCount) throws Exception {
+    private int writeDefaultFileRegion(ChannelOutboundBuffer in, DefaultFileRegion region) throws Exception {
         final long regionCount = region.count();
         if (region.transferred() >= regionCount) {
             in.remove();
-            return true;
+            return 0;
         }
 
-        final long baseOffset = region.position();
-        boolean done = false;
-        long flushedAmount = 0;
-
-        for (int i = writeSpinCount; i > 0; --i) {
-            final long offset = region.transferred();
-            final long localFlushedAmount =
-                    Native.sendfile(socket.intValue(), region, baseOffset, offset, regionCount - offset);
-            if (localFlushedAmount == 0) {
-                break;
-            }
-
-            flushedAmount += localFlushedAmount;
-            if (region.transferred() >= regionCount) {
-                done = true;
-                break;
-            }
-        }
-
+        final long offset = region.transferred();
+        final long flushedAmount = socket.sendFile(region, region.position(), offset, regionCount - offset);
         if (flushedAmount > 0) {
             in.progress(flushedAmount);
+            if (region.transferred() >= regionCount) {
+                in.remove();
+            }
+            return 1;
         }
-
-        if (done) {
-            in.remove();
-        }
-        return done;
+        return WRITE_STATUS_SNDBUF_FULL;
     }
 
-    private boolean writeFileRegion(
-            ChannelOutboundBuffer in, FileRegion region, final int writeSpinCount) throws Exception {
+    /**
+     * Write a {@link FileRegion}
+     * @param in the collection which contains objects to write.
+     * @param region the {@link FileRegion} from which the bytes should be written
+     * @return The value that should be decremented from the write quantum which starts at
+     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * <ul>
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     is encountered</li>
+     *     <li>1 - if a single call to write data was made to the OS</li>
+     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     no data was accepted</li>
+     * </ul>
+     */
+    private int writeFileRegion(ChannelOutboundBuffer in, FileRegion region) throws Exception {
         if (region.transferred() >= region.count()) {
             in.remove();
-            return true;
+            return 0;
         }
-
-        boolean done = false;
-        long flushedAmount = 0;
 
         if (byteChannel == null) {
             byteChannel = new EpollSocketWritableByteChannel();
         }
-        for (int i = writeSpinCount; i > 0; --i) {
-            final long localFlushedAmount = region.transferTo(byteChannel, region.transferred());
-            if (localFlushedAmount == 0) {
-                break;
-            }
-
-            flushedAmount += localFlushedAmount;
-            if (region.transferred() >= region.count()) {
-                done = true;
-                break;
-            }
-        }
-
+        final long flushedAmount = region.transferTo(byteChannel, region.transferred());
         if (flushedAmount > 0) {
             in.progress(flushedAmount);
+            if (region.transferred() >= region.count()) {
+                in.remove();
+            }
+            return 1;
         }
-
-        if (done) {
-            in.remove();
-        }
-        return done;
+        return WRITE_STATUS_SNDBUF_FULL;
     }
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         int writeSpinCount = config().getWriteSpinCount();
-        for (;;) {
+        do {
             final int msgCount = in.size();
-
-            if (msgCount == 0) {
+            // Do gathering write if the outbound buffer entries start with more than one ByteBuf.
+            if (msgCount > 1 && in.current() instanceof ByteBuf) {
+                writeSpinCount -= doWriteMultiple(in);
+            } else if (msgCount == 0) {
                 // Wrote all messages.
                 clearFlag(Native.EPOLLOUT);
                 // Return here so we not set the EPOLLOUT flag.
                 return;
+            } else {  // msgCount == 1
+                writeSpinCount -= doWriteSingle(in);
             }
 
-            // Do gathering write if the outbounf buffer entries start with more than one ByteBuf.
-            if (msgCount > 1 && in.current() instanceof ByteBuf) {
-                if (!doWriteMultiple(in, writeSpinCount)) {
-                    // Break the loop and so set EPOLLOUT flag.
-                    break;
-                }
+            // We do not break the loop here even if the outbound buffer was flushed completely,
+            // because a user might have triggered another write and flush when we notify his or her
+            // listeners.
+        } while (writeSpinCount > 0);
 
-                // We do not break the loop here even if the outbound buffer was flushed completely,
-                // because a user might have triggered another write and flush when we notify his or her
-                // listeners.
-            } else { // msgCount == 1
-                if (!doWriteSingle(in, writeSpinCount)) {
-                    // Break the loop and so set EPOLLOUT flag.
-                    break;
-                }
-            }
+        if (writeSpinCount == 0) {
+            // We used our writeSpin quantum, and should try to write again later.
+            eventLoop().execute(flushTask);
+        } else {
+            // Underlying descriptor can not accept all data currently, so set the EPOLLOUT flag to be woken up
+            // when it can accept more data.
+            setFlag(Native.EPOLLOUT);
         }
-        // Underlying descriptor can not accept all data currently, so set the EPOLLOUT flag to be woken up
-        // when it can accept more data.
-        setFlag(Native.EPOLLOUT);
     }
 
-    protected boolean doWriteSingle(ChannelOutboundBuffer in, int writeSpinCount) throws Exception {
+    /**
+     * Attempt to write a single object.
+     * @param in the collection which contains objects to write.
+     * @return The value that should be decremented from the write quantum which starts at
+     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * <ul>
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     is encountered</li>
+     *     <li>1 - if a single call to write data was made to the OS</li>
+     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     no data was accepted</li>
+     * </ul>
+     * @throws Exception If an I/O error occurs.
+     */
+    protected int doWriteSingle(ChannelOutboundBuffer in) throws Exception {
         // The outbound buffer contains only one message or it contains a file region.
         Object msg = in.current();
         if (msg instanceof ByteBuf) {
-            if (!writeBytes(in, (ByteBuf) msg, writeSpinCount)) {
-                // was not able to write everything so break here we will get notified later again once
-                // the network stack can handle more writes.
-                return false;
-            }
+            return writeBytes(in, (ByteBuf) msg);
         } else if (msg instanceof DefaultFileRegion) {
-            if (!writeDefaultFileRegion(in, (DefaultFileRegion) msg, writeSpinCount)) {
-                // was not able to write everything so break here we will get notified later again once
-                // the network stack can handle more writes.
-                return false;
-            }
+            return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
         } else if (msg instanceof FileRegion) {
-            if (!writeFileRegion(in, (FileRegion) msg, writeSpinCount)) {
-                // was not able to write everything so break here we will get notified later again once
-                // the network stack can handle more writes.
-                return false;
-            }
+            return writeFileRegion(in, (FileRegion) msg);
         } else if (msg instanceof SpliceOutTask) {
             if (!((SpliceOutTask) msg).spliceOut()) {
-                return false;
+                return WRITE_STATUS_SNDBUF_FULL;
             }
             in.remove();
+            return 1;
         } else {
             // Should never reach here.
             throw new Error();
         }
-
-        return true;
     }
 
-    private boolean doWriteMultiple(ChannelOutboundBuffer in, int writeSpinCount) throws Exception {
+    /**
+     * Attempt to write multiple {@link ByteBuf} objects.
+     * @param in the collection which contains objects to write.
+     * @return The value that should be decremented from the write quantum which starts at
+     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * <ul>
+     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
+     *     is encountered</li>
+     *     <li>1 - if a single call to write data was made to the OS</li>
+     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
+     *     no data was accepted</li>
+     * </ul>
+     * @throws Exception If an I/O error occurs.
+     */
+    private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
+        final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
         if (PlatformDependent.hasUnsafe()) {
-            // this means we can cast to IovArray and write the IovArray directly.
             IovArray array = ((EpollEventLoop) eventLoop()).cleanArray();
+            array.maxBytes(maxBytesPerGatheringWrite);
             in.forEachFlushedMessage(array);
 
-            int cnt = array.count();
-            if (cnt >= 1) {
+            if (array.count() >= 1) {
                 // TODO: Handle the case where cnt == 1 specially.
-                if (!writeBytesMultiple(in, array, writeSpinCount)) {
-                    // was not able to write everything so break here we will get notified later again once
-                    // the network stack can handle more writes.
-                    return false;
-                }
-            } else { // cnt == 0, which means the outbound buffer contained empty buffers only.
-                in.removeBytes(0);
+                return writeBytesMultiple(in, array);
             }
         } else {
             ByteBuffer[] buffers = in.nioBuffers();
             int cnt = in.nioBufferCount();
             if (cnt >= 1) {
                 // TODO: Handle the case where cnt == 1 specially.
-                if (!writeBytesMultiple(in, buffers, cnt, in.nioBufferSize(), writeSpinCount)) {
-                    // was not able to write everything so break here we will get notified later again once
-                    // the network stack can handle more writes.
-                    return false;
-                }
-            } else { // cnt == 0, which means the outbound buffer contained empty buffers only.
-                in.removeBytes(0);
+                return writeBytesMultiple(in, buffers, cnt, in.nioBufferSize(), maxBytesPerGatheringWrite);
             }
         }
-
-        return true;
+        // cnt == 0, which means the outbound buffer contained empty buffers only.
+        in.removeBytes(0);
+        return 0;
     }
 
     @Override
