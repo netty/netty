@@ -145,6 +145,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private static final InternalLogger LOG = InternalLoggerFactory.getInstance(Http2FrameCodec.class);
 
     private final PropertyKey streamKey;
+    private final PropertyKey upgradeKey;
 
     private final Integer initialFlowControlWindowSize;
 
@@ -161,6 +162,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         connection().addListener(new ConnectionListener());
         connection().remote().flowController().listener(new Http2RemoteFlowControllerListener());
         streamKey = connection().newKey();
+        upgradeKey = connection().newKey();
         initialFlowControlWindowSize = initialSettings.initialWindowSize();
     }
 
@@ -247,6 +249,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 }
                 upgrade.upgradeRequest().headers().setInt(
                         HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), HTTP_UPGRADE_STREAM_ID);
+                stream.setProperty(upgradeKey, true);
                 InboundHttpToHttp2Adapter.handle(
                         ctx, connection(), decoder().frameListener(), upgrade.upgradeRequest().retain());
             } finally {
@@ -312,6 +315,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     final boolean consumeBytes(int streamId, int bytes) throws Http2Exception {
         Http2Stream stream = connection().stream(streamId);
+        // upgraded requests are ineligible for stream control
+        if (streamId == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
+            Boolean upgraded = stream.getProperty(upgradeKey);
+            if (Boolean.TRUE.equals(upgraded)) {
+                return false;
+            }
+        }
+
         return connection().local().flowController().consumeBytes(stream, bytes);
     }
 
