@@ -1165,6 +1165,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     /**
+     * Called once the {@link ChannelInboundHandler#channelActive(ChannelHandlerContext)}event hit
+     * the end of the {@link ChannelPipeline}.
+     */
+    protected void onUnhandledInboundChannelActive() {
+    }
+
+    /**
+     * Called once the {@link ChannelInboundHandler#channelInactive(ChannelHandlerContext)} event hit
+     * the end of the {@link ChannelPipeline}.
+     */
+    protected void onUnhandledInboundChannelInactive() {
+    }
+
+    /**
      * Called once a message hit the end of the {@link ChannelPipeline} without been handled by the user
      * in {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}. This method is responsible
      * to call {@link ReferenceCountUtil#release(Object)} on the given msg at some point.
@@ -1177,6 +1191,31 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } finally {
             ReferenceCountUtil.release(msg);
         }
+    }
+
+    /**
+     * Called once the {@link ChannelInboundHandler#channelReadComplete(ChannelHandlerContext)} event hit
+     * the end of the {@link ChannelPipeline}.
+     */
+    protected void onUnhandledInboundChannelReadComplete() {
+    }
+
+    /**
+     * Called once an user event hit the end of the {@link ChannelPipeline} without been handled by the user
+     * in {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)}. This method is responsible
+     * to call {@link ReferenceCountUtil#release(Object)} on the given event at some point.
+     */
+    protected void onUnhandledInboundUserEventTriggered(Object evt) {
+        // This may not be a configuration error and so don't log anything.
+        // The event may be superfluous for the current pipeline configuration.
+        ReferenceCountUtil.release(evt);
+    }
+
+    /**
+     * Called once the {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)} event hit
+     * the end of the {@link ChannelPipeline}.
+     */
+    protected void onUnhandledChannelWritabilityChanged() {
     }
 
     @UnstableApi
@@ -1215,13 +1254,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public void channelUnregistered(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception { }
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            onUnhandledInboundChannelActive();
+        }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception { }
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            onUnhandledInboundChannelInactive();
+        }
 
         @Override
-        public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception { }
+        public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            onUnhandledChannelWritabilityChanged();
+        }
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception { }
@@ -1231,9 +1276,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            // This may not be a configuration error and so don't log anything.
-            // The event may be superfluous for the current pipeline configuration.
-            ReferenceCountUtil.release(evt);
+            onUnhandledInboundUserEventTriggered(evt);
         }
 
         @Override
@@ -1247,7 +1290,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception { }
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            onUnhandledInboundChannelReadComplete();
+        }
     }
 
     final class HeadContext extends AbstractChannelHandlerContext
