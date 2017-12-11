@@ -104,6 +104,13 @@ public final class ThreadDeathWatcher {
 
         if (started.compareAndSet(false, true)) {
             Thread watcherThread = threadFactory.newThread(watcher);
+            // Set to null to ensure we not create classloader leaks by holds a strong reference to the inherited
+            // classloader.
+            // See:
+            // - https://github.com/netty/netty/issues/7290
+            // - https://bugs.openjdk.java.net/browse/JDK-7008595
+            watcherThread.setContextClassLoader(null);
+
             watcherThread.start();
             ThreadDeathWatcher.watcherThread = watcherThread;
         }
