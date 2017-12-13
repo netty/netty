@@ -10,13 +10,6 @@
         { ":path": "/index.html" },
         { ":scheme": "http" },
         { ":scheme": "https" },
-        { ":status": "200" },
-        { ":status": "204" },
-        { ":status": "206" },
-        { ":status": "304" },
-        { ":status": "400" },
-        { ":status": "404" },
-        { ":status": "500" },
         { "accept-charset": "" },
         { "accept-encoding": "gzip, deflate" },
         { "accept-language": "" },
@@ -66,7 +59,7 @@
         { "www-authenticate": "" }
       ],
       "encoded": [
-        "8182 8384 8586 8788 898a 8b8c 8d8e 8f90",
+        "8182 8384 8586 87 8f90",
         "9192 9394 9596 9798 999a 9b9c 9d9e 9fa0",
         "a1a2 a3a4 a5a6 a7a8 a9aa abac adae afb0",
         "b1b2 b3b4 b5b6 b7b8 b9ba bbbc bd"

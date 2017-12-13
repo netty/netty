@@ -21,16 +21,19 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.handler.codec.http2.Http2Error.*;
-import static io.netty.handler.codec.http2.Http2Exception.*;
-import static io.netty.util.AsciiString.*;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
+import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
+import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
+import static io.netty.util.AsciiString.isUpperCase;
 
 @UnstableApi
 public class DefaultHttp2Headers
         extends DefaultHeaders<CharSequence, CharSequence, Http2Headers> implements Http2Headers {
     private static final ByteProcessor HTTP2_NAME_VALIDATOR_PROCESSOR = new ByteProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return !isUpperCase(value);
         }
     };
@@ -207,7 +210,7 @@ public class DefaultHttp2Headers
             this.next = next;
 
             // Make sure the pseudo headers fields are first in iteration order
-            if (key.length() != 0 && key.charAt(0) == ':') {
+            if (hasPseudoHeaderFormat(key)) {
                 after = firstNonPseudo;
                 before = firstNonPseudo.before();
             } else {
