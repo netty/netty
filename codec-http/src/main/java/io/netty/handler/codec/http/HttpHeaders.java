@@ -1693,4 +1693,18 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     public String toString() {
         return HeadersUtils.toString(getClass(), iteratorCharSequence(), size());
     }
+
+    /**
+     * Returns a deap copy of the passed in {@link HttpHeaders}.
+     */
+    public static HttpHeaders copy(HttpHeaders headers) {
+        final HttpHeaders copy;
+        if (headers instanceof DefaultHttpHeaders) {
+            copy = ((DefaultHttpHeaders) headers).copy();
+        } else {
+            copy = new DefaultHttpHeaders();
+            copy.set(headers);
+        }
+        return copy;
+    }
 }

@@ -142,7 +142,10 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
 
     @Override
     public FullHttpRequest replace(ByteBuf content) {
-        return new DefaultFullHttpRequest(protocolVersion(), method(), uri(), content, headers(), trailingHeaders());
+        FullHttpRequest request = new DefaultFullHttpRequest(protocolVersion(), method(), uri(), content,
+                HttpHeaders.copy(headers()), HttpHeaders.copy(trailingHeaders()));
+        request.setDecoderResult(decoderResult());
+        return request;
     }
 
     @Override

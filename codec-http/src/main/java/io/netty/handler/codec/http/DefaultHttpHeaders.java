@@ -42,7 +42,7 @@ import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
 /**
  * Default implementation of {@link HttpHeaders}.
  */
-public class DefaultHttpHeaders extends HttpHeaders {
+public class DefaultHttpHeaders extends HttpHeaders implements Cloneable {
     private static final int HIGHEST_INVALID_VALUE_CHAR_MASK = ~15;
     private static final ByteProcessor HEADER_NAME_VALIDATOR = new ByteProcessor() {
         @Override
@@ -346,6 +346,13 @@ public class DefaultHttpHeaders extends HttpHeaders {
     @Override
     public int hashCode() {
         return headers.hashCode(CASE_SENSITIVE_HASHER);
+    }
+
+    /**
+     * Returns a deep copy of this instance.
+     */
+    public HttpHeaders copy() {
+        return new DefaultHttpHeaders(headers.copy());
     }
 
     private static void validateHeaderNameElement(byte value) {
