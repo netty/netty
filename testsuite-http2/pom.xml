@@ -72,9 +72,6 @@
             <excludeSpec>5.1 - closed: Sends a HEADERS frame</excludeSpec>
             <excludeSpec>5.1.1 - Sends stream identifier that is numerically smaller than previous</excludeSpec>
             <excludeSpec>7 - Sends a GOAWAY frame with unknown error code</excludeSpec>
-            <excludeSpec>8.1.2.1 - Sends a HEADERS frame that contains a unknown pseudo-header field</excludeSpec>
-            <excludeSpec>8.1.2.1 - Sends a HEADERS frame that contains the pseudo-header field defined for response</excludeSpec>
-            <excludeSpec>8.1.2.1 - Sends a HEADERS frame that contains a pseudo-header field that appears in a header block after a regular header field</excludeSpec>
             <excludeSpec>8.1.2.2 - Sends a HEADERS frame that contains the connection-specific header field</excludeSpec>
             <excludeSpec>8.1.2.2 - Sends a HEADERS frame that contains the TE header field with any value other than "trailers"</excludeSpec>
             <excludeSpec>8.1.2.3 - Sends a HEADERS frame with empty ":path" pseudo-header field</excludeSpec>
