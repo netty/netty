@@ -82,7 +82,7 @@ public class HpackDecoderBenchmark extends AbstractMicrobenchmark {
                 return this;
             }
         };
-        hpackDecoder.decode(0, input.duplicate(), headers);
+        hpackDecoder.decode(0, input.duplicate(), headers, true);
     }
 
     private byte[] getSerializedHeaders(Http2Headers headers, boolean sensitive) throws Http2Exception {
