@@ -348,6 +348,11 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return headers.hashCode(CASE_SENSITIVE_HASHER);
     }
 
+    @Override
+    public HttpHeaders copy() {
+        return new DefaultHttpHeaders(headers.copy());
+    }
+
     private static void validateHeaderNameElement(byte value) {
         switch (value) {
         case 0x00:
