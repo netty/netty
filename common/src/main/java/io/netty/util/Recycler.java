@@ -416,7 +416,14 @@ public abstract class Recycler<T> {
         // to scavenge those that can be reused. this permits us to incur minimal thread synchronisation whilst
         // still recycling all items.
         final Recycler<T> parent;
-        final Thread thread;
+
+        // We store the Thread in a WeakReference as otherwise we may be the only ones that still hold a strong
+        // Reference to the Thread itself after it died because DefaultHandle will hold a reference to the Stack.
+        //
+        // The biggest issue is if we do not use a WeakReference the Thread may not be able to be collected at all if
+        // the user will store a reference to the DefaultHandle somewhere and never clear this reference (or not clear
+        // it in a timely manner).
+        final WeakReference<Thread> threadRef;
         final AtomicInteger availableSharedCapacity;
         final int maxDelayedQueues;
 
@@ -431,7 +438,7 @@ public abstract class Recycler<T> {
         Stack(Recycler<T> parent, Thread thread, int maxCapacity, int maxSharedCapacityFactor,
               int ratioMask, int maxDelayedQueues) {
             this.parent = parent;
-            this.thread = thread;
+            threadRef = new WeakReference<Thread>(thread);
             this.maxCapacity = maxCapacity;
             availableSharedCapacity = new AtomicInteger(max(maxCapacity / maxSharedCapacityFactor, LINK_CAPACITY));
             elements = new DefaultHandle[min(INITIAL_CAPACITY, maxCapacity)];
@@ -545,11 +552,12 @@ public abstract class Recycler<T> {
 
         void push(DefaultHandle<?> item) {
             Thread currentThread = Thread.currentThread();
-            if (thread == currentThread) {
+            if (threadRef.get() == currentThread) {
                 // The current Thread is the thread that belongs to the Stack, we can try to push the object now.
                 pushNow(item);
             } else {
-                // The current Thread is not the one that belongs to the Stack, we need to signal that the push
+                // The current Thread is not the one that belongs to the Stack
+                // (or the Thread that belonged to the Stack was collected already), we need to signal that the push
                 // happens later.
                 pushLater(item, currentThread);
             }
