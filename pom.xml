@@ -200,6 +200,7 @@
     <testJavaHome>${env.JAVA_HOME}</testJavaHome>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
+    <skipHttp2Testsuite>false</skipHttp2Testsuite>
   </properties>
 
   <modules>
@@ -235,6 +236,7 @@
     <module>example</module>
     <module>testsuite</module>
     <module>testsuite-autobahn</module>
+    <module>testsuite-http2</module>
     <module>testsuite-osgi</module>
     <module>microbench</module>
     <module>bom</module>
