@@ -21,12 +21,56 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class SingleThreadEventExecutorTest {
+
+    @Test
+    public void testWrappedExecutureIsShutdown() {
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null, executorService, false) {
+            @Override
+            protected void run() {
+                while (!confirmShutdown()) {
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        task.run();
+                    }
+                }
+            }
+        };
+
+        executorService.shutdownNow();
+        executeShouldFail(executor);
+        executeShouldFail(executor);
+        try {
+            executor.shutdownGracefully().syncUninterruptibly();
+            Assert.fail();
+        } catch (RejectedExecutionException expected) {
+            // expected
+        }
+        Assert.assertTrue(executor.isShutdown());
+    }
+
+    private static void executeShouldFail(Executor executor) {
+        try {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    // Noop.
+                }
+            });
+            Assert.fail();
+        } catch (RejectedExecutionException expected) {
+            // expected
+        }
+    }
 
     @Test
     public void testThreadProperties() {
