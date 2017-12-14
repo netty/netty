@@ -114,6 +114,16 @@ public abstract class Recycler<T> {
             return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacityPerThread, maxSharedCapacityFactor,
                     ratioMask, maxDelayedQueuesPerThread);
         }
+
+        @Override
+        protected void onRemoval(Stack<T> value) {
+            // Let us remove the WeakOrderQueue from the WeakHashMap directly if its safe to remove some overhead
+            if (value.threadRef.get() == Thread.currentThread()) {
+               if (DELAYED_RECYCLED.isSet()) {
+                   DELAYED_RECYCLED.get().remove(value);
+               }
+            }
+        }
     };
 
     protected Recycler() {
