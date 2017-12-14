@@ -51,7 +51,7 @@
         </property>
       </activation>
       <properties>
-        <skipAutobahnTestsuite>true</skipAutobahnTestsuite>
+        <skipHttp2Testsuite>true</skipHttp2Testsuite>
       </properties>
     </profile>
   </profiles>
