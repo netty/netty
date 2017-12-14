@@ -111,19 +111,19 @@ static jlong netty_unix_filedescriptor_writevAddresses(JNIEnv* env, jclass clazz
     return _writev(env, clazz, fd, iov, length);
 }
 
-static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd, jobjectArray buffers, jint offset, jint length, jlong maxBytesToWrite) {
+static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd, jobjectArray buffers, const jint offset, jint length, jlong maxBytesToWrite) {
     struct iovec iov[length];
-    struct iovec* iovptr = NULL;
+    struct iovec* iovptr = iov;
     int i;
     int num = offset + length;
     if (posFieldId != NULL && limitFieldId != NULL) {
-        for (i = offset; i < num; i++) {
+        for (i = offset; i < num; ++i) {
             jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
             jint pos = (*env)->GetIntField(env, bufObj, posFieldId);
             jint limit = (*env)->GetIntField(env, bufObj, limitFieldId);
             size_t bytesLength = (size_t) (limit - pos);
             if (bytesLength > maxBytesToWrite && i != offset) {
-              bytesLength = num - i;
+              length = i - offset;
               break;
             }
             maxBytesToWrite -= bytesLength;
@@ -140,13 +140,13 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
             (*env)->DeleteLocalRef(env, bufObj);
         }
     } else if (posFieldId != NULL && limitFieldId == NULL) {
-        for (i = offset; i < num; i++) {
+        for (i = offset; i < num; ++i) {
             jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
             jint pos = (*env)->GetIntField(env, bufObj, posFieldId);
             jint limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
             size_t bytesLength = (size_t) (limit - pos);
             if (bytesLength > maxBytesToWrite && i != offset) {
-              bytesLength = num - i;
+              length = i - offset;
               break;
             }
             maxBytesToWrite -= bytesLength;
@@ -163,13 +163,13 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
             (*env)->DeleteLocalRef(env, bufObj);
         }
     } else if (limitFieldId != NULL) {
-        for (i = offset; i < num; i++) {
+        for (i = offset; i < num; ++i) {
             jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
             jint pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
             jint limit = (*env)->GetIntField(env, bufObj, limitFieldId);
             size_t bytesLength = (size_t) (limit - pos);
             if (bytesLength > maxBytesToWrite && i != offset) {
-              bytesLength = num - i;
+              length = i - offset;
               break;
             }
             maxBytesToWrite -= bytesLength;
@@ -186,13 +186,13 @@ static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd
             (*env)->DeleteLocalRef(env, bufObj);
         }
     } else {
-        for (i = offset; i < num; i++) {
+        for (i = offset; i < num; ++i) {
             jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
             jint pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
             jint limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
             size_t bytesLength = (size_t) (limit - pos);
             if (bytesLength > maxBytesToWrite && i != offset) {
-              bytesLength = num - i;
+              length = i - offset;
               break;
             }
             maxBytesToWrite -= bytesLength;
