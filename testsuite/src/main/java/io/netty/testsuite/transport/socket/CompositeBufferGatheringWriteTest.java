@@ -21,12 +21,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -45,15 +47,15 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
         Channel clientChannel = null;
         try {
             final CountDownLatch latch = new CountDownLatch(1);
-            final AtomicReference<ByteBuf> clientReceived = new AtomicReference<ByteBuf>();
+            final AtomicReference<Object> clientReceived = new AtomicReference<Object>();
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                            ReferenceCountUtil.release(msg);
-                            ctx.writeAndFlush(newCompositeBuffer(ctx.alloc()));
+                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                            ctx.writeAndFlush(newCompositeBuffer(ctx.alloc()))
+                                    .addListener(ChannelFutureListener.CLOSE);
                         }
                     });
                 }
@@ -73,14 +75,33 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                             try {
                                 if (msg instanceof ByteBuf) {
                                     aggregator.writeBytes((ByteBuf) msg);
-                                    if (aggregator.readableBytes() == EXPECTED_BYTES) {
-                                        if (clientReceived.compareAndSet(null, aggregator)) {
-                                            latch.countDown();
-                                        }
-                                    }
                                 }
                             } finally {
                                 ReferenceCountUtil.release(msg);
+                            }
+                        }
+
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                            // IOException is fine as it will also close the channel and may just be a connection reset.
+                            if (!(cause instanceof IOException)) {
+                                clientReceived.set(cause);
+                                latch.countDown();
+                            }
+                        }
+
+                        @Override
+                        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                            if (clientReceived.compareAndSet(null, aggregator)) {
+                                try {
+                                    assertEquals(EXPECTED_BYTES, aggregator.readableBytes());
+                                } catch (Throwable cause) {
+                                    aggregator.release();
+                                    aggregator = null;
+                                    clientReceived.set(cause);
+                                } finally {
+                                    latch.countDown();
+                                }
                             }
                         }
                     });
@@ -91,12 +112,17 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
 
             ByteBuf expected = newCompositeBuffer(clientChannel.alloc());
-            clientChannel.writeAndFlush(expected.retainedSlice());
             latch.await();
-            ByteBuf actual = clientReceived.get();
-            assertEquals(expected, actual);
-            expected.release();
-            actual.release();
+            Object received = clientReceived.get();
+            if (received instanceof ByteBuf) {
+                ByteBuf actual = (ByteBuf) received;
+                assertEquals(expected, actual);
+                expected.release();
+                actual.release();
+            } else {
+                expected.release();
+                throw (Throwable) received;
+            }
         } finally {
             if (clientChannel != null) {
                 clientChannel.close().sync();
