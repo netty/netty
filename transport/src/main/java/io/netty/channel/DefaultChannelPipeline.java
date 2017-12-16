@@ -354,6 +354,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         ctx.next = newCtx;
     }
 
+    public final ChannelPipeline addFirst(ChannelHandler handler) {
+        return addFirst(null, handler);
+    }
+
+    @Override
+    public final ChannelPipeline addFirst(ChannelHandler handler) {
+        return addFirst(null, handler);
+    }
+
     @Override
     public final ChannelPipeline addFirst(ChannelHandler... handlers) {
         return addFirst(null, handlers);
@@ -381,6 +390,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         return this;
+    }
+
+    public final ChannelPipeline addLast(ChannelHandler handler) {
+        return addLast(null, handler);
+    }
+
+    @Override
+    public final ChannelPipeline addLast(ChannelHandler handler) {
+        return addLast(null, handler);
     }
 
     @Override
