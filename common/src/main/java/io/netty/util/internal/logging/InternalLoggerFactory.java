@@ -61,7 +61,8 @@ public abstract class InternalLoggerFactory {
     static {
         boolean lineNumber = SystemPropertyUtil.getBoolean(LINE_NUMBER, false);
         LOGGER_LINE_NUMBER = lineNumber;
-        getDefaultFactory().newInstance(InternalLoggerFactory.class.getName()).debug("-D{}: {}", LINE_NUMBER, lineNumber);
+        getDefaultFactory().newInstance(InternalLoggerFactory.class.getName())
+            .debug("-D{}: {}", LINE_NUMBER, lineNumber);
     }
 
     /**
