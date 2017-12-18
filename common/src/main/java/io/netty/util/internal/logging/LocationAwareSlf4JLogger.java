@@ -22,7 +22,7 @@ import static org.slf4j.spi.LocationAwareLogger.*;
 
 /**
  * <a href="http://www.slf4j.org/">SLF4J</a> logger.
- * similar to <a href="https://github.com/qos-ch/slf4j/blob/v_1.7.25/jcl-over-slf4j/src/main/java/org/apache/commons/logging/impl/SLF4JLocationAwareLog.java">SLF4JLocationAwareLog</a>
+ * similar to jcl-over-slf4j/SLF4JLocationAwareLog.java
  */
 class LocationAwareSlf4JLogger extends AbstractInternalLogger {
     public static final String FQCN = LocationAwareSlf4JLogger.class.getName();
@@ -42,7 +42,8 @@ class LocationAwareSlf4JLogger extends AbstractInternalLogger {
         logger.log(null, FQCN, level, message, params, throwable);
     }
 
-    public void log(final Marker marker, final int level, final String message, Throwable throwable, final Object... params) {
+    public void log(final Marker marker, final int level, final String message, Throwable throwable,
+                    final Object... params) {
         logger.log(marker, FQCN, level, message, params, throwable);
     }
 
