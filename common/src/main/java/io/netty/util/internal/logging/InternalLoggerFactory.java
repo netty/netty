@@ -57,7 +57,6 @@ public abstract class InternalLoggerFactory {
         return f;
     }
 
-
     static {
         boolean lineNumber = SystemPropertyUtil.getBoolean(LINE_NUMBER, false);
         LOGGER_LINE_NUMBER = lineNumber;
