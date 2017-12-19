@@ -162,6 +162,7 @@ final class HpackDecoder {
                             default:
                                 // Index was stored as the prefix
                                 name = readName(index);
+                                nameLength = name.length();
                                 state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                         }
                     } else if ((b & 0x20) == 0x20) {
@@ -187,6 +188,7 @@ final class HpackDecoder {
                             default:
                             // Index was stored as the prefix
                             name = readName(index);
+                            nameLength = name.length();
                             state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                         }
                     }
@@ -205,6 +207,7 @@ final class HpackDecoder {
                 case READ_INDEXED_HEADER_NAME:
                     // Header Name matches an entry in the Header Table
                     name = readName(decodeULE128(in, index));
+                    nameLength = name.length();
                     state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                     break;
 
