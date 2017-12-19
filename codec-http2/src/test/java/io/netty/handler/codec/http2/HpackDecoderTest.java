@@ -455,4 +455,26 @@ public class HpackDecoderTest {
             in.release();
         }
     }
+
+    @Test
+    public void testDecodeCountsNamesOnlyOnce() throws Http2Exception {
+        ByteBuf in = Unpooled.buffer(200);
+        try {
+            hpackDecoder.setMaxHeaderListSize(3500, 4000);
+            HpackEncoder hpackEncoder = new HpackEncoder(true);
+
+            // encode headers that are slightly larger than maxHeaderListSize
+            // but smaller than maxHeaderListSizeGoAway
+            Http2Headers toEncode = new DefaultHttp2Headers();
+            toEncode.add(String.format("%03000d", 0).replace('0', 'f'), "value");
+            toEncode.add("accept", "value");
+            hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
+
+            Http2Headers decoded = new DefaultHttp2Headers();
+            hpackDecoder.decode(1, in, decoded);
+            assertEquals(2, decoded.size());
+        } finally {
+            in.release();
+        }
+    }
 }
