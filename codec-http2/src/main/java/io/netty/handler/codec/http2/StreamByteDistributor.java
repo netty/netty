@@ -40,7 +40,7 @@ public interface StreamByteDistributor {
          * @return The amount of bytes this stream has pending to send.
          * @see Http2CodecUtil#streamableBytes(StreamState)
          */
-        int pendingBytes();
+        long pendingBytes();
 
         /**
          * Indicates whether or not there are frames pending for this stream.
