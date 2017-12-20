@@ -223,7 +223,7 @@ public final class Http2CodecUtil {
      * Calculate the amount of bytes that can be sent by {@code state}. The lower bound is {@code 0}.
      */
     public static int streamableBytes(StreamByteDistributor.StreamState state) {
-        return max(0, min(state.pendingBytes(), state.windowSize()));
+        return max(0, (int) min(state.pendingBytes(), state.windowSize()));
     }
 
     /**
