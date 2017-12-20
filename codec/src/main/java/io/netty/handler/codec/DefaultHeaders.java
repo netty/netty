@@ -952,6 +952,16 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         return (T) this;
     }
 
+    /**
+     * Returns a deep copy of this instance.
+     */
+    public DefaultHeaders<K, V, T> copy() {
+        DefaultHeaders<K, V, T> copy = new DefaultHeaders<K, V, T>(
+                hashingStrategy, valueConverter, nameValidator, entries.length);
+        copy.addImpl(this);
+        return copy;
+    }
+
     private final class HeaderIterator implements Iterator<Map.Entry<K, V>> {
         private HeaderEntry<K, V> current = head;
 
