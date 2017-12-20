@@ -425,7 +425,7 @@ public class HttpObjectAggregator
         @Override
         public FullHttpRequest replace(ByteBuf content) {
             DefaultFullHttpRequest dup = new DefaultFullHttpRequest(protocolVersion(), method(), uri(), content,
-                    HttpHeaders.copy(headers()), HttpHeaders.copy(trailingHeaders()));
+                    headers().copy(), trailingHeaders().copy());
             dup.setDecoderResult(decoderResult());
             return dup;
         }
@@ -523,7 +523,7 @@ public class HttpObjectAggregator
         @Override
         public FullHttpResponse replace(ByteBuf content) {
             DefaultFullHttpResponse dup = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(), content,
-                    HttpHeaders.copy(headers()), HttpHeaders.copy(trailingHeaders()));
+                    headers().copy(), trailingHeaders().copy());
             dup.setDecoderResult(decoderResult());
             return dup;
         }

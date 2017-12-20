@@ -348,9 +348,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return headers.hashCode(CASE_SENSITIVE_HASHER);
     }
 
-    /**
-     * Returns a deep copy of this instance.
-     */
+    @Override
     public HttpHeaders copy() {
         return new DefaultHttpHeaders(headers.copy());
     }
