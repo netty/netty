@@ -42,7 +42,7 @@ import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
 /**
  * Default implementation of {@link HttpHeaders}.
  */
-public class DefaultHttpHeaders extends HttpHeaders implements Cloneable {
+public class DefaultHttpHeaders extends HttpHeaders {
     private static final int HIGHEST_INVALID_VALUE_CHAR_MASK = ~15;
     private static final ByteProcessor HEADER_NAME_VALIDATOR = new ByteProcessor() {
         @Override

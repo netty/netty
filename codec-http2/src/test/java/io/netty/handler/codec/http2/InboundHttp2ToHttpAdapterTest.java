@@ -608,7 +608,7 @@ public class InboundHttp2ToHttpAdapterTest {
             verify(serverListener, times(2)).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
             assertEquals(2, capturedRequests.size());
-            // We expect to not have this header i nthe captured request so remove it now.
+            // We do not expect to have this header in the captured request so remove it now.
             assertNotNull(request.headers().remove("x-http2-stream-weight"));
 
             assertEquals(request, capturedRequests.get(0));

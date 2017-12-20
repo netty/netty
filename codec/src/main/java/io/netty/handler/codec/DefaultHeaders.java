@@ -958,7 +958,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public DefaultHeaders<K, V, T> copy() {
         DefaultHeaders<K, V, T> copy = new DefaultHeaders<K, V, T>(
                 hashingStrategy, valueConverter, nameValidator, entries.length);
-        copy.set(this);
+        copy.addImpl(this);
         return copy;
     }
 
