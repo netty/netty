@@ -89,4 +89,13 @@ public class FastThreadLocalThread extends Thread {
     public boolean willCleanupFastThreadLocals() {
         return cleanupFastThreadLocals;
     }
+
+    /**
+     * Returns {@code true} if {@link FastThreadLocal#removeAll()} will be called once {@link Thread#run()} completes.
+     */
+    @UnstableApi
+    public static boolean willCleanupFastThreadLocals(Thread thread) {
+        return thread instanceof FastThreadLocalThread &&
+                ((FastThreadLocalThread) thread).willCleanupFastThreadLocals();
+    }
 }

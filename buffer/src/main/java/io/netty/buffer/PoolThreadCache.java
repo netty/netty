@@ -20,7 +20,6 @@ package io.netty.buffer;
 import io.netty.buffer.PoolArena.SizeClass;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
-import io.netty.util.ThreadDeathWatcher;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -56,9 +55,6 @@ final class PoolThreadCache {
     private final int numShiftsNormalHeap;
     private final int freeSweepAllocationThreshold;
 
-    private final Thread deathWatchThread;
-    private final Runnable freeTask;
-
     private int allocations;
 
     // TODO: Test if adding padding helps under contention
@@ -66,8 +62,7 @@ final class PoolThreadCache {
 
     PoolThreadCache(PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
                     int tinyCacheSize, int smallCacheSize, int normalCacheSize,
-                    int maxCachedBufferCapacity, int freeSweepAllocationThreshold,
-                    boolean useThreadDeathWatcher) {
+                    int maxCachedBufferCapacity, int freeSweepAllocationThreshold) {
         if (maxCachedBufferCapacity < 0) {
             throw new IllegalArgumentException("maxCachedBufferCapacity: "
                     + maxCachedBufferCapacity + " (expected: >= 0)");
@@ -119,25 +114,6 @@ final class PoolThreadCache {
                 && freeSweepAllocationThreshold < 1) {
             throw new IllegalArgumentException("freeSweepAllocationThreshold: "
                     + freeSweepAllocationThreshold + " (expected: > 0)");
-        }
-
-        if (useThreadDeathWatcher) {
-
-            freeTask = new Runnable() {
-                @Override
-                public void run() {
-                    free0();
-                }
-            };
-
-            deathWatchThread = Thread.currentThread();
-
-            // The thread-local cache will keep a list of pooled buffers which must be returned to
-            // the pool when the thread is not alive anymore.
-            ThreadDeathWatcher.watch(deathWatchThread, freeTask);
-        } else {
-            freeTask = null;
-            deathWatchThread = null;
         }
     }
 
@@ -247,14 +223,6 @@ final class PoolThreadCache {
      *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
      */
     void free() {
-        if (freeTask != null) {
-            assert deathWatchThread != null;
-            ThreadDeathWatcher.unwatch(deathWatchThread, freeTask);
-        }
-        free0();
-    }
-
-    private void free0() {
         int numFreed = free(tinySubPageDirectCaches) +
                 free(smallSubPageDirectCaches) +
                 free(normalDirectCaches) +

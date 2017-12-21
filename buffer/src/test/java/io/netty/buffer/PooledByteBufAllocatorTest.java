@@ -241,43 +241,38 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test (timeout = 4000)
-    public void testThreadCacheDestroyedByThreadDeathWatcher() throws InterruptedException {
-        testThreadCacheDestroyedByThreadDeathWatcher(false);
+    public void testThreadCacheDestroyedByThreadCleaner() throws InterruptedException {
+        testThreadCacheDestroyed(false);
     }
 
     @Test (timeout = 4000)
     public void testThreadCacheDestroyedAfterExitRun() throws InterruptedException {
-        testThreadCacheDestroyedByThreadDeathWatcher(true);
+        testThreadCacheDestroyed(true);
     }
 
-    private static void testThreadCacheDestroyedByThreadDeathWatcher(boolean useRunnable) throws InterruptedException {
+    private static void testThreadCacheDestroyed(boolean useRunnable) throws InterruptedException {
         int numArenas = 11;
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
 
         final AtomicBoolean threadCachesCreated = new AtomicBoolean(true);
-        final CountDownLatch latch = new CountDownLatch(numArenas);
 
         final Runnable task = new Runnable() {
             @Override
             public void run() {
-                try {
-                    ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
-                    for (int i = 0; i < buf.capacity(); i++) {
-                        buf.writeByte(0);
-                    }
-
-                    // Make sure that thread caches are actually created,
-                    // so that down below we are not testing for zero
-                    // thread caches without any of them ever having been initialized.
-                    if (allocator.metric().numThreadLocalCaches() == 0) {
-                        threadCachesCreated.set(false);
-                    }
-
-                    buf.release();
-                } finally {
-                    latch.countDown();
+                ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
+                for (int i = 0; i < buf.capacity(); i++) {
+                    buf.writeByte(0);
                 }
+
+                // Make sure that thread caches are actually created,
+                // so that down below we are not testing for zero
+                // thread caches without any of them ever having been initialized.
+                if (allocator.metric().numThreadLocalCaches() == 0) {
+                    threadCachesCreated.set(false);
+                }
+
+                buf.release();
             }
         };
 
@@ -296,12 +291,14 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
                 assertFalse(thread.willCleanupFastThreadLocals());
             }
             thread.start();
+            thread.join();
         }
-
-        latch.await();
 
         // Wait for the ThreadDeathWatcher to have destroyed all thread caches
         while (allocator.metric().numThreadLocalCaches() > 0) {
+            // Signal we want to have a GC run to ensure we can process our ThreadCleanerReference
+            System.gc();
+            System.runFinalization();
             LockSupport.parkNanos(MILLISECONDS.toNanos(100));
         }
 

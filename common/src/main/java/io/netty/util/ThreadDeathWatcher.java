@@ -37,7 +37,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * associated {@link Runnable}s.  When there is no thread to watch (i.e. all threads are dead), the daemon thread
  * will terminate itself, and a new daemon thread will be started again when a new watch is added.
  * </p>
+ *
+ * @deprecated will be removed in the next major release
  */
+@Deprecated
 public final class ThreadDeathWatcher {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ThreadDeathWatcher.class);

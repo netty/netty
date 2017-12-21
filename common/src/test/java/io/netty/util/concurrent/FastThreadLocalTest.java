@@ -75,4 +75,61 @@ public class FastThreadLocalTest {
             throw t;
         }
     }
+
+    @Test(timeout = 4000)
+    public void testOnRemoveCalledForFastThreadLocal() throws Exception {
+        testOnRemoveCalled(true);
+    }
+
+    @Test(timeout = 4000)
+    public void testOnRemoveCalledForNonFastThreadLocal() throws Exception {
+        testOnRemoveCalled(false);
+    }
+
+    private static void testOnRemoveCalled(boolean fastThreadLocal) throws Exception {
+
+        final TestFastThreadLocal threadLocal = new TestFastThreadLocal();
+        final TestFastThreadLocal threadLocal2 = new TestFastThreadLocal();
+
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                assertEquals(Thread.currentThread().getName(), threadLocal.get());
+                assertEquals(Thread.currentThread().getName(), threadLocal2.get());
+            }
+        };
+        Thread thread = fastThreadLocal ? new FastThreadLocalThread(runnable) : new Thread(runnable);
+        thread.start();
+        thread.join();
+
+        String threadName = thread.getName();
+
+        // Null this out so it can be collected
+        thread = null;
+
+        // Loop until onRemoval(...) was called. This will fail the test if this not works due a timeout.
+        while (threadLocal.onRemovalCalled.get() == null || threadLocal2.onRemovalCalled.get() == null) {
+            System.gc();
+            System.runFinalization();
+            Thread.sleep(50);
+        }
+
+        assertEquals(threadName, threadLocal.onRemovalCalled.get());
+        assertEquals(threadName, threadLocal2.onRemovalCalled.get());
+    }
+
+    private static final class TestFastThreadLocal extends FastThreadLocal<String> {
+
+        final AtomicReference<String> onRemovalCalled = new AtomicReference<String>();
+
+        @Override
+        protected String initialValue() throws Exception {
+            return Thread.currentThread().getName();
+        }
+
+        @Override
+        protected void onRemoval(String value) throws Exception {
+            onRemovalCalled.set(value);
+        }
+    }
 }
