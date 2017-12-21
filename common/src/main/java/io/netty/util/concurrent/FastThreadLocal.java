@@ -134,13 +134,18 @@ public class FastThreadLocal<V> {
      */
     @SuppressWarnings("unchecked")
     public final V get() {
-        final InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
+        InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
         Object v = threadLocalMap.indexedVariable(index);
         if (v != InternalThreadLocalMap.UNSET) {
             return (V) v;
         }
 
         V value = initialize(threadLocalMap);
+        registerCleaner(threadLocalMap);
+        return value;
+    }
+
+    private void registerCleaner(final InternalThreadLocalMap threadLocalMap) {
         Thread current = Thread.currentThread();
         if (!FastThreadLocalThread.willCleanupFastThreadLocals(current)) {
             // We will need to ensure we will trigger remove(InternalThreadLocalMap) so everything will be released
@@ -155,7 +160,6 @@ public class FastThreadLocal<V> {
                 }
             });
         }
-        return value;
     }
 
     /**
@@ -190,7 +194,13 @@ public class FastThreadLocal<V> {
      */
     public final void set(V value) {
         if (value != InternalThreadLocalMap.UNSET) {
-            set(InternalThreadLocalMap.get(), value);
+            InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
+            boolean alreadySet = threadLocalMap.isIndexedVariableSet(index);
+            set(threadLocalMap, value);
+
+            if (!alreadySet) {
+                registerCleaner(threadLocalMap);
+            }
         } else {
             remove();
         }
