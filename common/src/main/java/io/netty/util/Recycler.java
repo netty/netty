@@ -17,6 +17,7 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.ObjectCleaner;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -236,41 +237,93 @@ public abstract class Recycler<T> {
 
         // Let Link extend AtomicInteger for intrinsics. The Link itself will be used as writerIndex.
         @SuppressWarnings("serial")
-        private static final class Link extends AtomicInteger {
+        static final class Link extends AtomicInteger {
             private final DefaultHandle<?>[] elements = new DefaultHandle[LINK_CAPACITY];
 
             private int readIndex;
-            private Link next;
+            Link next;
+        }
+
+        // This act as a place holder for the head Link but also will be used by the ObjectCleaner
+        // to return space that was before reserved. Its important this does not hold any reference to
+        // either Stack or WeakOrderQueue.
+        static final class Head implements Runnable {
+            private final AtomicInteger availableSharedCapacity;
+
+            Link link;
+
+            Head(AtomicInteger availableSharedCapacity) {
+                this.availableSharedCapacity = availableSharedCapacity;
+            }
+
+            @Override
+            public void run() {
+                Link head = link;
+                while (head != null) {
+                    reclaimSpace(LINK_CAPACITY);
+                    head = link.next;
+                }
+            }
+
+            void reclaimSpace(int space) {
+                assert space >= 0;
+                availableSharedCapacity.addAndGet(space);
+            }
+
+            boolean reserveSpace(int space) {
+                return reserveSpace(availableSharedCapacity, space);
+            }
+
+            static boolean reserveSpace(AtomicInteger availableSharedCapacity, int space) {
+                assert space >= 0;
+                for (;;) {
+                    int available = availableSharedCapacity.get();
+                    if (available < space) {
+                        return false;
+                    }
+                    if (availableSharedCapacity.compareAndSet(available, available - space)) {
+                        return true;
+                    }
+                }
+            }
         }
 
         // chain of data items
-        private Link head, tail;
+        private final Head head;
+        private Link tail;
         // pointer to another queue of delayed items for the same stack
         private WeakOrderQueue next;
         private final WeakReference<Thread> owner;
         private final int id = ID_GENERATOR.getAndIncrement();
-        private final AtomicInteger availableSharedCapacity;
 
         private WeakOrderQueue() {
             owner = null;
-            availableSharedCapacity = null;
+            head = new Head(null);
         }
 
         private WeakOrderQueue(Stack<?> stack, Thread thread) {
-            head = tail = new Link();
-            owner = new WeakReference<Thread>(thread);
+            tail = new Link();
 
             // Its important that we not store the Stack itself in the WeakOrderQueue as the Stack also is used in
             // the WeakHashMap as key. So just store the enclosed AtomicInteger which should allow to have the
             // Stack itself GCed.
-            availableSharedCapacity = stack.availableSharedCapacity;
+            head = new Head(stack.availableSharedCapacity);
+            head.link = tail;
+            owner = new WeakReference<Thread>(thread);
         }
 
         static WeakOrderQueue newQueue(Stack<?> stack, Thread thread) {
-            WeakOrderQueue queue = new WeakOrderQueue(stack, thread);
+            final WeakOrderQueue queue = new WeakOrderQueue(stack, thread);
             // Done outside of the constructor to ensure WeakOrderQueue.this does not escape the constructor and so
             // may be accessed while its still constructed.
             stack.setHead(queue);
+
+            // We need to reclaim all space that was reserved by this WeakOrderQueue so we not run out of space in
+            // the stack. This is needed as we not have a good life-time control over the queue as it is used in a
+            // WeakHashMap which will drop it at any time.
+            final Head head = queue.head;
+            ObjectCleaner.register(queue, head);
+
             return queue;
         }
 
@@ -284,26 +337,8 @@ public abstract class Recycler<T> {
          */
         static WeakOrderQueue allocate(Stack<?> stack, Thread thread) {
             // We allocated a Link so reserve the space
-            return reserveSpace(stack.availableSharedCapacity, LINK_CAPACITY)
+            return Head.reserveSpace(stack.availableSharedCapacity, LINK_CAPACITY)
                     ? newQueue(stack, thread) : null;
-        }
-
-        private static boolean reserveSpace(AtomicInteger availableSharedCapacity, int space) {
-            assert space >= 0;
-            for (;;) {
-                int available = availableSharedCapacity.get();
-                if (available < space) {
-                    return false;
-                }
-                if (availableSharedCapacity.compareAndSet(available, available - space)) {
-                    return true;
-                }
-            }
-        }
-
-        private void reclaimSpace(int space) {
-            assert space >= 0;
-            availableSharedCapacity.addAndGet(space);
         }
 
         void add(DefaultHandle<?> handle) {
@@ -312,7 +347,7 @@ public abstract class Recycler<T> {
             Link tail = this.tail;
             int writeIndex;
             if ((writeIndex = tail.get()) == LINK_CAPACITY) {
-                if (!reserveSpace(availableSharedCapacity, LINK_CAPACITY)) {
+                if (!head.reserveSpace(LINK_CAPACITY)) {
                     // Drop it.
                     return;
                 }
@@ -335,7 +370,7 @@ public abstract class Recycler<T> {
         // transfer as many items as we can from this queue to the stack, returning true if any were transferred
         @SuppressWarnings("rawtypes")
         boolean transfer(Stack<?> dst) {
-            Link head = this.head;
+            Link head = this.head.link;
             if (head == null) {
                 return false;
             }
@@ -344,7 +379,7 @@ public abstract class Recycler<T> {
                 if (head.next == null) {
                     return false;
                 }
-                this.head = head = head.next;
+                this.head.link = head = head.next;
             }
 
             final int srcStart = head.readIndex;
@@ -385,9 +420,8 @@ public abstract class Recycler<T> {
 
                 if (srcEnd == LINK_CAPACITY && head.next != null) {
                     // Add capacity back as the Link is GCed.
-                    reclaimSpace(LINK_CAPACITY);
-
-                    this.head = head.next;
+                    this.head.reclaimSpace(LINK_CAPACITY);
+                    this.head.link = head.next;
                 }
 
                 head.readIndex = srcEnd;
@@ -399,22 +433,6 @@ public abstract class Recycler<T> {
             } else {
                 // The destination stack is full already.
                 return false;
-            }
-        }
-
-        @Override
-        protected void finalize() throws Throwable {
-            try {
-                super.finalize();
-            } finally {
-                // We need to reclaim all space that was reserved by this WeakOrderQueue so we not run out of space in
-                // the stack. This is needed as we not have a good life-time control over the queue as it is used in a
-                // WeakHashMap which will drop it at any time.
-                Link link = head;
-                while (link != null) {
-                    reclaimSpace(LINK_CAPACITY);
-                    link = link.next;
-                }
             }
         }
     }
