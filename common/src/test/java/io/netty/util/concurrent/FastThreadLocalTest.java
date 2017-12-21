@@ -77,16 +77,26 @@ public class FastThreadLocalTest {
     }
 
     @Test(timeout = 4000)
-    public void testOnRemoveCalledForFastThreadLocal() throws Exception {
-        testOnRemoveCalled(true);
+    public void testOnRemoveCalledForFastThreadLocalGet() throws Exception {
+        testOnRemoveCalled(true, true);
     }
 
     @Test(timeout = 4000)
-    public void testOnRemoveCalledForNonFastThreadLocal() throws Exception {
-        testOnRemoveCalled(false);
+    public void testOnRemoveCalledForNonFastThreadLocalGet() throws Exception {
+        testOnRemoveCalled(false, true);
     }
 
-    private static void testOnRemoveCalled(boolean fastThreadLocal) throws Exception {
+    @Test(timeout = 4000)
+    public void testOnRemoveCalledForFastThreadLocalSet() throws Exception {
+        testOnRemoveCalled(true, false);
+    }
+
+    @Test(timeout = 4000)
+    public void testOnRemoveCalledForNonFastThreadLocalSet() throws Exception {
+        testOnRemoveCalled(false, false);
+    }
+
+    private static void testOnRemoveCalled(boolean fastThreadLocal, final boolean callGet) throws Exception {
 
         final TestFastThreadLocal threadLocal = new TestFastThreadLocal();
         final TestFastThreadLocal threadLocal2 = new TestFastThreadLocal();
@@ -94,8 +104,13 @@ public class FastThreadLocalTest {
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                assertEquals(Thread.currentThread().getName(), threadLocal.get());
-                assertEquals(Thread.currentThread().getName(), threadLocal2.get());
+                if (callGet) {
+                    assertEquals(Thread.currentThread().getName(), threadLocal.get());
+                    assertEquals(Thread.currentThread().getName(), threadLocal2.get());
+                } else {
+                    threadLocal.set(Thread.currentThread().getName());
+                    threadLocal2.set(Thread.currentThread().getName());
+                }
             }
         };
         Thread thread = fastThreadLocal ? new FastThreadLocalThread(runnable) : new Thread(runnable);
