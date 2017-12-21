@@ -35,14 +35,19 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import static io.netty.handler.codec.http2.HpackDecoder.decodeULE128;
 import static io.netty.handler.codec.http2.Http2HeadersEncoder.NEVER_SENSITIVE;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.AsciiString.of;
 import static java.lang.Integer.MAX_VALUE;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -52,6 +57,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 public class HpackDecoderTest {
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
     private HpackDecoder hpackDecoder;
     private Http2Headers mockHeaders;
 
@@ -425,9 +433,9 @@ public class HpackDecoderTest {
     @Test
     public void testDecodeLargerThanMaxHeaderListSizeButSmallerThanMaxHeaderListSizeUpdatesDynamicTable()
         throws Http2Exception {
-        ByteBuf in = Unpooled.buffer(200);
+        ByteBuf in = Unpooled.buffer(300);
         try {
-            hpackDecoder.setMaxHeaderListSize(100, 200);
+            hpackDecoder.setMaxHeaderListSize(200, 300);
             HpackEncoder hpackEncoder = new HpackEncoder(true);
 
             // encode headers that are slightly larger than maxHeaderListSize
@@ -473,6 +481,33 @@ public class HpackDecoderTest {
             Http2Headers decoded = new DefaultHttp2Headers();
             hpackDecoder.decode(1, in, decoded);
             assertEquals(2, decoded.size());
+        } finally {
+            in.release();
+        }
+    }
+
+    @Test
+    public void testAccountForHeaderOverhead() throws Exception {
+        ByteBuf in = Unpooled.buffer(100);
+        try {
+            String headerName = "12345";
+            String headerValue = "56789";
+            long headerSize = headerName.length() + headerValue.length();
+            hpackDecoder.setMaxHeaderListSize(headerSize, 100);
+            HpackEncoder hpackEncoder = new HpackEncoder(true);
+
+            Http2Headers toEncode = new DefaultHttp2Headers();
+            toEncode.add(headerName, headerValue);
+            hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
+
+            Http2Headers decoded = new DefaultHttp2Headers();
+
+            // SETTINGS_MAX_HEADER_LIST_SIZE is big enough for the header to fit...
+            assertThat(hpackDecoder.getMaxHeaderListSize(), is(greaterThanOrEqualTo(headerSize)));
+
+            // ... but decode should fail because we add some overhead for each header entry
+            expectedException.expect(Http2Exception.HeaderListSizeException.class);
+            hpackDecoder.decode(1, in, decoded);
         } finally {
             in.release();
         }
