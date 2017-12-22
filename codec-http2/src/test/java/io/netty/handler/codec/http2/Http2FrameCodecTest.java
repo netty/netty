@@ -483,7 +483,7 @@ public class Http2FrameCodecTest {
         verify(frameWriter).writeSettings(eq(http2HandlerCtx), same(settings), any(ChannelPromise.class));
     }
 
-    @Test(timeout = 1000)
+    @Test(timeout = 5000)
     public void newOutboundStream() {
         final Http2FrameStream stream = frameCodec.newStream();
 
