@@ -323,9 +323,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             if (channel != null) {
                 // channel can be null if newChannel crashed (eg SocketException("too many open files"))
                 channel.unsafe().closeForcibly();
+                // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
+                return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE).setFailure(t);
             }
             // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
-            return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE).setFailure(t);
+            return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
 
         ChannelFuture regFuture = config().group().register(channel);
