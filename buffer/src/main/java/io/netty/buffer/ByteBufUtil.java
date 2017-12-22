@@ -475,14 +475,29 @@ public final class ByteBufUtil {
     /**
      * Encode a {@link CharSequence} in <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and write
      * it to a {@link ByteBuf}.
-     *
+     * <p>
+     * It behaves like {@link #reserveAndWriteUtf8(ByteBuf, CharSequence, int)} with {@code reserveBytes}
+     * computed by {@link #utf8MaxBytes(CharSequence)}.<br>
      * This method returns the actual number of bytes written.
      */
     public static int writeUtf8(ByteBuf buf, CharSequence seq) {
+        return reserveAndWriteUtf8(buf, seq, utf8MaxBytes(seq));
+    }
+
+    /**
+     * Encode a {@link CharSequence} in <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a> and write
+     * it into {@code reserveBytes} of a {@link ByteBuf}.
+     * <p>
+     * The {@code reserveBytes} must be computed (ie eagerly using {@link #utf8MaxBytes(CharSequence)}
+     * or exactly with {@link #utf8Bytes(CharSequence)}) to ensure this method to not fail: for performance reasons
+     * the index checks will be performed using just {@code reserveBytes}.<br>
+     * This method returns the actual number of bytes written.
+     */
+    public static int reserveAndWriteUtf8(ByteBuf buf, CharSequence seq, int reserveBytes) {
         for (;;) {
             if (buf instanceof AbstractByteBuf) {
                 AbstractByteBuf byteBuf = (AbstractByteBuf) buf;
-                byteBuf.ensureWritable0(utf8MaxBytes(seq));
+                byteBuf.ensureWritable0(reserveBytes);
                 int written = writeUtf8(byteBuf, byteBuf.writerIndex, seq, seq.length());
                 byteBuf.writerIndex += written;
                 return written;
@@ -521,7 +536,7 @@ public final class ByteBufUtil {
                     // duplicate bounds checking with charAt. If an IndexOutOfBoundsException is thrown we will
                     // re-throw a more informative exception describing the problem.
                     c2 = seq.charAt(++i);
-                } catch (IndexOutOfBoundsException e) {
+                } catch (IndexOutOfBoundsException ignored) {
                     buffer._setByte(writerIndex++, WRITE_UTF_UNKNOWN);
                     break;
                 }
@@ -546,10 +561,76 @@ public final class ByteBufUtil {
     }
 
     /**
+     * Returns max bytes length of UTF8 character sequence of the given length.
+     */
+    public static int utf8MaxBytes(final int seqLength) {
+        return seqLength * MAX_BYTES_PER_CHAR_UTF8;
+    }
+
+    /**
      * Returns max bytes length of UTF8 character sequence.
+     * <p>
+     * It behaves like {@link #utf8MaxBytes(int)} applied to {@code seq} {@link CharSequence#length()}.
      */
     public static int utf8MaxBytes(CharSequence seq) {
-        return seq.length() * MAX_BYTES_PER_CHAR_UTF8;
+        return utf8MaxBytes(seq.length());
+    }
+
+    /**
+     * Returns the exact bytes length of UTF8 character sequence.
+     * <p>
+     * This method is producing the exact length according to {@link #writeUtf8(ByteBuf, CharSequence)}.
+     */
+    public static int utf8Bytes(final CharSequence seq) {
+        if (seq instanceof AsciiString) {
+            return seq.length();
+        }
+        int seqLength = seq.length();
+        int i = 0;
+        // ASCII fast path
+        while (i < seqLength && seq.charAt(i) < 0x80) {
+            ++i;
+        }
+        // !ASCII is packed in a separate method to let the ASCII case be smaller
+        return i < seqLength ? i + utf8Bytes(seq, i, seqLength) : i;
+    }
+
+    private static int utf8Bytes(final CharSequence seq, final int start, final int length) {
+        int encodedLength = 0;
+        for (int i = start; i < length; i++) {
+            final char c = seq.charAt(i);
+            // making it 100% branchless isn't rewarding due to the many bit operations necessary!
+            if (c < 0x800) {
+                // branchless version of: (c <= 127 ? 0:1) + 1
+                encodedLength += ((0x7f - c) >>> 31) + 1;
+            } else if (isSurrogate(c)) {
+                if (!Character.isHighSurrogate(c)) {
+                    encodedLength++;
+                    // WRITE_UTF_UNKNOWN
+                    continue;
+                }
+                final char c2;
+                try {
+                    // Surrogate Pair consumes 2 characters. Optimistically try to get the next character to avoid
+                    // duplicate bounds checking with charAt.
+                    c2 = seq.charAt(++i);
+                } catch (IndexOutOfBoundsException ignored) {
+                    encodedLength++;
+                    // WRITE_UTF_UNKNOWN
+                    break;
+                }
+                if (!Character.isLowSurrogate(c2)) {
+                    // WRITE_UTF_UNKNOWN + (Character.isHighSurrogate(c2) ? WRITE_UTF_UNKNOWN : c2)
+                    encodedLength += 2;
+                    continue;
+                }
+                // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+                encodedLength += 4;
+            } else {
+                encodedLength += 3;
+            }
+        }
+        return encodedLength;
     }
 
     /**

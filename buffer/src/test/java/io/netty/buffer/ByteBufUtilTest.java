@@ -263,6 +263,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -281,6 +282,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -299,6 +301,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -318,6 +321,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -337,7 +341,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
-
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
         buf.release();
         buf2.release();
     }
@@ -356,6 +360,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -372,6 +377,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -388,6 +394,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -539,6 +546,42 @@ public class ByteBufUtilTest {
             }
         } finally {
             buffer.release();
+        }
+    }
+
+    @Test
+    public void testUtf8Bytes() {
+        final String s = "Some UTF-8 like äÄ∏ŒŒ";
+        checkUtf8Bytes(s);
+    }
+
+    @Test
+    public void testUtf8BytesWithSurrogates() {
+        final String s = "a\uD800\uDC00b";
+        checkUtf8Bytes(s);
+    }
+
+    @Test
+    public void testUtf8BytesWithNonSurrogates3Bytes() {
+        final String s = "a\uE000b";
+        checkUtf8Bytes(s);
+    }
+
+    @Test
+    public void testUtf8BytesWithNonSurrogatesNonAscii() {
+        final char nonAscii = (char) 0x81;
+        final String s = "a" + nonAscii + "b";
+        checkUtf8Bytes(s);
+    }
+
+    private static void checkUtf8Bytes(final CharSequence charSequence) {
+        final ByteBuf buf = Unpooled.buffer(ByteBufUtil.utf8MaxBytes(charSequence));
+        try {
+            final int writtenBytes = ByteBufUtil.writeUtf8(buf, charSequence);
+            final int utf8Bytes = ByteBufUtil.utf8Bytes(charSequence);
+            assertEquals(writtenBytes, utf8Bytes);
+        } finally {
+            buf.release();
         }
     }
 
