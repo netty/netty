@@ -429,7 +429,7 @@ final class HpackDecoder {
 
     private long addHeader(int streamId, Http2Headers headers, CharSequence name, CharSequence value,
                            long headersLength) throws Http2Exception {
-        headersLength += name.length() + value.length();
+        headersLength += HpackHeaderField.sizeOf(name, value);
         if (headersLength > maxHeaderListSizeGoAway) {
             headerListSizeExceeded(maxHeaderListSizeGoAway);
         }
