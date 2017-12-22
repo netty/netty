@@ -16,8 +16,8 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ObjectCleaner;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -195,10 +195,7 @@ public class FastThreadLocal<V> {
     public final void set(V value) {
         if (value != InternalThreadLocalMap.UNSET) {
             InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
-            boolean alreadySet = threadLocalMap.isIndexedVariableSet(index);
-            set(threadLocalMap, value);
-
-            if (!alreadySet) {
+            if (setKnownNotUnset(threadLocalMap, value)) {
                 registerCleaner(threadLocalMap);
             }
         } else {
@@ -211,12 +208,21 @@ public class FastThreadLocal<V> {
      */
     public final void set(InternalThreadLocalMap threadLocalMap, V value) {
         if (value != InternalThreadLocalMap.UNSET) {
-            if (threadLocalMap.setIndexedVariable(index, value)) {
-                addToVariablesToRemove(threadLocalMap, this);
-            }
+            setKnownNotUnset(threadLocalMap, value);
         } else {
             remove(threadLocalMap);
         }
+    }
+
+    /**
+     * @return see {@link InternalThreadLocalMap#setIndexedVariable(int, Object)}.
+     */
+    private boolean setKnownNotUnset(InternalThreadLocalMap threadLocalMap, V value) {
+        if (threadLocalMap.setIndexedVariable(index, value)) {
+            addToVariablesToRemove(threadLocalMap, this);
+            return true;
+        }
+        return false;
     }
 
     /**
