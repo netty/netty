@@ -22,11 +22,14 @@ import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.CharsetUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
+
+import java.util.Arrays;
 
 
 @State(Scope.Benchmark)
@@ -44,22 +47,27 @@ public class
 
     private StringBuilder utf8Sequence;
     private String utf8;
+    private String fullUtf8;
+
+    @Param({"8", "128", "1024"})
+    private int stringLength;
 
     @Setup
     public void setup() {
+        final int requiredBytes = 4 * stringLength;
         // Use buffer sizes that will also allow to write UTF-8 without grow the buffer
-        buffer = Unpooled.directBuffer(512);
-        wrapped = Unpooled.unreleasableBuffer(Unpooled.directBuffer(512));
-        asciiSequence = new StringBuilder(128);
-        for (int i = 0; i < 128; i++) {
+        buffer = Unpooled.directBuffer(requiredBytes);
+        wrapped = Unpooled.unreleasableBuffer(Unpooled.directBuffer(requiredBytes));
+        asciiSequence = new StringBuilder(stringLength);
+        for (int i = 0; i < stringLength; i++) {
             asciiSequence.append('a');
         }
         ascii = asciiSequence.toString();
 
         // Generate some mixed UTF-8 String for benchmark
-        utf8Sequence = new StringBuilder(128);
+        utf8Sequence = new StringBuilder(stringLength);
         char[] chars = "Some UTF-8 like äÄ∏ŒŒ".toCharArray();
-        for (int i = 0; i < 128; i++) {
+        for (int i = 0; i < stringLength; i++) {
             utf8Sequence.append(chars[i % chars.length]);
         }
         utf8 = utf8Sequence.toString();
@@ -67,6 +75,10 @@ public class
 
         asciiBuffer = Unpooled.copiedBuffer(ascii, CharsetUtil.US_ASCII);
         utf8Buffer = Unpooled.copiedBuffer(utf8, CharsetUtil.UTF_8);
+        final char utf8Char = 'Œ';
+        final char[] utf8Chars = new char[stringLength];
+        Arrays.fill(utf8Chars, utf8Char);
+        fullUtf8 = new String(utf8Chars);
     }
 
     @TearDown
@@ -78,99 +90,111 @@ public class
     }
 
     @Benchmark
-    public void writeAsciiStringViaArray() {
+    public ByteBuf writeAsciiStringViaArray() {
         buffer.resetWriterIndex();
-        buffer.writeBytes(ascii.getBytes(CharsetUtil.US_ASCII));
+        return buffer.writeBytes(ascii.getBytes(CharsetUtil.US_ASCII));
     }
 
     @Benchmark
-    public void writeAsciiStringViaArrayWrapped() {
+    public ByteBuf writeAsciiStringViaArrayWrapped() {
         wrapped.resetWriterIndex();
-        wrapped.writeBytes(ascii.getBytes(CharsetUtil.US_ASCII));
+        return wrapped.writeBytes(ascii.getBytes(CharsetUtil.US_ASCII));
     }
 
     @Benchmark
-    public void writeAsciiString() {
+    public int writeAsciiString() {
         buffer.resetWriterIndex();
-        ByteBufUtil.writeAscii(buffer, ascii);
+        return ByteBufUtil.writeAscii(buffer, ascii);
     }
 
     @Benchmark
-    public void writeAsciiStringWrapped() {
+    public int writeAsciiStringWrapped() {
         wrapped.resetWriterIndex();
-        ByteBufUtil.writeAscii(wrapped, ascii);
+        return ByteBufUtil.writeAscii(wrapped, ascii);
     }
 
     @Benchmark
-    public void writeAsciiViaArray() {
+    public ByteBuf writeAsciiViaArray() {
         buffer.resetWriterIndex();
-        buffer.writeBytes(asciiSequence.toString().getBytes(CharsetUtil.US_ASCII));
+        return buffer.writeBytes(asciiSequence.toString().getBytes(CharsetUtil.US_ASCII));
     }
 
     @Benchmark
-    public void writeAsciiViaArrayWrapped() {
+    public ByteBuf writeAsciiViaArrayWrapped() {
         wrapped.resetWriterIndex();
-        wrapped.writeBytes(asciiSequence.toString().getBytes(CharsetUtil.US_ASCII));
+        return wrapped.writeBytes(asciiSequence.toString().getBytes(CharsetUtil.US_ASCII));
     }
 
     @Benchmark
-    public void writeAscii() {
+    public int writeAscii() {
         buffer.resetWriterIndex();
-        ByteBufUtil.writeAscii(buffer, asciiSequence);
+        return ByteBufUtil.writeAscii(buffer, asciiSequence);
     }
 
     @Benchmark
-    public void writeAsciiWrapped() {
+    public int writeAsciiWrapped() {
         wrapped.resetWriterIndex();
-        ByteBufUtil.writeAscii(wrapped, asciiSequence);
+        return ByteBufUtil.writeAscii(wrapped, asciiSequence);
     }
 
     @Benchmark
-    public void writeUtf8StringViaArray() {
+    public ByteBuf writeUtf8StringViaArray() {
         buffer.resetWriterIndex();
-        buffer.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
+        return buffer.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
     }
 
     @Benchmark
-    public void writeUtf8StringViaArrayWrapped() {
+    public ByteBuf writeUtf8StringViaArrayWrapped() {
         wrapped.resetWriterIndex();
-        wrapped.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
+        return wrapped.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
     }
 
     @Benchmark
-    public void writeUtf8String() {
+    public int writeUtf8String() {
         buffer.resetWriterIndex();
-        ByteBufUtil.writeUtf8(buffer, utf8);
+        return ByteBufUtil.writeUtf8(buffer, utf8);
     }
 
     @Benchmark
-    public void writeUtf8StringWrapped() {
-        wrapped.resetWriterIndex();
-        ByteBufUtil.writeUtf8(wrapped, utf8);
-    }
-
-    @Benchmark
-    public void writeUtf8ViaArray() {
+    public int writeFullUtf8String() {
         buffer.resetWriterIndex();
-        buffer.writeBytes(utf8Sequence.toString().getBytes(CharsetUtil.UTF_8));
+        return ByteBufUtil.writeUtf8(buffer, fullUtf8);
     }
 
     @Benchmark
-    public void writeUtf8ViaArrayWrapped() {
-        wrapped.resetWriterIndex();
-        wrapped.writeBytes(utf8Sequence.toString().getBytes(CharsetUtil.UTF_8));
-    }
-
-    @Benchmark
-    public void writeUtf8() {
+    public int writeAsciiStringAsUtf8() {
         buffer.resetWriterIndex();
-        ByteBufUtil.writeUtf8(buffer, utf8Sequence);
+        return ByteBufUtil.writeUtf8(buffer, ascii);
     }
 
     @Benchmark
-    public void writeUtf8Wrapped() {
+    public int writeUtf8StringWrapped() {
         wrapped.resetWriterIndex();
-        ByteBufUtil.writeUtf8(wrapped, utf8Sequence);
+        return ByteBufUtil.writeUtf8(wrapped, utf8);
+    }
+
+    @Benchmark
+    public ByteBuf writeUtf8ViaArray() {
+        buffer.resetWriterIndex();
+        return buffer.writeBytes(utf8Sequence.toString().getBytes(CharsetUtil.UTF_8));
+    }
+
+    @Benchmark
+    public ByteBuf writeUtf8ViaArrayWrapped() {
+        wrapped.resetWriterIndex();
+        return wrapped.writeBytes(utf8Sequence.toString().getBytes(CharsetUtil.UTF_8));
+    }
+
+    @Benchmark
+    public int writeUtf8() {
+        buffer.resetWriterIndex();
+        return ByteBufUtil.writeUtf8(buffer, utf8Sequence);
+    }
+
+    @Benchmark
+    public int writeUtf8Wrapped() {
+        wrapped.resetWriterIndex();
+        return ByteBufUtil.writeUtf8(wrapped, utf8Sequence);
     }
 
     @Benchmark
