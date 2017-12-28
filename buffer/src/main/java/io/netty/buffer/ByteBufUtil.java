@@ -503,8 +503,24 @@ public final class ByteBufUtil {
 
         // We can use the _set methods as these not need to do any index checks and reference checks.
         // This is possible as we called ensureWritable(...) before.
-        for (int i = 0; i < len; i++) {
-            char c = seq.charAt(i);
+        int i;
+        //ASCII fast-path
+        for (i = 0; i < len; i++) {
+            final char c = seq.charAt(i);
+            if (c < 0x80) {
+                buffer._setByte(writerIndex++, (byte) c);
+            } else {
+                writerIndex = writeUtf8SlowPath(buffer, writerIndex, seq, len, i);
+                break;
+            }
+        }
+        return writerIndex - oldWriterIndex;
+    }
+
+    private static int writeUtf8SlowPath(final AbstractByteBuf buffer, int writerIndex,
+                                         final CharSequence seq, final int len, int i) {
+        for (; i < len; i++) {
+            final char c = seq.charAt(i);
             if (c < 0x80) {
                 buffer._setByte(writerIndex++, (byte) c);
             } else if (c < 0x800) {
@@ -542,7 +558,7 @@ public final class ByteBufUtil {
                 buffer._setByte(writerIndex++, (byte) (0x80 | (c & 0x3f)));
             }
         }
-        return writerIndex - oldWriterIndex;
+        return writerIndex;
     }
 
     /**
