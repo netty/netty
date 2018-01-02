@@ -67,7 +67,6 @@
           <excludeSpecs>
             <excludeSpec>3.8 - Sends a GOAWAY frame</excludeSpec>
             <excludeSpec>4.2 - Sends a dynamic table size update at the end of header block</excludeSpec>
-            <excludeSpec>4.3 - Sends invalid header block fragment</excludeSpec>
             <excludeSpec>5.1 - idle: Sends a DATA frame</excludeSpec>
             <excludeSpec>5.1 - closed: Sends a DATA frame</excludeSpec>
             <excludeSpec>5.1 - closed: Sends a HEADERS frame</excludeSpec>

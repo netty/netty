@@ -303,6 +303,10 @@ final class HpackDecoder {
         if (headersLength > maxHeaderListSize) {
             headerListSizeExceeded(streamId, maxHeaderListSize, true);
         }
+
+        if (state != READ_HEADER_REPRESENTATION) {
+            throw connectionError(COMPRESSION_ERROR, "Incomplete header block fragment.");
+        }
     }
 
     /**
