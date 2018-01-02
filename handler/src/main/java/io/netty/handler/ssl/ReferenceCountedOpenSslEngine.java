@@ -212,7 +212,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private final ByteBufAllocator alloc;
     private final OpenSslEngineMap engineMap;
     private final OpenSslApplicationProtocolNegotiator apn;
-    private final boolean rejectRemoteInitiatedRenegotiation;
     private final OpenSslSession session;
     private final Certificate[] localCerts;
     private final ByteBuffer[] singleSrcBuffer = new ByteBuffer[1];
@@ -247,7 +246,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         session = new OpenSslSession(context.sessionContext());
         clientMode = context.isClient();
         engineMap = context.engineMap;
-        rejectRemoteInitiatedRenegotiation = context.getRejectRemoteInitiatedRenegotiation();
         localCerts = context.keyCertChain;
         keyMaterialManager = context.keyMaterialManager();
         enableOcsp = context.enableOcsp;
@@ -1122,7 +1120,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // As rejectRemoteInitiatedRenegotiation() is called in a finally block we also need to check if we shutdown
         // the engine before as otherwise SSL.getHandshakeCount(ssl) will throw an NPE if the passed in ssl is 0.
         // See https://github.com/netty/netty/issues/7353
-        if (rejectRemoteInitiatedRenegotiation && !isDestroyed() && SSL.getHandshakeCount(ssl) > 1) {
+        if (!isDestroyed() && SSL.getHandshakeCount(ssl) > 1) {
             // TODO: In future versions me may also want to send a fatal_alert to the client and so notify it
             // that the renegotiation failed.
             shutdown();
