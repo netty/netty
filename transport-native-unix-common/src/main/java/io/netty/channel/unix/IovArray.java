@@ -16,6 +16,7 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.util.internal.PlatformDependent;
 
@@ -80,8 +81,11 @@ public final class IovArray implements MessageProcessor {
     }
 
     /**
-     * Try to add the given {@link ByteBuf}. Returns {@code true} on success,
-     * {@code false} otherwise.
+     * Add a {@link ByteBuf} to this {@link IovArray}.
+     * @param buf The {@link ByteBuf} to add.
+     * @return {@code true} if the entire {@link ByteBuf} has been added to this {@link IovArray}. Note in the event
+     * that {@link ByteBuf} is a {@link CompositeByteBuf} {@code false} may be returned even if some of the components
+     * have been added.
      */
     public boolean add(ByteBuf buf) {
         if (count == IOV_MAX) {
@@ -95,7 +99,7 @@ public final class IovArray implements MessageProcessor {
             for (ByteBuffer nioBuffer : buffers) {
                 final int len = nioBuffer.remaining();
                 if (len != 0 && (!add(directBufferAddress(nioBuffer), nioBuffer.position(), len) || count == IOV_MAX)) {
-                    break;
+                    return false;
                 }
             }
             return true;
@@ -103,11 +107,6 @@ public final class IovArray implements MessageProcessor {
     }
 
     private boolean add(long addr, int offset, int len) {
-        if (len == 0) {
-            // No need to add an empty buffer.
-            return true;
-        }
-
         final long baseOffset = memoryAddress(count);
         final long lengthOffset = baseOffset + ADDRESS_SIZE;
 
