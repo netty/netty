@@ -39,9 +39,10 @@ public class DefaultStompFrameTest {
 
         AsciiString copyHeaderName = new AsciiString("foo");
         AsciiString copyHeaderValue = new AsciiString("bar");
-        copyFrame.headers().set(copyHeaderName, copyHeaderName);
+        copyFrame.headers().set(copyHeaderName, copyHeaderValue);
 
         assertFalse(sourceframe.headers().contains(copyHeaderName, copyHeaderValue));
+        assertTrue(copyFrame.headers().contains(copyHeaderName, copyHeaderValue));
 
         assertEquals(1, sourceframe.headers().size());
         assertEquals(2, copyFrame.headers().size());
