@@ -17,6 +17,7 @@ package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelConfig;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.CompositeBufferGatheringWriteTest;
 
@@ -26,5 +27,13 @@ public class KQueueCompositeBufferGatheringWriteTest extends CompositeBufferGath
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return KQueueSocketTestPermutation.INSTANCE.socket();
+    }
+
+    @Override
+    protected void compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(ChannelConfig config,
+                                                                                 int soSndBuf) {
+        if (config instanceof KQueueChannelConfig) {
+            ((KQueueChannelConfig) config).setMaxBytesPerGatheringWrite(soSndBuf);
+        }
     }
 }
