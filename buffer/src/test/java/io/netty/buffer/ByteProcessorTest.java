@@ -37,6 +37,7 @@ public class ByteProcessorTest {
         assertEquals(16, buf.forEachByte(14, length - 14, ByteProcessor.FIND_NON_LF));
         assertEquals(19, buf.forEachByte(16, length - 16, ByteProcessor.FIND_NUL));
         assertEquals(21, buf.forEachByte(19, length - 19, ByteProcessor.FIND_NON_NUL));
+        assertEquals(24, buf.forEachByte(19, length - 19, ByteProcessor.FIND_ASCII_SPACE));
         assertEquals(24, buf.forEachByte(21, length - 21, ByteProcessor.FIND_LINEAR_WHITESPACE));
         assertEquals(28, buf.forEachByte(24, length - 24, ByteProcessor.FIND_NON_LINEAR_WHITESPACE));
         assertEquals(-1, buf.forEachByte(28, length - 28, ByteProcessor.FIND_LINEAR_WHITESPACE));
@@ -51,6 +52,7 @@ public class ByteProcessorTest {
         final int length = buf.readableBytes();
 
         assertEquals(27, buf.forEachByteDesc(0, length, ByteProcessor.FIND_LINEAR_WHITESPACE));
+        assertEquals(25, buf.forEachByteDesc(0, length, ByteProcessor.FIND_ASCII_SPACE));
         assertEquals(23, buf.forEachByteDesc(0, 28, ByteProcessor.FIND_NON_LINEAR_WHITESPACE));
         assertEquals(20, buf.forEachByteDesc(0, 24, ByteProcessor.FIND_NUL));
         assertEquals(18, buf.forEachByteDesc(0, 21, ByteProcessor.FIND_NON_NUL));

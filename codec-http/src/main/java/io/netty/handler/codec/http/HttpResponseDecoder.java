@@ -116,7 +116,7 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
     protected HttpMessage createMessage(String[] initialLine) {
         return new DefaultHttpResponse(
                 HttpVersion.valueOf(initialLine[0]),
-                new HttpResponseStatus(Integer.parseInt(initialLine[1]), initialLine[2]), validateHeaders);
+                HttpResponseStatus.valueOf(Integer.parseInt(initialLine[1]), initialLine[2]), validateHeaders);
     }
 
     @Override

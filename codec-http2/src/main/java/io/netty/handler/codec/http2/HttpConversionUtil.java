@@ -44,6 +44,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.COOKIE;
 import static io.netty.handler.codec.http.HttpHeaderNames.TE;
 import static io.netty.handler.codec.http.HttpHeaderValues.TRAILERS;
+import static io.netty.handler.codec.http.HttpResponseStatus.parseLine;
 import static io.netty.handler.codec.http.HttpScheme.HTTP;
 import static io.netty.handler.codec.http.HttpScheme.HTTPS;
 import static io.netty.handler.codec.http.HttpUtil.isAsteriskForm;
@@ -183,7 +184,7 @@ public final class HttpConversionUtil {
     public static HttpResponseStatus parseStatus(CharSequence status) throws Http2Exception {
         HttpResponseStatus result;
         try {
-            result = HttpResponseStatus.parseLine(status);
+            result = parseLine(status);
             if (result == HttpResponseStatus.SWITCHING_PROTOCOLS) {
                 throw connectionError(PROTOCOL_ERROR, "Invalid HTTP/2 status code '%d'", result.code());
             }
