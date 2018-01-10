@@ -16,7 +16,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.StreamByteDistributor.Writer;
-import io.netty.util.BooleanSupplier;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -274,7 +273,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         private final Http2Stream stream;
         private final Deque<FlowControlled> pendingWriteQueue;
         private int window;
-        private int pendingBytes;
+        private long pendingBytes;
         private boolean markedWritable;
 
         /**
@@ -285,12 +284,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * Set to true if cancel() was called.
          */
         private boolean cancelled;
-        private BooleanSupplier isWritableSupplier = new BooleanSupplier() {
-            @Override
-            public boolean get() throws Exception {
-                return windowSize() > pendingBytes();
-            }
-        };
 
         FlowState(Http2Stream stream) {
             this.stream = stream;
@@ -302,11 +295,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
          * @return {@code true} if the stream associated with this object is writable.
          */
         boolean isWritable() {
-            try {
-                return isWritableSupplier.get();
-            } catch (Throwable cause) {
-                throw new Error("isWritableSupplier should never throw!", cause);
-            }
+            return windowSize() > pendingBytes() && !cancelled;
         }
 
         /**
@@ -432,7 +421,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         @Override
-        public int pendingBytes() {
+        public long pendingBytes() {
             return pendingBytes;
         }
 
@@ -502,7 +491,6 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
             streamByteDistributor.updateStreamableBytes(this);
 
-            isWritableSupplier = BooleanSupplier.FALSE_SUPPLIER;
             monitor.stateCancelled(this);
         }
 

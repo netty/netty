@@ -45,7 +45,7 @@ public class HpackUtilBenchmark extends AbstractMicrobenchmark {
 
     @Setup(Level.Trial)
     public void setup() {
-        hpackHeaders = HpackUtil.headers(size, false);
+        hpackHeaders = HpackBenchmarkUtil.headers(size, false);
     }
 
     @Benchmark

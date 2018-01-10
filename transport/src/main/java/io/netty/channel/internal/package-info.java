@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,24 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.ssl;
 
-import org.junit.BeforeClass;
-
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeTrue;
-
-public class OpenSslRenegotiateTest extends RenegotiateTest {
-
-    @BeforeClass
-    public static void checkOpenSsl() {
-        assumeTrue(OpenSsl.isAvailable());
-        // BoringSSL does not support renegotiation intentionally.
-        assumeFalse("BoringSSL".equals(OpenSsl.versionString()));
-    }
-
-    @Override
-    protected SslProvider serverSslProvider() {
-        return SslProvider.OPENSSL;
-    }
-}
+/**
+ * Internal utilities for channel implementations.
+ */
+package io.netty.channel.internal;

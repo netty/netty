@@ -20,7 +20,6 @@ package io.netty.buffer;
 import io.netty.buffer.PoolArena.SizeClass;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
-import io.netty.util.ThreadDeathWatcher;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -55,9 +54,6 @@ final class PoolThreadCache {
     private final int numShiftsNormalDirect;
     private final int numShiftsNormalHeap;
     private final int freeSweepAllocationThreshold;
-
-    private final Thread deathWatchThread;
-    private final Runnable freeTask;
 
     private int allocations;
 
@@ -112,29 +108,12 @@ final class PoolThreadCache {
             numShiftsNormalHeap = -1;
         }
 
-        // We only need to watch the thread when any cache is used.
-        if (tinySubPageDirectCaches != null || smallSubPageDirectCaches != null || normalDirectCaches != null
-                || tinySubPageHeapCaches != null || smallSubPageHeapCaches != null || normalHeapCaches != null) {
-            // Only check freeSweepAllocationThreshold when there are caches in use.
-            if (freeSweepAllocationThreshold < 1) {
-                throw new IllegalArgumentException("freeSweepAllocationThreshold: "
-                        + freeSweepAllocationThreshold + " (expected: > 0)");
-            }
-            freeTask = new Runnable() {
-                @Override
-                public void run() {
-                    free0();
-                }
-            };
-
-            deathWatchThread = Thread.currentThread();
-
-            // The thread-local cache will keep a list of pooled buffers which must be returned to
-            // the pool when the thread is not alive anymore.
-            ThreadDeathWatcher.watch(deathWatchThread, freeTask);
-        } else {
-            freeTask = null;
-            deathWatchThread = null;
+        // Only check if there are caches in use.
+        if ((tinySubPageDirectCaches != null || smallSubPageDirectCaches != null || normalDirectCaches != null
+                || tinySubPageHeapCaches != null || smallSubPageHeapCaches != null || normalHeapCaches != null)
+                && freeSweepAllocationThreshold < 1) {
+            throw new IllegalArgumentException("freeSweepAllocationThreshold: "
+                    + freeSweepAllocationThreshold + " (expected: > 0)");
         }
     }
 
@@ -244,14 +223,6 @@ final class PoolThreadCache {
      *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
      */
     void free() {
-        if (freeTask != null) {
-            assert deathWatchThread != null;
-            ThreadDeathWatcher.unwatch(deathWatchThread, freeTask);
-        }
-        free0();
-    }
-
-    private void free0() {
         int numFreed = free(tinySubPageDirectCaches) +
                 free(smallSubPageDirectCaches) +
                 free(normalDirectCaches) +

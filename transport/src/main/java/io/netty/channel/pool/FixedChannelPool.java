@@ -194,7 +194,7 @@ public class FixedChannelPool extends SimpleChannelPool {
         } else if (action == null && acquireTimeoutMillis != -1) {
             throw new NullPointerException("action");
         } else if (action != null && acquireTimeoutMillis < 0) {
-            throw new IllegalArgumentException("acquireTimeoutMillis: " + acquireTimeoutMillis + " (expected: >= 1)");
+            throw new IllegalArgumentException("acquireTimeoutMillis: " + acquireTimeoutMillis + " (expected: >= 0)");
         } else {
             acquireTimeoutNanos = TimeUnit.MILLISECONDS.toNanos(acquireTimeoutMillis);
             switch (action) {

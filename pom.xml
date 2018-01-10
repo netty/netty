@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.18.Final-SNAPSHOT</version>
+  <version>4.1.20.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -92,6 +92,12 @@
       <id>leak</id>
       <properties>
         <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.maxRecords=32</argLine.leak>
+      </properties>
+    </profile>
+    <profile>
+      <id>noPrintGC</id>
+      <properties>
+        <argLine.printGC>-D_</argLine.printGC>
       </properties>
     </profile>
     <profile>
@@ -180,6 +186,7 @@
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
+    <argLine.printGC>-XX:+PrintGCDetails</argLine.printGC>
     <argLine.java9 /> <!-- Overridden when 'java9' profile is active -->
     <argLine.javaProperties>-D_</argLine.javaProperties>
     <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
@@ -190,7 +197,7 @@
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
-    <conscrypt.version>1.0.0.RC11</conscrypt.version>
+    <conscrypt.version>1.0.0.RC13</conscrypt.version>
     <conscrypt.classifier />
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
@@ -200,6 +207,7 @@
     <testJavaHome>${env.JAVA_HOME}</testJavaHome>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
+    <skipHttp2Testsuite>false</skipHttp2Testsuite>
   </properties>
 
   <modules>
@@ -235,6 +243,7 @@
     <module>example</module>
     <module>testsuite</module>
     <module>testsuite-autobahn</module>
+    <module>testsuite-http2</module>
     <module>testsuite-osgi</module>
     <module>microbench</module>
     <module>bom</module>
@@ -809,7 +818,7 @@
             <logback.configurationFile>${logging.config}</logback.configurationFile>
             <logLevel>${logging.logLevel}</logLevel>
           </systemPropertyVariables>
-          <argLine>${argLine.common} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}</argLine>
+          <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}</argLine>
           <properties>
             <property>
               <name>listener</name>
@@ -1095,6 +1104,9 @@
                   <manifest>
                     <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                   </manifest>
+                  <manifestEntries>
+                    <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                  </manifestEntries>
                   <index>true</index>
                   <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
                 </archive>

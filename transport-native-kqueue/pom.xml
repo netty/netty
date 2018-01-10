@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.18.Final-SNAPSHOT</version>
+    <version>4.1.20.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-kqueue</artifactId>
 
@@ -111,6 +111,7 @@
                     </manifest>
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_${os.detected.arch}.jnilib; osname=MacOSX, processor=${os.detected.arch}"</Bundle-NativeCode>
+                      <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
                     <index>true</index>
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
@@ -353,6 +354,7 @@
   </profiles>
 
   <properties>
+    <javaModuleName>io.netty.transport.kqueue</javaModuleName>
     <!-- Needed by the native transport as we need the memoryAddress of the ByteBuffer -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED</argLine.java9.extras>
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>

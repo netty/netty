@@ -15,11 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.util.AsciiString;
 
-import java.util.HashMap;
-import java.util.Map;
+import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The request method of HTTP or its derived protocols, such as
@@ -86,18 +85,19 @@ public class HttpMethod implements Comparable<HttpMethod> {
      */
     public static final HttpMethod CONNECT = new HttpMethod("CONNECT");
 
-    private static final Map<String, HttpMethod> methodMap = new HashMap<String, HttpMethod>();
+    private static final EnumNameMap<HttpMethod> methodMap;
 
     static {
-        methodMap.put(OPTIONS.toString(), OPTIONS);
-        methodMap.put(GET.toString(), GET);
-        methodMap.put(HEAD.toString(), HEAD);
-        methodMap.put(POST.toString(), POST);
-        methodMap.put(PUT.toString(), PUT);
-        methodMap.put(PATCH.toString(), PATCH);
-        methodMap.put(DELETE.toString(), DELETE);
-        methodMap.put(TRACE.toString(), TRACE);
-        methodMap.put(CONNECT.toString(), CONNECT);
+        methodMap = new EnumNameMap<HttpMethod>(
+                new EnumNameMap.Node<HttpMethod>(OPTIONS.toString(), OPTIONS),
+                new EnumNameMap.Node<HttpMethod>(GET.toString(), GET),
+                new EnumNameMap.Node<HttpMethod>(HEAD.toString(), HEAD),
+                new EnumNameMap.Node<HttpMethod>(POST.toString(), POST),
+                new EnumNameMap.Node<HttpMethod>(PUT.toString(), PUT),
+                new EnumNameMap.Node<HttpMethod>(PATCH.toString(), PATCH),
+                new EnumNameMap.Node<HttpMethod>(DELETE.toString(), DELETE),
+                new EnumNameMap.Node<HttpMethod>(TRACE.toString(), TRACE),
+                new EnumNameMap.Node<HttpMethod>(CONNECT.toString(), CONNECT));
     }
 
     /**
@@ -172,5 +172,47 @@ public class HttpMethod implements Comparable<HttpMethod> {
     @Override
     public int compareTo(HttpMethod o) {
         return name().compareTo(o.name());
+    }
+
+    private static final class EnumNameMap<T> {
+        private final EnumNameMap.Node<T>[] values;
+        private final int valuesMask;
+
+        EnumNameMap(EnumNameMap.Node<T>... nodes) {
+            values = (EnumNameMap.Node<T>[]) new EnumNameMap.Node[findNextPositivePowerOfTwo(nodes.length)];
+            valuesMask = values.length - 1;
+            for (EnumNameMap.Node<T> node : nodes) {
+                int i = hashCode(node.key) & valuesMask;
+                if (values[i] != null) {
+                    throw new IllegalArgumentException("index " + i + " collision between values: [" +
+                            values[i].key + ", " + node.key + ']');
+                }
+                values[i] = node;
+            }
+        }
+
+        T get(String name) {
+            EnumNameMap.Node<T> node = values[hashCode(name) & valuesMask];
+            return node == null || !node.key.equals(name) ? null : node.value;
+        }
+
+        private static int hashCode(String name) {
+            // This hash code needs to produce a unique index in the "values" array for each HttpMethod. If new
+            // HttpMethods are added this algorithm will need to be adjusted. The constructor will "fail fast" if there
+            // are duplicates detected.
+            // For example with the current set of HttpMethods it just so happens that the String hash code value
+            // shifted right by 6 bits modulo 16 is unique relative to all other HttpMethod values.
+            return name.hashCode() >>> 6;
+        }
+
+        private static final class Node<T> {
+            final String key;
+            final T value;
+
+            Node(String key, T value) {
+                this.key = key;
+                this.value = value;
+            }
+        }
     }
 }

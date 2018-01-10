@@ -355,13 +355,6 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
     /**
      * For testing only!
      */
-    int streamableBytes0(Http2Stream stream) {
-        return state(stream).streamableBytes;
-    }
-
-    /**
-     * For testing only!
-     */
     boolean isChild(int childId, int parentId, short weight) {
         State parent = state(parentId);
         State child;

@@ -14,6 +14,9 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.handler.codec.http2.Http2TestUtil.TestStreamByteDistributorStreamState;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -21,6 +24,8 @@ import org.mockito.stubbing.Answer;
 abstract class AbstractWeightedFairQueueByteDistributorDependencyTest {
     Http2Connection connection;
     WeightedFairQueueByteDistributor distributor;
+    private IntObjectMap<TestStreamByteDistributorStreamState> stateMap =
+            new IntObjectHashMap<TestStreamByteDistributorStreamState>();
 
     @Mock
     StreamByteDistributor.Writer writer;
@@ -35,45 +40,30 @@ abstract class AbstractWeightedFairQueueByteDistributorDependencyTest {
             public Void answer(InvocationOnMock in) throws Throwable {
                 Http2Stream stream = in.getArgument(0);
                 int numBytes = in.getArgument(1);
-                int streamableBytes = distributor.streamableBytes0(stream) - numBytes;
-                boolean hasFrame = streamableBytes > 0;
-                updateStream(stream.id(), streamableBytes, hasFrame, hasFrame, closeIfNoFrame);
+                TestStreamByteDistributorStreamState state = stateMap.get(stream.id());
+                state.pendingBytes -= numBytes;
+                state.hasFrame = state.pendingBytes > 0;
+                state.isWriteAllowed = state.hasFrame;
+                if (closeIfNoFrame && !state.hasFrame) {
+                    stream.close();
+                }
+                distributor.updateStreamableBytes(state);
                 return null;
             }
         };
     }
 
-    void updateStream(final int streamId, final int streamableBytes, final boolean hasFrame) {
-        updateStream(streamId, streamableBytes, hasFrame, hasFrame, false);
+    void initState(final int streamId, final long streamableBytes, final boolean hasFrame) {
+        initState(streamId, streamableBytes, hasFrame, hasFrame);
     }
 
-    void updateStream(final int streamId, final int pendingBytes, final boolean hasFrame,
-                              final boolean isWriteAllowed, boolean closeIfNoFrame) {
+    void initState(final int streamId, final long pendingBytes, final boolean hasFrame,
+                              final boolean isWriteAllowed) {
         final Http2Stream stream = stream(streamId);
-        if (closeIfNoFrame && !hasFrame) {
-            stream(streamId).close();
-        }
-        distributor.updateStreamableBytes(new StreamByteDistributor.StreamState() {
-            @Override
-            public Http2Stream stream() {
-                return stream;
-            }
-
-            @Override
-            public int pendingBytes() {
-                return pendingBytes;
-            }
-
-            @Override
-            public boolean hasFrame() {
-                return hasFrame;
-            }
-
-            @Override
-            public int windowSize() {
-                return isWriteAllowed ? pendingBytes : -1;
-            }
-        });
+        TestStreamByteDistributorStreamState state = new TestStreamByteDistributorStreamState(stream, pendingBytes,
+                hasFrame, isWriteAllowed);
+        stateMap.put(streamId, state);
+        distributor.updateStreamableBytes(state);
     }
 
     void setPriority(int streamId, int parent, int weight, boolean exclusive) throws Http2Exception {

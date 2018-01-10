@@ -146,7 +146,7 @@ final class HpackDecoder {
                                 state = READ_INDEXED_HEADER;
                                 break;
                             default:
-                                headersLength = indexHeader(streamId, index, headers, headersLength);
+                                headersLength = indexHeader(index, headers, headersLength);
                         }
                     } else if ((b & 0x40) == 0x40) {
                         // Literal Header Field with Incremental Indexing
@@ -162,6 +162,7 @@ final class HpackDecoder {
                             default:
                                 // Index was stored as the prefix
                                 name = readName(index);
+                                nameLength = name.length();
                                 state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                         }
                     } else if ((b & 0x20) == 0x20) {
@@ -187,6 +188,7 @@ final class HpackDecoder {
                             default:
                             // Index was stored as the prefix
                             name = readName(index);
+                            nameLength = name.length();
                             state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                         }
                     }
@@ -198,13 +200,14 @@ final class HpackDecoder {
                     break;
 
                 case READ_INDEXED_HEADER:
-                    headersLength = indexHeader(streamId, decodeULE128(in, index), headers, headersLength);
+                    headersLength = indexHeader(decodeULE128(in, index), headers, headersLength);
                     state = READ_HEADER_REPRESENTATION;
                     break;
 
                 case READ_INDEXED_HEADER_NAME:
                     // Header Name matches an entry in the Header Table
                     name = readName(decodeULE128(in, index));
+                    nameLength = name.length();
                     state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                     break;
 
@@ -253,8 +256,7 @@ final class HpackDecoder {
                             state = READ_LITERAL_HEADER_VALUE_LENGTH;
                             break;
                         case 0:
-                            headersLength = insertHeader(streamId, headers, name, EMPTY_STRING, indexType,
-                                                         headersLength);
+                            headersLength = insertHeader(headers, name, EMPTY_STRING, indexType, headersLength);
                             state = READ_HEADER_REPRESENTATION;
                             break;
                         default:
@@ -286,7 +288,7 @@ final class HpackDecoder {
                     }
 
                     CharSequence value = readStringLiteral(in, valueLength, huffmanEncoded);
-                    headersLength = insertHeader(streamId, headers, name, value, indexType, headersLength);
+                    headersLength = insertHeader(headers, name, value, indexType, headersLength);
                     state = READ_HEADER_REPRESENTATION;
                     break;
 
@@ -392,21 +394,21 @@ final class HpackDecoder {
         throw READ_NAME_ILLEGAL_INDEX_VALUE;
     }
 
-    private long indexHeader(int streamId, int index, Http2Headers headers, long headersLength) throws Http2Exception {
+    private long indexHeader(int index, Http2Headers headers, long headersLength) throws Http2Exception {
         if (index <= HpackStaticTable.length) {
             HpackHeaderField hpackHeaderField = HpackStaticTable.getEntry(index);
-            return addHeader(streamId, headers, hpackHeaderField.name, hpackHeaderField.value, headersLength);
+            return addHeader(headers, hpackHeaderField.name, hpackHeaderField.value, headersLength);
         }
         if (index - HpackStaticTable.length <= hpackDynamicTable.length()) {
             HpackHeaderField hpackHeaderField = hpackDynamicTable.getEntry(index - HpackStaticTable.length);
-            return addHeader(streamId, headers, hpackHeaderField.name, hpackHeaderField.value, headersLength);
+            return addHeader(headers, hpackHeaderField.name, hpackHeaderField.value, headersLength);
         }
         throw INDEX_HEADER_ILLEGAL_INDEX_VALUE;
     }
 
-    private long insertHeader(int streamId, Http2Headers headers, CharSequence name, CharSequence value,
+    private long insertHeader(Http2Headers headers, CharSequence name, CharSequence value,
                               IndexType indexType, long headerSize) throws Http2Exception {
-        headerSize = addHeader(streamId, headers, name, value, headerSize);
+        headerSize = addHeader(headers, name, value, headerSize);
 
         switch (indexType) {
             case NONE:
@@ -424,9 +426,9 @@ final class HpackDecoder {
         return headerSize;
     }
 
-    private long addHeader(int streamId, Http2Headers headers, CharSequence name, CharSequence value,
-                           long headersLength) throws Http2Exception {
-        headersLength += name.length() + value.length();
+    private long addHeader(Http2Headers headers, CharSequence name, CharSequence value, long headersLength)
+            throws Http2Exception {
+        headersLength += HpackHeaderField.sizeOf(name, value);
         if (headersLength > maxHeaderListSizeGoAway) {
             headerListSizeExceeded(maxHeaderListSizeGoAway);
         }

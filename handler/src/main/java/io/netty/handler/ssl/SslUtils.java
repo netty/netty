@@ -310,11 +310,13 @@ final class SslUtils {
         return packetLength;
     }
 
-    static void notifyHandshakeFailure(ChannelHandlerContext ctx, Throwable cause) {
+    static void notifyHandshakeFailure(ChannelHandlerContext ctx, Throwable cause, boolean notify) {
         // We have may haven written some parts of data before an exception was thrown so ensure we always flush.
         // See https://github.com/netty/netty/issues/3900#issuecomment-172481830
         ctx.flush();
-        ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+        if (notify) {
+            ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+        }
         ctx.close();
     }
 

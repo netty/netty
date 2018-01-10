@@ -20,13 +20,17 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.18.Final-SNAPSHOT</version>
+    <version>4.1.20.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-resolver-dns</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/Resolver/DNS</name>
+
+  <properties>
+    <javaModuleName>io.netty.resolver.dns</javaModuleName>
+  </properties>
 
   <dependencies>
     <dependency>

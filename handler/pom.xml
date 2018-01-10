@@ -20,13 +20,14 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.18.Final-SNAPSHOT</version>
+    <version>4.1.20.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-handler</artifactId>
   <packaging>jar</packaging>
 
-  <properties> 
+  <properties>
+    <javaModuleName>io.netty.handler</javaModuleName>
     <!-- Needed for SelfSignedCertificate -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
   </properties>

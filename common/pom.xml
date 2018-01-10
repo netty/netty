@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.18.Final-SNAPSHOT</version>
+    <version>4.1.20.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-common</artifactId>
@@ -30,6 +30,7 @@
   <name>Netty/Common</name>
 
   <properties>
+    <javaModuleName>io.netty.common</javaModuleName>
     <collection.template.dir>${project.basedir}/src/main/templates</collection.template.dir>
     <collection.template.test.dir>${project.basedir}/src/test/templates</collection.template.test.dir>
     <collection.src.dir>${project.build.directory}/generated-sources/collections/java</collection.src.dir>

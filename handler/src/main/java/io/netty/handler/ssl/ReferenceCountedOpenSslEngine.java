@@ -163,7 +163,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     private HandshakeState handshakeState = HandshakeState.NOT_STARTED;
-    private boolean renegotiationPending;
     private boolean receivedShutdown;
     private volatile int destroyed;
     private volatile String applicationProtocol;
@@ -653,17 +652,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
 
                     status = handshake();
-
-                    if (renegotiationPending && status == FINISHED) {
-                        // If renegotiationPending is true that means when we attempted to start renegotiation
-                        // the BIO buffer didn't have enough space to hold the HelloRequest which prompts the
-                        // client to initiate a renegotiation. At this point the HelloRequest has been written
-                        // so we can actually start the handshake process.
-                        renegotiationPending = false;
-                        SSL.setState(ssl, SSL.SSL_ST_ACCEPT);
-                        handshakeState = HandshakeState.STARTED_EXPLICITLY;
-                        status = handshake();
-                    }
 
                     // Handshake may have generated more data, for example if the internal SSL buffer is small
                     // we may have freed up space by flushing above.
@@ -1510,43 +1498,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // Nothing to do as the handshake is not done yet.
                 break;
             case FINISHED:
-                if (clientMode) {
-                    // Only supported for server mode at the moment.
-                    throw RENEGOTIATION_UNSUPPORTED;
-                }
-                // For renegotiate on the server side we need to issue the following command sequence with openssl:
-                //
-                // SSL_renegotiate(ssl)
-                // SSL_do_handshake(ssl)
-                // ssl->state = SSL_ST_ACCEPT
-                // SSL_do_handshake(ssl)
-                //
-                // Because of this we fall-through to call handshake() after setting the state, as this will also take
-                // care of updating the internal OpenSslSession object.
-                //
-                // See also:
-                // https://github.com/apache/httpd/blob/2.4.16/modules/ssl/ssl_engine_kernel.c#L812
-                // http://h71000.www7.hp.com/doc/83final/ba554_90007/ch04s03.html
-                int status;
-                if ((status = SSL.renegotiate(ssl)) != 1 || (status = SSL.doHandshake(ssl)) != 1) {
-                    int err = SSL.getError(ssl, status);
-                    if (err == SSL.SSL_ERROR_WANT_READ || err == SSL.SSL_ERROR_WANT_WRITE) {
-                        // If the internal SSL buffer is small it is possible that doHandshake may "fail" because
-                        // there is not enough room to write, so we should wait until the renegotiation has been.
-                        renegotiationPending = true;
-                        handshakeState = HandshakeState.STARTED_EXPLICITLY;
-                        lastAccessed = System.currentTimeMillis();
-                        return;
-                    } else {
-                        throw shutdownWithError("renegotiation failed");
-                    }
-                }
-
-                SSL.setState(ssl, SSL.SSL_ST_ACCEPT);
-
-                lastAccessed = System.currentTimeMillis();
-
-                // fall-through
+                throw RENEGOTIATION_UNSUPPORTED;
             case NOT_STARTED:
                 handshakeState = HandshakeState.STARTED_EXPLICITLY;
                 handshake();

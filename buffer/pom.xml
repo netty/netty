@@ -20,13 +20,17 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.18.Final-SNAPSHOT</version>
+    <version>4.1.20.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-buffer</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/Buffer</name>
+
+  <properties>
+    <javaModuleName>io.netty.buffer</javaModuleName>
+  </properties>
 
   <dependencies>
     <dependency>

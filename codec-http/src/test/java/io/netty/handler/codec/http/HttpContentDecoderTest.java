@@ -21,6 +21,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.CodecException;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibEncoder;
@@ -32,16 +34,12 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class HttpContentDecoderTest {
     private static final String HELLO_WORLD = "hello, world";
@@ -484,6 +482,43 @@ public class HttpContentDecoderTest {
         assertHasInboundMessages(channel, true);
         assertHasOutboundMessages(channel, false);
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testCleanupThrows() {
+        HttpContentDecoder decoder = new HttpContentDecoder() {
+            @Override
+            protected EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception {
+                return new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                        ctx.fireExceptionCaught(new DecoderException());
+                        ctx.fireChannelInactive();
+                    }
+                });
+            }
+        };
+
+        final AtomicBoolean channelInactiveCalled = new AtomicBoolean();
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                assertTrue(channelInactiveCalled.compareAndSet(false, true));
+                super.channelInactive(ctx);
+            }
+        });
+        assertTrue(channel.writeInbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
+        HttpContent content = new DefaultHttpContent(Unpooled.buffer().writeZero(10));
+        assertTrue(channel.writeInbound(content));
+        assertEquals(1, content.refCnt());
+        try {
+            channel.finishAndReleaseAll();
+            fail();
+        } catch (CodecException expected) {
+            // expected
+        }
+        assertTrue(channelInactiveCalled.get());
+        assertEquals(0, content.refCnt());
     }
 
     private static byte[] gzDecompress(byte[] input) {

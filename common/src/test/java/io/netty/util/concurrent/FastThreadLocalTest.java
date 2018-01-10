@@ -75,4 +75,76 @@ public class FastThreadLocalTest {
             throw t;
         }
     }
+
+    @Test(timeout = 4000)
+    public void testOnRemoveCalledForFastThreadLocalGet() throws Exception {
+        testOnRemoveCalled(true, true);
+    }
+
+    @Test(timeout = 4000)
+    public void testOnRemoveCalledForNonFastThreadLocalGet() throws Exception {
+        testOnRemoveCalled(false, true);
+    }
+
+    @Test(timeout = 4000)
+    public void testOnRemoveCalledForFastThreadLocalSet() throws Exception {
+        testOnRemoveCalled(true, false);
+    }
+
+    @Test(timeout = 4000)
+    public void testOnRemoveCalledForNonFastThreadLocalSet() throws Exception {
+        testOnRemoveCalled(false, false);
+    }
+
+    private static void testOnRemoveCalled(boolean fastThreadLocal, final boolean callGet) throws Exception {
+
+        final TestFastThreadLocal threadLocal = new TestFastThreadLocal();
+        final TestFastThreadLocal threadLocal2 = new TestFastThreadLocal();
+
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                if (callGet) {
+                    assertEquals(Thread.currentThread().getName(), threadLocal.get());
+                    assertEquals(Thread.currentThread().getName(), threadLocal2.get());
+                } else {
+                    threadLocal.set(Thread.currentThread().getName());
+                    threadLocal2.set(Thread.currentThread().getName());
+                }
+            }
+        };
+        Thread thread = fastThreadLocal ? new FastThreadLocalThread(runnable) : new Thread(runnable);
+        thread.start();
+        thread.join();
+
+        String threadName = thread.getName();
+
+        // Null this out so it can be collected
+        thread = null;
+
+        // Loop until onRemoval(...) was called. This will fail the test if this not works due a timeout.
+        while (threadLocal.onRemovalCalled.get() == null || threadLocal2.onRemovalCalled.get() == null) {
+            System.gc();
+            System.runFinalization();
+            Thread.sleep(50);
+        }
+
+        assertEquals(threadName, threadLocal.onRemovalCalled.get());
+        assertEquals(threadName, threadLocal2.onRemovalCalled.get());
+    }
+
+    private static final class TestFastThreadLocal extends FastThreadLocal<String> {
+
+        final AtomicReference<String> onRemovalCalled = new AtomicReference<String>();
+
+        @Override
+        protected String initialValue() throws Exception {
+            return Thread.currentThread().getName();
+        }
+
+        @Override
+        protected void onRemoval(String value) throws Exception {
+            onRemovalCalled.set(value);
+        }
+    }
 }

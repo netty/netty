@@ -54,27 +54,27 @@ public class ByteBufBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public void setByteBufferHeap() {
-        byteBuffer.put(0, BYTE);
+    public ByteBuffer setByteBufferHeap() {
+        return byteBuffer.put(0, BYTE);
     }
 
     @Benchmark
-    public void setByteBufferDirect() {
-        directByteBuffer.put(0, BYTE);
+    public ByteBuffer setByteBufferDirect() {
+        return directByteBuffer.put(0, BYTE);
     }
 
     @Benchmark
-    public void setByteBufHeap() {
-        buffer.setByte(0, BYTE);
+    public ByteBuf setByteBufHeap() {
+        return buffer.setByte(0, BYTE);
     }
 
     @Benchmark
-    public void setByteBufDirect() {
-        directBuffer.setByte(0, BYTE);
+    public ByteBuf setByteBufDirect() {
+        return directBuffer.setByte(0, BYTE);
     }
 
     @Benchmark
-    public void setByteBufDirectPooled() {
-        directBufferPooled.setByte(0, BYTE);
+    public ByteBuf setByteBufDirectPooled() {
+        return directBufferPooled.setByte(0, BYTE);
     }
 }
