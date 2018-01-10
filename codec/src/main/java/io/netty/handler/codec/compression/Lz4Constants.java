@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec.compression;
 
+/**
+ * Constants for both the {@link Lz4FrameEncoder} and the {@link Lz4FrameDecoder}.
+ */
 final class Lz4Constants {
     /**
      * Magic number of LZ4 block.

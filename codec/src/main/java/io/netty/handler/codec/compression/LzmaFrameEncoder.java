@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import lzma.sdk.lzma.Base;
@@ -36,7 +35,7 @@ import static lzma.sdk.lzma.Encoder.*;
  * and <a href="http://svn.python.org/projects/external/xz-5.0.5/doc/lzma-file-format.txt">LZMA format</a>
  * or documents in <a href="http://www.7-zip.org/sdk.html">LZMA SDK</a> archive.
  */
-public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class LzmaFrameEncoder extends AbstractCompressionEncoder {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LzmaFrameEncoder.class);
 
@@ -135,6 +134,7 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *        available values [{@value #MIN_FAST_BYTES}, {@value #MAX_FAST_BYTES}].
      */
     public LzmaFrameEncoder(int lc, int lp, int pb, int dictionarySize, boolean endMarkerMode, int numFastBytes) {
+        super(CompressionFormat.LZMA, false);
         if (lc < 0 || lc > 8) {
             throw new IllegalArgumentException("lc: " + lc + " (expected: 0-8)");
         }

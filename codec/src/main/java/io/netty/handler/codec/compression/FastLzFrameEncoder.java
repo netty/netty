@@ -17,7 +17,6 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
 
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
@@ -29,7 +28,7 @@ import static io.netty.handler.codec.compression.FastLz.*;
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
  */
-public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class FastLzFrameEncoder extends AbstractCompressionEncoder {
     /**
      * Compression level.
      */
@@ -60,8 +59,8 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     /**
-     * Creates a FastLZ encoder with auto detection of compression
-     * level and calculation of checksums as specified.
+     * Creates a FastLZ encoder with auto detection of compression level
+     * and calculation of checksums as specified.
      *
      * @param validateChecksums
      *        If true, the checksum of each block will be calculated and this value
@@ -85,7 +84,8 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *        You may set {@code null} if you don't want to validate checksum of each block.
      */
     public FastLzFrameEncoder(int level, Checksum checksum) {
-        super(false);
+        super(CompressionFormat.FASTLZ, false);
+
         if (level != LEVEL_AUTO && level != LEVEL_1 && level != LEVEL_2) {
             throw new IllegalArgumentException(String.format(
                     "level: %d (expected: %d or %d or %d)", level, LEVEL_AUTO, LEVEL_1, LEVEL_2));

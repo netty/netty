@@ -18,7 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 
 /**
- * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an
+ * Decompresses an input {@link ByteBuf} encoded with Snappy compression into an
  * output {@link ByteBuf}.
  *
  * See <a href="https://github.com/google/snappy/blob/master/format_description.txt">snappy format</a>.

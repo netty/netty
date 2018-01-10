@@ -17,7 +17,6 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
@@ -29,7 +28,7 @@ import java.util.zip.Checksum;
 import static io.netty.handler.codec.compression.Lz4Constants.*;
 
 /**
- * Uncompresses a {@link ByteBuf} encoded with the LZ4 format.
+ * Decompresses a {@link ByteBuf} encoded with the LZ4 format.
  *
  * See original <a href="https://github.com/Cyan4973/lz4">LZ4 Github project</a>
  * and <a href="http://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
@@ -44,7 +43,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.*;
  *  *       *       *    length   *     length    *           *     *      block      *
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
  */
-public class Lz4FrameDecoder extends ByteToMessageDecoder {
+public class Lz4FrameDecoder extends AbstractClosableCompressionDecoder {
     /**
      * Current state of stream.
      */
@@ -139,6 +138,8 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
      *                  You may set {@code null} if you do not want to validate checksum of each block
      */
     public Lz4FrameDecoder(LZ4Factory factory, Checksum checksum) {
+        super(CompressionFormat.LZ4);
+
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -266,10 +267,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
         }
     }
 
-    /**
-     * Returns {@code true} if and only if the end of the compressed stream
-     * has been reached.
-     */
+    @Override
     public boolean isClosed() {
         return currentState == State.FINISHED;
     }

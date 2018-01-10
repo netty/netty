@@ -16,25 +16,37 @@
 package io.netty.handler.codec.compression;
 
 /**
- * The container file formats that wrap the stream compressed by the DEFLATE
- * algorithm.
+ * The container file formats that wrap the stream compressed by the DEFLATE algorithm.
  */
 public enum ZlibWrapper {
     /**
      * The ZLIB wrapper as specified in <a href="http://tools.ietf.org/html/rfc1950">RFC 1950</a>.
      */
-    ZLIB,
+    ZLIB(CompressionFormat.ZLIB),
     /**
      * The GZIP wrapper as specified in <a href="http://tools.ietf.org/html/rfc1952">RFC 1952</a>.
      */
-    GZIP,
+    GZIP(CompressionFormat.GZIP),
     /**
      * Raw DEFLATE stream only (no header and no footer).
      */
-    NONE,
+    NONE(CompressionFormat.DEFLATE),
     /**
      * Try {@link #ZLIB} first and then {@link #NONE} if the first attempt fails.
      * Please note that you can specify this wrapper type only when decompressing.
      */
-    ZLIB_OR_NONE
+    ZLIB_OR_NONE(CompressionFormat.ZLIB_OR_NONE);
+
+    private final CompressionFormat compressionFormat;
+
+    ZlibWrapper(CompressionFormat compressionFormat) {
+        this.compressionFormat = compressionFormat;
+    }
+
+    /**
+     * Returns a {@link CompressionFormat} of current {@link ZlibWrapper}.
+     */
+    public CompressionFormat asCompressionFormat() {
+        return compressionFormat;
+    }
 }
