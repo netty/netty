@@ -24,23 +24,6 @@ import io.netty.util.internal.UnstableApi;
  */
 @UnstableApi
 public interface Http2FrameStream {
-
-    /**
-     * The stream with identifier 0, representing the HTTP/2 connection.
-     */
-    Http2FrameStream CONNECTION_STREAM = new Http2FrameStream() {
-
-        @Override
-        public int id() {
-            return 0;
-        }
-
-        @Override
-        public State state() {
-            return State.IDLE;
-        }
-    };
-
     /**
      * Returns the stream identifier.
      *

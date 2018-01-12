@@ -21,21 +21,20 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
 import io.netty.handler.codec.http2.Http2Connection.PropertyKey;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2ChannelClosedException;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
-import io.netty.handler.codec.UnsupportedMessageTypeException;
-import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
 import io.netty.util.ReferenceCountUtil;
-
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
+import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 
 /**
  * <p><em>This API is very immature.</em> The Http2Connection-based API is currently preferred over this API.
@@ -274,7 +273,19 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             writeHeadersFrame(ctx, (Http2HeadersFrame) msg, promise);
         } else if (msg instanceof Http2WindowUpdateFrame) {
             Http2WindowUpdateFrame frame = (Http2WindowUpdateFrame) msg;
-            writeWindowUpdate(frame.stream().id(), frame.windowSizeIncrement(), promise);
+            Http2FrameStream frameStream = frame.stream();
+            // It is legit to send a WINDOW_UPDATE frame for the connection stream. The parent channel doesn't attempt
+            // to set the Http2FrameStream so we assume if it is null the WINDOW_UPDATE is for the connection stream.
+            try {
+                if (frameStream == null) {
+                    increaseInitialConnectionWindow(frame.windowSizeIncrement());
+                } else {
+                    consumeBytes(frameStream.id(), frame.windowSizeIncrement());
+                }
+                promise.setSuccess();
+            } catch (Throwable t) {
+                promise.setFailure(t);
+            }
         } else if (msg instanceof Http2ResetFrame) {
             Http2ResetFrame rstFrame = (Http2ResetFrame) msg;
             encoder().writeRstStream(ctx, rstFrame.stream().id(), rstFrame.errorCode(), promise);
@@ -290,19 +301,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         } else {
             ReferenceCountUtil.release(msg);
             throw new UnsupportedMessageTypeException(msg);
-        }
-    }
-
-    private void writeWindowUpdate(int streamId, int bytes, ChannelPromise promise) {
-        try {
-            if (streamId == 0) {
-                increaseInitialConnectionWindow(bytes);
-            } else {
-                consumeBytes(streamId, bytes);
-            }
-            promise.setSuccess();
-        } catch (Throwable t) {
-            promise.setFailure(t);
         }
     }
 
