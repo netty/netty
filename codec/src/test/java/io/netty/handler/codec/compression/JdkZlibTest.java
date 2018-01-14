@@ -15,7 +15,20 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Queue;
+
+import static org.junit.Assert.*;
 
 
 public class JdkZlibTest extends ZlibTest {
@@ -34,5 +47,63 @@ public class JdkZlibTest extends ZlibTest {
     @Override
     public void testZLIB_OR_NONE3() throws Exception {
         super.testZLIB_OR_NONE3();
+    }
+
+    @Test
+    // verifies backward compatibility
+    public void testConcatenatedStreamsReadFirstOnly() throws IOException {
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
+
+        try {
+            byte[] bytes = toByteArray(getClass().getResourceAsStream("/multiple.gz"));
+
+            assertTrue(chDecoderGZip.writeInbound(Unpooled.copiedBuffer(bytes)));
+            Queue<Object> messages = chDecoderGZip.inboundMessages();
+            assertEquals(1, messages.size());
+
+            ByteBuf msg = (ByteBuf) messages.poll();
+            assertEquals("a", msg.toString(CharsetUtil.UTF_8));
+            ReferenceCountUtil.release(msg);
+        } finally {
+            assertFalse(chDecoderGZip.finish());
+            chDecoderGZip.close();
+        }
+    }
+
+    @Test
+    public void testConcatenatedStreamsReadFully() throws IOException {
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true));
+
+        try {
+            byte[] bytes = toByteArray(getClass().getResourceAsStream("/multiple.gz"));
+
+            assertTrue(chDecoderGZip.writeInbound(Unpooled.copiedBuffer(bytes)));
+            Queue<Object> messages = chDecoderGZip.inboundMessages();
+            assertEquals(2, messages.size());
+
+            for (String s : Arrays.asList("a", "b")) {
+                ByteBuf msg = (ByteBuf) messages.poll();
+                assertEquals(s, msg.toString(CharsetUtil.UTF_8));
+                ReferenceCountUtil.release(msg);
+            }
+        } finally {
+            assertFalse(chDecoderGZip.finish());
+            chDecoderGZip.close();
+        }
+    }
+
+    private static byte[] toByteArray(InputStream in) throws IOException {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] array = new byte[1024];
+
+            int read;
+            while ((read = in.read(array)) != -1) {
+                out.write(array, 0, read);
+            }
+            return out.toByteArray();
+        } finally {
+            in.close();
+        }
     }
 }
