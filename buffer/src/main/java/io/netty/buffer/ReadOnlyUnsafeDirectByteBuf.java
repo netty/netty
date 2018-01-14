@@ -27,8 +27,10 @@ import java.nio.ByteBuffer;
 final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
     private final long memoryAddress;
 
-    ReadOnlyUnsafeDirectByteBuf(ByteBufAllocator allocator, ByteBuffer buffer) {
-        super(allocator, buffer);
+    ReadOnlyUnsafeDirectByteBuf(ByteBufAllocator allocator, ByteBuffer byteBuffer) {
+        super(allocator, byteBuffer);
+        // Use buffer as the super class will slice the passed in ByteBuffer which means the memoryAddress
+        // may be different if the position != 0.
         memoryAddress = PlatformDependent.directBufferAddress(buffer);
     }
 
