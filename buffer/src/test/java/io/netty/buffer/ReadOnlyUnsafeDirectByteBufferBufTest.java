@@ -16,7 +16,6 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
 import org.junit.BeforeClass;
 
 import java.nio.ByteBuffer;

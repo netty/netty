@@ -15,13 +15,18 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
+import java.nio.channels.FileChannel;
 
 public class ReadOnlyDirectByteBufferBufTest {
 
@@ -225,5 +230,48 @@ public class ReadOnlyDirectByteBufferBufTest {
         Assert.assertEquals(2, nioBuffer.getInt());
 
         buf.release();
+    }
+
+    @Test
+    public void testWrapMemoryMapped() throws Exception {
+        File file = File.createTempFile("netty-test", "tmp");
+        FileChannel output = null;
+        FileChannel input = null;
+        ByteBuf b1 = null;
+        ByteBuf b2 = null;
+
+        try {
+            output = new FileOutputStream(file).getChannel();
+            byte[] bytes = new byte[1024];
+            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+            output.write(ByteBuffer.wrap(bytes));
+
+            input = new FileInputStream(file).getChannel();
+            ByteBuffer m = input.map(FileChannel.MapMode.READ_ONLY, 0, input.size());
+
+            b1 = buffer(m);
+
+            ByteBuffer dup = m.duplicate();
+            dup.position(2);
+            dup.limit(4);
+
+            b2 = buffer(dup);
+
+            Assert.assertEquals(b2, b1.slice(2, 2));
+        } finally {
+            if (b1 != null) {
+                b1.release();
+            }
+            if (b2 != null) {
+                b2.release();
+            }
+            if (output != null) {
+                output.close();
+            }
+            if (input != null) {
+                input.close();
+            }
+            file.delete();
+        }
     }
 }
