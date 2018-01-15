@@ -600,7 +600,7 @@ public class DnsNameResolver extends InetNameResolver {
                                     Promise<InetAddress> promise,
                                     DnsCache resolveCache) {
         final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (cachedEntries == null || cachedEntries.isEmpty()) {
+        if (cachedEntries == null) {
             return false;
         }
 
@@ -608,7 +608,9 @@ public class DnsNameResolver extends InetNameResolver {
         Throwable cause = null;
         synchronized (cachedEntries) {
             final int numEntries = cachedEntries.size();
-            assert numEntries > 0;
+            if (numEntries == 0) {
+                return false;
+            }
 
             if (cachedEntries.get(0).cause() != null) {
                 cause = cachedEntries.get(0).cause();
@@ -730,7 +732,7 @@ public class DnsNameResolver extends InetNameResolver {
                                        Promise<List<InetAddress>> promise,
                                        DnsCache resolveCache) {
         final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (cachedEntries == null || cachedEntries.isEmpty()) {
+        if (cachedEntries == null) {
             return false;
         }
 
@@ -738,7 +740,9 @@ public class DnsNameResolver extends InetNameResolver {
         Throwable cause = null;
         synchronized (cachedEntries) {
             final int numEntries = cachedEntries.size();
-            assert numEntries > 0;
+            if (numEntries == 0) {
+                return false;
+            }
 
             if (cachedEntries.get(0).cause() != null) {
                 cause = cachedEntries.get(0).cause();
