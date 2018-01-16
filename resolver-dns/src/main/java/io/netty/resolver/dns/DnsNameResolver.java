@@ -600,43 +600,28 @@ public class DnsNameResolver extends InetNameResolver {
                                     Promise<InetAddress> promise,
                                     DnsCache resolveCache) {
         final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (cachedEntries == null) {
+        if (cachedEntries == null || cachedEntries.isEmpty()) {
             return false;
         }
 
-        InetAddress address = null;
-        Throwable cause = null;
-        synchronized (cachedEntries) {
+        Throwable cause = cachedEntries.get(0).cause();
+        if (cause == null) {
             final int numEntries = cachedEntries.size();
-            if (numEntries == 0) {
-                return false;
-            }
-
-            if (cachedEntries.get(0).cause() != null) {
-                cause = cachedEntries.get(0).cause();
-            } else {
-                // Find the first entry with the preferred address type.
-                for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
-                    for (int i = 0; i < numEntries; i++) {
-                        final DnsCacheEntry e = cachedEntries.get(i);
-                        if (f.addressType().isInstance(e.address())) {
-                            address = e.address();
-                            break;
-                        }
+            // Find the first entry with the preferred address type.
+            for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
+                for (int i = 0; i < numEntries; i++) {
+                    final DnsCacheEntry e = cachedEntries.get(i);
+                    if (f.addressType().isInstance(e.address())) {
+                        trySuccess(promise, e.address());
+                        return true;
                     }
                 }
             }
-        }
-
-        if (address != null) {
-            trySuccess(promise, address);
-            return true;
-        }
-        if (cause != null) {
+            return false;
+        } else {
             tryFailure(promise, cause);
             return true;
         }
-        return false;
     }
 
     private static <T> void trySuccess(Promise<T> promise, T result) {
@@ -732,44 +717,34 @@ public class DnsNameResolver extends InetNameResolver {
                                        Promise<List<InetAddress>> promise,
                                        DnsCache resolveCache) {
         final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (cachedEntries == null) {
+        if (cachedEntries == null || cachedEntries.isEmpty()) {
             return false;
         }
 
-        List<InetAddress> result = null;
-        Throwable cause = null;
-        synchronized (cachedEntries) {
+        Throwable cause = cachedEntries.get(0).cause();
+        if (cause == null) {
+            List<InetAddress> result = null;
             final int numEntries = cachedEntries.size();
-            if (numEntries == 0) {
-                return false;
-            }
-
-            if (cachedEntries.get(0).cause() != null) {
-                cause = cachedEntries.get(0).cause();
-            } else {
-                for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
-                    for (int i = 0; i < numEntries; i++) {
-                        final DnsCacheEntry e = cachedEntries.get(i);
-                        if (f.addressType().isInstance(e.address())) {
-                            if (result == null) {
-                                result = new ArrayList<InetAddress>(numEntries);
-                            }
-                            result.add(e.address());
+            for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
+                for (int i = 0; i < numEntries; i++) {
+                    final DnsCacheEntry e = cachedEntries.get(i);
+                    if (f.addressType().isInstance(e.address())) {
+                        if (result == null) {
+                            result = new ArrayList<InetAddress>(numEntries);
                         }
+                        result.add(e.address());
                     }
                 }
             }
-        }
-
-        if (result != null) {
-            trySuccess(promise, result);
-            return true;
-        }
-        if (cause != null) {
+            if (result != null) {
+                trySuccess(promise, result);
+                return true;
+            }
+            return false;
+        } else {
             tryFailure(promise, cause);
             return true;
         }
-        return false;
     }
 
     static final class ListResolverContext extends DnsNameResolverContext<List<InetAddress>> {
