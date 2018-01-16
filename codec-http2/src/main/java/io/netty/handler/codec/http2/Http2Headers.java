@@ -146,4 +146,16 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
      * Gets the {@link PseudoHeaderName#STATUS} header or {@code null} if there is no such header
      */
     CharSequence status();
+
+    /**
+     * Returns {@code true} if a header with the {@code name} and {@code value} exists, {@code false} otherwise.
+     * <p>
+     * If {@code caseInsensitive} is {@code true} then a case insensitive compare is done on the value.
+     *
+     * @param name the name of the header to find
+     * @param value the value of the header to find
+     * @param caseInsensitive {@code true} then a case insensitive compare is run to compare values.
+     * otherwise a case sensitive compare is run to compare values.
+     */
+    boolean contains(CharSequence name, CharSequence value, boolean caseInsensitive);
 }

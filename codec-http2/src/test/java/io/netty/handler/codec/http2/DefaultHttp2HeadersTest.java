@@ -22,12 +22,8 @@ import org.junit.Test;
 
 import java.util.Map.Entry;
 
-import static io.netty.util.AsciiString.of;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static io.netty.util.AsciiString.*;
+import static org.junit.Assert.*;
 
 public class DefaultHttp2HeadersTest {
 
@@ -145,6 +141,13 @@ public class DefaultHttp2HeadersTest {
         http2Headers.clear();
         http2Headers.method("GET");
         assertEquals(1, http2Headers.names().size());
+    }
+
+    @Test
+    public void testContainsNameAndValue() {
+        Http2Headers headers = newHeaders();
+        assertFalse(headers.contains("name1", "Value2", false));
+        assertTrue(headers.contains("name1", "Value2", true));
     }
 
     private static void verifyAllPseudoHeadersPresent(Http2Headers headers) {

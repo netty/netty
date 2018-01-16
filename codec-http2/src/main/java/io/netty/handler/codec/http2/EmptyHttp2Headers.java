@@ -75,4 +75,9 @@ public final class EmptyHttp2Headers
     public CharSequence status() {
         return get(PseudoHeaderName.STATUS.value());
     }
+
+    @Override
+    public boolean contains(CharSequence name, CharSequence value, boolean caseInsensitive) {
+        return false;
+    }
 }
