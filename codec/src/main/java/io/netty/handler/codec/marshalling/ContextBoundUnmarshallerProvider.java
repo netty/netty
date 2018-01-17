@@ -43,7 +43,7 @@ public class ContextBoundUnmarshallerProvider extends DefaultUnmarshallerProvide
 
     @Override
     public Unmarshaller getUnmarshaller(ChannelHandlerContext ctx) throws Exception {
-        Attribute<Unmarshaller> attr = ctx.attr(UNMARSHALLER);
+        Attribute<Unmarshaller> attr = ctx.channel().attr(UNMARSHALLER);
         Unmarshaller unmarshaller = attr.get();
         if (unmarshaller == null) {
             unmarshaller = super.getUnmarshaller(ctx);
