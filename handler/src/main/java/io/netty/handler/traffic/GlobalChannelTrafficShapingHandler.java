@@ -547,17 +547,18 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to try to limit the traffic
                 // Only AutoRead AND HandlerActive True means Context Active
-                ChannelConfig config = ctx.channel().config();
+                Channel channel = ctx.channel();
+                ChannelConfig config = channel.config();
                 if (logger.isDebugEnabled()) {
                     logger.debug("Read Suspend: " + wait + ':' + config.isAutoRead() + ':'
                             + isHandlerActive(ctx));
                 }
                 if (config.isAutoRead() && isHandlerActive(ctx)) {
                     config.setAutoRead(false);
-                    ctx.attr(READ_SUSPENDED).set(true);
+                    channel.attr(READ_SUSPENDED).set(true);
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
                     // reused to limit object creation
-                    Attribute<Runnable> attr = ctx.attr(REOPEN_TASK);
+                    Attribute<Runnable> attr = channel.attr(REOPEN_TASK);
                     Runnable reopenTask = attr.get();
                     if (reopenTask == null) {
                         reopenTask = new ReopenReadTimerTask(ctx);

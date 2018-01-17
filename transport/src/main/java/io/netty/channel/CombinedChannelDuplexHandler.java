@@ -581,12 +581,12 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
 
         @Override
         public <T> Attribute<T> attr(AttributeKey<T> key) {
-            return ctx.attr(key);
+            return ctx.channel().attr(key);
         }
 
         @Override
         public <T> boolean hasAttr(AttributeKey<T> key) {
-            return ctx.hasAttr(key);
+            return ctx.channel().hasAttr(key);
         }
 
         final void remove() {
