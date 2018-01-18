@@ -1,0 +1,34 @@
+FROM centos:6
+MAINTAINER netty@googlegroups.com
+ENTRYPOINT /bin/bash
+
+ENV SOURCE_DIR $HOME/source
+ENV MAVEN_VERSION 3.5.2
+ENV JAVA_VERSION 1.8.0
+
+RUN mkdir $SOURCE_DIR
+WORKDIR $SOURCE_DIR
+
+# install dependencies
+RUN yum install -y \
+ apr-devel \
+ autoconf \
+ automake \
+ git \
+ glibc-devel \
+ java-$JAVA_VERSION-openjdk-devel \
+ libtool \ 
+ lksctp-tools \
+ lsb-core \
+ make \
+ openssl-devel \
+ tar \
+ wget
+
+
+RUN wget -q http://archive.apache.org/dist/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz && tar xfz apache-maven-$MAVEN_VERSION-bin.tar.gz && mv apache-maven-$MAVEN_VERSION /opt/
+
+RUN echo 'PATH=/opt/apache-maven-$MAVEN_VERSION/bin:$PATH' >> ~/.bashrc
+RUN echo 'export JAVA_HOME="/usr/lib/jvm/java-$JAVA_VERSION/"' >> ~/.bashrc
+
+RUN rm -rf $SOURCE_DIR
