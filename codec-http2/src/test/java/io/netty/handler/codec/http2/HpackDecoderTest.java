@@ -512,4 +512,17 @@ public class HpackDecoderTest {
             in.release();
         }
     }
+
+    @Test
+    public void testIncompleteHeaderFieldRepresentation() throws Http2Exception {
+        // Incomplete Literal Header Field with Incremental Indexing
+        byte[] input = {(byte) 0x40};
+        ByteBuf in = Unpooled.wrappedBuffer(input);
+        try {
+            expectedException.expect(Http2Exception.class);
+            hpackDecoder.decode(0, in, mockHeaders);
+        } finally {
+            in.release();
+        }
+    }
 }
