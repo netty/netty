@@ -16,6 +16,8 @@
 package io.netty.util.internal;
 
 import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -45,19 +47,22 @@ public final class ObjectCleaner {
                 // Keep on processing as long as the LIVE_SET is not empty and once it becomes empty
                 // See if we can let this thread complete.
                 while (!LIVE_SET.isEmpty()) {
+                    final AutomaticCleanerReference reference;
                     try {
-                        AutomaticCleanerReference reference =
-                                (AutomaticCleanerReference) REFERENCE_QUEUE.remove(REFERENCE_QUEUE_POLL_TIMEOUT_MS);
-                        if (reference != null) {
-                            try {
-                                reference.cleanup();
-                            } finally {
-                                LIVE_SET.remove(reference);
-                            }
-                        }
+                        reference = (AutomaticCleanerReference) REFERENCE_QUEUE.remove(REFERENCE_QUEUE_POLL_TIMEOUT_MS);
                     } catch (InterruptedException ex) {
                         // Just consume and move on
                         interrupted = true;
+                        continue;
+                    }
+                    if (reference != null) {
+                        try {
+                            reference.cleanup();
+                        } catch (Throwable ignored) {
+                            // ignore exceptions, and don't log in case the logger throws an exception, blocks, or has
+                            // other unexpected side effects.
+                        }
+                        LIVE_SET.remove(reference);
                     }
                 }
                 CLEANER_RUNNING.set(false);
