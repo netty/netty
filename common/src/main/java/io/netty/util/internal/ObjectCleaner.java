@@ -22,12 +22,16 @@ import java.lang.ref.WeakReference;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static io.netty.util.internal.SystemPropertyUtil.getInt;
+import static java.lang.Math.max;
+
 /**
  * Allows a way to register some {@link Runnable} that will executed once there are no references to an {@link Object}
  * anymore.
  */
 public final class ObjectCleaner {
-
+    private static final int REFERENCE_QUEUE_POLL_TIMEOUT_MS =
+            max(500, getInt("io.netty.util.internal.ObjectCleaner.refQueuePollTimeout", 10000));
     // This will hold a reference to the AutomaticCleanerReference which will be removed once we called cleanup()
     private static final Set<AutomaticCleanerReference> LIVE_SET = new ConcurrentSet<AutomaticCleanerReference>();
     private static final ReferenceQueue<Object> REFERENCE_QUEUE = new ReferenceQueue<Object>();
@@ -43,11 +47,13 @@ public final class ObjectCleaner {
                 while (!LIVE_SET.isEmpty()) {
                     try {
                         AutomaticCleanerReference reference =
-                                (AutomaticCleanerReference) REFERENCE_QUEUE.remove();
-                        try {
-                            reference.cleanup();
-                        } finally {
-                            LIVE_SET.remove(reference);
+                                (AutomaticCleanerReference) REFERENCE_QUEUE.remove(REFERENCE_QUEUE_POLL_TIMEOUT_MS);
+                        if (reference != null) {
+                            try {
+                                reference.cleanup();
+                            } finally {
+                                LIVE_SET.remove(reference);
+                            }
                         }
                     } catch (InterruptedException ex) {
                         // Just consume and move on
