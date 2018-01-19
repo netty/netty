@@ -208,6 +208,10 @@ public final class HttpHeaderValues {
      * {@code "websocket"}
      */
     public static final AsciiString WEBSOCKET = AsciiString.cached("websocket");
+    /**
+     * {@code "immutable"}
+     */
+    public static final AsciiString IMMUTABLE = AsciiString.cached("immutable");
 
     private HttpHeaderValues() { }
 }
