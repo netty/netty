@@ -58,7 +58,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 public class HpackDecoderTest {
     @Rule
-    public ExpectedException expectedException = ExpectedException.none();
+    public final ExpectedException expectedException = ExpectedException.none();
 
     private HpackDecoder hpackDecoder;
     private Http2Headers mockHeaders;
@@ -78,7 +78,7 @@ public class HpackDecoderTest {
     }
 
     @Before
-    public void setUp() throws Http2Exception {
+    public void setUp() {
         hpackDecoder = new HpackDecoder(8192, 32);
         mockHeaders = mock(Http2Headers.class);
     }
