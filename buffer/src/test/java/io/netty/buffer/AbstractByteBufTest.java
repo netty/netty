@@ -2083,6 +2083,35 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testToStringMultipleThreads() throws Exception {
+        ByteBuf copied = copiedBuffer("Hello, World!", CharsetUtil.ISO_8859_1);
+        buffer.clear();
+        buffer.writeBytes(copied);
+
+        final CountDownLatch latch = new CountDownLatch(60000);
+        final CyclicBarrier barrier = new CyclicBarrier(11);
+        for (int i = 0; i < 10; i++) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (latch.getCount() > 0) {
+                        assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1));
+                        latch.countDown();
+                    }
+                    try {
+                        barrier.await();
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+            }).start();
+        }
+        latch.await(10, TimeUnit.SECONDS);
+        barrier.await(5, TimeUnit.SECONDS);
+        copied.release();
+    }
+
+    @Test
     public void testIndexOf() {
         buffer.clear();
         buffer.writeByte((byte) 1);
