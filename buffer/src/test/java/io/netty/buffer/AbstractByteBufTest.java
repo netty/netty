@@ -37,8 +37,10 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -2080,6 +2082,43 @@ public abstract class AbstractByteBufTest {
         buffer.writeBytes(copied);
         assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1));
         copied.release();
+    }
+
+    @Test(timeout = 5000)
+    public void testToStringMultipleThreads() throws Throwable {
+        buffer.clear();
+        buffer.writeBytes("Hello, World!".getBytes(CharsetUtil.ISO_8859_1));
+
+        final AtomicInteger counter = new AtomicInteger(60000);
+        final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
+        List<Thread> threads = new ArrayList<Thread>();
+        for (int i = 0; i < 10; i++) {
+            Thread thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        while (errorRef.get() == null && counter.decrementAndGet() > 0) {
+                            assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1));
+                        }
+                    } catch (Throwable cause) {
+                        errorRef.compareAndSet(null, cause);
+                    }
+                }
+            });
+            threads.add(thread);
+        }
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        for (Thread thread : threads) {
+            thread.join();
+        }
+
+        Throwable error = errorRef.get();
+        if (error != null) {
+            throw error;
+        }
     }
 
     @Test
