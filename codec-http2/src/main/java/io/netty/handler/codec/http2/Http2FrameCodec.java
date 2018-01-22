@@ -305,10 +305,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     private void increaseInitialConnectionWindow(int deltaBytes) throws Http2Exception {
-        Http2LocalFlowController localFlow = connection().local().flowController();
-        int targetConnectionWindow = localFlow.initialWindowSize() + deltaBytes;
-        localFlow.incrementWindowSize(connection().connectionStream(), deltaBytes);
-        localFlow.initialWindowSize(targetConnectionWindow);
+        // The LocalFlowController is responsible for detecting over/under flow.
+        connection().local().flowController().incrementWindowSize(connection().connectionStream(), deltaBytes);
     }
 
     final boolean consumeBytes(int streamId, int bytes) throws Http2Exception {
