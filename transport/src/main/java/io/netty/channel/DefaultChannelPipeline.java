@@ -611,8 +611,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerAdded0(final AbstractChannelHandlerContext ctx) {
         try {
-            ctx.handler().handlerAdded(ctx);
+            // We must call setAddComplete before calling handlerAdded. Otherwise if the handlerAdded method generates
+            // any pipeline events ctx.handler() will miss them because the state will not allow it.
             ctx.setAddComplete();
+            ctx.handler().handlerAdded(ctx);
         } catch (Throwable t) {
             boolean removed = false;
             try {
