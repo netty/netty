@@ -478,16 +478,38 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void streamZeroWindowUpdateIncrementsConnectionWindow() throws Exception {
+    public void streamZeroWindowUpdateIncrementsConnectionWindow() throws Http2Exception {
         Http2Connection connection = frameCodec.connection();
         Http2LocalFlowController localFlow = connection.local().flowController();
         int initialWindowSizeBefore = localFlow.initialWindowSize();
+        Http2Stream connectionStream = connection.connectionStream();
+        int connectionWindowSizeBefore = localFlow.windowSize(connectionStream);
+        // We only replenish the flow control window after the amount consumed drops below the following threshold.
+        // We make the threshold very "high" so that window updates will be sent when the delta is relatively small.
+        ((DefaultHttp2LocalFlowController) localFlow).windowUpdateRatio(connectionStream, .999f);
 
         int windowUpdate = 1024;
 
         channel.write(new DefaultHttp2WindowUpdateFrame(windowUpdate));
 
-        assertEquals(initialWindowSizeBefore + windowUpdate, localFlow.initialWindowSize());
+        // The initial window size is only changed by Http2Settings, so it shouldn't change.
+        assertEquals(initialWindowSizeBefore, localFlow.initialWindowSize());
+        // The connection window should be increased by the delta amount.
+        assertEquals(connectionWindowSizeBefore + windowUpdate, localFlow.windowSize(connectionStream));
+    }
+
+    @Test
+    public void windowUpdateDoesNotOverflowConnectionWindow() {
+        Http2Connection connection = frameCodec.connection();
+        Http2LocalFlowController localFlow = connection.local().flowController();
+        int initialWindowSizeBefore = localFlow.initialWindowSize();
+
+        channel.write(new DefaultHttp2WindowUpdateFrame(Integer.MAX_VALUE));
+
+        // The initial window size is only changed by Http2Settings, so it shouldn't change.
+        assertEquals(initialWindowSizeBefore, localFlow.initialWindowSize());
+        // The connection window should be increased by the delta amount.
+        assertEquals(Integer.MAX_VALUE, localFlow.windowSize(connection.connectionStream()));
     }
 
     @Test
