@@ -480,13 +480,15 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 return;
             }
 
-            for (;;) {
-                FlowControlled frame = pendingWriteQueue.poll();
-                if (frame == null) {
-                    break;
-                }
-                writeError(frame, streamError(stream.id(), INTERNAL_ERROR, cause,
-                                              "Stream closed before write could take place"));
+            FlowControlled frame = pendingWriteQueue.poll();
+            if (frame != null) {
+                // Only create exception once and reuse to reduce overhead of filling in the stacktrace.
+                final Http2Exception exception = streamError(stream.id(), INTERNAL_ERROR, cause,
+                        "Stream closed before write could take place");
+                do {
+                    writeError(frame, exception);
+                    frame = pendingWriteQueue.poll();
+                } while (frame != null);
             }
 
             streamByteDistributor.updateStreamableBytes(this);
