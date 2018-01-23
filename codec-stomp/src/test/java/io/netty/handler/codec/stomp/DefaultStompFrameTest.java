@@ -48,5 +48,8 @@ public class DefaultStompFrameTest {
         assertEquals(1, sourceFrame.headers().size());
         assertEquals(2, copyFrame.headers().size());
         assertNotEquals(sourceFrame.headers(), copyFrame.headers());
+
+        assertTrue(sourceFrame.release());
+        assertTrue(copyFrame.release());
     }
 }
