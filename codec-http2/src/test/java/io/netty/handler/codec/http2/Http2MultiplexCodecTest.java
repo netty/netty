@@ -171,6 +171,17 @@ public class Http2MultiplexCodecTest {
     }
 
     @Test
+    public void unhandledHttp2FramesShouldBePropagated() {
+        ByteBuf content = UnpooledByteBufAllocator.DEFAULT.buffer(8).writeLong(0);
+        Http2PingFrame decodedFrame = new DefaultHttp2PingFrame(content);
+
+        codec.onHttp2Frame(decodedFrame);
+        Http2PingFrame receivedPing = parentChannel.readInbound();
+        assertSame(receivedPing, decodedFrame);
+        assertTrue(receivedPing.release());
+    }
+
+    @Test
     public void channelReadShouldRespectAutoRead() {
         LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
         Channel childChannel = inboundHandler.channel();
