@@ -20,31 +20,33 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 public class DefaultStompFrameTest {
 
     @Test
     public void testStompFrameCopy() {
-        StompFrame sourceframe = new DefaultStompFrame(StompCommand.CONNECT);
+        StompFrame sourceFrame = new DefaultStompFrame(StompCommand.CONNECT);
 
-        assertTrue(sourceframe.headers().isEmpty());
+        assertTrue(sourceFrame.headers().isEmpty());
 
-        sourceframe.headers().set(StompHeaders.HOST, "localhost");
+        sourceFrame.headers().set(StompHeaders.HOST, "localhost");
 
-        StompFrame copyFrame = sourceframe.copy();
+        StompFrame copyFrame = sourceFrame.copy();
 
-        assertEquals(sourceframe.headers(), copyFrame.headers());
-        assertEquals(sourceframe.content(), copyFrame.content());
+        assertEquals(sourceFrame.headers(), copyFrame.headers());
+        assertEquals(sourceFrame.content(), copyFrame.content());
 
         AsciiString copyHeaderName = new AsciiString("foo");
         AsciiString copyHeaderValue = new AsciiString("bar");
         copyFrame.headers().set(copyHeaderName, copyHeaderValue);
 
-        assertFalse(sourceframe.headers().contains(copyHeaderName, copyHeaderValue));
+        assertFalse(sourceFrame.headers().contains(copyHeaderName, copyHeaderValue));
         assertTrue(copyFrame.headers().contains(copyHeaderName, copyHeaderValue));
 
-        assertEquals(1, sourceframe.headers().size());
+        assertEquals(1, sourceFrame.headers().size());
         assertEquals(2, copyFrame.headers().size());
+        assertNotEquals(sourceFrame.headers(), copyFrame.headers());
     }
 }

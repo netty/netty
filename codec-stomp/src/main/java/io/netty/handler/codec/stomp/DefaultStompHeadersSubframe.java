@@ -24,13 +24,13 @@ public class DefaultStompHeadersSubframe implements StompHeadersSubframe {
 
     protected final StompCommand command;
     protected DecoderResult decoderResult = DecoderResult.SUCCESS;
-    protected final StompHeaders headers;
+    protected final DefaultStompHeaders headers;
 
     public DefaultStompHeadersSubframe(StompCommand command) {
         this(command, null);
     }
 
-    public DefaultStompHeadersSubframe(StompCommand command, StompHeaders headers) {
+    DefaultStompHeadersSubframe(StompCommand command, DefaultStompHeaders headers) {
         if (command == null) {
             throw new NullPointerException("command");
         }
