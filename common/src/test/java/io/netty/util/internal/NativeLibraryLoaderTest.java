@@ -17,7 +17,6 @@ package io.netty.util.internal;
 
 import org.junit.Test;
 
-import java.lang.reflect.Method;
 import java.io.FileNotFoundException;
 import java.util.UUID;
 
@@ -26,8 +25,6 @@ import static org.junit.Assert.fail;
 
 public class NativeLibraryLoaderTest {
 
-    private static final Method getSupressedMethod = getGetSuppressed();
-
     @Test
     public void testFileNotFound() {
         try {
@@ -35,7 +32,7 @@ public class NativeLibraryLoaderTest {
             fail();
         } catch (UnsatisfiedLinkError error) {
             assertTrue(error.getCause() instanceof FileNotFoundException);
-            if (getSupressedMethod != null) {
+            if (PlatformDependent.javaVersion() >= 7) {
                 verifySuppressedException(error, UnsatisfiedLinkError.class);
             }
         }
@@ -48,33 +45,23 @@ public class NativeLibraryLoaderTest {
             fail();
         } catch (UnsatisfiedLinkError error) {
             assertTrue(error.getCause() instanceof FileNotFoundException);
-            if (getSupressedMethod != null) {
+            if (PlatformDependent.javaVersion() >= 7) {
                 verifySuppressedException(error, ClassNotFoundException.class);
             }
         }
     }
 
+    @SuppressJava6Requirement(reason = "uses Java 7+ Throwable#getSuppressed but is guarded by version checks")
     private static void verifySuppressedException(UnsatisfiedLinkError error,
             Class<?> expectedSuppressedExceptionClass) {
         try {
-            Throwable[] suppressed = (Throwable[]) getSupressedMethod.invoke(error.getCause());
+            Throwable[] suppressed = error.getCause().getSuppressed();
             assertTrue(suppressed.length == 1);
             assertTrue(suppressed[0] instanceof UnsatisfiedLinkError);
-            suppressed = (Throwable[]) getSupressedMethod.invoke(suppressed[0]);
+            suppressed = (suppressed[0]).getSuppressed();
             assertTrue(suppressed.length == 1);
             assertTrue(expectedSuppressedExceptionClass.isInstance(suppressed[0]));
         } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static Method getGetSuppressed() {
-        if (PlatformDependent.javaVersion() < 7) {
-            return null;
-        }
-        try {
-            return Throwable.class.getDeclaredMethod("getSuppressed");
-        } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
     }
