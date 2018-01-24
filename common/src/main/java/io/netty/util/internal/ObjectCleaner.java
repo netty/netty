@@ -16,12 +16,11 @@
 package io.netty.util.internal;
 
 import io.netty.util.concurrent.FastThreadLocalThread;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.util.internal.SystemPropertyUtil.getInt;
@@ -72,6 +71,7 @@ public final class ObjectCleaner {
                 if (LIVE_SET.isEmpty() || !CLEANER_RUNNING.compareAndSet(false, true)) {
                     // There was nothing added after we set STARTED to false or some other cleanup Thread
                     // was started already so its safe to let this Thread complete now.
+                    ObjectCleaner.objectCleanerThread = null;
                     break;
                 }
             }
@@ -81,6 +81,8 @@ public final class ObjectCleaner {
             }
         }
     };
+
+    private static volatile Thread objectCleanerThread;
 
     /**
      * Register the given {@link Object} for which the {@link Runnable} will be executed once there are no references
@@ -98,20 +100,56 @@ public final class ObjectCleaner {
 
         // Check if there is already a cleaner running.
         if (CLEANER_RUNNING.compareAndSet(false, true)) {
-            Thread cleanupThread = new FastThreadLocalThread(CLEANER_TASK);
-            cleanupThread.setPriority(Thread.MIN_PRIORITY);
+            objectCleanerThread = new FastThreadLocalThread(CLEANER_TASK);
+            objectCleanerThread.setPriority(Thread.MIN_PRIORITY);
             // Set to null to ensure we not create classloader leaks by holding a strong reference to the inherited
             // classloader.
             // See:
             // - https://github.com/netty/netty/issues/7290
             // - https://bugs.openjdk.java.net/browse/JDK-7008595
-            cleanupThread.setContextClassLoader(null);
-            cleanupThread.setName(CLEANER_THREAD_NAME);
+            objectCleanerThread.setContextClassLoader(null);
+            objectCleanerThread.setName(CLEANER_THREAD_NAME);
 
             // This Thread is not a daemon as it will die once all references to the registered Objects will go away
             // and its important to always invoke all cleanup tasks as these may free up direct memory etc.
-            cleanupThread.setDaemon(false);
-            cleanupThread.start();
+            objectCleanerThread.setDaemon(false);
+            objectCleanerThread.start();
+        }
+    }
+
+    /**
+     * Waits until the current cleaner thread has completed or the timeout has elapsed.
+     *
+     * Note: a new thread will be started if one is not running on a call to
+     * {@link #register(Object, Runnable)}, so this method is really only useful
+     * <strong>after</strong> your application has shut down and you want to wait for this
+     * thread to terminate.
+     *
+     * @return {@code true} if the cleaner thread has been terminated
+     */
+    public static boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
+        if (unit == null) {
+            throw new NullPointerException("unit");
+        }
+
+        if (CLEANER_RUNNING.get()) {
+            Thread objectCleanerThread;
+            // loop here because there is a race between the setting of the atomic boolean and the
+            // setting of the objectCleanerThread
+            for (;;) {
+                objectCleanerThread = ObjectCleaner.objectCleanerThread;
+                if (objectCleanerThread != null) {
+                    break;
+                } else if (!CLEANER_RUNNING.get()) {
+                    // not running anymore, return
+                    return true;
+                }
+            }
+
+            objectCleanerThread.join(unit.toMillis(timeout));
+            return !objectCleanerThread.isAlive();
+        } else {
+            return true;
         }
     }
 
