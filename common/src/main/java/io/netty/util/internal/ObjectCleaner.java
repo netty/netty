@@ -21,6 +21,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -98,14 +100,20 @@ public final class ObjectCleaner {
 
         // Check if there is already a cleaner running.
         if (CLEANER_RUNNING.compareAndSet(false, true)) {
-            Thread cleanupThread = new FastThreadLocalThread(CLEANER_TASK);
+            final Thread cleanupThread = new FastThreadLocalThread(CLEANER_TASK);
             cleanupThread.setPriority(Thread.MIN_PRIORITY);
             // Set to null to ensure we not create classloader leaks by holding a strong reference to the inherited
             // classloader.
             // See:
             // - https://github.com/netty/netty/issues/7290
             // - https://bugs.openjdk.java.net/browse/JDK-7008595
-            cleanupThread.setContextClassLoader(null);
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                @Override
+                public Void run() {
+                    cleanupThread.setContextClassLoader(null);
+                    return null;
+                }
+            });
             cleanupThread.setName(CLEANER_THREAD_NAME);
 
             // This Thread is not a daemon as it will die once all references to the registered Objects will go away
