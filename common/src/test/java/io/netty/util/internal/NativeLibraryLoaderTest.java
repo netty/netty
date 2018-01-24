@@ -15,7 +15,6 @@
  */
 package io.netty.util.internal;
 
-import io.netty.util.SuppressJava6Requirement;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
@@ -55,10 +54,6 @@ public class NativeLibraryLoaderTest {
     @SuppressJava6Requirement(reason = "uses Java 7+ Throwable#getSuppressed but is guarded by version checks")
     private static void verifySuppressedException(UnsatisfiedLinkError error,
             Class<?> expectedSuppressedExceptionClass) {
-        if (PlatformDependent.javaVersion() < 7) {
-            throw new IllegalStateException("this method should not be called by Java versions < 7 but is "
-                    + PlatformDependent.javaVersion());
-        }
         try {
             Throwable[] suppressed = error.getCause().getSuppressed();
             assertTrue(suppressed.length == 1);

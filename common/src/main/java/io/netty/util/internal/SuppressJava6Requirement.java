@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package io.netty.util;
+package io.netty.util.internal;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
