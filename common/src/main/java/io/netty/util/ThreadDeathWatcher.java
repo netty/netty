@@ -22,6 +22,8 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -106,13 +108,19 @@ public final class ThreadDeathWatcher {
         pendingEntries.add(new Entry(thread, task, isWatch));
 
         if (started.compareAndSet(false, true)) {
-            Thread watcherThread = threadFactory.newThread(watcher);
+            final Thread watcherThread = threadFactory.newThread(watcher);
             // Set to null to ensure we not create classloader leaks by holds a strong reference to the inherited
             // classloader.
             // See:
             // - https://github.com/netty/netty/issues/7290
             // - https://bugs.openjdk.java.net/browse/JDK-7008595
-            watcherThread.setContextClassLoader(null);
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                @Override
+                public Void run() {
+                    watcherThread.setContextClassLoader(null);
+                    return null;
+                }
+            });
 
             watcherThread.start();
             ThreadDeathWatcher.watcherThread = watcherThread;
