@@ -172,11 +172,6 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
         return delegate.getNow();
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @param mayInterruptIfRunning this value has no effect in this implementation.
-     */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         return delegate.cancel(mayInterruptIfRunning);
