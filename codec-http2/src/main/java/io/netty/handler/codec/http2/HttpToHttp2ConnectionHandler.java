@@ -112,7 +112,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                 }
             }
         } catch (Throwable t) {
-            onError(ctx, t);
+            onError(ctx, true, t);
             promiseAggregator.setFailure(t);
         } finally {
             if (release) {

@@ -186,7 +186,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 try {
                     return streamVisitor.visit((Http2FrameStream) stream.getProperty(streamKey));
                 } catch (Throwable cause) {
-                    onError(ctx, cause);
+                    onError(ctx, false, cause);
                     return false;
                 }
             }
@@ -431,11 +431,16 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     @Override
-    protected void onConnectionError(ChannelHandlerContext ctx, Throwable cause, Http2Exception http2Ex) {
-        // allow the user to handle it first in the pipeline, and then automatically clean up.
-        // If this is not desired behavior the user can override this method.
-        ctx.fireExceptionCaught(cause);
-        super.onConnectionError(ctx, cause, http2Ex);
+    protected void onConnectionError(
+            ChannelHandlerContext ctx, boolean outbound, Throwable cause, Http2Exception http2Ex) {
+        if (!outbound) {
+            // allow the user to handle it first in the pipeline, and then automatically clean up.
+            // If this is not desired behavior the user can override this method.
+            //
+            // We only forward non outbound errors as outbound errors will already be reflected by failing the promise.
+            ctx.fireExceptionCaught(cause);
+        }
+        super.onConnectionError(ctx, outbound, cause, http2Ex);
     }
 
     /**
@@ -443,14 +448,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      * are simply logged and replied to by sending a RST_STREAM frame.
      */
     @Override
-    protected final void onStreamError(ChannelHandlerContext ctx, Throwable cause,
+    protected final void onStreamError(ChannelHandlerContext ctx, boolean outbound, Throwable cause,
                                  Http2Exception.StreamException streamException) {
         int streamId = streamException.streamId();
         Http2Stream connectionStream = connection().stream(streamId);
         if (connectionStream == null) {
             onHttp2UnknownStreamError(ctx, cause, streamException);
             // Write a RST_STREAM
-            super.onStreamError(ctx, cause, streamException);
+            super.onStreamError(ctx, outbound, cause, streamException);
             return;
         }
 
@@ -458,11 +463,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         if (stream == null) {
             LOG.warn("Stream exception thrown without stream object attached.", cause);
             // Write a RST_STREAM
-            super.onStreamError(ctx, cause, streamException);
+            super.onStreamError(ctx, outbound, cause, streamException);
             return;
         }
 
-        onHttp2FrameStreamException(ctx, new Http2FrameStreamException(stream, streamException.error(), cause));
+        if (!outbound) {
+            // We only forward non outbound errors as outbound errors will already be reflected by failing the promise.
+            onHttp2FrameStreamException(ctx, new Http2FrameStreamException(stream, streamException.error(), cause));
+        }
     }
 
     void onHttp2UnknownStreamError(@SuppressWarnings("unused") ChannelHandlerContext ctx, Throwable cause,

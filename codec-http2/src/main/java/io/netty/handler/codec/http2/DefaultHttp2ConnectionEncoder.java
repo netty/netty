@@ -211,7 +211,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                     // other headers containing pseudo-header fields.
                     stream.headersSent(isInformational);
                 } else {
-                    lifecycleManager.onError(ctx, failureCause);
+                    lifecycleManager.onError(ctx, true, failureCause);
                 }
 
                 return future;
@@ -223,7 +223,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 return promise;
             }
         } catch (Throwable t) {
-            lifecycleManager.onError(ctx, t);
+            lifecycleManager.onError(ctx, true, t);
             promise.tryFailure(t);
             return promise;
         }
@@ -287,11 +287,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             if (failureCause == null) {
                 stream.pushPromiseSent();
             } else {
-                lifecycleManager.onError(ctx, failureCause);
+                lifecycleManager.onError(ctx, true, failureCause);
             }
             return future;
         } catch (Throwable t) {
-            lifecycleManager.onError(ctx, t);
+            lifecycleManager.onError(ctx, true, t);
             promise.tryFailure(t);
             return promise;
         }
@@ -376,7 +376,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             queue.releaseAndFailAll(cause);
             // Don't update dataSize because we need to ensure the size() method returns a consistent size even after
             // error so we don't invalidate flow control when returning bytes to flow control.
-            lifecycleManager.onError(ctx, cause);
+            lifecycleManager.onError(ctx, true, cause);
         }
 
         @Override
@@ -456,7 +456,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         @Override
         public void error(ChannelHandlerContext ctx, Throwable cause) {
             if (ctx != null) {
-                lifecycleManager.onError(ctx, cause);
+                lifecycleManager.onError(ctx, true, cause);
             }
             promise.tryFailure(cause);
         }
@@ -476,7 +476,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             if (failureCause == null) {
                 stream.headersSent(isInformational);
             } else {
-                lifecycleManager.onError(ctx, failureCause);
+                lifecycleManager.onError(ctx, true, failureCause);
             }
         }
 
