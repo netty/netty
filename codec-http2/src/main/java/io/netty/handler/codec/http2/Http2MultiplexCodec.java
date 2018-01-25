@@ -227,6 +227,9 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             if (settings.initialWindowSize() != null) {
                 initialOutboundStreamWindow = settings.initialWindowSize();
             }
+        } else {
+            // Send any other frames down the pipeline
+            ctx.fireChannelRead(frame);
         }
     }
 
