@@ -19,10 +19,14 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 public class ObjectCleanerTest {
 
@@ -61,7 +65,7 @@ public class ObjectCleanerTest {
         while (!freeCalled.get()) {
             System.gc();
             System.runFinalization();
-            Thread.sleep(100);
+            ObjectCleaner.awaitInactivity(100L, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -107,7 +111,71 @@ public class ObjectCleanerTest {
         while (freeCalledCount.get() != 2) {
             System.gc();
             System.runFinalization();
-            Thread.sleep(100);
+            ObjectCleaner.awaitInactivity(100L, TimeUnit.MILLISECONDS);
         }
     }
+
+    @Test(timeout = 5000)
+    public void testAwaitInactivity() throws InterruptedException {
+        final AtomicInteger freeCalledCount = new AtomicInteger();
+        final CountDownLatch latch = new CountDownLatch(1);
+        temporaryThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    latch.await();
+                } catch (InterruptedException ignore) {
+                    // just ignore
+                }
+            }
+        });
+        temporaryThread.start();
+        temporaryObject = new Object();
+        ObjectCleaner.register(temporaryThread, new Runnable() {
+            @Override
+            public void run() {
+                freeCalledCount.incrementAndGet();
+                throw new RuntimeException("expected");
+            }
+        });
+        ObjectCleaner.register(temporaryObject, new Runnable() {
+            @Override
+            public void run() {
+                freeCalledCount.incrementAndGet();
+                throw new RuntimeException("expected");
+            }
+        });
+
+        final AtomicReference<Boolean> awaitResult = new AtomicReference<Boolean>();
+        Thread waitingThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    awaitResult.set(ObjectCleaner.awaitInactivity(500, TimeUnit.MILLISECONDS));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        waitingThread.start();
+        waitingThread.join();
+
+        assertNotNull(awaitResult.get());
+        assertFalse(awaitResult.get());
+
+        latch.countDown();
+        temporaryThread.join();
+        assertEquals(0, freeCalledCount.get());
+
+        // Null out the temporary object to ensure it is enqueued for GC.
+        temporaryThread = null;
+        temporaryObject = null;
+
+        while (!(ObjectCleaner.awaitInactivity(100L, TimeUnit.MILLISECONDS))) {
+            System.gc();
+            System.runFinalization();
+        }
+        assertEquals(2, freeCalledCount.get());
+    }
+
 }
