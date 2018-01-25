@@ -138,6 +138,9 @@ final class VoidChannelGroupFuture implements ChannelGroupFuture {
         return null;
     }
 
+    /**
+     * @param mayInterruptIfRunning this value has no effect in this implementation.
+     */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         return false;

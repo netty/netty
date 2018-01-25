@@ -166,6 +166,9 @@ public final class VoidChannelPromise extends AbstractFuture<Void> implements Ch
         return false;
     }
 
+    /**
+     * @param mayInterruptIfRunning this value has no effect in this implementation.
+     */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         return false;
