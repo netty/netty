@@ -167,6 +167,8 @@ public final class VoidChannelPromise extends AbstractFuture<Void> implements Ch
     }
 
     /**
+     * {@inheritDoc}
+     *
      * @param mayInterruptIfRunning this value has no effect in this implementation.
      */
     @Override

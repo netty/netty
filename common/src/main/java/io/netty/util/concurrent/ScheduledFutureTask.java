@@ -152,6 +152,8 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     }
 
     /**
+     * {@inheritDoc}
+     *
      * @param mayInterruptIfRunning this value has no effect in this implementation.
      */
     @Override

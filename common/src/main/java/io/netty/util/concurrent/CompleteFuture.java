@@ -141,6 +141,8 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
     }
 
     /**
+     * {@inheritDoc}
+     *
      * @param mayInterruptIfRunning this value has no effect in this implementation.
      */
     @Override

@@ -173,6 +173,8 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     }
 
     /**
+     * {@inheritDoc}
+     *
      * @param mayInterruptIfRunning this value has no effect in this implementation.
      */
     @Override

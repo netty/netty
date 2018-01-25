@@ -309,6 +309,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     /**
+     * {@inheritDoc}
+     *
      * @param mayInterruptIfRunning this value has no effect in this implementation.
      */
     @Override
