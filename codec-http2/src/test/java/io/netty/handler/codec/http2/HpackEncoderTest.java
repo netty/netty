@@ -31,7 +31,7 @@ public class HpackEncoderTest {
     private Http2Headers mockHeaders;
 
     @Before
-    public void setUp() throws Http2Exception {
+    public void setUp() {
         hpackEncoder = new HpackEncoder();
         hpackDecoder = new HpackDecoder(DEFAULT_HEADER_LIST_SIZE, 32);
         mockHeaders = mock(Http2Headers.class);
@@ -42,7 +42,7 @@ public class HpackEncoderTest {
         ByteBuf buf = Unpooled.buffer();
         hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
         hpackDecoder.setMaxHeaderTableSize(MAX_HEADER_TABLE_SIZE);
-        hpackDecoder.decode(0, buf, mockHeaders);
+        hpackDecoder.decode(0, buf, mockHeaders, true);
         assertEquals(MAX_HEADER_TABLE_SIZE, hpackDecoder.getMaxHeaderTableSize());
         buf.release();
     }
