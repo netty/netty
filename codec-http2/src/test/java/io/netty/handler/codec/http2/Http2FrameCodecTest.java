@@ -389,14 +389,14 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void streamErrorShouldFireException() throws Exception {
+    public void streamErrorShouldFireExceptionForInbound() throws Exception {
         frameListener.onHeadersRead(http2HandlerCtx, 3, request, 31, false);
 
         Http2Stream stream = frameCodec.connection().stream(3);
         assertNotNull(stream);
 
         StreamException streamEx = new StreamException(3, Http2Error.INTERNAL_ERROR, "foo");
-        frameCodec.onError(http2HandlerCtx, streamEx);
+        frameCodec.onError(http2HandlerCtx, false, streamEx);
 
         Http2FrameStreamEvent event = inboundHandler.readInboundMessageOrUserEvent();
         assertEquals(Http2FrameStreamEvent.Type.State, event.type());
@@ -410,6 +410,28 @@ public class Http2FrameCodecTest {
         } catch (Http2FrameStreamException e) {
             assertEquals(streamEx, e.getCause());
         }
+
+        assertNull(inboundHandler.readInboundMessageOrUserEvent());
+    }
+
+    @Test
+    public void streamErrorShouldNotFireExceptionForOutbound() throws Exception {
+        frameListener.onHeadersRead(http2HandlerCtx, 3, request, 31, false);
+
+        Http2Stream stream = frameCodec.connection().stream(3);
+        assertNotNull(stream);
+
+        StreamException streamEx = new StreamException(3, Http2Error.INTERNAL_ERROR, "foo");
+        frameCodec.onError(http2HandlerCtx, true, streamEx);
+
+        Http2FrameStreamEvent event = inboundHandler.readInboundMessageOrUserEvent();
+        assertEquals(Http2FrameStreamEvent.Type.State, event.type());
+        assertEquals(State.OPEN, event.stream().state());
+        Http2HeadersFrame headersFrame = inboundHandler.readInboundMessageOrUserEvent();
+        assertNotNull(headersFrame);
+
+        // No exception expected
+        inboundHandler.checkException();
 
         assertNull(inboundHandler.readInboundMessageOrUserEvent());
     }

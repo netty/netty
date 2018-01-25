@@ -88,6 +88,11 @@ public interface Http2LifecycleManager {
 
     /**
      * Processes the given error.
+     *
+     * @param ctx The context used for communication and buffer allocation if necessary.
+     * @param outbound {@code true} if the error was caused by an outbound operation and so the corresponding
+     * {@link ChannelPromise} was failed as well.
+     * @param cause the error.
      */
-    void onError(ChannelHandlerContext ctx, Throwable cause);
+    void onError(ChannelHandlerContext ctx, boolean outbound, Throwable cause);
 }
