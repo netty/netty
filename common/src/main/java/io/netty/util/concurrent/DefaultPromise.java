@@ -308,6 +308,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return (V) result;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @param mayInterruptIfRunning this value has no effect in this implementation.
+     */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         if (RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
