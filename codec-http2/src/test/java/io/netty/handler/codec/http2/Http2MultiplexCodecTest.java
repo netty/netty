@@ -464,6 +464,18 @@ public class Http2MultiplexCodecTest {
         assertSame(headers, headers2);
     }
 
+    @Test
+    public void callUnsafeCloseMultipleTimes() {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
+        Http2StreamChannel childChannel = (Http2StreamChannel) inboundHandler.channel();
+        childChannel.unsafe().close(childChannel.voidPromise());
+
+        ChannelPromise promise = childChannel.newPromise();
+        childChannel.unsafe().close(promise);
+        promise.syncUninterruptibly();
+        childChannel.closeFuture().syncUninterruptibly();
+    }
+
     private LastInboundHandler streamActiveAndWriteHeaders(Http2FrameStream stream) {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         childChannelInitializer.handler = inboundHandler;
