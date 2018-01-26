@@ -220,8 +220,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         if (frame instanceof Http2StreamFrame) {
             Http2StreamFrame streamFrame = (Http2StreamFrame) frame;
             onHttp2StreamFrame(((Http2MultiplexCodecStream) streamFrame.stream()).channel, streamFrame);
-        } else if (frame instanceof Http2GoAwayFrame) {
-            onHttp2GoAwayFrame(ctx, (Http2GoAwayFrame) frame);
         } else if (frame instanceof Http2SettingsFrame) {
             Http2Settings settings = ((Http2SettingsFrame) frame).settings();
             if (settings.initialWindowSize() != null) {
@@ -315,28 +313,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 tail = childChannel;
             }
             childChannel.fireChannelReadPending = true;
-        }
-    }
-
-    private void onHttp2GoAwayFrame(ChannelHandlerContext ctx, final Http2GoAwayFrame goAwayFrame) {
-        try {
-            forEachActiveStream(new Http2FrameStreamVisitor() {
-                @Override
-                public boolean visit(Http2FrameStream stream) {
-                    final int streamId = stream.id();
-                    final DefaultHttp2StreamChannel childChannel = ((Http2MultiplexCodecStream) stream).channel;
-                    if (streamId > goAwayFrame.lastStreamId() && connection().local().isValidStreamId(streamId)) {
-                        childChannel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
-                    }
-                    return true;
-                }
-            });
-        } catch (Http2Exception e) {
-            ctx.fireExceptionCaught(e);
-            ctx.close();
-        } finally {
-            // We need to ensure we release the goAwayFrame.
-            goAwayFrame.release();
         }
     }
 
