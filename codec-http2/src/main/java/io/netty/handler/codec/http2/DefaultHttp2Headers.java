@@ -184,6 +184,11 @@ public class DefaultHttp2Headers
     }
 
     @Override
+    public boolean contains(CharSequence name, CharSequence value) {
+        return contains(name, value, false);
+    }
+
+    @Override
     public boolean contains(CharSequence name, CharSequence value, boolean caseInsensitive) {
         return contains(name, value, caseInsensitive ? CASE_INSENSITIVE_HASHER : CASE_SENSITIVE_HASHER);
     }
