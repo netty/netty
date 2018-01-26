@@ -155,9 +155,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     private final ChannelHandler inboundStreamHandler;
 
     private int initialOutboundStreamWindow = Http2CodecUtil.DEFAULT_WINDOW_SIZE;
-    // TODO: We may be able to optimize when we really need to call flush(...) during channelReadComplete(...)
-    // by checking if this is true and only then call flush(...).
-    private boolean flushNeeded;
     private boolean parentReadInProgress;
     private int idCount;
 
@@ -376,16 +373,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             tail = head = null;
 
             // We always flush as this is what Http2ConnectionHandler does for now.
-            // TODO: I think this is not really necessary and we should be able to optimize this in the future by
-            // checking flushNeeded and only flush if this returns true.
             flush0(ctx);
         }
-    }
-
-    @Override
-    public final void flush(ChannelHandlerContext ctx) {
-        flushNeeded = false;
-        super.flush(ctx);
     }
 
     // Allow to override for testing
@@ -768,10 +757,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     unsafe().recvBufAllocHandle().readComplete();
                     pipeline().fireChannelReadComplete();
                 }
-                flushNeeded |= flushPending;
             } finally {
                 inFireChannelReadComplete = false;
-                flushPending = false;
             }
         }
 
