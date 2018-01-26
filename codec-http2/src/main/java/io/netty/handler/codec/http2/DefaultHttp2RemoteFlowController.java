@@ -15,7 +15,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.StreamByteDistributor.Writer;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -543,15 +542,14 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     /**
      * Abstract class which provides common functionality for writability monitor implementations.
      */
-    private class WritabilityMonitor {
+    private class WritabilityMonitor implements StreamByteDistributor.Writer {
         private boolean inWritePendingBytes;
         private long totalPendingBytes;
-        private final Writer writer = new StreamByteDistributor.Writer() {
-            @Override
-            public void write(Http2Stream stream, int numBytes) {
-                state(stream).writeAllocatedBytes(numBytes);
-            }
-        };
+
+        @Override
+        public final void write(Http2Stream stream, int numBytes) {
+            state(stream).writeAllocatedBytes(numBytes);
+        }
 
         /**
          * Called when the writability of the underlying channel changes.
@@ -630,7 +628,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 // Make sure we always write at least once, regardless if we have bytesToWrite or not.
                 // This ensures that zero-length frames will always be written.
                 for (;;) {
-                    if (!streamByteDistributor.distribute(bytesToWrite, writer) ||
+                    if (!streamByteDistributor.distribute(bytesToWrite, this) ||
                         (bytesToWrite = writableBytes()) <= 0 ||
                         !isChannelWritable0()) {
                         break;
@@ -675,21 +673,20 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      * isChannelWritable()
      * </pre>
      */
-    private final class ListenerWritabilityMonitor extends WritabilityMonitor {
+    private final class ListenerWritabilityMonitor extends WritabilityMonitor implements Http2StreamVisitor {
         private final Listener listener;
-        private final Http2StreamVisitor checkStreamWritabilityVisitor = new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) throws Http2Exception {
-                FlowState state = state(stream);
-                if (isWritable(state) != state.markedWritability()) {
-                    notifyWritabilityChanged(state);
-                }
-                return true;
-            }
-        };
 
         ListenerWritabilityMonitor(Listener listener) {
             this.listener = listener;
+        }
+
+        @Override
+        public boolean visit(Http2Stream stream) throws Http2Exception {
+            FlowState state = state(stream);
+            if (isWritable(state) != state.markedWritability()) {
+                notifyWritabilityChanged(state);
+            }
+            return true;
         }
 
         @Override
@@ -771,7 +768,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         private void checkAllWritabilityChanged() throws Http2Exception {
             // Make sure we mark that we have notified as a result of this change.
             connectionState.markedWritability(isWritableConnection());
-            connection.forEachActiveStream(checkStreamWritabilityVisitor);
+            connection.forEachActiveStream(this);
         }
     }
 }
