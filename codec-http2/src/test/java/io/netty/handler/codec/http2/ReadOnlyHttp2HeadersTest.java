@@ -136,8 +136,9 @@ public class ReadOnlyHttp2HeadersTest {
     public void testContainsNameAndValue() {
         Http2Headers headers = newClientHeaders();
         assertTrue(headers.contains("Name1", "value1"));
-        assertFalse(headers.contains("Name1", "Value1", false));
-        assertTrue(headers.contains("Name1", "Value1", true));
+        assertFalse(headers.contains("Name1", "Value1"));
+        assertTrue(headers.contains("name2", "Value2", true));
+        assertFalse(headers.contains("name2", "Value2", false));
         assertTrue(headers.contains(Http2Headers.PseudoHeaderName.PATH.value(), "/foo"));
         assertFalse(headers.contains(Http2Headers.PseudoHeaderName.STATUS.value(), "200"));
         assertFalse(headers.contains("a missing header", "a missing value"));
