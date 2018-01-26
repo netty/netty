@@ -886,12 +886,14 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                         }
                     }
 
+                    // The promise should be notified before we call fireChannelInactive().
+                    promise.setSuccess();
+                    closePromise.setSuccess();
+
                     pipeline().fireChannelInactive();
                     if (isRegistered()) {
                         deregister(unsafe().voidPromise());
                     }
-                    promise.setSuccess();
-                    closePromise.setSuccess();
                 } finally {
                     pendingClosePromise = null;
                 }

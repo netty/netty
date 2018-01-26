@@ -31,6 +31,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.After;
 import org.junit.Before;
@@ -418,6 +419,31 @@ public class Http2MultiplexCodecTest {
 
         codec.onHttp2StreamWritabilityChanged(childChannel.stream(), false);
         assertEquals("true,false", inboundHandler.writabilityStates());
+    }
+
+    @Test
+    public void channelClosedWhenInactiveFired() {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
+        Http2StreamChannel childChannel = (Http2StreamChannel) inboundHandler.channel();
+
+        final AtomicBoolean channelOpen = new AtomicBoolean(false);
+        final AtomicBoolean channelActive = new AtomicBoolean(false);
+        assertTrue(childChannel.isOpen());
+        assertTrue(childChannel.isActive());
+
+        childChannel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                channelOpen.set(ctx.channel().isOpen());
+                channelActive.set(ctx.channel().isActive());
+
+                super.channelInactive(ctx);
+            }
+        });
+
+        childChannel.close().syncUninterruptibly();
+        assertFalse(channelOpen.get());
+        assertFalse(channelActive.get());
     }
 
     @Ignore("not supported anymore atm")
