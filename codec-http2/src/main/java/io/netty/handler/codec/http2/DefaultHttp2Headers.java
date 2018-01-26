@@ -14,16 +14,16 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
-import static io.netty.util.AsciiString.isUpperCase;
 import io.netty.handler.codec.CharSequenceValueConverter;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
+
+import static io.netty.handler.codec.http2.Http2Error.*;
+import static io.netty.handler.codec.http2.Http2Exception.*;
+import static io.netty.util.AsciiString.*;
 
 @UnstableApi
 public class DefaultHttp2Headers
@@ -181,6 +181,11 @@ public class DefaultHttp2Headers
     @Override
     public CharSequence status() {
         return get(PseudoHeaderName.STATUS.value());
+    }
+
+    @Override
+    public boolean contains(CharSequence name, CharSequence value, boolean caseInsensitive) {
+        return contains(name, value, caseInsensitive? CASE_INSENSITIVE_HASHER : CASE_SENSITIVE_HASHER);
     }
 
     @Override
