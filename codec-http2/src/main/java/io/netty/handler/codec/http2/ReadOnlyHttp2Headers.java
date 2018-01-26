@@ -774,11 +774,12 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     @Override
     public boolean contains(CharSequence name, CharSequence value, boolean caseInsensitive) {
         final int nameHash = AsciiString.hashCode(name);
-        final HashingStrategy<CharSequence> strategy = caseInsensitive? CASE_INSENSITIVE_HASHER : CASE_SENSITIVE_HASHER;
+        final HashingStrategy<CharSequence> strategy =
+                caseInsensitive ? CASE_INSENSITIVE_HASHER : CASE_SENSITIVE_HASHER;
         final int valueHash = strategy.hashCode(value);
 
-        return contains(name, nameHash, value, valueHash, strategy, pseudoHeaders)
-               || contains(name, nameHash, value, valueHash, strategy, otherHeaders);
+        return contains(name, nameHash, value, valueHash, strategy, otherHeaders)
+                || contains(name, nameHash, value, valueHash, strategy, pseudoHeaders);
     }
 
     private static boolean contains(CharSequence name, int nameHash, CharSequence value, int valueHash,
