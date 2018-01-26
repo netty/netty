@@ -146,8 +146,10 @@ public class DefaultHttp2HeadersTest {
     @Test
     public void testContainsNameAndValue() {
         Http2Headers headers = newHeaders();
-        assertFalse(headers.contains("name1", "Value2", false));
-        assertTrue(headers.contains("name1", "Value2", true));
+        assertTrue(headers.contains("name1", "value2"));
+        assertFalse(headers.contains("name1", "Value2"));
+        assertTrue(headers.contains("2name", "Value3", true));
+        assertFalse(headers.contains("2name", "Value3", false));
     }
 
     private static void verifyAllPseudoHeadersPresent(Http2Headers headers) {
