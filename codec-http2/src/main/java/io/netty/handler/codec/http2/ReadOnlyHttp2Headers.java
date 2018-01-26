@@ -430,29 +430,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
 
     @Override
     public boolean contains(CharSequence name, CharSequence value) {
-        final int nameHash = AsciiString.hashCode(name);
-        final int valueHash = AsciiString.hashCode(value);
-
-        final int pseudoHeadersEnd = pseudoHeaders.length - 1;
-        for (int i = 0; i < pseudoHeadersEnd; i += 2) {
-            AsciiString roName = pseudoHeaders[i];
-            AsciiString roValue = pseudoHeaders[i + 1];
-            if (roName.hashCode() == nameHash && roValue.hashCode() == valueHash &&
-                roName.contentEqualsIgnoreCase(name) && roValue.contentEqualsIgnoreCase(value)) {
-                return true;
-            }
-        }
-
-        final int otherHeadersEnd = otherHeaders.length - 1;
-        for (int i = 0; i < otherHeadersEnd; i += 2) {
-            AsciiString roName = otherHeaders[i];
-            AsciiString roValue = otherHeaders[i + 1];
-            if (roName.hashCode() == nameHash && roValue.hashCode() == valueHash &&
-                roName.contentEqualsIgnoreCase(name) && roValue.contentEqualsIgnoreCase(value)) {
-                return true;
-            }
-        }
-        return false;
+        return contains(name, value, false);
     }
 
     @Override
