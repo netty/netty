@@ -843,7 +843,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     return;
                 }
                 if (closePromise.isDone()) {
-                    promise.setFailure(new ClosedChannelException());
+                    promise.setSuccess();
                     return;
                 }
                 if (pendingClosePromise != null) {
@@ -873,9 +873,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                         }
                     }
 
-                    // The promise should be notified before we call fireChannelInactive().
-                    promise.setSuccess();
+                    // The promise should be notified before we call fireChannelInactive(), and the closePromise should
+                    // be notified first for consistency with AbstractChannel so listeners of
                     closePromise.setSuccess();
+                    promise.setSuccess();
 
                     pipeline().fireChannelInactive();
                     if (isRegistered()) {
