@@ -378,13 +378,17 @@ public class Http2MultiplexCodecTest {
         final AtomicBoolean channelOpen = new AtomicBoolean(true);
         final AtomicBoolean channelActive = new AtomicBoolean(true);
 
-        childChannel.close().addListener(new ChannelFutureListener() {
+        // Create a promise before actually doing the close, because otherwise we would be adding a listener to a future
+        // that is already completed because we are using EmbeddedChannel which executes code in the JUnit thread.
+        ChannelPromise p = childChannel.newPromise();
+        p.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
                 channelOpen.set(future.channel().isOpen());
                 channelActive.set(future.channel().isActive());
             }
-        }).syncUninterruptibly();
+        });
+        childChannel.close(p).syncUninterruptibly();
 
         assertFalse(channelOpen.get());
         assertFalse(childChannel.isActive());
@@ -426,21 +430,6 @@ public class Http2MultiplexCodecTest {
 
         assertFalse(childChannel.isOpen());
         assertFalse(childChannel.isActive());
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void channelClosedTwiceWithVoidPromiseThrows() {
-        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
-        Http2StreamChannel childChannel = (Http2StreamChannel) inboundHandler.channel();
-
-        assertTrue(childChannel.isOpen());
-        assertTrue(childChannel.isActive());
-        childChannel.close().syncUninterruptibly();
-
-        assertFalse(childChannel.isOpen());
-        assertFalse(childChannel.isActive());
-
-        childChannel.close(childChannel.voidPromise()).syncUninterruptibly();
     }
 
     @Test
