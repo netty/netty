@@ -31,6 +31,7 @@ Netty can be used in modular JDK9 applications as a collection of automatic modu
 reverse-DNS style, and are derived from subproject names rather than root packages due to historical reasons. They
 are listed below:
 
+ * `io.netty.all`
  * `io.netty.buffer`
  * `io.netty.codec`
  * `io.netty.codec.dns`
