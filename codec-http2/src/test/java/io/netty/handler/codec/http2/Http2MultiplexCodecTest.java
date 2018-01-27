@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -29,14 +30,13 @@ import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
-
-import java.net.InetSocketAddress;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.util.ReferenceCountUtil.release;
 import static org.junit.Assert.assertEquals;
@@ -365,6 +365,71 @@ public class Http2MultiplexCodecTest {
         inboundHandler.checkException();
 
         future.syncUninterruptibly();
+    }
+
+    @Test
+    public void channelClosedWhenCloseListenerCompletes() {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
+        Http2StreamChannel childChannel = (Http2StreamChannel) inboundHandler.channel();
+
+        assertTrue(childChannel.isOpen());
+        assertTrue(childChannel.isActive());
+
+        final AtomicBoolean channelOpen = new AtomicBoolean(true);
+        final AtomicBoolean channelActive = new AtomicBoolean(true);
+
+        // Create a promise before actually doing the close, because otherwise we would be adding a listener to a future
+        // that is already completed because we are using EmbeddedChannel which executes code in the JUnit thread.
+        ChannelPromise p = childChannel.newPromise();
+        p.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                channelOpen.set(future.channel().isOpen());
+                channelActive.set(future.channel().isActive());
+            }
+        });
+        childChannel.close(p).syncUninterruptibly();
+
+        assertFalse(channelOpen.get());
+        assertFalse(childChannel.isActive());
+    }
+
+    @Test
+    public void channelClosedWhenChannelClosePromiseCompletes() {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
+        Http2StreamChannel childChannel = (Http2StreamChannel) inboundHandler.channel();
+
+        assertTrue(childChannel.isOpen());
+        assertTrue(childChannel.isActive());
+
+        final AtomicBoolean channelOpen = new AtomicBoolean(true);
+        final AtomicBoolean channelActive = new AtomicBoolean(true);
+
+        childChannel.closeFuture().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                channelOpen.set(future.channel().isOpen());
+                channelActive.set(future.channel().isActive());
+            }
+        });
+        childChannel.close().syncUninterruptibly();
+
+        assertFalse(channelOpen.get());
+        assertFalse(childChannel.isActive());
+    }
+
+    @Test
+    public void channelClosedTwiceMarksPromiseAsSuccessful() {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
+        Http2StreamChannel childChannel = (Http2StreamChannel) inboundHandler.channel();
+
+        assertTrue(childChannel.isOpen());
+        assertTrue(childChannel.isActive());
+        childChannel.close().syncUninterruptibly();
+        childChannel.close().syncUninterruptibly();
+
+        assertFalse(childChannel.isOpen());
+        assertFalse(childChannel.isActive());
     }
 
     @Test
