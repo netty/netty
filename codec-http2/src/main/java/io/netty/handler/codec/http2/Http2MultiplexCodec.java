@@ -441,7 +441,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
         // Keeps track of flush calls in channelReadComplete(...) and aggregate these.
         private boolean inFireChannelReadComplete;
-        private boolean flushPending;
 
         boolean fireChannelReadPending;
 
@@ -1083,13 +1082,11 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     return;
                 }
                 try {
-                    // If we are current channelReadComplete(...) call we should just mark this Channel with a flush
-                    // pending. We will ensure we trigger ctx.flush() after we processed all Channels later on and
+                    // If we are currently in the  channelReadComplete(...) call we should just ignore the flush.
+                    // We will ensure we trigger ctx.flush() after we processed all Channels later on and
                     // so aggregate the flushes. This is done as ctx.flush() is expensive when as it may trigger an
                     // write(...) or writev(...) operation on the socket.
-                    if (inFireChannelReadComplete) {
-                        flushPending = true;
-                    } else {
+                    if (!inFireChannelReadComplete) {
                         flush0(ctx);
                     }
                 } finally {
