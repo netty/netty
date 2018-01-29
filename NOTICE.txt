@@ -61,6 +61,8 @@ facade for Java, which can be obtained at:
 This product contains a modified portion of 'Apache Harmony', an open source
 Java SE, which can be obtained at:
 
+  * NOTICE:
+    * license/NOTICE.harmony.txt
   * LICENSE:
     * license/LICENSE.harmony.txt (Apache License 2.0)
   * HOMEPAGE:
