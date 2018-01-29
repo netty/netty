@@ -487,10 +487,6 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     /**
      * Repositions the current {@code writerIndex} to the marked
      * {@code writerIndex} in this buffer.
-     *
-     * @throws IndexOutOfBoundsException
-     *         if the current {@code readerIndex} is greater than the marked
-     *         {@code writerIndex}
      */
     public abstract ByteBuf resetWriterIndex();
 
