@@ -214,11 +214,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
                     Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
 
-                    Throwable cause = ReflectionUtil.trySetAccessible(selectedKeysField);
+                    Throwable cause = ReflectionUtil.trySetAccessible(selectedKeysField, true);
                     if (cause != null) {
                         return cause;
                     }
-                    cause = ReflectionUtil.trySetAccessible(publicSelectedKeysField);
+                    cause = ReflectionUtil.trySetAccessible(publicSelectedKeysField, true);
                     if (cause != null) {
                         return cause;
                     }
