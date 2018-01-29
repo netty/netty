@@ -46,6 +46,8 @@ final class PlatformDependent0 {
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
     private static final Object INTERNAL_UNSAFE;
+    private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
+
     static final Unsafe UNSAFE;
 
     // constants borrowed from murmur3
@@ -84,7 +86,9 @@ final class PlatformDependent0 {
                 public Object run() {
                     try {
                         final Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
-                        Throwable cause = ReflectionUtil.trySetAccessible(unsafeField);
+                        // We always want to try using Unsafe as the access still works on java9 as well and
+                        // we need it for out native-transports and many optimizations.
+                        Throwable cause = ReflectionUtil.trySetAccessible(unsafeField, false);
                         if (cause != null) {
                             return cause;
                         }
@@ -218,7 +222,7 @@ final class PlatformDependent0 {
                                 try {
                                     final Constructor<?> constructor =
                                             direct.getClass().getDeclaredConstructor(long.class, int.class);
-                                    Throwable cause = ReflectionUtil.trySetAccessible(constructor);
+                                    Throwable cause = ReflectionUtil.trySetAccessible(constructor, true);
                                     if (cause != null) {
                                         return cause;
                                     }
@@ -267,7 +271,7 @@ final class PlatformDependent0 {
                         Class<?> bitsClass =
                                 Class.forName("java.nio.Bits", false, getSystemClassLoader());
                         Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
-                        Throwable cause = ReflectionUtil.trySetAccessible(unalignedMethod);
+                        Throwable cause = ReflectionUtil.trySetAccessible(unalignedMethod, true);
                         if (cause != null) {
                             return cause;
                         }
@@ -795,6 +799,15 @@ final class PlatformDependent0 {
             logger.debug("Platform: Android");
         }
         return android;
+    }
+
+    private static boolean explicitTryReflectionSetAccessible0() {
+        // we disable reflective access
+        return SystemPropertyUtil.getBoolean("io.netty.tryReflectionSetAccessible", javaVersion() < 9);
+    }
+
+    static boolean isExplicitTryReflectionSetAccessible() {
+        return IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE;
     }
 
     static int javaVersion() {
