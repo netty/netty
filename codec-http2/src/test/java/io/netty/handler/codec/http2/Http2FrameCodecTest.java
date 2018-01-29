@@ -719,7 +719,7 @@ public class Http2FrameCodecTest {
                 UpgradeEvent.class.getDeclaredConstructor(CharSequence.class, FullHttpRequest.class);
 
         // Check if we could make it accessible which may fail on java9.
-        Assume.assumeTrue(ReflectionUtil.trySetAccessible(constructor) == null);
+        Assume.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
 
         HttpServerUpgradeHandler.UpgradeEvent upgradeEvent = constructor.newInstance(
                 "HTTP/2", new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
@@ -757,7 +757,7 @@ public class Http2FrameCodecTest {
                 UpgradeEvent.class.getDeclaredConstructor(CharSequence.class, FullHttpRequest.class);
 
         // Check if we could make it accessible which may fail on java9.
-        Assume.assumeTrue(ReflectionUtil.trySetAccessible(constructor) == null);
+        Assume.assumeTrue(ReflectionUtil.trySetAccessible(constructor, true) == null);
 
         String longString = new String(new char[70000]).replace("\0", "*");
         DefaultFullHttpRequest request =

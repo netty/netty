@@ -67,7 +67,7 @@ public class Log4J2LoggerTest extends AbstractInternalLoggerTest<Logger> {
         try {
             Field field = clazz.getDeclaredField(fieldName);
             if (!field.isAccessible()) {
-                Assume.assumeThat(ReflectionUtil.trySetAccessible(field), CoreMatchers.nullValue());
+                Assume.assumeThat(ReflectionUtil.trySetAccessible(field, true), CoreMatchers.nullValue());
             }
             return (T) field.get(AbstractInternalLogger.class);
         } catch (ReflectiveOperationException e) {
@@ -87,7 +87,7 @@ public class Log4J2LoggerTest extends AbstractInternalLoggerTest<Logger> {
 
         Method method = mockLog.getClass().getDeclaredMethod("setLevel", Level.class);
         if (!method.isAccessible()) {
-            Assume.assumeThat(ReflectionUtil.trySetAccessible(method), CoreMatchers.nullValue());
+            Assume.assumeThat(ReflectionUtil.trySetAccessible(method, true), CoreMatchers.nullValue());
         }
         method.invoke(mockLog, targetLevel);
     }
