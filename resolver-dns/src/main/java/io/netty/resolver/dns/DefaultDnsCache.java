@@ -104,7 +104,7 @@ public class DefaultDnsCache implements DnsCache {
                 Map.Entry<String, Entries> e = i.next();
                 i.remove();
 
-                e.getValue().cancelExpiration();
+                e.getValue().clearAndCancel();
             }
         }
     }
@@ -113,7 +113,7 @@ public class DefaultDnsCache implements DnsCache {
     public boolean clear(String hostname) {
         checkNotNull(hostname, "hostname");
         Entries entries = resolveCache.remove(hostname);
-        return entries != null && entries.cancelExpiration();
+        return entries != null && entries.clearAndCancel();
     }
 
     private static boolean emptyAdditionals(DnsRecord[] additionals) {
@@ -171,18 +171,27 @@ public class DefaultDnsCache implements DnsCache {
             }
         }
 
-        scheduleCacheExpiration(entries, e, ttl, loop);
+        scheduleCacheExpiration(e, ttl, loop);
     }
 
-    private void scheduleCacheExpiration(final Entries entries,
-                                         final DefaultDnsCacheEntry e,
+    private void scheduleCacheExpiration(final DefaultDnsCacheEntry e,
                                          int ttl,
                                          EventLoop loop) {
         e.scheduleExpiration(loop, new Runnable() {
                     @Override
                     public void run() {
-                        if (entries.remove(e)) {
-                            resolveCache.remove(e.hostname);
+                        // We always remove all entries for a hostname once one entry expire. This is not the
+                        // most efficient to do but this way we can guarantee that if a DnsResolver
+                        // be configured to prefer one ip family over the other we will not return unexpected
+                        // results to the enduser if one of the A or AAAA records has different TTL settings.
+                        //
+                        // As a TTL is just a hint of the maximum time a cache is allowed to cache stuff it's
+                        // completely fine to remove the entry even if the TTL is not reached yet.
+                        //
+                        // See https://github.com/netty/netty/issues/7329
+                        Entries entries = resolveCache.remove(e.hostname);
+                        if (entries != null) {
+                            entries.clearAndCancel();
                         }
                     }
                 }, ttl, TimeUnit.SECONDS);
@@ -293,43 +302,7 @@ public class DefaultDnsCache implements DnsCache {
             }
         }
 
-        boolean remove(DefaultDnsCacheEntry entry) {
-            for (;;) {
-                List<DefaultDnsCacheEntry> entries = get();
-                int size = entries.size();
-                if (size == 0) {
-                    return false;
-                } else if (size == 1) {
-                    if (entries.get(0).equals(entry)) {
-                        // If the list is empty we just return early and so not allocate a new ArrayList.
-                        if (compareAndSet(entries, Collections.<DefaultDnsCacheEntry>emptyList())) {
-                            return true;
-                        }
-                    } else {
-                        return false;
-                    }
-                } else {
-                    // Just size the new ArrayList as before as we may not find the entry we are looking for and not
-                    // want to cause an extra allocation / memory copy in this case.
-                    //
-                    // Its very likely we find the entry we are looking for so we directly create a new ArrayList
-                    // and fill it.
-                    List<DefaultDnsCacheEntry> newEntries = new ArrayList<DefaultDnsCacheEntry>(size);
-                    for (int i = 0; i < size; i++) {
-                        DefaultDnsCacheEntry e = entries.get(i);
-                        if (!e.equals(entry)) {
-                            newEntries.add(e);
-                        }
-                    }
-                    if (compareAndSet(entries, Collections.unmodifiableList(newEntries))) {
-                        // This will return true if an entry was removed.
-                        return newEntries.size() != size;
-                    }
-                }
-            }
-        }
-
-        boolean cancelExpiration() {
+        boolean clearAndCancel() {
             List<DefaultDnsCacheEntry> entries = getAndSet(Collections.<DefaultDnsCacheEntry>emptyList());
             if (entries.isEmpty()) {
                 return false;
