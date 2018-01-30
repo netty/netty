@@ -167,7 +167,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf resetWriterIndex() {
-        writerIndex = markedWriterIndex;
+        writerIndex(markedWriterIndex);
         return this;
     }
 
@@ -516,23 +516,23 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
         int nLong = length >>> 3;
         int nBytes = length & 7;
-        for (int i = nLong; i > 0; i --) {
+        for (int i = nLong; i > 0; i--) {
             setLong(index, 0);
             index += 8;
         }
         if (nBytes == 4) {
             setInt(index, 0);
         } else if (nBytes < 4) {
-            for (int i = nBytes; i > 0; i --) {
+            for (int i = nBytes; i > 0; i--) {
                 setByte(index, (byte) 0);
-                index ++;
+                index++;
             }
         } else {
             setInt(index, 0);
             index += 4;
-            for (int i = nBytes - 4; i > 0; i --) {
+            for (int i = nBytes - 4; i > 0; i--) {
                 setByte(index, (byte) 0);
-                index ++;
+                index++;
             }
         }
         return this;
@@ -869,18 +869,18 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
         int nLong = length >>> 3;
         int nBytes = length & 7;
-        for (int i = nLong; i > 0; i --) {
+        for (int i = nLong; i > 0; i--) {
             writeLong(0);
         }
         if (nBytes == 4) {
             writeInt(0);
         } else if (nBytes < 4) {
-            for (int i = nBytes; i > 0; i --) {
+            for (int i = nBytes; i > 0; i--) {
                 writeByte((byte) 0);
             }
         } else {
             writeInt(0);
-            for (int i = nBytes - 4; i > 0; i --) {
+            for (int i = nBytes - 4; i > 0; i--) {
                 writeByte((byte) 0);
             }
         }
@@ -993,7 +993,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         try {
             do {
                 if (processor.process(_getByte(i))) {
-                    i ++;
+                    i++;
                 } else {
                     return i;
                 }
@@ -1034,7 +1034,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         try {
             do {
                 if (processor.process(_getByte(i))) {
-                    i --;
+                    i--;
                 } else {
                     return i;
                 }
@@ -1074,10 +1074,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
 
         StringBuilder buf = new StringBuilder()
-            .append(StringUtil.simpleClassName(this))
-            .append("(ridx: ").append(readerIndex)
-            .append(", widx: ").append(writerIndex)
-            .append(", cap: ").append(capacity());
+                .append(StringUtil.simpleClassName(this))
+                .append("(ridx: ").append(readerIndex)
+                .append(", widx: ").append(writerIndex)
+                .append(", cap: ").append(capacity());
         if (maxCapacity != Integer.MAX_VALUE) {
             buf.append('/').append(maxCapacity);
         }
