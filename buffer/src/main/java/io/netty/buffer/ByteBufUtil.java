@@ -1151,9 +1151,9 @@ public final class ByteBufUtil {
             CharsetDecoder decoder = CharsetUtil.decoder(charset, CodingErrorAction.REPORT, CodingErrorAction.REPORT);
             try {
                 if (buf.nioBufferCount() == 1) {
-                    decoder.decode(buf.internalNioBuffer(index, length));
+                    decoder.decode(buf.nioBuffer(index, length));
                 } else {
-                    ByteBuf heapBuffer =  buf.alloc().heapBuffer(length);
+                    ByteBuf heapBuffer = buf.alloc().heapBuffer(length);
                     try {
                         heapBuffer.writeBytes(buf, index, length);
                         decoder.decode(heapBuffer.internalNioBuffer(heapBuffer.readerIndex(), length));
