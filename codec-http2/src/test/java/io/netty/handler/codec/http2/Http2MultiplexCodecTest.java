@@ -30,13 +30,15 @@ import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
+
+import java.net.InetSocketAddress;
+import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import java.net.InetSocketAddress;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.util.ReferenceCountUtil.release;
 import static org.junit.Assert.assertEquals;
@@ -300,6 +302,31 @@ public class Http2MultiplexCodecTest {
 
         assertFalse(inboundHandler.isChannelActive());
         inboundHandler.checkException();
+    }
+
+    @Test(expected = ClosedChannelException.class)
+    public void streamClosedErrorTranslatedToClosedChannelExceptionOnWrites() throws Exception {
+        writer = new Writer() {
+            @Override
+            void write(Object msg, ChannelPromise promise) {
+                promise.tryFailure(new StreamException(inboundStream.id(), Http2Error.STREAM_CLOSED, "Stream Closed"));
+            }
+        };
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        childChannelInitializer.handler = inboundHandler;
+
+        Channel childChannel = newOutboundStream();
+        assertTrue(childChannel.isActive());
+
+        ChannelFuture future = childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+        parentChannel.flush();
+
+        assertFalse(childChannel.isActive());
+        assertFalse(childChannel.isOpen());
+
+        inboundHandler.checkException();
+
+        future.syncUninterruptibly();
     }
 
     @Test
