@@ -167,7 +167,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf resetWriterIndex() {
-        writerIndex = markedWriterIndex;
+        writerIndex(markedWriterIndex);
         return this;
     }
 
