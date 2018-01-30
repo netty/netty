@@ -19,10 +19,15 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import java.nio.Buffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static org.junit.Assert.assertArrayEquals;
@@ -547,6 +552,46 @@ public class ByteBufUtilTest {
         try {
             buffer.writeBytes(bytes);
             assertEquals(expected, ByteBufUtil.isText(buffer, charset));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testIsTextMultiThreaded() throws Throwable {
+        final ByteBuf buffer = Unpooled.copiedBuffer("Hello, World!", CharsetUtil.ISO_8859_1);
+
+        try {
+            final AtomicInteger counter = new AtomicInteger(60000);
+            final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
+            List<Thread> threads = new ArrayList<Thread>();
+            for (int i = 0; i < 10; i++) {
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            while (errorRef.get() == null && counter.decrementAndGet() > 0) {
+                                assertTrue(ByteBufUtil.isText(buffer, CharsetUtil.ISO_8859_1));
+                            }
+                        } catch (Throwable cause) {
+                            errorRef.compareAndSet(null, cause);
+                        }
+                    }
+                });
+                threads.add(thread);
+            }
+            for (Thread thread : threads) {
+                thread.start();
+            }
+
+            for (Thread thread : threads) {
+                thread.join();
+            }
+
+            Throwable error = errorRef.get();
+            if (error != null) {
+                throw error;
+            }
         } finally {
             buffer.release();
         }
