@@ -2084,12 +2084,12 @@ public abstract class AbstractByteBufTest {
         copied.release();
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 10000)
     public void testToStringMultipleThreads() throws Throwable {
         buffer.clear();
         buffer.writeBytes("Hello, World!".getBytes(CharsetUtil.ISO_8859_1));
 
-        final AtomicInteger counter = new AtomicInteger(60000);
+        final AtomicInteger counter = new AtomicInteger(30000);
         final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
         List<Thread> threads = new ArrayList<Thread>();
         for (int i = 0; i < 10; i++) {
