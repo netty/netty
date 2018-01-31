@@ -1176,6 +1176,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private void handleUnwrapThrowable(ChannelHandlerContext ctx, Throwable cause) {
         try {
+            // We should attempt to notify the handshake failure before writing any pending data. If we are in unwrap
+            // and failed during the handshake process, and we attempt to wrap, then promises will fail, and if
+            // listeners immediately close the Channel then we may end up firing the handshake event after the Channel
+            // has been closed.
+            if (handshakePromise.tryFailure(cause)) {
+                ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+            }
+
             // We need to flush one time as there may be an alert that we should send to the remote peer because
             // of the SSLException reported here.
             wrapAndFlush(ctx);
@@ -1183,7 +1191,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             logger.debug("SSLException during trying to call SSLEngine.wrap(...)" +
                     " because of an previous SSLException, ignoring...", ex);
         } finally {
-            setHandshakeFailure(ctx, cause);
+            setHandshakeFailure(ctx, cause, true, false);
         }
         PlatformDependent.throwException(cause);
     }
