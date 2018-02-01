@@ -27,7 +27,6 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
 import static io.netty.buffer.Unpooled.*;
-import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
 public class FixedCompositeByteBufTest {
