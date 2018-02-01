@@ -125,6 +125,16 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
         return copy;
     }
 
+    @Override
+    public boolean hasMemoryAddress() {
+        return true;
+    }
+
+    @Override
+    public long memoryAddress() {
+        return memoryAddress;
+    }
+
     private long addr(int index) {
         return memoryAddress + index;
     }
