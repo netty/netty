@@ -25,7 +25,6 @@ import java.util.Queue;
 
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 public class SimpleLeakAwareByteBufTest extends BigEndianHeapByteBufTest {
     private final Class<? extends ByteBuf> clazz = leakClass();

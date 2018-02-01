@@ -20,8 +20,6 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-
 public class WrappedUnpooledUnsafeByteBufTest extends BigEndianUnsafeDirectByteBufTest {
 
     @Before
