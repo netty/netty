@@ -755,7 +755,7 @@ abstract class DnsNameResolverContext<T> {
 
     private void followCname(String cname, final DnsQueryLifecycleObserver queryLifecycleObserver, Promise<T> promise) {
         // Use the same server for both CNAME queries
-        DnsServerAddressStream stream = DnsServerAddresses.singleton(getNameServers(cname).next()).stream();
+        DnsServerAddressStream stream = getNameServers(cname);
 
         DnsQuestion cnameQuestion = null;
         if (parent.supportsARecords()) {
