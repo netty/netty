@@ -123,6 +123,10 @@ public final class ObjectCleaner {
         }
     }
 
+    public static int getLiveSetCount() {
+        return LIVE_SET.size();
+    }
+
     private ObjectCleaner() {
         // Only contains a static method.
     }
