@@ -274,4 +274,20 @@ public class ReadOnlyDirectByteBufferBufTest {
             file.delete();
         }
     }
+
+    @Test
+    public void testMemoryAddress() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            Assert.assertFalse(buf.hasMemoryAddress());
+            try {
+                buf.memoryAddress();
+                Assert.fail();
+            } catch (UnsupportedOperationException expected) {
+                // expected
+            }
+        } finally {
+            buf.release();
+        }
+    }
 }

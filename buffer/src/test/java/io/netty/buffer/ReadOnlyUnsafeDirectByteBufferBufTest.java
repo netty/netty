@@ -16,7 +16,9 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
+import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
@@ -35,5 +37,17 @@ public class ReadOnlyUnsafeDirectByteBufferBufTest extends ReadOnlyDirectByteBuf
     @Override
     protected ByteBuf buffer(ByteBuffer buffer) {
         return new ReadOnlyUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, buffer);
+    }
+
+    @Test
+    @Override
+    public void testMemoryAddress() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            Assert.assertTrue(buf.hasMemoryAddress());
+            buf.memoryAddress();
+        } finally {
+            buf.release();
+        }
     }
 }
