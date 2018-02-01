@@ -105,7 +105,13 @@ public class JdkSslContext extends SslContext {
             //[3] https://www.ibm.com/developerworks/community/forums/html/topic?id=9b5a56a9-fa46-4031-b33b-df91e28d77c2
             //[4] https://www.ibm.com/developerworks/rfe/execute?use_case=viewRfe&CR_ID=71770
             if (supportedCipher.startsWith("SSL_")) {
-                SUPPORTED_CIPHERS.add("TLS_" + supportedCipher.substring("SSL_".length()));
+                final String tlsPrefixedCipherName = "TLS_" + supportedCipher.substring("SSL_".length());
+                try {
+                    engine.setEnabledCipherSuites(new String[]{tlsPrefixedCipherName});
+                    SUPPORTED_CIPHERS.add(tlsPrefixedCipherName);
+                } catch (IllegalArgumentException ignored) {
+                    // The cipher is not supported ... move on to the next cipher.
+                }
             }
         }
         List<String> ciphers = new ArrayList<String>();
