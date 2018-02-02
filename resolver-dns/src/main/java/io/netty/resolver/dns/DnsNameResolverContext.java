@@ -750,7 +750,7 @@ abstract class DnsNameResolverContext<T> {
 
     private DnsServerAddressStream getNameServers(String hostname) {
         DnsServerAddressStream stream = getNameServersFromCache(hostname);
-        return stream == null ? nameServerAddrs : stream;
+        return stream == null ? nameServerAddrs.duplicate() : stream;
     }
 
     private void followCname(String cname, final DnsQueryLifecycleObserver queryLifecycleObserver, Promise<T> promise) {
