@@ -78,9 +78,9 @@ public final class PlatformDependent {
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
-    private static final boolean HAS_UNSAFE = hasUnsafe0();
+    private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause0();
     private static final boolean DIRECT_BUFFER_PREFERRED =
-            HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
+            UNSAFE_UNAVAILABILITY_CAUSE == null && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
 
     private static final int MPSC_CHUNK_SIZE =  1024;
@@ -249,14 +249,14 @@ public final class PlatformDependent {
      * direct memory access.
      */
     public static boolean hasUnsafe() {
-        return HAS_UNSAFE;
+        return UNSAFE_UNAVAILABILITY_CAUSE == null;
     }
 
     /**
      * Return the reason (if any) why {@code sun.misc.Unsafe} was not available.
      */
     public static Throwable getUnsafeUnavailabilityCause() {
-        return PlatformDependent0.getUnsafeUnavailabilityCause();
+        return UNSAFE_UNAVAILABILITY_CAUSE;
     }
 
     /**
@@ -965,24 +965,24 @@ public final class PlatformDependent {
         return "root".equals(username) || "toor".equals(username);
     }
 
-    private static boolean hasUnsafe0() {
+    private static Throwable unsafeUnavailabilityCause0() {
         if (isAndroid()) {
             logger.debug("sun.misc.Unsafe: unavailable (Android)");
-            return false;
+            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (Android)");
         }
-
-        if (PlatformDependent0.isExplicitNoUnsafe()) {
-            return false;
+        Throwable cause = PlatformDependent0.getUnsafeUnavailabilityCause();
+        if (cause != null) {
+            return cause;
         }
 
         try {
             boolean hasUnsafe = PlatformDependent0.hasUnsafe();
             logger.debug("sun.misc.Unsafe: {}", hasUnsafe ? "available" : "unavailable");
-            return hasUnsafe;
+            return hasUnsafe ? null : PlatformDependent0.getUnsafeUnavailabilityCause();
         } catch (Throwable t) {
             logger.trace("Could not determine if Unsafe is available", t);
             // Probably failed to initialize PlatformDependent0.
-            return false;
+            return new UnsupportedOperationException("Could not determine if Unsafe is available", t);
         }
     }
 
