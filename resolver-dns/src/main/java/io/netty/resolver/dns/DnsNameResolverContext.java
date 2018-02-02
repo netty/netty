@@ -571,7 +571,7 @@ abstract class DnsNameResolverContext<T> {
         }
 
         if (found) {
-            followCname(resolved, queryLifecycleObserver, promise);
+            followCname(question, resolved, queryLifecycleObserver, promise);
         } else {
             queryLifecycleObserver.queryFailed(CNAME_NOT_FOUND_QUERY_FAILED_EXCEPTION);
         }
@@ -753,33 +753,19 @@ abstract class DnsNameResolverContext<T> {
         return stream == null ? nameServerAddrs.duplicate() : stream;
     }
 
-    private void followCname(String cname, final DnsQueryLifecycleObserver queryLifecycleObserver, Promise<T> promise) {
-        // Use the same server for both CNAME queries
+    private void followCname(
+            DnsQuestion question, String cname, DnsQueryLifecycleObserver queryLifecycleObserver, Promise<T> promise) {
         DnsServerAddressStream stream = getNameServers(cname);
 
-        DnsQuestion cnameQuestion = null;
-        if (parent.supportsARecords()) {
-            try {
-                if ((cnameQuestion = newQuestion(cname, DnsRecordType.A)) == null) {
-                    return;
-                }
-            } catch (Throwable cause) {
-                queryLifecycleObserver.queryFailed(cause);
-                PlatformDependent.throwException(cause);
-            }
-            query(stream, 0, cnameQuestion, queryLifecycleObserver.queryCNAMEd(cnameQuestion), promise, null);
+        final DnsQuestion cnameQuestion;
+        try {
+            cnameQuestion = newQuestion(cname, question.type());
+        } catch (Throwable cause) {
+            queryLifecycleObserver.queryFailed(cause);
+            PlatformDependent.throwException(cause);
+            return;
         }
-        if (parent.supportsAAAARecords()) {
-            try {
-                if ((cnameQuestion = newQuestion(cname, DnsRecordType.AAAA)) == null) {
-                    return;
-                }
-            } catch (Throwable cause) {
-                queryLifecycleObserver.queryFailed(cause);
-                PlatformDependent.throwException(cause);
-            }
-            query(stream, 0, cnameQuestion, queryLifecycleObserver.queryCNAMEd(cnameQuestion), promise, null);
-        }
+        query(stream, 0, cnameQuestion, queryLifecycleObserver.queryCNAMEd(cnameQuestion), promise, null);
     }
 
     private boolean query(String hostname, DnsRecordType type, DnsServerAddressStream dnsServerAddressStream,
