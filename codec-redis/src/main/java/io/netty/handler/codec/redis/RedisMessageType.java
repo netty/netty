@@ -28,8 +28,7 @@ public enum RedisMessageType {
     ERROR((byte) '-', true),
     INTEGER((byte) ':', true),
     BULK_STRING((byte) '$', false),
-    ARRAY_HEADER((byte) '*', false),
-    ARRAY((byte) '*', false); // for aggregated
+    ARRAY_HEADER((byte) '*', false);
 
     private final Byte value;
     private final boolean inline;

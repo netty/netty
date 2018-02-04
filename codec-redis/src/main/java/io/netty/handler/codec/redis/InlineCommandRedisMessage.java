@@ -15,7 +15,6 @@
 
 package io.netty.handler.codec.redis;
 
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -31,15 +30,6 @@ public final class InlineCommandRedisMessage extends AbstractStringRedisMessage 
      */
     public InlineCommandRedisMessage(String content) {
         super(content);
-    }
-
-    @Override
-    public String toString() {
-        return new StringBuilder(StringUtil.simpleClassName(this))
-                .append('[')
-                .append("content=")
-                .append(content())
-                .append(']').toString();
     }
 
 }
