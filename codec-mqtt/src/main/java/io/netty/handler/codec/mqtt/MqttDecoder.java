@@ -392,7 +392,10 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         final List<Integer> grantedQos = new ArrayList<Integer>();
         int numberOfBytesConsumed = 0;
         while (numberOfBytesConsumed < bytesRemainingInVariablePart) {
-            int qos = buffer.readUnsignedByte() & 0x03;
+            int qos = buffer.readUnsignedByte();
+            if (qos != MqttQoS.FAILURE.value()) {
+                qos &= 0x03;
+            }
             numberOfBytesConsumed++;
             grantedQos.add(qos);
         }
