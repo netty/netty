@@ -23,6 +23,7 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public enum RedisMessageType {
 
+    INLINE_COMMAND(null, true),
     SIMPLE_STRING((byte) '+', true),
     ERROR((byte) '-', true),
     INTEGER((byte) ':', true),
@@ -30,19 +31,26 @@ public enum RedisMessageType {
     ARRAY_HEADER((byte) '*', false),
     ARRAY((byte) '*', false); // for aggregated
 
-    private final byte value;
+    private final Byte value;
     private final boolean inline;
 
-    RedisMessageType(byte value, boolean inline) {
+    RedisMessageType(Byte value, boolean inline) {
         this.value = value;
         this.inline = inline;
     }
 
     /**
-     * Returns prefix {@code byte} for this type.
+     * Returns prefix {@code byte} for this type or {@code null} if its length is zero.
      */
-    public byte value() {
+    public Byte value() {
         return value;
+    }
+
+    /**
+     * Returns length of this type.
+     */
+    public int length() {
+        return (value != null) ? RedisConstants.TYPE_LENGTH : 0;
     }
 
     /**
@@ -69,7 +77,7 @@ public enum RedisMessageType {
         case '*':
             return ARRAY_HEADER;
         default:
-            throw new RedisCodecException("Unknown RedisMessageType: " + value);
+            return INLINE_COMMAND;
         }
     }
 }

@@ -126,7 +126,14 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         if (!in.isReadable()) {
             return false;
         }
+
+        final int initialIndex = in.readerIndex();
         type = RedisMessageType.valueOf(in.readByte());
+
+        if (type.length() == 0) {
+            // byte did not contain type info, make it readable again
+            in.readerIndex(initialIndex);
+        }
         state = type.isInline() ? State.DECODE_INLINE : State.DECODE_LENGTH;
         return true;
     }
@@ -233,6 +240,8 @@ public final class RedisDecoder extends ByteToMessageDecoder {
 
     private RedisMessage newInlineRedisMessage(RedisMessageType messageType, ByteBuf content) {
         switch (messageType) {
+        case INLINE_COMMAND:
+            return new InlineCommandRedisMessage(content.toString(CharsetUtil.UTF_8));
         case SIMPLE_STRING: {
             SimpleStringRedisMessage cached = messagePool.getSimpleString(content);
             return cached != null ? cached : new SimpleStringRedisMessage(content.toString(CharsetUtil.UTF_8));

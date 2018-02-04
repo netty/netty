@@ -68,6 +68,21 @@ public class RedisDecoderTest {
     }
 
     @Test
+    public void shouldDecodeInlineCommand() {
+        assertFalse(channel.writeInbound(byteBufOf("P")));
+        assertFalse(channel.writeInbound(byteBufOf("I")));
+        assertFalse(channel.writeInbound(byteBufOf("N")));
+        assertFalse(channel.writeInbound(byteBufOf("G")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        InlineCommandRedisMessage msg = channel.readInbound();
+
+        assertThat(msg.content(), is("PING"));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
     public void shouldDecodeSimpleString() {
         assertFalse(channel.writeInbound(byteBufOf("+")));
         assertFalse(channel.writeInbound(byteBufOf("O")));
