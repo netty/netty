@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -18,17 +18,17 @@ package io.netty.handler.codec.redis;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * Errors of <a href="http://redis.io/topics/protocol">RESP</a>.
+ * Inline commands of <a href="http://redis.io/topics/protocol">RESP</a>.
  */
 @UnstableApi
-public final class ErrorRedisMessage extends AbstractStringRedisMessage {
+public final class InlineCommandRedisMessage extends AbstractStringRedisMessage {
 
     /**
-     * Creates a {@link ErrorRedisMessage} from {@code content}.
+     * Creates a {@link InlineCommandRedisMessage} for the given {@code content}.
      *
      * @param content the message content, must not be {@code null}.
      */
-    public ErrorRedisMessage(String content) {
+    public InlineCommandRedisMessage(String content) {
         super(content);
     }
 

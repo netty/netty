@@ -36,6 +36,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
 
     private final ToPositiveLongProcessor toPositiveLongProcessor = new ToPositiveLongProcessor();
 
+    private final boolean decodeInlineCommands;
     private final int maxInlineMessageLength;
     private final RedisMessagePool messagePool;
 
@@ -53,25 +54,44 @@ public final class RedisDecoder extends ByteToMessageDecoder {
     }
 
     /**
-     * Creates a new instance with default {@code maxInlineMessageLength} and {@code messagePool}.
+     * Creates a new instance with default {@code maxInlineMessageLength} and {@code messagePool}
+     * and inline command decoding disabled.
      */
     public RedisDecoder() {
-        // 1024 * 64 is max inline length of current Redis server implementation.
-        this(1024 * 64, FixedRedisMessagePool.INSTANCE);
+        this(false);
+    }
+
+    /**
+     * Creates a new instance with default {@code maxInlineMessageLength} and {@code messagePool}.
+     * @param decodeInlineCommands if {@code true}, inline commands will be decoded.
+     */
+    public RedisDecoder(boolean decodeInlineCommands) {
+        this(RedisConstants.REDIS_INLINE_MESSAGE_MAX_LENGTH, FixedRedisMessagePool.INSTANCE, decodeInlineCommands);
+    }
+
+    /**
+     * Creates a new instance with inline command decoding disabled.
+     * @param maxInlineMessageLength the maximum length of inline message.
+     * @param messagePool the predefined message pool.
+     */
+    public RedisDecoder(int maxInlineMessageLength, RedisMessagePool messagePool) {
+        this(maxInlineMessageLength, messagePool, false);
     }
 
     /**
      * Creates a new instance.
      * @param maxInlineMessageLength the maximum length of inline message.
      * @param messagePool the predefined message pool.
+     * @param decodeInlineCommands if {@code true}, inline commands will be decoded.
      */
-    public RedisDecoder(int maxInlineMessageLength, RedisMessagePool messagePool) {
+    public RedisDecoder(int maxInlineMessageLength, RedisMessagePool messagePool, boolean decodeInlineCommands) {
         if (maxInlineMessageLength <= 0 || maxInlineMessageLength > RedisConstants.REDIS_MESSAGE_MAX_LENGTH) {
             throw new RedisCodecException("maxInlineMessageLength: " + maxInlineMessageLength +
                                           " (expected: <= " + RedisConstants.REDIS_MESSAGE_MAX_LENGTH + ")");
         }
         this.maxInlineMessageLength = maxInlineMessageLength;
         this.messagePool = messagePool;
+        this.decodeInlineCommands = decodeInlineCommands;
     }
 
     @Override
@@ -126,7 +146,8 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         if (!in.isReadable()) {
             return false;
         }
-        type = RedisMessageType.valueOf(in.readByte());
+
+        type = RedisMessageType.readFrom(in, decodeInlineCommands);
         state = type.isInline() ? State.DECODE_INLINE : State.DECODE_LENGTH;
         return true;
     }
@@ -233,6 +254,8 @@ public final class RedisDecoder extends ByteToMessageDecoder {
 
     private RedisMessage newInlineRedisMessage(RedisMessageType messageType, ByteBuf content) {
         switch (messageType) {
+        case INLINE_COMMAND:
+            return new InlineCommandRedisMessage(content.toString(CharsetUtil.UTF_8));
         case SIMPLE_STRING: {
             SimpleStringRedisMessage cached = messagePool.getSimpleString(content);
             return cached != null ? cached : new SimpleStringRedisMessage(content.toString(CharsetUtil.UTF_8));

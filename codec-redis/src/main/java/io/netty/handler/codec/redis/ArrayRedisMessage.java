@@ -137,10 +137,6 @@ public class ArrayRedisMessage extends AbstractReferenceCounted implements Redis
      * A predefined empty array instance for {@link ArrayRedisMessage}.
      */
     public static final ArrayRedisMessage EMPTY_INSTANCE = new ArrayRedisMessage() {
-        @Override
-        public boolean isNull() {
-            return false;
-        }
 
         @Override
         public ArrayRedisMessage retain() {

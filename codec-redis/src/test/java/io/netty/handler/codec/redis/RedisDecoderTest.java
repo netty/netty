@@ -19,6 +19,7 @@ package io.netty.handler.codec.redis;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderException;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.After;
@@ -27,15 +28,9 @@ import org.junit.Test;
 
 import java.util.List;
 
-import static io.netty.handler.codec.redis.RedisCodecTestUtil.byteBufOf;
-import static io.netty.handler.codec.redis.RedisCodecTestUtil.bytesOf;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 /**
  * Verifies the correct functionality of the {@link RedisDecoder} and {@link RedisArrayAggregator}.
@@ -46,8 +41,12 @@ public class RedisDecoderTest {
 
     @Before
     public void setup() throws Exception {
-        channel = new EmbeddedChannel(
-                new RedisDecoder(),
+        channel = newChannel(false);
+    }
+
+    private static EmbeddedChannel newChannel(boolean decodeInlineCommands) {
+        return new EmbeddedChannel(
+                new RedisDecoder(decodeInlineCommands),
                 new RedisBulkStringAggregator(),
                 new RedisArrayAggregator());
     }
@@ -64,6 +63,34 @@ public class RedisDecoderTest {
 
         RedisMessage msg = channel.readInbound();
         assertTrue(msg instanceof FullBulkStringRedisMessage);
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test(expected = DecoderException.class)
+    public void shouldNotDecodeInlineCommandByDefault() {
+        assertFalse(channel.writeInbound(byteBufOf("P")));
+        assertFalse(channel.writeInbound(byteBufOf("I")));
+        assertFalse(channel.writeInbound(byteBufOf("N")));
+        assertFalse(channel.writeInbound(byteBufOf("G")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        channel.readInbound();
+    }
+
+    @Test
+    public void shouldDecodeInlineCommand() {
+        channel = newChannel(true);
+
+        assertFalse(channel.writeInbound(byteBufOf("P")));
+        assertFalse(channel.writeInbound(byteBufOf("I")));
+        assertFalse(channel.writeInbound(byteBufOf("N")));
+        assertFalse(channel.writeInbound(byteBufOf("G")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        InlineCommandRedisMessage msg = channel.readInbound();
+
+        assertThat(msg.content(), is("PING"));
+
         ReferenceCountUtil.release(msg);
     }
 
