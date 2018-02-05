@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.redis;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -39,17 +40,10 @@ public enum RedisMessageType {
     }
 
     /**
-     * Returns prefix {@code byte} for this type or {@code null} if its length is zero.
-     */
-    public Byte value() {
-        return value;
-    }
-
-    /**
      * Returns length of this type.
      */
     public int length() {
-        return (value != null) ? RedisConstants.TYPE_LENGTH : 0;
+        return value != null ? RedisConstants.TYPE_LENGTH : 0;
     }
 
     /**
@@ -61,9 +55,32 @@ public enum RedisMessageType {
     }
 
     /**
-     * Return {@link RedisMessageType} for this type prefix {@code byte}.
+     * Determine {@link RedisMessageType} based on the type prefix {@code byte} read from given the buffer.
      */
-    public static RedisMessageType valueOf(byte value) {
+    public static RedisMessageType readFrom(ByteBuf in, boolean decodeInlineCommands) {
+        final int initialIndex = in.readerIndex();
+        final RedisMessageType type = valueOf(in.readByte());
+        if (type == INLINE_COMMAND) {
+            if (!decodeInlineCommands) {
+                throw new RedisCodecException("Decoding of inline commands is disabled");
+            }
+            // reset index to make content readable again
+            in.readerIndex(initialIndex);
+        }
+        return type;
+    }
+
+    /**
+     * Write the message type's prefix to the given buffer.
+     */
+    public void writeTo(ByteBuf out) {
+        if (value == null) {
+            return;
+        }
+        out.writeByte(value.byteValue());
+    }
+
+    private static RedisMessageType valueOf(byte value) {
         switch (value) {
         case '+':
             return SIMPLE_STRING;

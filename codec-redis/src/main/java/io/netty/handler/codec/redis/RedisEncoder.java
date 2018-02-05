@@ -103,7 +103,7 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
                                     List<Object> out) {
         ByteBuf buf = allocator.ioBuffer(type.length() + ByteBufUtil.utf8MaxBytes(content) +
                                          RedisConstants.EOL_LENGTH);
-        writeMessageType(buf, type);
+        type.writeTo(buf);
         ByteBufUtil.writeUtf8(buf, content);
         buf.writeShort(RedisConstants.EOL_SHORT);
         out.add(buf);
@@ -112,7 +112,7 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
     private void writeIntegerMessage(ByteBufAllocator allocator, IntegerRedisMessage msg, List<Object> out) {
         ByteBuf buf = allocator.ioBuffer(RedisConstants.TYPE_LENGTH + RedisConstants.LONG_MAX_LENGTH +
                                          RedisConstants.EOL_LENGTH);
-        writeMessageType(buf, RedisMessageType.INTEGER);
+        RedisMessageType.INTEGER.writeTo(buf);
         buf.writeBytes(numberToBytes(msg.value()));
         buf.writeShort(RedisConstants.EOL_SHORT);
         out.add(buf);
@@ -122,7 +122,7 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
         final ByteBuf buf = allocator.ioBuffer(RedisConstants.TYPE_LENGTH +
                                         (msg.isNull() ? RedisConstants.NULL_LENGTH :
                                                         RedisConstants.LONG_MAX_LENGTH + RedisConstants.EOL_LENGTH));
-        writeMessageType(buf, RedisMessageType.BULK_STRING);
+        RedisMessageType.BULK_STRING.writeTo(buf);
         if (msg.isNull()) {
             buf.writeShort(RedisConstants.NULL_SHORT);
         } else {
@@ -145,14 +145,14 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
         if (msg.isNull()) {
             ByteBuf buf = allocator.ioBuffer(RedisConstants.TYPE_LENGTH + RedisConstants.NULL_LENGTH +
                                              RedisConstants.EOL_LENGTH);
-            writeMessageType(buf, RedisMessageType.BULK_STRING);
+            RedisMessageType.BULK_STRING.writeTo(buf);
             buf.writeShort(RedisConstants.NULL_SHORT);
             buf.writeShort(RedisConstants.EOL_SHORT);
             out.add(buf);
         } else {
             ByteBuf headerBuf = allocator.ioBuffer(RedisConstants.TYPE_LENGTH + RedisConstants.LONG_MAX_LENGTH +
                                                    RedisConstants.EOL_LENGTH);
-            writeMessageType(headerBuf, RedisMessageType.BULK_STRING);
+            RedisMessageType.BULK_STRING.writeTo(headerBuf);
             headerBuf.writeBytes(numberToBytes(msg.content().readableBytes()));
             headerBuf.writeShort(RedisConstants.EOL_SHORT);
             out.add(headerBuf);
@@ -186,25 +186,18 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
         if (isNull) {
             final ByteBuf buf = allocator.ioBuffer(RedisConstants.TYPE_LENGTH + RedisConstants.NULL_LENGTH +
                                                    RedisConstants.EOL_LENGTH);
-            writeMessageType(buf, RedisMessageType.ARRAY_HEADER);
+            RedisMessageType.ARRAY_HEADER.writeTo(buf);
             buf.writeShort(RedisConstants.NULL_SHORT);
             buf.writeShort(RedisConstants.EOL_SHORT);
             out.add(buf);
         } else {
             final ByteBuf buf = allocator.ioBuffer(RedisConstants.TYPE_LENGTH + RedisConstants.LONG_MAX_LENGTH +
                                                    RedisConstants.EOL_LENGTH);
-            writeMessageType(buf, RedisMessageType.ARRAY_HEADER);
+            RedisMessageType.ARRAY_HEADER.writeTo(buf);
             buf.writeBytes(numberToBytes(length));
             buf.writeShort(RedisConstants.EOL_SHORT);
             out.add(buf);
         }
-    }
-
-    private static void writeMessageType(ByteBuf buf, RedisMessageType type) {
-        if (type.length() == 0) {
-            return;
-        }
-        buf.writeByte(type.value().byteValue());
     }
 
     private byte[] numberToBytes(long value) {
