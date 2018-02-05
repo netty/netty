@@ -16,6 +16,7 @@
 
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.ObjectCleaner;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -24,7 +25,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 public class FastThreadLocalTest {
     @Before
@@ -45,7 +47,7 @@ public class FastThreadLocalTest {
 
         // Initialize a thread-local variable.
         assertThat(var.get(), is(nullValue()));
-        assertThat(FastThreadLocal.size(), is(1));
+        assertThat(FastThreadLocal.size(), is(2));
 
         // And then remove it.
         FastThreadLocal.removeAll();
@@ -74,6 +76,65 @@ public class FastThreadLocalTest {
         if (t != null) {
             throw t;
         }
+    }
+
+    @Test
+    public void testMultipleSetRemove() throws Exception {
+        final FastThreadLocal<String> threadLocal = new FastThreadLocal<String>();
+        final Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                threadLocal.set("1");
+                threadLocal.remove();
+                threadLocal.set("2");
+                threadLocal.remove();
+            }
+        };
+
+        final int sizeWhenStart = ObjectCleaner.getLiveSetCount();
+        Thread thread = new Thread(runnable);
+        thread.start();
+        thread.join();
+
+        assertEquals(1, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
+
+        Thread thread2 = new Thread(runnable);
+        thread2.start();
+        thread2.join();
+
+        assertEquals(2, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
+    }
+
+    @Test
+    public void testMultipleSetRemove_multipleThreadLocal() throws Exception {
+        final FastThreadLocal<String> threadLocal = new FastThreadLocal<String>();
+        final FastThreadLocal<String> threadLocal2 = new FastThreadLocal<String>();
+        final Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                threadLocal.set("1");
+                threadLocal.remove();
+                threadLocal.set("2");
+                threadLocal.remove();
+                threadLocal2.set("1");
+                threadLocal2.remove();
+                threadLocal2.set("2");
+                threadLocal2.remove();
+            }
+        };
+
+        final int sizeWhenStart = ObjectCleaner.getLiveSetCount();
+        Thread thread = new Thread(runnable);
+        thread.start();
+        thread.join();
+
+        assertEquals(2, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
+
+        Thread thread2 = new Thread(runnable);
+        thread2.start();
+        thread2.join();
+
+        assertEquals(4, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
     }
 
     @Test(timeout = 4000)
