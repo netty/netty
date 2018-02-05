@@ -147,11 +147,11 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param ctx the context to use for writing.
      * @param ack indicates whether this is an ack of a PING frame previously received from the
      *            remote endpoint.
-     * @param data the payload of the frame. This will be released by this method.
+     * @param data the payload of the frame.
      * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data,
+    ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, long data,
             ChannelPromise promise);
 
     /**

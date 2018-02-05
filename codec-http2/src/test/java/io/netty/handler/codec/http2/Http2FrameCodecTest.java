@@ -615,24 +615,20 @@ public class Http2FrameCodecTest {
 
     @Test
     public void receivePing() throws Http2Exception {
-        ByteBuf data = Unpooled.buffer(8).writeLong(12345);
-        frameListener.onPingRead(http2HandlerCtx, data);
+        frameListener.onPingRead(http2HandlerCtx, 12345L);
 
         Http2PingFrame pingFrame = inboundHandler.readInbound();
         assertNotNull(pingFrame);
 
-        assertEquals(data, pingFrame.content());
+        assertEquals(12345, pingFrame.content());
         assertFalse(pingFrame.ack());
-        pingFrame.release();
-        data.release();
     }
 
     @Test
     public void sendPing() {
-        ByteBuf data = Unpooled.buffer(8).writeLong(12345);
-        channel.writeAndFlush(new DefaultHttp2PingFrame(data));
+        channel.writeAndFlush(new DefaultHttp2PingFrame(12345));
 
-        verify(frameWriter).writePing(eq(http2HandlerCtx), eq(false), eq(data), anyChannelPromise());
+        verify(frameWriter).writePing(eq(http2HandlerCtx), eq(false), eq(12345L), anyChannelPromise());
     }
 
     @Test

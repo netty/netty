@@ -45,7 +45,6 @@ import java.util.List;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
@@ -639,15 +638,15 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void pingWriteAfterGoAwayShouldSucceed() throws Exception {
         ChannelPromise promise = newPromise();
         goAwayReceived(0);
-        encoder.writePing(ctx, false, emptyPingBuf(), promise);
-        verify(writer).writePing(eq(ctx), eq(false), eq(emptyPingBuf()), eq(promise));
+        encoder.writePing(ctx, false, 0L, promise);
+        verify(writer).writePing(eq(ctx), eq(false), eq(0L), eq(promise));
     }
 
     @Test
     public void pingWriteShouldSucceed() throws Exception {
         ChannelPromise promise = newPromise();
-        encoder.writePing(ctx, false, emptyPingBuf(), promise);
-        verify(writer).writePing(eq(ctx), eq(false), eq(emptyPingBuf()), eq(promise));
+        encoder.writePing(ctx, false, 0L, promise);
+        verify(writer).writePing(eq(ctx), eq(false), eq(0L), eq(promise));
     }
 
     @Test

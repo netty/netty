@@ -90,7 +90,7 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
 
     @Override
     public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack,
-            ByteBuf data, ChannelPromise promise) {
+            long data, ChannelPromise promise) {
         if (ack) {
             logger.logPingAck(OUTBOUND, ctx, data);
         } else {
