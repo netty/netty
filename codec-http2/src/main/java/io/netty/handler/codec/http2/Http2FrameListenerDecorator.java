@@ -70,12 +70,12 @@ public class Http2FrameListenerDecorator implements Http2FrameListener {
     }
 
     @Override
-    public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+    public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
         listener.onPingRead(ctx, data);
     }
 
     @Override
-    public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+    public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
         listener.onPingAckRead(ctx, data);
     }
 
