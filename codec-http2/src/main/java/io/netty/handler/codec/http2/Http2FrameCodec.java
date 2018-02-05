@@ -499,13 +499,13 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
 
         @Override
-        public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) {
-            onHttp2Frame(ctx, new DefaultHttp2PingFrame(data, false).retain());
+        public void onPingRead(ChannelHandlerContext ctx, long data) {
+            onHttp2Frame(ctx, new DefaultHttp2PingFrame(data, false));
         }
 
         @Override
-        public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) {
-            onHttp2Frame(ctx, new DefaultHttp2PingFrame(data, true).retain());
+        public void onPingAckRead(ChannelHandlerContext ctx, long data) {
+            onHttp2Frame(ctx, new DefaultHttp2PingFrame(data, true));
         }
 
         @Override
