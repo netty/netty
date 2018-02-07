@@ -15,15 +15,48 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.Unpooled;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 
 public class DiskFileUploadTest {
 
     @Test
-    public final void testDiskFileUploadEquals() {
+    public void testDiskFileUploadEquals() {
         DiskFileUpload f2 =
                 new DiskFileUpload("d1", "d1", "application/json", null, null, 100);
         Assert.assertEquals(f2, f2);
+    }
+
+    @Test
+    public void testEmptyBufferCaseShouldBeIdempotent() throws IOException {
+        DiskFileUpload fileUpload =
+                new DiskFileUpload("d1", "d1", "application/json", null, null, 100);
+        //ensure https://github.com/netty/netty/issues/6418 works
+        fileUpload.setContent(Unpooled.EMPTY_BUFFER);
+        fileUpload.setContent(Unpooled.EMPTY_BUFFER);
+        fileUpload.setContent(Unpooled.EMPTY_BUFFER);
+
+        Assert.assertTrue("empty buffer should create file", fileUpload.getFile().exists());
+    }
+
+    @Test
+    public void testWritingToFile() throws IOException {
+        DiskFileUpload fileUpload =
+                new DiskFileUpload("d1", "d1", "application/json", null, null, 100);
+        String dataToWrite = "sample";
+        fileUpload.setContent(Unpooled.wrappedBuffer(dataToWrite.getBytes()));
+
+        Assert.assertEquals(readDataFromFile(fileUpload.getFile()), dataToWrite);
+    }
+
+    private String readDataFromFile(File file) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        return br.readLine();
     }
 }
