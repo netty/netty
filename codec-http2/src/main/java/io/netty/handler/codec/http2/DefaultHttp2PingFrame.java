@@ -55,6 +55,7 @@ public class DefaultHttp2PingFrame implements Http2PingFrame {
         return content;
     }
 
+    @Override
     public boolean equals(Object o) {
         if (!(o instanceof Http2PingFrame)) {
             return false;
@@ -69,7 +70,8 @@ public class DefaultHttp2PingFrame implements Http2PingFrame {
         hash = hash * 31 + (ack ? 1 : 0);
         return hash;
     }
-   @Override
+
+    @Override
     public String toString() {
         return StringUtil.simpleClassName(this) + "(content=" + content + ", ack=" + ack + ')';
     }

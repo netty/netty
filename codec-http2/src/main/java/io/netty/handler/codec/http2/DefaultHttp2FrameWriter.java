@@ -334,11 +334,10 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     @Override
     public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, long data, ChannelPromise promise) {
         Http2Flags flags = ack ? new Http2Flags().ack(true) : new Http2Flags();
-        int payloadLength = 8;
-        ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH + payloadLength);
+        ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH + PING_FRAME_PAYLOAD_LENGTH);
         // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
         // in the catch block.
-        writeFrameHeaderInternal(buf, payloadLength, PING, flags, 0);
+        writeFrameHeaderInternal(buf, PING_FRAME_PAYLOAD_LENGTH, PING, flags, 0);
         buf.writeLong(data);
         return ctx.write(buf, promise);
     }
