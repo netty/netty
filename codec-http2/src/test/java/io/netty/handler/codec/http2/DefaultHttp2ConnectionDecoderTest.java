@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
@@ -714,15 +713,15 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void pingReadWithAckShouldNotifyListener() throws Exception {
-        decode().onPingAckRead(ctx, emptyPingBuf());
-        verify(listener).onPingAckRead(eq(ctx), eq(emptyPingBuf()));
+        decode().onPingAckRead(ctx, 0L);
+        verify(listener).onPingAckRead(eq(ctx), eq(0L));
     }
 
     @Test
     public void pingReadShouldReplyWithAck() throws Exception {
-        decode().onPingRead(ctx, emptyPingBuf());
-        verify(encoder).writePing(eq(ctx), eq(true), eq(emptyPingBuf()), eq(promise));
-        verify(listener, never()).onPingAckRead(eq(ctx), any(ByteBuf.class));
+        decode().onPingRead(ctx, 0L);
+        verify(encoder).writePing(eq(ctx), eq(true), eq(0L), eq(promise));
+        verify(listener, never()).onPingAckRead(eq(ctx), any(long.class));
     }
 
     @Test

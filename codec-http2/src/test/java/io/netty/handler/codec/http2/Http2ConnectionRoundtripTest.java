@@ -57,7 +57,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
-import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.not;
@@ -871,24 +870,23 @@ public class Http2ConnectionRoundtripTest {
     @Test
     public void stressTest() throws Exception {
         final Http2Headers headers = dummyHeaders();
-        final String pingMsg = "12345678";
         int length = 10;
         final ByteBuf data = randomBytes(length);
         final String dataAsHex = ByteBufUtil.hexDump(data);
-        final ByteBuf pingData = Unpooled.copiedBuffer(pingMsg, UTF_8);
+        final long pingData = 8;
         final int numStreams = 2000;
 
         // Collect all the ping buffers as we receive them at the server.
-        final String[] receivedPings = new String[numStreams];
+        final long[] receivedPings = new long[numStreams];
         doAnswer(new Answer<Void>() {
             int nextIndex;
 
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
-                receivedPings[nextIndex++] = ((ByteBuf) in.getArguments()[1]).toString(UTF_8);
+                receivedPings[nextIndex++] = (Long) in.getArguments()[1];
                 return null;
             }
-        }).when(serverListener).onPingRead(any(ChannelHandlerContext.class), any(ByteBuf.class));
+        }).when(serverListener).onPingRead(any(ChannelHandlerContext.class), any(Long.class));
 
         // Collect all the data buffers as we receive them at the server.
         final StringBuilder[] receivedData = new StringBuilder[numStreams];
@@ -921,7 +919,7 @@ public class Http2ConnectionRoundtripTest {
                         // Send a bunch of data on each stream.
                         http2Client.encoder().writeHeaders(ctx(), streamId, headers, 0, (short) 16,
                                 false, 0, false, newPromise());
-                        http2Client.encoder().writePing(ctx(), false, pingData.retainedSlice(),
+                        http2Client.encoder().writePing(ctx(), false, pingData,
                                 newPromise());
                         http2Client.encoder().writeData(ctx(), streamId, data.retainedSlice(), 0,
                                                         false, newPromise());
@@ -940,20 +938,19 @@ public class Http2ConnectionRoundtripTest {
             verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
                     eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(true));
             verify(serverListener, times(numStreams)).onPingRead(any(ChannelHandlerContext.class),
-                    any(ByteBuf.class));
+                    any(long.class));
             verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class),
                     anyInt(), any(ByteBuf.class), eq(0), eq(true));
             for (StringBuilder builder : receivedData) {
                 assertEquals(dataAsHex, builder.toString());
             }
-            for (String receivedPing : receivedPings) {
-                assertEquals(pingMsg, receivedPing);
+            for (long receivedPing : receivedPings) {
+                assertEquals(pingData, receivedPing);
             }
         } finally {
             // Don't wait for server to close streams
             http2Client.gracefulShutdownTimeoutMillis(0);
             data.release();
-            pingData.release();
         }
     }
 

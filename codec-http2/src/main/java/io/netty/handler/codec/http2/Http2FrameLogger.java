@@ -98,14 +98,14 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
         logger.log(level, "{} {} SETTINGS: ack=false settings={}", ctx.channel(), direction.name(), settings);
     }
 
-    public void logPing(Direction direction, ChannelHandlerContext ctx, ByteBuf data) {
-        logger.log(level, "{} {} PING: ack=false length={} bytes={}", ctx.channel(),
-                direction.name(), data.readableBytes(), toString(data));
+    public void logPing(Direction direction, ChannelHandlerContext ctx, long data) {
+        logger.log(level, "{} {} PING: ack=false bytes={}", ctx.channel(),
+                direction.name(), data);
     }
 
-    public void logPingAck(Direction direction, ChannelHandlerContext ctx, ByteBuf data) {
-        logger.log(level, "{} {} PING: ack=true length={} bytes={}", ctx.channel(),
-                direction.name(), data.readableBytes(), toString(data));
+    public void logPingAck(Direction direction, ChannelHandlerContext ctx, long data) {
+        logger.log(level, "{} {} PING: ack=true bytes={}", ctx.channel(),
+                direction.name(), data);
     }
 
     public void logPushPromise(Direction direction, ChannelHandlerContext ctx, int streamId, int promisedStreamId,

@@ -332,36 +332,14 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data, ChannelPromise promise) {
-        final SimpleChannelPromiseAggregator promiseAggregator =
-                new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
-        try {
-            verifyPingPayload(data);
-            Http2Flags flags = ack ? new Http2Flags().ack(true) : new Http2Flags();
-            int payloadLength = data.readableBytes();
-            ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
-            // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
-            // in the catch block.
-            writeFrameHeaderInternal(buf, payloadLength, PING, flags, 0);
-            ctx.write(buf, promiseAggregator.newPromise());
-        } catch (Throwable t) {
-            try {
-                data.release();
-            } finally {
-                promiseAggregator.setFailure(t);
-                promiseAggregator.doneAllocatingPromises();
-            }
-            return promiseAggregator;
-        }
-
-        try {
-            // Write the debug data.
-            ctx.write(data, promiseAggregator.newPromise());
-        } catch (Throwable t) {
-            promiseAggregator.setFailure(t);
-        }
-
-        return promiseAggregator.doneAllocatingPromises();
+    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, long data, ChannelPromise promise) {
+        Http2Flags flags = ack ? new Http2Flags().ack(true) : new Http2Flags();
+        ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH + PING_FRAME_PAYLOAD_LENGTH);
+        // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
+        // in the catch block.
+        writeFrameHeaderInternal(buf, PING_FRAME_PAYLOAD_LENGTH, PING, flags, 0);
+        buf.writeLong(data);
+        return ctx.write(buf, promise);
     }
 
     @Override

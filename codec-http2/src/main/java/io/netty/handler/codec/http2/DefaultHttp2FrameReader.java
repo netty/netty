@@ -266,7 +266,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 readPushPromiseFrame(ctx, payload, listener);
                 break;
             case PING:
-                readPingFrame(ctx, payload, listener);
+                readPingFrame(ctx, payload.readLong(), listener);
                 break;
             case GO_AWAY:
                 readGoAwayFrame(ctx, payload, listener);
@@ -574,9 +574,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         resetHeadersContinuationIfEnd(flags.endOfHeaders());
     }
 
-    private void readPingFrame(ChannelHandlerContext ctx, ByteBuf payload,
+    private void readPingFrame(ChannelHandlerContext ctx, long data,
             Http2FrameListener listener) throws Http2Exception {
-        ByteBuf data = payload.readSlice(payload.readableBytes());
         if (flags.ack()) {
             listener.onPingAckRead(ctx, data);
         } else {

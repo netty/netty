@@ -58,11 +58,11 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
     }
 
     @Override
-    public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+    public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
     }
 
     @Override
-    public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+    public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
     }
 
     @Override

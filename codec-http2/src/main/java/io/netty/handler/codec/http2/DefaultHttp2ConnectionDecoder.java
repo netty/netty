@@ -424,16 +424,16 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
-        public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+        public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
             // Send an ack back to the remote client.
             // Need to retain the buffer here since it will be released after the write completes.
-            encoder.writePing(ctx, true, data.retainedSlice(), ctx.newPromise());
+            encoder.writePing(ctx, true, data, ctx.newPromise());
 
             listener.onPingRead(ctx, data);
         }
 
         @Override
-        public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+        public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
             listener.onPingAckRead(ctx, data);
         }
 
@@ -636,13 +636,13 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
-        public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+        public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
             verifyPrefaceReceived();
             internalFrameListener.onPingRead(ctx, data);
         }
 
         @Override
-        public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+        public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
             verifyPrefaceReceived();
             internalFrameListener.onPingAckRead(ctx, data);
         }
