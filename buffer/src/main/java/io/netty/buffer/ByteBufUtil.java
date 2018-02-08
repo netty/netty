@@ -439,6 +439,30 @@ public final class ByteBufUtil {
         }
     }
 
+    /**
+     * Reads a string from the given {@link ByteBuf} in an efficient manner.
+     * @param buffer The buffer to read from.
+     * @param length The amount of bytes to be read from the buffer.
+     * @param charset The charset of the string to be returned.
+     * @return {@link String} from the given {@link ByteBuf} with the provided length and charset.
+     */
+    public static String readString(ByteBuf buffer, int length, Charset charset) {
+        if (buffer.isDirect()) {
+            final String result = buffer.toString(buffer.readerIndex(), length, charset);
+            buffer.skipBytes(length);
+            return result;
+        } else if (buffer.hasArray()) {
+            final String result = new String(buffer.array(), buffer.arrayOffset() + buffer.readerIndex(), length,
+                    charset);
+            buffer.skipBytes(length);
+            return result;
+        } else {
+            final byte[] array = new byte[length];
+            buffer.readBytes(array);
+            return new String(array, charset);
+        }
+    }
+
     private static int firstIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
         fromIndex = Math.max(fromIndex, 0);
         if (fromIndex >= toIndex || buffer.capacity() == 0) {
