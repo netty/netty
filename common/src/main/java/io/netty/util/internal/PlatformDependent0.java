@@ -786,19 +786,19 @@ final class PlatformDependent0 {
     }
 
     private static boolean isAndroid0() {
-        boolean android;
-        try {
-            Class.forName("android.app.Application", false, getSystemClassLoader());
-            android = true;
-        } catch (Throwable ignored) {
-            // Failed to load the class uniquely available in Android.
-            android = false;
-        }
+        // Idea: Sometimes java binaries include Android classes on the classpath, even if it isn't actually Android.
+        // Rather than check if certain classes are present, just check the VM, which is tied to the JDK.
 
-        if (android) {
+        // Optional improvement: check if `android.os.Build.VERSION` is >= 24. On later versions of Android, the
+        // OpenJDK is used, which means `Unsafe` will actually work as expected.
+
+        // Android sets this property to Dalvik, regardless of whether it actually is.
+        String vmName = SystemPropertyUtil.get("java.vm.name");
+        boolean isAndroid = vmName.equals("Dalvik");
+        if (isAndroid) {
             logger.debug("Platform: Android");
         }
-        return android;
+        return isAndroid;
     }
 
     private static boolean explicitTryReflectionSetAccessible0() {
