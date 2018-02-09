@@ -794,7 +794,7 @@ final class PlatformDependent0 {
 
         // Android sets this property to Dalvik, regardless of whether it actually is.
         String vmName = SystemPropertyUtil.get("java.vm.name");
-        boolean isAndroid = vmName.equals("Dalvik");
+        boolean isAndroid = "Dalvik".equals(vmName);
         if (isAndroid) {
             logger.debug("Platform: Android");
         }
