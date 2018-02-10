@@ -118,14 +118,14 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             }
             FileOutputStream outputStream = new FileOutputStream(file);
             try {
-                FileChannel localfileChannel = outputStream.getChannel();
+                FileChannel localFileChannel = outputStream.getChannel();
                 ByteBuffer byteBuffer = buffer.nioBuffer();
                 int written = 0;
                 while (written < size) {
-                    written += localfileChannel.write(byteBuffer);
+                    written += localFileChannel.write(byteBuffer);
                 }
                 buffer.readerIndex(buffer.readerIndex() + written);
-                localfileChannel.force(false);
+                localFileChannel.force(false);
             } finally {
                 outputStream.close();
             }
