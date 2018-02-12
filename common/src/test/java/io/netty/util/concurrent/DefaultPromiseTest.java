@@ -16,6 +16,7 @@
 
 package io.netty.util.concurrent;
 
+import io.netty.util.Signal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.BeforeClass;
@@ -239,6 +240,22 @@ public class DefaultPromiseTest {
                 executor.shutdownGracefully();
             }
         }
+    }
+
+    @Test
+    public void signalUncancellableCompletionValue() {
+        final Promise<Signal> promise = new DefaultPromise<Signal>(ImmediateEventExecutor.INSTANCE);
+        promise.setSuccess(Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE"));
+        assertTrue(promise.isDone());
+        assertTrue(promise.isSuccess());
+    }
+
+    @Test
+    public void signalSuccessCompletionValue() {
+        final Promise<Signal> promise = new DefaultPromise<Signal>(ImmediateEventExecutor.INSTANCE);
+        promise.setSuccess(Signal.valueOf(DefaultPromise.class, "SUCCESS"));
+        assertTrue(promise.isDone());
+        assertTrue(promise.isSuccess());
     }
 
     private static void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,
