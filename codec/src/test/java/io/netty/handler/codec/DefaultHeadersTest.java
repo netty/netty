@@ -41,7 +41,11 @@ public class DefaultHeadersTest {
     private static final class TestDefaultHeaders extends
             DefaultHeaders<CharSequence, CharSequence, TestDefaultHeaders> {
         public TestDefaultHeaders() {
-            super(CharSequenceValueConverter.INSTANCE);
+            this(CharSequenceValueConverter.INSTANCE);
+        }
+
+        public TestDefaultHeaders(ValueConverter<CharSequence> converter) {
+            super(converter);
         }
     }
 
@@ -508,5 +512,132 @@ public class DefaultHeadersTest {
 
         headers = newInstance();
         assertEquals("TestDefaultHeaders[]", headers.toString());
+    }
+
+    @Test
+    public void testNotThrowWhenConvertFails() {
+        TestDefaultHeaders headers = new TestDefaultHeaders(new ValueConverter<CharSequence>() {
+            @Override
+            public CharSequence convertObject(Object value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public CharSequence convertBoolean(boolean value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public boolean convertToBoolean(CharSequence value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public CharSequence convertByte(byte value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public byte convertToByte(CharSequence value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public CharSequence convertChar(char value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public char convertToChar(CharSequence value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public CharSequence convertShort(short value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public short convertToShort(CharSequence value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public CharSequence convertInt(int value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public int convertToInt(CharSequence value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public CharSequence convertLong(long value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public long convertToLong(CharSequence value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public CharSequence convertTimeMillis(long value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public long convertToTimeMillis(CharSequence value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public CharSequence convertFloat(float value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public float convertToFloat(CharSequence value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public CharSequence convertDouble(double value) {
+                throw new IllegalArgumentException();
+            }
+
+            @Override
+            public double convertToDouble(CharSequence value) {
+                throw new IllegalArgumentException();
+            }
+        });
+        headers.set("name1", "");
+        assertNull(headers.getInt("name1"));
+        assertEquals(1, headers.getInt("name1", 1));
+
+        assertNull(headers.getBoolean(""));
+        assertFalse(headers.getBoolean("name1", false));
+
+        assertNull(headers.getByte("name1"));
+        assertEquals(1, headers.getByte("name1", (byte) 1));
+
+        assertNull(headers.getChar("name"));
+        assertEquals('n', headers.getChar("name1", 'n'));
+
+        assertNull(headers.getDouble("name"));
+        assertEquals(1, headers.getDouble("name1", 1), 0);
+
+        assertNull(headers.getFloat("name"));
+        assertEquals(Float.MAX_VALUE, headers.getFloat("name1", Float.MAX_VALUE), 0);
+
+        assertNull(headers.getLong("name"));
+        assertEquals(Long.MAX_VALUE, headers.getLong("name1", Long.MAX_VALUE));
+
+        assertNull(headers.getShort("name"));
+        assertEquals(Short.MAX_VALUE, headers.getShort("name1", Short.MAX_VALUE));
+
+        assertNull(headers.getTimeMillis("name"));
+        assertEquals(Long.MAX_VALUE, headers.getTimeMillis("name1", Long.MAX_VALUE));
     }
 }
