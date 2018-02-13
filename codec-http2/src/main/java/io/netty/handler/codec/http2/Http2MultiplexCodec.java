@@ -66,7 +66,8 @@ import static java.lang.Math.min;
  * communication, closing of the channel is delayed until any inbound queue is drained with {@link
  * Channel#read()}, which follows the default behavior of channels in Netty. Applications are
  * free to close the channel in response to such events if they don't have use for any queued
- * messages.
+ * messages. Any connection level events like {@link Http2SettingsFrame} and {@link Http2GoAwayFrame}
+ * will be processed internally and also propagated down the pipeline for other handlers to act on.
  *
  * <p>Outbound streams are supported via the {@link Http2StreamChannelBootstrap}.
  *
@@ -164,8 +165,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     // Need to be volatile as accessed from within the DefaultHttp2StreamChannel in a multi-threaded fashion.
     volatile ChannelHandlerContext ctx;
 
-    Http2MultiplexCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings,
-                    ChannelHandler inboundStreamHandler) {
+    Http2MultiplexCodec(Http2ConnectionEncoder encoder,
+                        Http2ConnectionDecoder decoder,
+                        Http2Settings initialSettings,
+                        ChannelHandler inboundStreamHandler) {
         super(encoder, decoder, initialSettings);
         this.inboundStreamHandler = inboundStreamHandler;
     }
@@ -218,11 +221,15 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             onHttp2StreamFrame(((Http2MultiplexCodecStream) streamFrame.stream()).channel, streamFrame);
         } else if (frame instanceof Http2GoAwayFrame) {
             onHttp2GoAwayFrame(ctx, (Http2GoAwayFrame) frame);
+            // Allow other handlers to act on GOAWAY frame
+            ctx.fireChannelRead(frame);
         } else if (frame instanceof Http2SettingsFrame) {
             Http2Settings settings = ((Http2SettingsFrame) frame).settings();
             if (settings.initialWindowSize() != null) {
                 initialOutboundStreamWindow = settings.initialWindowSize();
             }
+            // Allow other handlers to act on SETTINGS frame
+            ctx.fireChannelRead(frame);
         } else {
             // Send any other frames down the pipeline
             ctx.fireChannelRead(frame);

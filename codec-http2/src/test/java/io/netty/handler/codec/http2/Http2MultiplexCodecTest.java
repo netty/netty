@@ -41,11 +41,13 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import static io.netty.util.ReferenceCountUtil.release;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -175,11 +177,15 @@ public class Http2MultiplexCodecTest {
 
     @Test
     public void unhandledHttp2FramesShouldBePropagated() {
-        Http2PingFrame decodedFrame = new DefaultHttp2PingFrame(0);
+        assertThat(parentChannel.readInbound(), instanceOf(Http2SettingsFrame.class));
 
-        codec.onHttp2Frame(decodedFrame);
-        Http2PingFrame receivedPing = parentChannel.readInbound();
-        assertSame(receivedPing, decodedFrame);
+        Http2PingFrame pingFrame = new DefaultHttp2PingFrame(0);
+        codec.onHttp2Frame(pingFrame);
+        assertSame(parentChannel.readInbound(), pingFrame);
+
+        DefaultHttp2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(1);
+        codec.onHttp2Frame(goAwayFrame);
+        assertSame(parentChannel.readInbound(), goAwayFrame);
     }
 
     @Test
@@ -619,8 +625,10 @@ public class Http2MultiplexCodecTest {
      */
     private final class TestableHttp2MultiplexCodec extends Http2MultiplexCodec {
 
-        public TestableHttp2MultiplexCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder,
-                                           Http2Settings initialSettings, ChannelHandler inboundStreamHandler) {
+        public TestableHttp2MultiplexCodec(Http2ConnectionEncoder encoder,
+                                           Http2ConnectionDecoder decoder,
+                                           Http2Settings initialSettings,
+                                           ChannelHandler inboundStreamHandler) {
             super(encoder, decoder, initialSettings, inboundStreamHandler);
         }
 
@@ -682,6 +690,7 @@ public class Http2MultiplexCodecTest {
     }
 
     private final class TestableHttp2MultiplexCodecBuilder extends Http2MultiplexCodecBuilder {
+
         TestableHttp2MultiplexCodecBuilder(boolean server, ChannelHandler childHandler) {
             super(server, childHandler);
         }
