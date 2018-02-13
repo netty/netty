@@ -15,6 +15,15 @@
  */
 package io.netty.channel.group;
 
+import java.util.AbstractSet;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
@@ -26,15 +35,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-
-import java.util.AbstractSet;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The default {@link ChannelGroup} implementation.
@@ -126,16 +126,12 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public boolean contains(Object o) {
-        if (o instanceof Channel) {
-            Channel c = (Channel) o;
-            if (o instanceof ServerChannel) {
-                return serverChannels.containsValue(c);
-            } else {
-                return nonServerChannels.containsValue(c);
-            }
-        } else {
-            return false;
+        if(o instanceof ServerChannel){
+            return serverChannels.containsKey(((ServerChannel)o).id());
+        }else if(o instanceof Channel){
+            return nonServerChannels.containsKey(((Channel)o).id());
         }
+        return false;
     }
 
     @Override
