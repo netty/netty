@@ -231,7 +231,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
         ByteBuf settingsFrame = settingsFrameBuf();
 
-        assertFalse(channel.writeInbound(settingsFrame));
+        assertTrue(channel.writeInbound(settingsFrame));
 
         assertEquals(1, userEvents.size());
         assertTrue(userEvents.get(0) instanceof PriorKnowledgeUpgradeEvent);
