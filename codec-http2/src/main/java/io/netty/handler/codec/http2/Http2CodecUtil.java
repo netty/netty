@@ -162,7 +162,7 @@ public final class Http2CodecUtil {
     }
 
     /**
-     * Returns a buffer containing the the {@link #CONNECTION_PREFACE}.
+     * Returns a buffer containing the {@link #CONNECTION_PREFACE}.
      */
     public static ByteBuf connectionPrefaceBuf() {
         // Return a duplicate so that modifications to the reader index will not affect the original buffer.
