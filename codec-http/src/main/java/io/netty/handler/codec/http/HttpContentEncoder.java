@@ -136,7 +136,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 }
 
                 if (isFull) {
-                    // Pass through the full response with empty content and continue waiting for the the next resp.
+                    // Pass through the full response with empty content and continue waiting for the next resp.
                     if (!((ByteBufHolder) res).content().isReadable()) {
                         out.add(ReferenceCountUtil.retain(res));
                         break;

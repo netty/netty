@@ -456,7 +456,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         /**
-         * Returns the the head of the pending queue, or {@code null} if empty.
+         * Returns the head of the pending queue, or {@code null} if empty.
          */
         private FlowControlled peek() {
             return pendingWriteQueue.peek();

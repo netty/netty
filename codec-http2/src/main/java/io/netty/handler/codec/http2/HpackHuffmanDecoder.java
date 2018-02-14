@@ -168,8 +168,8 @@ final class HpackHuffmanDecoder {
          * currentBits represents how many of the low order bits of current are actually valid.
          * currentBits will vary between 0 and 15.
          *
-         * symbolBits is the number of bits of the the symbol being decoded, *including* all those
-         * of the parent nodes. symbolBits tells how far down the tree we are. For example, when
+         * symbolBits is the number of bits of the symbol being decoded, *including* all those of
+         * the parent nodes. symbolBits tells how far down the tree we are. For example, when
          * decoding the invalid sequence {0xff, 0xff}, currentBits will be 0, but symbolBits will be
          * 16. This is used to know if buf ended early (before consuming a whole symbol) or if
          * there is too much padding.
