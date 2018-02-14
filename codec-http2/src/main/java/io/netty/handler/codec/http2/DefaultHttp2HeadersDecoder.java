@@ -123,7 +123,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
             throw e;
         } catch (Throwable e) {
             // Default handler for any other types of errors that may have occurred. For example,
-            // the the Header builder throws IllegalArgumentException if the key or value was invalid
+            // the Header builder throws IllegalArgumentException if the key or value was invalid
             // for any reason (e.g. the key was an invalid pseudo-header).
             throw connectionError(COMPRESSION_ERROR, e, e.getMessage());
         }

@@ -96,7 +96,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     /**
      * Return the {@link Runnable} which is ready to be executed with the given {@code nanoTime}.
-     * You should use {@link #nanoTime()} to retrieve the the correct {@code nanoTime}.
+     * You should use {@link #nanoTime()} to retrieve the correct {@code nanoTime}.
      */
     protected final Runnable pollScheduledTask(long nanoTime) {
         assert inEventLoop();
