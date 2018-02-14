@@ -442,6 +442,24 @@ public class DefaultHeadersTest {
     }
 
     @Test
+    public void testEntryEquals() {
+        Map.Entry<CharSequence, CharSequence> same1 = newInstance().add("name", "value").iterator().next();
+        Map.Entry<CharSequence, CharSequence> same2 = newInstance().add("name", "value").iterator().next();
+        assertEquals(same1, same2);
+        assertEquals(same1.hashCode(), same2.hashCode());
+
+        Map.Entry<CharSequence, CharSequence> nameDifferent1 = newInstance().add("name1", "value").iterator().next();
+        Map.Entry<CharSequence, CharSequence> nameDifferent2 = newInstance().add("name2", "value").iterator().next();
+        assertNotEquals(nameDifferent1, nameDifferent2);
+        assertNotEquals(nameDifferent1.hashCode(), nameDifferent2.hashCode());
+
+        Map.Entry<CharSequence, CharSequence> valueDifferent1 = newInstance().add("name", "value1").iterator().next();
+        Map.Entry<CharSequence, CharSequence> valueDifferent2 = newInstance().add("name", "value2").iterator().next();
+        assertNotEquals(valueDifferent1, valueDifferent2);
+        assertNotEquals(valueDifferent1.hashCode(), valueDifferent2.hashCode());
+    }
+
+    @Test
     public void getAllReturnsEmptyListForUnknownName() {
         TestDefaultHeaders headers = newInstance();
         assertEquals(0, headers.getAll(of("noname")).size());
