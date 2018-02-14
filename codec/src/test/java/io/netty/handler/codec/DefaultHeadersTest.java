@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.util.AsciiString;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -639,5 +640,41 @@ public class DefaultHeadersTest {
 
         assertNull(headers.getTimeMillis("name"));
         assertEquals(Long.MAX_VALUE, headers.getTimeMillis("name1", Long.MAX_VALUE));
+    }
+
+    @Test
+    public void testGetBooleanInvalidValue() {
+        TestDefaultHeaders headers = newInstance();
+        headers.set("name1", "invalid");
+        headers.set("name2", new AsciiString("invalid"));
+        headers.set("name3", new StringBuilder("invalid"));
+
+        assertFalse(headers.getBoolean("name1", false));
+        assertFalse(headers.getBoolean("name2", false));
+        assertFalse(headers.getBoolean("name3", false));
+    }
+
+    @Test
+    public void testGetBooleanFalseValue() {
+        TestDefaultHeaders headers = newInstance();
+        headers.set("name1", "false");
+        headers.set("name2", new AsciiString("false"));
+        headers.set("name3", new StringBuilder("false"));
+
+        assertFalse(headers.getBoolean("name1", true));
+        assertFalse(headers.getBoolean("name2", true));
+        assertFalse(headers.getBoolean("name3", true));
+    }
+
+    @Test
+    public void testGetBooleanTrueValue() {
+        TestDefaultHeaders headers = newInstance();
+        headers.set("name1", "true");
+        headers.set("name2", new AsciiString("true"));
+        headers.set("name3", new StringBuilder("true"));
+
+        assertTrue(headers.getBoolean("name1", false));
+        assertTrue(headers.getBoolean("name2", false));
+        assertTrue(headers.getBoolean("name3", false));
     }
 }
