@@ -195,7 +195,7 @@ public class SearchDomainTest {
         resolved = assertResolve(resolver, "host2");
         assertEquals(store.getAddress("host2.bar.com"), resolved);
 
-        // "host3" resolves via the the "foo.com" search path as it is the first one
+        // "host3" resolves via the "foo.com" search path as it is the first one
         resolved = assertResolve(resolver, "host3");
         assertEquals(store.getAddress("host3.foo.com"), resolved);
 

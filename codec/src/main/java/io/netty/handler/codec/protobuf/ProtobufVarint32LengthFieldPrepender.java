@@ -23,7 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
 /**
- * An encoder that prepends the the Google Protocol Buffers
+ * An encoder that prepends the Google Protocol Buffers
  * <a href="https://developers.google.com/protocol-buffers/docs/encoding?csw=1#varints">Base
  * 128 Varints</a> integer length field. For example:
  * <pre>

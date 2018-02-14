@@ -97,7 +97,7 @@ public final class ChannelFlushPromiseNotifier {
 
     /**
      * Notify all {@link ChannelFuture}s that were registered with {@link #add(ChannelPromise, int)} and
-     * their pendingDatasize is smaller after the the current writeCounter returned by {@link #writeCounter()}.
+     * their pendingDatasize is smaller after the current writeCounter returned by {@link #writeCounter()}.
      *
      * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
      * so not receive anymore notification.

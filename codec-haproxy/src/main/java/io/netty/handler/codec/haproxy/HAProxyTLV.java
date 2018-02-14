@@ -48,7 +48,7 @@ public class HAProxyTLV extends DefaultByteBufHolder {
         OTHER;
 
         /**
-         * Returns the the {@link Type} for a specific byte value as defined in the PROXY protocol 1.5 spec
+         * Returns the {@link Type} for a specific byte value as defined in the PROXY protocol 1.5 spec
          * <p>
          * If the byte value is not an official one, it will return {@link Type#OTHER}.
          *
