@@ -82,6 +82,38 @@ public class ByteBufUtilTest {
         assertTrue(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
     }
 
+    @Test
+    public void readStringFromHeapBuffer() throws Exception {
+        String payload = "huuhaa";
+        ByteBuf byteBuf = Unpooled.wrappedBuffer(payload.getBytes(CharsetUtil.UTF_8));
+        try {
+            assertEquals(payload, ByteBufUtil.readString(byteBuf, payload.length(), CharsetUtil.UTF_8));
+        } finally {
+            byteBuf.release();
+        }
+        byte[] bytes = payload.getBytes(CharsetUtil.UTF_8);
+        byteBuf = Unpooled.buffer(4 + bytes.length);
+        try {
+            byteBuf.writeInt(1);
+            byteBuf.writeBytes(bytes);
+            byteBuf.readInt();
+            assertEquals(payload, ByteBufUtil.readString(byteBuf, payload.length(), CharsetUtil.UTF_8));
+        } finally {
+            byteBuf.release();
+        }
+    }
+
+    @Test
+    public void readStringFromDirectBuffer() throws Exception {
+        String payload = "huuhaa";
+        ByteBuf byteBuf = Unpooled.directBuffer(payload.length()).writeBytes(payload.getBytes(CharsetUtil.UTF_8));
+        try {
+            assertEquals(payload, ByteBufUtil.readString(byteBuf, payload.length(), CharsetUtil.UTF_8));
+        } finally {
+            byteBuf.release();
+        }
+    }
+
     private static int random(Random r, int min, int max) {
         return r.nextInt((max - min) + 1) + min;
     }
