@@ -1170,5 +1170,20 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         public final String toString() {
             return key.toString() + '=' + value.toString();
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof Map.Entry)) {
+                return false;
+            }
+            Map.Entry<?, ?> other = (Map.Entry<?, ?>) o;
+            return (getKey() == null ? other.getKey() == null : getKey().equals(other.getKey()))  &&
+                   (getValue() == null ? other.getValue() == null : getValue().equals(other.getValue()));
+        }
+
+        @Override
+        public int hashCode() {
+            return (key == null ? 0 : key.hashCode()) ^ (value == null ? 0 : value.hashCode());
+        }
     }
 }
