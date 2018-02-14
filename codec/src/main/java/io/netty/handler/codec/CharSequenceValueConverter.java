@@ -67,7 +67,11 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
     @Override
     public boolean convertToBoolean(CharSequence value) {
         if (value instanceof AsciiString) {
-            return ((AsciiString) value).parseBoolean();
+            AsciiString asciiString = (AsciiString) value;
+            return asciiString.contentEqualsIgnoreCase("true");
+        }
+        if (value.length() != 4) {
+            return false;
         }
         return Boolean.parseBoolean(value.toString());
     }
