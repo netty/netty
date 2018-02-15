@@ -125,7 +125,7 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public CharSequence convertTimeMillis(long value) {
-        return String.valueOf(value);
+        return DateFormatter.format(new Date(value));
     }
 
     @Override
