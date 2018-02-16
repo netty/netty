@@ -424,7 +424,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         final int sslWrote;
 
         if (src.isDirect()) {
-            sslWrote = SSL.writeToSSL(ssl, Buffer.address(src) + pos, len);
+            sslWrote = SSL.writeToSSL(ssl, bufferAddress(src) + pos, len);
             if (sslWrote > 0) {
                 src.position(pos + sslWrote);
             }
@@ -455,7 +455,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private ByteBuf writeEncryptedData(final ByteBuffer src, int len) {
         final int pos = src.position();
         if (src.isDirect()) {
-            SSL.bioSetByteBuffer(networkBIO, Buffer.address(src) + pos, len, false);
+            SSL.bioSetByteBuffer(networkBIO, bufferAddress(src) + pos, len, false);
         } else {
             final ByteBuf buf = alloc.directBuffer(len);
             try {
@@ -483,7 +483,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         final int sslRead;
         final int pos = dst.position();
         if (dst.isDirect()) {
-            sslRead = SSL.readFromSSL(ssl, Buffer.address(dst) + pos, dst.limit() - pos);
+            sslRead = SSL.readFromSSL(ssl, bufferAddress(dst) + pos, dst.limit() - pos);
             if (sslRead > 0) {
                 dst.position(pos + sslRead);
             }
@@ -597,7 +597,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             try {
                 // Setup the BIO buffer so that we directly write the encryption results into dst.
                 if (dst.isDirect()) {
-                    SSL.bioSetByteBuffer(networkBIO, Buffer.address(dst) + dst.position(), dst.remaining(),
+                    SSL.bioSetByteBuffer(networkBIO, bufferAddress(dst) + dst.position(), dst.remaining(),
                             true);
                 } else {
                     bioReadCopyBuf = alloc.directBuffer(dst.remaining());
@@ -1800,6 +1800,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     @Override
     public String getNegotiatedApplicationProtocol() {
         return applicationProtocol;
+    }
+
+    private static long bufferAddress(ByteBuffer b) {
+        assert b.isDirect();
+        if (PlatformDependent.hasUnsafe()) {
+            return PlatformDependent.directBufferAddress(b);
+        }
+        return Buffer.address(b);
     }
 
     private final class OpenSslSession implements SSLSession {
