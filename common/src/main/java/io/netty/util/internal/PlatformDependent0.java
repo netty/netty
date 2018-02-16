@@ -39,7 +39,7 @@ final class PlatformDependent0 {
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
-    private static final boolean IS_EXPLICIT_NO_UNSAFE = explicitNoUnsafe0();
+    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final Method ALLOCATE_ARRAY_METHOD;
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
@@ -71,10 +71,9 @@ final class PlatformDependent0 {
         Unsafe unsafe;
         Object internalUnsafe = null;
 
-        if (isExplicitNoUnsafe()) {
+        if ((unsafeUnavailabilityCause = EXPLICIT_NO_UNSAFE_CAUSE) != null) {
             direct = null;
             addressField = null;
-            unsafeUnavailabilityCause = new UnsupportedOperationException("Unsafe explicitly disabled");
             unsafe = null;
             internalUnsafe = null;
         } else {
@@ -369,32 +368,33 @@ final class PlatformDependent0 {
     }
 
     static boolean isExplicitNoUnsafe() {
-        return IS_EXPLICIT_NO_UNSAFE;
+        return EXPLICIT_NO_UNSAFE_CAUSE == null;
     }
 
-    private static boolean explicitNoUnsafe0() {
+    private static Throwable explicitNoUnsafeCause0() {
         final boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
         logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
 
         if (noUnsafe) {
             logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
-            return true;
+            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
         }
 
         // Legacy properties
-        boolean tryUnsafe;
+        String unsafePropName;
         if (SystemPropertyUtil.contains("io.netty.tryUnsafe")) {
-            tryUnsafe = SystemPropertyUtil.getBoolean("io.netty.tryUnsafe", true);
+            unsafePropName = "io.netty.tryUnsafe";
         } else {
-            tryUnsafe = SystemPropertyUtil.getBoolean("org.jboss.netty.tryUnsafe", true);
+            unsafePropName = "org.jboss.netty.tryUnsafe";
         }
 
-        if (!tryUnsafe) {
-            logger.debug("sun.misc.Unsafe: unavailable (io.netty.tryUnsafe/org.jboss.netty.tryUnsafe)");
-            return true;
+        if (!SystemPropertyUtil.getBoolean(unsafePropName, true)) {
+            String msg = "sun.misc.Unsafe: unavailable (" + unsafePropName + ")";
+            logger.debug(msg);
+            return new UnsupportedOperationException(msg);
         }
 
-        return false;
+        return null;
     }
 
     static boolean isUnaligned() {
