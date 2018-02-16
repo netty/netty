@@ -865,7 +865,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     /**
      * This method will not call
-     * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable, boolean, boolean)} or
+     * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable, boolean, boolean, boolean)} or
      * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable)}.
      * @return {@code true} if this method ends on {@link SSLEngineResult.HandshakeStatus#NOT_HANDSHAKING}.
      */
@@ -1002,7 +1002,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         // Make sure to release SSLEngine,
         // and notify the handshake future if the connection has been closed during handshake.
-        setHandshakeFailure(ctx, CHANNEL_CLOSED, !outboundClosed, handshakeStarted);
+        setHandshakeFailure(ctx, CHANNEL_CLOSED, !outboundClosed, handshakeStarted, false);
 
         // Ensure we always notify the sslClosePromise as well
         notifyClosePromise(CHANNEL_CLOSED);
@@ -1191,7 +1191,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             logger.debug("SSLException during trying to call SSLEngine.wrap(...)" +
                     " because of an previous SSLException, ignoring...", ex);
         } finally {
-            setHandshakeFailure(ctx, cause, true, false);
+            // ensure we always flush and close the channel.
+            setHandshakeFailure(ctx, cause, true, false, true);
         }
         PlatformDependent.throwException(cause);
     }
@@ -1498,13 +1499,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Notify all the handshake futures about the failure during the handshake.
      */
     private void setHandshakeFailure(ChannelHandlerContext ctx, Throwable cause) {
-        setHandshakeFailure(ctx, cause, true, true);
+        setHandshakeFailure(ctx, cause, true, true, false);
     }
 
     /**
      * Notify all the handshake futures about the failure during the handshake.
      */
-    private void setHandshakeFailure(ChannelHandlerContext ctx, Throwable cause, boolean closeInbound, boolean notify) {
+    private void setHandshakeFailure(ChannelHandlerContext ctx, Throwable cause, boolean closeInbound,
+                                     boolean notify, boolean alwaysFlushAndClose) {
         try {
             // Release all resources such as internal buffers that SSLEngine
             // is managing.
@@ -1526,7 +1528,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     }
                 }
             }
-            notifyHandshakeFailure(cause, notify);
+            if (handshakePromise.tryFailure(cause) || alwaysFlushAndClose) {
+                SslUtils.handleHandshakeFailure(ctx, cause, notify);
+            }
         } finally {
             // Ensure we remove and fail all pending writes in all cases and so release memory quickly.
             releaseAndFailAll(cause);
@@ -1536,12 +1540,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private void releaseAndFailAll(Throwable cause) {
         if (pendingUnencryptedWrites != null) {
             pendingUnencryptedWrites.releaseAndFailAll(ctx, cause);
-        }
-    }
-
-    private void notifyHandshakeFailure(Throwable cause, boolean notify) {
-        if (handshakePromise.tryFailure(cause)) {
-            SslUtils.notifyHandshakeFailure(ctx, cause, notify);
         }
     }
 
@@ -1725,7 +1723,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     return;
                 }
                 try {
-                    notifyHandshakeFailure(HANDSHAKE_TIMED_OUT, true);
+                    if (handshakePromise.tryFailure(HANDSHAKE_TIMED_OUT)) {
+                        SslUtils.handleHandshakeFailure(ctx, HANDSHAKE_TIMED_OUT, true);
+                    }
                 } finally {
                     releaseAndFailAll(HANDSHAKE_TIMED_OUT);
                 }
