@@ -25,6 +25,7 @@ import java.util.Date;
  */
 public class CharSequenceValueConverter implements ValueConverter<CharSequence> {
     public static final CharSequenceValueConverter INSTANCE = new CharSequenceValueConverter();
+    private static final AsciiString TRUE_ASCII = new AsciiString("true");
 
     @Override
     public CharSequence convertObject(Object value) {
@@ -66,14 +67,7 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public boolean convertToBoolean(CharSequence value) {
-        if (value instanceof AsciiString) {
-            AsciiString asciiString = (AsciiString) value;
-            return asciiString.contentEqualsIgnoreCase("true");
-        }
-        if (value.length() != 4) {
-            return false;
-        }
-        return Boolean.parseBoolean(value.toString());
+        return AsciiString.contentEqualsIgnoreCase(value, TRUE_ASCII);
     }
 
     @Override
