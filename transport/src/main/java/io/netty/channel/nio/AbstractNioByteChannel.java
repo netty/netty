@@ -46,7 +46,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';
 
-    private Runnable flushTask;
+    private final Runnable flushTask = new Runnable() {
+        @Override
+        public void run() {
+            flush();
+        }
+    };
 
     /**
      * Create a new instance
@@ -266,16 +271,13 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         if (setOpWrite) {
             setOpWrite();
         } else {
+            // It is possible that we have set the write OP, woken up by NIO because the socket is writable, and then
+            // use our write quantum. In this case we no longer want to set the write OP because the socket is still
+            // writable (as far as we know). We will find out next time we attempt to write if the socket is writable
+            // and set the write OP if necessary.
+            clearOpWrite();
+
             // Schedule flush again later so other tasks can be picked up in the meantime
-            Runnable flushTask = this.flushTask;
-            if (flushTask == null) {
-                flushTask = this.flushTask = new Runnable() {
-                    @Override
-                    public void run() {
-                        flush();
-                    }
-                };
-            }
             eventLoop().execute(flushTask);
         }
     }

@@ -356,10 +356,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // Flush immediately only when there's no pending flush.
             // If there's a pending flush operation, event loop will call forceFlush() later,
             // and thus there's no need to call it now.
-            if (isFlushPending()) {
-                return;
+            if (!isFlushPending()) {
+                super.flush0();
             }
-            super.flush0();
         }
 
         @Override
