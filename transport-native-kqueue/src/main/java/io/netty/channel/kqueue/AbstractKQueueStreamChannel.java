@@ -283,6 +283,12 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         } while (writeSpinCount > 0);
 
         if (writeSpinCount == 0) {
+            // It is possible that we have set the write filter, woken up by KQUEUE because the socket is writable, and
+            // then use our write quantum. In this case we no longer want to set the write filter because the socket is
+            // still writable (as far as we know). We will find out next time we attempt to write if the socket is
+            // writable and set the write filter if necessary.
+            writeFilter(false);
+
             // We used our writeSpin quantum, and should try to write again later.
             eventLoop().execute(flushTask);
         } else {

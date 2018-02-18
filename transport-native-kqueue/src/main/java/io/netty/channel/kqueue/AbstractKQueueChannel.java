@@ -498,6 +498,16 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             return allocHandle;
         }
 
+        @Override
+        protected final void flush0() {
+            // Flush immediately only when there's no pending flush.
+            // If there's a pending flush operation, event loop will call forceFlush() later,
+            // and thus there's no need to call it now.
+            if (!writeFilterEnabled) {
+                super.flush0();
+            }
+        }
+
         final void executeReadReadyRunnable(ChannelConfig config) {
             if (readReadyRunnablePending || !isActive() || shouldBreakReadReady(config)) {
                 return;
