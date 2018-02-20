@@ -64,6 +64,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     final BsdSocket socket;
     private boolean readFilterEnabled = true;
+
+    // We always start with the assumption that the writefilter is not enabled as otherwise flush0 may return before
+    // we were even able to try to flush one time at all.
     private boolean writeFilterEnabled;
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
@@ -81,14 +84,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private volatile SocketAddress remote;
 
     AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active) {
-        this(parent, fd, active, false);
-    }
-
-    AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active, boolean writeFilterEnabled) {
         super(parent);
         socket = checkNotNull(fd, "fd");
         this.active = active;
-        this.writeFilterEnabled = writeFilterEnabled;
         if (active) {
             // Directly cache the remote and local addresses
             // See https://github.com/netty/netty/issues/2359

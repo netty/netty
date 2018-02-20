@@ -64,7 +64,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     };
 
     AbstractKQueueStreamChannel(Channel parent, BsdSocket fd, boolean active) {
-        super(parent, fd, active, true);
+        super(parent, fd, active);
     }
 
     AbstractKQueueStreamChannel(Channel parent, BsdSocket fd, SocketAddress remote) {
