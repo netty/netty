@@ -507,13 +507,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         @Override
-        protected final void flush0() {
+        protected void flush0() {
             // Flush immediately only when there's no pending flush.
             // If there's a pending flush operation, event loop will call forceFlush() later,
             // and thus there's no need to call it now.
-            if (!isFlagSet(Native.EPOLLOUT)) {
-                super.flush0();
+            if (isFlagSet(Native.EPOLLOUT)) {
+                return;
             }
+            super.flush0();
         }
 
         /**
