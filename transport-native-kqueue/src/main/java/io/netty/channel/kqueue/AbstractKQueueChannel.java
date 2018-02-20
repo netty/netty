@@ -217,10 +217,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // make sure the readReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
         readReadyRunnablePending = false;
-        // Add the write event first so we get notified of connection refused on the client side!
-        if (writeFilterEnabled) {
-            evSet0(Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE);
-        }
+
+        // Always start with the write filter enabled to ensure we are notified about connection refused.
+        evSet0(Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE);
+
         if (readFilterEnabled) {
             evSet0(Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE);
         }
