@@ -64,7 +64,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     };
 
     AbstractKQueueStreamChannel(Channel parent, BsdSocket fd, boolean active) {
-        super(parent, fd, active, true);
+        super(parent, fd, active);
     }
 
     AbstractKQueueStreamChannel(Channel parent, BsdSocket fd, SocketAddress remote) {
@@ -588,11 +588,13 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                     byteBuf.release();
                 }
             }
-            allocHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-            pipeline.fireExceptionCaught(cause);
-            if (close || cause instanceof IOException) {
-                shutdownInput(false);
+            if (!failConnectPromise(cause)) {
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
+                pipeline.fireExceptionCaught(cause);
+                if (close || cause instanceof IOException) {
+                    shutdownInput(false);
+                }
             }
         }
     }
