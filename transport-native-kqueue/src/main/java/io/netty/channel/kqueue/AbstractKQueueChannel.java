@@ -64,6 +64,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     final BsdSocket socket;
     private boolean readFilterEnabled = true;
+
+    // We always start with the assumption that the writefilter is not enabled as otherwise flush0 may return before
+    // we were even able to try to flush one time at all.
     private boolean writeFilterEnabled;
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
@@ -81,14 +84,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private volatile SocketAddress remote;
 
     AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active) {
-        this(parent, fd, active, false);
-    }
-
-    AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active, boolean writeFilterEnabled) {
         super(parent);
         socket = checkNotNull(fd, "fd");
         this.active = active;
-        this.writeFilterEnabled = writeFilterEnabled;
         if (active) {
             // Directly cache the remote and local addresses
             // See https://github.com/netty/netty/issues/2359
@@ -219,10 +217,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // make sure the readReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
         readReadyRunnablePending = false;
-        // Add the write event first so we get notified of connection refused on the client side!
-        if (writeFilterEnabled) {
-            evSet0(Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE);
-        }
+
+        // Always start with the write filter enabled to ensure we are notified about connection refused.
+        evSet0(Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE);
+
         if (readFilterEnabled) {
             evSet0(Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE);
         }
