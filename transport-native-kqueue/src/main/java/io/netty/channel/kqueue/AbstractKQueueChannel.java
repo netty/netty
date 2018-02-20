@@ -38,6 +38,7 @@ import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -81,14 +82,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private volatile SocketAddress remote;
 
     AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active) {
-        this(parent, fd, active, false);
-    }
-
-    AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active, boolean writeFilterEnabled) {
         super(parent);
         socket = checkNotNull(fd, "fd");
         this.active = active;
-        this.writeFilterEnabled = writeFilterEnabled;
         if (active) {
             // Directly cache the remote and local addresses
             // See https://github.com/netty/netty/issues/2359
@@ -426,6 +422,22 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 // the underlying OS again unless the user happens to call read again.
                 executeReadReadyRunnable(config);
             }
+        }
+
+        final boolean failConnectPromise(Throwable cause) {
+            if (connectPromise != null) {
+                // SO_ERROR has been shown to return 0 on macOS if detect an error via read() and the write filter was
+                // not set before calling connect. This means finishConnect will not detect any error and would
+                // successfully complete the connectPromise and update the channel state to active (which is incorrect).
+                ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
+                AbstractKQueueChannel.this.connectPromise = null;
+                if (connectPromise.tryFailure((cause instanceof ConnectException) ? cause
+                                : new ConnectException("failed to connect").initCause(cause))) {
+                    closeIfClosed();
+                    return true;
+                }
+            }
+            return false;
         }
 
         final void writeReady() {
