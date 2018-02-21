@@ -538,32 +538,46 @@ final class UnsafeByteBufUtil {
     }
 
     static void setBytes(AbstractByteBuf buf, long addr, int index, ByteBuffer src) {
-        buf.checkIndex(index, src.remaining());
-
-        int length = src.remaining();
+        final int length = src.remaining();
         if (length == 0) {
             return;
         }
 
         if (src.isDirect()) {
+            buf.checkIndex(index, length);
             // Copy from direct memory
             long srcAddress = PlatformDependent.directBufferAddress(src);
-            PlatformDependent.copyMemory(srcAddress + src.position(), addr, src.remaining());
+            PlatformDependent.copyMemory(srcAddress + src.position(), addr, length);
             src.position(src.position() + length);
         } else if (src.hasArray()) {
+            buf.checkIndex(index, length);
             // Copy from array
             PlatformDependent.copyMemory(src.array(), src.arrayOffset() + src.position(), addr, length);
             src.position(src.position() + length);
         } else {
-            ByteBuf tmpBuf = buf.alloc().heapBuffer(length);
-            try {
-                byte[] tmp = tmpBuf.array();
-                src.get(tmp, tmpBuf.arrayOffset(), length); // moves the src position too
-                PlatformDependent.copyMemory(tmp, tmpBuf.arrayOffset(), addr, length);
-            } finally {
-                tmpBuf.release();
+            if (length < 8) {
+                setSingleBytes(buf, addr, index, src, length);
+            } else {
+                //no need to checkIndex: internalNioBuffer is already taking care of it
+                assert buf.nioBufferCount() == 1;
+                final ByteBuffer internalBuffer = buf.internalNioBuffer(index, length);
+                internalBuffer.put(src);
             }
         }
+    }
+
+    private static void setSingleBytes(final AbstractByteBuf buf, final long addr, final int index,
+                                       final ByteBuffer src, final int length) {
+        buf.checkIndex(index, length);
+        final int srcPosition = src.position();
+        final int srcLimit = src.limit();
+        long dstAddr = addr;
+        for (int srcIndex = srcPosition; srcIndex < srcLimit; srcIndex++) {
+            final byte value = src.get(srcIndex);
+            PlatformDependent.putByte(dstAddr, value);
+            dstAddr++;
+        }
+        src.position(srcLimit);
     }
 
     static void getBytes(AbstractByteBuf buf, long addr, int index, OutputStream out, int length) throws IOException {
