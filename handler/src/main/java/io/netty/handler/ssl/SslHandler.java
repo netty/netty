@@ -1510,6 +1510,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         try {
             // Release all resources such as internal buffers that SSLEngine
             // is managing.
+            outboundClosed = true;
             engine.closeOutbound();
 
             if (closeInbound) {
@@ -1557,6 +1558,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private void closeOutboundAndChannel(
             final ChannelHandlerContext ctx, final ChannelPromise promise, boolean disconnect) throws Exception {
+        outboundClosed = true;
+        engine.closeOutbound();
+
         if (!ctx.channel().isActive()) {
             if (disconnect) {
                 ctx.disconnect(promise);
@@ -1565,9 +1569,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
             return;
         }
-
-        outboundClosed = true;
-        engine.closeOutbound();
 
         ChannelPromise closeNotifyPromise = ctx.newPromise();
         try {
