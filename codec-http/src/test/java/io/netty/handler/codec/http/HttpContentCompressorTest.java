@@ -29,11 +29,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class HttpContentCompressorTest {
 
@@ -451,6 +447,52 @@ public class HttpContentCompressorTest {
         assertEquals("Hello, World", response.content().toString(CharsetUtil.US_ASCII));
         response.release();
 
+        assertTrue(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testCompressThresholdAllCompress() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        assertTrue(ch.writeInbound(newRequest()));
+
+        FullHttpResponse res1023 = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.wrappedBuffer(new byte[1023]));
+        assertTrue(ch.writeOutbound(res1023));
+        DefaultHttpResponse response1023 = ch.readOutbound();
+        assertThat(response1023.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
+        ch.releaseOutbound();
+
+        assertTrue(ch.writeInbound(newRequest()));
+        FullHttpResponse res1024 = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.wrappedBuffer(new byte[1024]));
+        assertTrue(ch.writeOutbound(res1024));
+        DefaultHttpResponse response1024 = ch.readOutbound();
+        assertThat(response1024.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
+        assertTrue(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testCompressThresholdNotCompress() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor(6, 15, 8, 1024));
+        assertTrue(ch.writeInbound(newRequest()));
+
+        FullHttpResponse res1023 = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.wrappedBuffer(new byte[1023]));
+        assertTrue(ch.writeOutbound(res1023));
+        DefaultHttpResponse response1023 = ch.readOutbound();
+        assertFalse(response1023.headers().contains(HttpHeaderNames.CONTENT_ENCODING));
+        ch.releaseOutbound();
+
+        assertTrue(ch.writeInbound(newRequest()));
+        FullHttpResponse res1024 = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.wrappedBuffer(new byte[1024]));
+        assertTrue(ch.writeOutbound(res1024));
+        DefaultHttpResponse response1024 = ch.readOutbound();
+        assertThat(response1024.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
         assertTrue(ch.finishAndReleaseAll());
     }
 
