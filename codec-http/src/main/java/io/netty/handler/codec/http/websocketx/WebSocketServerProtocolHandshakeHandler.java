@@ -43,6 +43,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     private final int maxFramePayloadSize;
     private final boolean allowMaskMismatch;
     private final boolean checkStartsWith;
+    private WebSocketServerHandshaker handshaker;
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch) {
@@ -51,12 +52,19 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch, boolean checkStartsWith) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, checkStartsWith, null);
+     }
+
+    WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
+                                            boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch,
+                                            boolean checkStartsWith, WebSocketServerHandshaker handshaker) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
         maxFramePayloadSize = maxFrameSize;
         this.allowMaskMismatch = allowMaskMismatch;
         this.checkStartsWith = checkStartsWith;
+        this.handshaker = handshaker;
     }
 
     @Override
@@ -72,11 +80,12 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                 sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
                 return;
             }
-
-            final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-                    getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols,
-                            allowExtensions, maxFramePayloadSize, allowMaskMismatch);
-            final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
+            if (handshaker == null) {
+                final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
+                        getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols,
+                        allowExtensions, maxFramePayloadSize, allowMaskMismatch);
+                handshaker = wsFactory.newHandshaker(req);
+            }
             if (handshaker == null) {
                 WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
             } else {

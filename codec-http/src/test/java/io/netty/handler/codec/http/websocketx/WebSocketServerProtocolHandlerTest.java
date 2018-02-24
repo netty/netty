@@ -62,6 +62,21 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
+    public void testHttpUpgradeRequestWithInjectedHandshaker() throws Exception {
+        WebSocketServerHandshaker13 handshaker = new WebSocketServerHandshaker13(
+                "ws://server.example.com/test", null, false,
+                65536, false);
+        EmbeddedChannel ch = createChannel(handshaker);
+        ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
+        writeUpgradeRequest(ch);
+
+        FullHttpResponse response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+        assertSame(handshaker, WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
+    }
+
+    @Test
     public void testSubsequentHttpRequestsAfterUpgradeShouldReturn403() throws Exception {
         EmbeddedChannel ch = createChannel();
 
@@ -134,7 +149,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     private EmbeddedChannel createChannel() {
-        return createChannel(null);
+        return createChannel((ChannelHandler) null);
     }
 
     private EmbeddedChannel createChannel(ChannelHandler handler) {
@@ -144,6 +159,16 @@ public class WebSocketServerProtocolHandlerTest {
                 new HttpResponseEncoder(),
                 new MockOutboundHandler(),
                 handler);
+    }
+
+    private EmbeddedChannel createChannel(WebSocketServerHandshaker handshaker) {
+        return new EmbeddedChannel(
+                new WebSocketServerProtocolHandler("/test", null, false,
+                        65536, false, false, handshaker),
+                new HttpRequestDecoder(),
+                new HttpResponseEncoder(),
+                new MockOutboundHandler()
+        );
     }
 
     private static void writeUpgradeRequest(EmbeddedChannel ch) {

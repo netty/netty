@@ -103,6 +103,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
     private final boolean checkStartsWith;
+    private WebSocketServerHandshaker handshaker;
 
     public WebSocketServerProtocolHandler(String websocketPath) {
         this(websocketPath, null, false);
@@ -132,12 +133,19 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch, boolean checkStartsWith) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, false, null);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
+            boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch, boolean checkStartsWith,
+            WebSocketServerHandshaker handshaker) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
         maxFramePayloadLength = maxFrameSize;
         this.allowMaskMismatch = allowMaskMismatch;
         this.checkStartsWith = checkStartsWith;
+        this.handshaker = handshaker;
     }
 
     @Override
@@ -147,7 +155,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             // Add the WebSocketHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
                     new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
-                            allowExtensions, maxFramePayloadLength, allowMaskMismatch, checkStartsWith));
+                            allowExtensions, maxFramePayloadLength, allowMaskMismatch, checkStartsWith, handshaker));
         }
         if (cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
