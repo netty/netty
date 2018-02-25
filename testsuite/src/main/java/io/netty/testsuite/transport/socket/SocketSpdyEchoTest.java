@@ -28,11 +28,9 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.spdy.SpdyFrameCodec;
 import io.netty.handler.codec.spdy.SpdyVersion;
-import io.netty.util.NetUtil;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -195,7 +193,6 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         cb.handler(ch);
 
         Channel sc = sb.bind().sync().channel();
-        int port = ((InetSocketAddress) sc.localAddress()).getPort();
 
         Channel cc = cb.connect(sc.localAddress()).sync().channel();
         cc.writeAndFlush(frames);

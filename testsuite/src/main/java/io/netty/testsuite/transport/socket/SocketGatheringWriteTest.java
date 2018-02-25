@@ -219,7 +219,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
             if (!autoRead) {
                 ctx.read();
             }
-            super.channelInactive(ctx);
+            super.channelActive(ctx);
         }
 
         @Override
