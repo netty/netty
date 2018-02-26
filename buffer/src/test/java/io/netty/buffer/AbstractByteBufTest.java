@@ -4625,4 +4625,25 @@ public abstract class AbstractByteBufTest {
             buffer.release();
         }
     }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void testReaderIndexLargerThanWriterIndex() {
+        String content1 = "hello";
+        String content2 = "world";
+        int length = content1.length() + content2.length();
+        ByteBuf buffer = newBuffer(length);
+        buffer.setIndex(0, 0);
+        buffer.writeCharSequence(content1, CharsetUtil.US_ASCII);
+        buffer.markWriterIndex();
+        buffer.skipBytes(content1.length());
+        buffer.writeCharSequence(content2, CharsetUtil.US_ASCII);
+        buffer.skipBytes(content2.length());
+        assertTrue(buffer.readerIndex() <= buffer.writerIndex());
+
+        try {
+            buffer.resetWriterIndex();
+        } finally {
+            buffer.release();
+        }
+    }
 }
