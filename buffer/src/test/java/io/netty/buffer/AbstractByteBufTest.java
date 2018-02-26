@@ -4625,4 +4625,47 @@ public abstract class AbstractByteBufTest {
             buffer.release();
         }
     }
+
+    @Test
+    public void testReaderIndexLargerThanWriterIndex() {
+        String content1 = "hello";
+        String content2 = "world";
+        int capaticy = content1.length() + content2.length();
+        ByteBuf buffer = newBuffer(capaticy);
+        buffer.setIndex(0, 0);
+        try {
+            buffer.writeBytes(content1.getBytes());
+            buffer.markWriterIndex();
+            byte[] bytes = new byte[content1.length()];
+            buffer.readBytes(bytes);
+            buffer.writeBytes(content2.getBytes());
+
+            assertEquals(content2.length(), buffer.readableBytes());
+            for (int i = 0; i < buffer.readableBytes(); i++) {
+                assertEquals(content2.charAt(i), buffer.readByte());
+            }
+
+            /*
+             * This assert will be successful.
+             * It accords with the definition.
+             */
+            assertTrue(buffer.readerIndex() <= buffer.writerIndex());
+
+            /*
+             * I think it should be throw IndexOutOfBoundException here, but not now.
+             */
+            buffer.resetWriterIndex();
+
+            /*
+             * This assert will be successful.
+             * It breaks the definition.
+             * Because resetWriterIndex() reset the writerIndex directly instead of invoking the writerIndex().
+             *
+             */
+            assertTrue(buffer.readerIndex() > buffer.writerIndex());
+        } finally {
+            buffer.release();
+        }
+
+    }
 }
