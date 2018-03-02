@@ -289,9 +289,26 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
                     throws SSLException {
                 int writerIndex = out.writerIndex();
-                final SSLEngineResult result = handler.engine.unwrap(toByteBuffer(in, readerIndex, len),
+                ByteBuffer inNioBuffer = toByteBuffer(in, readerIndex, len);
+                int position = inNioBuffer.position();
+                final SSLEngineResult result = handler.engine.unwrap(inNioBuffer,
                     toByteBuffer(out, writerIndex, out.writableBytes()));
                 out.writerIndex(writerIndex + result.bytesProduced());
+
+                // This is a workaround for a bug in Android 5.0. Android 5.0 does not correctly update the
+                // SSLEngineResult.bytesConsumed() in some cases and just return 0.
+                //
+                // See:
+                //     - https://android-review.googlesource.com/c/platform/external/conscrypt/+/122080
+                //     - https://github.com/netty/netty/issues/7758
+                if (result.bytesConsumed() == 0) {
+                    int consumed = inNioBuffer.position() - position;
+                    if (consumed != result.bytesConsumed()) {
+                        // Create a new SSLEngineResult with the correct bytesConsumed().
+                        return new SSLEngineResult(
+                                result.getStatus(), result.getHandshakeStatus(), consumed, result.bytesProduced());
+                    }
+                }
                 return result;
             }
 
