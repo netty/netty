@@ -419,6 +419,11 @@ public class HashedWheelTimer implements Timer {
         // Add the timeout to the timeout queue which will be processed on the next tick.
         // During processing all the queued HashedWheelTimeouts will be added to the correct HashedWheelBucket.
         long deadline = System.nanoTime() + unit.toNanos(delay) - startTime;
+
+        // Guard against overflow.
+        if (delay > 0 && deadline < 0) {
+            deadline = Long.MAX_VALUE;
+        }
         HashedWheelTimeout timeout = new HashedWheelTimeout(this, task, deadline);
         timeouts.add(timeout);
         return timeout;
