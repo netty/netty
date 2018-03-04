@@ -414,7 +414,7 @@ public class ResourceLeakDetector<T> {
          * In this particular implementation, there are also some advantages. A thread local random is used to decide
          * if something should be recorded. This means that if there is a deterministic access pattern, it is now
          * possible to see what other accesses occur, rather than always dropping them. Second, after
-         * {@link #TARGET_RECORDS} accesses, backoff occurs. This matches typical access patterns,
+         * {@link #targetRecords} accesses, backoff occurs. This matches typical access patterns,
          * where there are either a high number of accesses (i.e. a cached buffer), or low (an ephemeral buffer), but
          * not many in between.
          *
@@ -424,8 +424,9 @@ public class ResourceLeakDetector<T> {
          * thread won the race.
          */
         private void record0(Object hint) {
-            // Check TARGET_RECORDS > 0 here to avoid similar check before remove from and add to lastRecords
-            if (targetRecords > 0) {
+            // Check targetRecords > 0 here to avoid similar check before remove from and add to lastRecords
+            int records = targetRecords;
+            if (records > 0) {
                 Record oldHead;
                 Record prevHead;
                 Record newHead;
@@ -436,8 +437,8 @@ public class ResourceLeakDetector<T> {
                         return;
                     }
                     final int numElements = oldHead.pos + 1;
-                    if (numElements >= targetRecords) {
-                        final int backOffFactor = Math.min(numElements - targetRecords, 30);
+                    if (numElements >= records) {
+                        final int backOffFactor = Math.min(numElements - records, 30);
                         if (dropped = PlatformDependent.threadLocalRandom().nextInt(1 << backOffFactor) != 0) {
                             prevHead = oldHead.next;
                         }
