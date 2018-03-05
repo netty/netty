@@ -21,6 +21,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -652,5 +653,19 @@ public class SslHandlerTest {
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
         }
+    }
+
+    @Test
+    public void testOutboundClosedAfterChannelInactive() throws Exception {
+        SslContext context = SslContextBuilder.forClient().build();
+        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        EmbeddedChannel channel = new EmbeddedChannel();
+        assertFalse(channel.finish());
+        channel.pipeline().addLast(new SslHandler(engine));
+        assertFalse(engine.isOutboundDone());
+        channel.close().syncUninterruptibly();
+
+        assertTrue(engine.isOutboundDone());
     }
 }
