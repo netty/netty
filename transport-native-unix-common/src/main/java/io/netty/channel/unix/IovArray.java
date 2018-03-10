@@ -91,7 +91,7 @@ public final class IovArray implements MessageProcessor {
         if (count == IOV_MAX) {
             // No more room!
             return false;
-        } else if (buf.nioBufferCount() == 1) {
+        } else if (buf.hasMemoryAddress() && buf.nioBufferCount() == 1) {
             final int len = buf.readableBytes();
             return len == 0 || add(buf.memoryAddress(), buf.readerIndex(), len);
         } else {
