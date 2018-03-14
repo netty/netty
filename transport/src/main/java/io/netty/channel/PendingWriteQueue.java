@@ -144,7 +144,9 @@ public final class PendingWriteQueue {
                     Object msg = write.msg;
                     ChannelPromise promise = write.promise;
                     recycle(write, false);
-                    combiner.add(promise);
+                    if (!(promise instanceof VoidChannelPromise)) {
+                        combiner.add(promise);
+                    }
                     ctx.write(msg, promise);
                     write = next;
                 }
