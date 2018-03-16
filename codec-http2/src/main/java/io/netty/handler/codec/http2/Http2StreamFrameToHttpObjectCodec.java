@@ -81,7 +81,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
     @Override
     protected void decode(ChannelHandlerContext ctx, Http2StreamFrame frame, List<Object> out) throws Exception {
         if (frame instanceof Http2HeadersFrame) {
-            int id = 0; // not really the id
+            int id = frame.stream().id();
             Http2HeadersFrame headersFrame = (Http2HeadersFrame) frame;
             Http2Headers headers = headersFrame.headers();
 
