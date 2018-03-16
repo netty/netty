@@ -745,12 +745,36 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
     @Test
     public void testDecodeFullResponseHeaders() throws Exception {
+        testDecodeFullResponseHeaders(false);
+    }
+
+    @Test
+    public void testDecodeFullResponseHeadersWithStreamID() throws Exception {
+        testDecodeFullResponseHeaders(true);
+    }
+
+    private void testDecodeFullResponseHeaders(boolean withStreamId) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Http2Headers headers = new DefaultHttp2Headers();
         headers.scheme(HttpScheme.HTTP.name());
         headers.status(HttpResponseStatus.OK.codeAsText());
 
-        assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers, true)));
+        Http2HeadersFrame frame = new DefaultHttp2HeadersFrame(headers, true);
+        if (withStreamId) {
+            frame.stream(new Http2FrameStream() {
+                @Override
+                public int id() {
+                    return 1;
+                }
+
+                @Override
+                public Http2Stream.State state() {
+                    return Http2Stream.State.OPEN;
+                }
+            });
+        }
+
+        assertTrue(ch.writeInbound(frame));
 
         FullHttpResponse response = ch.readInbound();
         try {
@@ -759,6 +783,10 @@ public class Http2StreamFrameToHttpObjectCodecTest {
             assertThat(response.content().readableBytes(), is(0));
             assertTrue(response.trailingHeaders().isEmpty());
             assertFalse(HttpUtil.isTransferEncodingChunked(response));
+            if (withStreamId) {
+                assertEquals(1,
+                        (int) response.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text()));
+            }
         } finally {
             response.release();
         }
