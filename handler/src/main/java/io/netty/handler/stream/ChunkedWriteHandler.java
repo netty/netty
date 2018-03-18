@@ -102,28 +102,26 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
             return;
         }
         if (ctx.executor().inEventLoop()) {
-            try {
-                doFlush(ctx);
-            } catch (Exception e) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn("Unexpected exception while sending chunks.", e);
-                }
-            }
+            resumeTransfer0(ctx);
         } else {
             // let the transfer resume on the next event loop round
             ctx.executor().execute(new Runnable() {
 
                 @Override
                 public void run() {
-                    try {
-                        doFlush(ctx);
-                    } catch (Exception e) {
-                        if (logger.isWarnEnabled()) {
-                            logger.warn("Unexpected exception while sending chunks.", e);
-                        }
-                    }
+                    resumeTransfer0(ctx);
                 }
             });
+        }
+    }
+
+    private void resumeTransfer0(ChannelHandlerContext ctx) {
+        try {
+            doFlush(ctx);
+        } catch (Exception e) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Unexpected exception while sending chunks.", e);
+            }
         }
     }
 
@@ -192,7 +190,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
         }
     }
 
-    private void doFlush(final ChannelHandlerContext ctx) throws Exception {
+    private void doFlush(final ChannelHandlerContext ctx) {
         final Channel channel = ctx.channel();
         if (!channel.isActive()) {
             discard(null);
@@ -317,7 +315,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
         }
     }
 
-    static void closeInput(ChunkedInput<?> chunks) {
+    private static void closeInput(ChunkedInput<?> chunks) {
         try {
             chunks.close();
         } catch (Throwable t) {
@@ -346,12 +344,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 // No need to notify the progress or fulfill the promise because it's done already.
                 return;
             }
-
-            if (promise instanceof ChannelProgressivePromise) {
-                // Now we know what the total is.
-                ((ChannelProgressivePromise) promise).tryProgress(total, total);
-            }
-
+            progress(total, total);
             promise.trySuccess();
         }
 
