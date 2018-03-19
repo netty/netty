@@ -1009,7 +1009,7 @@ public abstract class SSLEngineTest {
         SslHandler handler = channel.pipeline().get(SslHandler.class);
         assertNotNull(handler);
         String appProto = handler.applicationProtocol();
-        assertEquals(appProto, expectedApplicationProtocol);
+        assertEquals(expectedApplicationProtocol, appProto);
 
         SSLEngine engine = handler.engine();
         if (engine instanceof Java9SslEngine) {
