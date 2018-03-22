@@ -79,7 +79,15 @@ static jint _read(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, ji
 // JNI Registered Methods Begin
 static jint netty_unix_filedescriptor_close(JNIEnv* env, jclass clazz, jint fd) {
    if (close(fd) < 0) {
-       return -errno;
+       // There is really nothing "sane" we can do when EINTR was reported on close. So just ignore it and "assume"
+       // everything is fine == we closed the file descriptor.
+       //
+       // For more details see:
+       //     - https://bugs.chromium.org/p/chromium/issues/detail?id=269623
+       //     - https://lwn.net/Articles/576478/
+       if (errno != EINTR) {
+           return -errno;
+       }
    }
    return 0;
 }
