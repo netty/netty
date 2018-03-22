@@ -28,6 +28,7 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
@@ -36,6 +37,7 @@ import io.netty.handler.codec.dns.DnsSection;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
@@ -52,6 +54,7 @@ import org.apache.directory.server.dns.messages.ResourceRecordModifier;
 import org.apache.directory.server.dns.messages.ResponseCode;
 import org.apache.directory.server.dns.store.DnsAttribute;
 import org.apache.directory.server.dns.store.RecordStore;
+import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -608,7 +611,7 @@ public class DnsNameResolverTest {
                     buf.append(' ');
                     buf.append(recordContent.readUnsignedShort());
                     buf.append(' ');
-                    buf.append(DnsNameResolverContext.decodeDomainName(recordContent));
+                    buf.append(DnsResolveContext.decodeDomainName(recordContent));
                 }
 
                 logger.info("{} has the following MX records:{}", hostname, buf);
@@ -943,6 +946,84 @@ public class DnsNameResolverTest {
         } finally {
             resolver.close();
         }
+    }
+
+    @Test
+    public void testResolveAllMx() {
+        final DnsNameResolver resolver = newResolver().build();
+        try {
+            assertThat(resolver.isRecursionDesired(), is(true));
+
+            final Map<String, Future<List<DnsRecord>>> futures = new LinkedHashMap<String, Future<List<DnsRecord>>>();
+            for (String name: DOMAINS) {
+                if (EXCLUSIONS_QUERY_MX.contains(name)) {
+                    continue;
+                }
+
+                futures.put(name, resolver.resolveAll(new DefaultDnsQuestion(name, DnsRecordType.MX)));
+            }
+
+            for (Entry<String, Future<List<DnsRecord>>> e: futures.entrySet()) {
+                String hostname = e.getKey();
+                Future<List<DnsRecord>> f = e.getValue().awaitUninterruptibly();
+
+                final List<DnsRecord> mxList = f.getNow();
+                assertThat(mxList.size(), is(greaterThan(0)));
+                StringBuilder buf = new StringBuilder();
+                for (DnsRecord r: mxList) {
+                    ByteBuf recordContent = ((ByteBufHolder) r).content();
+
+                    buf.append(StringUtil.NEWLINE);
+                    buf.append('\t');
+                    buf.append(r.name());
+                    buf.append(' ');
+                    buf.append(r.type().name());
+                    buf.append(' ');
+                    buf.append(recordContent.readUnsignedShort());
+                    buf.append(' ');
+                    buf.append(DnsResolveContext.decodeDomainName(recordContent));
+
+                    ReferenceCountUtil.release(r);
+                }
+
+                logger.info("{} has the following MX records:{}", hostname, buf);
+            }
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test
+    public void testResolveAllHostsFile() {
+        final DnsNameResolver resolver = new DnsNameResolverBuilder(group.next())
+                .channelType(NioDatagramChannel.class)
+                .hostsFileEntriesResolver(new HostsFileEntriesResolver() {
+                    @Override
+                    public InetAddress address(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
+                        if ("foo.com.".equals(inetHost)) {
+                            try {
+                                return InetAddress.getByAddress("foo.com", new byte[] { 1, 2, 3, 4 });
+                            } catch (UnknownHostException e) {
+                                throw new Error(e);
+                            }
+                        }
+                        return null;
+                    }
+                }).build();
+
+        final List<DnsRecord> records = resolver.resolveAll(new DefaultDnsQuestion("foo.com.", A))
+                                                .syncUninterruptibly().getNow();
+        assertThat(records, Matchers.<DnsRecord>hasSize(1));
+        assertThat(records.get(0), Matchers.<DnsRecord>instanceOf(DnsRawRecord.class));
+
+        final DnsRawRecord record = (DnsRawRecord) records.get(0);
+        final ByteBuf content = record.content();
+        assertThat(record.name(), is("foo.com."));
+        assertThat(record.dnsClass(), is(DnsRecord.CLASS_IN));
+        assertThat(record.type(), is(A));
+        assertThat(content.readableBytes(), is(4));
+        assertThat(content.readInt(), is(0x01020304));
+        record.release();
     }
 
     @Test
