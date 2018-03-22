@@ -34,6 +34,8 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
+    private static final int BUFFER_SIZE = 8192;
+
     private final ByteBufAllocator alloc;
 
     private ByteBuffer buffer;
@@ -482,36 +484,32 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        getBytes(index, out, length, false);
-        return this;
-    }
-
-    private void getBytes(int index, OutputStream out, int length, boolean internal) throws IOException {
         ensureAccessible();
         if (length == 0) {
-            return;
+            return this;
         }
 
         if (buffer.hasArray()) {
             out.write(buffer.array(), index + buffer.arrayOffset(), length);
         } else {
-            byte[] tmp = new byte[length];
-            ByteBuffer tmpBuf;
-            if (internal) {
-                tmpBuf = internalNioBuffer();
-            } else {
-                tmpBuf = buffer.duplicate();
+            byte[] tmp = new byte[Math.min(length, BUFFER_SIZE)];
+            int pos = 0;
+            int remaining = length;
+            while (remaining > 0) {
+                int chunkSize = Math.min(remaining, BUFFER_SIZE);
+                buffer.get(tmp, 0, chunkSize);
+                out.write(tmp, 0, chunkSize);
+                pos += chunkSize;
+                remaining -= chunkSize;
             }
-            tmpBuf.clear().position(index);
-            tmpBuf.get(tmp);
-            out.write(tmp);
         }
+        return this;
     }
 
     @Override
     public ByteBuf readBytes(OutputStream out, int length) throws IOException {
         checkReadableBytes(length);
-        getBytes(readerIndex, out, length, true);
+        getBytes(readerIndex, out, length);
         readerIndex += length;
         return this;
     }

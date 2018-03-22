@@ -34,6 +34,7 @@ import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
 final class UnsafeByteBufUtil {
     private static final boolean UNALIGNED = PlatformDependent.isUnaligned();
     private static final byte ZERO = 0;
+    private static final int BUFFER_SIZE = 8192;
 
     static byte getByte(long address) {
         return PlatformDependent.getByte(address);
@@ -583,12 +584,19 @@ final class UnsafeByteBufUtil {
     static void getBytes(AbstractByteBuf buf, long addr, int index, OutputStream out, int length) throws IOException {
         buf.checkIndex(index, length);
         if (length != 0) {
-            ByteBuf tmpBuf = buf.alloc().heapBuffer(length);
+            ByteBuf tmpBuf = buf.alloc().heapBuffer(Math.min(length, BUFFER_SIZE));
             try {
                 byte[] tmp = tmpBuf.array();
                 int offset = tmpBuf.arrayOffset();
-                PlatformDependent.copyMemory(addr, tmp, offset, length);
-                out.write(tmp, offset, length);
+                int pos = 0;
+                int remaining = length;
+                while (remaining > 0) {
+                    int chunkSize = Math.min(remaining, BUFFER_SIZE);
+                    PlatformDependent.copyMemory(addr + pos, tmp, offset, chunkSize);
+                    out.write(tmp, offset, chunkSize);
+                    pos += chunkSize;
+                    remaining -= chunkSize;
+                }
             } finally {
                 tmpBuf.release();
             }
