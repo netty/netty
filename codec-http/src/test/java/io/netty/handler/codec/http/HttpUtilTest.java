@@ -19,13 +19,14 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasToString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -256,4 +257,39 @@ public class HttpUtilTest {
         ReferenceCountUtil.release(message);
     }
 
+    @Test
+    public void testFormatHostnameForHttpFromResolvedAddressWithHostname() throws Exception {
+        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("localhost"), 8080);
+        assertEquals("localhost", HttpUtil.formatHostnameForHttp(socketAddress));
+    }
+
+    @Test
+    public void testFormatHostnameForHttpFromUnesolvedAddressWithHostname() {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("localhost", 80);
+        assertEquals("localhost", HttpUtil.formatHostnameForHttp(socketAddress));
+    }
+
+    @Test
+    public void testIpv6() throws Exception  {
+        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("::1"), 8080);
+        assertEquals("[::1]", HttpUtil.formatHostnameForHttp(socketAddress));
+    }
+
+    @Test
+    public void testIpv6Unresolved()  {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("::1", 8080);
+        assertEquals("[::1]", HttpUtil.formatHostnameForHttp(socketAddress));
+    }
+
+    @Test
+    public void testIpv4() throws Exception  {
+        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("10.0.0.1"), 8080);
+        assertEquals("10.0.0.1", HttpUtil.formatHostnameForHttp(socketAddress));
+    }
+
+    @Test
+    public void testIpv4Unresolved()  {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("10.0.0.1", 8080);
+        assertEquals("10.0.0.1", HttpUtil.formatHostnameForHttp(socketAddress));
+    }
 }
