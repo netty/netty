@@ -897,8 +897,8 @@ public final class NetUtil {
         final StringBuilder sb;
 
         if (addr.isUnresolved()) {
-            String hostString = PlatformDependent.javaVersion() >= 7 ? addr.getHostString() : addr.getHostName();
-            sb = newSocketAddressStringBuilder(hostString, port, !isValidIpV6Address(hostString));
+            String hostname = getHostname(addr);
+            sb = newSocketAddressStringBuilder(hostname, port, !isValidIpV6Address(hostname));
         } else {
             InetAddress address = addr.getAddress();
             String hostString = toAddressString(address);
@@ -1066,6 +1066,16 @@ public final class NetUtil {
         }
 
         return b.toString();
+    }
+
+    /**
+     * Returns {@link InetSocketAddress#getHostString()} if Java >= 7,
+     * or {@link InetSocketAddress#getHostName()} otherwise.
+     * @param addr The address
+     * @return the host string
+     */
+    public static String getHostname(InetSocketAddress addr) {
+        return PlatformDependent.javaVersion() >= 7 ? addr.getHostString() : addr.getHostName();
     }
 
     /**
