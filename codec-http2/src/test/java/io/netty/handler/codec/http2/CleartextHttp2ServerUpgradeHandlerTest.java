@@ -119,7 +119,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
                                "Connection: Upgrade, HTTP2-Settings\r\n" +
                                "Upgrade: h2c\r\n" +
                                "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n";
-        ByteBuf upgrade = Unpooled.buffer().writeBytes(upgradeString.getBytes(CharsetUtil.US_ASCII));
+        ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
 
         assertFalse(channel.writeInbound(upgrade));
 
