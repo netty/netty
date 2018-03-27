@@ -48,6 +48,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -182,6 +183,52 @@ public class DefaultChannelPipelineTest {
         assertNull(pipeline.get("handler2"));
         pipeline.remove(handler3);
         assertNull(pipeline.get("handler3"));
+    }
+
+    @Test
+    public void testRemoveIfExists() {
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+
+        ChannelHandler handler1 = newHandler();
+        ChannelHandler handler2 = newHandler();
+        ChannelHandler handler3 = newHandler();
+
+        pipeline.addLast("handler1", handler1);
+        pipeline.addLast("handler2", handler2);
+        pipeline.addLast("handler3", handler3);
+
+        assertNotNull(pipeline.removeIfExists(handler1));
+        assertNull(pipeline.get("handler1"));
+
+        assertNotNull(pipeline.removeIfExists("handler2"));
+        assertNull(pipeline.get("handler2"));
+
+        assertNotNull(pipeline.removeIfExists(TestHandler.class));
+        assertNull(pipeline.get("handler3"));
+    }
+
+    @Test
+    public void testRemoveIfExistsDoesNotThrowException() {
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+
+        ChannelHandler handler1 = newHandler();
+        ChannelHandler handler2 = newHandler();
+        pipeline.addLast("handler1", handler1);
+
+        assertNull(pipeline.removeIfExists("handlerXXX"));
+        assertNull(pipeline.removeIfExists(handler2));
+        assertNull(pipeline.removeIfExists(ChannelOutboundHandlerAdapter.class));
+        assertNotNull(pipeline.get("handler1"));
+    }
+
+    @Test(expected = NoSuchElementException.class)
+    public void testRemoveThrowNoSuchElementException() {
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+
+        ChannelHandler handler1 = newHandler();
+        pipeline.addLast("handler1", handler1);
+
+        pipeline.remove("handlerXXX");
     }
 
     @Test
