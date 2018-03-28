@@ -57,17 +57,19 @@ final class DnsRecordResolveContext extends DnsResolveContext<DnsRecord> {
     }
 
     @Override
-    boolean gotResult(List<DnsRecord> finalResult) {
+    boolean containsExpectedResult(List<DnsRecord> finalResult) {
         return true;
     }
 
     @Override
     void cache(String hostname, DnsRecord[] additionals, DnsRecord result, DnsRecord convertedResult) {
         // Do not cache.
+        // XXX: When we implement cache, we would need to retain the reference count of the result record.
     }
 
     @Override
     void cache(String hostname, DnsRecord[] additionals, UnknownHostException cause) {
         // Do not cache.
+        // XXX: When we implement cache, we would need to retain the reference count of the result record.
     }
 }

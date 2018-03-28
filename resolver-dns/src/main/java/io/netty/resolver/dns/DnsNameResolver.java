@@ -608,6 +608,8 @@ public class DnsNameResolver extends InetNameResolver {
                 }
 
                 if (content != null) {
+                    // Our current implementation does not support reloading the hosts file,
+                    // so use a fairly large TTL (1 day, i.e. 86400 seconds).
                     trySuccess(promise, Collections.<DnsRecord>singletonList(
                             new DefaultDnsRawRecord(hostname, type, 86400, content)));
                     return promise;
@@ -739,7 +741,7 @@ public class DnsNameResolver extends InetNameResolver {
         doResolveAllUncached(hostname, additionals, allPromise, resolveCache);
         allPromise.addListener(new FutureListener<List<InetAddress>>() {
             @Override
-            public void operationComplete(Future<List<InetAddress>> future) throws Exception {
+            public void operationComplete(Future<List<InetAddress>> future) {
                 if (future.isSuccess()) {
                     trySuccess(promise, future.getNow().get(0));
                 } else {

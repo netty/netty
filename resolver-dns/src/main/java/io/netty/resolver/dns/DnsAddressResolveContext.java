@@ -49,7 +49,7 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     }
 
     @Override
-    boolean gotResult(List<InetAddress> finalResult) {
+    boolean containsExpectedResult(List<InetAddress> finalResult) {
         final int size = finalResult.size();
         final Class<? extends InetAddress> inetAddressType = parent.preferredAddressType().addressType();
         for (int i = 0; i < size; i++) {
