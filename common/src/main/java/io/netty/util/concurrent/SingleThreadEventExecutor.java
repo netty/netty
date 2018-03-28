@@ -762,11 +762,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
 
         boolean inEventLoop = inEventLoop();
-        if (inEventLoop) {
-            addTask(task);
-        } else {
+        addTask(task);
+        if (!inEventLoop) {
             startThread();
-            addTask(task);
             if (isShutdown() && removeTask(task)) {
                 reject();
             }
@@ -858,14 +856,19 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
 
     private void startThread() {
-        if (state == ST_NOT_STARTED) {
-            if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
-                try {
-                    doStartThread();
-                } catch (Throwable cause) {
-                    STATE_UPDATER.set(this, ST_NOT_STARTED);
-                    PlatformDependent.throwException(cause);
+        for (;;) {
+            if (state == ST_NOT_STARTED) {
+                if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
+                    try {
+                        doStartThread();
+                        break;
+                    } catch (Throwable cause) {
+                        STATE_UPDATER.set(this, ST_NOT_STARTED);
+                        PlatformDependent.throwException(cause);
+                    }
                 }
+            } else {
+                break;
             }
         }
     }
