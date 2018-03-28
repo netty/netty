@@ -32,6 +32,7 @@ import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -139,7 +140,13 @@ abstract class DnsNameResolverContext<T> {
                 public void operationComplete(Future<T> future) throws Exception {
                     Throwable cause = future.cause();
                     if (cause == null) {
-                        promise.trySuccess(future.getNow());
+                        T result = future.getNow();
+
+                        // Assert that we will not use any ReferenceCounted result here as trySuccess(...) may
+                        // return false in which case the ownership would not be transferred and special
+                        // handling would be required. This is not the case in our current implementation.
+                        assert !(result instanceof ReferenceCounted);
+                        promise.trySuccess(result);
                     } else {
                         if (DnsNameResolver.isTransportOrTimeoutError(cause)) {
                             promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname));
