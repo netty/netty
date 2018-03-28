@@ -28,7 +28,7 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.DefaultSocketChannelConfig;
+import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -90,8 +90,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     private static boolean isAllowHalfClosure(ChannelConfig config) {
-        return config instanceof DefaultSocketChannelConfig &&
-                ((DefaultSocketChannelConfig) config).isAllowHalfClosure();
+        return config instanceof SocketChannelConfig &&
+                ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
     protected class NioByteUnsafe extends AbstractNioUnsafe {
