@@ -583,16 +583,32 @@ final class UnsafeByteBufUtil {
     static void getBytes(AbstractByteBuf buf, long addr, int index, OutputStream out, int length) throws IOException {
         buf.checkIndex(index, length);
         if (length != 0) {
-            ByteBuf tmpBuf = buf.alloc().heapBuffer(length);
-            try {
-                byte[] tmp = tmpBuf.array();
-                int offset = tmpBuf.arrayOffset();
-                PlatformDependent.copyMemory(addr, tmp, offset, length);
-                out.write(tmp, offset, length);
-            } finally {
-                tmpBuf.release();
+            int len = Math.min(length, ByteBufUtil.WRITE_CHUNK_SIZE);
+            if (buf.alloc().isDirectBufferPooled()) {
+                // if direct buffers are pooled chances are good that heap buffers are pooled as well.
+                ByteBuf tmpBuf = buf.alloc().heapBuffer(len);
+                try {
+                    byte[] tmp = tmpBuf.array();
+                    int offset = tmpBuf.arrayOffset();
+                    getBytes(addr, tmp, offset, len, out, length);
+                } finally {
+                    tmpBuf.release();
+                }
+            } else {
+                getBytes(addr, new byte[len], 0, len, out, length);
             }
         }
+    }
+
+    private static void getBytes(long inAddr, byte[] in, int inOffset, int inLen, OutputStream out, int outLen)
+            throws IOException {
+        do {
+            int len = Math.min(inLen, outLen);
+            PlatformDependent.copyMemory(inAddr, in, inOffset, len);
+            out.write(in, inOffset, len);
+            outLen -= len;
+            inAddr += len;
+        } while (outLen > 0);
     }
 
     static void setZero(long addr, int length) {
