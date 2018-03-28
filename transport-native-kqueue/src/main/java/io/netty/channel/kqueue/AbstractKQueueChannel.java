@@ -33,6 +33,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -322,8 +323,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     private static boolean isAllowHalfClosure(ChannelConfig config) {
-        return config instanceof KQueueSocketChannelConfig &&
-                ((KQueueSocketChannelConfig) config).isAllowHalfClosure();
+        return config instanceof SocketChannelConfig &&
+                ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
     final void clearReadFilter() {
