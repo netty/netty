@@ -33,6 +33,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
@@ -241,8 +242,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     private static boolean isAllowHalfClosure(ChannelConfig config) {
-        return config instanceof EpollSocketChannelConfig &&
-                ((EpollSocketChannelConfig) config).isAllowHalfClosure();
+        return config instanceof SocketChannelConfig &&
+                ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
     final void clearEpollIn() {

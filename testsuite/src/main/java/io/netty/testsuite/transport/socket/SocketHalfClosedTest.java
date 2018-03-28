@@ -40,10 +40,82 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class SocketHalfClosedTest extends AbstractSocketTest {
+    @Test(timeout = 10000)
+    public void testHalfClosureOnlyOneEventWhenAutoRead() throws Throwable {
+        run();
+    }
+
+    public void testHalfClosureOnlyOneEventWhenAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        Channel serverChannel = null;
+        try {
+            cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
+                    .option(ChannelOption.AUTO_READ, true);
+            sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) {
+                            ((DuplexChannel) ctx).shutdownOutput();
+                        }
+
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                            ctx.close();
+                        }
+                    });
+                }
+            });
+
+            final AtomicInteger shutdownEventReceivedCounter = new AtomicInteger();
+            final AtomicInteger shutdownReadCompleteEventReceivedCounter = new AtomicInteger();
+
+            cb.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+
+                        @Override
+                        public void userEventTriggered(final ChannelHandlerContext ctx, Object evt) {
+                            if (evt == ChannelInputShutdownEvent.INSTANCE) {
+                                shutdownEventReceivedCounter.incrementAndGet();
+                            } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                                shutdownReadCompleteEventReceivedCounter.incrementAndGet();
+                                ctx.executor().schedule(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        ctx.close();
+                                    }
+                                }, 100, MILLISECONDS);
+                            }
+                        }
+
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                            ctx.close();
+                        }
+                    });
+                }
+            });
+
+            serverChannel = sb.bind().sync().channel();
+            Channel clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            clientChannel.closeFuture().await();
+            assertEquals(1, shutdownEventReceivedCounter.get());
+            assertEquals(1, shutdownReadCompleteEventReceivedCounter.get());
+        } finally {
+            if (serverChannel != null) {
+                serverChannel.close().sync();
+            }
+        }
+    }
+
     @Test
     public void testAllDataReadAfterHalfClosure() throws Throwable {
         run();
