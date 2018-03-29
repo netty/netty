@@ -491,21 +491,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         if (length == 0) {
             return;
         }
-
-        if (buffer.hasArray()) {
-            out.write(buffer.array(), index + buffer.arrayOffset(), length);
-        } else {
-            byte[] tmp = new byte[length];
-            ByteBuffer tmpBuf;
-            if (internal) {
-                tmpBuf = internalNioBuffer();
-            } else {
-                tmpBuf = buffer.duplicate();
-            }
-            tmpBuf.clear().position(index);
-            tmpBuf.get(tmp);
-            out.write(tmp);
-        }
+        ByteBufUtil.readBytes(alloc(), internal ? internalNioBuffer() : buffer.duplicate(), index, length, out);
     }
 
     @Override
