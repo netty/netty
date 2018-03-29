@@ -55,6 +55,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         Epoll.ensureAvailability();
     }
 
+    // Pick a number that no task could have previously used.
+    private long prevDeadlineNanos = nanoTime() - 1;
     private final FileDescriptor epollFd;
     private final FileDescriptor eventFd;
     private final FileDescriptor timerFd;
@@ -236,10 +238,19 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             return epollWaitNow();
         }
 
-        long totalDelay = delayNanos(System.nanoTime());
-        int delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
-        return Native.epollWait(epollFd, events, timerFd, delaySeconds,
-                (int) min(MAX_SCHEDULED_TIMERFD_NS, totalDelay - delaySeconds * 1000000000L));
+        int delaySeconds;
+        int delayNanos;
+        long curDeadlineNanos = deadlineNanos();
+        if (curDeadlineNanos == prevDeadlineNanos) {
+            delaySeconds = -1;
+            delayNanos = -1;
+        } else {
+            long totalDelay = delayNanos(System.nanoTime());
+            prevDeadlineNanos = curDeadlineNanos;
+            delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
+            delayNanos = (int) min(totalDelay - delaySeconds * 1000000000L, Integer.MAX_VALUE);
+        }
+        return Native.epollWait(epollFd, events, timerFd, delaySeconds, delayNanos);
     }
 
     private int epollWaitNow() throws IOException {
