@@ -299,8 +299,8 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 ctx.flush();
                 requiresFlush = false;
             } else {
-                ctx.write(pendingMessage, currentWrite.promise);
                 this.currentWrite = null;
+                ctx.write(pendingMessage, currentWrite.promise);
                 requiresFlush = true;
             }
 
