@@ -21,6 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 import org.junit.Test;
 
@@ -172,6 +173,27 @@ public class HttpClientUpgradeHandlerTest {
 
         HttpResponse response = channel.readInbound();
         assertEquals(HttpResponseStatus.OK, response.status());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void dontStripConnectionHeaders() {
+        HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
+        HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
+        HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
+        UserEventCatcher catcher = new UserEventCatcher();
+        EmbeddedChannel channel = new EmbeddedChannel(catcher);
+        channel.pipeline().addFirst("upgrade", handler);
+
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io");
+        request.headers().add("connection", "extra");
+        request.headers().add("extra", "value");
+        assertTrue(channel.writeOutbound(request));
+        FullHttpRequest readRequest = channel.readOutbound();
+
+        List<String> connectionHeaders = readRequest.headers().getAll("connection");
+        assertTrue(connectionHeaders.contains("extra"));
+        assertTrue(readRequest.release());
         assertFalse(channel.finish());
     }
 }

@@ -277,6 +277,6 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
             builder.append(',');
         }
         builder.append(HttpHeaderValues.UPGRADE);
-        request.headers().set(HttpHeaderNames.CONNECTION, builder.toString());
+        request.headers().add(HttpHeaderNames.CONNECTION, builder.toString());
     }
 }
