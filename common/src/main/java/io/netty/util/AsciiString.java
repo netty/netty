@@ -1851,7 +1851,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         return (byte) ((c > MAX_CHAR_VALUE) ? '?' : c);
     }
 
-    public static byte c2b0(char c) {
+    private static byte c2b0(char c) {
         return (byte) c;
     }
 
