@@ -463,6 +463,10 @@ public final class NetUtil {
         }
     }
 
+    public static boolean isValidIpV6Address(String ip) {
+        return isValidIpV6Address((CharSequence) ip);
+    }
+
     public static boolean isValidIpV6Address(CharSequence ip) {
         int end = ip.length();
         if (end < 2) {
@@ -625,7 +629,7 @@ public final class NetUtil {
     }
 
     /**
-     * Takes a string and parses it to see if it is a valid IPV4 address.
+     * Takes a {@link CharSequence} and parses it to see if it is a valid IPV4 address.
      *
      * @return true, if the string represents an IPV4 address in dotted
      *         notation, false otherwise
@@ -635,7 +639,7 @@ public final class NetUtil {
     }
 
     /**
-     * Takes a string and parses it to see if it is a valid IPV4 address.
+     * Takes a {@link String} and parses it to see if it is a valid IPV4 address.
      *
      * @return true, if the string represents an IPV4 address in dotted
      *         notation, false otherwise
