@@ -41,6 +41,8 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
+import static io.netty.util.AsciiString.indexOf;
+
 /**
  * A class that holds a number of network-related constants.
  * <p/>
@@ -461,7 +463,7 @@ public final class NetUtil {
         }
     }
 
-    public static boolean isValidIpV6Address(String ip) {
+    public static boolean isValidIpV6Address(CharSequence ip) {
         int end = ip.length();
         if (end < 2) {
             return false;
@@ -557,7 +559,7 @@ public final class NetUtil {
                 }
 
                 // 7 - is minimum IPv4 address length
-                int ipv4End = ip.indexOf('%', ipv4Start + 7);
+                int ipv4End = indexOf(ip, '%', ipv4Start + 7);
                 if (ipv4End < 0) {
                     ipv4End = end;
                 }
@@ -628,8 +630,24 @@ public final class NetUtil {
      * @return true, if the string represents an IPV4 address in dotted
      *         notation, false otherwise
      */
+    public static boolean isValidIpV4Address(CharSequence ip) {
+        return isValidIpV4Address(ip, 0, ip.length());
+    }
+
+    /**
+     * Takes a string and parses it to see if it is a valid IPV4 address.
+     *
+     * @return true, if the string represents an IPV4 address in dotted
+     *         notation, false otherwise
+     */
     public static boolean isValidIpV4Address(String ip) {
         return isValidIpV4Address(ip, 0, ip.length());
+    }
+
+    private static boolean isValidIpV4Address(CharSequence ip, int from, int toExcluded) {
+        return ip instanceof String ? isValidIpV4Address((String) ip, from, toExcluded) :
+                ip instanceof AsciiString ? isValidIpV4Address((AsciiString) ip, from, toExcluded) :
+                        isValidIpV4Address0(ip, from, toExcluded);
     }
 
     @SuppressWarnings("DuplicateBooleanBranch")
@@ -637,10 +655,32 @@ public final class NetUtil {
         int len = toExcluded - from;
         int i;
         return len <= 15 && len >= 7 &&
-               (i = ip.indexOf('.', from + 1)) > 0 && isValidIpV4Word(ip, from, i) &&
-               (i = ip.indexOf('.', from = i + 2)) > 0 && isValidIpV4Word(ip, from - 1, i) &&
-               (i = ip.indexOf('.', from = i + 2)) > 0 && isValidIpV4Word(ip, from - 1, i) &&
-               isValidIpV4Word(ip, i + 1, toExcluded);
+                (i = ip.indexOf('.', from + 1)) > 0 && isValidIpV4Word(ip, from, i) &&
+                (i =  ip.indexOf('.', from = i + 2)) > 0 && isValidIpV4Word(ip, from - 1, i) &&
+                (i =  ip.indexOf('.', from = i + 2)) > 0 && isValidIpV4Word(ip, from - 1, i) &&
+                isValidIpV4Word(ip, i + 1, toExcluded);
+    }
+
+    @SuppressWarnings("DuplicateBooleanBranch")
+    private static boolean isValidIpV4Address(AsciiString ip, int from, int toExcluded) {
+        int len = toExcluded - from;
+        int i;
+        return len <= 15 && len >= 7 &&
+                (i = ip.indexOf('.', from + 1)) > 0 && isValidIpV4Word(ip, from, i) &&
+                (i =  ip.indexOf('.', from = i + 2)) > 0 && isValidIpV4Word(ip, from - 1, i) &&
+                (i =  ip.indexOf('.', from = i + 2)) > 0 && isValidIpV4Word(ip, from - 1, i) &&
+                isValidIpV4Word(ip, i + 1, toExcluded);
+    }
+
+    @SuppressWarnings("DuplicateBooleanBranch")
+    private static boolean isValidIpV4Address0(CharSequence ip, int from, int toExcluded) {
+        int len = toExcluded - from;
+        int i;
+        return len <= 15 && len >= 7 &&
+                (i = indexOf(ip, '.', from + 1)) > 0 && isValidIpV4Word(ip, from, i) &&
+                (i =  indexOf(ip, '.', from = i + 2)) > 0 && isValidIpV4Word(ip, from - 1, i) &&
+                (i =  indexOf(ip, '.', from = i + 2)) > 0 && isValidIpV4Word(ip, from - 1, i) &&
+                isValidIpV4Word(ip, i + 1, toExcluded);
     }
 
     /**

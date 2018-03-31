@@ -723,22 +723,16 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * -1 if found no occurrence.
      */
     public int indexOf(char ch, int start) {
-        if (start < 0) {
-            start = 0;
-        }
-
-        final int thisLen = length();
-
         if (ch > MAX_CHAR_VALUE) {
-            return -1;
+            return INDEX_NOT_FOUND;
         }
 
-        try {
-            return forEachByte(start, thisLen - start, new IndexOfProcessor((byte) ch));
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
-            return -1;
+        for (int i = start < 0 ? arrayOffset() : start + arrayOffset(); i < length(); ++i) {
+            if (b2c(value[i]) == ch) {
+                return i - arrayOffset();
+            }
         }
+        return -1;
     }
 
     /**
@@ -1832,10 +1826,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return INDEX_NOT_FOUND;
         }
         final int sz = cs.length();
-        if (start < 0) {
-            start = 0;
-        }
-        for (int i = start; i < sz; i++) {
+        for (int i = start < 0 ? 0 : start; i < sz; i++) {
             if (cs.charAt(i) == searchChar) {
                 return i;
             }
