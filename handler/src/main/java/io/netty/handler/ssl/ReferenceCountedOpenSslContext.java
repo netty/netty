@@ -285,26 +285,20 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             }
 
             /* Set session cache size, if specified */
-            if (sessionCacheSize > 0) {
-                this.sessionCacheSize = sessionCacheSize;
-                SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
-            } else {
+            if (sessionCacheSize <= 0) {
                 // Get the default session cache size using SSLContext.setSessionCacheSize()
-                this.sessionCacheSize = sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
-                // Revert the session cache size to the default value.
-                SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
+                sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
             }
+            this.sessionCacheSize = sessionCacheSize;
+            SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
 
             /* Set session timeout, if specified */
-            if (sessionTimeout > 0) {
-                this.sessionTimeout = sessionTimeout;
-                SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
-            } else {
+            if (sessionTimeout <= 0) {
                 // Get the default session timeout using SSLContext.setSessionCacheTimeout()
-                this.sessionTimeout = sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
-                // Revert the session timeout to the default value.
-                SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
+                sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
             }
+            this.sessionTimeout = sessionTimeout;
+            SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
 
             if (enableOcsp) {
                 SSLContext.enableOcsp(ctx, isClient());

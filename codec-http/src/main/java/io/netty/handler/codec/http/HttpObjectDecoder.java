@@ -534,12 +534,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         // when we produced an invalid message without consuming anything.
         in.skipBytes(in.readableBytes());
 
-        if (message != null) {
-            message.setDecoderResult(DecoderResult.failure(cause));
-        } else {
+        if (message == null) {
             message = createInvalidMessage();
-            message.setDecoderResult(DecoderResult.failure(cause));
         }
+        message.setDecoderResult(DecoderResult.failure(cause));
 
         HttpMessage ret = message;
         message = null;
