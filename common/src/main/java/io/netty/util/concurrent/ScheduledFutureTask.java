@@ -26,7 +26,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
-final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFuture<V>, PriorityQueueNode {
+final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFuture<V>, PriorityQueueNode,
+        AbstractScheduledEventExecutor.ScheduledTask {
     private static final AtomicLong nextTaskId = new AtomicLong();
     private static final long START_TIME = System.nanoTime();
 
@@ -38,6 +39,10 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         long deadlineNanos = nanoTime() + delay;
         // Guard against overflow
         return deadlineNanos < 0 ? Long.MAX_VALUE : deadlineNanos;
+    }
+
+    static long initialNanoTime() {
+        return START_TIME;
     }
 
     private final long id = nextTaskId.getAndIncrement();
@@ -80,12 +85,17 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         return super.executor();
     }
 
+    @Override
     public long deadlineNanos() {
         return deadlineNanos;
     }
 
     public long delayNanos() {
-        return Math.max(0, deadlineNanos() - nanoTime());
+        return deadlineToDelayNanos(deadlineNanos());
+    }
+
+    static long deadlineToDelayNanos(long deadlineNanos) {
+        return Math.max(0, deadlineNanos - nanoTime());
     }
 
     public long delayNanos(long currentTimeNanos) {
@@ -111,9 +121,8 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
             return 1;
         } else if (id < that.id) {
             return -1;
-        } else if (id == that.id) {
-            throw new Error();
         } else {
+            assert id != that.id;
             return 1;
         }
     }
@@ -132,11 +141,10 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                 if (!isCancelled()) {
                     task.call();
                     if (!executor().isShutdown()) {
-                        long p = periodNanos;
-                        if (p > 0) {
-                            deadlineNanos += p;
+                        if (periodNanos > 0) {
+                            deadlineNanos += periodNanos;
                         } else {
-                            deadlineNanos = nanoTime() - p;
+                            deadlineNanos = nanoTime() - periodNanos;
                         }
                         if (!isCancelled()) {
                             // scheduledTaskQueue can never be null as we lazy init it before submit the task!

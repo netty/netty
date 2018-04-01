@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit;
  * Abstract base class for {@link EventExecutor}s that want to support scheduling.
  */
 public abstract class AbstractScheduledEventExecutor extends AbstractEventExecutor {
-
     private static final Comparator<ScheduledFutureTask<?>> SCHEDULED_FUTURE_TASK_COMPARATOR =
             new Comparator<ScheduledFutureTask<?>>() {
                 @Override
@@ -49,6 +48,24 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     protected static long nanoTime() {
         return ScheduledFutureTask.nanoTime();
+    }
+
+    /**
+     * Given an arbitrary deadline {@code deadlineNanos}, calculate the number of nano seconds from now
+     * {@code deadlineNanos} would expire.
+     * @param deadlineNanos An arbitrary deadline in nano seconds.
+     * @return the number of nano seconds from now {@code deadlineNanos} would expire.
+     */
+    protected static long deadlineToDelayNanos(long deadlineNanos) {
+        return ScheduledFutureTask.deadlineToDelayNanos(deadlineNanos);
+    }
+
+    /**
+     * The initial value used for delay and computations based upon a monatomic time source.
+     * @return initial value used for delay and computations based upon a monatomic time source.
+     */
+    protected static long initialNanoTime() {
+        return ScheduledFutureTask.initialNanoTime();
     }
 
     PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue() {
@@ -85,6 +102,15 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         scheduledTaskQueue.clearIgnoringIndexes();
+
+        // calling minimumDelayScheduledTaskRemoved was considered here to give a chance for EventLoop
+        // implementations the opportunity to cleanup any timerFds, but this is currently only called when the EventLoop
+        // is being shutdown, so the timerFd and associated polling mechanism will be destroyed anyways.
+    }
+
+    protected final ScheduledTask peekScheduledTaskDelayNanos() {
+        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
+        return scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
     }
 
     /**
@@ -99,16 +125,21 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      * You should use {@link #nanoTime()} to retrieve the correct {@code nanoTime}.
      */
     protected final Runnable pollScheduledTask(long nanoTime) {
+        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
+        return scheduledTaskQueue != null ? pollScheduledTask(scheduledTaskQueue, nanoTime, true) : null;
+    }
+
+    final Runnable pollScheduledTask(Queue<ScheduledFutureTask<?>> scheduledTaskQueue, long nanoTime,
+                                     boolean notifyMinimumDeadlineRemoved) {
+        assert scheduledTaskQueue != null;
         assert inEventLoop();
 
-        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
-        if (scheduledTask == null) {
-            return null;
-        }
-
-        if (scheduledTask.deadlineNanos() <= nanoTime) {
-            scheduledTaskQueue.remove();
+        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue.peek();
+        if (scheduledTask != null && scheduledTask.deadlineNanos() <= nanoTime) {
+            scheduledTaskQueue.poll();
+            if (notifyMinimumDeadlineRemoved) {
+                minimumDelayScheduledTaskRemoved(scheduledTask);
+            }
             return scheduledTask;
         }
         return null;
@@ -225,11 +256,46 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         // NOOP
     }
 
-    <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {
+    /**
+     * Represents a task that is scheduled to expire some time in the future.
+     */
+    protected interface ScheduledTask {
+        /**
+         * Get the time stamp relative to some monotonically increasing time source for which this {@link ScheduledTask}
+         * expires.
+         * @return the time stamp relative to some monotonically increasing time source for which this
+         * {@link ScheduledTask} expires.
+         */
+        long deadlineNanos();
+    }
+
+    /**
+     * Represents a call to one of the {@link #schedule(Runnable, long, TimeUnit)} method variants from outside of this
+     * event executor thread (e.g. {@link #inEventLoop()} returns {@code false}).
+     */
+    protected interface ScheduledTaskRunnable extends Runnable, ScheduledTask {
+        /**
+         * Determine if this object is the result of adding or removing a scheduled task.
+         * @return {@code true} if this object is the result of adding or removing a scheduled task.
+         */
+        boolean isAddition();
+    }
+
+    final <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {
         if (inEventLoop()) {
             scheduledTaskQueue().add(task);
         } else {
-            execute(new Runnable() {
+            executeScheduledRunnable(new ScheduledTaskRunnable() {
+                @Override
+                public boolean isAddition() {
+                    return true;
+                }
+
+                @Override
+                public long deadlineNanos() {
+                    return task.deadlineNanos();
+                }
+
                 @Override
                 public void run() {
                     scheduledTaskQueue().add(task);
@@ -242,14 +308,51 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     final void removeScheduled(final ScheduledFutureTask<?> task) {
         if (inEventLoop()) {
-            scheduledTaskQueue().removeTyped(task);
+            removedSchedule0(task);
         } else {
-            execute(new Runnable() {
+            executeScheduledRunnable(new ScheduledTaskRunnable() {
+                @Override
+                public boolean isAddition() {
+                    return false;
+                }
+
+                @Override
+                public long deadlineNanos() {
+                    return task.deadlineNanos();
+                }
+
                 @Override
                 public void run() {
-                    removeScheduled(task);
+                    removedSchedule0(task);
                 }
             });
         }
+    }
+
+    private void removedSchedule0(final ScheduledFutureTask<?> task) {
+        if (scheduledTaskQueue == null) {
+            return;
+        }
+        if (scheduledTaskQueue.peek() == task) {
+            scheduledTaskQueue.poll();
+            minimumDelayScheduledTaskRemoved(task);
+        } else {
+            scheduledTaskQueue.removeTyped(task);
+        }
+    }
+
+    /**
+     * Execute a {@link ScheduledTaskRunnable} from outside the event loop thread. Note that schedule events which
+     * occur on the event loop thread do not interact with this method.
+     * @param runnable The {@link ScheduledTaskRunnable} to execute.
+     */
+    protected void executeScheduledRunnable(ScheduledTaskRunnable runnable) {
+        execute(runnable);
+    }
+
+    /**
+     * The next task to expire (e.g. minimum delay) has been removed from the scheduled priority queue.
+     */
+    protected void minimumDelayScheduledTaskRemoved(@SuppressWarnings("unused") ScheduledTask task) {
     }
 }
