@@ -205,7 +205,7 @@ public class CorsHandler extends ChannelDuplexHandler {
                 setExposeHeaders(response);
             }
         }
-        ctx.writeAndFlush(msg, promise);
+        ctx.write(msg, promise);
     }
 
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {
