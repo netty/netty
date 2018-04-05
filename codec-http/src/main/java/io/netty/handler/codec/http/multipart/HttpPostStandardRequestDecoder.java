@@ -333,7 +333,9 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         checkDestroyed();
 
         if (hasNext()) {
-            return bodyListHttpData.get(bodyListHttpDataRank++);
+            InterfaceHttpData data = bodyListHttpData.get(bodyListHttpDataRank++);
+            factory.removeHttpDataFromClean(request, data);
+            return data;
         }
         return null;
     }

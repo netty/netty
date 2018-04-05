@@ -380,7 +380,9 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         checkDestroyed();
 
         if (hasNext()) {
-            return bodyListHttpData.get(bodyListHttpDataRank++);
+            InterfaceHttpData data = bodyListHttpData.get(bodyListHttpDataRank++);
+            factory.removeHttpDataFromClean(request, data);
+            return data;
         }
         return null;
     }
@@ -940,11 +942,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         if (undecodedChunk != null && undecodedChunk.refCnt() > 0) {
             undecodedChunk.release();
             undecodedChunk = null;
-        }
-
-        // release all data which was not yet pulled
-        for (int i = bodyListHttpDataRank; i < bodyListHttpData.size(); i++) {
-            bodyListHttpData.get(i).release();
         }
     }
 

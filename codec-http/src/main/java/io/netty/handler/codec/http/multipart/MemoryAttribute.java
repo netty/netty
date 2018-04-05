@@ -61,6 +61,9 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
 
     @Override
     public String getValue() {
+        if (getByteBuf() == null){
+            return null;
+        }
         return getByteBuf().toString(getCharset());
     }
 
