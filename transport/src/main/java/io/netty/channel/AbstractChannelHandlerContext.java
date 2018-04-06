@@ -73,6 +73,9 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     // child executor.
     final EventExecutor executor;
     private ChannelFuture succeededFuture;
+    // Read from channel config when channel is active. Since the config of a channel is assigned after
+    // a pipeline is instantiated, the config isn't available in the constructor for all contexts.
+    private boolean wakeupOnWrite;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
@@ -189,6 +192,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelActive() {
+        wakeupOnWrite = pipeline.channel().config().getOption(ChannelOption.WAKEUP_ON_WRITE);
         invokeChannelActive(findContextInbound());
         return this;
     }
@@ -820,7 +824,8 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             if (flush) {
                 task = WriteAndFlushTask.newInstance(next, m, promise);
             }  else {
-                task = WriteTask.newInstance(next, m, promise);
+                task = wakeupOnWrite ? WakeupWriteTask.newInstance(next, m, promise) :
+                        WriteTask.newInstance(next, m, promise);
             }
             safeExecute(executor, task, promise, m);
         }
@@ -1127,6 +1132,27 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         public void write(AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             super.write(ctx, msg, promise);
             ctx.invokeFlush();
+        }
+    }
+
+    static final class WakeupWriteTask extends AbstractWriteTask {
+
+        private static final Recycler<WakeupWriteTask> RECYCLER = new Recycler<WakeupWriteTask>() {
+            @Override
+            protected WakeupWriteTask newObject(Handle<WakeupWriteTask> handle) {
+                return new WakeupWriteTask(handle);
+            }
+        };
+
+        private static WakeupWriteTask newInstance(
+                AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            WakeupWriteTask task = RECYCLER.get();
+            init(task, ctx, msg, promise);
+            return task;
+        }
+
+        private WakeupWriteTask(Recycler.Handle<WakeupWriteTask> handle) {
+            super(handle);
         }
     }
 }
