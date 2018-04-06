@@ -3317,6 +3317,224 @@ public abstract class AbstractByteBufTest {
         }
     }
 
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testSliceAfterRelease() {
+        releasedBuffer().slice();
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testSliceAfterRelease2() {
+        releasedBuffer().slice(0, 1);
+    }
+
+    private static void assertSliceFailAfterRelease(ByteBuf... bufs) {
+        for (ByteBuf buf : bufs) {
+            if (buf.refCnt() > 0) {
+                buf.release();
+            }
+        }
+        for (ByteBuf buf : bufs) {
+            try {
+                assertEquals(0, buf.refCnt());
+                buf.slice();
+                fail();
+            } catch (IllegalReferenceCountException ignored) {
+                // as expected
+            }
+        }
+    }
+
+    @Test
+    public void testSliceAfterReleaseRetainedSlice() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedSlice(0, 1);
+        assertSliceFailAfterRelease(buf, buf2);
+    }
+
+    @Test
+    public void testSliceAfterReleaseRetainedSliceDuplicate() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedSlice(0, 1);
+        ByteBuf buf3 = buf2.duplicate();
+        assertSliceFailAfterRelease(buf, buf2, buf3);
+    }
+
+    @Test
+    public void testSliceAfterReleaseRetainedSliceRetainedDuplicate() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedSlice(0, 1);
+        ByteBuf buf3 = buf2.retainedDuplicate();
+        assertSliceFailAfterRelease(buf, buf2, buf3);
+    }
+
+    @Test
+    public void testSliceAfterReleaseRetainedDuplicate() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedDuplicate();
+        assertSliceFailAfterRelease(buf, buf2);
+    }
+
+    @Test
+    public void testSliceAfterReleaseRetainedDuplicateSlice() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedDuplicate();
+        ByteBuf buf3 = buf2.slice(0, 1);
+        assertSliceFailAfterRelease(buf, buf2, buf3);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testRetainedSliceAfterRelease() {
+        releasedBuffer().retainedSlice();
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testRetainedSliceAfterRelease2() {
+        releasedBuffer().retainedSlice(0, 1);
+    }
+
+    private static void assertRetainedSliceFailAfterRelease(ByteBuf... bufs) {
+        for (ByteBuf buf : bufs) {
+            if (buf.refCnt() > 0) {
+                buf.release();
+            }
+        }
+        for (ByteBuf buf : bufs) {
+            try {
+                assertEquals(0, buf.refCnt());
+                buf.retainedSlice();
+                fail();
+            } catch (IllegalReferenceCountException ignored) {
+                // as expected
+            }
+        }
+    }
+
+    @Test
+    public void testRetainedSliceAfterReleaseRetainedSlice() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedSlice(0, 1);
+        assertRetainedSliceFailAfterRelease(buf, buf2);
+    }
+
+    @Test
+    public void testRetainedSliceAfterReleaseRetainedSliceDuplicate() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedSlice(0, 1);
+        ByteBuf buf3 = buf2.duplicate();
+        assertRetainedSliceFailAfterRelease(buf, buf2, buf3);
+    }
+
+    @Test
+    public void testRetainedSliceAfterReleaseRetainedSliceRetainedDuplicate() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedSlice(0, 1);
+        ByteBuf buf3 = buf2.retainedDuplicate();
+        assertRetainedSliceFailAfterRelease(buf, buf2, buf3);
+    }
+
+    @Test
+    public void testRetainedSliceAfterReleaseRetainedDuplicate() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedDuplicate();
+        assertRetainedSliceFailAfterRelease(buf, buf2);
+    }
+
+    @Test
+    public void testRetainedSliceAfterReleaseRetainedDuplicateSlice() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedDuplicate();
+        ByteBuf buf3 = buf2.slice(0, 1);
+        assertRetainedSliceFailAfterRelease(buf, buf2, buf3);
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testDuplicateAfterRelease() {
+        releasedBuffer().duplicate();
+    }
+
+    @Test(expected = IllegalReferenceCountException.class)
+    public void testRetainedDuplicateAfterRelease() {
+        releasedBuffer().retainedDuplicate();
+    }
+
+    private static void assertDuplicateFailAfterRelease(ByteBuf... bufs) {
+        for (ByteBuf buf : bufs) {
+            if (buf.refCnt() > 0) {
+                buf.release();
+            }
+        }
+        for (ByteBuf buf : bufs) {
+            try {
+                assertEquals(0, buf.refCnt());
+                buf.duplicate();
+                fail();
+            } catch (IllegalReferenceCountException ignored) {
+                // as expected
+            }
+        }
+    }
+
+    @Test
+    public void testDuplicateAfterReleaseRetainedSliceDuplicate() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedSlice(0, 1);
+        ByteBuf buf3 = buf2.duplicate();
+        assertDuplicateFailAfterRelease(buf, buf2, buf3);
+    }
+
+    @Test
+    public void testDuplicateAfterReleaseRetainedDuplicate() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedDuplicate();
+        assertDuplicateFailAfterRelease(buf, buf2);
+    }
+
+    @Test
+    public void testDuplicateAfterReleaseRetainedDuplicateSlice() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedDuplicate();
+        ByteBuf buf3 = buf2.slice(0, 1);
+        assertDuplicateFailAfterRelease(buf, buf2, buf3);
+    }
+
+    private static void assertRetainedDuplicateFailAfterRelease(ByteBuf... bufs) {
+        for (ByteBuf buf : bufs) {
+            if (buf.refCnt() > 0) {
+                buf.release();
+            }
+        }
+        for (ByteBuf buf : bufs) {
+            try {
+                assertEquals(0, buf.refCnt());
+                buf.retainedDuplicate();
+                fail();
+            } catch (IllegalReferenceCountException ignored) {
+                // as expected
+            }
+        }
+    }
+
+    @Test
+    public void testRetainedDuplicateAfterReleaseRetainedDuplicate() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedDuplicate();
+        assertRetainedDuplicateFailAfterRelease(buf, buf2);
+    }
+
+    @Test
+    public void testRetainedDuplicateAfterReleaseDuplicate() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.duplicate();
+        assertRetainedDuplicateFailAfterRelease(buf, buf2);
+    }
+
+    @Test
+    public void testRetainedDuplicateAfterReleaseRetainedSlice() {
+        ByteBuf buf = newBuffer(1);
+        ByteBuf buf2 = buf.retainedSlice(0, 1);
+        assertRetainedDuplicateFailAfterRelease(buf, buf2);
+    }
+
     @Test
     public void testSliceRelease() {
         ByteBuf buf = newBuffer(8);

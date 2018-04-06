@@ -1172,6 +1172,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf duplicate() {
+        ensureAccessible();
         return new UnpooledDuplicatedByteBuf(this);
     }
 
