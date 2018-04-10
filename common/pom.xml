@@ -75,6 +75,15 @@
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
     </dependency>
+    <!-- Add dependency on dev-tools as otherwise the build will fail if not installed first manually -->
+    <!-- See https://github.com/netty/netty/issues/7842 -->
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-dev-tools</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>
