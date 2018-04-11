@@ -130,15 +130,13 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     @Override
     public InetAddress getInterface() {
         NetworkInterface inf = getNetworkInterface();
-        if (inf == null) {
-            return null;
-        } else {
+        if (inf != null) {
             Enumeration<InetAddress> addresses = SocketUtils.addressesFromNetworkInterface(inf);
             if (addresses.hasMoreElements()) {
                 return addresses.nextElement();
             }
-            return null;
         }
+        return null;
     }
 
     @Override
