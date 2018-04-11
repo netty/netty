@@ -14,6 +14,8 @@
  */
 package io.netty.util.internal;
 
+import java.util.Collection;
+
 /**
  * A grab-bag of useful utility methods.
  */
@@ -86,6 +88,17 @@ public final class ObjectUtil {
         checkNotNull(array, name);
         checkPositive(array.length, name + ".length");
         return array;
+    }
+
+    /**
+     * Checks that the given argument is neither null nor empty.
+     * If it is, throws {@link NullPointerException} or {@link IllegalArgumentException}.
+     * Otherwise, returns the argument.
+     */
+    public static <T extends Collection<?>> T checkNonEmpty(T collection, String name) {
+        checkNotNull(collection, name);
+        checkPositive(collection.size(), name + ".size");
+        return collection;
     }
 
     /**
