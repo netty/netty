@@ -125,11 +125,8 @@ public class FastThreadLocal<V> {
 
     private final int index;
 
-    private final int cleanerFlagIndex;
-
     public FastThreadLocal() {
         index = InternalThreadLocalMap.nextVariableIndex();
-        cleanerFlagIndex = InternalThreadLocalMap.nextVariableIndex();
     }
 
     /**
@@ -150,13 +147,11 @@ public class FastThreadLocal<V> {
 
     private void registerCleaner(final InternalThreadLocalMap threadLocalMap) {
         Thread current = Thread.currentThread();
-        if (FastThreadLocalThread.willCleanupFastThreadLocals(current) ||
-            threadLocalMap.indexedVariable(cleanerFlagIndex) != InternalThreadLocalMap.UNSET) {
+        if (FastThreadLocalThread.willCleanupFastThreadLocals(current) || threadLocalMap.isCleanerFlagSet(index)) {
             return;
         }
-        // removeIndexedVariable(cleanerFlagIndex) isn't necessary because the finally cleanup is tied to the lifetime
-        // of the thread, and this Object will be discarded if the associated thread is GCed.
-        threadLocalMap.setIndexedVariable(cleanerFlagIndex, Boolean.TRUE);
+
+        threadLocalMap.setCleanerFlag(index);
 
         // We will need to ensure we will trigger remove(InternalThreadLocalMap) so everything will be released
         // and FastThreadLocal.onRemoval(...) will be called.
