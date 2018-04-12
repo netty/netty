@@ -150,6 +150,14 @@ public class CorsHandlerTest {
     }
 
     @Test
+    public void preflightRequestWithUnauthorizedOrigin() {
+        final String origin = "http://host";
+        final CorsConfig config = forOrigin("http://localhost").build();
+        final HttpResponse response = preflightRequest(config, origin, "xheader1");
+        assertThat(response.headers().contains(ACCESS_CONTROL_ALLOW_ORIGIN), is(false));
+    }
+
+    @Test
     public void preflightRequestWithCustomHeaders() {
         final String headerName = "CustomHeader";
         final String value1 = "value1";

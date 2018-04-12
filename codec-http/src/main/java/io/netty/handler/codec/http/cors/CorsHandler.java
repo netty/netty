@@ -38,6 +38,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.util.ReferenceCountUtil.release;
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Handles <a href="http://www.w3.org/TR/cors/">Cross Origin Resource Sharing</a> (CORS) requests.
@@ -60,7 +61,7 @@ public class CorsHandler extends ChannelDuplexHandler {
      * Creates a new instance with a single {@link CorsConfig}.
      */
     public CorsHandler(final CorsConfig config) {
-        this(Collections.singletonList(config), config.isShortCircuit());
+        this(Collections.singletonList(checkNotNull(config, "config")), config.isShortCircuit());
     }
 
     /**
@@ -137,7 +138,7 @@ public class CorsHandler extends ChannelDuplexHandler {
 
     private boolean setOrigin(final HttpResponse response) {
         final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
-        if (origin != null) {
+        if (origin != null && config != null) {
             if (NULL_ORIGIN.equals(origin) && config.isNullOriginAllowed()) {
                 setNullOrigin(response);
                 return true;
