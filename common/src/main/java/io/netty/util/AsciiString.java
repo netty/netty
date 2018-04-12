@@ -689,7 +689,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         }
         final byte firstCharAsByte = c2b0(firstChar);
         final int len = offset + start + length - subCount;
-        for (int i = start + offset; i <= len; ++i) {
+        for (int i = start + offset; i <= len && i < length; ++i) {
             if (value[i] == firstCharAsByte) {
                 int o1 = i, o2 = 0;
                 while (++o2 < subCount && b2c(value[++o1]) == subString.charAt(o2)) {
@@ -773,7 +773,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         }
         final byte firstCharAsByte = c2b0(firstChar);
         final int end = offset + start;
-        for (int i = offset + start + length - subCount; i >= end; --i) {
+        for (int i = length - subCount; i >= end; --i) {
             if (value[i] == firstCharAsByte) {
                 int o1 = i, o2 = 0;
                 while (++o2 < subCount && b2c(value[++o1]) == subString.charAt(o2)) {

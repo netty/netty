@@ -385,4 +385,26 @@ public class AsciiStringCharacterTest {
         //two "123"s
         assertEquals(AsciiString.hashCode("123"), AsciiString.hashCode("a123".substring(1)));
     }
+
+    @Test
+    public void testIndexOf() {
+        Assert.assertEquals(3, new AsciiString("012345").indexOf("345", 3));
+        Assert.assertEquals(3, new AsciiString("012345").indexOf("345", 0));
+        Assert.assertEquals(-1, new AsciiString("012345").indexOf("345", 4));
+        Assert.assertEquals(-1, new AsciiString("012345").indexOf("abc", 3));
+        Assert.assertEquals(-1, new AsciiString("012345").indexOf("abc", 0));
+        Assert.assertEquals(-1, new AsciiString("012345").indexOf("abcdefghi", 0));
+        Assert.assertEquals(-1, new AsciiString("012345").indexOf("abcdefghi", 4));
+    }
+
+    @Test
+    public void testLastIndexOf() {
+        Assert.assertEquals(3, new AsciiString("012345").lastIndexOf("345", 3));
+        Assert.assertEquals(3, new AsciiString("012345").lastIndexOf("345", 0));
+        Assert.assertEquals(-1, new AsciiString("012345").lastIndexOf("345", 4));
+        Assert.assertEquals(-1, new AsciiString("012345").lastIndexOf("abc", 3));
+        Assert.assertEquals(-1, new AsciiString("012345").lastIndexOf("abc", 0));
+        Assert.assertEquals(-1, new AsciiString("012345").lastIndexOf("abcdefghi", 0));
+        Assert.assertEquals(-1, new AsciiString("012345").lastIndexOf("abcdefghi", 4));
+    }
 }
