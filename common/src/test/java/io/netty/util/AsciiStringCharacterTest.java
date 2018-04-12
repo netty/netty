@@ -15,7 +15,6 @@
  */
 package io.netty.util;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.CharBuffer;
@@ -87,7 +86,7 @@ public class AsciiStringCharacterTest {
     public void testComparisonWithString() {
         String string = "shouldn't fail";
         AsciiString ascii = new AsciiString(string.toCharArray());
-        Assert.assertEquals(string, ascii.toString());
+        assertEquals(string, ascii.toString());
     }
 
     @Test
@@ -319,6 +318,8 @@ public class AsciiStringCharacterTest {
         assertEquals(0, new AsciiString("abcd", 1, 2).indexOf("bc", 0));
         assertEquals(0, new AsciiString("abcd", 1, 3).indexOf("bcd", 0));
         assertEquals(1, new AsciiString("abcdabcd", 4, 4).indexOf("bcd", 0));
+        assertEquals(3, new AsciiString("012345").indexOf("345", 3));
+        assertEquals(3, new AsciiString("012345").indexOf("345", 0));
 
         // Test with empty string
         assertEquals(0, new AsciiString("abcd").indexOf("", 0));
@@ -330,6 +331,11 @@ public class AsciiStringCharacterTest {
         assertEquals(-1, new AsciiString("abcdbc").indexOf("bce", 0));
         assertEquals(-1, new AsciiString("abcd", 1, 3).indexOf("abc", 0));
         assertEquals(-1, new AsciiString("abcd", 1, 2).indexOf("bd", 0));
+        assertEquals(-1, new AsciiString("012345").indexOf("345", 4));
+        assertEquals(-1, new AsciiString("012345").indexOf("abc", 3));
+        assertEquals(-1, new AsciiString("012345").indexOf("abc", 0));
+        assertEquals(-1, new AsciiString("012345").indexOf("abcdefghi", 0));
+        assertEquals(-1, new AsciiString("012345").indexOf("abcdefghi", 4));
     }
 
     @Test
@@ -354,6 +360,8 @@ public class AsciiStringCharacterTest {
         assertEquals(0, new AsciiString("abcd", 1, 2).lastIndexOf("bc", 0));
         assertEquals(0, new AsciiString("abcd", 1, 3).lastIndexOf("bcd", 0));
         assertEquals(1, new AsciiString("abcdabcd", 4, 4).lastIndexOf("bcd", 0));
+        assertEquals(3, new AsciiString("012345").lastIndexOf("345", 3));
+        assertEquals(3, new AsciiString("012345").lastIndexOf("345", 0));
 
         // Test with empty string
         assertEquals(0, new AsciiString("abcd").lastIndexOf("", 0));
@@ -365,6 +373,11 @@ public class AsciiStringCharacterTest {
         assertEquals(-1, new AsciiString("abcdbc").lastIndexOf("bce", 0));
         assertEquals(-1, new AsciiString("abcd", 1, 3).lastIndexOf("abc", 0));
         assertEquals(-1, new AsciiString("abcd", 1, 2).lastIndexOf("bd", 0));
+        assertEquals(-1, new AsciiString("012345").lastIndexOf("345", 4));
+        assertEquals(-1, new AsciiString("012345").lastIndexOf("abc", 3));
+        assertEquals(-1, new AsciiString("012345").lastIndexOf("abc", 0));
+        assertEquals(-1, new AsciiString("012345").lastIndexOf("abcdefghi", 0));
+        assertEquals(-1, new AsciiString("012345").lastIndexOf("abcdefghi", 4));
     }
 
     @Test
