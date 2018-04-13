@@ -296,6 +296,10 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writeSettings(ctx, ((Http2SettingsFrame) msg).settings(), promise);
         } else if (msg instanceof Http2GoAwayFrame) {
             writeGoAwayFrame(ctx, (Http2GoAwayFrame) msg, promise);
+        } else if (msg instanceof Http2UnknownFrame) {
+            Http2UnknownFrame unknownFrame = (Http2UnknownFrame) msg;
+            encoder().writeFrame(ctx, unknownFrame.frameType(), unknownFrame.stream().id(),
+                    unknownFrame.flags(), unknownFrame.content(), promise);
         } else if (!(msg instanceof Http2Frame)) {
             ctx.write(msg, promise);
         } else {
