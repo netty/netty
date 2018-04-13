@@ -535,6 +535,20 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void writeUnknownFrame() {
+        final Http2FrameStream stream = frameCodec.newStream();
+
+        ByteBuf buffer = Unpooled.buffer().writeByte(1);
+        DefaultHttp2UnknownFrame unknownFrame = new DefaultHttp2UnknownFrame(
+                (byte) 20, new Http2Flags().ack(true), buffer);
+        unknownFrame.stream(stream);
+        channel.write(unknownFrame);
+
+        verify(frameWriter).writeFrame(eq(http2HandlerCtx), eq(unknownFrame.frameType()),
+                eq(unknownFrame.stream().id()), eq(unknownFrame.flags()), eq(buffer), any(ChannelPromise.class));
+    }
+
+    @Test
     public void sendSettingsFrame() {
         Http2Settings settings = new Http2Settings();
         channel.write(new DefaultHttp2SettingsFrame(settings));
