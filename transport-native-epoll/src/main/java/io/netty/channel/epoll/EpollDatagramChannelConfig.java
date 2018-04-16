@@ -16,13 +16,9 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.FixedRecvByteBufAllocator;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.*;
 import io.netty.channel.socket.DatagramChannelConfig;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -48,7 +44,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
                 ChannelOption.SO_REUSEADDR, ChannelOption.IP_MULTICAST_LOOP_DISABLED,
                 ChannelOption.IP_MULTICAST_ADDR, ChannelOption.IP_MULTICAST_IF, ChannelOption.IP_MULTICAST_TTL,
                 ChannelOption.IP_TOS, ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION,
-                EpollChannelOption.SO_REUSEPORT);
+                EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_TRANSPARENT);
     }
 
     @SuppressWarnings({ "unchecked", "deprecation" })
@@ -87,6 +83,9 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         if (option == EpollChannelOption.SO_REUSEPORT) {
             return (T) Boolean.valueOf(isReusePort());
         }
+        if (option == EpollChannelOption.IP_TRANSPARENT) {
+            return (T) Boolean.valueOf(isIpTransparent());
+        }
         return super.getOption(option);
     }
 
@@ -117,6 +116,8 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
             setActiveOnOpen((Boolean) value);
         } else if (option == EpollChannelOption.SO_REUSEPORT) {
             setReusePort((Boolean) value);
+        } else if (option == EpollChannelOption.IP_TRANSPARENT) {
+            setIpTransparent((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -371,4 +372,31 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
             throw new ChannelException(e);
         }
     }
+
+    /**
+     * Returns {@code true} if <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
+     * {@code false} otherwise.
+     */
+    public boolean isIpTransparent() {
+        try {
+            return datagramChannel.socket.isIpTransparent();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * If {@code true} is used <a href="http://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
+     * {@code false} for disable it. Default is disabled.
+     */
+    public EpollDatagramChannelConfig setIpTransparent(boolean ipTransparent) {
+        try {
+            datagramChannel.socket.setIpTransparent(ipTransparent);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
 }
+
