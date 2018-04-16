@@ -404,4 +404,3 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
 }
-
