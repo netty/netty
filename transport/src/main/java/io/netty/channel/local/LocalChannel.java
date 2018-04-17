@@ -436,7 +436,9 @@ public class LocalChannel extends AbstractChannel {
             }
         }
         ChannelPipeline peerPipeline = peer.pipeline();
-        if (peer.readInProgress) {
+        // We should only set readInProgress to false if there is any data that was read as otherwise we may miss to
+        // forward data later on.
+        if (peer.readInProgress && !peer.inboundBuffer.isEmpty()) {
             peer.readInProgress = false;
             for (;;) {
                 Object received = peer.inboundBuffer.poll();
