@@ -62,6 +62,11 @@ final class DnsRecordResolveContext extends DnsResolveContext<DnsRecord> {
     }
 
     @Override
+    List<DnsRecord> filterResults(List<DnsRecord> unfiltered) {
+        return unfiltered;
+    }
+
+    @Override
     void cache(String hostname, DnsRecord[] additionals, DnsRecord result, DnsRecord convertedResult) {
         // Do not cache.
         // XXX: When we implement cache, we would need to retain the reference count of the result record.

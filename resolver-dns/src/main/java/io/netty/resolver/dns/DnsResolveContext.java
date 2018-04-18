@@ -31,6 +31,7 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -141,6 +142,12 @@ abstract class DnsResolveContext<T> {
      * at least one element.
      */
     abstract boolean containsExpectedResult(List<T> finalResult);
+
+    /**
+     * Returns a filtered list of results which should be the final result of DNS resolution. This must take into
+     * account JDK semantics such as {@link NetUtil#isIpV6AddressesPreferred()}.
+     */
+    abstract List<T> filterResults(List<T> unfiltered);
 
     /**
      * Caches a successful resolution.
@@ -702,7 +709,7 @@ abstract class DnsResolveContext<T> {
 
         if (finalResult != null) {
             // Found at least one resolved record.
-            trySuccess(promise, finalResult);
+            trySuccess(promise, filterResults(finalResult));
             return;
         }
 

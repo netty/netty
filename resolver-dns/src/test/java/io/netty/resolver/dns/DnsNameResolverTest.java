@@ -66,9 +66,12 @@ import java.net.UnknownHostException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +79,7 @@ import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -1175,6 +1179,67 @@ public class DnsNameResolverTest {
     @Test
     public void testRecursiveResolveCache() throws Exception {
         testRecursiveResolveCache(true);
+    }
+
+    @Test
+    public void testIpv4PreferredWhenIpv6First() throws Exception {
+        testResolvesPreferredWhenNonPreferredFirst0(ResolvedAddressTypes.IPV4_PREFERRED);
+    }
+
+    @Test
+    public void testIpv6PreferredWhenIpv4First() throws Exception {
+        testResolvesPreferredWhenNonPreferredFirst0(ResolvedAddressTypes.IPV6_PREFERRED);
+    }
+
+    private static void testResolvesPreferredWhenNonPreferredFirst0(ResolvedAddressTypes types) throws Exception {
+        final String name = "netty.com";
+        // This store is non-compliant, returning records of the wrong type for a query.
+        // It works since we don't verify the type of the result when resolving to deal with
+        // non-compliant servers in the wild.
+        List<Set<ResourceRecord>> records = new ArrayList<Set<ResourceRecord>>();
+        final String ipv6Address = "0:0:0:0:0:0:1:1";
+        final String ipv4Address = "1.1.1.1";
+        if (types == ResolvedAddressTypes.IPV4_PREFERRED) {
+            records.add(newAddressRecord(name, RecordType.AAAA, ipv6Address));
+            records.add(newAddressRecord(name, RecordType.A, ipv4Address));
+        } else {
+            records.add(newAddressRecord(name, RecordType.A, ipv4Address));
+            records.add(newAddressRecord(name, RecordType.AAAA, ipv6Address));
+        }
+        final Iterator<Set<ResourceRecord>> recordsIterator = records.iterator();
+        RecordStore arbitrarilyOrderedStore = new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
+                return recordsIterator.next();
+            }
+        };
+        TestDnsServer nonCompliantDnsServer = new TestDnsServer(arbitrarilyOrderedStore);
+        nonCompliantDnsServer.start();
+        try {
+            DnsNameResolver resolver = newResolver(types)
+                    .maxQueriesPerResolve(2)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(
+                            nonCompliantDnsServer.localAddress()))
+                    .build();
+            InetAddress resolved = resolver.resolve("netty.com").syncUninterruptibly().getNow();
+            if (types == ResolvedAddressTypes.IPV4_PREFERRED) {
+                assertEquals(ipv4Address, resolved.getHostAddress());
+            } else {
+                assertEquals(ipv6Address, resolved.getHostAddress());
+            }
+        } finally {
+            nonCompliantDnsServer.stop();
+        }
+    }
+
+    private static Set<ResourceRecord> newAddressRecord(String name, RecordType type, String address) {
+        ResourceRecordModifier rm = new ResourceRecordModifier();
+        rm.setDnsClass(RecordClass.IN);
+        rm.setDnsName(name);
+        rm.setDnsTtl(100);
+        rm.setDnsType(type);
+        rm.put(DnsAttribute.IP_ADDRESS, address);
+        return Collections.singleton(rm.getEntry());
     }
 
     private static void testRecursiveResolveCache(boolean cache)
