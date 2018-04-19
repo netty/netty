@@ -258,7 +258,7 @@ class TestDnsServer extends DnsServer {
 
         private final Set<String> domains;
 
-        public TestRecordStore(Set<String> domains) {
+        private TestRecordStore(Set<String> domains) {
             this.domains = domains;
         }
 
