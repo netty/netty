@@ -68,7 +68,7 @@ static int nettyNonBlockingSocket(int domain, int type, int protocol) {
 #endif
 }
 
-static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr, int len) {
+static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr, int len, jobject local) {
     char ipstr[INET6_ADDRSTRLEN];
     int port;
     jstring ipString;
@@ -93,7 +93,7 @@ static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_st
             ipString = (*env)->NewStringUTF(env, ipstr);
         }
     }
-    jobject socketAddr = (*env)->NewObject(env, datagramSocketAddressClass, datagramSocketAddrMethodId, ipString, port, len);
+    jobject socketAddr = (*env)->NewObject(env, datagramSocketAddressClass, datagramSocketAddrMethodId, ipString, port, len, local);
     return socketAddr;
 }
 
@@ -289,12 +289,39 @@ static jint _sendTo(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit, jb
 
 static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit) {
     struct sockaddr_storage addr;
+    struct sockaddr_storage daddr;
     socklen_t addrlen = sizeof(addr);
+    char cntrlbuf[64];
+    struct iovec iov;
+    struct msghdr msg;
     ssize_t res;
     int err;
+    struct cmsghdr* cmsg;
+    jobject local = NULL;
+    int readLocalAddr;
+
+    if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR,
+            &readLocalAddr, sizeof(readLocalAddr)) < 0) {
+        readLocalAddr = 0;
+    }
+
+    if (readLocalAddr) {
+        iov.iov_base = buffer + pos;
+        iov.iov_len  = (size_t) (limit - pos);
+        msg.msg_name = (struct sockaddr*) &addr;
+        msg.msg_namelen = addrlen;
+        msg.msg_iov = &iov;
+        msg.msg_iovlen = 1;
+        msg.msg_control = cntrlbuf;
+        msg.msg_controllen = sizeof(cntrlbuf);
+    }
 
     do {
-        res = recvfrom(fd, buffer + pos, (size_t) (limit - pos), 0, (struct sockaddr*) &addr, &addrlen);
+        if (readLocalAddr) {
+            res = recvmsg(fd, &msg, 0);
+        } else {
+            res = recvfrom(fd, buffer + pos, (size_t) (limit - pos), 0, (struct sockaddr*) &addr, &addrlen);
+        }
         // Keep on reading if we was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
 
@@ -315,7 +342,16 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
         return NULL;
     }
 
-    return createDatagramSocketAddress(env, &addr, res);
+    if (readLocalAddr) {
+        for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+            if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVORIGDSTADDR) {
+                memcpy (&daddr, CMSG_DATA(cmsg), sizeof (struct sockaddr_storage));
+                local = createDatagramSocketAddress(env, &daddr, res, NULL);
+                break;
+            }
+        }
+    }
+    return createDatagramSocketAddress(env, &addr, res, local);
 }
 
 void netty_unix_socket_getOptionHandleError(JNIEnv* env, int err) {
@@ -977,9 +1013,9 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
         netty_unix_errors_throwOutOfMemoryError(env);
         return JNI_ERR;
     }
-    datagramSocketAddrMethodId = (*env)->GetMethodID(env, datagramSocketAddressClass, "<init>", "(Ljava/lang/String;II)V");
+    datagramSocketAddrMethodId = (*env)->GetMethodID(env, datagramSocketAddressClass, "<init>", "(Ljava/lang/String;IILio/netty/channel/unix/DatagramSocketAddress;)V");
     if (datagramSocketAddrMethodId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: DatagramSocketAddress.<init>(String, int, int)");
+        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: DatagramSocketAddress.<init>(String, int, int, DatagramSocketAddress)");
         return JNI_ERR;
     }
     jclass localInetSocketAddressClass = (*env)->FindClass(env, "java/net/InetSocketAddress");
