@@ -26,6 +26,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoop;
@@ -940,6 +941,80 @@ public class LocalChannelTest {
             closeChannel(cc);
             assertTrue(cc.inboundBuffer.isEmpty());
             closeChannel(sc);
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    private static void writeAndFlushReadOnSuccess(final ChannelHandlerContext ctx, Object msg) {
+        ctx.writeAndFlush(msg).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                if (future.isSuccess()) {
+                    ctx.read();
+                }
+            }
+        });
+    }
+
+    @Test(timeout = 5000)
+    public void testAutoReadDisabledSharedGroup() throws Exception {
+        testAutoReadDisabled(sharedGroup, sharedGroup);
+    }
+
+    @Test(timeout = 5000)
+    public void testAutoReadDisabledDifferentGroup() throws Exception {
+        testAutoReadDisabled(group1, group2);
+    }
+
+    private static void testAutoReadDisabled(EventLoopGroup serverGroup, EventLoopGroup clientGroup) throws Exception {
+        final CountDownLatch latch = new CountDownLatch(100);
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+
+        cb.group(serverGroup)
+                .channel(LocalChannel.class)
+                .option(ChannelOption.AUTO_READ, false)
+                .handler(new ChannelInboundHandlerAdapter() {
+
+                    @Override
+                    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                        writeAndFlushReadOnSuccess(ctx, "test");
+                    }
+
+                    @Override
+                    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+                        writeAndFlushReadOnSuccess(ctx, msg);
+                    }
+                });
+
+        sb.group(clientGroup)
+                .channel(LocalServerChannel.class)
+                .childOption(ChannelOption.AUTO_READ, false)
+                .childHandler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                        ctx.read();
+                    }
+
+                    @Override
+                    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+                        latch.countDown();
+                        if (latch.getCount() > 0) {
+                            writeAndFlushReadOnSuccess(ctx, msg);
+                        }
+                    }
+                });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            cc = cb.connect(TEST_ADDRESS).sync().channel();
+
+            latch.await();
         } finally {
             closeChannel(cc);
             closeChannel(sc);
