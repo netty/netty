@@ -261,7 +261,7 @@ public abstract class Recycler<T> {
                 Link head = link;
                 while (head != null) {
                     reclaimSpace(LINK_CAPACITY);
-                    head = link.next;
+                    head = head.next;
                 }
             }
 
