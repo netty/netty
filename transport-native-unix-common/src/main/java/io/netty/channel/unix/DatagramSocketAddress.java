@@ -28,7 +28,7 @@ public final class DatagramSocketAddress extends InetSocketAddress {
 
     // holds the amount of received bytes
     private final int receivedAmount;
-    private DatagramSocketAddress localAddress;
+    private final DatagramSocketAddress localAddress;
 
     DatagramSocketAddress(String addr, int port, int receivedAmount, DatagramSocketAddress local) {
         super(addr, port);
