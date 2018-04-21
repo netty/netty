@@ -76,9 +76,9 @@ public interface Http2Stream {
      * <ul>
      * <li>{@link State#OPEN} if {@link #state()} is {@link State#IDLE} and {@code halfClosed} is {@code false}.</li>
      * <li>{@link State#HALF_CLOSED_LOCAL} if {@link #state()} is {@link State#IDLE} and {@code halfClosed}
-     * is {@code true} and the stream is local.</li>
+     * is {@code true} and the stream is local. In this state, {@link #isHeadersSent()} is {@code true}</li>
      * <li>{@link State#HALF_CLOSED_REMOTE} if {@link #state()} is {@link State#IDLE} and {@code halfClosed}
-     * is {@code true} and the stream is remote.</li>
+     * is {@code true} and the stream is remote. In this state, {@link #isHeadersReceived()} is {@code true}</li>
      * <li>{@link State#RESERVED_LOCAL} if {@link #state()} is {@link State#HALF_CLOSED_REMOTE}.</li>
      * <li>{@link State#RESERVED_REMOTE} if {@link #state()} is {@link State#HALF_CLOSED_LOCAL}.</li>
      * </ul>
