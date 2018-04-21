@@ -52,6 +52,26 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     protected void deallocate() { }
 
     @Override
+    public boolean isWritable() {
+        return false;
+    }
+
+    @Override
+    public boolean isWritable(int numBytes) {
+        return false;
+    }
+
+    @Override
+    public ByteBuf ensureWritable(int minWritableBytes) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    public int ensureWritable(int minWritableBytes, boolean force) {
+        return 1;
+    }
+
+    @Override
     public byte getByte(int index) {
         ensureAccessible();
         return _getByte(index);
