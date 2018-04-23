@@ -43,6 +43,58 @@ public class ReadOnlyDirectByteBufferBufTest {
         buffer(allocate(1));
     }
 
+    @Test
+    public void shouldIndicateNotWritable() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer()).clear();
+        try {
+            Assert.assertFalse(buf.isWritable());
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void shouldIndicateNotWritableAnyNumber() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer()).clear();
+        try {
+            Assert.assertFalse(buf.isWritable(1));
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void ensureWritableIntStatusShouldFailButNotThrow() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer()).clear();
+        try {
+            int result = buf.ensureWritable(1, false);
+            Assert.assertEquals(1, result);
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void ensureWritableForceIntStatusShouldFailButNotThrow() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer()).clear();
+        try {
+            int result = buf.ensureWritable(1, true);
+            Assert.assertEquals(1, result);
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test(expected = ReadOnlyBufferException.class)
+    public void ensureWritableShouldThrow() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer()).clear();
+        try {
+            buf.ensureWritable(1);
+        } finally {
+            buf.release();
+        }
+    }
+
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetByte() {
         ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
