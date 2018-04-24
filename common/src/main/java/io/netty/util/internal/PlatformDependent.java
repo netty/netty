@@ -988,13 +988,20 @@ public final class PlatformDependent {
 
     private static long maxDirectMemory0() {
         long maxDirectMemory = 0;
+
         ClassLoader systemClassLoader = null;
         try {
-            // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
             systemClassLoader = getSystemClassLoader();
-            Class<?> vmClass = Class.forName("sun.misc.VM", true, systemClassLoader);
-            Method m = vmClass.getDeclaredMethod("maxDirectMemory");
-            maxDirectMemory = ((Number) m.invoke(null)).longValue();
+
+            // On z/OS we should not use VM.maxDirectMemory() as it not reflects the correct value.
+            // See:
+            //  - https://github.com/netty/netty/issues/7654
+            if (!SystemPropertyUtil.get("os.name", "").toLowerCase().contains("z/os")) {
+                // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
+                Class<?> vmClass = Class.forName("sun.misc.VM", true, systemClassLoader);
+                Method m = vmClass.getDeclaredMethod("maxDirectMemory");
+                maxDirectMemory = ((Number) m.invoke(null)).longValue();
+            }
         } catch (Throwable ignored) {
             // Ignore
         }
