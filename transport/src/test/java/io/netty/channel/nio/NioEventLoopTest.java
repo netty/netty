@@ -17,12 +17,15 @@ package io.netty.channel.nio;
 
 import io.netty.channel.AbstractEventLoopTest;
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.Future;
 import org.junit.Test;
 
 import java.nio.channels.Selector;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -67,5 +70,41 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    @Test(timeout = 5000L)
+    public void testScheduleBigDelayOverMax() {
+        EventLoopGroup group = new NioEventLoopGroup(1);
+        final EventLoop el = group.next();
+        try {
+            el.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    // NOOP
+                }
+            }, Integer.MAX_VALUE, TimeUnit.DAYS);
+            fail();
+        } catch (IllegalArgumentException expected) {
+            // expected
+        }
+
+        group.shutdownGracefully();
+    }
+
+    @Test
+    public void testScheduleBigDelay() {
+        EventLoopGroup group = new NioEventLoopGroup(1);
+
+        final EventLoop el = group.next();
+        Future<?> future = el.schedule(new Runnable() {
+            @Override
+            public void run() {
+                // NOOP
+            }
+        }, NioEventLoop.MAX_SCHEDULED_DAYS, TimeUnit.DAYS);
+
+        assertFalse(future.awaitUninterruptibly(1000));
+        assertTrue(future.cancel(true));
+        group.shutdownGracefully();
     }
 }
