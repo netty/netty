@@ -47,7 +47,7 @@ public class FastThreadLocalTest {
 
         // Initialize a thread-local variable.
         assertThat(var.get(), is(nullValue()));
-        assertThat(FastThreadLocal.size(), is(2));
+        assertThat(FastThreadLocal.size(), is(1));
 
         // And then remove it.
         FastThreadLocal.removeAll();
