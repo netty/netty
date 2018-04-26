@@ -18,6 +18,7 @@ package io.netty.resolver.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -1619,5 +1620,21 @@ public class DnsNameResolverTest {
         assertTrue(DnsNameResolver.isTimeoutError(cause));
         assertTrue(DnsNameResolver.isTransportOrTimeoutError(cause));
         resolver.close();
+    }
+
+    @Test
+    public void testDnsNameResolverBuilderCopy() {
+        ChannelFactory<DatagramChannel> channelFactory =
+                new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class);
+        DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
+                .channelFactory(channelFactory);
+        DnsNameResolverBuilder copiedBuilder = builder.copy();
+
+        // change channel factory does not propagate to previously made copy
+        ChannelFactory<DatagramChannel> newChannelFactory =
+                new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class);
+        builder.channelFactory(newChannelFactory);
+        assertEquals(channelFactory, copiedBuilder.channelFactory());
+        assertEquals(newChannelFactory, builder.channelFactory());
     }
 }
