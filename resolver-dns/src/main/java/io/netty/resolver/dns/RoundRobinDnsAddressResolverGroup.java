@@ -36,6 +36,10 @@ import java.net.InetSocketAddress;
 @UnstableApi
 public class RoundRobinDnsAddressResolverGroup extends DnsAddressResolverGroup {
 
+    public RoundRobinDnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {
+        super(dnsResolverBuilder);
+    }
+
     public RoundRobinDnsAddressResolverGroup(
             Class<? extends DatagramChannel> channelType,
             DnsServerAddressStreamProvider nameServerProvider) {
