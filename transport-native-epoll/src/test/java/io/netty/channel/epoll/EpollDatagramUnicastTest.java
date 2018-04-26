@@ -26,4 +26,11 @@ public class EpollDatagramUnicastTest extends DatagramUnicastTest {
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
         return EpollSocketTestPermutation.INSTANCE.datagram();
     }
+
+    public void testSimpleSendWithConnect(Bootstrap sb, Bootstrap cb) throws Throwable {
+        // Run this test with IP_RECVORIGDSTADDR option enabled
+        sb.option(EpollChannelOption.IP_RECVORIGDSTADDR, true);
+        super.testSimpleSendWithConnect(sb, cb);
+        sb.option(EpollChannelOption.IP_RECVORIGDSTADDR, false);
+    }
 }
