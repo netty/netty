@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.PreferHeapByteBufAllocator;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -67,17 +68,13 @@ public class LocalChannel extends AbstractChannel {
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
-            ChannelPipeline pipeline = pipeline();
-            for (;;) {
-                Object m = inboundBuffer.poll();
-                if (m == null) {
-                    break;
-                }
-                pipeline.fireChannelRead(m);
+            // Ensure the inboundBuffer is not empty as readInbound() will always call fireChannelReadComplete()
+            if (!inboundBuffer.isEmpty()) {
+                readInbound();
             }
-            pipeline.fireChannelReadComplete();
         }
     };
+
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {
@@ -295,13 +292,27 @@ public class LocalChannel extends AbstractChannel {
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
+    private void readInbound() {
+        RecvByteBufAllocator.Handle handle = unsafe().recvBufAllocHandle();
+        handle.reset(config());
+        ChannelPipeline pipeline = pipeline();
+        do {
+            Object received = inboundBuffer.poll();
+            if (received == null) {
+                break;
+            }
+            pipeline.fireChannelRead(received);
+        } while (handle.continueReading());
+
+        pipeline.fireChannelReadComplete();
+    }
+
     @Override
     protected void doBeginRead() throws Exception {
         if (readInProgress) {
             return;
         }
 
-        ChannelPipeline pipeline = pipeline();
         Queue<Object> inboundBuffer = this.inboundBuffer;
         if (inboundBuffer.isEmpty()) {
             readInProgress = true;
@@ -313,14 +324,7 @@ public class LocalChannel extends AbstractChannel {
         if (stackDepth < MAX_READER_STACK_DEPTH) {
             threadLocals.setLocalChannelReaderStackDepth(stackDepth + 1);
             try {
-                for (;;) {
-                    Object received = inboundBuffer.poll();
-                    if (received == null) {
-                        break;
-                    }
-                    pipeline.fireChannelRead(received);
-                }
-                pipeline.fireChannelReadComplete();
+                readInbound();
             } finally {
                 threadLocals.setLocalChannelReaderStackDepth(stackDepth);
             }
@@ -435,19 +439,11 @@ public class LocalChannel extends AbstractChannel {
                 FINISH_READ_FUTURE_UPDATER.compareAndSet(peer, peerFinishReadFuture, null);
             }
         }
-        ChannelPipeline peerPipeline = peer.pipeline();
         // We should only set readInProgress to false if there is any data that was read as otherwise we may miss to
         // forward data later on.
         if (peer.readInProgress && !peer.inboundBuffer.isEmpty()) {
             peer.readInProgress = false;
-            for (;;) {
-                Object received = peer.inboundBuffer.poll();
-                if (received == null) {
-                    break;
-                }
-                peerPipeline.fireChannelRead(received);
-            }
-            peerPipeline.fireChannelReadComplete();
+            peer.readInbound();
         }
     }
 
