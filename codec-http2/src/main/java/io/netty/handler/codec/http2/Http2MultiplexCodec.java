@@ -337,9 +337,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         } catch (Http2Exception e) {
             ctx.fireExceptionCaught(e);
             ctx.close();
-        } finally {
-            // We need to ensure we release the goAwayFrame.
-            goAwayFrame.release();
         }
     }
 
