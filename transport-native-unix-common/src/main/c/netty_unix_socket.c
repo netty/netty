@@ -289,17 +289,19 @@ static jint _sendTo(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit, jb
 
 static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limit) {
     struct sockaddr_storage addr;
-    struct sockaddr_storage daddr;
     socklen_t addrlen = sizeof(addr);
-    char cntrlbuf[64];
-    struct iovec iov;
-    struct msghdr msg;
     ssize_t res;
     int err;
-    struct cmsghdr* cmsg;
     jobject local = NULL;
-    int readLocalAddr;
 
+#ifdef IP_RECVORIGDSTADDR
+    struct sockaddr_storage daddr;
+    struct iovec iov;
+    struct cmsghdr* cmsg;
+    struct msghdr msg;
+    char cntrlbuf[64];
+
+    int readLocalAddr;
     if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR,
             &readLocalAddr, sizeof(readLocalAddr)) < 0) {
         readLocalAddr = 0;
@@ -315,13 +317,18 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
         msg.msg_control = cntrlbuf;
         msg.msg_controllen = sizeof(cntrlbuf);
     }
+#endif
 
     do {
+#ifdef IP_RECVORIGDSTADDR
         if (readLocalAddr) {
             res = recvmsg(fd, &msg, 0);
         } else {
+#endif
             res = recvfrom(fd, buffer + pos, (size_t) (limit - pos), 0, (struct sockaddr*) &addr, &addrlen);
+#ifdef IP_RECVORIGDSTADDR
         }
+#endif
         // Keep on reading if we was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
 
@@ -342,6 +349,7 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
         return NULL;
     }
 
+#ifdef IP_RECVORIGDSTADDR
     if (readLocalAddr) {
         for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
             if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVORIGDSTADDR) {
@@ -351,6 +359,7 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
             }
         }
     }
+#endif
     return createDatagramSocketAddress(env, &addr, res, local);
 }
 
