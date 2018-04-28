@@ -183,9 +183,13 @@ public class Http2MultiplexCodecTest {
         codec.onHttp2Frame(pingFrame);
         assertSame(parentChannel.readInbound(), pingFrame);
 
-        DefaultHttp2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(1);
+        DefaultHttp2GoAwayFrame goAwayFrame =
+                new DefaultHttp2GoAwayFrame(1, parentChannel.alloc().buffer().writeLong(8));
         codec.onHttp2Frame(goAwayFrame);
-        assertSame(parentChannel.readInbound(), goAwayFrame);
+
+        Http2GoAwayFrame frame = parentChannel.readInbound();
+        assertSame(frame, goAwayFrame);
+        assertTrue(frame.release());
     }
 
     @Test
