@@ -209,6 +209,20 @@ public class Http2FrameCodecTest {
         assertTrue(channel.isActive());
     }
 
+     @Test
+     public void flowControlShouldBeResilientToMissingStreams() throws Http2Exception {
+         Http2Connection conn = new DefaultHttp2Connection(true);
+         Http2ConnectionEncoder enc = new DefaultHttp2ConnectionEncoder(conn, new DefaultHttp2FrameWriter());
+         Http2ConnectionDecoder dec = new DefaultHttp2ConnectionDecoder(conn, enc, new DefaultHttp2FrameReader());
+         Http2FrameCodec codec = new Http2FrameCodec(enc, dec, new Http2Settings());
+         EmbeddedChannel em = new EmbeddedChannel(codec);
+
+         // We call #consumeBytes on a stream id which has not been seen yet to emulate the case
+         // where a stream is deregistered which in reality can happen in response to a RST.
+         assertFalse(codec.consumeBytes(1, 1));
+         assertTrue(em.finishAndReleaseAll());
+     }
+
     @Test
     public void entityRequestEntityResponse() throws Exception {
         frameListener.onHeadersRead(http2HandlerCtx, 1, request, 0, false);
