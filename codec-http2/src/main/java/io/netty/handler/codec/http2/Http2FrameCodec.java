@@ -296,6 +296,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writeSettings(ctx, ((Http2SettingsFrame) msg).settings(), promise);
         } else if (msg instanceof Http2GoAwayFrame) {
             writeGoAwayFrame(ctx, (Http2GoAwayFrame) msg, promise);
+        } else if (msg instanceof Http2PushPromiseFrame) {
+            Http2PushPromiseFrame frame = (Http2PushPromiseFrame) msg;
+            writePushPromiseFrame(ctx, frame, promise);
         } else if (msg instanceof Http2UnknownFrame) {
             Http2UnknownFrame unknownFrame = (Http2UnknownFrame) msg;
             encoder().writeFrame(ctx, unknownFrame.frameType(), unknownFrame.stream().id(),
@@ -341,6 +344,39 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         goAway(ctx, (int) lastStreamId, frame.errorCode(), frame.content(), promise);
     }
 
+    private void writePushPromiseFrame(
+            final ChannelHandlerContext ctx, final Http2PushPromiseFrame frame, final ChannelPromise promise) {
+
+        if (frame.promisedStream() != null && isStreamIdValid(frame.promisedStream().id())) {
+            encoder().writePushPromise(ctx,
+                    frame.stream().id(), frame.promisedStream().id(),
+                    frame.headers(), frame.padding(), promise);
+        } else {
+            final int promisedStreamId = connection().local().incrementAndGetNextStreamId();
+            if (promisedStreamId < 0) {
+                promise.setFailure(new Http2NoMoreStreamIdsException());
+                return;
+            }
+
+            final DefaultHttp2FrameStream newFrameStream = newStream();
+            newFrameStream.id = promisedStreamId;
+            frame.promisedStream(newFrameStream);
+
+            // TODO: This depends on the fact that the connection based API will create Http2Stream objects
+            // synchronously. We should investigate how to refactor this later on when we consolidate some layers.
+            assert frameStreamToInitialize == null;
+            frameStreamToInitialize = newFrameStream;
+
+            final ChannelPromise writePromise = ctx.newPromise();
+
+            encoder().writePushPromise(ctx,
+                    frame.stream().id(), promisedStreamId,
+                    frame.headers(), frame.padding(), writePromise);
+
+            notifyPromiseBuffered(promise, writePromise);
+        }
+    }
+
     private void writeHeadersFrame(
             final ChannelHandlerContext ctx, Http2HeadersFrame headersFrame, final ChannelPromise promise) {
 
@@ -367,24 +403,29 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
             encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), writePromise);
-            if (writePromise.isDone()) {
-                notifyHeaderWritePromise(writePromise, promise);
-            } else {
-                numBufferedStreams++;
 
-                writePromise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        numBufferedStreams--;
-
-                        notifyHeaderWritePromise(future, promise);
-                    }
-                });
-            }
+            notifyPromiseBuffered(promise, writePromise);
         }
     }
 
-    private static void notifyHeaderWritePromise(ChannelFuture future, ChannelPromise promise) {
+    private void notifyPromiseBuffered(final ChannelPromise promise, ChannelPromise writePromise) {
+        if (writePromise.isDone()) {
+            notifyPromise(writePromise, promise);
+        } else {
+            numBufferedStreams++;
+
+            writePromise.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    numBufferedStreams--;
+
+                    notifyPromise(future, promise);
+                }
+            });
+        }
+    }
+
+    private static void notifyPromise(ChannelFuture future, ChannelPromise promise) {
         Throwable cause = future.cause();
         if (cause == null) {
             promise.setSuccess();
@@ -568,7 +609,15 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         @Override
         public void onPushPromiseRead(
                 ChannelHandlerContext ctx, int streamId, int promisedStreamId, Http2Headers headers, int padding)  {
-            // TODO: Maybe handle me
+            try {
+                connection().stream(promisedStreamId).open(false);
+            } catch (Http2Exception e) {
+                throw new IllegalStateException("Unable to open reserved promised stream " + streamId + ": " + e.getMessage(), e);
+            }
+
+            onHttp2Frame(ctx, new DefaultHttp2PushPromiseFrame(headers, padding)
+                                        .stream(requireStream(streamId))
+                                        .promisedStream(requireStream(promisedStreamId)));
         }
 
         private Http2FrameStream requireStream(int streamId) {

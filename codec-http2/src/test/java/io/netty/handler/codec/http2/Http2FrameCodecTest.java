@@ -142,7 +142,13 @@ public class Http2FrameCodecTest {
         verify(frameWriter).writeSettings(eq(http2HandlerCtx),
                                           anyHttp2Settings(), anyChannelPromise());
         verifyNoMoreInteractions(frameWriter);
-        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
+
+        if (frameCodec.connection().isServer()) {
+            channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
+        } else {
+            channel.writeOutbound(Http2CodecUtil.connectionPrefaceBuf());
+        }
+
         frameListener.onSettingsRead(http2HandlerCtx, initialRemoteSettings);
         verify(frameWriter).writeSettingsAck(eq(http2HandlerCtx), anyChannelPromise());
         frameListener.onSettingsAckRead(http2HandlerCtx);
@@ -253,6 +259,42 @@ public class Http2FrameCodecTest {
         verify(frameWriter, never()).writeRstStream(
                 any(ChannelHandlerContext.class), anyInt(), anyLong(), anyChannelPromise());
         assertTrue(channel.isActive());
+    }
+
+    @Test
+    public void pushPromiseSend() throws Exception {
+        frameListener.onHeadersRead(http2HandlerCtx, 1, request, 0, false);
+        Http2HeadersFrame inboundHeaders = inboundHandler.readInbound();
+        Http2FrameStream stream = inboundHeaders.stream();
+
+        Http2PushPromiseFrame frame = new DefaultHttp2PushPromiseFrame(request).stream(stream);
+        inboundHandler.writeOutbound(frame);
+
+        verify(frameWriter).writePushPromise(eq(http2HandlerCtx), eq(stream.id()), eq(2),
+                any(Http2Headers.class), anyInt(), anyChannelPromise());
+
+        assertEquals(2, frame.promisedStream().id());
+    }
+
+    @Test
+    public void pushPromiseReceive() throws Exception {
+        final int PUSH_PROMISE_STREAM_ID = 2;
+
+        Http2Settings settings = new Http2Settings();
+        setUp(Http2FrameCodecBuilder.forClient(), settings);
+        Http2FrameStream frameStream = frameCodec.newStream();
+
+        inboundHandler.writeOutbound(new DefaultHttp2HeadersFrame(request, true).stream(frameStream));
+        frameListener.onPushPromiseRead(http2HandlerCtx, frameStream.id(), PUSH_PROMISE_STREAM_ID, request, 0);
+        Http2PushPromiseFrame frame = inboundHandler.readInbound();
+        assertNotNull(frame);
+        assertEquals(PUSH_PROMISE_STREAM_ID, frame.promisedStream().id());
+        assertEquals(frameStream.id(), frame.stream().id());
+
+        // check that the promised stream is functional
+        frameListener.onHeadersRead(http2HandlerCtx, PUSH_PROMISE_STREAM_ID, response, 0, true);
+        Http2HeadersFrame headers = inboundHandler.readInbound();
+        assertNotNull(headers);
     }
 
     @Test
