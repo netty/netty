@@ -353,4 +353,48 @@ public class HttpResponseEncoderTest {
         lastContent.release();
         assertFalse(channel.finish());
     }
+
+    @Test
+    public void testStatusResetContentTransferContentLength() {
+        testStatusResetContentTransferContentLength0(HttpHeaderNames.CONTENT_LENGTH, Unpooled.buffer().writeLong(8));
+    }
+
+    @Test
+    public void testStatusResetContentTransferEncoding() {
+        testStatusResetContentTransferContentLength0(HttpHeaderNames.TRANSFER_ENCODING, Unpooled.buffer().writeLong(8));
+    }
+
+    private static void testStatusResetContentTransferContentLength0(CharSequence headerName, ByteBuf content) {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.RESET_CONTENT);
+        if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(headerName)) {
+            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+        } else {
+            response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+        }
+
+        assertTrue(channel.writeOutbound(response));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(content)));
+        assertTrue(channel.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+
+        StringBuilder responseText = new StringBuilder();
+        responseText.append(HttpVersion.HTTP_1_1.toString()).append(' ')
+                .append(HttpResponseStatus.RESET_CONTENT.toString()).append("\r\n");
+        responseText.append(HttpHeaderNames.CONTENT_LENGTH).append(": 0\r\n");
+        responseText.append("\r\n");
+
+        StringBuilder written = new StringBuilder();
+        for (;;) {
+            ByteBuf buffer = channel.readOutbound();
+            if (buffer == null) {
+                break;
+            }
+            written.append(buffer.toString(CharsetUtil.US_ASCII));
+            buffer.release();
+        }
+
+        assertEquals(responseText.toString(), written.toString());
+        assertFalse(channel.finish());
+    }
 }
