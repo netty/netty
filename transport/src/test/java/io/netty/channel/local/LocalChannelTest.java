@@ -1190,8 +1190,16 @@ public class LocalChannelTest {
                 } else {
                     read = 0;
                 }
+            } else {
+                read = 0;
             }
             ctx.fireChannelReadComplete();
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            ctx.fireExceptionCaught(cause);
+            ctx.close();
         }
     }
 }
