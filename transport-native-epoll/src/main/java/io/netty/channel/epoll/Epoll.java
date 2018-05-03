@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 
 /**
  * Tells if <a href="http://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is supported.
@@ -27,26 +28,32 @@ public final class Epoll {
 
     static  {
         Throwable cause = null;
-        FileDescriptor epollFd = null;
-        FileDescriptor eventFd = null;
-        try {
-            epollFd = Native.newEpollCreate();
-            eventFd = Native.newEventFd();
-        } catch (Throwable t) {
-            cause = t;
-        } finally {
-            if (epollFd != null) {
-                try {
-                    epollFd.close();
-                } catch (Exception ignore) {
-                    // ignore
+
+        if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
+            cause = new UnsupportedOperationException(
+                    "Native transport was explicit disabled with -Dio.netty.transport.noNative=true");
+        } else {
+            FileDescriptor epollFd = null;
+            FileDescriptor eventFd = null;
+            try {
+                epollFd = Native.newEpollCreate();
+                eventFd = Native.newEventFd();
+            } catch (Throwable t) {
+                cause = t;
+            } finally {
+                if (epollFd != null) {
+                    try {
+                        epollFd.close();
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
                 }
-            }
-            if (eventFd != null) {
-                try {
-                    eventFd.close();
-                } catch (Exception ignore) {
-                    // ignore
+                if (eventFd != null) {
+                    try {
+                        eventFd.close();
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
                 }
             }
         }
@@ -57,8 +64,8 @@ public final class Epoll {
             UNAVAILABILITY_CAUSE = PlatformDependent.hasUnsafe()
                     ? null
                     : new IllegalStateException(
-                            "sun.misc.Unsafe not available",
-                            PlatformDependent.getUnsafeUnavailabilityCause());
+                    "sun.misc.Unsafe not available",
+                    PlatformDependent.getUnsafeUnavailabilityCause());
         }
     }
 
