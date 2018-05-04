@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 
 public class DefaultDnsCacheTest {
 
@@ -128,5 +129,34 @@ public class DefaultDnsCacheTest {
     private static void assertEntry(DnsCacheEntry entry, InetAddress address) {
         assertEquals(address, entry.address());
         assertNull(entry.cause());
+    }
+
+    @Test
+    public void testCacheFailed() throws Exception {
+        InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
+        InetAddress addr2 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 });
+        EventLoopGroup group = new DefaultEventLoopGroup(1);
+
+        try {
+            EventLoop loop = group.next();
+            final DefaultDnsCache cache = new DefaultDnsCache(1, 100, 100);
+            cache.cache("netty.io", null, addr1, 10000, loop);
+            cache.cache("netty.io", null, addr2, 10000, loop);
+
+            List<? extends DnsCacheEntry> entries = cache.get("netty.io", null);
+            assertEquals(2, entries.size());
+            assertEntry(entries.get(0), addr1);
+            assertEntry(entries.get(1), addr2);
+
+            Exception exception = new Exception();
+            cache.cache("netty.io", null, exception, loop);
+            entries = cache.get("netty.io", null);
+            DnsCacheEntry entry = entries.get(0);
+            assertEquals(1, entries.size());
+            assertSame(exception, entry.cause());
+            assertNull(entry.address());
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 }
