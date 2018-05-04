@@ -43,6 +43,9 @@ public class DefaultDnsCache implements DnsCache {
 
     private final ConcurrentMap<String, Entries> resolveCache = PlatformDependent.newConcurrentHashMap();
 
+    // Two years are supported by all our EventLoop implementations and so safe to use as maximum.
+    // See also: https://github.com/netty/netty/commit/b47fb817991b42ec8808c7d26538f3f2464e1fa6
+    private static final int MAX_SUPPORTED_TTL_SECS = (int) TimeUnit.DAYS.toSeconds(365 * 2);
     private final int minTtl;
     private final int maxTtl;
     private final int negativeTtl;
@@ -52,7 +55,7 @@ public class DefaultDnsCache implements DnsCache {
      * and doesn't cache negative responses.
      */
     public DefaultDnsCache() {
-        this(0, Integer.MAX_VALUE, 0);
+        this(0, MAX_SUPPORTED_TTL_SECS, 0);
     }
 
     /**
@@ -141,7 +144,7 @@ public class DefaultDnsCache implements DnsCache {
         if (maxTtl == 0 || !emptyAdditionals(additionals)) {
             return e;
         }
-        cache0(e, Math.max(minTtl, (int) Math.min(maxTtl, originalTtl)), loop);
+        cache0(e, Math.max(minTtl, Math.min(MAX_SUPPORTED_TTL_SECS, (int) Math.min(maxTtl, originalTtl))), loop);
         return e;
     }
 
@@ -156,7 +159,7 @@ public class DefaultDnsCache implements DnsCache {
             return e;
         }
 
-        cache0(e, negativeTtl, loop);
+        cache0(e, Math.min(MAX_SUPPORTED_TTL_SECS, negativeTtl), loop);
         return e;
     }
 
