@@ -18,6 +18,7 @@ package io.netty.resolver.dns;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.NetUtil;
 import org.junit.Assert;
 import org.junit.Test;
@@ -51,6 +52,25 @@ public class DefaultDnsCacheTest {
             if (error != null) {
                 throw error;
             }
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testExpireWithDifferentTTLs() {
+        testExpireWithTTL0(1);
+        testExpireWithTTL0(1000);
+        testExpireWithTTL0(1000000);
+    }
+
+    private static void testExpireWithTTL0(int days) {
+        EventLoopGroup group = new NioEventLoopGroup(1);
+
+        try {
+            EventLoop loop = group.next();
+            final DefaultDnsCache cache = new DefaultDnsCache();
+            Assert.assertNotNull(cache.cache("netty.io", null, NetUtil.LOCALHOST, days, loop));
         } finally {
             group.shutdownGracefully();
         }
