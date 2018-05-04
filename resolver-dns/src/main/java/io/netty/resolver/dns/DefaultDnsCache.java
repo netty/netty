@@ -170,9 +170,9 @@ public class DefaultDnsCache implements DnsCache {
             Entries oldEntries = resolveCache.putIfAbsent(e.hostname(), entries);
             if (oldEntries != null) {
                 entries = oldEntries;
-                entries.add(e);
             }
         }
+        entries.add(e);
 
         scheduleCacheExpiration(e, ttl, loop);
     }
@@ -288,11 +288,27 @@ public class DefaultDnsCache implements DnsCache {
                                 continue;
                             }
                         }
+
                         // Create a new List for COW semantics
                         List<DefaultDnsCacheEntry> newEntries = new ArrayList<DefaultDnsCacheEntry>(entries.size() + 1);
-                        newEntries.addAll(entries);
+                        DefaultDnsCacheEntry replacedEntry = null;
+                        for (int i = 0; i < entries.size(); i++) {
+                            DefaultDnsCacheEntry entry = entries.get(i);
+                            // Only add old entry if the address is not the same as the one we try to add as well.
+                            // In this case we will skip it and just add the new entry as this may have
+                            // more up-to-date data and cancel the old after we were able to update the cache.
+                            if (!e.address().equals(entry.address())) {
+                                newEntries.add(entry);
+                            } else {
+                                assert replacedEntry == null;
+                                replacedEntry = entry;
+                            }
+                        }
                         newEntries.add(e);
                         if (compareAndSet(entries, newEntries)) {
+                            if (replacedEntry != null) {
+                                replacedEntry.cancelExpiration();
+                            }
                             return;
                         }
                     } else if (compareAndSet(entries, Collections.singletonList(e))) {
