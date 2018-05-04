@@ -72,45 +72,54 @@ public final class OpenSsl {
     static {
         Throwable cause = null;
 
-        // Test if netty-tcnative is in the classpath first.
-        try {
-            Class.forName("io.netty.internal.tcnative.SSL", false, OpenSsl.class.getClassLoader());
-        } catch (ClassNotFoundException t) {
-            cause = t;
-            logger.debug(
-                    "netty-tcnative not in the classpath; " +
-                    OpenSslEngine.class.getSimpleName() + " will be unavailable.");
-        }
+        if (SystemPropertyUtil.getBoolean("io.netty.handler.ssl.noOpenSsl", false)) {
+            cause = new UnsupportedOperationException(
+                    "OpenSSL was explicit disabled with -Dio.netty.handler.ssl.noOpenSsl=true");
 
-        // If in the classpath, try to load the native library and initialize netty-tcnative.
-        if (cause == null) {
+            logger.debug(
+                    "netty-tcnative explicit disabled; " +
+                            OpenSslEngine.class.getSimpleName() + " will be unavailable.", cause);
+        } else {
+            // Test if netty-tcnative is in the classpath first.
             try {
-                // The JNI library was not already loaded. Load it now.
-                loadTcNative();
-            } catch (Throwable t) {
+                Class.forName("io.netty.internal.tcnative.SSL", false, OpenSsl.class.getClassLoader());
+            } catch (ClassNotFoundException t) {
                 cause = t;
                 logger.debug(
-                    "Failed to load netty-tcnative; " +
-                        OpenSslEngine.class.getSimpleName() + " will be unavailable, unless the " +
-                        "application has already loaded the symbols by some other means. " +
-                        "See http://netty.io/wiki/forked-tomcat-native.html for more information.", t);
+                        "netty-tcnative not in the classpath; " +
+                                OpenSslEngine.class.getSimpleName() + " will be unavailable.");
             }
 
-            try {
-                initializeTcNative();
-
-                // The library was initialized successfully. If loading the library failed above,
-                // reset the cause now since it appears that the library was loaded by some other
-                // means.
-                cause = null;
-            } catch (Throwable t) {
-                if (cause == null) {
+            // If in the classpath, try to load the native library and initialize netty-tcnative.
+            if (cause == null) {
+                try {
+                    // The JNI library was not already loaded. Load it now.
+                    loadTcNative();
+                } catch (Throwable t) {
                     cause = t;
+                    logger.debug(
+                            "Failed to load netty-tcnative; " +
+                                    OpenSslEngine.class.getSimpleName() + " will be unavailable, unless the " +
+                                    "application has already loaded the symbols by some other means. " +
+                                    "See http://netty.io/wiki/forked-tomcat-native.html for more information.", t);
                 }
-                logger.debug(
-                    "Failed to initialize netty-tcnative; " +
-                        OpenSslEngine.class.getSimpleName() + " will be unavailable. " +
-                        "See http://netty.io/wiki/forked-tomcat-native.html for more information.", t);
+
+                try {
+                    initializeTcNative();
+
+                    // The library was initialized successfully. If loading the library failed above,
+                    // reset the cause now since it appears that the library was loaded by some other
+                    // means.
+                    cause = null;
+                } catch (Throwable t) {
+                    if (cause == null) {
+                        cause = t;
+                    }
+                    logger.debug(
+                            "Failed to initialize netty-tcnative; " +
+                                    OpenSslEngine.class.getSimpleName() + " will be unavailable. " +
+                                    "See http://netty.io/wiki/forked-tomcat-native.html for more information.", t);
+                }
             }
         }
 
