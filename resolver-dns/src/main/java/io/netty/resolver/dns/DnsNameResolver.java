@@ -47,6 +47,7 @@ import io.netty.resolver.InetNameResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -664,9 +665,9 @@ public class DnsNameResolver extends InetNameResolver {
      * instead of using the global one.
      */
     protected void doResolve(String inetHost,
-                             DnsRecord[] additionals,
-                             Promise<InetAddress> promise,
-                             DnsCache resolveCache) throws Exception {
+                             final DnsRecord[] additionals,
+                             final Promise<InetAddress> promise,
+                             final DnsCache resolveCache) throws Exception {
         if (inetHost == null || inetHost.isEmpty()) {
             // If an empty hostname is used we should use "localhost", just like InetAddress.getByName(...) does.
             promise.setSuccess(loopbackAddress());
@@ -687,6 +688,26 @@ public class DnsNameResolver extends InetNameResolver {
             return;
         }
 
+        // Dispatch to the EventLoop to ensure we always see all cached entries or none. If we would not dispatch
+        // to the EventLoop it would be possible to only see a partial result in the cache as we are not done adding
+        // every result of the query to the cache.
+        // See https://github.com/netty/netty/issues/7882
+        if (executor().inEventLoop()) {
+            doResolve0(hostname, additionals, promise, resolveCache);
+        } else {
+            executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    doResolve0(hostname, additionals, promise, resolveCache);
+                }
+            });
+        }
+    }
+
+    private void doResolve0(String hostname,
+                                    DnsRecord[] additionals,
+                                    Promise<InetAddress> promise,
+                                    DnsCache resolveCache) {
         if (!doResolveCached(hostname, additionals, promise, resolveCache)) {
             doResolveUncached(hostname, additionals, promise, resolveCache);
         }
@@ -761,9 +782,9 @@ public class DnsNameResolver extends InetNameResolver {
      * instead of using the global one.
      */
     protected void doResolveAll(String inetHost,
-                                DnsRecord[] additionals,
-                                Promise<List<InetAddress>> promise,
-                                DnsCache resolveCache) throws Exception {
+                                final DnsRecord[] additionals,
+                                final Promise<List<InetAddress>> promise,
+                                final DnsCache resolveCache) throws Exception {
         if (inetHost == null || inetHost.isEmpty()) {
             // If an empty hostname is used we should use "localhost", just like InetAddress.getAllByName(...) does.
             promise.setSuccess(Collections.singletonList(loopbackAddress()));
@@ -784,6 +805,26 @@ public class DnsNameResolver extends InetNameResolver {
             return;
         }
 
+        // Dispatch to the EventLoop to ensure we always see all cached entries or none. If we would not dispatch
+        // to the EventLoop it would be possible to only see a partial result in the cache as we are not done adding
+        // every result of the query to the cache.
+        // See https://github.com/netty/netty/issues/7882
+        if (executor().inEventLoop()) {
+            doResolveAll0(hostname, additionals, promise, resolveCache);
+        } else {
+            executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    doResolveAll0(hostname, additionals, promise, resolveCache);
+                }
+            });
+        }
+    }
+
+    private void doResolveAll0(String hostname,
+                               DnsRecord[] additionals,
+                               Promise<List<InetAddress>> promise,
+                               DnsCache resolveCache) {
         if (!doResolveAllCached(hostname, additionals, promise, resolveCache)) {
             doResolveAllUncached(hostname, additionals, promise, resolveCache);
         }
@@ -830,7 +871,15 @@ public class DnsNameResolver extends InetNameResolver {
                                       DnsCache resolveCache) {
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        new DnsAddressResolveContext(this, hostname, additionals, nameServerAddrs, resolveCache).resolve(promise);
+
+        // We wrap the actual DnsCache into our own implementation which will delay the caching of all entries
+        // until the promise is notified. This helps to guarantee that no partial results are seen as
+        // we also delegate resolving that takes the cache into account on the EventLoop.
+        CommittingDnsCache<List<InetAddress>> cache =
+                new CommittingDnsCache<List<InetAddress>>(executor(), resolveCache);
+        promise.addListener(cache);
+
+        new DnsAddressResolveContext(this, hostname, additionals, nameServerAddrs, cache).resolve(promise);
     }
 
     private static String hostname(String inetHost) {
@@ -966,7 +1015,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             try {
                 final DatagramDnsResponse res = (DatagramDnsResponse) msg;
                 final int queryId = res.id();
@@ -994,8 +1043,126 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             logger.warn("{} Unexpected exception: ", ch, cause);
+        }
+    }
+
+    /**
+     * {@link DnsCache} implementation that only commits all its cached entries to the wrapped {@link DnsCache}
+     * once the {@link FutureListener} is notified.
+     */
+    private static final class CommittingDnsCache<T> implements DnsCache, FutureListener<T> {
+
+        private final EventExecutor executor;
+        private final DnsCache cache;
+
+        DnsCacheEntryNode head;
+        DnsCacheEntryNode tail;
+
+        CommittingDnsCache(EventExecutor executor, DnsCache cache) {
+            this.executor = executor;
+            this.cache = cache;
+        }
+
+        @Override
+        public void clear() {
+            cache.clear();
+        }
+
+        @Override
+        public boolean clear(String hostname) {
+            return cache.clear(hostname);
+        }
+
+        @Override
+        public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+            return cache.get(hostname, additionals);
+        }
+
+        @Override
+        public DnsCacheEntry cache(final String hostname, final DnsRecord[] additionals, final InetAddress address,
+                                   final long originalTtl, final EventLoop loop) {
+            return add(new DnsCacheEntryNode() {
+                @Override
+                void commit() {
+                    cache.cache(hostname, additionals, address, originalTtl, loop);
+                }
+
+                @Override
+                public InetAddress address() {
+                    return address;
+                }
+
+                @Override
+                public Throwable cause() {
+                    return null;
+                }
+            });
+        }
+
+        @Override
+        public DnsCacheEntry cache(
+                final String hostname, final DnsRecord[] additionals, final Throwable cause, final EventLoop loop) {
+            return add(new DnsCacheEntryNode() {
+                @Override
+                void commit() {
+                    cache.cache(hostname, additionals, cause, loop);
+                }
+
+                @Override
+                public InetAddress address() {
+                    return null;
+                }
+
+                @Override
+                public Throwable cause() {
+                    return cause;
+                }
+            });
+        }
+
+        @Override
+        public void operationComplete(Future<T> future) {
+            if (executor.inEventLoop()) {
+                commitEntries();
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        commitEntries();
+                    }
+                });
+            }
+        }
+
+        private void commitEntries() {
+            DnsCacheEntryNode node = head;
+            while (node != null) {
+                node.commit();
+                node = node.next;
+            }
+            head = tail = null;
+        }
+
+        private DnsCacheEntry add(DnsCacheEntryNode node) {
+            assert executor.inEventLoop();
+
+            if (head == null) {
+                assert tail == null;
+                head = tail = node;
+            } else {
+                tail.next = node;
+                tail = node;
+            }
+            return node;
+        }
+
+        private abstract class DnsCacheEntryNode implements DnsCacheEntry {
+
+            DnsCacheEntryNode next;
+
+            abstract void commit();
         }
     }
 }
