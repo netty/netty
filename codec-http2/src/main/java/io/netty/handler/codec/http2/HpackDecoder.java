@@ -114,8 +114,8 @@ final class HpackDecoder {
     }
 
     public void decode(int streamId, ByteBuf in, Http2Headers headers, boolean validateHeaders) throws Http2Exception {
-        Http2HeadersSink sink = new Http2HeadersSink(headers, maxHeaderListSize);
-        decode(in, sink, validateHeaders);
+        Http2HeadersSink sink = new Http2HeadersSink(headers, maxHeaderListSize, validateHeaders);
+        decode(in, sink);
 
         // we have read all of our headers. See if we have exceeded our maxHeaderListSize. We must
         // delay throwing until this point to prevent dynamic table corruption
@@ -129,7 +129,7 @@ final class HpackDecoder {
      * <p>
      * This method assumes the entire header block is contained in {@code in}.
      */
-    private void decode(ByteBuf in, Sink sink, boolean validateHeaders) throws Http2Exception {
+    private void decode(ByteBuf in, Sink sink) throws Http2Exception {
         int index = 0;
         int nameLength = 0;
         int valueLength = 0;
@@ -162,7 +162,6 @@ final class HpackDecoder {
                                 break;
                             default:
                                 HpackHeaderField indexedHeader = getIndexedHeader(index);
-                                headerType = validate(indexedHeader.name, headerType, validateHeaders);
                                 sink.appendToHeaderList(indexedHeader.name, indexedHeader.value);
                         }
                     } else if ((b & 0x40) == 0x40) {
@@ -179,7 +178,6 @@ final class HpackDecoder {
                             default:
                                 // Index was stored as the prefix
                                 name = readName(index);
-                                headerType = validate(name, headerType, validateHeaders);
                                 nameLength = name.length();
                                 state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                         }
@@ -206,7 +204,6 @@ final class HpackDecoder {
                             default:
                                 // Index was stored as the prefix
                                 name = readName(index);
-                                headerType = validate(name, headerType, validateHeaders);
                                 nameLength = name.length();
                                 state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                         }
@@ -220,7 +217,6 @@ final class HpackDecoder {
 
                 case READ_INDEXED_HEADER:
                     HpackHeaderField indexedHeader = getIndexedHeader(decodeULE128(in, index));
-                    headerType = validate(indexedHeader.name, headerType, validateHeaders);
                     sink.appendToHeaderList(indexedHeader.name, indexedHeader.value);
                     state = READ_HEADER_REPRESENTATION;
                     break;
@@ -228,7 +224,6 @@ final class HpackDecoder {
                 case READ_INDEXED_HEADER_NAME:
                     // Header Name matches an entry in the Header Table
                     name = readName(decodeULE128(in, index));
-                    headerType = validate(name, headerType, validateHeaders);
                     nameLength = name.length();
                     state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                     break;
@@ -266,7 +261,6 @@ final class HpackDecoder {
                         name = EMPTY_STRING;
                     } else {
                         name = readStringLiteral(in, nameLength, huffmanEncoded);
-                        headerType = validate(name, headerType, validateHeaders);
                     }
 
                     state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
@@ -287,7 +281,6 @@ final class HpackDecoder {
                                     hpackDynamicTable.clear();
                                 }
                             } else {
-                                headerType = validate(name, headerType, validateHeaders);
                                 insertHeader(sink, name, EMPTY_STRING, indexType);
                             }
                             state = READ_HEADER_REPRESENTATION;
@@ -324,7 +317,6 @@ final class HpackDecoder {
                         }
                     } else {
                         CharSequence value = readStringLiteral(in, valueLength, huffmanEncoded);
-                        headerType = validate(name, headerType, validateHeaders);
                         insertHeader(sink, name, value, indexType);
                     }
                     state = READ_HEADER_REPRESENTATION;
@@ -406,34 +398,6 @@ final class HpackDecoder {
         encoderMaxDynamicTableSize = dynamicTableSize;
         maxDynamicTableSizeChangeRequired = false;
         hpackDynamicTable.setCapacity(dynamicTableSize);
-    }
-
-    private HeaderType validate(CharSequence name, HeaderType previousHeaderType,
-                                final boolean validateHeaders) throws Http2Exception {
-        if (!validateHeaders) {
-            return null;
-        }
-
-        if (hasPseudoHeaderFormat(name)) {
-            if (previousHeaderType == HeaderType.REGULAR_HEADER) {
-                throw connectionError(PROTOCOL_ERROR, "Pseudo-header field '%s' found after regular header.", name);
-            }
-
-            final Http2Headers.PseudoHeaderName pseudoHeader = getPseudoHeader(name);
-            if (pseudoHeader == null) {
-                throw connectionError(PROTOCOL_ERROR, "Invalid HTTP/2 pseudo-header '%s' encountered.", name);
-            }
-
-            final HeaderType currentHeaderType = pseudoHeader.isRequestOnly() ?
-                    HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
-            if (previousHeaderType != null && currentHeaderType != previousHeaderType) {
-                throw connectionError(PROTOCOL_ERROR, "Mix of request and response pseudo-headers.");
-            }
-
-            return currentHeaderType;
-        }
-
-        return HeaderType.REGULAR_HEADER;
     }
 
     private CharSequence readName(int index) throws Http2Exception {
@@ -556,18 +520,27 @@ final class HpackDecoder {
          * act as if an entry was added with that size.
          */
         boolean triggersExceededSizeLimit(long length);
-        void appendToHeaderList(CharSequence name, CharSequence value);
+
+        /**
+         * Throwing an exception here can corrupt the HPACK state, so only connection errors should
+         * be thrown.
+         */
+        void appendToHeaderList(CharSequence name, CharSequence value) throws Http2Exception;
     }
 
     private static class Http2HeadersSink implements Sink {
         private final Http2Headers headers;
         private final long maxHeaderListSize;
+        private final boolean validateHeaders;
+
         private long headersLength;
         private boolean exceededMaxLength;
+        private HeaderType headerType;
 
-        public Http2HeadersSink(Http2Headers headers, long maxHeaderListSize) {
+        public Http2HeadersSink(Http2Headers headers, long maxHeaderListSize, boolean validateHeaders) {
             this.headers = headers;
             this.maxHeaderListSize = maxHeaderListSize;
+            this.validateHeaders = validateHeaders;
         }
 
         @Override
@@ -580,10 +553,13 @@ final class HpackDecoder {
         }
 
         @Override
-        public void appendToHeaderList(CharSequence name, CharSequence value) {
+        public void appendToHeaderList(CharSequence name, CharSequence value) throws Http2Exception {
             headersLength += HpackHeaderField.sizeOf(name, value);
             if (headersLength > maxHeaderListSize) {
                 exceededMaxLength = true;
+            }
+            if (validateHeaders) {
+                headerType = validate(name, headerType);
             }
             if (!exceededMaxLength) {
                 headers.add(name, value);
@@ -592,6 +568,29 @@ final class HpackDecoder {
 
         public boolean exceededMaxLength() {
             return exceededMaxLength;
+        }
+
+        private HeaderType validate(CharSequence name, HeaderType previousHeaderType) throws Http2Exception {
+            if (hasPseudoHeaderFormat(name)) {
+                if (previousHeaderType == HeaderType.REGULAR_HEADER) {
+                    throw connectionError(PROTOCOL_ERROR, "Pseudo-header field '%s' found after regular header.", name);
+                }
+
+                final Http2Headers.PseudoHeaderName pseudoHeader = getPseudoHeader(name);
+                if (pseudoHeader == null) {
+                    throw connectionError(PROTOCOL_ERROR, "Invalid HTTP/2 pseudo-header '%s' encountered.", name);
+                }
+
+                final HeaderType currentHeaderType = pseudoHeader.isRequestOnly() ?
+                        HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
+                if (previousHeaderType != null && currentHeaderType != previousHeaderType) {
+                    throw connectionError(PROTOCOL_ERROR, "Mix of request and response pseudo-headers.");
+                }
+
+                return currentHeaderType;
+            }
+
+            return HeaderType.REGULAR_HEADER;
         }
     }
 }
