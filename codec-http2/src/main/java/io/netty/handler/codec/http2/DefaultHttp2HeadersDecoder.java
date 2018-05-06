@@ -21,9 +21,16 @@ import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.headerListSizeExceeded;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.getPseudoHeader;
+import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 @UnstableApi
 public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2HeadersDecoder.Configuration {
@@ -32,7 +39,8 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
 
     private final HpackDecoder hpackDecoder;
     private final boolean validateHeaders;
-    private long maxHeaderListSizeGoAway;
+    private long maxHeaderListSize;
+    private Http2HeadersSink sink;
 
     /**
      * Used to calculate an exponential moving average of header sizes to get an estimate of how large the data
@@ -71,18 +79,17 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      */
     public DefaultHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize,
                                       int initialHuffmanDecodeCapacity) {
-        this(validateHeaders, new HpackDecoder(maxHeaderListSize, initialHuffmanDecodeCapacity));
+        this(validateHeaders, maxHeaderListSize, new HpackDecoder(initialHuffmanDecodeCapacity));
     }
 
     /**
      * Exposed Used for testing only! Default values used in the initial settings frame are overridden intentionally
      * for testing but violate the RFC if used outside the scope of testing.
      */
-    DefaultHttp2HeadersDecoder(boolean validateHeaders, HpackDecoder hpackDecoder) {
+    DefaultHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize, HpackDecoder hpackDecoder) {
         this.hpackDecoder = ObjectUtil.checkNotNull(hpackDecoder, "hpackDecoder");
         this.validateHeaders = validateHeaders;
-        this.maxHeaderListSizeGoAway =
-                Http2CodecUtil.calculateMaxHeaderListSizeGoAway(hpackDecoder.getMaxHeaderListSize());
+        this.maxHeaderListSize = checkPositive(maxHeaderListSize, "maxHeaderListSize");
     }
 
     @Override
@@ -96,23 +103,17 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     }
 
     @Override
-    public void maxHeaderListSize(long max, long goAwayMax) throws Http2Exception {
-        if (goAwayMax < max || goAwayMax < 0) {
-            throw connectionError(INTERNAL_ERROR, "Header List Size GO_AWAY %d must be positive and >= %d",
-                    goAwayMax, max);
+    public void maxHeaderListSize(long max) throws Http2Exception {
+        if (max < MIN_HEADER_LIST_SIZE || max > MAX_HEADER_LIST_SIZE) {
+            throw connectionError(PROTOCOL_ERROR, "Header List Size must be >= %d and <= %d but was %d",
+                    MIN_HEADER_LIST_SIZE, MAX_HEADER_LIST_SIZE, max);
         }
-        hpackDecoder.setMaxHeaderListSize(max);
-        this.maxHeaderListSizeGoAway = max;
+        this.maxHeaderListSize = max;
     }
 
     @Override
     public long maxHeaderListSize() {
-        return hpackDecoder.getMaxHeaderListSize();
-    }
-
-    @Override
-    public long maxHeaderListSizeGoAway() {
-        return maxHeaderListSizeGoAway;
+        return maxHeaderListSize;
     }
 
     @Override
@@ -121,13 +122,22 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     }
 
     @Override
-    public Http2Headers decodeHeaders(int streamId, ByteBuf headerBlock) throws Http2Exception {
+    public Http2Headers decodeHeadersStart(int streamId, ByteBuf headersBlock, boolean endHeaders)
+            throws Http2Exception {
+        if (sink != null) {
+            throw new IllegalStateException("Previous headers decoding did not complete with endHeaders=true");
+        }
+        sink = new Http2HeadersSink(newHeaders(), maxHeaderListSize, validateHeaders, streamId);
+        return decodeHeadersContinue(headersBlock, endHeaders);
+    }
+
+    @Override
+    public Http2Headers decodeHeadersContinue(ByteBuf headerBlock, boolean endHeaders) throws Http2Exception {
+        if (sink == null) {
+            throw new IllegalStateException("Failed to call decodeHeadersStart before decodeHeadersContinue");
+        }
         try {
-            final Http2Headers headers = newHeaders();
-            hpackDecoder.decode(streamId, headerBlock, headers, validateHeaders);
-            headerArraySizeAccumulator = HEADERS_COUNT_WEIGHT_NEW * headers.size() +
-                                         HEADERS_COUNT_WEIGHT_HISTORICAL * headerArraySizeAccumulator;
-            return headers;
+            hpackDecoder.decode(headerBlock, sink);
         } catch (Http2Exception e) {
             throw e;
         } catch (Throwable e) {
@@ -136,6 +146,19 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
             // for any reason (e.g. the key was an invalid pseudo-header).
             throw connectionError(COMPRESSION_ERROR, e, e.getMessage());
         }
+
+        if (!endHeaders) {
+            return null;
+        }
+        hpackDecoder.checkDecodeComplete();
+        // we have read all of our headers. See if we have exceeded our maxHeaderListSize. We must
+        // delay throwing until this point to prevent dynamic table corruption
+        sink.checkExceededMaxLength();
+        Http2Headers headers = sink.headers();
+        headerArraySizeAccumulator = HEADERS_COUNT_WEIGHT_NEW * headers.size() +
+                                     HEADERS_COUNT_WEIGHT_HISTORICAL * headerArraySizeAccumulator;
+        sink = null;
+        return headers;
     }
 
     /**
@@ -160,5 +183,88 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      */
     protected Http2Headers newHeaders() {
         return new DefaultHttp2Headers(validateHeaders, (int) headerArraySizeAccumulator);
+    }
+
+    /**
+     * HTTP/2 header types.
+     */
+    private enum HeaderType {
+        REGULAR_HEADER,
+        REQUEST_PSEUDO_HEADER,
+        RESPONSE_PSEUDO_HEADER
+    }
+
+    private static class Http2HeadersSink implements HpackDecoder.Sink {
+        private final Http2Headers headers;
+        private final long maxHeaderListSize;
+        private final boolean validateHeaders;
+        private final int streamId;
+
+        private long headersLength;
+        private boolean exceededMaxLength;
+        private HeaderType headerType;
+
+        public Http2HeadersSink(Http2Headers headers, long maxHeaderListSize, boolean validateHeaders, int streamId) {
+            this.headers = headers;
+            this.maxHeaderListSize = maxHeaderListSize;
+            this.validateHeaders = validateHeaders;
+            this.streamId = streamId;
+        }
+
+        @Override
+        public boolean triggersExceededSizeLimit(long length) {
+            boolean exceeds = headersLength + length > maxHeaderListSize;
+            if (exceeds) {
+                exceededMaxLength = true;
+            }
+            return exceeds;
+        }
+
+        @Override
+        public void appendToHeaderList(CharSequence name, CharSequence value) throws Http2Exception {
+            headersLength += HpackHeaderField.sizeOf(name, value);
+            if (headersLength > maxHeaderListSize) {
+                exceededMaxLength = true;
+            }
+            if (validateHeaders) {
+                headerType = validate(name, headerType);
+            }
+            if (!exceededMaxLength) {
+                headers.add(name, value);
+            }
+        }
+
+        public void checkExceededMaxLength() throws Http2Exception {
+            if (exceededMaxLength) {
+                headerListSizeExceeded(streamId, maxHeaderListSize, true);
+            }
+        }
+
+        public Http2Headers headers() {
+            return headers;
+        }
+
+        private HeaderType validate(CharSequence name, HeaderType previousHeaderType) throws Http2Exception {
+            if (hasPseudoHeaderFormat(name)) {
+                if (previousHeaderType == HeaderType.REGULAR_HEADER) {
+                    throw connectionError(PROTOCOL_ERROR, "Pseudo-header field '%s' found after regular header.", name);
+                }
+
+                final Http2Headers.PseudoHeaderName pseudoHeader = getPseudoHeader(name);
+                if (pseudoHeader == null) {
+                    throw connectionError(PROTOCOL_ERROR, "Invalid HTTP/2 pseudo-header '%s' encountered.", name);
+                }
+
+                final HeaderType currentHeaderType = pseudoHeader.isRequestOnly() ?
+                        HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
+                if (previousHeaderType != null && currentHeaderType != previousHeaderType) {
+                    throw connectionError(PROTOCOL_ERROR, "Mix of request and response pseudo-headers.");
+                }
+
+                return currentHeaderType;
+            }
+
+            return HeaderType.REGULAR_HEADER;
+        }
     }
 }

@@ -36,18 +36,12 @@ import io.netty.handler.codec.http2.HpackUtil.IndexType;
 import io.netty.util.AsciiString;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.headerListSizeExceeded;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.getPseudoHeader;
-import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 import static io.netty.util.AsciiString.EMPTY_STRING;
-import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
 final class HpackDecoder {
@@ -80,7 +74,6 @@ final class HpackDecoder {
 
     private final HpackDynamicTable hpackDynamicTable;
     private final HpackHuffmanDecoder hpackHuffmanDecoder;
-    private long maxHeaderListSize;
     private long maxDynamicTableSize;
     private long encoderMaxDynamicTableSize;
     private boolean maxDynamicTableSizeChangeRequired;
@@ -91,7 +84,7 @@ final class HpackDecoder {
     private int valueLength;
     private boolean huffmanEncoded;
     private IndexType indexType = IndexType.NONE;
-    private CharSequence name = null;
+    private CharSequence name;
     /**
      * An entry is ignored if it is too large for both the dynamic table and the output header
      * list. When true, we still process the entry, but by throwing it away and clearing then
@@ -101,39 +94,21 @@ final class HpackDecoder {
 
     /**
      * Create a new instance.
-     * @param maxHeaderListSize This is the only setting that can be configured before notifying the peer.
-     *  This is because <a href="https://tools.ietf.org/html/rfc7540#section-6.5.1">SETTINGS_MAX_HEADER_LIST_SIZE</a>
-     *  allows a lower than advertised limit from being enforced, and the default limit is unlimited
-     *  (which is dangerous).
      * @param initialHuffmanDecodeCapacity Size of an intermediate buffer used during huffman decode.
      */
-    HpackDecoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity) {
-        this(maxHeaderListSize, initialHuffmanDecodeCapacity, DEFAULT_HEADER_TABLE_SIZE);
+    HpackDecoder(int initialHuffmanDecodeCapacity) {
+        this(initialHuffmanDecodeCapacity, DEFAULT_HEADER_TABLE_SIZE);
     }
 
     /**
      * Exposed Used for testing only! Default values used in the initial settings frame are overridden intentionally
      * for testing but violate the RFC if used outside the scope of testing.
      */
-    HpackDecoder(long maxHeaderListSize, int initialHuffmanDecodeCapacity, int maxHeaderTableSize) {
-        this.maxHeaderListSize = checkPositive(maxHeaderListSize, "maxHeaderListSize");
-
+    HpackDecoder(int initialHuffmanDecodeCapacity, int maxHeaderTableSize) {
         maxDynamicTableSize = encoderMaxDynamicTableSize = maxHeaderTableSize;
         maxDynamicTableSizeChangeRequired = false;
         hpackDynamicTable = new HpackDynamicTable(maxHeaderTableSize);
         hpackHuffmanDecoder = new HpackHuffmanDecoder(initialHuffmanDecodeCapacity);
-    }
-
-    public void decode(int streamId, ByteBuf in, Http2Headers headers, boolean validateHeaders) throws Http2Exception {
-        Http2HeadersSink sink = new Http2HeadersSink(headers, maxHeaderListSize, validateHeaders);
-        decode(in, sink);
-
-        checkDecodeComplete();
-        // we have read all of our headers. See if we have exceeded our maxHeaderListSize. We must
-        // delay throwing until this point to prevent dynamic table corruption
-        if (sink.exceededMaxLength()) {
-            headerListSizeExceeded(streamId, maxHeaderListSize, true);
-        }
     }
 
     /**
@@ -142,7 +117,7 @@ final class HpackDecoder {
      * <p>
      * Must call {@link #checkDecodeComplete()} after the entire header block has been provided.
      */
-    private void decode(ByteBuf in, Sink sink) throws Http2Exception {
+    public void decode(ByteBuf in, Sink sink) throws Http2Exception {
         while (in.isReadable()) {
             switch (state) {
                 case READ_HEADER_REPRESENTATION:
@@ -391,18 +366,6 @@ final class HpackDecoder {
         }
     }
 
-    public void setMaxHeaderListSize(long maxHeaderListSize) throws Http2Exception {
-        if (maxHeaderListSize < MIN_HEADER_LIST_SIZE || maxHeaderListSize > MAX_HEADER_LIST_SIZE) {
-            throw connectionError(PROTOCOL_ERROR, "Header List Size must be >= %d and <= %d but was %d",
-                    MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, maxHeaderListSize);
-        }
-        this.maxHeaderListSize = maxHeaderListSize;
-    }
-
-    public long getMaxHeaderListSize() {
-        return maxHeaderListSize;
-    }
-
     /**
      * Return the maximum table size. This is the maximum size allowed by both the encoder and the
      * decoder.
@@ -546,16 +509,7 @@ final class HpackDecoder {
         return -1;
     }
 
-    /**
-     * HTTP/2 header types.
-     */
-    private enum HeaderType {
-        REGULAR_HEADER,
-        REQUEST_PSEUDO_HEADER,
-        RESPONSE_PSEUDO_HEADER
-    }
-
-    private interface Sink {
+    public interface Sink {
         /**
          * Only needs rough accuracy, to avoid unbounded decoding sizes. If returns true, should
          * act as if an entry was added with that size.
@@ -567,71 +521,5 @@ final class HpackDecoder {
          * be thrown.
          */
         void appendToHeaderList(CharSequence name, CharSequence value) throws Http2Exception;
-    }
-
-    private static class Http2HeadersSink implements Sink {
-        private final Http2Headers headers;
-        private final long maxHeaderListSize;
-        private final boolean validateHeaders;
-
-        private long headersLength;
-        private boolean exceededMaxLength;
-        private HeaderType headerType;
-
-        public Http2HeadersSink(Http2Headers headers, long maxHeaderListSize, boolean validateHeaders) {
-            this.headers = headers;
-            this.maxHeaderListSize = maxHeaderListSize;
-            this.validateHeaders = validateHeaders;
-        }
-
-        @Override
-        public boolean triggersExceededSizeLimit(long length) {
-            boolean exceeds = headersLength + length > maxHeaderListSize;
-            if (exceeds) {
-                exceededMaxLength = true;
-            }
-            return exceeds;
-        }
-
-        @Override
-        public void appendToHeaderList(CharSequence name, CharSequence value) throws Http2Exception {
-            headersLength += HpackHeaderField.sizeOf(name, value);
-            if (headersLength > maxHeaderListSize) {
-                exceededMaxLength = true;
-            }
-            if (validateHeaders) {
-                headerType = validate(name, headerType);
-            }
-            if (!exceededMaxLength) {
-                headers.add(name, value);
-            }
-        }
-
-        public boolean exceededMaxLength() {
-            return exceededMaxLength;
-        }
-
-        private HeaderType validate(CharSequence name, HeaderType previousHeaderType) throws Http2Exception {
-            if (hasPseudoHeaderFormat(name)) {
-                if (previousHeaderType == HeaderType.REGULAR_HEADER) {
-                    throw connectionError(PROTOCOL_ERROR, "Pseudo-header field '%s' found after regular header.", name);
-                }
-
-                final Http2Headers.PseudoHeaderName pseudoHeader = getPseudoHeader(name);
-                if (pseudoHeader == null) {
-                    throw connectionError(PROTOCOL_ERROR, "Invalid HTTP/2 pseudo-header '%s' encountered.", name);
-                }
-
-                final HeaderType currentHeaderType = pseudoHeader.isRequestOnly() ?
-                        HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
-                if (previousHeaderType != null && currentHeaderType != previousHeaderType) {
-                    throw connectionError(PROTOCOL_ERROR, "Mix of request and response pseudo-headers.");
-                }
-
-                return currentHeaderType;
-            }
-
-            return HeaderType.REGULAR_HEADER;
-        }
     }
 }

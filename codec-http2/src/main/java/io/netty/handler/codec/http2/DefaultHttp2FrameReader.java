@@ -16,6 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2FrameReader.Configuration;
 import io.netty.util.internal.PlatformDependent;
@@ -684,16 +685,9 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
      * multiple frames.
      */
     protected class HeadersBlockBuilder {
-        private ByteBuf headerBlock;
-
-        /**
-         * The local header size maximum has been exceeded while accumulating bytes.
-         * @throws Http2Exception A connection error indicating too much data has been received.
-         */
-        private void headerSizeExceeded() throws Http2Exception {
-            close();
-            headerListSizeExceeded(headersDecoder.configuration().maxHeaderListSizeGoAway());
-        }
+        private CompositeByteBuf unprocessedHeaderBlock;
+        private boolean continuation;
+        private Http2Headers headers;
 
         /**
          * Adds a fragment to the block.
@@ -705,34 +699,25 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          *            block. In that case, the buffer is used directly without copying.
          */
         final void addFragment(ByteBuf fragment, ByteBufAllocator alloc, boolean endOfHeaders) throws Http2Exception {
-            if (headerBlock == null) {
-                if (fragment.readableBytes() > headersDecoder.configuration().maxHeaderListSizeGoAway()) {
-                    headerSizeExceeded();
-                }
-                if (endOfHeaders) {
-                    // Optimization - don't bother copying, just use the buffer as-is. Need
-                    // to retain since we release when the header block is built.
-                    headerBlock = fragment.retain();
+            if (unprocessedHeaderBlock == null) {
+                unprocessedHeaderBlock = alloc.compositeBuffer();
+            }
+            // Need to retain since CompositeByteBuf expects to own the reference.
+            unprocessedHeaderBlock.addComponent(fragment.retain());
+            Http2Headers headers;
+            boolean didThrow = true;
+            try {
+                if (!continuation) {
+                    headers = headersDecoder.decodeHeadersStart(streamId, unprocessedHeaderBlock, endOfHeaders);
+                    continuation = true;
                 } else {
-                    headerBlock = alloc.buffer(fragment.readableBytes());
-                    headerBlock.writeBytes(fragment);
+                    headers = headersDecoder.decodeHeadersContinue(unprocessedHeaderBlock, endOfHeaders);
                 }
-                return;
-            }
-            if (headersDecoder.configuration().maxHeaderListSizeGoAway() - fragment.readableBytes() <
-                    headerBlock.readableBytes()) {
-                headerSizeExceeded();
-            }
-            if (headerBlock.isWritable(fragment.readableBytes())) {
-                // The buffer can hold the requested bytes, just write it directly.
-                headerBlock.writeBytes(fragment);
-            } else {
-                // Allocate a new buffer that is big enough to hold the entire header block so far.
-                ByteBuf buf = alloc.buffer(headerBlock.readableBytes() + fragment.readableBytes());
-                buf.writeBytes(headerBlock);
-                buf.writeBytes(fragment);
-                headerBlock.release();
-                headerBlock = buf;
+                didThrow = false;
+            } finally {
+                if (didThrow) {
+                    close();
+                }
             }
         }
 
@@ -741,20 +726,20 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          * should not be called again.
          */
         Http2Headers headers() throws Http2Exception {
-            try {
-                return headersDecoder.decodeHeaders(streamId, headerBlock);
-            } finally {
-                close();
+            close();
+            if (headers == null) {
+                throw new IllegalStateException("Did not receive fragment with endOfHeaders=true");
             }
+            return headers;
         }
 
         /**
          * Closes this builder and frees any resources.
          */
         void close() {
-            if (headerBlock != null) {
-                headerBlock.release();
-                headerBlock = null;
+            if (unprocessedHeaderBlock != null) {
+                unprocessedHeaderBlock.release();
+                unprocessedHeaderBlock = null;
             }
 
             // Clear the member variable pointing at this instance.

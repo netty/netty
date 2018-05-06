@@ -48,30 +48,40 @@ public interface Http2HeadersDecoder {
          * @param max <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>.
          *      If this limit is exceeded the implementation should attempt to keep the HPACK header tables up to date
          *      by processing data from the peer, but a {@code RST_STREAM} frame will be sent for the offending stream.
-         * @param goAwayMax Must be {@code >= max}. A {@code GO_AWAY} frame will be generated if this limit is exceeded
-         *                  for any particular stream.
          * @throws Http2Exception if limits exceed the RFC's boundaries or {@code max > goAwayMax}.
          */
-        void maxHeaderListSize(long max, long goAwayMax) throws Http2Exception;
+        void maxHeaderListSize(long max) throws Http2Exception;
 
         /**
          * Represents the value for
          * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>.
          */
         long maxHeaderListSize();
-
-        /**
-         * Represents the upper bound in bytes for a set of headers before a {@code GO_AWAY} should be sent.
-         * This will be {@code <=}
-         * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>.
-         */
-        long maxHeaderListSizeGoAway();
     }
 
     /**
-     * Decodes the given headers block and returns the headers.
+     * Starts decoding a new headers block. Any previous headers block must have been fully decoded
+     * by passing {@code endHeaders = true} to this method or {@link #decodeHeadersContinue}.
+     *
+     * <p>When {@code endHeaders} is {@code false}, after returning, {@code headersBlock} may not be
+     * fully consumed. The unconsumed portion should be included in future calls to
+     * {@link #decodeHeadersContinue}.
+     *
+     * @return non-{@code null} when {@code endHeaders} is {@code true}
      */
-    Http2Headers decodeHeaders(int streamId, ByteBuf headerBlock) throws Http2Exception;
+    Http2Headers decodeHeadersStart(int streamId, ByteBuf headersBlock, boolean endHeaders) throws Http2Exception;
+
+    /**
+     * Continues decoding a headers block. A block must already have been started by a call to
+     * {@link #decodeHeadersStart} and must not have been completed via {@code endHeaders = true}.
+     *
+     * <p>When {@code endHeaders} is {@code false}, after returning, {@code headersBlock} may not be
+     * fully consumed. The unconsumed portion should be included in future calls to
+     * {@link #decodeHeadersContinue}.
+     *
+     * @return non-{@code null} when {@code endHeaders} is {@code true}
+     */
+    Http2Headers decodeHeadersContinue(ByteBuf headerBlock, boolean endHeaders) throws Http2Exception;
 
     /**
      * Get the {@link Configuration} for this {@link Http2HeadersDecoder}

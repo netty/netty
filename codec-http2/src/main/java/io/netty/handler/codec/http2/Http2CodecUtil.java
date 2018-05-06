@@ -122,18 +122,6 @@ public final class Http2CodecUtil {
     static final int DEFAULT_MIN_ALLOCATION_CHUNK = 1024;
     static final int DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY = 32;
 
-    /**
-     * Calculate the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
-     * @param maxHeaderListSize
-     *      <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a> for the local
-     *      endpoint.
-     * @return the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
-     */
-    public static long calculateMaxHeaderListSizeGoAway(long maxHeaderListSize) {
-        // This is equivalent to `maxHeaderListSize * 1.25` but we avoid floating point multiplication.
-        return maxHeaderListSize + (maxHeaderListSize >>> 2);
-    }
-
     public static final long DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = MILLISECONDS.convert(30, SECONDS);
 
     /**

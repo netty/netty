@@ -141,17 +141,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         frameReader.close();
     }
 
-    /**
-     * Calculate the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
-     * @param maxHeaderListSize
-     *      <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a> for the local
-     *      endpoint.
-     * @return the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
-     */
-    protected long calculateMaxHeaderListSizeGoAway(long maxHeaderListSize) {
-        return Http2CodecUtil.calculateMaxHeaderListSizeGoAway(maxHeaderListSize);
-    }
-
     private int unconsumedBytes(Http2Stream stream) {
         return flowController().unconsumedBytes(stream);
     }
@@ -397,7 +386,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Long maxHeaderListSize = settings.maxHeaderListSize();
             if (maxHeaderListSize != null) {
-                headerConfig.maxHeaderListSize(maxHeaderListSize, calculateMaxHeaderListSizeGoAway(maxHeaderListSize));
+                headerConfig.maxHeaderListSize(maxHeaderListSize);
             }
 
             Integer maxFrameSize = settings.maxFrameSize();
