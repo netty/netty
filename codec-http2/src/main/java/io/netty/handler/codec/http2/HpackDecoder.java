@@ -138,9 +138,14 @@ final class HpackDecoder {
         CharSequence name = null;
         HeaderType headerType = null;
         IndexType indexType = IndexType.NONE;
+        // An entry is ignored if it is too large for both the dynamic table and the output header
+        // list. When true, we still process the entry, but by throwing it away and clearing then
+        // dynamic table if the entry would have been added to the table.
+        boolean ignoreEntry = false;
         while (in.isReadable()) {
             switch (state) {
                 case READ_HEADER_REPRESENTATION:
+                    assert !ignoreEntry;
                     byte b = in.readByte();
                     if (maxDynamicTableSizeChangeRequired && (b & 0xE0) != 0x20) {
                         // HpackEncoder MUST signal maximum dynamic table size change
@@ -248,13 +253,21 @@ final class HpackDecoder {
                     break;
 
                 case READ_LITERAL_HEADER_NAME:
+                    if (nameLength > encoderMaxDynamicTableSize && sink.triggersExceededSizeLimit(nameLength)) {
+                        ignoreEntry = true;
+                    }
                     // Wait until entire name is readable
                     if (in.readableBytes() < nameLength) {
                         throw notEnoughDataException(in);
                     }
 
-                    name = readStringLiteral(in, nameLength, huffmanEncoded);
-                    headerType = validate(name, headerType, validateHeaders);
+                    if (ignoreEntry) {
+                        in.skipBytes(nameLength);
+                        name = EMPTY_STRING;
+                    } else {
+                        name = readStringLiteral(in, nameLength, huffmanEncoded);
+                        headerType = validate(name, headerType, validateHeaders);
+                    }
 
                     state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                     break;
@@ -268,8 +281,15 @@ final class HpackDecoder {
                             state = READ_LITERAL_HEADER_VALUE_LENGTH;
                             break;
                         case 0:
-                            headerType = validate(name, headerType, validateHeaders);
-                            insertHeader(sink, name, EMPTY_STRING, indexType);
+                            if (ignoreEntry) {
+                                ignoreEntry = false;
+                                if (indexType == IndexType.INCREMENTAL) {
+                                    hpackDynamicTable.clear();
+                                }
+                            } else {
+                                headerType = validate(name, headerType, validateHeaders);
+                                insertHeader(sink, name, EMPTY_STRING, indexType);
+                            }
                             state = READ_HEADER_REPRESENTATION;
                             break;
                         default:
@@ -287,14 +307,26 @@ final class HpackDecoder {
                     break;
 
                 case READ_LITERAL_HEADER_VALUE:
+                    if (valueLength > encoderMaxDynamicTableSize
+                            && sink.triggersExceededSizeLimit(nameLength + valueLength)) {
+                        ignoreEntry = true;
+                    }
                     // Wait until entire value is readable
                     if (in.readableBytes() < valueLength) {
                         throw notEnoughDataException(in);
                     }
 
-                    CharSequence value = readStringLiteral(in, valueLength, huffmanEncoded);
-                    headerType = validate(name, headerType, validateHeaders);
-                    insertHeader(sink, name, value, indexType);
+                    if (ignoreEntry) {
+                        ignoreEntry = false;
+                        in.skipBytes(valueLength);
+                        if (indexType == IndexType.INCREMENTAL) {
+                            hpackDynamicTable.clear();
+                        }
+                    } else {
+                        CharSequence value = readStringLiteral(in, valueLength, huffmanEncoded);
+                        headerType = validate(name, headerType, validateHeaders);
+                        insertHeader(sink, name, value, indexType);
+                    }
                     state = READ_HEADER_REPRESENTATION;
                     break;
 
@@ -519,6 +551,11 @@ final class HpackDecoder {
     }
 
     private interface Sink {
+        /**
+         * Only needs rough accuracy, to avoid unbounded decoding sizes. If returns true, should
+         * act as if an entry was added with that size.
+         */
+        boolean triggersExceededSizeLimit(long length);
         void appendToHeaderList(CharSequence name, CharSequence value);
     }
 
@@ -531,6 +568,15 @@ final class HpackDecoder {
         public Http2HeadersSink(Http2Headers headers, long maxHeaderListSize) {
             this.headers = headers;
             this.maxHeaderListSize = maxHeaderListSize;
+        }
+
+        @Override
+        public boolean triggersExceededSizeLimit(long length) {
+            boolean exceeds = headersLength + length > maxHeaderListSize;
+            if (exceeds) {
+                exceededMaxLength = true;
+            }
+            return exceeds;
         }
 
         @Override
