@@ -51,9 +51,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
 final class HpackDecoder {
-    private static final Http2Exception DECODE_ULE_128_DECOMPRESSION_EXCEPTION = unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - decompression failure"), HpackDecoder.class,
-            "decodeULE128(..)");
     private static final Http2Exception DECODE_ULE_128_TO_LONG_DECOMPRESSION_EXCEPTION = unknownStackTrace(
             connectionError(COMPRESSION_ERROR, "HPACK - long overflow"), HpackDecoder.class, "decodeULE128(..)");
     private static final Http2Exception DECODE_ULE_128_TO_INT_DECOMPRESSION_EXCEPTION = unknownStackTrace(
@@ -88,6 +85,20 @@ final class HpackDecoder {
     private long encoderMaxDynamicTableSize;
     private boolean maxDynamicTableSizeChangeRequired;
 
+    private byte state = READ_HEADER_REPRESENTATION;
+    private int index;
+    private int nameLength;
+    private int valueLength;
+    private boolean huffmanEncoded;
+    private IndexType indexType = IndexType.NONE;
+    private CharSequence name = null;
+    /**
+     * An entry is ignored if it is too large for both the dynamic table and the output header
+     * list. When true, we still process the entry, but by throwing it away and clearing then
+     * dynamic table if the entry would have been added to the table.
+     */
+    private boolean ignoreEntry;
+
     /**
      * Create a new instance.
      * @param maxHeaderListSize This is the only setting that can be configured before notifying the peer.
@@ -117,6 +128,7 @@ final class HpackDecoder {
         Http2HeadersSink sink = new Http2HeadersSink(headers, maxHeaderListSize, validateHeaders);
         decode(in, sink);
 
+        checkDecodeComplete();
         // we have read all of our headers. See if we have exceeded our maxHeaderListSize. We must
         // delay throwing until this point to prevent dynamic table corruption
         if (sink.exceededMaxLength()) {
@@ -125,23 +137,12 @@ final class HpackDecoder {
     }
 
     /**
-     * Decode the header block into header fields.
+     * Decode the header block into header fields. May return early if {@code in} is incomplete, but
+     * will have updated the readerIndex of {@code in} to what has been consumed.
      * <p>
-     * This method assumes the entire header block is contained in {@code in}.
+     * Must call {@link #checkDecodeComplete()} after the entire header block has been provided.
      */
     private void decode(ByteBuf in, Sink sink) throws Http2Exception {
-        int index = 0;
-        int nameLength = 0;
-        int valueLength = 0;
-        byte state = READ_HEADER_REPRESENTATION;
-        boolean huffmanEncoded = false;
-        CharSequence name = null;
-        HeaderType headerType = null;
-        IndexType indexType = IndexType.NONE;
-        // An entry is ignored if it is too large for both the dynamic table and the output header
-        // list. When true, we still process the entry, but by throwing it away and clearing then
-        // dynamic table if the entry would have been added to the table.
-        boolean ignoreEntry = false;
         while (in.isReadable()) {
             switch (state) {
                 case READ_HEADER_REPRESENTATION:
@@ -211,20 +212,38 @@ final class HpackDecoder {
                     break;
 
                 case READ_MAX_DYNAMIC_TABLE_SIZE:
-                    setDynamicTableSize(decodeULE128(in, (long) index));
+                {
+                    long dynamicTableSize = decodeULE128(in, (long) index);
+                    if (dynamicTableSize == -1) {
+                        // Need more data
+                        return;
+                    }
+                    setDynamicTableSize(dynamicTableSize);
                     state = READ_HEADER_REPRESENTATION;
                     break;
+                }
 
                 case READ_INDEXED_HEADER:
-                    HpackHeaderField indexedHeader = getIndexedHeader(decodeULE128(in, index));
+                {
+                    int decodedIndex = decodeULE128(in, index);
+                    if (decodedIndex == -1) {
+                        // Need more data
+                        return;
+                    }
+                    HpackHeaderField indexedHeader = getIndexedHeader(decodedIndex);
                     sink.appendToHeaderList(indexedHeader.name, indexedHeader.value);
                     state = READ_HEADER_REPRESENTATION;
                     break;
+                }
 
                 case READ_INDEXED_HEADER_NAME:
                     // Header Name matches an entry in the Header Table
-                    name = readName(decodeULE128(in, index));
-                    nameLength = name.length();
+                    nameLength = decodeULE128(in, index);
+                    if (nameLength == -1) {
+                        // Need more data
+                        return;
+                    }
+                    name = readName(nameLength);
                     state = READ_LITERAL_HEADER_VALUE_LENGTH_PREFIX;
                     break;
 
@@ -243,6 +262,10 @@ final class HpackDecoder {
                 case READ_LITERAL_HEADER_NAME_LENGTH:
                     // Header Name is a Literal String
                     nameLength = decodeULE128(in, index);
+                    if (nameLength == -1) {
+                        // Need more data
+                        return;
+                    }
 
                     state = READ_LITERAL_HEADER_NAME;
                     break;
@@ -253,7 +276,12 @@ final class HpackDecoder {
                     }
                     // Wait until entire name is readable
                     if (in.readableBytes() < nameLength) {
-                        throw notEnoughDataException(in);
+                        if (ignoreEntry) {
+                            int readableBytes = in.readableBytes();
+                            in.skipBytes(readableBytes);
+                            valueLength -= readableBytes;
+                        }
+                        return;
                     }
 
                     if (ignoreEntry) {
@@ -283,6 +311,7 @@ final class HpackDecoder {
                             } else {
                                 insertHeader(sink, name, EMPTY_STRING, indexType);
                             }
+                            name = null;
                             state = READ_HEADER_REPRESENTATION;
                             break;
                         default:
@@ -295,6 +324,10 @@ final class HpackDecoder {
                 case READ_LITERAL_HEADER_VALUE_LENGTH:
                     // Header Value is a Literal String
                     valueLength = decodeULE128(in, index);
+                    if (nameLength == -1) {
+                        // Need more data
+                        return;
+                    }
 
                     state = READ_LITERAL_HEADER_VALUE;
                     break;
@@ -306,7 +339,12 @@ final class HpackDecoder {
                     }
                     // Wait until entire value is readable
                     if (in.readableBytes() < valueLength) {
-                        throw notEnoughDataException(in);
+                        if (ignoreEntry) {
+                            int readableBytes = in.readableBytes();
+                            in.skipBytes(readableBytes);
+                            valueLength -= readableBytes;
+                        }
+                        return;
                     }
 
                     if (ignoreEntry) {
@@ -319,6 +357,7 @@ final class HpackDecoder {
                         CharSequence value = readStringLiteral(in, valueLength, huffmanEncoded);
                         insertHeader(sink, name, value, indexType);
                     }
+                    name = null;
                     state = READ_HEADER_REPRESENTATION;
                     break;
 
@@ -326,7 +365,9 @@ final class HpackDecoder {
                     throw new Error("should not reach here state: " + state);
             }
         }
+    }
 
+    public void checkDecodeComplete() throws Http2Exception {
         if (state != READ_HEADER_REPRESENTATION) {
             throw connectionError(COMPRESSION_ERROR, "Incomplete header block fragment.");
         }
@@ -449,14 +490,12 @@ final class HpackDecoder {
         return new AsciiString(buf, false);
     }
 
-    private static IllegalArgumentException notEnoughDataException(ByteBuf in) {
-        return new IllegalArgumentException("decode only works with an entire header block! " + in);
-    }
-
     /**
      * Unsigned Little Endian Base 128 Variable-Length Integer Encoding
      * <p>
      * Visible for testing only!
+     *
+     * @return decoded value, or -1 if {@code in} is too small
      */
     static int decodeULE128(ByteBuf in, int result) throws Http2Exception {
         final int readerIndex = in.readerIndex();
@@ -477,6 +516,8 @@ final class HpackDecoder {
      * Unsigned Little Endian Base 128 Variable-Length Integer Encoding
      * <p>
      * Visible for testing only!
+     *
+     * @return decoded value, or -1 if {@code in} is too small
      */
     static long decodeULE128(ByteBuf in, long result) throws Http2Exception {
         assert result <= 0x7f && result >= 0;
@@ -502,7 +543,7 @@ final class HpackDecoder {
             result += (b & 0x7FL) << shift;
         }
 
-        throw DECODE_ULE_128_DECOMPRESSION_EXCEPTION;
+        return -1;
     }
 
     /**
