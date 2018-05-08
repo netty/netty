@@ -50,19 +50,6 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     }
 
     @Override
-    boolean containsExpectedResult(List<InetAddress> finalResult) {
-        final int size = finalResult.size();
-        final Class<? extends InetAddress> inetAddressType = parent.preferredAddressType().addressType();
-        for (int i = 0; i < size; i++) {
-            InetAddress address = finalResult.get(i);
-            if (inetAddressType.isInstance(address)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Override
     List<InetAddress> filterResults(List<InetAddress> unfiltered) {
         final Class<? extends InetAddress> inetAddressType = parent.preferredAddressType().addressType();
         final int size = unfiltered.size();
