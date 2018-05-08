@@ -84,7 +84,7 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         } else if (oldRef < decrement || oldRef - decrement > oldRef) {
             // Ensure we don't over-release, and avoid underflow.
             refCntUpdater.getAndAdd(this, decrement);
-            throw new IllegalReferenceCountException(oldRef, decrement);
+            throw new IllegalReferenceCountException(oldRef, -decrement);
         }
         return false;
     }
