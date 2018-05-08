@@ -29,6 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class AbstractReferenceCountedByteBufTest {
 
@@ -53,6 +54,18 @@ public class AbstractReferenceCountedByteBufTest {
         referenceCounted.setRefCnt(0);
         assertEquals(0, referenceCounted.refCnt());
         referenceCounted.release(Integer.MAX_VALUE);
+    }
+
+    @Test
+    public void testReleaseErrorMessage() {
+        AbstractReferenceCountedByteBuf referenceCounted = newReferenceCounted();
+        assertTrue(referenceCounted.release());
+        try {
+            referenceCounted.release(1);
+            fail("IllegalReferenceCountException didn't occur");
+        } catch (IllegalReferenceCountException e) {
+            assertEquals("refCnt: 0, decrement: 1", e.getMessage());
+        }
     }
 
     @Test(expected = IllegalReferenceCountException.class)
