@@ -87,6 +87,19 @@ public class DefaultDnsCacheTest {
     }
 
     @Test
+    public void testExpireWithToBigMinTTL() {
+        EventLoopGroup group = new NioEventLoopGroup(1);
+
+        try {
+            EventLoop loop = group.next();
+            final DefaultDnsCache cache = new DefaultDnsCache(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
+            assertNotNull(cache.cache("netty.io", null, NetUtil.LOCALHOST, 100, loop));
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
     public void testAddMultipleAddressesForSameHostname() throws Exception {
         InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
         InetAddress addr2 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 });
