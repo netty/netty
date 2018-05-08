@@ -67,20 +67,18 @@ import java.net.UnknownHostException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -379,20 +377,17 @@ public class DnsNameResolverTest {
         final String overriddenIP = "12.34.12.34";
         final TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
             @Override
-            public Set<ResourceRecord> getRecords(QuestionRecord question) throws DnsException {
-                ResourceRecordModifier rm = new ResourceRecordModifier();
-                rm.setDnsClass(RecordClass.IN);
-                rm.setDnsName(question.getDomainName());
-                rm.setDnsTtl(100);
-                rm.setDnsType(question.getRecordType());
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
                 switch (question.getRecordType()) {
                     case A:
-                        rm.put(DnsAttribute.IP_ADDRESS, overriddenIP);
-                        break;
+                        Map<String, Object> attr = new HashMap<String, Object>();
+                        attr.put(DnsAttribute.IP_ADDRESS.toLowerCase(Locale.US), overriddenIP);
+                        return Collections.<ResourceRecord>singleton(
+                                new TestDnsServer.TestResourceRecord(
+                                        question.getDomainName(), question.getRecordType(), attr));
                     default:
                         return null;
                 }
-                return Collections.singleton(rm.getEntry());
             }
         });
         dnsServer2.start();
@@ -496,7 +491,7 @@ public class DnsNameResolverTest {
         testNonCachedResolveEmptyHostName(null);
     }
 
-    public void testNonCachedResolveEmptyHostName(String inetHost) throws Exception {
+    private static void testNonCachedResolveEmptyHostName(String inetHost) throws Exception {
         DnsNameResolver resolver = newNonCachedResolver(ResolvedAddressTypes.IPV4_ONLY).build();
         try {
             InetAddress addr = resolver.resolve(inetHost).syncUninterruptibly().getNow();
@@ -753,16 +748,16 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testCNAMEResolveAllIpv4() throws IOException, InterruptedException {
+    public void testCNAMEResolveAllIpv4() throws IOException {
         testCNAMERecursiveResolve(true);
     }
 
     @Test
-    public void testCNAMEResolveAllIpv6() throws IOException, InterruptedException {
+    public void testCNAMEResolveAllIpv6() throws IOException {
         testCNAMERecursiveResolve(false);
     }
 
-    private static void testCNAMERecursiveResolve(boolean ipv4Preferred) throws IOException, InterruptedException {
+    private static void testCNAMERecursiveResolve(boolean ipv4Preferred) throws IOException {
         final String firstName = "firstname.com";
         final String secondName = "secondname.com";
         final String lastName = "lastname.com";
@@ -770,7 +765,7 @@ public class DnsNameResolverTest {
         final String ipv6Addr = "::1";
         TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
             @Override
-            public Set<ResourceRecord> getRecords(QuestionRecord question) throws DnsException {
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
                 ResourceRecordModifier rm = new ResourceRecordModifier();
                 rm.setDnsClass(RecordClass.IN);
                 rm.setDnsName(question.getDomainName());
@@ -1067,8 +1062,8 @@ public class DnsNameResolverTest {
 
     private static void secondDnsServerShouldBeUsedBeforeCNAME(boolean startDnsServer1) throws IOException {
         final String knownHostName = "netty.io";
-        final TestDnsServer dnsServer1 = new TestDnsServer(new HashSet<String>(Arrays.asList("notnetty.com")));
-        final TestDnsServer dnsServer2 = new TestDnsServer(new HashSet<String>(Arrays.asList(knownHostName)));
+        final TestDnsServer dnsServer1 = new TestDnsServer(Collections.singleton("notnetty.com"));
+        final TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(knownHostName));
         DnsNameResolver resolver = null;
         try {
             final InetSocketAddress dnsServer1Address;
@@ -1122,8 +1117,8 @@ public class DnsNameResolverTest {
     @Test(timeout = DEFAULT_TEST_TIMEOUT_MS)
     public void aAndAAAAQueryShouldTryFirstDnsServerBeforeSecond() throws IOException {
         final String knownHostName = "netty.io";
-        final TestDnsServer dnsServer1 = new TestDnsServer(new HashSet<String>(Arrays.asList("notnetty.com")));
-        final TestDnsServer dnsServer2 = new TestDnsServer(new HashSet<String>(Arrays.asList(knownHostName)));
+        final TestDnsServer dnsServer1 = new TestDnsServer(Collections.singleton("notnetty.com"));
+        final TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(knownHostName));
         DnsNameResolver resolver = null;
         try {
             dnsServer1.start();
@@ -1347,7 +1342,7 @@ public class DnsNameResolverTest {
     private static void queryMx(
             DnsNameResolver resolver,
             Map<String, Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> futures,
-            String hostname) throws Exception {
+            String hostname) {
         futures.put(hostname, resolver.query(new DefaultDnsQuestion(hostname, DnsRecordType.MX)));
     }
 

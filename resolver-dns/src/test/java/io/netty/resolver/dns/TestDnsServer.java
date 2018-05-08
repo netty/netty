@@ -17,7 +17,6 @@ package io.netty.resolver.dns;
 
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
-import org.apache.directory.server.dns.DnsException;
 import org.apache.directory.server.dns.DnsServer;
 import org.apache.directory.server.dns.io.encoder.DnsMessageEncoder;
 import org.apache.directory.server.dns.io.encoder.ResourceRecordEncoder;
@@ -27,7 +26,6 @@ import org.apache.directory.server.dns.messages.RecordClass;
 import org.apache.directory.server.dns.messages.RecordType;
 import org.apache.directory.server.dns.messages.ResourceRecord;
 import org.apache.directory.server.dns.messages.ResourceRecordImpl;
-import org.apache.directory.server.dns.messages.ResourceRecordModifier;
 import org.apache.directory.server.dns.protocol.DnsProtocolHandler;
 import org.apache.directory.server.dns.protocol.DnsUdpDecoder;
 import org.apache.directory.server.dns.protocol.DnsUdpEncoder;
@@ -51,6 +49,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -91,7 +90,7 @@ class TestDnsServer extends DnsServer {
 
         acceptor.setHandler(new DnsProtocolHandler(this, store) {
             @Override
-            public void sessionCreated(IoSession session) throws Exception {
+            public void sessionCreated(IoSession session) {
                 // USe our own codec to support AAAA testing
                 session.getFilterChain()
                     .addFirst("codec", new ProtocolCodecFilter(new TestDnsProtocolUdpCodecFactory()));
@@ -120,7 +119,7 @@ class TestDnsServer extends DnsServer {
         private final TestAAAARecordEncoder recordEncoder = new TestAAAARecordEncoder();
 
         @Override
-        public ProtocolEncoder getEncoder(IoSession session) throws Exception {
+        public ProtocolEncoder getEncoder(IoSession session) {
             return new DnsUdpEncoder() {
 
                 @Override
@@ -150,7 +149,7 @@ class TestDnsServer extends DnsServer {
         }
 
         @Override
-        public ProtocolDecoder getDecoder(IoSession session) throws Exception {
+        public ProtocolDecoder getDecoder(IoSession session) {
             return new DnsUdpDecoder();
         }
 
@@ -160,7 +159,7 @@ class TestDnsServer extends DnsServer {
             protected void putResourceRecordData(IoBuffer ioBuffer, ResourceRecord resourceRecord) {
                 byte[] bytes = BYTES.get(resourceRecord.get(DnsAttribute.IP_ADDRESS));
                 if (bytes == null) {
-                    throw new IllegalStateException();
+                    throw new IllegalStateException(resourceRecord.get(DnsAttribute.IP_ADDRESS));
                 }
                 // encode the ::1
                 ioBuffer.put(bytes);
@@ -168,11 +167,11 @@ class TestDnsServer extends DnsServer {
         }
     }
 
-    public static final class MapRecordStoreA implements RecordStore {
+    static final class MapRecordStoreA implements RecordStore {
 
         private final Map<String, List<String>> domainMap;
 
-        public MapRecordStoreA(Set<String> domains, int length) {
+        MapRecordStoreA(Set<String> domains, int length) {
             domainMap = new HashMap<String, List<String>>(domains.size());
             for (String domain : domains) {
                 List<String> addresses = new ArrayList<String>(length);
@@ -183,7 +182,7 @@ class TestDnsServer extends DnsServer {
             }
         }
 
-        public MapRecordStoreA(Set<String> domains) {
+        MapRecordStoreA(Set<String> domains) {
             this(domains, 1);
         }
 
@@ -196,25 +195,15 @@ class TestDnsServer extends DnsServer {
         }
 
         @Override
-        public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) throws DnsException {
+        public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
             String name = questionRecord.getDomainName();
             List<String> addresses = domainMap.get(name);
             if (addresses != null && questionRecord.getRecordType() == RecordType.A) {
                 Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>();
                 for (String address : addresses) {
-                    HashMap<String, Object> attributes = new HashMap<String, Object>();
+                    Map<String, Object> attributes = new HashMap<String, Object>();
                     attributes.put(DnsAttribute.IP_ADDRESS.toLowerCase(), address);
-                    records.add(new ResourceRecordImpl(name, questionRecord.getRecordType(),
-                        RecordClass.IN, 100, attributes) {
-                        @Override
-                        public int hashCode() {
-                            return System.identityHashCode(this);
-                        }
-                        @Override
-                        public boolean equals(Object o) {
-                            return false;
-                        }
-                    });
+                    records.add(new TestResourceRecord(name, questionRecord.getRecordType(), attributes));
                 }
                 return records;
             }
@@ -266,36 +255,49 @@ class TestDnsServer extends DnsServer {
         public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
             String name = questionRecord.getDomainName();
             if (domains.contains(name)) {
-                ResourceRecordModifier rm = new ResourceRecordModifier();
-                rm.setDnsClass(RecordClass.IN);
-                rm.setDnsName(name);
-                rm.setDnsTtl(100);
-                rm.setDnsType(questionRecord.getRecordType());
-
+                Map<String, Object> attr = new HashMap<String, Object>();
                 switch (questionRecord.getRecordType()) {
                     case A:
                         do {
-                            rm.put(DnsAttribute.IP_ADDRESS, nextIp());
+                            attr.put(DnsAttribute.IP_ADDRESS.toLowerCase(Locale.US), nextIp());
                         } while (PlatformDependent.threadLocalRandom().nextBoolean());
                         break;
                     case AAAA:
                         do {
-                            rm.put(DnsAttribute.IP_ADDRESS, nextIp6());
+                            attr.put(DnsAttribute.IP_ADDRESS.toLowerCase(Locale.US), nextIp6());
                         } while (PlatformDependent.threadLocalRandom().nextBoolean());
                         break;
                     case MX:
                         int priority = 0;
                         do {
-                            rm.put(DnsAttribute.DOMAIN_NAME, nextDomain());
-                            rm.put(DnsAttribute.MX_PREFERENCE, String.valueOf(++priority));
+                            attr.put(DnsAttribute.DOMAIN_NAME.toLowerCase(Locale.US), nextDomain());
+                            attr.put(DnsAttribute.MX_PREFERENCE.toLowerCase(Locale.US), String.valueOf(++priority));
                         } while (PlatformDependent.threadLocalRandom().nextBoolean());
                         break;
                     default:
                         return null;
                 }
-                return Collections.singleton(rm.getEntry());
+                return Collections.<ResourceRecord>singleton(
+                        new TestResourceRecord(name, questionRecord.getRecordType(), attr));
             }
             return null;
+        }
+    }
+
+    static final class TestResourceRecord extends ResourceRecordImpl {
+
+        TestResourceRecord(String domainName, RecordType recordType, Map<String, Object> attributes) {
+            super(domainName, recordType, RecordClass.IN, 100, attributes);
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(this);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o == this;
         }
     }
 }
