@@ -65,8 +65,8 @@ public class DefaultDnsCache implements DnsCache {
      * @param negativeTtl the TTL for failed queries
      */
     public DefaultDnsCache(int minTtl, int maxTtl, int negativeTtl) {
-        this.minTtl = checkPositiveOrZero(minTtl, "minTtl");
-        this.maxTtl = checkPositiveOrZero(maxTtl, "maxTtl");
+        this.minTtl = Math.min(MAX_SUPPORTED_TTL_SECS, checkPositiveOrZero(minTtl, "minTtl"));
+        this.maxTtl = Math.min(MAX_SUPPORTED_TTL_SECS, checkPositiveOrZero(maxTtl, "maxTtl"));
         if (minTtl > maxTtl) {
             throw new IllegalArgumentException(
                     "minTtl: " + minTtl + ", maxTtl: " + maxTtl + " (expected: 0 <= minTtl <= maxTtl)");
