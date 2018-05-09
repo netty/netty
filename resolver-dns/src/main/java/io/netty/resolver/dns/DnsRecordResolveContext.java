@@ -15,9 +15,6 @@
  */
 package io.netty.resolver.dns;
 
-import static io.netty.resolver.dns.DnsAddressDecoder.decodeAddress;
-
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 
@@ -54,11 +51,6 @@ final class DnsRecordResolveContext extends DnsResolveContext<DnsRecord> {
     @Override
     DnsRecord convertRecord(DnsRecord record, String hostname, DnsRecord[] additionals, EventLoop eventLoop) {
         return ReferenceCountUtil.retain(record);
-    }
-
-    @Override
-    boolean containsExpectedResult(List<DnsRecord> finalResult) {
-        return true;
     }
 
     @Override
