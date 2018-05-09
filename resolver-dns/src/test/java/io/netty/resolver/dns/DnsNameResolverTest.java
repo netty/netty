@@ -72,6 +72,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -567,7 +568,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testQueryMx() throws Exception {
+    public void testQueryMx() {
         DnsNameResolver resolver = newResolver().build();
         try {
             assertThat(resolver.isRecursionDesired(), is(true));
@@ -1631,5 +1632,54 @@ public class DnsNameResolverTest {
         builder.channelFactory(newChannelFactory);
         assertEquals(channelFactory, copiedBuilder.channelFactory());
         assertEquals(newChannelFactory, builder.channelFactory());
+    }
+
+    @Test
+    public void testFollowCNAMEEvenIfARecordIsPresent() throws IOException {
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getDomainName().equals("cname.netty.io")) {
+                    Map<String, Object> map1 = new HashMap<String, Object>();
+                    map1.put(DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.99");
+                    return Collections.<ResourceRecord>singleton(
+                            new TestDnsServer.TestResourceRecord(question.getDomainName(), RecordType.A, map1));
+                } else {
+                    Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(2);
+                    Map<String, Object> map = new HashMap<String, Object>();
+                    map.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io");
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            question.getDomainName(), RecordType.CNAME, map));
+
+                    Map<String, Object> map1 = new HashMap<String, Object>();
+                    map1.put(DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.2");
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            question.getDomainName(), RecordType.A, map1));
+                    return records;
+                }
+            }
+        });
+        dnsServer2.start();
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .recursionDesired(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+
+            resolver = builder.build();
+            List<InetAddress> resolvedAddresses =
+                    resolver.resolveAll("somehost.netty.io").syncUninterruptibly().getNow();
+            assertEquals(2, resolvedAddresses.size());
+            assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 99 })));
+            assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 })));
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
     }
 }
