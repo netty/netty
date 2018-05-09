@@ -25,6 +25,7 @@ import io.netty.util.concurrent.Future;
 import org.junit.Test;
 
 import java.nio.channels.Selector;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
@@ -42,7 +43,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     }
 
     @Test
-    public void testRebuildSelector() throws Exception {
+    public void testRebuildSelector() {
         EventLoopGroup group = new NioEventLoopGroup(1);
         final NioEventLoop loop = (NioEventLoop) group.next();
         try {
@@ -106,5 +107,48 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         assertFalse(future.awaitUninterruptibly(1000));
         assertTrue(future.cancel(true));
         group.shutdownGracefully();
+    }
+
+    @Test
+    public void testInterruptEventLoopThread() throws Exception {
+        EventLoopGroup group = new NioEventLoopGroup(1);
+        final NioEventLoop loop = (NioEventLoop) group.next();
+        try {
+            Selector selector = loop.unwrappedSelector();
+            assertTrue(selector.isOpen());
+
+            loop.submit(new Runnable() {
+                @Override
+                public void run() {
+                    // Interrupt the thread which should not end-up in a busy spin and
+                    // so the selector should not have been rebuild.
+                    Thread.currentThread().interrupt();
+                }
+            }).syncUninterruptibly();
+
+            assertTrue(selector.isOpen());
+
+            final CountDownLatch latch = new CountDownLatch(2);
+            loop.submit(new Runnable() {
+                @Override
+                public void run() {
+                    latch.countDown();
+                }
+            }).syncUninterruptibly();
+
+            loop.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    latch.countDown();
+                }
+            }, 2, TimeUnit.SECONDS).syncUninterruptibly();
+
+            latch.await();
+
+            assertSame(selector, loop.unwrappedSelector());
+            assertTrue(selector.isOpen());
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 }
