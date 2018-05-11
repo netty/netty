@@ -37,6 +37,7 @@ import io.netty.util.UncheckedBooleanSupplier;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -327,8 +328,18 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     public void operationComplete(ChannelFuture future) throws Exception {
                         future.channel().close().addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                followerCloseLatch.countDown();
+                            public void operationComplete(final ChannelFuture future) throws Exception {
+                                // This is a bit racy but there is no better way how to handle this in Java11.
+                                // The problem is that on close() the underlying FD will not actually be closed directly
+                                // but the close will be done after the Selector did process all events. Because of
+                                // this we will need to give it a bit time to ensure the FD is actual closed before we
+                                // count down the latch and try to write.
+                                future.channel().eventLoop().schedule(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        followerCloseLatch.countDown();
+                                    }
+                                }, 200, TimeUnit.MILLISECONDS);
                             }
                         });
                     }
