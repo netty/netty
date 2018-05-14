@@ -191,7 +191,7 @@
     <argLine.javaProperties>-D_</argLine.javaProperties>
     <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
-    <!--<os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes> -->
+    <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <tcnative.version>2.0.8.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
