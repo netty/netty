@@ -119,7 +119,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
                                "Connection: Upgrade, HTTP2-Settings\r\n" +
                                "Upgrade: h2c\r\n" +
                                "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n";
-        ByteBuf upgrade = Unpooled.buffer().writeBytes(upgradeString.getBytes(CharsetUtil.US_ASCII));
+        ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
 
         assertFalse(channel.writeInbound(upgrade));
 
@@ -142,8 +142,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
         String expectedHttpResponse = "HTTP/1.1 101 Switching Protocols\r\n" +
                 "connection: upgrade\r\n" +
-                "upgrade: h2c\r\n" +
-                "content-length: 0\r\n\r\n";
+                "upgrade: h2c\r\n\r\n";
         ByteBuf responseBuffer = channel.readOutbound();
         assertEquals(expectedHttpResponse, responseBuffer.toString(CharsetUtil.UTF_8));
         responseBuffer.release();
@@ -232,7 +231,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
         ByteBuf settingsFrame = settingsFrameBuf();
 
-        assertFalse(channel.writeInbound(settingsFrame));
+        assertTrue(channel.writeInbound(settingsFrame));
 
         assertEquals(1, userEvents.size());
         assertTrue(userEvents.get(0) instanceof PriorKnowledgeUpgradeEvent);

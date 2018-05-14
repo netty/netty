@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.redis;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -23,26 +24,26 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public enum RedisMessageType {
 
+    INLINE_COMMAND(null, true),
     SIMPLE_STRING((byte) '+', true),
     ERROR((byte) '-', true),
     INTEGER((byte) ':', true),
     BULK_STRING((byte) '$', false),
-    ARRAY_HEADER((byte) '*', false),
-    ARRAY((byte) '*', false); // for aggregated
+    ARRAY_HEADER((byte) '*', false);
 
-    private final byte value;
+    private final Byte value;
     private final boolean inline;
 
-    RedisMessageType(byte value, boolean inline) {
+    RedisMessageType(Byte value, boolean inline) {
         this.value = value;
         this.inline = inline;
     }
 
     /**
-     * Returns prefix {@code byte} for this type.
+     * Returns length of this type.
      */
-    public byte value() {
-        return value;
+    public int length() {
+        return value != null ? RedisConstants.TYPE_LENGTH : 0;
     }
 
     /**
@@ -54,9 +55,32 @@ public enum RedisMessageType {
     }
 
     /**
-     * Return {@link RedisMessageType} for this type prefix {@code byte}.
+     * Determine {@link RedisMessageType} based on the type prefix {@code byte} read from given the buffer.
      */
-    public static RedisMessageType valueOf(byte value) {
+    public static RedisMessageType readFrom(ByteBuf in, boolean decodeInlineCommands) {
+        final int initialIndex = in.readerIndex();
+        final RedisMessageType type = valueOf(in.readByte());
+        if (type == INLINE_COMMAND) {
+            if (!decodeInlineCommands) {
+                throw new RedisCodecException("Decoding of inline commands is disabled");
+            }
+            // reset index to make content readable again
+            in.readerIndex(initialIndex);
+        }
+        return type;
+    }
+
+    /**
+     * Write the message type's prefix to the given buffer.
+     */
+    public void writeTo(ByteBuf out) {
+        if (value == null) {
+            return;
+        }
+        out.writeByte(value.byteValue());
+    }
+
+    private static RedisMessageType valueOf(byte value) {
         switch (value) {
         case '+':
             return SIMPLE_STRING;
@@ -69,7 +93,7 @@ public enum RedisMessageType {
         case '*':
             return ARRAY_HEADER;
         default:
-            throw new RedisCodecException("Unknown RedisMessageType: " + value);
+            return INLINE_COMMAND;
         }
     }
 }

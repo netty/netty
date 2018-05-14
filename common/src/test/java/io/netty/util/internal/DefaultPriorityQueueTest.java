@@ -15,8 +15,11 @@
  */
 package io.netty.util.internal;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -107,6 +110,37 @@ public class DefaultPriorityQueueTest {
     }
 
     @Test
+    public void testClearIgnoringIndexes() {
+        PriorityQueue<TestElement> queue = new DefaultPriorityQueue<TestElement>(TestElementComparator.INSTANCE, 0);
+        assertEmptyQueue(queue);
+
+        TestElement a = new TestElement(5);
+        TestElement b = new TestElement(10);
+        TestElement c = new TestElement(2);
+        TestElement d = new TestElement(6);
+        TestElement e = new TestElement(11);
+
+        assertOffer(queue, a);
+        assertOffer(queue, b);
+        assertOffer(queue, c);
+        assertOffer(queue, d);
+
+        queue.clearIgnoringIndexes();
+        assertEmptyQueue(queue);
+
+        // Elements cannot be re-inserted but new ones can.
+        try {
+            queue.offer(a);
+            fail();
+        } catch (IllegalArgumentException t) {
+            // expected
+        }
+
+        assertOffer(queue, e);
+        assertSame(e, queue.peek());
+    }
+
+    @Test
     public void testRemoval() {
         testRemoval(false);
     }
@@ -116,7 +150,7 @@ public class DefaultPriorityQueueTest {
         testRemoval(true);
     }
 
-    private void testRemoval(boolean typed) {
+    private static void testRemoval(boolean typed) {
         PriorityQueue<TestElement> queue = new DefaultPriorityQueue<TestElement>(TestElementComparator.INSTANCE, 4);
         assertEmptyQueue(queue);
 
@@ -245,7 +279,9 @@ public class DefaultPriorityQueueTest {
         assertTrue(queue.isEmpty());
     }
 
-    private static final class TestElementComparator implements Comparator<TestElement> {
+    private static final class TestElementComparator implements Comparator<TestElement>, Serializable {
+        private static final long serialVersionUID = 7930368853384760103L;
+
         static final TestElementComparator INSTANCE = new TestElementComparator();
 
         private TestElementComparator() {

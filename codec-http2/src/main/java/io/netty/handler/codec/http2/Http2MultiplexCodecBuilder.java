@@ -36,7 +36,7 @@ public class Http2MultiplexCodecBuilder
     }
 
     private static ChannelHandler checkSharable(ChannelHandler handler) {
-        if ((handler instanceof ChannelHandlerAdapter && !((ChannelHandlerAdapter) handler).isSharable()) ||
+        if ((handler instanceof ChannelHandlerAdapter && !((ChannelHandlerAdapter) handler).isSharable()) &&
                 !handler.getClass().isAnnotationPresent(ChannelHandler.Sharable.class)) {
             throw new IllegalArgumentException("The handler must be Sharable");
         }

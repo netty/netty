@@ -18,11 +18,19 @@ package io.netty.handler.ssl;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.net.ssl.SSLException;
 import java.io.File;
 import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assume.assumeNotNull;
 
 public abstract class SslContextTest {
 
@@ -83,6 +91,27 @@ public abstract class SslContextTest {
         File crtFile = new File(getClass().getResource("test.crt").getFile());
 
         newServerContext(crtFile, keyFile, "");
+    }
+
+    @Test
+    public void testSupportedCiphers() throws KeyManagementException, NoSuchAlgorithmException, SSLException {
+        SSLContext jdkSslContext = SSLContext.getInstance("TLS");
+        jdkSslContext.init(null, null, null);
+        SSLEngine sslEngine = jdkSslContext.createSSLEngine();
+
+        String unsupportedCipher = "TLS_DH_anon_WITH_DES_CBC_SHA";
+        IllegalArgumentException exception = null;
+        try {
+            sslEngine.setEnabledCipherSuites(new String[] {unsupportedCipher});
+        } catch (IllegalArgumentException e) {
+            exception = e;
+        }
+        assumeNotNull(exception);
+        File keyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
+        File crtFile = new File(getClass().getResource("test.crt").getFile());
+
+        SslContext sslContext = newServerContext(crtFile, keyFile, null);
+        assertFalse(sslContext.cipherSuites().contains(unsupportedCipher));
     }
 
     protected abstract SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException;

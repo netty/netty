@@ -26,6 +26,10 @@ public final class ReferenceCountUtil {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ReferenceCountUtil.class);
 
+    static {
+        ResourceLeakDetector.addExclusions(ReferenceCountUtil.class, "touch");
+    }
+
     /**
      * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.

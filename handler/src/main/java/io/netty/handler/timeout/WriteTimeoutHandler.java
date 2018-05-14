@@ -140,13 +140,11 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     private void addWriteTimeoutTask(WriteTimeoutTask task) {
-        if (lastTask == null) {
-            lastTask = task;
-        } else {
+        if (lastTask != null) {
             lastTask.next = task;
             task.prev = lastTask;
-            lastTask = task;
         }
+        lastTask = task;
     }
 
     private void removeWriteTimeoutTask(WriteTimeoutTask task) {

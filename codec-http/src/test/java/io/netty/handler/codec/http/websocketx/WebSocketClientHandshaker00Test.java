@@ -15,11 +15,18 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
+
 import java.net.URI;
 
 public class WebSocketClientHandshaker00Test extends WebSocketClientHandshakerTest {
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri) {
         return new WebSocketClientHandshaker00(uri, WebSocketVersion.V00, null, null, 1024);
+    }
+
+    @Override
+    protected CharSequence getOriginHeaderName() {
+        return HttpHeaderNames.ORIGIN;
     }
 }

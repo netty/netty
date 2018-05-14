@@ -25,6 +25,7 @@
 #include <string.h>
 #include <errno.h>
 #include <netinet/in.h>
+#include <sys/sendfile.h>
 #include <linux/tcp.h> // TCP_NOTSENT_LOWAT is a linux specific define
 
 #include "netty_epoll_linuxsocket.h"
@@ -39,6 +40,11 @@
 #define TCP_FASTOPEN 23
 #endif
 
+// TCP_FASTOPEN_CONNECT is defined in linux 4.11. We define this here so older kernels can compile.
+#ifndef TCP_FASTOPEN_CONNECT
+#define TCP_FASTOPEN_CONNECT 30
+#endif
+
 // TCP_NOTSENT_LOWAT is defined in linux 3.12. We define this here so older kernels can compile.
 #ifndef TCP_NOTSENT_LOWAT
 #define TCP_NOTSENT_LOWAT 25
@@ -46,6 +52,11 @@
 
 static jclass peerCredentialsClass = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
+
+static jfieldID fileChannelFieldId = NULL;
+static jfieldID transferredFieldId = NULL;
+static jfieldID fdFieldId = NULL;
+static jfieldID fileDescriptorFieldId = NULL;
 
 // JNI Registered Methods Begin
 static void netty_epoll_linuxsocket_setTcpCork(JNIEnv* env, jclass clazz, jint fd, jint optval) {
@@ -66,6 +77,10 @@ static void netty_epoll_linuxsocket_setTcpNotSentLowAt(JNIEnv* env, jclass clazz
 
 static void netty_epoll_linuxsocket_setTcpFastOpen(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN, &optval, sizeof(optval));
+}
+
+static void netty_epoll_linuxsocket_setTcpFastOpenConnect(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN_CONNECT, &optval, sizeof(optval));
 }
 
 static void netty_epoll_linuxsocket_setTcpKeepIdle(JNIEnv* env, jclass clazz, jint fd, jint optval) {
@@ -90,6 +105,10 @@ static void netty_epoll_linuxsocket_setIpFreeBind(JNIEnv* env, jclass clazz, jin
 
 static void netty_epoll_linuxsocket_setIpTransparent(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, SOL_IP, IP_TRANSPARENT, &optval, sizeof(optval));
+}
+
+static void netty_epoll_linuxsocket_setIpRecvOrigDestAddr(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR, &optval, sizeof(optval));
 }
 
 static void netty_epoll_linuxsocket_setTcpMd5Sig(JNIEnv* env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jbyteArray key) {
@@ -178,6 +197,14 @@ static jint netty_epoll_linuxsocket_isIpTransparent(JNIEnv* env, jclass clazz, j
      return optval;
 }
 
+static jint netty_epoll_linuxsocket_isIpRecvOrigDestAddr(JNIEnv* env, jclass clazz, jint fd) {
+     int optval;
+     if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR, &optval, sizeof(optval)) == -1) {
+         return -1;
+     }
+     return optval;
+}
+
 static void netty_epoll_linuxsocket_getTcpInfo(JNIEnv* env, jclass clazz, jint fd, jlongArray array) {
      struct tcp_info tcp_info;
      if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_INFO, &tcp_info, sizeof(tcp_info)) == -1) {
@@ -245,6 +272,20 @@ static jint netty_epoll_linuxsocket_isTcpQuickAck(JNIEnv* env, jclass clazz, jin
     return optval;
 }
 
+static jint netty_epoll_linuxsocket_isTcpFastOpenConnect(JNIEnv* env, jclass clazz, jint fd) {
+    int optval;
+    // We call netty_unix_socket_getOption0 directly so we can handle ENOPROTOOPT by ourself.
+    if (netty_unix_socket_getOption0(fd, IPPROTO_TCP, TCP_FASTOPEN_CONNECT, &optval, sizeof(optval)) == -1) {
+        if (errno == ENOPROTOOPT) {
+            // Not supported by the system, so just return 0.
+            return 0;
+        }
+        netty_unix_socket_getOptionHandleError(env, errno);
+        return -1;
+    }
+    return optval;
+}
+
 static jint netty_epoll_linuxsocket_getTcpNotSentLowAt(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
     if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_NOTSENT_LOWAT, &optval, sizeof(optval)) == -1) {
@@ -262,6 +303,39 @@ static jobject netty_epoll_linuxsocket_getPeerCredentials(JNIEnv *env, jclass cl
      (*env)->SetIntArrayRegion(env, gids, 0, 1, (jint*) &credentials.gid);
      return (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, credentials.pid, credentials.uid, gids);
 }
+
+static jlong netty_epoll_linuxsocket_sendFile(JNIEnv* env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
+    jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
+    if (fileChannel == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
+        return -1;
+    }
+    jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
+    if (fileDescriptor == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
+        return -1;
+    }
+    jint srcFd = (*env)->GetIntField(env, fileDescriptor, fdFieldId);
+    if (srcFd == -1) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get FileDescriptor.fd");
+        return -1;
+    }
+    ssize_t res;
+    off_t offset = base_off + off;
+    int err;
+    do {
+      res = sendfile(fd, srcFd, &offset, (size_t) len);
+    } while (res == -1 && ((err = errno) == EINTR));
+    if (res < 0) {
+        return -err;
+    }
+    if (res > 0) {
+        // update the transferred field in DefaultFileRegion
+        (*env)->SetLongField(env, fileRegion, transferredFieldId, off + res);
+    }
+
+    return res;
+}
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -275,26 +349,31 @@ static const JNINativeMethod fixed_method_table[] = {
   { "getTcpNotSentLowAt", "(I)I", (void *) netty_epoll_linuxsocket_getTcpNotSentLowAt },
   { "isTcpQuickAck", "(I)I", (void *) netty_epoll_linuxsocket_isTcpQuickAck },
   { "setTcpFastOpen", "(II)V", (void *) netty_epoll_linuxsocket_setTcpFastOpen },
+  { "setTcpFastOpenConnect", "(II)V", (void *) netty_epoll_linuxsocket_setTcpFastOpenConnect },
+  { "isTcpFastOpenConnect", "(I)I", (void *) netty_epoll_linuxsocket_isTcpFastOpenConnect },
   { "setTcpKeepIdle", "(II)V", (void *) netty_epoll_linuxsocket_setTcpKeepIdle },
   { "setTcpKeepIntvl", "(II)V", (void *) netty_epoll_linuxsocket_setTcpKeepIntvl },
   { "setTcpKeepCnt", "(II)V", (void *) netty_epoll_linuxsocket_setTcpKeepCnt },
   { "setTcpUserTimeout", "(II)V", (void *) netty_epoll_linuxsocket_setTcpUserTimeout },
   { "setIpFreeBind", "(II)V", (void *) netty_epoll_linuxsocket_setIpFreeBind },
   { "setIpTransparent", "(II)V", (void *) netty_epoll_linuxsocket_setIpTransparent },
+  { "setIpRecvOrigDestAddr", "(II)V", (void *) netty_epoll_linuxsocket_setIpRecvOrigDestAddr },
   { "getTcpKeepIdle", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepIdle },
   { "getTcpKeepIntvl", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepIntvl },
   { "getTcpKeepCnt", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepCnt },
   { "getTcpUserTimeout", "(I)I", (void *) netty_epoll_linuxsocket_getTcpUserTimeout },
   { "isIpFreeBind", "(I)I", (void *) netty_epoll_linuxsocket_isIpFreeBind },
   { "isIpTransparent", "(I)I", (void *) netty_epoll_linuxsocket_isIpTransparent },
+  { "isIpRecvOrigDestAddr", "(I)I", (void *) netty_epoll_linuxsocket_isIpRecvOrigDestAddr },
   { "getTcpInfo", "(I[J)V", (void *) netty_epoll_linuxsocket_getTcpInfo },
   { "setTcpMd5Sig", "(I[BI[B)V", (void *) netty_epoll_linuxsocket_setTcpMd5Sig }
+  // "sendFile" has a dynamic signature
 };
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
 static jint dynamicMethodsTableSize() {
-    return fixed_method_table_size + 1;
+    return fixed_method_table_size + 2; // 2 is for the dynamic method signatures.
 }
 
 static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
@@ -305,6 +384,13 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     dynamicMethod->name = "getPeerCredentials";
     dynamicMethod->signature = netty_unix_util_prepend("(I)L", dynamicTypeName);
     dynamicMethod->fnPtr = (void *) netty_epoll_linuxsocket_getPeerCredentials;
+    free(dynamicTypeName);
+
+    ++dynamicMethod;
+    dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/DefaultFileRegion;JJJ)J");
+    dynamicMethod->name = "sendFile";
+    dynamicMethod->signature = netty_unix_util_prepend("(IL", dynamicTypeName);
+    dynamicMethod->fnPtr = (void *) netty_epoll_linuxsocket_sendFile;
     free(dynamicTypeName);
     return dynamicMethods;
 }
@@ -349,6 +435,46 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
     peerCredentialsMethodId = (*env)->GetMethodID(env, peerCredentialsClass, "<init>", "(II[I)V");
     if (peerCredentialsMethodId == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get method ID: PeerCredentials.<init>(int, int, int[])");
+        return JNI_ERR;
+    }
+
+    nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/DefaultFileRegion");
+    jclass fileRegionCls = (*env)->FindClass(env, nettyClassName);
+    free(nettyClassName);
+    nettyClassName = NULL;
+    if (fileRegionCls == NULL) {
+        return JNI_ERR;
+    }
+    fileChannelFieldId = (*env)->GetFieldID(env, fileRegionCls, "file", "Ljava/nio/channels/FileChannel;");
+    if (fileChannelFieldId == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.file");
+        return JNI_ERR;
+    }
+    transferredFieldId = (*env)->GetFieldID(env, fileRegionCls, "transferred", "J");
+    if (transferredFieldId == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.transferred");
+        return JNI_ERR;
+    }
+
+    jclass fileChannelCls = (*env)->FindClass(env, "sun/nio/ch/FileChannelImpl");
+    if (fileChannelCls == NULL) {
+        // pending exception...
+        return JNI_ERR;
+    }
+    fileDescriptorFieldId = (*env)->GetFieldID(env, fileChannelCls, "fd", "Ljava/io/FileDescriptor;");
+    if (fileDescriptorFieldId == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: FileChannelImpl.fd");
+        return JNI_ERR;
+    }
+
+    jclass fileDescriptorCls = (*env)->FindClass(env, "java/io/FileDescriptor");
+    if (fileDescriptorCls == NULL) {
+        // pending exception...
+        return JNI_ERR;
+    }
+    fdFieldId = (*env)->GetFieldID(env, fileDescriptorCls, "fd", "I");
+    if (fdFieldId == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: FileDescriptor.fd");
         return JNI_ERR;
     }
 

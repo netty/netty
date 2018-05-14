@@ -18,6 +18,8 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -214,7 +216,20 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
 
     private void startThread() {
         if (started.compareAndSet(false, true)) {
-            Thread t = threadFactory.newThread(taskRunner);
+            final Thread t = threadFactory.newThread(taskRunner);
+            // Set to null to ensure we not create classloader leaks by holds a strong reference to the inherited
+            // classloader.
+            // See:
+            // - https://github.com/netty/netty/issues/7290
+            // - https://bugs.openjdk.java.net/browse/JDK-7008595
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                @Override
+                public Void run() {
+                    t.setContextClassLoader(null);
+                    return null;
+                }
+            });
+
             // Set the thread before starting it as otherwise inEventLoop() may return false and so produce
             // an assert error.
             // See https://github.com/netty/netty/issues/4357

@@ -14,6 +14,9 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.handler.codec.http2.Http2TestUtil.TestStreamByteDistributorStreamState;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -32,13 +35,13 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
@@ -55,6 +58,7 @@ public class UniformStreamByteDistributorTest {
 
     private Http2Connection connection;
     private UniformStreamByteDistributor distributor;
+    private IntObjectMap<TestStreamByteDistributorStreamState> stateMap;
 
     @Mock
     private StreamByteDistributor.Writer writer;
@@ -63,6 +67,7 @@ public class UniformStreamByteDistributorTest {
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
+        stateMap = new IntObjectHashMap<TestStreamByteDistributorStreamState>();
         connection = new DefaultHttp2Connection(false);
         distributor = new UniformStreamByteDistributor(connection);
 
@@ -83,8 +88,10 @@ public class UniformStreamByteDistributorTest {
             public Void answer(InvocationOnMock in) throws Throwable {
                 Http2Stream stream = in.getArgument(0);
                 int numBytes = in.getArgument(1);
-                int streamableBytes = distributor.streamableBytes0(stream) - numBytes;
-                updateStream(stream.id(), streamableBytes, streamableBytes > 0);
+                TestStreamByteDistributorStreamState state = stateMap.get(stream.id());
+                state.pendingBytes -= numBytes;
+                state.hasFrame = state.pendingBytes > 0;
+                distributor.updateStreamableBytes(state);
                 return null;
             }
         };
@@ -97,10 +104,10 @@ public class UniformStreamByteDistributorTest {
 
     @Test
     public void bytesUnassignedAfterProcessing() throws Http2Exception {
-        updateStream(STREAM_A, 1, true);
-        updateStream(STREAM_B, 2, true);
-        updateStream(STREAM_C, 3, true);
-        updateStream(STREAM_D, 4, true);
+        initState(STREAM_A, 1, true);
+        initState(STREAM_B, 2, true);
+        initState(STREAM_C, 3, true);
+        initState(STREAM_D, 4, true);
 
         assertFalse(write(10));
         verifyWrite(STREAM_A, 1);
@@ -115,10 +122,10 @@ public class UniformStreamByteDistributorTest {
 
     @Test
     public void connectionErrorForWriterException() throws Http2Exception {
-        updateStream(STREAM_A, 1, true);
-        updateStream(STREAM_B, 2, true);
-        updateStream(STREAM_C, 3, true);
-        updateStream(STREAM_D, 4, true);
+        initState(STREAM_A, 1, true);
+        initState(STREAM_B, 2, true);
+        initState(STREAM_C, 3, true);
+        initState(STREAM_D, 4, true);
 
         Exception fakeException = new RuntimeException("Fake exception");
         doThrow(fakeException).when(writer).write(same(stream(STREAM_C)), eq(3));
@@ -158,10 +165,10 @@ public class UniformStreamByteDistributorTest {
         setPriority(STREAM_D, STREAM_A, (short) 100, false);
 
         // Update the streams.
-        updateStream(STREAM_A, CHUNK_SIZE, true);
-        updateStream(STREAM_B, CHUNK_SIZE, true);
-        updateStream(STREAM_C, CHUNK_SIZE, true);
-        updateStream(STREAM_D, CHUNK_SIZE, true);
+        initState(STREAM_A, CHUNK_SIZE, true);
+        initState(STREAM_B, CHUNK_SIZE, true);
+        initState(STREAM_C, CHUNK_SIZE, true);
+        initState(STREAM_D, CHUNK_SIZE, true);
 
         // Only write 3 * chunkSize, so that we'll only write to the first 3 streams.
         int written = 3 * CHUNK_SIZE;
@@ -182,7 +189,7 @@ public class UniformStreamByteDistributorTest {
     @Test
     public void streamWithMoreDataShouldBeEnqueuedAfterWrite() throws Http2Exception {
         // Give the stream a bunch of data.
-        updateStream(STREAM_A, 2 * CHUNK_SIZE, true);
+        initState(STREAM_A, 2 * CHUNK_SIZE, true);
 
         // Write only part of the data.
         assertTrue(write(CHUNK_SIZE));
@@ -199,10 +206,10 @@ public class UniformStreamByteDistributorTest {
 
     @Test
     public void emptyFrameAtHeadIsWritten() throws Http2Exception {
-        updateStream(STREAM_A, 10, true);
-        updateStream(STREAM_B, 0, true);
-        updateStream(STREAM_C, 0, true);
-        updateStream(STREAM_D, 10, true);
+        initState(STREAM_A, 10, true);
+        initState(STREAM_B, 0, true);
+        initState(STREAM_C, 0, true);
+        initState(STREAM_D, 10, true);
 
         assertTrue(write(10));
         verifyWrite(STREAM_A, 10);
@@ -213,10 +220,10 @@ public class UniformStreamByteDistributorTest {
 
     @Test
     public void streamWindowExhaustedDoesNotWrite() throws Http2Exception {
-        updateStream(STREAM_A, 0, true, false);
-        updateStream(STREAM_B, 0, true);
-        updateStream(STREAM_C, 0, true);
-        updateStream(STREAM_D, 0, true, false);
+        initState(STREAM_A, 0, true, false);
+        initState(STREAM_B, 0, true);
+        initState(STREAM_C, 0, true);
+        initState(STREAM_D, 0, true, false);
 
         assertFalse(write(10));
         verifyWrite(STREAM_B, 0);
@@ -224,38 +231,30 @@ public class UniformStreamByteDistributorTest {
         verifyNoMoreInteractions(writer);
     }
 
+    @Test
+    public void streamWindowLargerThanIntDoesNotInfiniteLoop() throws Http2Exception {
+        initState(STREAM_A, Integer.MAX_VALUE + 1L, true, true);
+        assertTrue(write(Integer.MAX_VALUE));
+        verifyWrite(STREAM_A, Integer.MAX_VALUE);
+        assertFalse(write(1));
+        verifyWrite(STREAM_A, 1);
+    }
+
     private Http2Stream stream(int streamId) {
         return connection.stream(streamId);
     }
 
-    private void updateStream(final int streamId, final int streamableBytes, final boolean hasFrame) {
-        updateStream(streamId, streamableBytes, hasFrame, hasFrame);
+    private void initState(final int streamId, final long streamableBytes, final boolean hasFrame) {
+        initState(streamId, streamableBytes, hasFrame, hasFrame);
     }
 
-    private void updateStream(final int streamId, final int pendingBytes, final boolean hasFrame,
+    private void initState(final int streamId, final long pendingBytes, final boolean hasFrame,
             final boolean isWriteAllowed) {
         final Http2Stream stream = stream(streamId);
-        distributor.updateStreamableBytes(new StreamByteDistributor.StreamState() {
-            @Override
-            public Http2Stream stream() {
-                return stream;
-            }
-
-            @Override
-            public int pendingBytes() {
-                return pendingBytes;
-            }
-
-            @Override
-            public boolean hasFrame() {
-                return hasFrame;
-            }
-
-            @Override
-            public int windowSize() {
-                return isWriteAllowed ? pendingBytes : -1;
-            }
-        });
+        TestStreamByteDistributorStreamState state = new TestStreamByteDistributorStreamState(stream, pendingBytes,
+                hasFrame, isWriteAllowed);
+        stateMap.put(streamId, state);
+        distributor.updateStreamableBytes(state);
     }
 
     private void setPriority(int streamId, int parent, int weight, boolean exclusive) {

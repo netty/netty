@@ -19,10 +19,13 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2RemoteFlowController.FlowControlled;
@@ -42,7 +45,6 @@ import java.util.List;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
@@ -87,6 +89,9 @@ public class DefaultHttp2ConnectionEncoderTest {
     private Channel channel;
 
     @Mock
+    private Channel.Unsafe unsafe;
+
+    @Mock
     private ChannelPipeline pipeline;
 
     @Mock
@@ -112,8 +117,13 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
+        ChannelMetadata metadata = new ChannelMetadata(false, 16);
         when(channel.isActive()).thenReturn(true);
         when(channel.pipeline()).thenReturn(pipeline);
+        when(channel.metadata()).thenReturn(metadata);
+        when(channel.unsafe()).thenReturn(unsafe);
+        ChannelConfig config = new DefaultChannelConfig(channel);
+        when(channel.config()).thenReturn(config);
         when(writer.configuration()).thenReturn(writerConfig);
         when(writerConfig.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(64);
@@ -628,15 +638,15 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void pingWriteAfterGoAwayShouldSucceed() throws Exception {
         ChannelPromise promise = newPromise();
         goAwayReceived(0);
-        encoder.writePing(ctx, false, emptyPingBuf(), promise);
-        verify(writer).writePing(eq(ctx), eq(false), eq(emptyPingBuf()), eq(promise));
+        encoder.writePing(ctx, false, 0L, promise);
+        verify(writer).writePing(eq(ctx), eq(false), eq(0L), eq(promise));
     }
 
     @Test
     public void pingWriteShouldSucceed() throws Exception {
         ChannelPromise promise = newPromise();
-        encoder.writePing(ctx, false, emptyPingBuf(), promise);
-        verify(writer).writePing(eq(ctx), eq(false), eq(emptyPingBuf()), eq(promise));
+        encoder.writePing(ctx, false, 0L, promise);
+        verify(writer).writePing(eq(ctx), eq(false), eq(0L), eq(promise));
     }
 
     @Test

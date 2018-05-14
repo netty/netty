@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * A decoder that splits the received {@link ByteBuf}s dynamically by the
  * value of the Google Protocol Buffers
- * <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html#varints">Base
+ * <a href="https://developers.google.com/protocol-buffers/docs/encoding#varints">Base
  * 128 Varints</a> integer length field in the message. For example:
  * <pre>
  * BEFORE DECODE (302 bytes)       AFTER DECODE (300 bytes)

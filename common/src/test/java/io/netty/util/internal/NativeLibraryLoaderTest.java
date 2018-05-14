@@ -32,6 +32,37 @@ public class NativeLibraryLoaderTest {
             fail();
         } catch (UnsatisfiedLinkError error) {
             assertTrue(error.getCause() instanceof FileNotFoundException);
+            if (PlatformDependent.javaVersion() >= 7) {
+                verifySuppressedException(error, UnsatisfiedLinkError.class);
+            }
+        }
+    }
+
+    @Test
+    public void testFileNotFoundWithNullClassLoader() {
+        try {
+            NativeLibraryLoader.load(UUID.randomUUID().toString(), null);
+            fail();
+        } catch (UnsatisfiedLinkError error) {
+            assertTrue(error.getCause() instanceof FileNotFoundException);
+            if (PlatformDependent.javaVersion() >= 7) {
+                verifySuppressedException(error, ClassNotFoundException.class);
+            }
+        }
+    }
+
+    @SuppressJava6Requirement(reason = "uses Java 7+ Throwable#getSuppressed but is guarded by version checks")
+    private static void verifySuppressedException(UnsatisfiedLinkError error,
+            Class<?> expectedSuppressedExceptionClass) {
+        try {
+            Throwable[] suppressed = error.getCause().getSuppressed();
+            assertTrue(suppressed.length == 1);
+            assertTrue(suppressed[0] instanceof UnsatisfiedLinkError);
+            suppressed = (suppressed[0]).getSuppressed();
+            assertTrue(suppressed.length == 1);
+            assertTrue(expectedSuppressedExceptionClass.isInstance(suppressed[0]));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 }

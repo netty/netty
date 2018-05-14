@@ -1009,7 +1009,7 @@ public abstract class SSLEngineTest {
         SslHandler handler = channel.pipeline().get(SslHandler.class);
         assertNotNull(handler);
         String appProto = handler.applicationProtocol();
-        assertEquals(appProto, expectedApplicationProtocol);
+        assertEquals(expectedApplicationProtocol, appProto);
 
         SSLEngine engine = handler.engine();
         if (engine instanceof Java9SslEngine) {
@@ -2310,5 +2310,49 @@ public abstract class SSLEngineTest {
         assertEquals(SSLEngineResult.Status.BUFFER_UNDERFLOW, result.getStatus());
         assertEquals(0, result.bytesConsumed());
         assertEquals(0, result.bytesProduced());
+    }
+
+    @Test
+    public void testWrapDoesNotZeroOutSrc() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .trustManager(cert.cert())
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            ByteBuffer plainServerOut = allocateBuffer(server.getSession().getApplicationBufferSize() / 2);
+
+            handshake(client, server);
+
+            // Fill the whole buffer and flip it.
+            for (int i = 0; i < plainServerOut.capacity(); i++) {
+                plainServerOut.put(i, (byte) i);
+            }
+            plainServerOut.position(plainServerOut.capacity());
+            plainServerOut.flip();
+
+            ByteBuffer encryptedServerToClient = allocateBuffer(server.getSession().getPacketBufferSize());
+            SSLEngineResult result = server.wrap(plainServerOut, encryptedServerToClient);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertTrue(result.bytesConsumed() > 0);
+
+            for (int i = 0; i < plainServerOut.capacity(); i++) {
+                assertEquals((byte) i, plainServerOut.get(i));
+            }
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+            cert.delete();
+        }
     }
 }

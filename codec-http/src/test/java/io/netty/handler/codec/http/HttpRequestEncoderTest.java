@@ -17,12 +17,19 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderResult;
+import io.netty.util.CharsetUtil;
+import io.netty.util.IllegalReferenceCountException;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
+import java.util.concurrent.ExecutionException;
 
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
 
 /**
@@ -120,6 +127,169 @@ public class HttpRequestEncoderTest {
             String req = buffer.toString(Charset.forName("US-ASCII"));
             assertEquals("GET /?url=http://example.com HTTP/1.1\r\n", req);
             buffer.release();
+        }
+    }
+
+    @Test
+    public void testEmptyReleasedBufferShouldNotWriteEmptyBufferToChannel() throws Exception {
+        HttpRequestEncoder encoder = new HttpRequestEncoder();
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        ByteBuf buf = Unpooled.buffer();
+        buf.release();
+        try {
+            channel.writeAndFlush(buf).get();
+            fail();
+        } catch (ExecutionException e) {
+            assertThat(e.getCause().getCause(), is(instanceOf(IllegalReferenceCountException.class)));
+        }
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testEmptyBufferShouldPassThrough() throws Exception {
+        HttpRequestEncoder encoder = new HttpRequestEncoder();
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        ByteBuf buffer = Unpooled.buffer();
+        channel.writeAndFlush(buffer).get();
+        channel.finishAndReleaseAll();
+        assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
+    public void testEmptyContentsChunked() throws Exception {
+        testEmptyContents(true, false);
+    }
+
+    @Test
+    public void testEmptyContentsChunkedWithTrailers() throws Exception {
+        testEmptyContents(true, true);
+    }
+
+    @Test
+    public void testEmptyContentsNotChunked() throws Exception {
+        testEmptyContents(false, false);
+    }
+
+    @Test
+    public void testEmptyContentNotsChunkedWithTrailers() throws Exception {
+        testEmptyContents(false, true);
+    }
+
+    private void testEmptyContents(boolean chunked, boolean trailers) throws Exception {
+        HttpRequestEncoder encoder = new HttpRequestEncoder();
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        if (chunked) {
+            HttpUtil.setTransferEncodingChunked(request, true);
+        }
+        assertTrue(channel.writeOutbound(request));
+
+        ByteBuf contentBuffer = Unpooled.buffer();
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(contentBuffer)));
+
+        ByteBuf lastContentBuffer = Unpooled.buffer();
+        LastHttpContent last = new DefaultLastHttpContent(lastContentBuffer);
+        if (trailers) {
+            last.trailingHeaders().set("X-Netty-Test", "true");
+        }
+        assertTrue(channel.writeOutbound(last));
+
+        // Ensure we only produce ByteBuf instances.
+        ByteBuf head = channel.readOutbound();
+        assertTrue(head.release());
+
+        ByteBuf content = channel.readOutbound();
+        content.release();
+
+        ByteBuf lastContent = channel.readOutbound();
+        lastContent.release();
+        assertFalse(channel.finish());
+    }
+
+    /**
+     * A test that checks for a NPE that would occur if when processing {@link LastHttpContent#EMPTY_LAST_CONTENT}
+     * when a certain initialization order of {@link EmptyHttpHeaders} would occur.
+     */
+    @Test
+    public void testForChunkedRequestNpe() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestEncoder());
+        assertTrue(channel.writeOutbound(new CustomHttpRequest()));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII))));
+        assertTrue(channel.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertTrue(channel.finishAndReleaseAll());
+    }
+
+    /**
+     * This class is required to triggered the desired initialization order of {@link EmptyHttpHeaders}.
+     * If {@link DefaultHttpRequest} is used, the {@link HttpHeaders} class will be initialized before {@link HttpUtil}
+     * and the test won't trigger the original issue.
+     */
+    private static final class CustomHttpRequest implements HttpRequest {
+
+        @Override
+        public DecoderResult decoderResult() {
+            return DecoderResult.SUCCESS;
+        }
+
+        @Override
+        public void setDecoderResult(DecoderResult result) {
+        }
+
+        @Override
+        public DecoderResult getDecoderResult() {
+            return decoderResult();
+        }
+
+        @Override
+        public HttpVersion getProtocolVersion() {
+            return HttpVersion.HTTP_1_1;
+        }
+
+        @Override
+        public HttpVersion protocolVersion() {
+            return getProtocolVersion();
+        }
+
+        @Override
+        public HttpHeaders headers() {
+            DefaultHttpHeaders headers = new DefaultHttpHeaders();
+            headers.add("Transfer-Encoding", "chunked");
+            return headers;
+        }
+
+        @Override
+        public HttpMethod getMethod() {
+            return HttpMethod.POST;
+        }
+
+        @Override
+        public HttpMethod method() {
+            return getMethod();
+        }
+
+        @Override
+        public HttpRequest setMethod(HttpMethod method) {
+            return this;
+        }
+
+        @Override
+        public String getUri() {
+            return "/";
+        }
+
+        @Override
+        public String uri() {
+            return "/";
+        }
+
+        @Override
+        public HttpRequest setUri(String uri) {
+            return this;
+        }
+
+        @Override
+        public HttpRequest setProtocolVersion(HttpVersion version) {
+            return this;
         }
     }
 }

@@ -257,8 +257,8 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         moreData.assertNotWritten();
 
         connection.stream(STREAM_A).close();
-        data.assertError();
-        moreData.assertError();
+        data.assertError(Http2Error.STREAM_CLOSED);
+        moreData.assertError(Http2Error.STREAM_CLOSED);
         verifyZeroInteractions(listener);
     }
 
@@ -1106,8 +1106,11 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
             return merged;
         }
 
-        public void assertError() {
+        public void assertError(Http2Error error) {
             assertNotNull(t);
+            if (error != null) {
+                assertSame(error, ((Http2Exception) t).error());
+            }
         }
     }
 }

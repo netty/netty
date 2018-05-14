@@ -477,11 +477,25 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
 
             switch (code) {
-            case 204: case 205: case 304:
+            case 204: case 304:
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Returns true if the server switched to a different protocol than HTTP/1.0 or HTTP/1.1, e.g. HTTP/2 or Websocket.
+     * Returns false if the upgrade happened in a different layer, e.g. upgrade from HTTP/1.1 to HTTP/1.1 over TLS.
+     */
+    protected boolean isSwitchingToNonHttp1Protocol(HttpResponse msg) {
+        if (msg.status().code() != HttpResponseStatus.SWITCHING_PROTOCOLS.code()) {
+            return false;
+        }
+        String newProtocol = msg.headers().get(HttpHeaderNames.UPGRADE);
+        return newProtocol == null ||
+                !newProtocol.contains(HttpVersion.HTTP_1_0.text()) &&
+                !newProtocol.contains(HttpVersion.HTTP_1_1.text());
     }
 
     /**
@@ -503,7 +517,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         trailer = null;
         if (!isDecodingRequest()) {
             HttpResponse res = (HttpResponse) message;
-            if (res != null && res.status().code() == 101) {
+            if (res != null && isSwitchingToNonHttp1Protocol(res)) {
                 currentState = State.UPGRADED;
                 return;
             }
@@ -520,12 +534,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         // when we produced an invalid message without consuming anything.
         in.skipBytes(in.readableBytes());
 
-        if (message != null) {
-            message.setDecoderResult(DecoderResult.failure(cause));
-        } else {
+        if (message == null) {
             message = createInvalidMessage();
-            message.setDecoderResult(DecoderResult.failure(cause));
         }
+        message.setDecoderResult(DecoderResult.failure(cause));
 
         HttpMessage ret = message;
         message = null;

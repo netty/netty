@@ -25,10 +25,9 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newIOException;
-import static io.netty.channel.unix.LimitsStaticallyReferencedJniMethods.iovMax;
-import static io.netty.channel.unix.LimitsStaticallyReferencedJniMethods.ssizeMax;
-import static io.netty.channel.unix.LimitsStaticallyReferencedJniMethods.uioMaxIov;
+import static io.netty.channel.unix.Limits.IOV_MAX;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.Math.min;
 
 /**
  * Native {@link FileDescriptor} implementation which allows to wrap an {@code int} and provide a
@@ -140,8 +139,8 @@ public class FileDescriptor {
                 WRITE_ADDRESS_CONNECTION_RESET_EXCEPTION, WRITE_ADDRESS_CLOSED_CHANNEL_EXCEPTION);
     }
 
-    public final long writev(ByteBuffer[] buffers, int offset, int length) throws IOException {
-        long res = writev(fd, buffers, offset, length);
+    public final long writev(ByteBuffer[] buffers, int offset, int length, long maxBytesToWrite) throws IOException {
+        long res = writev(fd, buffers, offset, min(IOV_MAX, length), maxBytesToWrite);
         if (res >= 0) {
             return res;
         }
@@ -263,7 +262,7 @@ public class FileDescriptor {
 
     private static native int write(int fd, ByteBuffer buf, int pos, int limit);
     private static native int writeAddress(int fd, long address, int pos, int limit);
-    private static native long writev(int fd, ByteBuffer[] buffers, int offset, int length);
+    private static native long writev(int fd, ByteBuffer[] buffers, int offset, int length, long maxBytesToWrite);
     private static native long writevAddresses(int fd, long memoryAddress, int length);
 
     private static native int read(int fd, ByteBuffer buf, int pos, int limit);

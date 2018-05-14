@@ -69,7 +69,7 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
         }
     }
 
-    private void sendBadRequest(ChannelHandlerContext ctx, String streamId) {
+    private static void sendBadRequest(ChannelHandlerContext ctx, String streamId) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, EMPTY_BUFFER);
         streamId(response, streamId);
         ctx.writeAndFlush(response);

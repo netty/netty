@@ -14,6 +14,11 @@
  */
 package io.netty.util;
 
+import static io.netty.util.ByteProcessorUtils.CARRIAGE_RETURN;
+import static io.netty.util.ByteProcessorUtils.HTAB;
+import static io.netty.util.ByteProcessorUtils.LINE_FEED;
+import static io.netty.util.ByteProcessorUtils.SPACE;
+
 /**
  * Provides a mechanism to iterate over a collection of bytes.
  */
@@ -63,27 +68,37 @@ public interface ByteProcessor {
     /**
      * Aborts on a {@code CR ('\r')}.
      */
-    ByteProcessor FIND_CR = new IndexOfProcessor((byte) '\r');
+    ByteProcessor FIND_CR = new IndexOfProcessor(CARRIAGE_RETURN);
 
     /**
      * Aborts on a non-{@code CR ('\r')}.
      */
-    ByteProcessor FIND_NON_CR = new IndexNotOfProcessor((byte) '\r');
+    ByteProcessor FIND_NON_CR = new IndexNotOfProcessor(CARRIAGE_RETURN);
 
     /**
      * Aborts on a {@code LF ('\n')}.
      */
-    ByteProcessor FIND_LF = new IndexOfProcessor((byte) '\n');
+    ByteProcessor FIND_LF = new IndexOfProcessor(LINE_FEED);
 
     /**
      * Aborts on a non-{@code LF ('\n')}.
      */
-    ByteProcessor FIND_NON_LF = new IndexNotOfProcessor((byte) '\n');
+    ByteProcessor FIND_NON_LF = new IndexNotOfProcessor(LINE_FEED);
 
     /**
-     * Aborts on a {@code CR (';')}.
+     * Aborts on a semicolon {@code (';')}.
      */
     ByteProcessor FIND_SEMI_COLON = new IndexOfProcessor((byte) ';');
+
+    /**
+     * Aborts on a comma {@code (',')}.
+     */
+    ByteProcessor FIND_COMMA = new IndexOfProcessor((byte) ',');
+
+    /**
+     * Aborts on a ascii space character ({@code ' '}).
+     */
+    ByteProcessor FIND_ASCII_SPACE = new IndexOfProcessor(SPACE);
 
     /**
      * Aborts on a {@code CR ('\r')} or a {@code LF ('\n')}.
@@ -91,7 +106,7 @@ public interface ByteProcessor {
     ByteProcessor FIND_CRLF = new ByteProcessor() {
         @Override
         public boolean process(byte value) {
-            return value != '\r' && value != '\n';
+            return value != CARRIAGE_RETURN && value != LINE_FEED;
         }
     };
 
@@ -101,7 +116,7 @@ public interface ByteProcessor {
     ByteProcessor FIND_NON_CRLF = new ByteProcessor() {
         @Override
         public boolean process(byte value) {
-            return value == '\r' || value == '\n';
+            return value == CARRIAGE_RETURN || value == LINE_FEED;
         }
     };
 
@@ -111,7 +126,7 @@ public interface ByteProcessor {
     ByteProcessor FIND_LINEAR_WHITESPACE = new ByteProcessor() {
         @Override
         public boolean process(byte value) {
-            return value != ' ' && value != '\t';
+            return value != SPACE && value != HTAB;
         }
     };
 
@@ -121,7 +136,7 @@ public interface ByteProcessor {
     ByteProcessor FIND_NON_LINEAR_WHITESPACE = new ByteProcessor() {
         @Override
         public boolean process(byte value) {
-            return value == ' ' || value == '\t';
+            return value == SPACE || value == HTAB;
         }
     };
 

@@ -16,6 +16,7 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.util.internal.PlatformDependent;
 
@@ -23,6 +24,13 @@ import java.nio.ByteBuffer;
 
 import static io.netty.channel.unix.Limits.IOV_MAX;
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.PlatformDependent.allocateMemory;
+import static io.netty.util.internal.PlatformDependent.directBufferAddress;
+import static io.netty.util.internal.PlatformDependent.freeMemory;
+import static io.netty.util.internal.PlatformDependent.putInt;
+import static io.netty.util.internal.PlatformDependent.putLong;
+import static java.lang.Math.min;
 
 /**
  * Represent an array of struct array and so can be passed directly over via JNI without the need to do any more
@@ -61,9 +69,10 @@ public final class IovArray implements MessageProcessor {
     private final long memoryAddress;
     private int count;
     private long size;
+    private long maxBytes = SSIZE_MAX;
 
     public IovArray() {
-        memoryAddress = PlatformDependent.allocateMemory(CAPACITY);
+        memoryAddress = allocateMemory(CAPACITY);
     }
 
     public void clear() {
@@ -72,40 +81,24 @@ public final class IovArray implements MessageProcessor {
     }
 
     /**
-     * Try to add the given {@link ByteBuf}. Returns {@code true} on success,
-     * {@code false} otherwise.
+     * Add a {@link ByteBuf} to this {@link IovArray}.
+     * @param buf The {@link ByteBuf} to add.
+     * @return {@code true} if the entire {@link ByteBuf} has been added to this {@link IovArray}. Note in the event
+     * that {@link ByteBuf} is a {@link CompositeByteBuf} {@code false} may be returned even if some of the components
+     * have been added.
      */
     public boolean add(ByteBuf buf) {
-        int nioBufferCount = buf.nioBufferCount();
-        if (count + nioBufferCount > IOV_MAX) {
+        if (count == IOV_MAX) {
             // No more room!
             return false;
-        }
-
-        if (nioBufferCount == 1) {
+        } else if (buf.hasMemoryAddress() && buf.nioBufferCount() == 1) {
             final int len = buf.readableBytes();
-            if (len == 0) {
-                // No need to add an empty buffer.
-                // We return true here because we want ChannelOutboundBuffer.forEachFlushedMessage() to continue
-                // fetching the next buffers.
-                return true;
-            }
-
-            final long addr = buf.memoryAddress();
-            final int offset = buf.readerIndex();
-            return add(addr, offset, len);
+            return len == 0 || add(buf.memoryAddress(), buf.readerIndex(), len);
         } else {
             ByteBuffer[] buffers = buf.nioBuffers();
             for (ByteBuffer nioBuffer : buffers) {
-                int len = nioBuffer.remaining();
-                if (len == 0) {
-                    // No need to add an empty buffer so just continue
-                    continue;
-                }
-                int offset = nioBuffer.position();
-                long addr = PlatformDependent.directBufferAddress(nioBuffer);
-
-                if (!add(addr, offset, len)) {
+                final int len = nioBuffer.remaining();
+                if (len != 0 && (!add(directBufferAddress(nioBuffer), nioBuffer.position(), len) || count == IOV_MAX)) {
                     return false;
                 }
             }
@@ -114,16 +107,13 @@ public final class IovArray implements MessageProcessor {
     }
 
     private boolean add(long addr, int offset, int len) {
-        if (len == 0) {
-            // No need to add an empty buffer.
-            return true;
-        }
-
-        final long baseOffset = memoryAddress(count++);
+        final long baseOffset = memoryAddress(count);
         final long lengthOffset = baseOffset + ADDRESS_SIZE;
 
-        if (SSIZE_MAX - len < size) {
-            // If the size + len will overflow an SSIZE_MAX we stop populate the IovArray. This is done as linux
+        // If there is at least 1 entry then we enforce the maximum bytes. We want to accept at least one entry so we
+        // will attempt to write some data and make progress.
+        if (maxBytes - len < size && count > 0) {
+            // If the size + len will overflow SSIZE_MAX we stop populate the IovArray. This is done as linux
             //  not allow to write more bytes then SSIZE_MAX with one writev(...) call and so will
             // return 'EINVAL', which will raise an IOException.
             //
@@ -132,47 +122,18 @@ public final class IovArray implements MessageProcessor {
             return false;
         }
         size += len;
+        ++count;
 
         if (ADDRESS_SIZE == 8) {
             // 64bit
-            PlatformDependent.putLong(baseOffset, addr + offset);
-            PlatformDependent.putLong(lengthOffset, len);
+            putLong(baseOffset, addr + offset);
+            putLong(lengthOffset, len);
         } else {
             assert ADDRESS_SIZE == 4;
-            PlatformDependent.putInt(baseOffset, (int) addr + offset);
-            PlatformDependent.putInt(lengthOffset, len);
+            putInt(baseOffset, (int) addr + offset);
+            putInt(lengthOffset, len);
         }
         return true;
-    }
-
-    /**
-     * Process the written iov entries. This will return the length of the iov entry on the given index if it is
-     * smaller then the given {@code written} value. Otherwise it returns {@code -1}.
-     */
-    public long processWritten(int index, long written) {
-        long baseOffset = memoryAddress(index);
-        long lengthOffset = baseOffset + ADDRESS_SIZE;
-        if (ADDRESS_SIZE == 8) {
-            // 64bit
-            long len = PlatformDependent.getLong(lengthOffset);
-            if (len > written) {
-                long offset = PlatformDependent.getLong(baseOffset);
-                PlatformDependent.putLong(baseOffset, offset + written);
-                PlatformDependent.putLong(lengthOffset, len - written);
-                return -1;
-            }
-            return len;
-        } else {
-            assert ADDRESS_SIZE == 4;
-            long len = PlatformDependent.getInt(lengthOffset);
-            if (len > written) {
-                int offset = PlatformDependent.getInt(baseOffset);
-                PlatformDependent.putInt(baseOffset, (int) (offset + written));
-                PlatformDependent.putInt(lengthOffset, (int) (len - written));
-                return -1;
-            }
-            return len;
-        }
     }
 
     /**
@@ -190,6 +151,28 @@ public final class IovArray implements MessageProcessor {
     }
 
     /**
+     * Set the maximum amount of bytes that can be added to this {@link IovArray} via {@link #add(ByteBuf)}.
+     * <p>
+     * This will not impact the existing state of the {@link IovArray}, and only applies to subsequent calls to
+     * {@link #add(ByteBuf)}.
+     * <p>
+     * In order to ensure some progress is made at least one {@link ByteBuf} will be accepted even if it's size exceeds
+     * this value.
+     * @param maxBytes the maximum amount of bytes that can be added to this {@link IovArray} via {@link #add(ByteBuf)}.
+     */
+    public void maxBytes(long maxBytes) {
+        this.maxBytes = min(SSIZE_MAX, checkPositive(maxBytes, "maxBytes"));
+    }
+
+    /**
+     * Get the maximum amount of bytes that can be added to this {@link IovArray} via {@link #add(ByteBuf)}.
+     * @return the maximum amount of bytes that can be added to this {@link IovArray} via {@link #add(ByteBuf)}.
+     */
+    public long maxBytes() {
+        return maxBytes;
+    }
+
+    /**
      * Returns the {@code memoryAddress} for the given {@code offset}.
      */
     public long memoryAddress(int offset) {
@@ -200,14 +183,11 @@ public final class IovArray implements MessageProcessor {
      * Release the {@link IovArray}. Once release further using of it may crash the JVM!
      */
     public void release() {
-        PlatformDependent.freeMemory(memoryAddress);
+        freeMemory(memoryAddress);
     }
 
     @Override
     public boolean processMessage(Object msg) throws Exception {
-        if (msg instanceof ByteBuf) {
-            return add((ByteBuf) msg);
-        }
-        return false;
+        return (msg instanceof ByteBuf) && add((ByteBuf) msg);
     }
 }

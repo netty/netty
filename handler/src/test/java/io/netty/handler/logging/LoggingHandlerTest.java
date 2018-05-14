@@ -146,8 +146,8 @@ public class LoggingHandlerTest {
     public void shouldLogChannelConnectWithLocalAddress() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.connect(new InetSocketAddress(80), new InetSocketAddress(81)).await();
-        verify(appender).doAppend(argThat(
-                new RegexLogMatcher(".+CONNECT: 0.0.0.0/0.0.0.0:80, 0.0.0.0/0.0.0.0:81$")));
+        verify(appender).doAppend(argThat(new RegexLogMatcher(
+                "^\\[id: 0xembedded, L:embedded - R:embedded\\] CONNECT: 0.0.0.0/0.0.0.0:80, 0.0.0.0/0.0.0.0:81$")));
     }
 
     @Test

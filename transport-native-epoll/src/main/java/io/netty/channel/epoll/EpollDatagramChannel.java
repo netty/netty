@@ -470,13 +470,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                             break;
                         }
 
+                        InetSocketAddress localAddress = remoteAddress.localAddress();
+                        if (localAddress == null) {
+                            localAddress = (InetSocketAddress) localAddress();
+                        }
+
                         allocHandle.incMessagesRead(1);
                         allocHandle.lastBytesRead(remoteAddress.receivedAmount());
                         data.writerIndex(data.writerIndex() + allocHandle.lastBytesRead());
 
                         readPending = false;
                         pipeline.fireChannelRead(
-                                new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
+                                new DatagramPacket(data, localAddress, remoteAddress));
 
                         data = null;
                     } while (allocHandle.continueReading());

@@ -66,7 +66,7 @@ public class PlatformDependentTest {
         boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length);
     }
 
-    private void testEquals(EqualityChecker equalsChecker) {
+    private static void testEquals(EqualityChecker equalsChecker) {
         byte[] bytes1 = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd'};
         byte[] bytes2 = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd'};
         assertNotSame(bytes1, bytes2);

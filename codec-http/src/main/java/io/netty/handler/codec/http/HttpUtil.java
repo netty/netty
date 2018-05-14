@@ -17,7 +17,9 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.nio.charset.Charset;
@@ -29,15 +31,7 @@ import java.util.List;
  * Utility methods useful in the HTTP context.
  */
 public final class HttpUtil {
-    /**
-     * @deprecated Use {@link EmptyHttpHeaders#INSTANCE}
-     * <p>
-     * The instance is instantiated here to break the cyclic static initialization between {@link EmptyHttpHeaders} and
-     * {@link HttpHeaders}. The issue is that if someone accesses {@link EmptyHttpHeaders#INSTANCE} before
-     * {@link HttpHeaders#EMPTY_HEADERS} then {@link HttpHeaders#EMPTY_HEADERS} will be {@code null}.
-     */
-    @Deprecated
-    static final EmptyHttpHeaders EMPTY_HEADERS = new EmptyHttpHeaders();
+
     private static final AsciiString CHARSET_EQUALS = AsciiString.of(HttpHeaderValues.CHARSET + "=");
     private static final AsciiString SEMICOLON = AsciiString.cached(";");
 
@@ -518,5 +512,22 @@ public final class HttpUtil {
         } else {
             return contentTypeValue.length() > 0 ? contentTypeValue : null;
         }
+    }
+
+    /**
+     * Formats the host string of an address so it can be used for computing an HTTP component
+     * such as an URL or a Host header
+     * @param addr the address
+     * @return the formatted String
+     */
+    public static String formatHostnameForHttp(InetSocketAddress addr) {
+        String hostString = NetUtil.getHostname(addr);
+        if (NetUtil.isValidIpV6Address(hostString)) {
+            if (!addr.isUnresolved()) {
+                hostString = NetUtil.toAddressString(addr.getAddress());
+            }
+            return "[" + hostString + "]";
+        }
+        return hostString;
     }
 }

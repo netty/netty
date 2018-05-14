@@ -15,19 +15,17 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.unix.Errors.NativeIoException;
+import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.Socket;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.NativeInetAddress;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Locale;
 
@@ -40,9 +38,7 @@ import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupp
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingTcpFastopen;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.kernelVersion;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.tcpMd5SigMaxKeyLen;
-import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EPIPE_NEGATIVE;
-import static io.netty.channel.unix.Errors.ERRNO_EWOULDBLOCK_NEGATIVE;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newConnectionResetException;
 import static io.netty.channel.unix.Errors.newIOException;
@@ -64,6 +60,7 @@ public final class Native {
             // The library was not previously loaded, load it now.
             loadNativeLibrary();
         }
+        Socket.initialize();
     }
 
     // EventLoop operations and constants
@@ -78,19 +75,14 @@ public final class Native {
     public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
     public static final String KERNEL_VERSION = kernelVersion();
 
-    private static final NativeIoException SENDFILE_CONNECTION_RESET_EXCEPTION;
     private static final NativeIoException SENDMMSG_CONNECTION_RESET_EXCEPTION;
     private static final NativeIoException SPLICE_CONNECTION_RESET_EXCEPTION;
-    private static final ClosedChannelException SENDFILE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), Native.class, "sendfile(...)");
     private static final ClosedChannelException SENDMMSG_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), Native.class, "sendmmsg(...)");
     private static final ClosedChannelException SPLICE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), Native.class, "splice(...)");
 
     static {
-        SENDFILE_CONNECTION_RESET_EXCEPTION = newConnectionResetException("syscall:sendfile(...)",
-                ERRNO_EPIPE_NEGATIVE);
         SENDMMSG_CONNECTION_RESET_EXCEPTION = newConnectionResetException("syscall:sendmmsg(...)",
                 ERRNO_EPIPE_NEGATIVE);
         SPLICE_CONNECTION_RESET_EXCEPTION = newConnectionResetException("syscall:splice(...)",
@@ -162,22 +154,6 @@ public final class Native {
     }
 
     private static native int splice0(int fd, long offIn, int fdOut, long offOut, long len);
-
-    public static long sendfile(
-            int dest, DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException {
-        // Open the file-region as it may be created via the lazy constructor. This is needed as we directly access
-        // the FileChannel field directly via JNI
-        src.open();
-
-        long res = sendfile0(dest, src, baseOffset, offset, length);
-        if (res >= 0) {
-            return res;
-        }
-        return ioResult("sendfile", (int) res, SENDFILE_CONNECTION_RESET_EXCEPTION, SENDFILE_CLOSED_CHANNEL_EXCEPTION);
-    }
-
-    private static native long sendfile0(
-            int dest, DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException;
 
     public static int sendmmsg(
             int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len) throws IOException {

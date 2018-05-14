@@ -27,6 +27,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -73,6 +74,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
             } else {
                 unsafe().close(unsafe().voidPromise());
             }
+            pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
         }
     }
 
@@ -123,6 +125,10 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                         byteBuf.release();
                         byteBuf = null;
                         close = allocHandle.lastBytesRead() < 0;
+                        if (close) {
+                            // There is nothing left to read as we received an EOF.
+                            readPending = false;
+                        }
                     }
                     break;
                 } else {

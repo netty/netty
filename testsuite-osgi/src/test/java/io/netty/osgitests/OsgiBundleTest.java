@@ -17,17 +17,19 @@
 package io.netty.osgitests;
 
 import static org.junit.Assert.assertFalse;
+import static org.ops4j.pax.exam.CoreOptions.frameworkProperty;
 import static org.ops4j.pax.exam.CoreOptions.junitBundles;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
 import static org.ops4j.pax.exam.CoreOptions.wrappedBundle;
+import static org.osgi.framework.Constants.FRAMEWORK_BOOTDELEGATION;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -38,6 +40,7 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
+import io.netty.util.internal.PlatformDependent;
 
 @RunWith(PaxExam.class)
 public class OsgiBundleTest {
@@ -86,6 +89,8 @@ public class OsgiBundleTest {
     public final Option[] config() {
         final Collection<Option> options = new ArrayList<Option>();
 
+        // Avoid boot delegating sun.misc which would fail testCanLoadPlatformDependent()
+        options.add(frameworkProperty(FRAMEWORK_BOOTDELEGATION).value("com.sun.*"));
         options.add(systemProperty("pax.exam.osgi.unresolved.fail").value("true"));
         options.addAll(Arrays.asList(junitBundles()));
 
@@ -103,5 +108,10 @@ public class OsgiBundleTest {
     public void testResolvedBundles() {
         // No-op, as we just want the bundles to be resolved. Just check if we tested something
         assertFalse("At least one bundle needs to be tested", BUNDLES.isEmpty());
+    }
+
+    @Test
+    public void testCanLoadPlatformDependent() {
+        assertFalse(PlatformDependent.hasUnsafe());
     }
 }

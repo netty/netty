@@ -195,13 +195,13 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        cleanup();
+        cleanupSafely(ctx);
         super.handlerRemoved(ctx);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        cleanup();
+        cleanupSafely(ctx);
         super.channelInactive(ctx);
     }
 
@@ -214,17 +214,18 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     private void cleanup() {
         if (decoder != null) {
             // Clean-up the previous decoder if not cleaned up correctly.
-            if (decoder.finish()) {
-                for (;;) {
-                    ByteBuf buf = decoder.readInbound();
-                    if (buf == null) {
-                        break;
-                    }
-                    // Release the buffer
-                    buf.release();
-                }
-            }
+            decoder.finishAndReleaseAll();
             decoder = null;
+        }
+    }
+
+    private void cleanupSafely(ChannelHandlerContext ctx) {
+        try {
+            cleanup();
+        } catch (Throwable cause) {
+            // If cleanup throws any error we need to propagate it through the pipeline
+            // so we don't fail to propagate pipeline events.
+            ctx.fireExceptionCaught(cause);
         }
     }
 

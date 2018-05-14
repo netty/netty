@@ -20,10 +20,12 @@ import static org.junit.Assume.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.Map;
 import java.util.Random;
 
 import org.junit.After;
@@ -63,11 +65,11 @@ public class EpollSocketChannelConfigTest {
         ch.close().syncUninterruptibly();
     }
 
-    private long randLong(long min, long max) {
+    private static long randLong(long min, long max) {
         return min + nextLong(max - min + 1);
     }
 
-    private long nextLong(long n) {
+    private static long nextLong(long n) {
         long bits, val;
         do {
            bits = (rand.nextLong() << 1) >>> 1;
@@ -152,5 +154,11 @@ public class EpollSocketChannelConfigTest {
         } catch (ChannelException e) {
             assertTrue(e.getCause() instanceof ClosedChannelException);
         }
+    }
+
+    @Test
+    public void getGetOptions() {
+        Map<ChannelOption<?>, Object> map = ch.config().getOptions();
+        assertFalse(map.isEmpty());
     }
 }

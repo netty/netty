@@ -277,6 +277,10 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
                         for (byte b : bytes) {
                             assertEquals(b, buf.readByte());
                         }
+
+                        // Test that the channel's localAddress is equal to the message's recipient
+                        assertEquals(ctx.channel().localAddress(), msg.recipient());
+
                         latch.countDown();
                     }
                 });

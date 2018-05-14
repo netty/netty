@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -12,19 +12,24 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.http2;
+
+package io.netty.handler.codec.redis;
 
 import io.netty.util.internal.UnstableApi;
 
 /**
- * Signifies that the <a href="https://tools.ietf.org/html/rfc7540#section-3.5">connection preface</a> has been sent.
- * The client sends the preface, and the server receives the preface. The client shouldn't write any data until this
- * event has been processed.
+ * Inline commands of <a href="http://redis.io/topics/protocol">RESP</a>.
  */
 @UnstableApi
-public final class Http2ConnectionPrefaceWrittenEvent {
-    static final Http2ConnectionPrefaceWrittenEvent INSTANCE = new Http2ConnectionPrefaceWrittenEvent();
+public final class InlineCommandRedisMessage extends AbstractStringRedisMessage {
 
-    private Http2ConnectionPrefaceWrittenEvent() {
+    /**
+     * Creates a {@link InlineCommandRedisMessage} for the given {@code content}.
+     *
+     * @param content the message content, must not be {@code null}.
+     */
+    public InlineCommandRedisMessage(String content) {
+        super(content);
     }
+
 }

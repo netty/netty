@@ -33,7 +33,7 @@ public class LineEncoderTest {
         testLineEncode(LineSeparator.UNIX, "abc");
     }
 
-    private void testLineEncode(LineSeparator lineSeparator, String msg) {
+    private static void testLineEncode(LineSeparator lineSeparator, String msg) {
         EmbeddedChannel channel = new EmbeddedChannel(new LineEncoder(lineSeparator, CharsetUtil.UTF_8));
         assertTrue(channel.writeOutbound(msg));
         ByteBuf buf = channel.readOutbound();

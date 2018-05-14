@@ -14,6 +14,8 @@
  */
 package io.netty.util.internal;
 
+import java.util.Collection;
+
 /**
  * A grab-bag of useful utility methods.
  */
@@ -34,7 +36,7 @@ public final class ObjectUtil {
     }
 
     /**
-     * Checks that the given argument is strictly positive. If it is, throws {@link IllegalArgumentException}.
+     * Checks that the given argument is strictly positive. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
     public static int checkPositive(int i, String name) {
@@ -45,7 +47,7 @@ public final class ObjectUtil {
     }
 
     /**
-     * Checks that the given argument is strictly positive. If it is, throws {@link IllegalArgumentException}.
+     * Checks that the given argument is strictly positive. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
     public static long checkPositive(long i, String name) {
@@ -56,7 +58,7 @@ public final class ObjectUtil {
     }
 
     /**
-     * Checks that the given argument is positive or zero. If it is, throws {@link IllegalArgumentException}.
+     * Checks that the given argument is positive or zero. If it is not , throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
     public static int checkPositiveOrZero(int i, String name) {
@@ -67,7 +69,7 @@ public final class ObjectUtil {
     }
 
     /**
-     * Checks that the given argument is positive or zero. If it is, throws {@link IllegalArgumentException}.
+     * Checks that the given argument is positive or zero. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
     public static long checkPositiveOrZero(long i, String name) {
@@ -86,6 +88,17 @@ public final class ObjectUtil {
         checkNotNull(array, name);
         checkPositive(array.length, name + ".length");
         return array;
+    }
+
+    /**
+     * Checks that the given argument is neither null nor empty.
+     * If it is, throws {@link NullPointerException} or {@link IllegalArgumentException}.
+     * Otherwise, returns the argument.
+     */
+    public static <T extends Collection<?>> T checkNonEmpty(T collection, String name) {
+        checkNotNull(collection, name);
+        checkPositive(collection.size(), name + ".size");
+        return collection;
     }
 
     /**

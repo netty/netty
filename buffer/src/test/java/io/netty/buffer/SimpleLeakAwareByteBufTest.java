@@ -84,7 +84,12 @@ public class SimpleLeakAwareByteBufTest extends BigEndianHeapByteBufTest {
 
     @Test
     public void testWrapReadSlice() {
-        assertWrapped(newBuffer(8).readSlice(1));
+        ByteBuf buffer = newBuffer(8);
+        if (buffer.isReadable()) {
+            assertWrapped(buffer.readSlice(1));
+        } else {
+            assertTrue(buffer.release());
+        }
     }
 
     @Test
@@ -97,14 +102,18 @@ public class SimpleLeakAwareByteBufTest extends BigEndianHeapByteBufTest {
     @Test
     public void testWrapRetainedSlice2() {
         ByteBuf buffer = newBuffer(8);
-        assertWrapped(buffer.retainedSlice(0, 1));
+        if (buffer.isReadable()) {
+            assertWrapped(buffer.retainedSlice(0, 1));
+        }
         assertTrue(buffer.release());
     }
 
     @Test
     public void testWrapReadRetainedSlice() {
         ByteBuf buffer = newBuffer(8);
-        assertWrapped(buffer.readRetainedSlice(1));
+        if (buffer.isReadable()) {
+            assertWrapped(buffer.readRetainedSlice(1));
+        }
         assertTrue(buffer.release());
     }
 

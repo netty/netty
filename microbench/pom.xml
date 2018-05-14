@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.17.Final-SNAPSHOT</version>
+    <version>4.1.25.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-microbench</artifactId>
@@ -31,7 +31,6 @@
   <properties>
     <!-- Skip tests by default; run only if -DskipTests=false is specified -->
     <skipTests>true</skipTests>
-    <epoll.arch>x86_64</epoll.arch>
     <jmh.version>1.19</jmh.version>
   </properties>
 
@@ -43,17 +42,6 @@
           <family>linux</family>
         </os>
       </activation>
-      <properties>
-        <epoll.arch>${os.detected.arch}</epoll.arch>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty-transport-native-epoll</artifactId>
-          <version>${project.version}</version>
-          <classifier>${jni.classifier}</classifier>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
           <plugin>
@@ -83,6 +71,11 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-http2</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-redis</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -167,13 +160,6 @@
         </executions>
       </plugin>
     </plugins>
-    <extensions>
-      <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>1.5.0.Final</version>
-      </extension>
-    </extensions>
   </build>
 </project>
 

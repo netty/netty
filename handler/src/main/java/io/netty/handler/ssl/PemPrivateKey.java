@@ -41,6 +41,7 @@ import io.netty.util.internal.ObjectUtil;
  * @see #valueOf(ByteBuf)
  */
 public final class PemPrivateKey extends AbstractReferenceCounted implements PrivateKey, PemEncoded {
+    private static final long serialVersionUID = 7978017465645018936L;
 
     private static final byte[] BEGIN_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\n".getBytes(CharsetUtil.US_ASCII);
     private static final byte[] END_PRIVATE_KEY = "\n-----END PRIVATE KEY-----\n".getBytes(CharsetUtil.US_ASCII);

@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/uio.h>
+#include <limits.h>
 
 #include "netty_unix_errors.h"
 #include "netty_unix_filedescriptor.h"
@@ -78,7 +79,15 @@ static jint _read(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, ji
 // JNI Registered Methods Begin
 static jint netty_unix_filedescriptor_close(JNIEnv* env, jclass clazz, jint fd) {
    if (close(fd) < 0) {
-       return -errno;
+       // There is really nothing "sane" we can do when EINTR was reported on close. So just ignore it and "assume"
+       // everything is fine == we closed the file descriptor.
+       //
+       // For more details see:
+       //     - https://bugs.chromium.org/p/chromium/issues/detail?id=269623
+       //     - https://lwn.net/Articles/576478/
+       if (errno != EINTR) {
+           return -errno;
+       }
    }
    return 0;
 }
@@ -110,40 +119,103 @@ static jlong netty_unix_filedescriptor_writevAddresses(JNIEnv* env, jclass clazz
     return _writev(env, clazz, fd, iov, length);
 }
 
-static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd, jobjectArray buffers, jint offset, jint length) {
+static jlong netty_unix_filedescriptor_writev(JNIEnv* env, jclass clazz, jint fd, jobjectArray buffers, const jint offset, jint length, jlong maxBytesToWrite) {
     struct iovec iov[length];
-    int iovidx = 0;
+    struct iovec* iovptr = iov;
     int i;
     int num = offset + length;
-    for (i = offset; i < num; i++) {
-        jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
-        jint pos;
-        // Get the current position using the (*env)->GetIntField if possible and fallback
-        // to slower (*env)->CallIntMethod(...) if needed
-        if (posFieldId == NULL) {
-            pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
-        } else {
-            pos = (*env)->GetIntField(env, bufObj, posFieldId);
-        }
-        jint limit;
-        // Get the current limit using the (*env)->GetIntField if possible and fallback
-        // to slower (*env)->CallIntMethod(...) if needed
-        if (limitFieldId == NULL) {
-            limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
-        } else {
-            limit = (*env)->GetIntField(env, bufObj, limitFieldId);
-        }
-        void* buffer = (*env)->GetDirectBufferAddress(env, bufObj);
-        // We check that GetDirectBufferAddress will not return NULL in OnLoad
-        iov[iovidx].iov_base = buffer + pos;
-        iov[iovidx].iov_len = (size_t) (limit - pos);
-        iovidx++;
+    if (posFieldId != NULL && limitFieldId != NULL) {
+        for (i = offset; i < num; ++i) {
+            jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
+            jint pos = (*env)->GetIntField(env, bufObj, posFieldId);
+            jint limit = (*env)->GetIntField(env, bufObj, limitFieldId);
+            size_t bytesLength = (size_t) (limit - pos);
+            if (bytesLength > maxBytesToWrite && i != offset) {
+              length = i - offset;
+              break;
+            }
+            maxBytesToWrite -= bytesLength;
+            void* buffer = (*env)->GetDirectBufferAddress(env, bufObj);
+            // We check that GetDirectBufferAddress will not return NULL in OnLoad
+            iovptr->iov_base = buffer + pos;
+            iovptr->iov_len = bytesLength;
+            ++iovptr;
 
-        // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
-        // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
-        //
-        // See https://github.com/netty/netty/issues/2623
-        (*env)->DeleteLocalRef(env, bufObj);
+            // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
+            // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
+            //
+            // See https://github.com/netty/netty/issues/2623
+            (*env)->DeleteLocalRef(env, bufObj);
+        }
+    } else if (posFieldId != NULL && limitFieldId == NULL) {
+        for (i = offset; i < num; ++i) {
+            jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
+            jint pos = (*env)->GetIntField(env, bufObj, posFieldId);
+            jint limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
+            size_t bytesLength = (size_t) (limit - pos);
+            if (bytesLength > maxBytesToWrite && i != offset) {
+              length = i - offset;
+              break;
+            }
+            maxBytesToWrite -= bytesLength;
+            void* buffer = (*env)->GetDirectBufferAddress(env, bufObj);
+            // We check that GetDirectBufferAddress will not return NULL in OnLoad
+            iovptr->iov_base = buffer + pos;
+            iovptr->iov_len = bytesLength;
+            ++iovptr;
+
+            // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
+            // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
+            //
+            // See https://github.com/netty/netty/issues/2623
+            (*env)->DeleteLocalRef(env, bufObj);
+        }
+    } else if (limitFieldId != NULL) {
+        for (i = offset; i < num; ++i) {
+            jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
+            jint pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
+            jint limit = (*env)->GetIntField(env, bufObj, limitFieldId);
+            size_t bytesLength = (size_t) (limit - pos);
+            if (bytesLength > maxBytesToWrite && i != offset) {
+              length = i - offset;
+              break;
+            }
+            maxBytesToWrite -= bytesLength;
+            void* buffer = (*env)->GetDirectBufferAddress(env, bufObj);
+            // We check that GetDirectBufferAddress will not return NULL in OnLoad
+            iovptr->iov_base = buffer + pos;
+            iovptr->iov_len = bytesLength;
+            ++iovptr;
+
+            // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
+            // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
+            //
+            // See https://github.com/netty/netty/issues/2623
+            (*env)->DeleteLocalRef(env, bufObj);
+        }
+    } else {
+        for (i = offset; i < num; ++i) {
+            jobject bufObj = (*env)->GetObjectArrayElement(env, buffers, i);
+            jint pos = (*env)->CallIntMethod(env, bufObj, posId, NULL);
+            jint limit = (*env)->CallIntMethod(env, bufObj, limitId, NULL);
+            size_t bytesLength = (size_t) (limit - pos);
+            if (bytesLength > maxBytesToWrite && i != offset) {
+              length = i - offset;
+              break;
+            }
+            maxBytesToWrite -= bytesLength;
+            void* buffer = (*env)->GetDirectBufferAddress(env, bufObj);
+            // We check that GetDirectBufferAddress will not return NULL in OnLoad
+            iovptr->iov_base = buffer + pos;
+            iovptr->iov_len = bytesLength;
+            ++iovptr;
+
+            // Explicit delete local reference as otherwise the local references will only be released once the native method returns.
+            // Also there may be a lot of these and JNI specification only specify that 16 must be able to be created.
+            //
+            // See https://github.com/netty/netty/issues/2623
+            (*env)->DeleteLocalRef(env, bufObj);
+        }
     }
     return _writev(env, clazz, fd, iov, length);
 }
@@ -195,7 +267,7 @@ static const JNINativeMethod method_table[] = {
   { "write", "(ILjava/nio/ByteBuffer;II)I", (void *) netty_unix_filedescriptor_write },
   { "writeAddress", "(IJII)I", (void *) netty_unix_filedescriptor_writeAddress },
   { "writevAddresses", "(IJI)J", (void *) netty_unix_filedescriptor_writevAddresses },
-  { "writev", "(I[Ljava/nio/ByteBuffer;II)J", (void *) netty_unix_filedescriptor_writev },
+  { "writev", "(I[Ljava/nio/ByteBuffer;IIJ)J", (void *) netty_unix_filedescriptor_writev },
   { "read", "(ILjava/nio/ByteBuffer;II)I", (void *) netty_unix_filedescriptor_read },
   { "readAddress", "(IJII)I", (void *) netty_unix_filedescriptor_readAddress },
   { "newPipe", "()J", (void *) netty_unix_filedescriptor_newPipe }

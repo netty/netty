@@ -115,7 +115,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     public Http2Headers decodeHeaders(int streamId, ByteBuf headerBlock) throws Http2Exception {
         try {
             final Http2Headers headers = newHeaders();
-            hpackDecoder.decode(streamId, headerBlock, headers);
+            hpackDecoder.decode(streamId, headerBlock, headers, validateHeaders);
             headerArraySizeAccumulator = HEADERS_COUNT_WEIGHT_NEW * headers.size() +
                                          HEADERS_COUNT_WEIGHT_HISTORICAL * headerArraySizeAccumulator;
             return headers;
@@ -123,7 +123,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
             throw e;
         } catch (Throwable e) {
             // Default handler for any other types of errors that may have occurred. For example,
-            // the the Header builder throws IllegalArgumentException if the key or value was invalid
+            // the Header builder throws IllegalArgumentException if the key or value was invalid
             // for any reason (e.g. the key was an invalid pseudo-header).
             throw connectionError(COMPRESSION_ERROR, e, e.getMessage());
         }

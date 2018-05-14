@@ -43,10 +43,10 @@ public class FixedChannelPool extends SimpleChannelPool {
             new TimeoutException("Acquire operation took longer then configured maximum time"),
             FixedChannelPool.class, "<init>(...)");
     static final IllegalStateException POOL_CLOSED_ON_RELEASE_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new IllegalStateException("FixedChannelPooled was closed"),
+            new IllegalStateException("FixedChannelPool was closed"),
             FixedChannelPool.class, "release(...)");
     static final IllegalStateException POOL_CLOSED_ON_ACQUIRE_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new IllegalStateException("FixedChannelPooled was closed"),
+            new IllegalStateException("FixedChannelPool was closed"),
             FixedChannelPool.class, "acquire0(...)");
     public enum AcquireTimeoutAction {
         /**
@@ -194,7 +194,7 @@ public class FixedChannelPool extends SimpleChannelPool {
         } else if (action == null && acquireTimeoutMillis != -1) {
             throw new NullPointerException("action");
         } else if (action != null && acquireTimeoutMillis < 0) {
-            throw new IllegalArgumentException("acquireTimeoutMillis: " + acquireTimeoutMillis + " (expected: >= 1)");
+            throw new IllegalArgumentException("acquireTimeoutMillis: " + acquireTimeoutMillis + " (expected: >= 0)");
         } else {
             acquireTimeoutNanos = TimeUnit.MILLISECONDS.toNanos(acquireTimeoutMillis);
             switch (action) {

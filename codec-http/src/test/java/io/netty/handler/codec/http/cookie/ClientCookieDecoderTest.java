@@ -204,6 +204,13 @@ public class ClientCookieDecoderTest {
     }
 
     @Test
+    public void testDecodingInvalidValuesWithCommaAtStart() {
+        assertNull(ClientCookieDecoder.STRICT.decode(","));
+        assertNull(ClientCookieDecoder.STRICT.decode(",a"));
+        assertNull(ClientCookieDecoder.STRICT.decode(",a=a"));
+    }
+
+    @Test
     public void testDecodingLongValue() {
         String longValue =
                 "b___$Q__$ha__<NC=MN(F__%#4__<NC=MN(F__2_d____#=IvZB__2_F____'=KqtH__2-9____" +

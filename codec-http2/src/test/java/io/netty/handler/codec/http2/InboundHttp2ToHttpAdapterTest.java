@@ -60,9 +60,9 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.getEmbeddedHttp2Except
 import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.handler.codec.http2.Http2TestUtil.of;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -608,6 +608,9 @@ public class InboundHttp2ToHttpAdapterTest {
             verify(serverListener, times(2)).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
             assertEquals(2, capturedRequests.size());
+            // We do not expect to have this header in the captured request so remove it now.
+            assertNotNull(request.headers().remove("x-http2-stream-weight"));
+
             assertEquals(request, capturedRequests.get(0));
             assertEquals(request2, capturedRequests.get(1));
 
@@ -725,7 +728,7 @@ public class InboundHttp2ToHttpAdapterTest {
                 });
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt instanceof Http2ConnectionPrefaceWrittenEvent) {
+                        if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                             prefaceWrittenLatch.countDown();
                             ctx.pipeline().remove(this);
                         }

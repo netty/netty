@@ -15,7 +15,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -210,9 +209,17 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 if (failureCause == null) {
                     // Synchronously set the headersSent flag to ensure that we do not subsequently write
                     // other headers containing pseudo-header fields.
+                    //
+                    // This just sets internal stream state which is used elsewhere in the codec and doesn't
+                    // necessarily mean the write will complete successfully.
                     stream.headersSent(isInformational);
+
+                    if (!future.isSuccess()) {
+                        // Either the future is not done or failed in the meantime.
+                        notifyLifecycleManagerOnError(future, ctx);
+                    }
                 } else {
-                    lifecycleManager.onError(ctx, failureCause);
+                    lifecycleManager.onError(ctx, true, failureCause);
                 }
 
                 return future;
@@ -224,7 +231,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                 return promise;
             }
         } catch (Throwable t) {
-            lifecycleManager.onError(ctx, t);
+            lifecycleManager.onError(ctx, true, t);
             promise.tryFailure(t);
             return promise;
         }
@@ -265,7 +272,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data, ChannelPromise promise) {
+    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, long data, ChannelPromise promise) {
         return frameWriter.writePing(ctx, ack, data, promise);
     }
 
@@ -286,13 +293,20 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // Writing headers may fail during the encode state if they violate HPACK limits.
             Throwable failureCause = future.cause();
             if (failureCause == null) {
+                // This just sets internal stream state which is used elsewhere in the codec and doesn't
+                // necessarily mean the write will complete successfully.
                 stream.pushPromiseSent();
+
+                if (!future.isSuccess()) {
+                    // Either the future is not done or failed in the meantime.
+                    notifyLifecycleManagerOnError(future, ctx);
+                }
             } else {
-                lifecycleManager.onError(ctx, failureCause);
+                lifecycleManager.onError(ctx, true, failureCause);
             }
             return future;
         } catch (Throwable t) {
-            lifecycleManager.onError(ctx, t);
+            lifecycleManager.onError(ctx, true, t);
             promise.tryFailure(t);
             return promise;
         }
@@ -377,7 +391,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             queue.releaseAndFailAll(cause);
             // Don't update dataSize because we need to ensure the size() method returns a consistent size even after
             // error so we don't invalidate flow control when returning bytes to flow control.
-            lifecycleManager.onError(ctx, cause);
+            lifecycleManager.onError(ctx, true, cause);
         }
 
         @Override
@@ -386,10 +400,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             if (!endOfStream) {
                 if (queuedData == 0) {
                     // There's no need to write any data frames because there are only empty data frames in the queue
-                    // and it is not end of stream yet. Just complete their promises by writing an empty buffer.
+                    // and it is not end of stream yet. Just complete their promises by getting the buffer corresponding
+                    // to 0 bytes and writing it to the channel (to preserve notification order).
                     ChannelPromise writePromise = ctx.newPromise().addListener(this);
-                    queue.remove(0, writePromise).release();
-                    ctx.write(Unpooled.EMPTY_BUFFER, writePromise);
+                    ctx.write(queue.remove(0, writePromise), writePromise);
                     return;
                 }
 
@@ -429,6 +443,18 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
     }
 
+    private void notifyLifecycleManagerOnError(ChannelFuture future, final ChannelHandlerContext ctx) {
+        future.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                Throwable cause = future.cause();
+                if (cause != null) {
+                    lifecycleManager.onError(ctx, true, cause);
+                }
+            }
+        });
+    }
+
     /**
      * Wrap headers so they can be written subject to flow-control. While headers do not have cost against the
      * flow-control window their order with respect to other frames must be maintained, hence if a DATA frame is
@@ -457,7 +483,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         @Override
         public void error(ChannelHandlerContext ctx, Throwable cause) {
             if (ctx != null) {
-                lifecycleManager.onError(ctx, cause);
+                lifecycleManager.onError(ctx, true, cause);
             }
             promise.tryFailure(cause);
         }
@@ -475,9 +501,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // Writing headers may fail during the encode state if they violate HPACK limits.
             Throwable failureCause = f.cause();
             if (failureCause == null) {
+                // This just sets internal stream state which is used elsewhere in the codec and doesn't
+                // necessarily mean the write will complete successfully.
                 stream.headersSent(isInformational);
-            } else {
-                lifecycleManager.onError(ctx, failureCause);
             }
         }
 

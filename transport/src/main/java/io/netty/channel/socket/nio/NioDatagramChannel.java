@@ -286,7 +286,8 @@ public final class NioDatagramChannel
             return true;
         }
 
-        final ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), dataLen);
+        final ByteBuffer nioData = data.nioBufferCount() == 1 ? data.internalNioBuffer(data.readerIndex(), dataLen)
+                                                              : data.nioBuffer(data.readerIndex(), dataLen);
         final int writtenBytes;
         if (remoteAddress != null) {
             writtenBytes = javaChannel().send(nioData, remoteAddress);

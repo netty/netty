@@ -80,8 +80,8 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                                 NotSslRecordException e = new NotSslRecordException(
                                         "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
                                 in.skipBytes(in.readableBytes());
-
-                                SslUtils.notifyHandshakeFailure(ctx, e);
+                                ctx.fireUserEventTriggered(new SniCompletionEvent(e));
+                                SslUtils.handleHandshakeFailure(ctx, e, true);
                                 throw e;
                             }
                             if (len == SslUtils.NOT_ENOUGH_DATA ||
@@ -98,7 +98,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                             // SSLv3 or TLS
                             if (majorVersion == 3) {
                                 final int packetLength = in.getUnsignedShort(readerIndex + 3) +
-                                                         SslUtils.SSL_RECORD_HEADER_LENGTH;
+                                        SslUtils.SSL_RECORD_HEADER_LENGTH;
 
                                 if (readableBytes < packetLength) {
                                     // client hello incomplete; try again to decode once more data is ready.
@@ -185,7 +185,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                                             }
 
                                             final String hostname = in.toString(offset, serverNameLength,
-                                                                                CharsetUtil.US_ASCII);
+                                                    CharsetUtil.US_ASCII);
 
                                             try {
                                                 select(ctx, hostname.toLowerCase(Locale.US));
@@ -208,7 +208,10 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                             break loop;
                     }
                 }
-            } catch (Throwable e) {
+            } catch (NotSslRecordException e) {
+                // Just rethrow as in this case we also closed the channel and this is consistent with SslHandler.
+                throw e;
+            } catch (Exception e) {
                 // unexpected encoding, ignore sni and use default
                 if (logger.isDebugEnabled()) {
                     logger.debug("Unexpected client hello packet: " + ByteBufUtil.hexDump(in), e);
@@ -222,6 +225,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
     private void select(final ChannelHandlerContext ctx, final String hostname) throws Exception {
         Future<T> future = lookup(ctx, hostname);
         if (future.isDone()) {
+            fireSniCompletionEvent(ctx, hostname, future);
             onLookupComplete(ctx, hostname, future);
         } else {
             suppressRead = true;
@@ -231,6 +235,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                     try {
                         suppressRead = false;
                         try {
+                            fireSniCompletionEvent(ctx, hostname, future);
                             onLookupComplete(ctx, hostname, future);
                         } catch (DecoderException err) {
                             ctx.fireExceptionCaught(err);
@@ -247,6 +252,15 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                     }
                 }
             });
+        }
+    }
+
+    private void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<T> future) {
+        Throwable cause = future.cause();
+        if (cause == null) {
+            ctx.fireUserEventTriggered(new SniCompletionEvent(hostname));
+        } else {
+            ctx.fireUserEventTriggered(new SniCompletionEvent(hostname, cause));
         }
     }
 

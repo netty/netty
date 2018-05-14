@@ -182,6 +182,21 @@ public class QueryStringDecoder {
         return params;
     }
 
+    /**
+     * Returns the raw path string of the URI.
+     */
+    public String rawPath() {
+        return uri.substring(0, pathEndIdx());
+    }
+
+    /**
+     * Returns raw query string of the URI.
+     */
+    public String rawQuery() {
+        int start = pathEndIdx() + 1;
+        return start < uri.length() ? uri.substring(start) : EMPTY_STRING;
+    }
+
     private int pathEndIdx() {
         if (pathEndIdx == -1) {
             pathEndIdx = findPathEndIndex(uri);

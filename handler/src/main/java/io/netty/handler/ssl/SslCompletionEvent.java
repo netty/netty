@@ -45,7 +45,7 @@ public abstract class SslCompletionEvent {
     }
 
     @Override
-    public final String toString() {
+    public  String toString() {
         final Throwable cause = cause();
         return cause == null? getClass().getSimpleName() + "(SUCCESS)" :
                 getClass().getSimpleName() +  '(' + cause + ')';

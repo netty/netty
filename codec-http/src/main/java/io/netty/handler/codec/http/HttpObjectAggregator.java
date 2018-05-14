@@ -159,7 +159,7 @@ public class HttpObjectAggregator
         }
     }
 
-    private Object continueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
+    private static Object continueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
         if (HttpUtil.isUnsupportedExpectation(start)) {
             // if the request contains an unsupported expectation, we return 417
             pipeline.fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
@@ -424,9 +424,8 @@ public class HttpObjectAggregator
 
         @Override
         public FullHttpRequest replace(ByteBuf content) {
-            DefaultFullHttpRequest dup = new DefaultFullHttpRequest(protocolVersion(), method(), uri(), content);
-            dup.headers().set(headers());
-            dup.trailingHeaders().set(trailingHeaders());
+            DefaultFullHttpRequest dup = new DefaultFullHttpRequest(protocolVersion(), method(), uri(), content,
+                    headers().copy(), trailingHeaders().copy());
             dup.setDecoderResult(decoderResult());
             return dup;
         }
@@ -523,9 +522,8 @@ public class HttpObjectAggregator
 
         @Override
         public FullHttpResponse replace(ByteBuf content) {
-            DefaultFullHttpResponse dup = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(), content);
-            dup.headers().set(headers());
-            dup.trailingHeaders().set(trailingHeaders());
+            DefaultFullHttpResponse dup = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(), content,
+                    headers().copy(), trailingHeaders().copy());
             dup.setDecoderResult(decoderResult());
             return dup;
         }

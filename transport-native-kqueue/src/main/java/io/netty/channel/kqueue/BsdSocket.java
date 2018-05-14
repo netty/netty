@@ -83,7 +83,7 @@ final class BsdSocket extends Socket {
 
     long sendFile(DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException {
         // Open the file-region as it may be created via the lazy constructor. This is needed as we directly access
-        // the FileChannel field directly via JNI
+        // the FileChannel field via JNI.
         src.open();
 
         long res = sendFile(intValue(), src, baseOffset, offset, length);

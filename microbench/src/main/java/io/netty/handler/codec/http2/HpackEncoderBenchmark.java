@@ -79,7 +79,7 @@ public class HpackEncoderBenchmark extends AbstractMicrobenchmark {
 
     @Setup(Level.Trial)
     public void setup() {
-        http2Headers = HpackUtil.http2Headers(size, limitToAscii);
+        http2Headers = HpackBenchmarkUtil.http2Headers(size, limitToAscii);
         if (duplicates) {
             int size = http2Headers.size();
             if (size > 0) {

@@ -314,31 +314,31 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         // Create the user event to be fired once the upgrade completes.
         final UpgradeEvent event = new UpgradeEvent(upgradeProtocol, request);
 
-        final UpgradeCodec finalUpgradeCodec = upgradeCodec;
-        ctx.writeAndFlush(upgradeResponse).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                try {
-                    if (future.isSuccess()) {
-                        // Perform the upgrade to the new protocol.
-                        sourceCodec.upgradeFrom(ctx);
-                        finalUpgradeCodec.upgradeTo(ctx, request);
+        // After writing the upgrade response we immediately prepare the
+        // pipeline for the next protocol to avoid a race between completion
+        // of the write future and receiving data before the pipeline is
+        // restructured.
+        try {
+            final ChannelFuture writeComplete = ctx.writeAndFlush(upgradeResponse);
+            // Perform the upgrade to the new protocol.
+            sourceCodec.upgradeFrom(ctx);
+            upgradeCodec.upgradeTo(ctx, request);
 
-                        // Notify that the upgrade has occurred. Retain the event to offset
-                        // the release() in the finally block.
-                        ctx.fireUserEventTriggered(event.retain());
+            // Remove this handler from the pipeline.
+            ctx.pipeline().remove(HttpServerUpgradeHandler.this);
 
-                        // Remove this handler from the pipeline.
-                        ctx.pipeline().remove(HttpServerUpgradeHandler.this);
-                    } else {
-                        future.channel().close();
-                    }
-                } finally {
-                    // Release the event if the upgrade event wasn't fired.
-                    event.release();
-                }
-            }
-        });
+            // Notify that the upgrade has occurred. Retain the event to offset
+            // the release() in the finally block.
+            ctx.fireUserEventTriggered(event.retain());
+
+            // Add the listener last to avoid firing upgrade logic after
+            // the channel is already closed since the listener may fire
+            // immediately if the write failed eagerly.
+            writeComplete.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        } finally {
+            // Release the event if the upgrade event wasn't fired.
+            event.release();
+        }
         return true;
     }
 
@@ -350,7 +350,6 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
                 Unpooled.EMPTY_BUFFER, false);
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
         res.headers().add(HttpHeaderNames.UPGRADE, upgradeProtocol);
-        res.headers().add(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
         return res;
     }
 

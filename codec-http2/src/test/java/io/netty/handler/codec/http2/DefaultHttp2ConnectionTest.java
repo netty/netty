@@ -294,12 +294,14 @@ public class DefaultHttp2ConnectionTest {
         assertEquals(State.HALF_CLOSED_REMOTE, stream.state());
         assertEquals(2, client.numActiveStreams());
         assertEquals(4, client.remote().lastStreamCreated());
+        assertTrue(stream.isHeadersReceived());
 
         stream = client.local().createStream(3, true);
         assertEquals(3, stream.id());
         assertEquals(State.HALF_CLOSED_LOCAL, stream.state());
         assertEquals(3, client.numActiveStreams());
         assertEquals(3, client.local().lastStreamCreated());
+        assertTrue(stream.isHeadersSent());
 
         stream = client.local().createStream(5, false);
         assertEquals(5, stream.id());

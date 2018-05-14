@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2016 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,11 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.ssl;
-
-public class OpenSslRenegotiateSmallBIOTest extends OpenSslRenegotiateTest {
-    @Override
-    protected void initSslServerContext(SslContext context) {
-        ((ReferenceCountedOpenSslContext) context).setBioNonApplicationBufferSize(1);
-    }
-}
+/**
+ * Benchmarks for {@link io.netty.handler.codec.redis}.
+ */
+package io.netty.microbench.redis;

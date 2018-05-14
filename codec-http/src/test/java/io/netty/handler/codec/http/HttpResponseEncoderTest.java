@@ -302,4 +302,99 @@ public class HttpResponseEncoderTest {
         buffer = channel.readOutbound();
         buffer.release();
     }
+
+    @Test
+    public void testEmptyContentsChunked() throws Exception {
+        testEmptyContents(true, false);
+    }
+
+    @Test
+    public void testEmptyContentsChunkedWithTrailers() throws Exception {
+        testEmptyContents(true, true);
+    }
+
+    @Test
+    public void testEmptyContentsNotChunked() throws Exception {
+        testEmptyContents(false, false);
+    }
+
+    @Test
+    public void testEmptyContentNotsChunkedWithTrailers() throws Exception {
+        testEmptyContents(false, true);
+    }
+
+    private void testEmptyContents(boolean chunked, boolean trailers) throws Exception {
+        HttpResponseEncoder encoder = new HttpResponseEncoder();
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        HttpResponse request = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        if (chunked) {
+            HttpUtil.setTransferEncodingChunked(request, true);
+        }
+        assertTrue(channel.writeOutbound(request));
+
+        ByteBuf contentBuffer = Unpooled.buffer();
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(contentBuffer)));
+
+        ByteBuf lastContentBuffer = Unpooled.buffer();
+        LastHttpContent last = new DefaultLastHttpContent(lastContentBuffer);
+        if (trailers) {
+            last.trailingHeaders().set("X-Netty-Test", "true");
+        }
+        assertTrue(channel.writeOutbound(last));
+
+        // Ensure we only produce ByteBuf instances.
+        ByteBuf head = channel.readOutbound();
+        assertTrue(head.release());
+
+        ByteBuf content = channel.readOutbound();
+        content.release();
+
+        ByteBuf lastContent = channel.readOutbound();
+        lastContent.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testStatusResetContentTransferContentLength() {
+        testStatusResetContentTransferContentLength0(HttpHeaderNames.CONTENT_LENGTH, Unpooled.buffer().writeLong(8));
+    }
+
+    @Test
+    public void testStatusResetContentTransferEncoding() {
+        testStatusResetContentTransferContentLength0(HttpHeaderNames.TRANSFER_ENCODING, Unpooled.buffer().writeLong(8));
+    }
+
+    private static void testStatusResetContentTransferContentLength0(CharSequence headerName, ByteBuf content) {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.RESET_CONTENT);
+        if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(headerName)) {
+            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+        } else {
+            response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+        }
+
+        assertTrue(channel.writeOutbound(response));
+        assertTrue(channel.writeOutbound(new DefaultHttpContent(content)));
+        assertTrue(channel.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+
+        StringBuilder responseText = new StringBuilder();
+        responseText.append(HttpVersion.HTTP_1_1.toString()).append(' ')
+                .append(HttpResponseStatus.RESET_CONTENT.toString()).append("\r\n");
+        responseText.append(HttpHeaderNames.CONTENT_LENGTH).append(": 0\r\n");
+        responseText.append("\r\n");
+
+        StringBuilder written = new StringBuilder();
+        for (;;) {
+            ByteBuf buffer = channel.readOutbound();
+            if (buffer == null) {
+                break;
+            }
+            written.append(buffer.toString(CharsetUtil.US_ASCII));
+            buffer.release();
+        }
+
+        assertEquals(responseText.toString(), written.toString());
+        assertFalse(channel.finish());
+    }
 }

@@ -23,11 +23,13 @@ import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -39,8 +41,11 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 @UnstableApi
 public class DefaultDnsCache implements DnsCache {
 
-    private final ConcurrentMap<String, List<DefaultDnsCacheEntry>> resolveCache =
-                                                            PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<String, Entries> resolveCache = PlatformDependent.newConcurrentHashMap();
+
+    // Two years are supported by all our EventLoop implementations and so safe to use as maximum.
+    // See also: https://github.com/netty/netty/commit/b47fb817991b42ec8808c7d26538f3f2464e1fa6
+    private static final int MAX_SUPPORTED_TTL_SECS = (int) TimeUnit.DAYS.toSeconds(365 * 2);
     private final int minTtl;
     private final int maxTtl;
     private final int negativeTtl;
@@ -50,7 +55,7 @@ public class DefaultDnsCache implements DnsCache {
      * and doesn't cache negative responses.
      */
     public DefaultDnsCache() {
-        this(0, Integer.MAX_VALUE, 0);
+        this(0, MAX_SUPPORTED_TTL_SECS, 0);
     }
 
     /**
@@ -60,8 +65,8 @@ public class DefaultDnsCache implements DnsCache {
      * @param negativeTtl the TTL for failed queries
      */
     public DefaultDnsCache(int minTtl, int maxTtl, int negativeTtl) {
-        this.minTtl = checkPositiveOrZero(minTtl, "minTtl");
-        this.maxTtl = checkPositiveOrZero(maxTtl, "maxTtl");
+        this.minTtl = Math.min(MAX_SUPPORTED_TTL_SECS, checkPositiveOrZero(minTtl, "minTtl"));
+        this.maxTtl = Math.min(MAX_SUPPORTED_TTL_SECS, checkPositiveOrZero(maxTtl, "maxTtl"));
         if (minTtl > maxTtl) {
             throw new IllegalArgumentException(
                     "minTtl: " + minTtl + ", maxTtl: " + maxTtl + " (expected: 0 <= minTtl <= maxTtl)");
@@ -97,28 +102,21 @@ public class DefaultDnsCache implements DnsCache {
 
     @Override
     public void clear() {
-        for (Iterator<Map.Entry<String, List<DefaultDnsCacheEntry>>> i = resolveCache.entrySet().iterator();
-             i.hasNext();) {
-            final Map.Entry<String, List<DefaultDnsCacheEntry>> e = i.next();
-            i.remove();
-            cancelExpiration(e.getValue());
+        while (!resolveCache.isEmpty()) {
+            for (Iterator<Map.Entry<String, Entries>> i = resolveCache.entrySet().iterator(); i.hasNext();) {
+                Map.Entry<String, Entries> e = i.next();
+                i.remove();
+
+                e.getValue().clearAndCancel();
+            }
         }
     }
 
     @Override
     public boolean clear(String hostname) {
         checkNotNull(hostname, "hostname");
-        boolean removed = false;
-        for (Iterator<Map.Entry<String, List<DefaultDnsCacheEntry>>> i = resolveCache.entrySet().iterator();
-             i.hasNext();) {
-            final Map.Entry<String, List<DefaultDnsCacheEntry>> e = i.next();
-            if (e.getKey().equals(hostname)) {
-                i.remove();
-                cancelExpiration(e.getValue());
-                removed = true;
-            }
-        }
-        return removed;
+        Entries entries = resolveCache.remove(hostname);
+        return entries != null && entries.clearAndCancel();
     }
 
     private static boolean emptyAdditionals(DnsRecord[] additionals) {
@@ -129,22 +127,11 @@ public class DefaultDnsCache implements DnsCache {
     public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
         checkNotNull(hostname, "hostname");
         if (!emptyAdditionals(additionals)) {
-            return null;
+            return Collections.<DnsCacheEntry>emptyList();
         }
-        return resolveCache.get(hostname);
-    }
 
-    private List<DefaultDnsCacheEntry> cachedEntries(String hostname) {
-        List<DefaultDnsCacheEntry> oldEntries = resolveCache.get(hostname);
-        final List<DefaultDnsCacheEntry> entries;
-        if (oldEntries == null) {
-            List<DefaultDnsCacheEntry> newEntries = new ArrayList<DefaultDnsCacheEntry>(8);
-            oldEntries = resolveCache.putIfAbsent(hostname, newEntries);
-            entries = oldEntries != null? oldEntries : newEntries;
-        } else {
-            entries = oldEntries;
-        }
-        return entries;
+        Entries entries = resolveCache.get(hostname);
+        return entries == null ? null : entries.get();
     }
 
     @Override
@@ -157,22 +144,7 @@ public class DefaultDnsCache implements DnsCache {
         if (maxTtl == 0 || !emptyAdditionals(additionals)) {
             return e;
         }
-        final int ttl = Math.max(minTtl, (int) Math.min(maxTtl, originalTtl));
-        final List<DefaultDnsCacheEntry> entries = cachedEntries(hostname);
-
-        synchronized (entries) {
-            if (!entries.isEmpty()) {
-                final DefaultDnsCacheEntry firstEntry = entries.get(0);
-                if (firstEntry.cause() != null) {
-                    assert entries.size() == 1;
-                    firstEntry.cancelExpiration();
-                    entries.clear();
-                }
-            }
-            entries.add(e);
-        }
-
-        scheduleCacheExpiration(entries, e, ttl, loop);
+        cache0(e, Math.max(minTtl, Math.min(MAX_SUPPORTED_TTL_SECS, (int) Math.min(maxTtl, originalTtl))), loop);
         return e;
     }
 
@@ -186,40 +158,43 @@ public class DefaultDnsCache implements DnsCache {
         if (negativeTtl == 0 || !emptyAdditionals(additionals)) {
             return e;
         }
-        final List<DefaultDnsCacheEntry> entries = cachedEntries(hostname);
 
-        synchronized (entries) {
-            final int numEntries = entries.size();
-            for (int i = 0; i < numEntries; i ++) {
-                entries.get(i).cancelExpiration();
-            }
-            entries.clear();
-            entries.add(e);
-        }
-
-        scheduleCacheExpiration(entries, e, negativeTtl, loop);
+        cache0(e, Math.min(MAX_SUPPORTED_TTL_SECS, negativeTtl), loop);
         return e;
     }
 
-    private static void cancelExpiration(List<DefaultDnsCacheEntry> entries) {
-        final int numEntries = entries.size();
-        for (int i = 0; i < numEntries; i++) {
-            entries.get(i).cancelExpiration();
+    private void cache0(DefaultDnsCacheEntry e, int ttl, EventLoop loop) {
+        Entries entries = resolveCache.get(e.hostname());
+        if (entries == null) {
+            entries = new Entries(e);
+            Entries oldEntries = resolveCache.putIfAbsent(e.hostname(), entries);
+            if (oldEntries != null) {
+                entries = oldEntries;
+            }
         }
+        entries.add(e);
+
+        scheduleCacheExpiration(e, ttl, loop);
     }
 
-    private void scheduleCacheExpiration(final List<DefaultDnsCacheEntry> entries,
-                                         final DefaultDnsCacheEntry e,
+    private void scheduleCacheExpiration(final DefaultDnsCacheEntry e,
                                          int ttl,
                                          EventLoop loop) {
         e.scheduleExpiration(loop, new Runnable() {
                     @Override
                     public void run() {
-                        synchronized (entries) {
-                            entries.remove(e);
-                            if (entries.isEmpty()) {
-                                resolveCache.remove(e.hostname());
-                            }
+                        // We always remove all entries for a hostname once one entry expire. This is not the
+                        // most efficient to do but this way we can guarantee that if a DnsResolver
+                        // be configured to prefer one ip family over the other we will not return unexpected
+                        // results to the enduser if one of the A or AAAA records has different TTL settings.
+                        //
+                        // As a TTL is just a hint of the maximum time a cache is allowed to cache stuff it's
+                        // completely fine to remove the entry even if the TTL is not reached yet.
+                        //
+                        // See https://github.com/netty/netty/issues/7329
+                        Entries entries = resolveCache.remove(e.hostname);
+                        if (entries != null) {
+                            entries.clearAndCancel();
                         }
                     }
                 }, ttl, TimeUnit.SECONDS);
@@ -286,6 +261,80 @@ public class DefaultDnsCache implements DnsCache {
                 return hostname + '/' + cause;
             } else {
                 return address.toString();
+            }
+        }
+    }
+
+    // Directly extend AtomicReference for intrinsics and also to keep memory overhead low.
+    private static final class Entries extends AtomicReference<List<DefaultDnsCacheEntry>> {
+
+        Entries(DefaultDnsCacheEntry entry) {
+            super(Collections.singletonList(entry));
+        }
+
+        void add(DefaultDnsCacheEntry e) {
+            if (e.cause() == null) {
+                for (;;) {
+                    List<DefaultDnsCacheEntry> entries = get();
+                    if (!entries.isEmpty()) {
+                        final DefaultDnsCacheEntry firstEntry = entries.get(0);
+                        if (firstEntry.cause() != null) {
+                            assert entries.size() == 1;
+                            if (compareAndSet(entries, Collections.singletonList(e))) {
+                                firstEntry.cancelExpiration();
+                                return;
+                            } else {
+                                // Need to try again as CAS failed
+                                continue;
+                            }
+                        }
+
+                        // Create a new List for COW semantics
+                        List<DefaultDnsCacheEntry> newEntries = new ArrayList<DefaultDnsCacheEntry>(entries.size() + 1);
+                        DefaultDnsCacheEntry replacedEntry = null;
+                        for (int i = 0; i < entries.size(); i++) {
+                            DefaultDnsCacheEntry entry = entries.get(i);
+                            // Only add old entry if the address is not the same as the one we try to add as well.
+                            // In this case we will skip it and just add the new entry as this may have
+                            // more up-to-date data and cancel the old after we were able to update the cache.
+                            if (!e.address().equals(entry.address())) {
+                                newEntries.add(entry);
+                            } else {
+                                assert replacedEntry == null;
+                                replacedEntry = entry;
+                            }
+                        }
+                        newEntries.add(e);
+                        if (compareAndSet(entries, newEntries)) {
+                            if (replacedEntry != null) {
+                                replacedEntry.cancelExpiration();
+                            }
+                            return;
+                        }
+                    } else if (compareAndSet(entries, Collections.singletonList(e))) {
+                        return;
+                    }
+                }
+            } else {
+                List<DefaultDnsCacheEntry> entries = getAndSet(Collections.singletonList(e));
+                cancelExpiration(entries);
+            }
+        }
+
+        boolean clearAndCancel() {
+            List<DefaultDnsCacheEntry> entries = getAndSet(Collections.<DefaultDnsCacheEntry>emptyList());
+            if (entries.isEmpty()) {
+                return false;
+            }
+
+            cancelExpiration(entries);
+            return true;
+        }
+
+        private static void cancelExpiration(List<DefaultDnsCacheEntry> entryList) {
+            final int numEntries = entryList.size();
+            for (int i = 0; i < numEntries; i++) {
+                entryList.get(i).cancelExpiration();
             }
         }
     }

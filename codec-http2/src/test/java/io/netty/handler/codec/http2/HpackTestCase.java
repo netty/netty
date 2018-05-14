@@ -214,7 +214,7 @@ final class HpackTestCase {
         try {
             List<HpackHeaderField> headers = new ArrayList<HpackHeaderField>();
             TestHeaderListener listener = new TestHeaderListener(headers);
-            hpackDecoder.decode(0, in, listener);
+            hpackDecoder.decode(0, in, listener, true);
             return headers;
         } finally {
             in.release();

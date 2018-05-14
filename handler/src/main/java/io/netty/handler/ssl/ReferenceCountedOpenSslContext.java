@@ -75,21 +75,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 public abstract class ReferenceCountedOpenSslContext extends SslContext implements ReferenceCounted {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslContext.class);
-    /**
-     * To make it easier for users to replace JDK implementation with OpenSsl version we also use
-     * {@code jdk.tls.rejectClientInitiatedRenegotiation} to allow disabling client initiated renegotiation.
-     * Java8+ uses this system property as well.
-     * <p>
-     * See also <a href="http://blog.ivanristic.com/2014/03/ssl-tls-improvements-in-java-8.html">
-     * Significant SSL/TLS improvements in Java 8</a>
-     */
-    private static final boolean JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION =
-            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override
-                public Boolean run() {
-                    return SystemPropertyUtil.getBoolean("jdk.tls.rejectClientInitiatedRenegotiation", false);
-                }
-            });
 
     private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE =
             AccessController.doPrivileged(new PrivilegedAction<Integer>() {
@@ -149,7 +134,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
     final ReadWriteLock ctxLock = new ReentrantReadWriteLock();
 
-    private volatile boolean rejectRemoteInitiatedRenegotiation;
     private volatile int bioNonApplicationBufferSize = DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE;
 
     @SuppressWarnings("deprecation")
@@ -230,10 +214,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         this.protocols = protocols;
         this.enableOcsp = enableOcsp;
 
-        if (mode == SSL.SSL_MODE_SERVER) {
-            rejectRemoteInitiatedRenegotiation =
-                    JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION;
-        }
         this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
 
         unmodifiableCiphers = Arrays.asList(checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
@@ -305,26 +285,20 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             }
 
             /* Set session cache size, if specified */
-            if (sessionCacheSize > 0) {
-                this.sessionCacheSize = sessionCacheSize;
-                SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
-            } else {
+            if (sessionCacheSize <= 0) {
                 // Get the default session cache size using SSLContext.setSessionCacheSize()
-                this.sessionCacheSize = sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
-                // Revert the session cache size to the default value.
-                SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
+                sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
             }
+            this.sessionCacheSize = sessionCacheSize;
+            SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
 
             /* Set session timeout, if specified */
-            if (sessionTimeout > 0) {
-                this.sessionTimeout = sessionTimeout;
-                SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
-            } else {
+            if (sessionTimeout <= 0) {
                 // Get the default session timeout using SSLContext.setSessionCacheTimeout()
-                this.sessionTimeout = sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
-                // Revert the session timeout to the default value.
-                SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
+                sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
             }
+            this.sessionTimeout = sessionTimeout;
+            SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
 
             if (enableOcsp) {
                 SSLContext.enableOcsp(ctx, isClient());
@@ -380,12 +354,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     @Override
     protected final SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
-        return new SslHandler(newEngine0(alloc, null, -1, false), startTls, false);
+        return new SslHandler(newEngine0(alloc, null, -1, false), startTls);
     }
 
     @Override
     protected final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
-        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls, false);
+        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls);
     }
 
     SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
@@ -431,18 +405,24 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     /**
+     * {@deprecated Renegotiation is not supported}
      * Specify if remote initiated renegotiation is supported or not. If not supported and the remote side tries
      * to initiate a renegotiation a {@link SSLHandshakeException} will be thrown during decoding.
      */
+    @Deprecated
     public void setRejectRemoteInitiatedRenegotiation(boolean rejectRemoteInitiatedRenegotiation) {
-        this.rejectRemoteInitiatedRenegotiation = rejectRemoteInitiatedRenegotiation;
+        if (!rejectRemoteInitiatedRenegotiation) {
+            throw new UnsupportedOperationException("Renegotiation is not supported");
+        }
     }
 
     /**
-     * Returns if remote initiated renegotiation is supported or not.
+     * {@deprecated Renegotiation is not supported}
+     * @return {@code true} because renegotiation is not supported.
      */
+    @Deprecated
     public boolean getRejectRemoteInitiatedRenegotiation() {
-        return rejectRemoteInitiatedRenegotiation;
+        return true;
     }
 
     /**

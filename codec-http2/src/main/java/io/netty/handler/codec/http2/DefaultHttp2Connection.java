@@ -478,11 +478,19 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (!createdBy().canOpenStream()) {
                 throw connectionError(PROTOCOL_ERROR, "Maximum active streams violated for this endpoint.");
             }
+
             activate();
             return this;
         }
 
         void activate() {
+            // If the stream is opened in a half-closed state, the headers must have either
+            // been sent if this is a local stream, or received if it is a remote stream.
+            if (state == HALF_CLOSED_LOCAL) {
+                headersSent(/*isInformational*/ false);
+            } else if (state == HALF_CLOSED_REMOTE) {
+                headersReceived(/*isInformational*/ false);
+            }
             activeStreams.activate(this);
         }
 

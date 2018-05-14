@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2017 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.netty</groupId>
+    <artifactId>netty-parent</artifactId>
+    <version>4.1.25.Final-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>netty-testsuite-http2</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Netty/Testsuite/Http2</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-http</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-http2</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+  </dependencies>
+
+  <profiles>
+    <profile>
+      <id>skipTests</id>
+      <activation>
+        <property>
+          <name>skipTests</name>
+        </property>
+      </activation>
+      <properties>
+        <skipHttp2Testsuite>true</skipHttp2Testsuite>
+      </properties>
+    </profile>
+  </profiles>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.github.madgnome</groupId>
+        <artifactId>h2spec-maven-plugin</artifactId>
+        <version>0.3</version>
+        <configuration>
+          <mainClass>io.netty.testsuite.http2.Http2Server</mainClass>
+          <excludeSpecs>
+            <excludeSpec>3.8 - Sends a GOAWAY frame</excludeSpec>
+            <excludeSpec>4.2 - Sends a dynamic table size update at the end of header block</excludeSpec>
+            <excludeSpec>5.1 - idle: Sends a DATA frame</excludeSpec>
+            <excludeSpec>5.1 - closed: Sends a DATA frame</excludeSpec>
+            <excludeSpec>5.1 - closed: Sends a HEADERS frame</excludeSpec>
+            <excludeSpec>5.1.1 - Sends stream identifier that is numerically smaller than previous</excludeSpec>
+            <excludeSpec>7 - Sends a GOAWAY frame with unknown error code</excludeSpec>
+            <excludeSpec>8.1.2.2 - Sends a HEADERS frame that contains the connection-specific header field</excludeSpec>
+            <excludeSpec>8.1.2.2 - Sends a HEADERS frame that contains the TE header field with any value other than "trailers"</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame with empty ":path" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame that omits ":method" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame that omits ":scheme" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame that omits ":path" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame with duplicated ":method" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame with duplicated ":method" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame with duplicated ":scheme" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.6 - Sends a HEADERS frame with the "content-length" header field which does not equal the DATA frame payload length</excludeSpec>
+            <excludeSpec>8.1.2.6 - Sends a HEADERS frame with the "content-length" header field which does not equal the sum of the multiple DATA frames payload length</excludeSpec>
+          </excludeSpecs>
+          <skip>${skipHttp2Testsuite}</skip>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>test</phase>
+            <goals>
+              <goal>h2spec</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

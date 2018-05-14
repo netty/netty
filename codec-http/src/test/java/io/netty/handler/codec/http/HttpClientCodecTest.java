@@ -42,14 +42,9 @@ import java.util.concurrent.CountDownLatch;
 
 import static io.netty.util.ReferenceCountUtil.release;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class HttpClientCodecTest {
 
@@ -281,5 +276,59 @@ public class HttpClientCodecTest {
         int getReceivedCount() {
             return receivedCount;
         }
+    }
+
+    @Test
+    public void testDecodesFinalResponseAfterSwitchingProtocols() {
+        String SWITCHING_PROTOCOLS_RESPONSE = "HTTP/1.1 101 Switching Protocols\r\n" +
+                "Connection: Upgrade\r\n" +
+                "Upgrade: TLS/1.2, HTTP/1.1\r\n\r\n";
+
+        HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
+        EmbeddedChannel ch = new EmbeddedChannel(codec, new HttpObjectAggregator(1024));
+
+        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/");
+        request.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
+        request.headers().set(HttpHeaderNames.UPGRADE, "TLS/1.2");
+        assertTrue("Channel outbound write failed.", ch.writeOutbound(request));
+
+        assertTrue("Channel inbound write failed.",
+                ch.writeInbound(Unpooled.copiedBuffer(SWITCHING_PROTOCOLS_RESPONSE, CharsetUtil.ISO_8859_1)));
+        Object switchingProtocolsResponse = ch.readInbound();
+        assertNotNull("No response received", switchingProtocolsResponse);
+        assertThat("Response was not decoded", switchingProtocolsResponse, instanceOf(FullHttpResponse.class));
+        ((FullHttpResponse) switchingProtocolsResponse).release();
+
+        assertTrue("Channel inbound write failed",
+                ch.writeInbound(Unpooled.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1)));
+        Object finalResponse = ch.readInbound();
+        assertNotNull("No response received", finalResponse);
+        assertThat("Response was not decoded", finalResponse, instanceOf(FullHttpResponse.class));
+        ((FullHttpResponse) finalResponse).release();
+        assertTrue("Channel finish failed", ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testWebSocket00Response() {
+        byte[] data = ("HTTP/1.1 101 WebSocket Protocol Handshake\r\n" +
+                "Upgrade: WebSocket\r\n" +
+                "Connection: Upgrade\r\n" +
+                "Sec-WebSocket-Origin: http://localhost:8080\r\n" +
+                "Sec-WebSocket-Location: ws://localhost/some/path\r\n" +
+                "\r\n" +
+                "1234567812345678").getBytes();
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec());
+        assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
+
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
+        HttpContent content = ch.readInbound();
+        assertThat(content.content().readableBytes(), is(16));
+        content.release();
+
+        assertThat(ch.finish(), is(false));
+
+        assertThat(ch.readInbound(), is(nullValue()));
     }
 }

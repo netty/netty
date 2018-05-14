@@ -18,7 +18,9 @@ package io.netty.util;
 import org.junit.Test;
 
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
@@ -32,6 +34,43 @@ public class RecyclerTest {
                 return new HandledObject(handle);
             }
         };
+    }
+
+    @Test(timeout = 5000L)
+    public void testThreadCanBeCollectedEvenIfHandledObjectIsReferenced() throws Exception {
+        final Recycler<HandledObject> recycler = newRecycler(1024);
+        final AtomicBoolean collected = new AtomicBoolean();
+        final AtomicReference<HandledObject> reference = new AtomicReference<HandledObject>();
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                HandledObject object = recycler.get();
+                // Store a reference to the HandledObject to ensure it is not collected when the run method finish.
+                reference.set(object);
+            }
+        }) {
+            @Override
+            protected void finalize() throws Throwable {
+                super.finalize();
+                collected.set(true);
+            }
+        };
+        assertFalse(collected.get());
+        thread.start();
+        thread.join();
+
+        // Null out so it can be collected.
+        thread = null;
+
+        // Loop until the Thread was collected. If we can not collect it the Test will fail due of a timeout.
+        while (!collected.get()) {
+            System.gc();
+            System.runFinalization();
+            Thread.sleep(50);
+        }
+
+        // Now call recycle after the Thread was collected to ensure this still works...
+        reference.getAndSet(null).recycle();
     }
 
     @Test(expected = IllegalStateException.class)

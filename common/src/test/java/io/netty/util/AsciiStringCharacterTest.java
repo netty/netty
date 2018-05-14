@@ -15,7 +15,6 @@
  */
 package io.netty.util;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.CharBuffer;
@@ -28,6 +27,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -86,7 +86,7 @@ public class AsciiStringCharacterTest {
     public void testComparisonWithString() {
         String string = "shouldn't fail";
         AsciiString ascii = new AsciiString(string.toCharArray());
-        Assert.assertEquals(string, ascii.toString());
+        assertEquals(string, ascii.toString());
     }
 
     @Test
@@ -301,6 +301,41 @@ public class AsciiStringCharacterTest {
         assertEquals(1, AsciiString.of("aabaabaa").indexOf('a', 1));
         assertEquals(3, AsciiString.of("aabaabaa").indexOf('a', 2));
         assertEquals(3, AsciiString.of("aabdabaa").indexOf('d', 1));
+        assertEquals(1, new AsciiString("abcd", 1, 2).indexOf('c', 0));
+        assertEquals(2, new AsciiString("abcd", 1, 3).indexOf('d', 2));
+        assertEquals(0, new AsciiString("abcd", 1, 2).indexOf('b', 0));
+        assertEquals(-1, new AsciiString("abcd", 0, 2).indexOf('c', 0));
+        assertEquals(-1, new AsciiString("abcd", 1, 3).indexOf('a', 0));
+    }
+
+    @Test
+    public void testIndexOfCharSequence() {
+        assertEquals(0, new AsciiString("abcd").indexOf("abcd", 0));
+        assertEquals(0, new AsciiString("abcd").indexOf("abc", 0));
+        assertEquals(1, new AsciiString("abcd").indexOf("bcd", 0));
+        assertEquals(1, new AsciiString("abcd").indexOf("bc", 0));
+        assertEquals(1, new AsciiString("abcdabcd").indexOf("bcd", 0));
+        assertEquals(0, new AsciiString("abcd", 1, 2).indexOf("bc", 0));
+        assertEquals(0, new AsciiString("abcd", 1, 3).indexOf("bcd", 0));
+        assertEquals(1, new AsciiString("abcdabcd", 4, 4).indexOf("bcd", 0));
+        assertEquals(3, new AsciiString("012345").indexOf("345", 3));
+        assertEquals(3, new AsciiString("012345").indexOf("345", 0));
+
+        // Test with empty string
+        assertEquals(0, new AsciiString("abcd").indexOf("", 0));
+        assertEquals(1, new AsciiString("abcd").indexOf("", 1));
+        assertEquals(3, new AsciiString("abcd", 1, 3).indexOf("", 4));
+
+        // Test not found
+        assertEquals(-1, new AsciiString("abcd").indexOf("abcde", 0));
+        assertEquals(-1, new AsciiString("abcdbc").indexOf("bce", 0));
+        assertEquals(-1, new AsciiString("abcd", 1, 3).indexOf("abc", 0));
+        assertEquals(-1, new AsciiString("abcd", 1, 2).indexOf("bd", 0));
+        assertEquals(-1, new AsciiString("012345").indexOf("345", 4));
+        assertEquals(-1, new AsciiString("012345").indexOf("abc", 3));
+        assertEquals(-1, new AsciiString("012345").indexOf("abc", 0));
+        assertEquals(-1, new AsciiString("012345").indexOf("abcdefghi", 0));
+        assertEquals(-1, new AsciiString("012345").indexOf("abcdefghi", 4));
     }
 
     @Test
@@ -313,6 +348,49 @@ public class AsciiStringCharacterTest {
         assertEquals(1, AsciiString.indexOf("aabaabaa", 'a', 1));
         assertEquals(3, AsciiString.indexOf("aabaabaa", 'a', 2));
         assertEquals(3, AsciiString.indexOf("aabdabaa", 'd', 1));
+    }
+
+    @Test
+    public void testLastIndexOfCharSequence() {
+        assertEquals(0, new AsciiString("abcd").lastIndexOf("abcd", 0));
+        assertEquals(0, new AsciiString("abcd").lastIndexOf("abc", 0));
+        assertEquals(1, new AsciiString("abcd").lastIndexOf("bcd", 0));
+        assertEquals(1, new AsciiString("abcd").lastIndexOf("bc", 0));
+        assertEquals(5, new AsciiString("abcdabcd").lastIndexOf("bcd", 0));
+        assertEquals(0, new AsciiString("abcd", 1, 2).lastIndexOf("bc", 0));
+        assertEquals(0, new AsciiString("abcd", 1, 3).lastIndexOf("bcd", 0));
+        assertEquals(1, new AsciiString("abcdabcd", 4, 4).lastIndexOf("bcd", 0));
+        assertEquals(3, new AsciiString("012345").lastIndexOf("345", 3));
+        assertEquals(3, new AsciiString("012345").lastIndexOf("345", 0));
+
+        // Test with empty string
+        assertEquals(0, new AsciiString("abcd").lastIndexOf("", 0));
+        assertEquals(1, new AsciiString("abcd").lastIndexOf("", 1));
+        assertEquals(3, new AsciiString("abcd", 1, 3).lastIndexOf("", 4));
+
+        // Test not found
+        assertEquals(-1, new AsciiString("abcd").lastIndexOf("abcde", 0));
+        assertEquals(-1, new AsciiString("abcdbc").lastIndexOf("bce", 0));
+        assertEquals(-1, new AsciiString("abcd", 1, 3).lastIndexOf("abc", 0));
+        assertEquals(-1, new AsciiString("abcd", 1, 2).lastIndexOf("bd", 0));
+        assertEquals(-1, new AsciiString("012345").lastIndexOf("345", 4));
+        assertEquals(-1, new AsciiString("012345").lastIndexOf("abc", 3));
+        assertEquals(-1, new AsciiString("012345").lastIndexOf("abc", 0));
+        assertEquals(-1, new AsciiString("012345").lastIndexOf("abcdefghi", 0));
+        assertEquals(-1, new AsciiString("012345").lastIndexOf("abcdefghi", 4));
+    }
+
+    @Test
+    public void testReplace() {
+        AsciiString abcd = new AsciiString("abcd");
+        assertEquals(new AsciiString("adcd"), abcd.replace('b', 'd'));
+        assertEquals(new AsciiString("dbcd"), abcd.replace('a', 'd'));
+        assertEquals(new AsciiString("abca"), abcd.replace('d', 'a'));
+        assertSame(abcd, abcd.replace('x', 'a'));
+        assertEquals(new AsciiString("cc"), new AsciiString("abcd", 1, 2).replace('b', 'c'));
+        assertEquals(new AsciiString("bb"), new AsciiString("abcd", 1, 2).replace('c', 'b'));
+        assertEquals(new AsciiString("bddd"), new AsciiString("abcdc", 1, 4).replace('c', 'd'));
+        assertEquals(new AsciiString("xbcxd"), new AsciiString("abcada", 0, 5).replace('a', 'x'));
     }
 
     @Test
