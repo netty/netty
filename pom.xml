@@ -637,10 +637,10 @@
                 </requireMavenVersion>
                 <requireProperty>
                   <regexMessage>
-                    x86_64 JDK must be used.
+                    x86_64/AARCH64 JDK must be used.
                   </regexMessage>
                   <property>os.detected.arch</property>
-                  <regex>^x86_64$</regex>
+                  <regex>^(x86_64)|(aarch_64)$</regex>
                 </requireProperty>
               </rules>
             </configuration>
