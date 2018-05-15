@@ -21,7 +21,9 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBeh
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.internal.tcnative.SSL;
 import io.netty.util.internal.PlatformDependent;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -80,6 +82,12 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @BeforeClass
     public static void checkOpenSsl() {
         assumeTrue(OpenSsl.isAvailable());
+    }
+
+    @Override
+    public void tearDown() throws InterruptedException {
+        super.tearDown();
+        Assert.assertEquals("SSL error stack not correctly consumed", 0, SSL.getLastErrorNumber());
     }
 
     @Override
