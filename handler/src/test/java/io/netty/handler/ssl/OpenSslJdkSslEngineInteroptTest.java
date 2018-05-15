@@ -19,6 +19,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -110,5 +111,10 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
         // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
         return super.mySetupMutualAuthServerIsValidServerException(cause) || causedBySSLException(cause);
+    }
+
+    @Override
+    protected SSLEngine wrapEngine(SSLEngine engine) {
+        return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
     }
 }
