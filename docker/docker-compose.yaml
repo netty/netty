@@ -1,0 +1,23 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty:default
+    build:
+      context: .
+      dockerfile: Dockerfile.centos
+
+  common: &common
+    image: netty:default
+    depends_on: [runtime-setup]
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.m2:/root/.m2
+      - ~/.gnupg:/root/.gnupg
+      - ..:/code
+    working_dir: /code
+
+  test:
+    <<: *common
+    command: /bin/bash -cl "./mvnw clean package -Dio.netty.testsuite.badHost=netty.io -DskipOsgiTestsuite=true"
