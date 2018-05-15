@@ -148,7 +148,7 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
             expandArray();
         }
 
-        if (index != size - 1) {
+        if (index != size) {
             System.arraycopy(array, index, array, index + 1, size - index);
         }
 
