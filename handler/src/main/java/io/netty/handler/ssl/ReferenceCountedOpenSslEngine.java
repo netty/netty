@@ -1093,8 +1093,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     private SSLEngineResult sslReadErrorResult(int err, int bytesConsumed, int bytesProduced) throws SSLException {
-        String errStr = SSL.getErrorString(err);
-
         // Check if we have a pending handshakeException and if so see if we need to consume all pending data from the
         // BIO first or can just shutdown and throw it now.
         // This is needed so we ensure close_notify etc is correctly send to the remote peer.
@@ -1103,11 +1101,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (handshakeException == null && handshakeState != HandshakeState.FINISHED) {
                 // we seems to have data left that needs to be transfered and so the user needs
                 // call wrap(...). Store the error so we can pick it up later.
-                handshakeException = new SSLHandshakeException(errStr);
+                handshakeException = new SSLHandshakeException(SSL.getErrorString(err));
             }
+            // We need to clear all errors so we not pick up anything that was left on the stack on the next
+            // operation. Note that shutdownWithError(...) will cleanup the stack as well so its only needed here.
+            SSL.clearError();
             return new SSLEngineResult(OK, NEED_WRAP, bytesConsumed, bytesProduced);
         }
-        throw shutdownWithError("SSL_read", errStr);
+        throw shutdownWithError("SSL_read", SSL.getErrorString(err));
     }
 
     private void closeAll() throws SSLException {
