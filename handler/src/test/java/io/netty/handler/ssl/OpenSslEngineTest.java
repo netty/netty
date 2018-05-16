@@ -87,7 +87,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @Override
     public void tearDown() throws InterruptedException {
         super.tearDown();
-        Assert.assertEquals("SSL error stack not correctly consumed", 0, SSL.getLastErrorNumber());
+        assertEquals("SSL error stack not correctly consumed", 0, SSL.getLastErrorNumber());
     }
 
     @Override
@@ -215,8 +215,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             handshake(clientEngine, serverEngine);
 
             ByteBuffer src = allocateBuffer(1024 * 10);
@@ -249,8 +249,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             handshake(clientEngine, serverEngine);
 
             // Allocate a buffer which is small enough and set the limit to the capacity to mark its whole content
@@ -259,9 +259,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
             ByteBuffer src = allocateBuffer(srcLen);
 
             ByteBuffer dstTooSmall = allocateBuffer(
-                    src.capacity() + ((ReferenceCountedOpenSslEngine) clientEngine).maxWrapOverhead() - 1);
+                    src.capacity() + unwrapEngine(clientEngine).maxWrapOverhead() - 1);
             ByteBuffer dst = allocateBuffer(
-                    src.capacity() + ((ReferenceCountedOpenSslEngine) clientEngine).maxWrapOverhead());
+                    src.capacity() + unwrapEngine(clientEngine).maxWrapOverhead());
 
             // Check that we fail to wrap if the dst buffers capacity is not at least
             // src.capacity() + ReferenceCountedOpenSslEngine.MAX_TLS_RECORD_OVERHEAD_LENGTH
@@ -300,15 +300,15 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             handshake(clientEngine, serverEngine);
 
             ByteBuffer src = allocateBuffer(1024);
             ByteBuffer src2 = src.duplicate();
 
             ByteBuffer dst = allocateBuffer(src.capacity()
-                    + ((ReferenceCountedOpenSslEngine) clientEngine).maxWrapOverhead());
+                    + unwrapEngine(clientEngine).maxWrapOverhead());
 
             SSLEngineResult result = clientEngine.wrap(new ByteBuffer[] { src, src2 }, dst);
             assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
@@ -336,8 +336,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             handshake(clientEngine, serverEngine);
 
             ByteBuffer src = allocateBuffer(1024);
@@ -353,7 +353,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
             ByteBuffer[] srcs = srcList.toArray(new ByteBuffer[srcList.size()]);
             ByteBuffer dst = allocateBuffer(
-                    ((ReferenceCountedOpenSslEngine) clientEngine).maxEncryptedPacketLength() - 1);
+                    unwrapEngine(clientEngine).maxEncryptedPacketLength() - 1);
 
             SSLEngineResult result = clientEngine.wrap(srcs, dst);
             assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
@@ -596,13 +596,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
                 .build();
-        SSLEngine client = clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine();
+        SSLEngine client = wrapEngine(clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
                 .build();
-        SSLEngine server = serverSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine();
+        SSLEngine server = wrapEngine(serverSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
         try {
             // Choose buffer size small enough that we can put multiple buffers into one buffer and pass it into the
@@ -673,13 +673,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
                 .build();
-        SSLEngine client = clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine();
+        SSLEngine client = wrapEngine(clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
                 .build();
-        SSLEngine server = serverSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine();
+        SSLEngine server = wrapEngine(serverSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
         try {
             ByteBuffer plainClient = allocateBuffer(MAX_PLAINTEXT_LENGTH + 100);
@@ -757,13 +757,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
                 .build();
-        SSLEngine client = clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine();
+        SSLEngine client = wrapEngine(clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
                 .build();
-        SSLEngine server = serverSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine();
+        SSLEngine server = wrapEngine(serverSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
         try {
             ByteBuffer plainClient = allocateBuffer(1024);
@@ -832,13 +832,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
                 .build();
-        SSLEngine client = clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine();
+        SSLEngine client = wrapEngine(clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
                 .build();
-        SSLEngine server = serverSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine();
+        SSLEngine server = wrapEngine(serverSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
         try {
             ByteBuffer plainClient = allocateBuffer(1024);
@@ -913,8 +913,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             clientEngine.setEnabledCipherSuites(new String[] { cipher });
             clientEngine.setEnabledProtocols(new String[] { protocol });
             serverEngine.setEnabledCipherSuites(new String[] { cipher });
@@ -944,7 +944,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     private void testWrapDstBigEnough(SSLEngine engine, int srcLen) throws SSLException {
         ByteBuffer src = allocateBuffer(srcLen);
-        ByteBuffer dst = allocateBuffer(srcLen + ((ReferenceCountedOpenSslEngine) engine).maxWrapOverhead());
+        ByteBuffer dst = allocateBuffer(srcLen + unwrapEngine(engine).maxWrapOverhead());
 
         SSLEngineResult result = engine.wrap(src, dst);
         assertEquals(SSLEngineResult.Status.OK, result.getStatus());
@@ -966,7 +966,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .sslProvider(sslServerProvider())
                 .build();
 
-        SSLEngine engine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
         try {
             SSLParameters parameters = new SSLParameters();
             Java8SslTestUtils.setSNIMatcher(parameters);
@@ -984,7 +984,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .sslProvider(sslServerProvider())
                 .build();
 
-        SSLEngine engine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
         try {
             SSLParameters parameters = new SSLParameters();
             parameters.setAlgorithmConstraints(new AlgorithmConstraints() {
@@ -1028,5 +1028,20 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 SelectorFailureBehavior.NO_ADVERTISE,
                 SelectedListenerFailureBehavior.ACCEPT,
                 supportedProtocols);
+    }
+
+    @Override
+    protected SSLEngine wrapEngine(SSLEngine engine) {
+        if (PlatformDependent.javaVersion() >= 8) {
+            return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
+        }
+        return engine;
+    }
+
+    ReferenceCountedOpenSslEngine unwrapEngine(SSLEngine engine) {
+        if (engine instanceof JdkSslEngine) {
+            return (ReferenceCountedOpenSslEngine) ((JdkSslEngine) engine).getWrappedEngine();
+        }
+        return (ReferenceCountedOpenSslEngine) engine;
     }
 }
