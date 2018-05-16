@@ -23,7 +23,6 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -398,6 +397,68 @@ public class OpenSslEngineTest extends SSLEngineTest {
             assertTrue(((ReferenceCountedOpenSslEngine) clientEngine).calculateMaxLengthForWrap(0, 1) > 0);
         } finally {
             cleanupClientSslEngine(clientEngine);
+        }
+    }
+
+    @Test
+    public void testCorrectlyCalculateSpaceForAlert() throws Exception {
+        testCorrectlyCalculateSpaceForAlert(true);
+    }
+
+    @Test
+    public void testCorrectlyCalculateSpaceForAlertJDKCompatabilityModeOff() throws Exception {
+        testCorrectlyCalculateSpaceForAlert(false);
+    }
+
+    private void testCorrectlyCalculateSpaceForAlert(boolean jdkCompatabilityMode) throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .build();
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            if (jdkCompatabilityMode) {
+                clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+                serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            } else {
+                clientEngine = wrapEngine(clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
+                serverEngine = wrapEngine(serverSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
+            }
+            handshake(clientEngine, serverEngine);
+
+            // This should produce an alert
+            clientEngine.closeOutbound();
+
+            ByteBuffer empty = allocateBuffer(0);
+            ByteBuffer dst = allocateBuffer(clientEngine.getSession().getPacketBufferSize());
+            // Limit to something that is guaranteed to be too small to hold a SSL Record.
+            dst.limit(1);
+
+            // As we called closeOutbound() before this should produce a BUFFER_OVERFLOW.
+            SSLEngineResult result = clientEngine.wrap(empty, dst);
+            assertEquals(SSLEngineResult.Status.BUFFER_OVERFLOW, result.getStatus());
+
+            // This must calculate a length that can hold an alert at least (or more).
+            dst.limit(dst.capacity());
+
+            result = clientEngine.wrap(empty, dst);
+            assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
+
+            // flip the buffer so we can verify we produced a full length buffer.
+            dst.flip();
+
+            int length = SslUtils.getEncryptedPacketLength(new ByteBuffer[] { dst }, 0);
+            assertEquals(length, dst.remaining());
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            ssc.delete();
         }
     }
 
