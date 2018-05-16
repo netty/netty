@@ -416,7 +416,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
 
     @Override
     public boolean release(int decrement) {
-        return getWrappedEngine().release();
+        return getWrappedEngine().release(decrement);
     }
 
     @Override
