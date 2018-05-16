@@ -217,19 +217,19 @@ public final class OpenSsl {
             Set<String> protocols = new LinkedHashSet<String>(6);
             // Seems like there is no way to explicitly disable SSLv2Hello in openssl so it is always enabled
             protocols.add(PROTOCOL_SSL_V2_HELLO);
-            if (doesSupportProtocol(SSL.SSL_PROTOCOL_SSLV2)) {
+            if (doesSupportProtocol(SSL.SSL_PROTOCOL_SSLV2, SSL.SSL_OP_NO_SSLv2)) {
                 protocols.add(PROTOCOL_SSL_V2);
             }
-            if (doesSupportProtocol(SSL.SSL_PROTOCOL_SSLV3)) {
+            if (doesSupportProtocol(SSL.SSL_PROTOCOL_SSLV3, SSL.SSL_OP_NO_SSLv3)) {
                 protocols.add(PROTOCOL_SSL_V3);
             }
-            if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1)) {
+            if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1, SSL.SSL_OP_NO_TLSv1)) {
                 protocols.add(PROTOCOL_TLS_V1);
             }
-            if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_1)) {
+            if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_1, SSL.SSL_OP_NO_TLSv1_1)) {
                 protocols.add(PROTOCOL_TLS_V1_1);
             }
-            if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_2)) {
+            if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_2, SSL.SSL_OP_NO_TLSv1_2)) {
                 protocols.add(PROTOCOL_TLS_V1_2);
             }
 
@@ -237,7 +237,7 @@ public final class OpenSsl {
             SUPPORTS_OCSP = doesSupportOcsp();
 
             if (logger.isDebugEnabled()) {
-                logger.debug("Supported protocols (OpenSSL): {} ", Arrays.asList(SUPPORTED_PROTOCOLS_SET));
+                logger.debug("Supported protocols (OpenSSL): {} ", SUPPORTED_PROTOCOLS_SET);
                 logger.debug("Default cipher suites (OpenSSL): {}", DEFAULT_CIPHERS);
             }
         } else {
@@ -271,7 +271,11 @@ public final class OpenSsl {
         }
         return supportsOcsp;
     }
-    private static boolean doesSupportProtocol(int protocol) {
+    private static boolean doesSupportProtocol(int protocol, int opt) {
+        if (opt == 0) {
+            // If the opt is 0 the protocol is not supported. This is for example the case with BoringSSL and SSLv2.
+            return false;
+        }
         long sslCtx = -1;
         try {
             sslCtx = SSLContext.make(protocol, SSL.SSL_MODE_COMBINED);
