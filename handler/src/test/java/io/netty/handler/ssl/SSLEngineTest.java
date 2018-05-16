@@ -44,6 +44,7 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -62,7 +63,9 @@ import java.security.Provider;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -76,7 +79,11 @@ import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import javax.security.cert.X509Certificate;
 
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2_HELLO;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V3;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_1;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
 import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
 
@@ -2352,6 +2359,49 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
+            cert.delete();
+        }
+    }
+
+    @Test
+    public void testDisableProtocols() throws Exception {
+        testDisableProtocols(PROTOCOL_SSL_V2, PROTOCOL_SSL_V2);
+        testDisableProtocols(PROTOCOL_SSL_V3, PROTOCOL_SSL_V2, PROTOCOL_SSL_V3);
+        testDisableProtocols(PROTOCOL_TLS_V1, PROTOCOL_SSL_V2, PROTOCOL_SSL_V3, PROTOCOL_TLS_V1);
+        testDisableProtocols(PROTOCOL_TLS_V1_1, PROTOCOL_SSL_V2, PROTOCOL_SSL_V3, PROTOCOL_TLS_V1, PROTOCOL_TLS_V1_1);
+        testDisableProtocols(PROTOCOL_TLS_V1_2, PROTOCOL_SSL_V2,
+                PROTOCOL_SSL_V3, PROTOCOL_TLS_V1, PROTOCOL_TLS_V1_1, PROTOCOL_TLS_V1_2);
+    }
+
+    private void testDisableProtocols(String protocol, String... disabledProtocols) throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        SslContext ctx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+        SSLEngine server = ctx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            Set<String> supported = new HashSet<String>(Arrays.asList(server.getSupportedProtocols()));
+            if (supported.contains(protocol)) {
+                server.setEnabledProtocols(server.getSupportedProtocols());
+                Assert.assertEquals(supported, new HashSet<String>(Arrays.asList(server.getSupportedProtocols())));
+
+                for (String disabled: disabledProtocols) {
+                    supported.remove(disabled);
+                }
+                if (supported.contains(SslUtils.PROTOCOL_SSL_V2_HELLO) && supported.size() == 1) {
+                    // It's not allowed to set only PROTOCOL_SSL_V2_HELLO if using JDK SSLEngine.
+                    return;
+                }
+                server.setEnabledProtocols(supported.toArray(new String[0]));
+                Assert.assertEquals(supported, new HashSet<String>(Arrays.asList(server.getEnabledProtocols())));
+                server.setEnabledProtocols(server.getSupportedProtocols());
+            }
+        } finally {
+            cleanupServerSslEngine(server);
+            cleanupClientSslContext(ctx);
             cert.delete();
         }
     }
