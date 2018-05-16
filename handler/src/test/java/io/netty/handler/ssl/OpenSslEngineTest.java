@@ -558,9 +558,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .build();
 
         testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "ADH-AES128-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "AES128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "ADH-CAMELLIA128-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "DES-CBC3-SHA");
         testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "AECDH-AES128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "AECDH-DES-CBC3-SHA");
         testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "CAMELLIA128-SHA");
@@ -568,7 +566,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
         testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "SEED-SHA");
         testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "RC4-MD5");
         testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "ADH-AES256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "AES256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "ADH-SEED-SHA");
         testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "ADH-DES-CBC3-SHA");
         testWrapWithDifferentSizes(PROTOCOL_SSL_V3, "EDH-RSA-DES-CBC3-SHA");
