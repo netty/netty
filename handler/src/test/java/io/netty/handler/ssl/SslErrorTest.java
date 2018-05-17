@@ -203,14 +203,24 @@ public class SslErrorTest {
                                             if (reason == CertPathValidatorException.BasicReason.EXPIRED) {
                                                 verifyException(unwrappedCause, "expired", promise);
                                             } else if (reason == CertPathValidatorException.BasicReason.NOT_YET_VALID) {
-                                                verifyException(unwrappedCause, "bad", promise);
+                                                // BoringSSL uses "expired" in this case while others use "bad"
+                                                if ("BoringSSL".equals(OpenSsl.versionString())) {
+                                                    verifyException(unwrappedCause, "expired", promise);
+                                                } else {
+                                                    verifyException(unwrappedCause, "bad", promise);
+                                                }
                                             } else if (reason == CertPathValidatorException.BasicReason.REVOKED) {
                                                 verifyException(unwrappedCause, "revoked", promise);
                                             }
                                         } else if (exception instanceof CertificateExpiredException) {
                                             verifyException(unwrappedCause, "expired", promise);
                                         } else if (exception instanceof CertificateNotYetValidException) {
-                                            verifyException(unwrappedCause, "bad", promise);
+                                            // BoringSSL uses "expired" in this case while others use "bad"
+                                            if ("BoringSSL".equals(OpenSsl.versionString())) {
+                                                verifyException(unwrappedCause, "expired", promise);
+                                            } else {
+                                                verifyException(unwrappedCause, "bad", promise);
+                                            }
                                         } else if (exception instanceof CertificateRevokedException) {
                                             verifyException(unwrappedCause, "revoked", promise);
                                         }
@@ -242,7 +252,9 @@ public class SslErrorTest {
         if (message.toLowerCase(Locale.UK).contains(messagePart.toLowerCase(Locale.UK))) {
             promise.setSuccess(null);
         } else {
-            promise.setFailure(new AssertionError("message not contains '" + messagePart + "': " + message));
+            Throwable error = new AssertionError("message not contains '" + messagePart + "': " + message);
+            error.initCause(cause);
+            promise.setFailure(error);
         }
     }
 
