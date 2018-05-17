@@ -427,7 +427,10 @@ final class PlatformDependent0 {
     }
 
     static ByteBuffer allocateDirectNoCleaner(int capacity) {
-        return newDirectBuffer(UNSAFE.allocateMemory(capacity), capacity);
+        // Calling malloc with capacity of 0 may return a null ptr or a memory address that can be used.
+        // Just use 1 to make it safe to use in all cases:
+        // See: http://pubs.opengroup.org/onlinepubs/009695399/functions/malloc.html
+        return newDirectBuffer(UNSAFE.allocateMemory(Math.max(1, capacity)), capacity);
     }
 
     static boolean hasAllocateArrayMethod() {
