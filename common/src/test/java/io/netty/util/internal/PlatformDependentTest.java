@@ -17,14 +17,13 @@ package io.netty.util.internal;
 
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.util.Random;
 
 import static io.netty.util.internal.PlatformDependent.hashCodeAscii;
 import static io.netty.util.internal.PlatformDependent.hashCodeAsciiSafe;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 public class PlatformDependentTest {
     private static final Random r = new Random();
@@ -145,5 +144,14 @@ public class PlatformDependentTest {
                     hashCodeAscii(bytes, 0, bytes.length),
                     hashCodeAscii(string));
         }
+    }
+
+    @Test
+    public void testAllocateWithCapacity0() {
+        assumeTrue(PlatformDependent.hasDirectBufferNoCleanerConstructor());
+        ByteBuffer buffer = PlatformDependent.allocateDirectNoCleaner(0);
+        assertNotEquals(0, PlatformDependent.directBufferAddress(buffer));
+        assertEquals(0, buffer.capacity());
+        PlatformDependent.freeDirectNoCleaner(buffer);
     }
 }
