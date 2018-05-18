@@ -22,8 +22,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -91,13 +89,6 @@ public class SocketRstTest extends AbstractSocketTest {
 
         // Verify the client received a RST.
         Throwable cause = throwableRef.get();
-        if (PlatformDependent.javaVersion() >= 11 && sb.config().group() instanceof NioEventLoopGroup) {
-            // In Java11 calling SocketChannel.close() will also call shutdown(..,SHUT_WR) before actual closing the
-            // fd which means we may not see the ECONNRESET at all :(
-            if (cause == null) {
-                return;
-            }
-        }
         assertTrue("actual [type, message]: [" + cause.getClass() + ", " + cause.getMessage() + "]",
                 cause instanceof IOException);
 
