@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SniHostNameMatcher;
@@ -162,7 +163,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             if (issuers != null && issuers.length > 0) {
                 long bio = 0;
                 try {
-                    bio = toBIO(issuers);
+                    bio = toBIO(ByteBufAllocator.DEFAULT, issuers);
                     if (!SSLContext.setCACertificateBio(ctx, bio)) {
                         throw new SSLException("unable to setup accepted issuers for trustmanager " + manager);
                     }

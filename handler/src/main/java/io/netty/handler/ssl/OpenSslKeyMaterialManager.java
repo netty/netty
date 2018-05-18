@@ -79,7 +79,7 @@ class OpenSslKeyMaterialManager {
             if (type != null) {
                 String alias = chooseServerAlias(engine, type);
                 if (alias != null && aliases.add(alias)) {
-                    setKeyMaterial(ssl, alias);
+                    setKeyMaterial(ssl, alias, engine.alloc);
                 }
             }
         }
@@ -101,10 +101,10 @@ class OpenSslKeyMaterialManager {
             }
 
             PrivateKey key = keyManager.getPrivateKey(alias);
-            keyCertChainBio = toBIO(certificates);
+            keyCertChainBio = toBIO(engine.alloc, certificates);
             certChain = SSL.parseX509Chain(keyCertChainBio);
             if (key != null) {
-                keyBio = toBIO(key);
+                keyBio = toBIO(engine.alloc, key);
                 pkey = SSL.parsePrivateKey(keyBio, password);
             }
             CertificateRequestedCallback.KeyMaterial material = new CertificateRequestedCallback.KeyMaterial(
@@ -127,7 +127,7 @@ class OpenSslKeyMaterialManager {
         }
     }
 
-    private void setKeyMaterial(long ssl, String alias) throws SSLException {
+    private void setKeyMaterial(long ssl, String alias, ByteBufAllocator allocator) throws SSLException {
         long keyBio = 0;
         long keyCertChainBio = 0;
         long keyCertChainBio2 = 0;
@@ -142,13 +142,13 @@ class OpenSslKeyMaterialManager {
             PrivateKey key = keyManager.getPrivateKey(alias);
 
             // Only encode one time
-            PemEncoded encoded = PemX509Certificate.toPEM(ByteBufAllocator.DEFAULT, true, certificates);
+            PemEncoded encoded = PemX509Certificate.toPEM(allocator, true, certificates);
             try {
-                keyCertChainBio = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
-                keyCertChainBio2 = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
+                keyCertChainBio = toBIO(allocator, encoded.retain());
+                keyCertChainBio2 = toBIO(allocator, encoded.retain());
 
                 if (key != null) {
-                    keyBio = toBIO(key);
+                    keyBio = toBIO(allocator, key);
                 }
                 SSL.setCertificateBio(ssl, keyCertChainBio, keyBio, password);
 
