@@ -17,6 +17,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.Library;
@@ -33,7 +34,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -157,7 +157,7 @@ public final class OpenSsl {
                         }
                         try {
                             cert = new SelfSignedCertificate();
-                            certBio = ReferenceCountedOpenSslContext.toBIO(cert.cert());
+                            certBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, cert.cert());
                             SSL.setCertificateChainBio(ssl, certBio, false);
                             supportsKeyManagerFactory = true;
                             try {
