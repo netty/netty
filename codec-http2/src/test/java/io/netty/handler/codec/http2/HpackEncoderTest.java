@@ -74,7 +74,7 @@ public class HpackEncoderTest {
 
         try {
             hpackEncoder.encodeHeaders(0, buf, headersIn, Http2HeadersEncoder.NEVER_SENSITIVE);
-            hpackDecoder.setMaxHeaderListSize(bigHeaderSize + 1024, bigHeaderSize + 1024);
+            hpackDecoder.setMaxHeaderListSize(bigHeaderSize + 1024);
             hpackDecoder.decode(0, buf, headersOut, false);
         } finally {
             buf.release();
