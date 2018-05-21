@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
@@ -437,27 +438,43 @@ public class FixedChannelPool extends SimpleChannelPool {
 
     @Override
     public void close() {
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                if (!closed) {
-                    closed = true;
-                    for (;;) {
-                        AcquireTask task = pendingAcquireQueue.poll();
-                        if (task == null) {
-                            break;
-                        }
-                        ScheduledFuture<?> f = task.timeoutFuture;
-                        if (f != null) {
-                            f.cancel(false);
-                        }
-                        task.promise.setFailure(new ClosedChannelException());
-                    }
-                    acquiredChannelCount = 0;
-                    pendingAcquireCount = 0;
+        if (executor.inEventLoop()) {
+            close0();
+        } else {
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    close0();
+                }
+            }).awaitUninterruptibly();
+        }
+    }
+
+    private void close0() {
+        if (!closed) {
+            closed = true;
+            for (;;) {
+                AcquireTask task = pendingAcquireQueue.poll();
+                if (task == null) {
+                    break;
+                }
+                ScheduledFuture<?> f = task.timeoutFuture;
+                if (f != null) {
+                    f.cancel(false);
+                }
+                task.promise.setFailure(new ClosedChannelException());
+            }
+            acquiredChannelCount = 0;
+            pendingAcquireCount = 0;
+
+            // Ensure we dispatch this on another Thread as close0 will be called from the EventExecutor and we need
+            // to ensure we will not block in a EventExecutor.
+            GlobalEventExecutor.INSTANCE.execute(new Runnable() {
+                @Override
+                public void run() {
                     FixedChannelPool.super.close();
                 }
-            }
-        });
+            });
+        }
     }
 }

@@ -394,7 +394,8 @@ public class SimpleChannelPool implements ChannelPool {
             if (channel == null) {
                 break;
             }
-            channel.close();
+            // Just ignore any errors that are reported back from close().
+            channel.close().awaitUninterruptibly();
         }
     }
 }
