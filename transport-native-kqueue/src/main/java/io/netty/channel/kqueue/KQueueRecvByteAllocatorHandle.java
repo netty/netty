@@ -103,6 +103,10 @@ final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.Extend
         readEOF = true;
     }
 
+    boolean isReadEOF() {
+        return readEOF;
+    }
+
     void numberBytesPending(long numberBytesPending) {
         this.numberBytesPending = numberBytesPending;
     }
