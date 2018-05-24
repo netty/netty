@@ -398,7 +398,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         final void epollInFinally(ChannelConfig config) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
 
-            if ((readPending || allocHandle.isReceivedRdHup()) && maybeMoreDataToRead) {
+            if (allocHandle.isReceivedRdHup() || (readPending && maybeMoreDataToRead)) {
                 // trigger a read again as there may be something left to read and because of epoll ET we
                 // will not get notified again until we read everything from the socket
                 //

@@ -406,7 +406,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         final void readReadyFinally(ChannelConfig config) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
 
-            if ((readPending || allocHandle.isReadEOF()) && maybeMoreDataToRead) {
+            if (allocHandle.isReadEOF() || (readPending && maybeMoreDataToRead)) {
                 // trigger a read again as there may be something left to read and because of ET we
                 // will not get notified again until we read everything from the socket
                 //

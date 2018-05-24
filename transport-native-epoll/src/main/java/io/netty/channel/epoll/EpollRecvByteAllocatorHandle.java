@@ -52,10 +52,11 @@ class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandl
          * respect auto read we supporting reading to stop if auto read is off. It is expected that the
          * {@link #EpollSocketChannel} implementations will track if we are in edgeTriggered mode and all data was not
          * read, and will force a EPOLLIN ready event.
+         *
+         * It is assumed RDHUP is handled externally by checking {@link #isReceivedRdHup()}.
          */
         return (isEdgeTriggered && lastBytesRead() > 0) ||
-               (!isEdgeTriggered && lastBytesRead() == attemptedBytesRead()) ||
-                receivedRdHup;
+               (!isEdgeTriggered && lastBytesRead() == attemptedBytesRead());
     }
 
     final void edgeTriggered(boolean edgeTriggered) {
