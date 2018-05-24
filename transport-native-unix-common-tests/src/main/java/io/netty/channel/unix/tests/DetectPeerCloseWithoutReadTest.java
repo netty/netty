@@ -25,6 +25,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.junit.Test;
@@ -41,7 +42,17 @@ public abstract class DetectPeerCloseWithoutReadTest {
     protected abstract Class<? extends Channel> clientChannel();
 
     @Test(timeout = 10000)
-    public void clientCloseWithoutServerReadIsDetected() throws InterruptedException {
+    public void clientCloseWithoutServerReadIsDetectedNoExtraReadRequested() throws InterruptedException {
+        clientCloseWithoutServerReadIsDetected0(false);
+    }
+
+    @Test(timeout = 10000)
+    public void clientCloseWithoutServerReadIsDetectedExtraReadRequested() throws InterruptedException {
+        clientCloseWithoutServerReadIsDetected0(true);
+    }
+
+    private void clientCloseWithoutServerReadIsDetected0(final boolean extraReadRequested)
+            throws InterruptedException {
         EventLoopGroup serverGroup = null;
         EventLoopGroup clientGroup = null;
         Channel serverChannel = null;
@@ -54,11 +65,15 @@ public abstract class DetectPeerCloseWithoutReadTest {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(serverGroup);
             sb.channel(serverChannel());
+            // Ensure we read only one message per read() call and that we need multiple read()
+            // calls to consume everything.
             sb.childOption(ChannelOption.AUTO_READ, false);
+            sb.childOption(ChannelOption.MAX_MESSAGES_PER_READ, 1);
+            sb.childOption(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(expectedBytes / 10));
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new TestHandler(bytesRead, latch));
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new TestHandler(bytesRead, extraReadRequested, latch));
                 }
             });
 
@@ -89,7 +104,16 @@ public abstract class DetectPeerCloseWithoutReadTest {
     }
 
     @Test(timeout = 10000)
-    public void serverCloseWithoutClientReadIsDetected() throws InterruptedException {
+    public void serverCloseWithoutClientReadIsDetectedNoExtraReadRequested() throws InterruptedException {
+        serverCloseWithoutClientReadIsDetected0(false);
+    }
+
+    @Test(timeout = 10000)
+    public void serverCloseWithoutClientReadIsDetectedExtraReadRequested() throws InterruptedException {
+        serverCloseWithoutClientReadIsDetected0(true);
+    }
+
+    private void serverCloseWithoutClientReadIsDetected0(final boolean extraReadRequested) throws InterruptedException {
         EventLoopGroup serverGroup = null;
         EventLoopGroup clientGroup = null;
         Channel serverChannel = null;
@@ -105,10 +129,10 @@ public abstract class DetectPeerCloseWithoutReadTest {
             sb.channel(serverChannel());
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelActive(ChannelHandlerContext ctx) {
                             ByteBuf buf = ctx.alloc().buffer(expectedBytes);
                             buf.writerIndex(buf.writerIndex() + expectedBytes);
                             ctx.writeAndFlush(buf).addListener(ChannelFutureListener.CLOSE);
@@ -123,11 +147,15 @@ public abstract class DetectPeerCloseWithoutReadTest {
             Bootstrap cb = new Bootstrap();
             cb.group(serverGroup);
             cb.channel(clientChannel());
+            // Ensure we read only one message per read() call and that we need multiple read()
+            // calls to consume everything.
             cb.option(ChannelOption.AUTO_READ, false);
+            cb.option(ChannelOption.MAX_MESSAGES_PER_READ, 1);
+            cb.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(expectedBytes / 10));
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new TestHandler(bytesRead, latch));
+                    ch.pipeline().addLast(new TestHandler(bytesRead, extraReadRequested, latch));
                 }
             });
             clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
@@ -152,22 +180,27 @@ public abstract class DetectPeerCloseWithoutReadTest {
 
     private static final class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
         private final AtomicInteger bytesRead;
+        private final boolean extraReadRequested;
         private final CountDownLatch latch;
 
-        TestHandler(AtomicInteger bytesRead, CountDownLatch latch) {
+        TestHandler(AtomicInteger bytesRead, boolean extraReadRequested, CountDownLatch latch) {
             this.bytesRead = bytesRead;
+            this.extraReadRequested = extraReadRequested;
             this.latch = latch;
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
             bytesRead.addAndGet(msg.readableBytes());
-            // Because autoread is off, we call read to consume all data until we detect the close.
-            ctx.read();
+
+            if (extraReadRequested) {
+                // Because autoread is off, we call read to consume all data until we detect the close.
+                ctx.read();
+            }
         }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        public void channelInactive(ChannelHandlerContext ctx) {
             latch.countDown();
             ctx.fireChannelInactive();
         }

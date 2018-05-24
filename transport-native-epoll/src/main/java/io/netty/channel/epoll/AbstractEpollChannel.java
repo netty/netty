@@ -396,16 +396,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         final void epollInBefore() { maybeMoreDataToRead = false; }
 
         final void epollInFinally(ChannelConfig config) {
-            maybeMoreDataToRead = allocHandle.isEdgeTriggered() && allocHandle.maybeMoreDataToRead();
-            // Check if there is a readPending which was not processed yet.
-            // This could be for two reasons:
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-            //
-            // See https://github.com/netty/netty/issues/2254
-            if (!readPending && !config.isAutoRead()) {
-                clearEpollIn();
-            } else if (readPending && maybeMoreDataToRead) {
+            maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
+
+            if (allocHandle.isReceivedRdHup() || (readPending && maybeMoreDataToRead)) {
                 // trigger a read again as there may be something left to read and because of epoll ET we
                 // will not get notified again until we read everything from the socket
                 //
@@ -414,6 +407,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // to false before every read operation to prevent re-entry into epollInReady() we will not read from
                 // the underlying OS again unless the user happens to call read again.
                 executeEpollInReadyRunnable(config);
+            } else if (!readPending && !config.isAutoRead()) {
+                // Check if there is a readPending which was not processed yet.
+                // This could be for two reasons:
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+                //
+                // See https://github.com/netty/netty/issues/2254
+                clearEpollIn();
             }
         }
 

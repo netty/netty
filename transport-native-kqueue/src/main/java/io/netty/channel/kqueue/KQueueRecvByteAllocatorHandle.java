@@ -103,6 +103,10 @@ final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.Extend
         readEOF = true;
     }
 
+    boolean isReadEOF() {
+        return readEOF;
+    }
+
     void numberBytesPending(long numberBytesPending) {
         this.numberBytesPending = numberBytesPending;
     }
@@ -116,9 +120,9 @@ final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.Extend
          * channel. It is expected that the {@link #KQueueSocketChannel} implementations will track if all data was not
          * read, and will force a EVFILT_READ ready event.
          *
-         * If EOF has been read we must read until we get an error.
+         * It is assumed EOF is handled externally by checking {@link #isReadEOF()}.
          */
-        return numberBytesPending != 0 || readEOF;
+        return numberBytesPending != 0;
     }
 
     private int guess0() {
