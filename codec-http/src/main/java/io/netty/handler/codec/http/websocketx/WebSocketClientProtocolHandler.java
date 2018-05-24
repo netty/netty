@@ -151,6 +151,23 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            {@code true} if close frames should not be forwarded and just close the channel
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames) {
+        this(handshaker, handleCloseFrames, true);
+    }
+
+    /**
+     * Base constructor
+     *
+     * @param handshaker
+     *            The {@link WebSocketClientHandshaker} which will be used to issue the handshake once the connection
+     *            was established to the remote peer.
+     * @param handleCloseFrames
+     *            {@code true} if close frames should not be forwarded and just close the channel
+     * @param dropPongFrames
+     *            {@code true} if pong frames should not be forwarded
+     */
+    public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
+                                          boolean dropPongFrames) {
+        super(dropPongFrames);
         this.handshaker = handshaker;
         this.handleCloseFrames = handleCloseFrames;
     }
