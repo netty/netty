@@ -99,12 +99,9 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     public static final ChannelOption<Boolean> AUTO_READ = valueOf("AUTO_READ");
 
     /**
-     * @deprecated  Auto close will be removed in a future release.
-     *
      * If {@code true} then the {@link Channel} is closed automatically and immediately on write failure.
      * The default value is {@code true}.
      */
-    @Deprecated
     public static final ChannelOption<Boolean> AUTO_CLOSE = valueOf("AUTO_CLOSE");
 
     public static final ChannelOption<Boolean> SO_BROADCAST = valueOf("SO_BROADCAST");
