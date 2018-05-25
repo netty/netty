@@ -35,7 +35,9 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     }
 
     static long deadlineNanos(long delay) {
-        return nanoTime() + delay;
+        long deadlineNanos = nanoTime() + delay;
+        // Guard against overflow
+        return deadlineNanos < 0 ? Long.MAX_VALUE : deadlineNanos;
     }
 
     private final long id = nextTaskId.getAndIncrement();

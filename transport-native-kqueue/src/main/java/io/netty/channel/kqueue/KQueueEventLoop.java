@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.kqueue.KQueueEventArray.deleteGlobalRefs;
@@ -76,8 +75,6 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
 
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
-
-    static final long MAX_SCHEDULED_DAYS = 365 * 3;
 
     KQueueEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
                     SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
@@ -368,14 +365,6 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
             // Ignore.
-        }
-    }
-
-    @Override
-    protected void validateScheduled(long amount, TimeUnit unit) {
-        long days = unit.toDays(amount);
-        if (days > MAX_SCHEDULED_DAYS) {
-            throw new IllegalArgumentException("days: " + days + " (expected: < " + MAX_SCHEDULED_DAYS + ')');
         }
     }
 }

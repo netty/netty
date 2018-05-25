@@ -113,8 +113,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    static final long MAX_SCHEDULED_DAYS = 365 * 3;
-
     /**
      * The NIO {@link Selector}.
      */
@@ -823,14 +821,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             selector.selectNow();
         } catch (Throwable t) {
             logger.warn("Failed to update SelectionKeys.", t);
-        }
-    }
-
-    @Override
-    protected void validateScheduled(long amount, TimeUnit unit) {
-        long days = unit.toDays(amount);
-        if (days > MAX_SCHEDULED_DAYS) {
-            throw new IllegalArgumentException("days: " + days + " (expected: < " + MAX_SCHEDULED_DAYS + ')');
         }
     }
 }

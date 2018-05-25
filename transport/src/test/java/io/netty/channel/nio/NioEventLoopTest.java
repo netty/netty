@@ -73,27 +73,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
-    @Test(timeout = 5000L)
-    public void testScheduleBigDelayOverMax() {
-        EventLoopGroup group = new NioEventLoopGroup(1);
-        final EventLoop el = group.next();
-        try {
-            el.schedule(new Runnable() {
-                @Override
-                public void run() {
-                    // NOOP
-                }
-            }, Integer.MAX_VALUE, TimeUnit.DAYS);
-            fail();
-        } catch (IllegalArgumentException expected) {
-            // expected
-        }
-
-        group.shutdownGracefully();
-    }
-
     @Test
-    public void testScheduleBigDelay() {
+    public void testScheduleBigDelayNotOverflow() {
         EventLoopGroup group = new NioEventLoopGroup(1);
 
         final EventLoop el = group.next();
@@ -102,7 +83,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             public void run() {
                 // NOOP
             }
-        }, NioEventLoop.MAX_SCHEDULED_DAYS, TimeUnit.DAYS);
+        }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
         assertFalse(future.awaitUninterruptibly(1000));
         assertTrue(future.cancel(true));
