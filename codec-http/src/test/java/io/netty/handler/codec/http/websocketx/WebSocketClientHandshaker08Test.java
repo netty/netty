@@ -20,6 +20,6 @@ import java.net.URI;
 public class WebSocketClientHandshaker08Test extends WebSocketClientHandshaker07Test {
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri) {
-        return new WebSocketClientHandshaker07(uri, WebSocketVersion.V08, null, false, null, 1024);
+        return new WebSocketClientHandshaker08(uri, WebSocketVersion.V08, null, false, null, 1024);
     }
 }
