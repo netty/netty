@@ -20,13 +20,12 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
-public interface Http2UnknownFrame extends Http2Frame, ByteBufHolder {
+public interface Http2UnknownFrame extends Http2StreamFrame, ByteBufHolder {
 
+    @Override
     Http2FrameStream stream();
 
-    /**
-     * Set the {@link Http2FrameStream} object for this frame.
-     */
+    @Override
     Http2UnknownFrame stream(Http2FrameStream stream);
 
     byte frameType();
