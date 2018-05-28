@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty:centos-7-1.11
+    build:
+      args:
+        centos_version : "7"
+        java_version : "1.11.0-14"
+
+  test:
+    image: netty:centos-7-1.11
