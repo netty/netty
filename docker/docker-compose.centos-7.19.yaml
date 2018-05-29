@@ -11,3 +11,9 @@ services:
 
   test:
     image: netty:centos-7-1.9
+
+  test-boringssl-static:
+    image: netty:centos-7-1.9
+
+  shell:
+    image: netty:centos-7-1.9
