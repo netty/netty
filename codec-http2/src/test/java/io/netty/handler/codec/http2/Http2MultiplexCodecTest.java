@@ -105,6 +105,43 @@ public class Http2MultiplexCodecTest {
     // TODO(buchgr): Test ChannelConfig.setMaxMessagesPerRead
 
     @Test
+    public void writeUnknownFrame() {
+        childChannelInitializer.handler = new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+                ctx.writeAndFlush(new DefaultHttp2UnknownFrame((byte) 99, new Http2Flags()));
+                ctx.fireChannelActive();
+            }
+        };
+
+        Channel childChannel = newOutboundStream();
+        assertTrue(childChannel.isActive());
+
+        Http2FrameStream stream = readOutboundHeadersAndAssignId();
+        parentChannel.runPendingTasks();
+
+        Http2UnknownFrame frame = parentChannel.readOutbound();
+        assertEquals(stream, frame.stream());
+        assertEquals(99, frame.frameType());
+        assertEquals(new Http2Flags(), frame.flags());
+        frame.release();
+    }
+
+    @Test
+    public void readUnkownFrame() {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
+        codec.onHttp2Frame(new DefaultHttp2UnknownFrame((byte) 99, new Http2Flags()).stream(inboundStream));
+        codec.onChannelReadComplete();
+
+        // headers and unknown frame
+        verifyFramesMultiplexedToCorrectChannel(inboundStream, inboundHandler, 2);
+
+        Channel childChannel = newOutboundStream();
+        assertTrue(childChannel.isActive());
+    }
+
+    @Test
     public void headerAndDataFramesShouldBeDelivered() {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         childChannelInitializer.handler = inboundHandler;
