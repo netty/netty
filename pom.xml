@@ -864,6 +864,8 @@
             </property>
           </properties>
           <jvm>${testJavaHome}/bin/java</jvm>
+           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 --> 
+          <trimStackTrace>false</trimStackTrace>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
