@@ -33,7 +33,9 @@ import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.DuplexChannel;
+import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.util.UncheckedBooleanSupplier;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -414,19 +416,26 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
-            checkPrematureClose();
+            checkPrematureClose(ctx);
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             ctx.close();
-            checkPrematureClose();
+            checkPrematureClose(ctx);
         }
 
-        private void checkPrematureClose() {
+        private void checkPrematureClose(ChannelHandlerContext ctx) {
             if (bytesRead < expectedBytes || !seenOutputShutdown) {
-                causeRef.set(new IllegalStateException("leader premature close"));
-                doneLatch.countDown();
+                if (ctx.channel() instanceof OioSocketChannel && seenOutputShutdown
+                        && PlatformDependent.javaVersion() >= 11) {
+                    // If we are using OIO and are using Java11 this is expected atm.
+                    // See http://mail.openjdk.java.net/pipermail/net-dev/2018-May/011511.html.
+                    doneLatch.countDown();
+                } else {
+                    causeRef.set(new IllegalStateException("leader premature close"));
+                    doneLatch.countDown();
+                }
             }
         }
     }
