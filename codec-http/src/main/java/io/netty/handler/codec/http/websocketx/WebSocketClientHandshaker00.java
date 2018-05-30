@@ -131,20 +131,21 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         // Format request
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
-        headers.add(HttpHeaderNames.UPGRADE, WEBSOCKET)
-               .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
-               .add(HttpHeaderNames.HOST, websocketHostValue(wsURL))
-               .add(HttpHeaderNames.ORIGIN, websocketOriginValue(wsURL))
-               .add(HttpHeaderNames.SEC_WEBSOCKET_KEY1, key1)
-               .add(HttpHeaderNames.SEC_WEBSOCKET_KEY2, key2);
-
-        String expectedSubprotocol = expectedSubprotocol();
-        if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
-            headers.add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
-        }
 
         if (customHeaders != null) {
             headers.add(customHeaders);
+        }
+
+        headers.set(HttpHeaderNames.UPGRADE, WEBSOCKET)
+               .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+               .set(HttpHeaderNames.HOST, websocketHostValue(wsURL))
+               .set(HttpHeaderNames.ORIGIN, websocketOriginValue(wsURL))
+               .set(HttpHeaderNames.SEC_WEBSOCKET_KEY1, key1)
+               .set(HttpHeaderNames.SEC_WEBSOCKET_KEY2, key2);
+
+        String expectedSubprotocol = expectedSubprotocol();
+        if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
+            headers.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 
         // Set Content-Length to workaround some known defect.
