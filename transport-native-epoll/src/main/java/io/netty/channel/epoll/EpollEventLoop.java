@@ -37,7 +37,6 @@ import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static java.lang.Math.min;
@@ -80,7 +79,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private volatile int ioRatio = 50;
 
     // See http://man7.org/linux/man-pages/man2/timerfd_create.2.html.
-    static final long MAX_SCHEDULED_DAYS = TimeUnit.SECONDS.toDays(999999999);
+    private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
 
     EpollEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
                    SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
@@ -237,7 +236,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         long totalDelay = delayNanos(System.nanoTime());
         int delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
         return Native.epollWait(epollFd, events, timerFd, delaySeconds,
-                (int) min(totalDelay - delaySeconds * 1000000000L, Integer.MAX_VALUE));
+                (int) min(MAX_SCHEDULED_TIMERFD_NS, totalDelay - delaySeconds * 1000000000L));
     }
 
     private int epollWaitNow() throws IOException {
@@ -451,14 +450,6 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             // release native memory
             iovArray.release();
             events.free();
-        }
-    }
-
-    @Override
-    protected void validateScheduled(long amount, TimeUnit unit) {
-        long days = unit.toDays(amount);
-        if (days > MAX_SCHEDULED_DAYS) {
-            throw new IllegalArgumentException("days: " + days + " (expected: < " + MAX_SCHEDULED_DAYS + ')');
         }
     }
 }
