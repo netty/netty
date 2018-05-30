@@ -64,6 +64,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -626,17 +627,24 @@ public class SslHandlerTest {
                     });
             sc = sb.bind(address).syncUninterruptibly().channel();
 
+            final AtomicReference<SslHandler> sslHandlerRef = new AtomicReference<SslHandler>();
             Bootstrap b = new Bootstrap()
                     .group(group)
                     .channel(LocalChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
-                            ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
+                            SslHandler handler = sslClientCtx.newHandler(ch.alloc());
+
+                            // We propagate the SslHandler via an AtomicReference to the outer-scope as using
+                            // pipeline.get(...) may return null if the pipeline was teared down by the time we call it.
+                            // This will happen if the channel was closed in the meantime.
+                            sslHandlerRef.set(handler);
+                            ch.pipeline().addLast(handler);
                         }
                     });
             cc = b.connect(sc.localAddress()).syncUninterruptibly().channel();
-            SslHandler handler = cc.pipeline().get(SslHandler.class);
+            SslHandler handler = sslHandlerRef.get();
             handler.handshakeFuture().awaitUninterruptibly();
             assertFalse(handler.handshakeFuture().isSuccess());
 
