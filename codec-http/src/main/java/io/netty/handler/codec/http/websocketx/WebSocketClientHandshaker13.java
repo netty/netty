@@ -146,22 +146,22 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
 
-        headers.add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
-               .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
-               .add(HttpHeaderNames.SEC_WEBSOCKET_KEY, key)
-               .add(HttpHeaderNames.HOST, websocketHostValue(wsURL))
-               .add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, websocketOriginValue(wsURL));
-
-        String expectedSubprotocol = expectedSubprotocol();
-        if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
-            headers.add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
-        }
-
-        headers.add(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13");
-
         if (customHeaders != null) {
             headers.add(customHeaders);
         }
+
+        headers.set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
+               .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+               .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, key)
+               .set(HttpHeaderNames.HOST, websocketHostValue(wsURL))
+               .set(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, websocketOriginValue(wsURL));
+
+        String expectedSubprotocol = expectedSubprotocol();
+        if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
+            headers.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
+        }
+
+        headers.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13");
         return request;
     }
 
