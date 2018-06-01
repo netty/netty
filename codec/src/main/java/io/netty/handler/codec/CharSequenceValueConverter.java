@@ -77,7 +77,7 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public byte convertToByte(CharSequence value) {
-        if (value instanceof AsciiString) {
+        if (value instanceof AsciiString && value.length() == 1) {
             return ((AsciiString) value).byteAt(0);
         }
         return Byte.parseByte(value.toString());
