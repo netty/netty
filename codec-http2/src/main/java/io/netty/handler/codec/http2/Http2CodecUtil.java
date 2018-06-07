@@ -67,9 +67,6 @@ public final class Http2CodecUtil {
     private static final ByteBuf CONNECTION_PREFACE =
             unreleasableBuffer(directBuffer(24).writeBytes("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8)))
                     .asReadOnly();
-    private static final ByteBuf EMPTY_PING =
-            unreleasableBuffer(directBuffer(PING_FRAME_PAYLOAD_LENGTH).writeZero(PING_FRAME_PAYLOAD_LENGTH))
-                    .asReadOnly();
 
     private static final int MAX_PADDING_LENGTH_LENGTH = 1;
     public static final int DATA_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH;
@@ -167,14 +164,6 @@ public final class Http2CodecUtil {
     public static ByteBuf connectionPrefaceBuf() {
         // Return a duplicate so that modifications to the reader index will not affect the original buffer.
         return CONNECTION_PREFACE.retainedDuplicate();
-    }
-
-    /**
-     * Returns a buffer filled with all zeros that is the appropriate length for a PING frame.
-     */
-    public static ByteBuf emptyPingBuf() {
-        // Return a duplicate so that modifications to the reader index will not affect the original buffer.
-        return EMPTY_PING.retainedDuplicate();
     }
 
     /**
