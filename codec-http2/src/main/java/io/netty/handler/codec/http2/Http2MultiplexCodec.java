@@ -49,7 +49,11 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+
 import static java.lang.Math.min;
 
 /**
@@ -153,6 +157,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     }
 
     private final ChannelHandler inboundStreamHandler;
+    private final ChannelHandler upgradeStreamHandler;
 
     private int initialOutboundStreamWindow = Http2CodecUtil.DEFAULT_WINDOW_SIZE;
     private boolean parentReadInProgress;
@@ -168,9 +173,25 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     Http2MultiplexCodec(Http2ConnectionEncoder encoder,
                         Http2ConnectionDecoder decoder,
                         Http2Settings initialSettings,
-                        ChannelHandler inboundStreamHandler) {
+                        ChannelHandler inboundStreamHandler,
+                        ChannelHandler upgradeStreamHandler) {
         super(encoder, decoder, initialSettings);
         this.inboundStreamHandler = inboundStreamHandler;
+        this.upgradeStreamHandler = upgradeStreamHandler;
+    }
+
+    @Override
+    public void onHttpClientUpgrade() throws Http2Exception {
+        // We must have an upgrade handler or else we can't handle the stream
+        if (upgradeStreamHandler == null) {
+            throw connectionError(INTERNAL_ERROR, "Client is misconfigured for upgrade requests");
+        }
+        // Creates the Http2Stream in the Connection.
+        super.onHttpClientUpgrade();
+        // Now make a new FrameStream, set it's underlying Http2Stream, and initialize it.
+        Http2MultiplexCodecStream codecStream = newStream();
+        codecStream.setStreamAndProperty(streamKey, connection().stream(HTTP_UPGRADE_STREAM_ID));
+        onHttp2UpgradeStreamInitialized(ctx, codecStream);
     }
 
     private static void registerDone(ChannelFuture future) {
@@ -233,6 +254,22 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         } else {
             // Send any other frames down the pipeline
             ctx.fireChannelRead(frame);
+        }
+    }
+
+    private void onHttp2UpgradeStreamInitialized(ChannelHandlerContext ctx, Http2MultiplexCodecStream stream) {
+        assert stream.state() == Http2Stream.State.HALF_CLOSED_LOCAL;
+        DefaultHttp2StreamChannel ch = new DefaultHttp2StreamChannel(stream, true);
+        ch.outboundClosed = true;
+
+        // Add our upgrade handler to the channel and then register the channel.
+        // The register call fires the channelActive, etc.
+        ch.pipeline().addLast(upgradeStreamHandler);
+        ChannelFuture future = ctx.channel().eventLoop().register(ch);
+        if (future.isDone()) {
+            registerDone(future);
+        } else {
+            future.addListener(CHILD_CHANNEL_REGISTRATION_LISTENER);
         }
     }
 

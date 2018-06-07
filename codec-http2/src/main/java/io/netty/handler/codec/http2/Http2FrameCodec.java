@@ -143,7 +143,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private static final InternalLogger LOG = InternalLoggerFactory.getInstance(Http2FrameCodec.class);
 
-    private final PropertyKey streamKey;
+    protected final PropertyKey streamKey;
     private final PropertyKey upgradeKey;
 
     private final Integer initialFlowControlWindowSize;

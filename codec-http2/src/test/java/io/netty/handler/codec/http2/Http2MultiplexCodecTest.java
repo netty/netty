@@ -670,7 +670,7 @@ public class Http2MultiplexCodecTest {
                                            Http2ConnectionDecoder decoder,
                                            Http2Settings initialSettings,
                                            ChannelHandler inboundStreamHandler) {
-            super(encoder, decoder, initialSettings, inboundStreamHandler);
+            super(encoder, decoder, initialSettings, inboundStreamHandler, null);
         }
 
         void onHttp2Frame(Http2Frame frame) {
