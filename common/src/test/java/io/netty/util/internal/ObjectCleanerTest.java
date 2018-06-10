@@ -113,6 +113,12 @@ public class ObjectCleanerTest {
         }
     }
 
+    @Test
+    public void testCleanerThreadName() {
+        // the thread name is part of the public API
+        assertEquals("ObjectCleanerThread", ObjectCleaner.CLEANER_THREAD_NAME);
+    }
+
     @Test(timeout = 5000)
     public void testCleanerThreadIsDaemon() throws Exception {
         temporaryObject = new Object();
