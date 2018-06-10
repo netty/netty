@@ -35,8 +35,7 @@ public final class ObjectCleaner {
     private static final int REFERENCE_QUEUE_POLL_TIMEOUT_MS =
             max(500, getInt("io.netty.util.internal.ObjectCleaner.refQueuePollTimeout", 10000));
 
-    // Package-private for testing
-    static final String CLEANER_THREAD_NAME = ObjectCleaner.class.getSimpleName() + "Thread";
+    public static final String CLEANER_THREAD_NAME = ObjectCleaner.class.getSimpleName() + "Thread";
     // This will hold a reference to the AutomaticCleanerReference which will be removed once we called cleanup()
     private static final Set<AutomaticCleanerReference> LIVE_SET = new ConcurrentSet<AutomaticCleanerReference>();
     private static final ReferenceQueue<Object> REFERENCE_QUEUE = new ReferenceQueue<Object>();
