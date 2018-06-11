@@ -88,7 +88,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         return new byte[initialCapacity];
     }
 
-    void freeArray(byte[] array) {
+    protected void freeArray(byte[] array) {
         // NOOP
     }
 
