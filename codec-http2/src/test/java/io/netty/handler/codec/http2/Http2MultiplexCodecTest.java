@@ -34,6 +34,7 @@ import io.netty.util.AttributeKey;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.After;
 import org.junit.Before;
@@ -581,6 +582,54 @@ public class Http2MultiplexCodecTest {
         childChannel.close().syncUninterruptibly();
         assertFalse(channelOpen.get());
         assertFalse(channelActive.get());
+    }
+
+    @Test
+    public void channelInactiveHappensAfterExceptionCaughtEvents() throws Exception {
+        final AtomicInteger count = new AtomicInteger(0);
+        final AtomicInteger exceptionCaught = new AtomicInteger(-1);
+        final AtomicInteger channelInactive = new AtomicInteger(-1);
+        final AtomicInteger channelUnregistered = new AtomicInteger(-1);
+        Http2StreamChannel childChannel = newOutboundStream();
+
+        childChannel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                ctx.close();
+                throw new Exception("exception");
+            }
+        });
+
+        childChannel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                channelInactive.set(count.getAndIncrement());
+                super.channelInactive(ctx);
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                exceptionCaught.set(count.getAndIncrement());
+                super.exceptionCaught(ctx, cause);
+            }
+
+            @Override
+            public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+                channelUnregistered.set(count.getAndIncrement());
+                super.channelUnregistered(ctx);
+            }
+        });
+
+        childChannel.pipeline().fireUserEventTriggered(new Object());
+        parentChannel.runPendingTasks();
+
+        // The events should have happened in this order because the inactive and deregistration events
+        // get deferred as they do in the AbstractChannel.
+        assertEquals(0, exceptionCaught.get());
+        assertEquals(1, channelInactive.get());
+        assertEquals(2, channelUnregistered.get());
     }
 
     @Ignore("not supported anymore atm")

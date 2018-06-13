@@ -43,11 +43,14 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.RejectedExecutionException;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
@@ -103,6 +106,8 @@ import static java.lang.Math.min;
  */
 @UnstableApi
 public class Http2MultiplexCodec extends Http2FrameCodec {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2StreamChannel.class);
 
     private static final ChannelFutureListener CHILD_CHANNEL_REGISTRATION_LISTENER = new ChannelFutureListener() {
         @Override
@@ -899,6 +904,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 closePending = false;
                 fireChannelReadPending = false;
 
+                final boolean wasActive = isActive();
+
                 // Only ever send a reset frame if the connection is still alive as otherwise it makes no sense at
                 // all anyway.
                 if (parent().isActive() && !streamClosedWithoutError && isStreamIdValid(stream().id())) {
@@ -922,10 +929,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 closePromise.setSuccess();
                 promise.setSuccess();
 
-                pipeline().fireChannelInactive();
-                if (isRegistered()) {
-                    deregister(unsafe().voidPromise());
-                }
+                fireChannelInactiveAndDeregister(voidPromise(), wasActive);
             }
 
             @Override
@@ -935,15 +939,70 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
             @Override
             public void deregister(ChannelPromise promise) {
+                fireChannelInactiveAndDeregister(promise, false);
+            }
+
+            private void fireChannelInactiveAndDeregister(final ChannelPromise promise,
+                                                          final boolean fireChannelInactive) {
                 if (!promise.setUncancellable()) {
                     return;
                 }
-                if (registered) {
-                    registered = true;
+
+                if (!registered) {
                     promise.setSuccess();
-                    pipeline().fireChannelUnregistered();
-                } else {
-                    promise.setFailure(new IllegalStateException("Not registered"));
+                    return;
+                }
+
+                // As a user may call deregister() from within any method while doing processing in the ChannelPipeline,
+                // we need to ensure we do the actual deregister operation later. This is necessary to preserve the
+                // behavior of the AbstractChannel, which always invokes channelUnregistered and channelInactive
+                // events 'later' to ensure the current events in the handler are completed before these events.
+                //
+                // See:
+                // https://github.com/netty/netty/issues/4435
+                invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (fireChannelInactive) {
+                            pipeline.fireChannelInactive();
+                        }
+                        // Some transports like local and AIO does not allow the deregistration of
+                        // an open channel.  Their doDeregister() calls close(). Consequently,
+                        // close() calls deregister() again - no need to fire channelUnregistered, so check
+                        // if it was registered.
+                        if (registered) {
+                            registered = false;
+                            pipeline.fireChannelUnregistered();
+                        } else {
+                            promise.setFailure(new IllegalStateException("Not registered"));
+                        }
+                        safeSetSuccess(promise);
+                    }
+                });
+            }
+
+            private void safeSetSuccess(ChannelPromise promise) {
+                if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
+                    logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
+                }
+            }
+
+            private void invokeLater(Runnable task) {
+                try {
+                    // This method is used by outbound operation implementations to trigger an inbound event later.
+                    // They do not trigger an inbound event immediately because an outbound operation might have been
+                    // triggered by another inbound event handler method.  If fired immediately, the call stack
+                    // will look like this for example:
+                    //
+                    //   handlerA.inboundBufferUpdated() - (1) an inbound handler method closes a connection.
+                    //   -> handlerA.ctx.close()
+                    //     -> channel.unsafe.close()
+                    //       -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
+                    //
+                    // which means the execution of two inbound handler methods of the same handler overlap undesirably.
+                    eventLoop().execute(task);
+                } catch (RejectedExecutionException e) {
+                    logger.warn("Can't invoke task later as EventLoop rejected it", e);
                 }
             }
 
