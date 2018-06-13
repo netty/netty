@@ -175,7 +175,9 @@ public final class SelfSignedCertificate {
                 try {
                     certificateInput.close();
                 } catch (IOException e) {
-                    logger.warn("Failed to close a file: " + certificate, e);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("Failed to close a file: " + certificate, e);
+                    }
                 }
             }
         }
@@ -288,7 +290,9 @@ public final class SelfSignedCertificate {
 
     private static void safeDelete(File certFile) {
         if (!certFile.delete()) {
-            logger.warn("Failed to delete a file: " + certFile);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to delete a file: " + certFile);
+            }
         }
     }
 
@@ -296,7 +300,9 @@ public final class SelfSignedCertificate {
         try {
             keyOut.close();
         } catch (IOException e) {
-            logger.warn("Failed to close a file: " + keyFile, e);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to close a file: " + keyFile, e);
+            }
         }
     }
 }

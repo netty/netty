@@ -44,12 +44,16 @@ public final class InsecureTrustManagerFactory extends SimpleTrustManagerFactory
     private static final TrustManager tm = new X509TrustManager() {
         @Override
         public void checkClientTrusted(X509Certificate[] chain, String s) {
-            logger.debug("Accepting a client certificate: " + chain[0].getSubjectDN());
+            if (logger.isDebugEnabled()) {
+                logger.debug("Accepting a client certificate: " + chain[0].getSubjectDN());
+            }
         }
 
         @Override
         public void checkServerTrusted(X509Certificate[] chain, String s) {
-            logger.debug("Accepting a server certificate: " + chain[0].getSubjectDN());
+            if (logger.isDebugEnabled()) {
+                logger.debug("Accepting a server certificate: " + chain[0].getSubjectDN());
+            }
         }
 
         @Override

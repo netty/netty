@@ -402,7 +402,9 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         try {
             selector.close();
         } catch (IOException e) {
-            logger.warn("Failed to close a " + selectorName + " selector.", e);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to close a " + selectorName + " selector.", e);
+            }
         }
     }
 
