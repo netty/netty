@@ -88,7 +88,9 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
      */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.warn("Failed to initialize a channel. Closing: " + ctx.channel(), cause);
+        if (logger.isWarnEnabled()) {
+            logger.warn("Failed to initialize a channel. Closing: " + ctx.channel(), cause);
+        }
         ctx.close();
     }
 

@@ -75,7 +75,9 @@ public final class HostsFileParser {
         try {
             return parse(hostsFile);
         } catch (IOException e) {
-            logger.warn("Failed to load and parse hosts file at " + hostsFile.getPath(), e);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to load and parse hosts file at " + hostsFile.getPath(), e);
+            }
             return HostsFileEntries.EMPTY;
         }
     }
