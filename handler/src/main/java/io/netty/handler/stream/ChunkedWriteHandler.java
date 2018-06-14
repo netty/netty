@@ -178,7 +178,9 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                     closeInput(in);
                 } catch (Exception e) {
                     currentWrite.fail(e);
-                    logger.warn(ChunkedInput.class.getSimpleName() + ".isEndOfInput() failed", e);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(ChunkedInput.class.getSimpleName() + ".isEndOfInput() failed", e);
+                    }
                     closeInput(in);
                 }
             } else {
