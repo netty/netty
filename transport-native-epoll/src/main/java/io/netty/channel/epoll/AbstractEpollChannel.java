@@ -60,7 +60,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private static final ClosedChannelException DO_CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), AbstractEpollChannel.class, "doClose()");
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
-    private final int readFlag;
     final LinuxSocket socket;
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -79,15 +78,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     protected volatile boolean active;
 
-    AbstractEpollChannel(LinuxSocket fd, int flag) {
-        this(null, fd, flag, false);
+    AbstractEpollChannel(LinuxSocket fd) {
+        this(null, fd, false);
     }
 
-    AbstractEpollChannel(Channel parent, LinuxSocket fd, int flag, boolean active) {
+    AbstractEpollChannel(Channel parent, LinuxSocket fd, boolean active) {
         super(parent);
         socket = checkNotNull(fd, "fd");
-        readFlag = flag;
-        flags |= flag;
         this.active = active;
         if (active) {
             // Directly cache the remote and local addresses
@@ -97,11 +94,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
     }
 
-    AbstractEpollChannel(Channel parent, LinuxSocket fd, int flag, SocketAddress remote) {
+    AbstractEpollChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
         super(parent);
         socket = checkNotNull(fd, "fd");
-        readFlag = flag;
-        flags |= flag;
         active = true;
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
@@ -228,7 +223,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         // We must set the read flag here as it is possible the user didn't read in the last read loop, the
         // executeEpollInReadyRunnable could read nothing, and if the user doesn't explicitly call read they will
         // never get data after this.
-        setFlag(readFlag);
+        setFlag(Native.EPOLLIN);
 
         // If EPOLL ET mode is enabled and auto read was toggled off on the last read loop then we may not be notified
         // again if we didn't consume all the data. So we force a read operation here if there maybe more data.
@@ -268,7 +263,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         } else  {
             // The EventLoop is not registered atm so just update the flags so the correct value
             // will be used once the channel is registered
-            flags &= ~readFlag;
+            flags &= ~Native.EPOLLIN;
         }
     }
 
@@ -535,7 +530,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             assert eventLoop().inEventLoop();
             try {
                 readPending = false;
-                clearFlag(readFlag);
+                clearFlag(Native.EPOLLIN);
             } catch (IOException e) {
                 // When this happens there is something completely wrong with either the filedescriptor or epoll,
                 // so fire the exception through the pipeline and close the Channel.

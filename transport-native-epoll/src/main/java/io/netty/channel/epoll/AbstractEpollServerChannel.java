@@ -39,7 +39,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     }
 
     AbstractEpollServerChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, Native.EPOLLIN, active);
+        super(null, fd, active);
     }
 
     @Override

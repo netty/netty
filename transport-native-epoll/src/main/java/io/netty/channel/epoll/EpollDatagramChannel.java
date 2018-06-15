@@ -59,7 +59,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private volatile boolean connected;
 
     public EpollDatagramChannel() {
-        super(newSocketDgram(), Native.EPOLLIN);
+        super(newSocketDgram());
         config = new EpollDatagramChannelConfig(this);
     }
 
@@ -68,7 +68,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     EpollDatagramChannel(LinuxSocket fd) {
-        super(null, fd, Native.EPOLLIN, true);
+        super(null, fd, true);
         config = new EpollDatagramChannelConfig(this);
     }
 
