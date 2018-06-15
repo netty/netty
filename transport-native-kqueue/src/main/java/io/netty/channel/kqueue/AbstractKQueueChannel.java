@@ -65,7 +65,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private SocketAddress requestedRemoteAddress;
 
     final BsdSocket socket;
-    private boolean readFilterEnabled = true;
+    private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
@@ -187,9 +187,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         evSet0(Native.EVFILT_SOCK, Native.EV_DELETE, 0);
 
         ((KQueueEventLoop) eventLoop()).remove(this);
-
-        // Set the filters back to the initial state in case this channel is registered with another event loop.
-        readFilterEnabled = true;
     }
 
     @Override
