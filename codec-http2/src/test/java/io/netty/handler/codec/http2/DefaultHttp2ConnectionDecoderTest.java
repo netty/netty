@@ -276,6 +276,18 @@ public class DefaultHttp2ConnectionDecoderTest {
         }
     }
 
+    @Test(expected = Http2Exception.class)
+    public void dataReadForUnknownStreamThatNeverExistedShouldThrow() throws Exception {
+        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        final ByteBuf data = dummyData();
+        try {
+            decode().onDataRead(ctx, STREAM_ID, data, 0, true);
+        } finally {
+            data.release();
+        }
+    }
+
     @Test
     public void dataReadForUnknownStreamShouldApplyFlowControl() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
@@ -283,19 +295,15 @@ public class DefaultHttp2ConnectionDecoderTest {
         int padding = 10;
         int processedBytes = data.readableBytes() + padding;
         try {
-            try {
-                decode().onDataRead(ctx, STREAM_ID, data, padding, true);
-                fail();
-            } catch (Http2Exception e) {
-                verify(localFlow)
-                        .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
-                verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
-                verify(localFlow).frameWriter(any(Http2FrameWriter.class));
-                verifyNoMoreInteractions(localFlow);
+            decode().onDataRead(ctx, STREAM_ID, data, padding, true);
+            verify(localFlow)
+                .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
+            verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
+            verify(localFlow).frameWriter(any(Http2FrameWriter.class));
+            verifyNoMoreInteractions(localFlow);
 
-                // Verify that the event was absorbed and not propagated to the observer.
-                verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
-            }
+            // Verify that the event was absorbed and not propagated to the observer.
+            verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
         } finally {
             data.release();
         }
@@ -434,10 +442,15 @@ public class DefaultHttp2ConnectionDecoderTest {
         }
     }
 
-    @Test(expected = Http2Exception.class)
-    public void headersReadForUnknownStreamShouldThrow() throws Exception {
+    @Test
+    public void headersReadForUnknownStreamThatMayHaveExistedShouldBeIgnored() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+
+        // Verify that the event was absorbed and not propagated to the observer.
+        verify(listener, never()).onHeadersRead(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyBoolean());
+        verify(remote, never()).createStream(anyInt(), anyBoolean());
+        verify(stream, never()).open(anyBoolean());
     }
 
     @Test
@@ -649,8 +662,21 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
     }
 
+    @Test
+    public void pushPromiseReadForUnknownStreamThatMayHaveExistedShouldBeIgnored() throws Exception {
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+
+        // Verify that the event was absorbed and not propagated to the observer.
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(),
+                                                    any(Http2Headers.class), anyInt());
+        verify(remote, never()).createStream(anyInt(), anyBoolean());
+        verify(stream, never()).open(anyBoolean());
+    }
+
     @Test(expected = Http2Exception.class)
-    public void pushPromiseReadForUnknownStreamShouldThrow() throws Exception {
+    public void pushPromiseReadForUnknownStreamThatNeverExistedShouldThrow() throws Exception {
+        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
         when(connection.stream(STREAM_ID)).thenReturn(null);
         decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
     }
