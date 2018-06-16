@@ -966,15 +966,11 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                         if (fireChannelInactive) {
                             pipeline.fireChannelInactive();
                         }
-                        // Some transports like local and AIO does not allow the deregistration of
-                        // an open channel.  Their doDeregister() calls close(). Consequently,
-                        // close() calls deregister() again - no need to fire channelUnregistered, so check
-                        // if it was registered.
+                        // The user can fire `deregister` events multiple times but we only want to fire the pipeline
+                        // event if the channel was actually registered.
                         if (registered) {
                             registered = false;
                             pipeline.fireChannelUnregistered();
-                        } else {
-                            promise.setFailure(new IllegalStateException("Not registered"));
                         }
                         safeSetSuccess(promise);
                     }
