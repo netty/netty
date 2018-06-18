@@ -479,35 +479,23 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .sslProvider(sslServerProvider())
                 .build();
 
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "ADH-AES128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "AES128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "ECDHE-RSA-AES128-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "ADH-CAMELLIA128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "DES-CBC3-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "AECDH-AES128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "AECDH-DES-CBC3-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "CAMELLIA128-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "DHE-RSA-AES256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "SEED-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "RC4-MD5");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "ADH-AES256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "AES256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "ADH-SEED-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "ADH-DES-CBC3-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "EDH-RSA-DES-CBC3-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "ADH-RC4-MD5");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "IDEA-CBC-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "DHE-RSA-AES128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "RC4-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "CAMELLIA256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "AECDH-RC4-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "DHE-RSA-SEED-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "AECDH-AES256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "ECDHE-RSA-DES-CBC3-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "ADH-CAMELLIA256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "DHE-RSA-CAMELLIA256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "ECDHE-RSA-AES256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "DHE-RSA-CAMELLIA128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1, "ECDHE-RSA-RC4-SHA");
     }
 
@@ -523,18 +511,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .build();
 
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "ECDHE-RSA-AES256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "DHE-RSA-AES256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "DHE-RSA-CAMELLIA256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "ADH-CAMELLIA256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "ADH-AES256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "AES256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "CAMELLIA256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "AECDH-AES128-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "DHE-RSA-CAMELLIA128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "ECDHE-RSA-AES256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "ADH-AES128-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "ADH-SEED-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "ADH-CAMELLIA128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "SEED-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "CAMELLIA128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_1, "IDEA-CBC-SHA");
@@ -559,15 +538,10 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .sslProvider(sslServerProvider())
                 .build();
 
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ADH-AES128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "AES128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES128-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ADH-CAMELLIA128-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "DHE-RSA-AES256-GCM-SHA384");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "DES-CBC3-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "AECDH-AES128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "AES128-GCM-SHA256");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "DHE-RSA-AES128-GCM-SHA256");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES256-SHA384");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "AECDH-DES-CBC3-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "AES256-GCM-SHA384");
@@ -575,35 +549,19 @@ public class OpenSslEngineTest extends SSLEngineTest {
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES128-GCM-SHA256");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES128-SHA256");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "CAMELLIA128-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "DHE-RSA-AES256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "SEED-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "RC4-MD5");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ADH-AES256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "AES256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ADH-SEED-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "DHE-RSA-AES128-SHA256");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ADH-DES-CBC3-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "EDH-RSA-DES-CBC3-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ADH-RC4-MD5");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "IDEA-CBC-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "DHE-RSA-AES128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "RC4-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "CAMELLIA256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ADH-AES128-GCM-SHA256");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "AES128-SHA256");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "AECDH-RC4-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ADH-AES256-GCM-SHA384");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "DHE-RSA-SEED-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "DHE-RSA-AES256-SHA256");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "AECDH-AES256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ECDHE-RSA-DES-CBC3-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ADH-CAMELLIA256-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES256-GCM-SHA384");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "DHE-RSA-CAMELLIA256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ADH-AES256-SHA256");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ADH-AES128-SHA256");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ECDHE-RSA-AES256-SHA");
-        testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "DHE-RSA-CAMELLIA128-SHA");
         testWrapWithDifferentSizes(PROTOCOL_TLS_V1_2, "ECDHE-RSA-RC4-SHA");
     }
 
@@ -981,7 +939,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
             try {
                 handshake(clientEngine, serverEngine);
             } catch (SSLException e) {
-                if (e.getMessage().contains("unsupported protocol")) {
+                if (e.getMessage().contains("unsupported protocol") ||
+                        e.getMessage().contains("no protocols available")) {
                     Assume.assumeNoException(protocol + " not supported with cipher " + cipher, e);
                 }
                 throw e;
