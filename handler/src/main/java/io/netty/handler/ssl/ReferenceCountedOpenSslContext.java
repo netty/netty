@@ -49,11 +49,11 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
@@ -486,6 +486,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
                 SSLContext.free(ctx);
                 ctx = 0;
+                sessionContext().destroy();
             }
         } finally {
             writerLock.unlock();
@@ -564,10 +565,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     static boolean useExtendedTrustManager(X509TrustManager trustManager) {
         return PlatformDependent.javaVersion() >= 7 && trustManager instanceof X509ExtendedTrustManager;
-    }
-
-    static boolean useExtendedKeyManager(X509KeyManager keyManager) {
-        return PlatformDependent.javaVersion() >= 7 && keyManager instanceof X509ExtendedKeyManager;
     }
 
     @Override
@@ -818,5 +815,20 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         } finally {
             buffer.release();
         }
+    }
+
+    /**
+     * Returns the {@link OpenSslKeyMaterialProvider} that should be used for OpenSSL. Depending on the given
+     * {@link KeyManagerFactory} this may cache the {@link OpenSslKeyMaterial} for better performance if it can
+     * ensure that the same material is always returned for the same alias.
+     */
+    static OpenSslKeyMaterialProvider providerFor(KeyManagerFactory factory, String password) {
+        X509KeyManager keyManager = chooseX509KeyManager(factory.getKeyManagers());
+        if (factory instanceof OpenSslCachingX509KeyManagerFactory) {
+            // The user explicit used OpenSslCachingX509KeyManagerFactory which signals us that its fine to cache.
+            return new OpenSslCachingKeyMaterialProvider(keyManager, password);
+        }
+        // We can not be sure if the material may change at runtime so we will not cache it.
+        return new OpenSslKeyMaterialProvider(keyManager, password);
     }
 }

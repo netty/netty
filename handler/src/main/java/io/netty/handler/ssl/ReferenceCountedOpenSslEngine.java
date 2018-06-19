@@ -1567,7 +1567,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         if (!certificateSet && keyMaterialManager != null) {
             certificateSet = true;
-            keyMaterialManager.setKeyMaterial(this);
+            keyMaterialManager.setKeyMaterialServerSide(this);
         }
 
         int code = SSL.doHandshake(ssl);

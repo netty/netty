@@ -34,14 +34,21 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
     private static final Enumeration<byte[]> EMPTY = new EmptyEnumeration();
 
     private final OpenSslSessionStats stats;
+
+    // The OpenSslKeyMaterialProvider is not really used by the OpenSslSessionContext but only be stored here
+    // to make it easier to destroy it later because the ReferenceCountedOpenSslContext will hold a reference
+    // to OpenSslSessionContext.
+    private final OpenSslKeyMaterialProvider provider;
+
     final ReferenceCountedOpenSslContext context;
 
     // IMPORTANT: We take the OpenSslContext and not just the long (which points the native instance) to prevent
     //            the GC to collect OpenSslContext as this would also free the pointer and so could result in a
     //            segfault when the user calls any of the methods here that try to pass the pointer down to the native
     //            level.
-    OpenSslSessionContext(ReferenceCountedOpenSslContext context) {
+    OpenSslSessionContext(ReferenceCountedOpenSslContext context, OpenSslKeyMaterialProvider provider) {
         this.context = context;
+        this.provider = provider;
         stats = new OpenSslSessionStats(context);
     }
 
@@ -121,6 +128,12 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
      */
     public OpenSslSessionStats stats() {
         return stats;
+    }
+
+    final void destroy() {
+        if (provider != null) {
+            provider.destroy();
+        }
     }
 
     private static final class EmptyEnumeration implements Enumeration<byte[]> {
