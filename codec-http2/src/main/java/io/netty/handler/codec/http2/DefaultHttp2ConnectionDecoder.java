@@ -520,26 +520,24 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 throw connectionError(PROTOCOL_ERROR, "A client cannot push.");
             }
 
-            Http2Stream parentStream = connection.stream(streamId);
-
-            if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, parentStream, "PUSH_PROMISE")) {
+            if (streamCreatedAfterGoAwaySent(promisedStreamId)) {
                 return;
             }
 
-            if (parentStream == null) {
-                throw connectionError(PROTOCOL_ERROR, "Stream %d does not exist", streamId);
-            }
+            Http2Stream parentStream = connection.stream(streamId);
 
-            switch (parentStream.state()) {
-              case OPEN:
-              case HALF_CLOSED_LOCAL:
-                  // Allowed to receive push promise in these states.
-                  break;
-              default:
-                  // Connection error.
-                  throw connectionError(PROTOCOL_ERROR,
-                      "Stream %d in unexpected state for receiving push promise: %s",
-                      parentStream.id(), parentStream.state());
+            if (parentStream != null) {
+                switch (parentStream.state()) {
+                    case OPEN:
+                    case HALF_CLOSED_LOCAL:
+                        // Allowed to receive push promise in these states.
+                        break;
+                    default:
+                        // Connection error.
+                        throw connectionError(PROTOCOL_ERROR,
+                                              "Stream %d in unexpected state for receiving push promise: %s",
+                                              parentStream.id(), parentStream.state());
+                }
             }
 
             if (!requestVerifier.isAuthoritative(ctx, headers)) {

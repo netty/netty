@@ -27,6 +27,7 @@ import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -648,7 +649,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void pushPromiseReadAfterGoAwaySentShouldBeIgnored() throws Exception {
-        mockGoAwaySent();
+        mockGoAwaySent(PUSH_STREAM_ID);
         decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
         verify(remote, never()).reservePushStream(anyInt(), any(Http2Stream.class));
         verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
@@ -662,21 +663,11 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
     }
 
-    @Test
-    public void pushPromiseReadForUnknownStreamThatMayHaveExistedShouldBeIgnored() throws Exception {
-        when(connection.stream(STREAM_ID)).thenReturn(null);
-        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
-
-        // Verify that the event was absorbed and not propagated to the observer.
-        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(),
-                                                    any(Http2Headers.class), anyInt());
-        verify(remote, never()).createStream(anyInt(), anyBoolean());
-        verify(stream, never()).open(anyBoolean());
-    }
-
-    @Test(expected = Http2Exception.class)
-    public void pushPromiseReadForUnknownStreamThatNeverExistedShouldThrow() throws Exception {
+    @Test(expected = Http2Exception.StreamException.class)
+    public void pushPromiseReadForUnknownStreamShouldThrowStreamException() throws Exception {
         when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
+        when(connection.remote().reservePushStream(anyInt(), ArgumentMatchers.<Http2Stream>isNull()))
+            .thenThrow(new Http2Exception.StreamException(PUSH_STREAM_ID, Http2Error.REFUSED_STREAM, "no stream"));
         when(connection.stream(STREAM_ID)).thenReturn(null);
         decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
     }
@@ -857,8 +848,12 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     private void mockGoAwaySent() {
+        mockGoAwaySent(STREAM_ID);
+    }
+
+    private void mockGoAwaySent(int streamId) {
         when(connection.goAwaySent()).thenReturn(true);
-        when(remote.isValidStreamId(STREAM_ID)).thenReturn(true);
+        when(remote.isValidStreamId(streamId)).thenReturn(true);
         when(remote.lastStreamKnownByPeer()).thenReturn(0);
     }
 

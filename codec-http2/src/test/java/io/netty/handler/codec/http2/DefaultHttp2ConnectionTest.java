@@ -321,6 +321,18 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test
+    public void reservePushStreamForUnknownParentStreamIncrementsExpectedStreamIdAndThrows() throws Http2Exception {
+        try {
+            assertEquals(0, server.local().lastStreamCreated());
+            server.local().reservePushStream(2, null);
+            fail("Expected StreamException");
+        } catch (Http2Exception.StreamException expected) {
+            // Next expected stream id should still be incremented.
+            assertEquals(2, server.local().lastStreamCreated());
+        }
+    }
+
+    @Test
     public void clientReservePushStreamShouldSucceed() throws Http2Exception {
         Http2Stream stream = server.remote().createStream(3, true);
         Http2Stream pushStream = server.local().reservePushStream(4, stream);

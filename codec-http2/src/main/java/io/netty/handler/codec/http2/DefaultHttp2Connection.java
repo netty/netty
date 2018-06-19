@@ -771,7 +771,9 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public DefaultStream reservePushStream(int streamId, Http2Stream parent) throws Http2Exception {
             if (parent == null) {
-                throw connectionError(PROTOCOL_ERROR, "Parent stream missing");
+                incrementExpectedStreamId(streamId);
+                throw streamError(streamId, Http2Error.REFUSED_STREAM, "PUSH_PROMISE sent on unknown stream, "
+                                                                       + "likely discarded due to a RST_STREAM.");
             }
             if (isLocal() ? !parent.state().localSideOpen() : !parent.state().remoteSideOpen()) {
                 throw connectionError(PROTOCOL_ERROR, "Stream %d is not open for sending push promise", parent.id());
