@@ -22,6 +22,7 @@ import java.nio.ByteOrder;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -883,7 +884,31 @@ public final class Unpooled {
      * not try to slice the given {@link ByteBuf}s to reduce GC-Pressure.
      */
     public static ByteBuf unmodifiableBuffer(ByteBuf... buffers) {
-        return new FixedCompositeByteBuf(ALLOC, buffers);
+        return wrappedUnmodifiableBuffer(true, buffers);
+    }
+
+    /**
+     * Wrap the given {@link ByteBuf}s in an unmodifiable {@link ByteBuf}. Be aware the returned {@link ByteBuf} will
+     * not try to slice the given {@link ByteBuf}s to reduce GC-Pressure.
+     *
+     * The returned {@link ByteBuf} wraps the provided array directly, and so should not be subsequently modified.
+     */
+    public static ByteBuf wrappedUnmodifiableBuffer(ByteBuf... buffers) {
+        return wrappedUnmodifiableBuffer(false, buffers);
+    }
+
+    private static ByteBuf wrappedUnmodifiableBuffer(boolean copy, ByteBuf... buffers) {
+        switch (buffers.length) {
+        case 0:
+            return EMPTY_BUFFER;
+        case 1:
+            return buffers[0].asReadOnly();
+        default:
+            if (copy) {
+                buffers = Arrays.copyOf(buffers, buffers.length, ByteBuf[].class);
+            }
+            return new FixedCompositeByteBuf(ALLOC, buffers);
+        }
     }
 
     private Unpooled() {
