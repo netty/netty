@@ -18,7 +18,9 @@ package io.netty.handler.codec.http.cookie;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.matchers.JUnitMatchers.containsString;
 import io.netty.handler.codec.DateFormatter;
 
 import java.text.ParseException;
@@ -129,6 +131,15 @@ public class ServerCookieEncoderTest {
         }
 
         assertEquals(illegalChars.size(), exceptions);
+    }
+
+    @Test
+    public void illegalCharInWrappedValueAppearsInException() {
+        try {
+            ServerCookieEncoder.STRICT.encode(new DefaultCookie("name", "\"value,\""));
+        } catch (IllegalArgumentException e) {
+            assertThat(e.getMessage().toLowerCase(), containsString("cookie value contains an invalid char: ,"));
+        }
     }
 
     @Test
