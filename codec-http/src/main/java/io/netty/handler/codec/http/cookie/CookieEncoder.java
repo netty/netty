@@ -44,7 +44,8 @@ public abstract class CookieEncoder {
             }
 
             if ((pos = firstInvalidCookieValueOctet(unwrappedValue)) >= 0) {
-                throw new IllegalArgumentException("Cookie value contains an invalid char: " + value.charAt(pos));
+                throw new IllegalArgumentException("Cookie value contains an invalid char: " +
+                                                   unwrappedValue.charAt(pos));
             }
         }
     }
