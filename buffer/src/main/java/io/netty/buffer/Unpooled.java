@@ -238,7 +238,7 @@ public final class Unpooled {
      * content will be visible to the returned buffer.
      */
     public static ByteBuf wrappedBuffer(byte[]... arrays) {
-        return wrappedBuffer(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, arrays);
+        return wrappedBuffer(arrays.length, arrays);
     }
 
     /**
@@ -249,7 +249,7 @@ public final class Unpooled {
      * @return The readable portion of the {@code buffers}. The caller is responsible for releasing this buffer.
      */
     public static ByteBuf wrappedBuffer(ByteBuf... buffers) {
-        return wrappedBuffer(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, buffers);
+        return wrappedBuffer(buffers.length, buffers);
     }
 
     /**
@@ -258,7 +258,7 @@ public final class Unpooled {
      * specified buffers will be visible to the returned buffer.
      */
     public static ByteBuf wrappedBuffer(ByteBuffer... buffers) {
-        return wrappedBuffer(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, buffers);
+        return wrappedBuffer(buffers.length, buffers);
     }
 
     /**
