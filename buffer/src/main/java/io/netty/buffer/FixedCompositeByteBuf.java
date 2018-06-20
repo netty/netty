@@ -27,7 +27,6 @@ import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.util.Arrays;
 import java.util.Collections;
 
 /**
@@ -53,7 +52,12 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
             direct = false;
         } else {
             ByteBuf b = buffers[0];
-            this.buffers = copy ? Arrays.copyOf(buffers, buffers.length) : buffers;
+            if (copy) {
+                this.buffers = new ByteBuf[buffers.length];
+                System.arraycopy(buffers, 0, this.buffers, 0, buffers.length);
+            } else {
+                this.buffers = buffers;
+            }
             boolean direct = true;
             int nioBufferCount = b.nioBufferCount();
             int capacity = b.readableBytes();
