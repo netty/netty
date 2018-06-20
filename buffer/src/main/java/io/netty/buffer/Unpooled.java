@@ -883,7 +883,17 @@ public final class Unpooled {
      * not try to slice the given {@link ByteBuf}s to reduce GC-Pressure.
      */
     public static ByteBuf unmodifiableBuffer(ByteBuf... buffers) {
-        return new FixedCompositeByteBuf(ALLOC, buffers);
+        return new FixedCompositeByteBuf(ALLOC, true, buffers);
+    }
+
+    /**
+     * Wrap the given {@link ByteBuf}s in an unmodifiable {@link ByteBuf}. Be aware the returned {@link ByteBuf} will
+     * not try to slice the given {@link ByteBuf}s to reduce GC-Pressure.
+     *
+     * The returned {@link ByteBuf} wraps the provided array directly, and so should not be subsequently modified.
+     */
+    public static ByteBuf wrappedUnmodifiableBuffer(ByteBuf... buffers) {
+        return new FixedCompositeByteBuf(ALLOC, false, buffers);
     }
 
     private Unpooled() {

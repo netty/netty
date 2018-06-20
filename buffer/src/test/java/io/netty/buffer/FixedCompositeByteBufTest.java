@@ -33,7 +33,7 @@ import static org.junit.Assert.*;
 public class FixedCompositeByteBufTest {
 
     private static ByteBuf newBuffer(ByteBuf... buffers) {
-        return new FixedCompositeByteBuf(UnpooledByteBufAllocator.DEFAULT, buffers);
+        return new FixedCompositeByteBuf(UnpooledByteBufAllocator.DEFAULT, false, buffers);
     }
 
     @Test(expected = ReadOnlyBufferException.class)
