@@ -42,7 +42,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     private final ByteBuf[] buffers;
     private final boolean direct;
 
-    FixedCompositeByteBuf(ByteBufAllocator allocator, boolean copy, ByteBuf... buffers) {
+    FixedCompositeByteBuf(ByteBufAllocator allocator, ByteBuf... buffers) {
         super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
         if (buffers.length == 0) {
             this.buffers = EMPTY;
@@ -52,12 +52,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
             direct = false;
         } else {
             ByteBuf b = buffers[0];
-            if (copy) {
-                this.buffers = new ByteBuf[buffers.length];
-                System.arraycopy(buffers, 0, this.buffers, 0, buffers.length);
-            } else {
-                this.buffers = buffers;
-            }
+            this.buffers = buffers;
             boolean direct = true;
             int nioBufferCount = b.nioBufferCount();
             int capacity = b.readableBytes();
