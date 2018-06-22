@@ -544,7 +544,7 @@ public class HpackDecoderTest {
 
             Http2Headers decoded = new DefaultHttp2Headers();
 
-            expectedException.expect(Http2Exception.class);
+            expectedException.expect(Http2Exception.StreamException.class);
             hpackDecoder.decode(1, in, decoded, true);
         } finally {
             in.release();
@@ -588,7 +588,7 @@ public class HpackDecoderTest {
 
             Http2Headers decoded = new DefaultHttp2Headers();
 
-            expectedException.expect(Http2Exception.class);
+            expectedException.expect(Http2Exception.StreamException.class);
             hpackDecoder.decode(1, in, decoded, true);
         } finally {
             in.release();
@@ -608,7 +608,7 @@ public class HpackDecoderTest {
 
             Http2Headers decoded = new DefaultHttp2Headers();
 
-            expectedException.expect(Http2Exception.class);
+            expectedException.expect(Http2Exception.StreamException.class);
             hpackDecoder.decode(1, in, decoded, true);
         } finally {
             in.release();
@@ -628,10 +628,47 @@ public class HpackDecoderTest {
 
             Http2Headers decoded = new DefaultHttp2Headers();
 
-            expectedException.expect(Http2Exception.class);
+            expectedException.expect(Http2Exception.StreamException.class);
             hpackDecoder.decode(1, in, decoded, true);
         } finally {
             in.release();
+        }
+    }
+
+    @Test
+    public void failedValidationDoesntCorruptHpack() throws Exception {
+        ByteBuf in1 = Unpooled.buffer(200);
+        ByteBuf in2 = Unpooled.buffer(200);
+        try {
+            HpackEncoder hpackEncoder = new HpackEncoder(true);
+
+            Http2Headers toEncode = new DefaultHttp2Headers();
+            toEncode.add(":method", "GET");
+            toEncode.add(":status", "200");
+            toEncode.add("foo", "bar");
+            hpackEncoder.encodeHeaders(1, in1, toEncode, NEVER_SENSITIVE);
+
+            Http2Headers decoded = new DefaultHttp2Headers();
+
+            try {
+                hpackDecoder.decode(1, in1, decoded, true);
+                fail("Should have thrown a StreamException");
+            } catch (Http2Exception.StreamException expected) {
+                assertEquals(1, expected.streamId());
+            }
+
+            // Do it again, this time without validation, to make sure the HPACK state is still sane.
+            decoded.clear();
+            hpackEncoder.encodeHeaders(1, in2, toEncode, NEVER_SENSITIVE);
+            hpackDecoder.decode(1, in2, decoded, false);
+
+            assertEquals(3, decoded.size());
+            assertEquals("GET", decoded.method().toString());
+            assertEquals("200", decoded.status().toString());
+            assertEquals("bar", decoded.get("foo").toString());
+        } finally {
+            in1.release();
+            in2.release();
         }
     }
 }
