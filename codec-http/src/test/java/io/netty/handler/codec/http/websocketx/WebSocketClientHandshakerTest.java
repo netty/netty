@@ -240,8 +240,8 @@ public abstract class WebSocketClientHandshakerTest {
             }
         };
 
-        byte[] data = new byte[24];
-        PlatformDependent.threadLocalRandom().nextBytes(data);
+        // use randomBytes helper from utils to check that it functions properly
+        byte[] data = WebSocketUtil.randomBytes(24);
 
         // Create a EmbeddedChannel which we will use to encode a BinaryWebsocketFrame to bytes and so use these
         // to test the actual handshaker.
