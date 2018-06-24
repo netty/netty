@@ -105,7 +105,13 @@ public final class OpenSsl {
                 }
 
                 try {
-                    initializeTcNative();
+                    String engine = SystemPropertyUtil.get("io.netty.handler.ssl.openssl.engine", null);
+                    if (engine == null) {
+                        logger.debug("Initialize netty-tcnative using engine: 'default'");
+                    } else {
+                        logger.debug("Initialize netty-tcnative using engine: '{}'", engine);
+                    }
+                    initializeTcNative(engine);
 
                     // The library was initialized successfully. If loading the library failed above,
                     // reset the cause now since it appears that the library was loaded by some other
@@ -435,8 +441,8 @@ public final class OpenSsl {
             libNames.toArray(new String[libNames.size()]));
     }
 
-    private static boolean initializeTcNative() throws Exception {
-        return Library.initialize();
+    private static boolean initializeTcNative(String engine) throws Exception {
+        return Library.initialize("provided", engine);
     }
 
     static void releaseIfNeeded(ReferenceCounted counted) {
