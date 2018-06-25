@@ -35,6 +35,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.resolver.NoopAddressResolverGroup;
@@ -91,8 +92,8 @@ public class ProxyHandlerTest {
         SslContext cctx;
         try {
             SelfSignedCertificate ssc = new SelfSignedCertificate();
-            sctx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
-            cctx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+            sctx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+            cctx = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
         } catch (Exception e) {
             throw new Error(e);
         }
