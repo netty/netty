@@ -123,10 +123,22 @@ public class FastThreadLocal<V> {
         variablesToRemove.remove(variable);
     }
 
+    // visible for tests
+    static boolean hasOnRemoval(Class<? extends FastThreadLocal> clazz) {
+      try {
+        Class<?> declaringClass = clazz.getMethod("onRemoval", Object.class).getDeclaringClass();
+        return !declaringClass.equals(FastThreadLocal.class);
+      } catch (Throwable t) {
+        return true;
+      }
+    }
+
     private final int index;
+    private final boolean hasOnRemoval;
 
     public FastThreadLocal() {
         index = InternalThreadLocalMap.nextVariableIndex();
+        hasOnRemoval = hasOnRemoval(getClass());
     }
 
     /**
@@ -147,7 +159,8 @@ public class FastThreadLocal<V> {
 
     private void registerCleaner(final InternalThreadLocalMap threadLocalMap) {
         Thread current = Thread.currentThread();
-        if (FastThreadLocalThread.willCleanupFastThreadLocals(current) || threadLocalMap.isCleanerFlagSet(index)) {
+        if (!hasOnRemoval || FastThreadLocalThread.willCleanupFastThreadLocals(current)
+                || threadLocalMap.isCleanerFlagSet(index)) {
             return;
         }
 

@@ -137,6 +137,18 @@ public class FastThreadLocalTest {
         assertEquals(4, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
     }
 
+    public void testDetectOnRemoval_whenPresent() {
+        assertThat(FastThreadLocal.hasOnRemoval(TestFastThreadLocal.class), is(true));
+    }
+
+    public void testDetectOnRemoval_whenAbsent() {
+        class ExtendingFastThreadLocal<T> extends FastThreadLocal<T> {
+        }
+
+        assertThat(FastThreadLocal.hasOnRemoval(FastThreadLocal.class), is(false));
+        assertThat(FastThreadLocal.hasOnRemoval(ExtendingFastThreadLocal.class), is(false));
+    }
+
     @Test(timeout = 4000)
     public void testOnRemoveCalledForFastThreadLocalGet() throws Exception {
         testOnRemoveCalled(true, true);
