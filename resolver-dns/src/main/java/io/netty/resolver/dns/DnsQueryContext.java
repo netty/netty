@@ -115,10 +115,13 @@ final class DnsQueryContext {
         } else {
             parent.channelFuture.addListener(new GenericFutureListener<Future<? super Channel>>() {
                 @Override
-                public void operationComplete(Future<? super Channel> future) throws Exception {
+                public void operationComplete(Future<? super Channel> future) {
                     if (future.isSuccess()) {
                         writeQuery(query, writePromise);
                     } else {
+                        // Remove the id from the manager as we fail the query.
+                        parent.queryContextManager.remove(nameServerAddr(), id);
+
                         Throwable cause = future.cause();
                         promise.tryFailure(cause);
                         writePromise.setFailure(cause);
