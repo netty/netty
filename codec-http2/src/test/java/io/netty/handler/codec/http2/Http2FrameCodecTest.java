@@ -44,6 +44,7 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ReflectionUtil;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -58,13 +59,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -400,6 +395,20 @@ public class Http2FrameCodecTest {
         assertEquals(1, debugData.refCnt());
         assertEquals(State.OPEN, stream.state());
         assertTrue(channel.isActive());
+    }
+
+    @Test
+    public void outboundStreamAfterGoAwayFails() throws Exception {
+        final Http2FrameStream stream = frameCodec.newStream();
+        frameListener.onGoAwayRead(http2HandlerCtx, 0, Http2Error.NO_ERROR.code(), Unpooled.EMPTY_BUFFER);
+
+        assertTrue(frameCodec.connection().goAwayReceived());
+        assertTrue(channel.isOpen());
+        ChannelFuture f = channel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false).stream(stream));
+
+        assertFalse(f.isSuccess());
+        assertThat(f.cause(), instanceOf(Http2NoMoreStreamIdsException.class));
     }
 
     @Test
