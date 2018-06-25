@@ -37,21 +37,43 @@ import static java.lang.Math.min;
  * @param <T> the type of the pooled object
  */
 public abstract class Recycler<T> {
+    // By its very nature this class uses heuristics, and depending on the
+    // workload may be overeager or too conservative. However, to prevent
+    // unnecessary burden on users, it has a core design principal of "do no
+    // harm." Being conservative and providing less benefit is better than
+    // being disabled due to overeagerness and providing no benefit.
+    //
+    // Because this class causes objects to have longer lifetimes than
+    // previously, it can negatively impact memory usage. Thus it follows the
+    // rule: "do not be the _direct_ cause of an object to outlive its
+    // generation." It does this by using weak references when objects are not
+    // actively being used. Worst-case, it will retain one WeakReference per
+    // thread of additional memory. This class does _indirectly_ cause objects
+    // to outlive their generation, however. To help mitigate that, it attempts
+    // to follow: "prefer using objects in older generations over objects in
+    // newer generations." This keeps newer objects out of the application,
+    // giving them more opportunity to be garbage collected. This rule works
+    // well for CMS, but is imprecise for G1.
+    //
+    // Because this class needs to maintain state, it can negatively impact GC
+    // and memory usage. Thus it follows the rule: "avoid overhead for objects
+    // that won't be reused." While more sophisticated methods of following the
+    // rule are possible, the class uses a simple approach of making ~1% of the
+    // new objects be recyclable. If recycling is helping, the recyclable
+    // objects will accumulate.
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Recycler.class);
 
-    @SuppressWarnings("rawtypes")
-    private static final Handle NOOP_HANDLE = new Handle() {
+    private static final Handle<?> NOOP_HANDLE = new Handle<Object>() {
         @Override
         public void recycle(Object object) {
             // NOOP
         }
     };
-    private static final AtomicInteger ID_GENERATOR = new AtomicInteger(Integer.MIN_VALUE);
-    private static final int OWN_THREAD_ID = ID_GENERATOR.getAndIncrement();
-    private static final int DEFAULT_INITIAL_MAX_CAPACITY_PER_THREAD = 4 * 1024; // Use 4k instances as default.
+
+    // These constants aren't actually used, but they are needed to maintain the previous API.
+    private static final int DEFAULT_INITIAL_MAX_CAPACITY_PER_THREAD = 4 * 1024;
     private static final int DEFAULT_MAX_CAPACITY_PER_THREAD;
-    private static final int INITIAL_CAPACITY;
     private static final int MAX_SHARED_CAPACITY_FACTOR;
     private static final int MAX_DELAYED_QUEUES_PER_THREAD;
     private static final int LINK_CAPACITY;
@@ -99,32 +121,17 @@ public abstract class Recycler<T> {
                 logger.debug("-Dio.netty.recycler.ratio: {}", RATIO);
             }
         }
-
-        INITIAL_CAPACITY = min(DEFAULT_MAX_CAPACITY_PER_THREAD, 256);
     }
 
     private final int maxCapacityPerThread;
-    private final int maxSharedCapacityFactor;
-    private final int ratioMask;
-    private final int maxDelayedQueuesPerThread;
 
-    private final FastThreadLocal<Stack<T>> threadLocal = new FastThreadLocal<Stack<T>>() {
+    final FastThreadLocal<Stack<T>> threadLocal = new FastThreadLocal<Stack<T>>() {
         @Override
         protected Stack<T> initialValue() {
-            return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacityPerThread, maxSharedCapacityFactor,
-                    ratioMask, maxDelayedQueuesPerThread);
-        }
-
-        @Override
-        protected void onRemoval(Stack<T> value) {
-            // Let us remove the WeakOrderQueue from the WeakHashMap directly if its safe to remove some overhead
-            if (value.threadRef.get() == Thread.currentThread()) {
-               if (DELAYED_RECYCLED.isSet()) {
-                   DELAYED_RECYCLED.get().remove(value);
-               }
-            }
+            return new Stack<T>(Recycler.this);
         }
     };
+    final AtomicInteger currentGenId = new AtomicInteger();
 
     protected Recycler() {
         this(DEFAULT_MAX_CAPACITY_PER_THREAD);
@@ -140,15 +147,10 @@ public abstract class Recycler<T> {
 
     protected Recycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
                        int ratio, int maxDelayedQueuesPerThread) {
-        ratioMask = safeFindNextPositivePowerOfTwo(ratio) - 1;
         if (maxCapacityPerThread <= 0) {
             this.maxCapacityPerThread = 0;
-            this.maxSharedCapacityFactor = 1;
-            this.maxDelayedQueuesPerThread = 0;
         } else {
             this.maxCapacityPerThread = maxCapacityPerThread;
-            this.maxSharedCapacityFactor = max(1, maxSharedCapacityFactor);
-            this.maxDelayedQueuesPerThread = max(0, maxDelayedQueuesPerThread);
         }
     }
 
@@ -158,12 +160,7 @@ public abstract class Recycler<T> {
             return newObject((Handle<T>) NOOP_HANDLE);
         }
         Stack<T> stack = threadLocal.get();
-        DefaultHandle<T> handle = stack.pop();
-        if (handle == null) {
-            handle = stack.newHandle();
-            handle.value = newObject(handle);
-        }
-        return (T) handle.value;
+        return stack.popOrCreate();
     }
 
     /**
@@ -176,20 +173,12 @@ public abstract class Recycler<T> {
         }
 
         DefaultHandle<T> h = (DefaultHandle<T>) handle;
-        if (h.stack.parent != this) {
+        if (h.parent != this) {
             return false;
         }
 
         h.recycle(o);
         return true;
-    }
-
-    final int threadLocalCapacity() {
-        return threadLocal.get().elements.length;
-    }
-
-    final int threadLocalSize() {
-        return threadLocal.get().size;
     }
 
     protected abstract T newObject(Handle<T> handle);
@@ -199,16 +188,15 @@ public abstract class Recycler<T> {
     }
 
     static final class DefaultHandle<T> implements Handle<T> {
-        private int lastRecycledId;
-        private int recycleId;
+        private final WeakReference<DefaultHandle<T>> selfRef = new WeakReference<DefaultHandle<T>>(this);
+        private final Recycler<T> parent;
+        private T value;
+        private WeakReference<DefaultHandle<T>> next;
+        final int genId;
 
-        boolean hasBeenRecycled;
-
-        private Stack<?> stack;
-        private Object value;
-
-        DefaultHandle(Stack<?> stack) {
-            this.stack = stack;
+        DefaultHandle(Recycler<T> parent) {
+            this.parent = parent;
+            this.genId = parent.currentGenId.get();
         }
 
         @Override
@@ -216,446 +204,89 @@ public abstract class Recycler<T> {
             if (object != value) {
                 throw new IllegalArgumentException("object does not belong to handle");
             }
-
-            Stack<?> stack = this.stack;
-            if (lastRecycledId != recycleId || stack == null) {
-                throw new IllegalStateException("recycled already");
-            }
-
-            stack.push(this);
-        }
-    }
-
-    private static final FastThreadLocal<Map<Stack<?>, WeakOrderQueue>> DELAYED_RECYCLED =
-            new FastThreadLocal<Map<Stack<?>, WeakOrderQueue>>() {
-        @Override
-        protected Map<Stack<?>, WeakOrderQueue> initialValue() {
-            return new WeakHashMap<Stack<?>, WeakOrderQueue>();
-        }
-    };
-
-    // a queue that makes only moderate guarantees about visibility: items are seen in the correct order,
-    // but we aren't absolutely guaranteed to ever see anything at all, thereby keeping the queue cheap to maintain
-    private static final class WeakOrderQueue {
-
-        static final WeakOrderQueue DUMMY = new WeakOrderQueue();
-
-        // Let Link extend AtomicInteger for intrinsics. The Link itself will be used as writerIndex.
-        @SuppressWarnings("serial")
-        static final class Link extends AtomicInteger {
-            private final DefaultHandle<?>[] elements = new DefaultHandle[LINK_CAPACITY];
-
-            private int readIndex;
-            Link next;
-        }
-
-        // This act as a place holder for the head Link but also will reclaim space once finalized.
-        // Its important this does not hold any reference to either Stack or WeakOrderQueue.
-        static final class Head {
-            private final AtomicInteger availableSharedCapacity;
-
-            Link link;
-
-            Head(AtomicInteger availableSharedCapacity) {
-                this.availableSharedCapacity = availableSharedCapacity;
-            }
-
-            /// TODO: In the future when we move to Java9+ we should use java.lang.ref.Cleaner.
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    super.finalize();
-                } finally {
-                    Link head = link;
-                    link = null;
-                    while (head != null) {
-                        reclaimSpace(LINK_CAPACITY);
-                        Link next = head.next;
-                        // Unlink to help GC and guard against GC nepotism.
-                        head.next = null;
-                        head = next;
-                    }
-                }
-            }
-
-            void reclaimSpace(int space) {
-                assert space >= 0;
-                availableSharedCapacity.addAndGet(space);
-            }
-
-            boolean reserveSpace(int space) {
-                return reserveSpace(availableSharedCapacity, space);
-            }
-
-            static boolean reserveSpace(AtomicInteger availableSharedCapacity, int space) {
-                assert space >= 0;
-                for (;;) {
-                    int available = availableSharedCapacity.get();
-                    if (available < space) {
-                        return false;
-                    }
-                    if (availableSharedCapacity.compareAndSet(available, available - space)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        // chain of data items
-        private final Head head;
-        private Link tail;
-        // pointer to another queue of delayed items for the same stack
-        private WeakOrderQueue next;
-        private final WeakReference<Thread> owner;
-        private final int id = ID_GENERATOR.getAndIncrement();
-
-        private WeakOrderQueue() {
-            owner = null;
-            head = new Head(null);
-        }
-
-        private WeakOrderQueue(Stack<?> stack, Thread thread) {
-            tail = new Link();
-
-            // Its important that we not store the Stack itself in the WeakOrderQueue as the Stack also is used in
-            // the WeakHashMap as key. So just store the enclosed AtomicInteger which should allow to have the
-            // Stack itself GCed.
-            head = new Head(stack.availableSharedCapacity);
-            head.link = tail;
-            owner = new WeakReference<Thread>(thread);
-        }
-
-        static WeakOrderQueue newQueue(Stack<?> stack, Thread thread) {
-            final WeakOrderQueue queue = new WeakOrderQueue(stack, thread);
-            // Done outside of the constructor to ensure WeakOrderQueue.this does not escape the constructor and so
-            // may be accessed while its still constructed.
-            stack.setHead(queue);
-
-            return queue;
-        }
-
-        private void setNext(WeakOrderQueue next) {
-            assert next != this;
-            this.next = next;
-        }
-
-        /**
-         * Allocate a new {@link WeakOrderQueue} or return {@code null} if not possible.
-         */
-        static WeakOrderQueue allocate(Stack<?> stack, Thread thread) {
-            // We allocated a Link so reserve the space
-            return Head.reserveSpace(stack.availableSharedCapacity, LINK_CAPACITY)
-                    ? newQueue(stack, thread) : null;
-        }
-
-        void add(DefaultHandle<?> handle) {
-            handle.lastRecycledId = id;
-
-            Link tail = this.tail;
-            int writeIndex;
-            if ((writeIndex = tail.get()) == LINK_CAPACITY) {
-                if (!head.reserveSpace(LINK_CAPACITY)) {
-                    // Drop it.
-                    return;
-                }
-                // We allocate a Link so reserve the space
-                this.tail = tail = tail.next = new Link();
-
-                writeIndex = tail.get();
-            }
-            tail.elements[writeIndex] = handle;
-            handle.stack = null;
-            // we lazy set to ensure that setting stack to null appears before we unnull it in the owning thread;
-            // this also means we guarantee visibility of an element in the queue if we see the index updated
-            tail.lazySet(writeIndex + 1);
-        }
-
-        boolean hasFinalData() {
-            return tail.readIndex != tail.get();
-        }
-
-        // transfer as many items as we can from this queue to the stack, returning true if any were transferred
-        @SuppressWarnings("rawtypes")
-        boolean transfer(Stack<?> dst) {
-            Link head = this.head.link;
-            if (head == null) {
-                return false;
-            }
-
-            if (head.readIndex == LINK_CAPACITY) {
-                if (head.next == null) {
-                    return false;
-                }
-                this.head.link = head = head.next;
-            }
-
-            final int srcStart = head.readIndex;
-            int srcEnd = head.get();
-            final int srcSize = srcEnd - srcStart;
-            if (srcSize == 0) {
-                return false;
-            }
-
-            final int dstSize = dst.size;
-            final int expectedCapacity = dstSize + srcSize;
-
-            if (expectedCapacity > dst.elements.length) {
-                final int actualCapacity = dst.increaseCapacity(expectedCapacity);
-                srcEnd = min(srcStart + actualCapacity - dstSize, srcEnd);
-            }
-
-            if (srcStart != srcEnd) {
-                final DefaultHandle[] srcElems = head.elements;
-                final DefaultHandle[] dstElems = dst.elements;
-                int newDstSize = dstSize;
-                for (int i = srcStart; i < srcEnd; i++) {
-                    DefaultHandle element = srcElems[i];
-                    if (element.recycleId == 0) {
-                        element.recycleId = element.lastRecycledId;
-                    } else if (element.recycleId != element.lastRecycledId) {
-                        throw new IllegalStateException("recycled already");
-                    }
-                    srcElems[i] = null;
-
-                    if (dst.dropHandle(element)) {
-                        // Drop the object.
-                        continue;
-                    }
-                    element.stack = dst;
-                    dstElems[newDstSize ++] = element;
-                }
-
-                if (srcEnd == LINK_CAPACITY && head.next != null) {
-                    // Add capacity back as the Link is GCed.
-                    this.head.reclaimSpace(LINK_CAPACITY);
-                    this.head.link = head.next;
-                }
-
-                head.readIndex = srcEnd;
-                if (dst.size == newDstSize) {
-                    return false;
-                }
-                dst.size = newDstSize;
-                return true;
-            } else {
-                // The destination stack is full already.
-                return false;
-            }
+            parent.threadLocal.get().push(this);
         }
     }
 
     static final class Stack<T> {
+        private static final WeakReference<?> NULL_REF = new WeakReference<DefaultHandle<?>>(null);
 
-        // we keep a queue of per-thread queues, which is appended to once only, each time a new thread other
-        // than the stack owner recycles: when we run out of items in our stack we iterate this collection
-        // to scavenge those that can be reused. this permits us to incur minimal thread synchronisation whilst
-        // still recycling all items.
         final Recycler<T> parent;
+        /** The maxId of every handle within the generation. The last generation accepts the remaining ids. */
+        private final int[] genMaxId = new int[] {-1, -1};
+        private final WeakReference[] genHead = new WeakReference[] {
+            NULL_REF, NULL_REF, NULL_REF
+        };
+        private int allocationCount;
 
-        // We store the Thread in a WeakReference as otherwise we may be the only ones that still hold a strong
-        // Reference to the Thread itself after it died because DefaultHandle will hold a reference to the Stack.
-        //
-        // The biggest issue is if we do not use a WeakReference the Thread may not be able to be collected at all if
-        // the user will store a reference to the DefaultHandle somewhere and never clear this reference (or not clear
-        // it in a timely manner).
-        final WeakReference<Thread> threadRef;
-        final AtomicInteger availableSharedCapacity;
-        final int maxDelayedQueues;
-
-        private final int maxCapacity;
-        private final int ratioMask;
-        private DefaultHandle<?>[] elements;
-        private int size;
-        private int handleRecycleCount = -1; // Start with -1 so the first one will be recycled.
-        private WeakOrderQueue cursor, prev;
-        private volatile WeakOrderQueue head;
-
-        Stack(Recycler<T> parent, Thread thread, int maxCapacity, int maxSharedCapacityFactor,
-              int ratioMask, int maxDelayedQueues) {
+        Stack(Recycler<T> parent) {
             this.parent = parent;
-            threadRef = new WeakReference<Thread>(thread);
-            this.maxCapacity = maxCapacity;
-            availableSharedCapacity = new AtomicInteger(max(maxCapacity / maxSharedCapacityFactor, LINK_CAPACITY));
-            elements = new DefaultHandle[min(INITIAL_CAPACITY, maxCapacity)];
-            this.ratioMask = ratioMask;
-            this.maxDelayedQueues = maxDelayedQueues;
         }
 
-        // Marked as synchronized to ensure this is serialized.
-        synchronized void setHead(WeakOrderQueue queue) {
-            queue.setNext(head);
-            head = queue;
-        }
-
-        int increaseCapacity(int expectedCapacity) {
-            int newCapacity = elements.length;
-            int maxCapacity = this.maxCapacity;
-            do {
-                newCapacity <<= 1;
-            } while (newCapacity < expectedCapacity && newCapacity < maxCapacity);
-
-            newCapacity = min(newCapacity, maxCapacity);
-            if (newCapacity != elements.length) {
-                elements = Arrays.copyOf(elements, newCapacity);
-            }
-
-            return newCapacity;
-        }
-
-        @SuppressWarnings({ "unchecked", "rawtypes" })
         DefaultHandle<T> pop() {
-            int size = this.size;
-            if (size == 0) {
-                if (!scavenge()) {
-                    return null;
+            for (int i = 0; i < genHead.length; i++) {
+                WeakReference<DefaultHandle<T>> head = genHead[i];
+                if (head == NULL_REF) {
+                    continue;
                 }
-                size = this.size;
+                DefaultHandle<T> node = head.get();
+                if (node == null) {
+                    gcDetected(i);
+                    genHead[i] = NULL_REF;
+                    continue;
+                }
+                genHead[i] = node.next;
+                node.next = null;
+                return node;
             }
-            size --;
-            DefaultHandle ret = elements[size];
-            elements[size] = null;
-            if (ret.lastRecycledId != ret.recycleId) {
-                throw new IllegalStateException("recycled multiple times");
-            }
-            ret.recycleId = 0;
-            ret.lastRecycledId = 0;
-            this.size = size;
-            return ret;
+            return null;
         }
 
-        boolean scavenge() {
-            // continue an existing scavenge, if any
-            if (scavengeSome()) {
-                return true;
-            }
+        void gcDetected(int genIndex) {
+            int i = genIndex;
+            if (i > 0) {
+                // Promote this generation
 
-            // reset our scavenge cursor
-            prev = null;
-            cursor = head;
-            return false;
-        }
-
-        boolean scavengeSome() {
-            WeakOrderQueue prev;
-            WeakOrderQueue cursor = this.cursor;
-            if (cursor == null) {
-                prev = null;
-                cursor = head;
-                if (cursor == null) {
-                    return false;
-                }
-            } else {
-                prev = this.prev;
-            }
-
-            boolean success = false;
-            do {
-                if (cursor.transfer(this)) {
-                    success = true;
-                    break;
-                }
-                WeakOrderQueue next = cursor.next;
-                if (cursor.owner.get() == null) {
-                    // If the thread associated with the queue is gone, unlink it, after
-                    // performing a volatile read to confirm there is no data left to collect.
-                    // We never unlink the first queue, as we don't want to synchronize on updating the head.
-                    if (cursor.hasFinalData()) {
-                        for (;;) {
-                            if (cursor.transfer(this)) {
-                                success = true;
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-
-                    if (prev != null) {
-                        prev.setNext(next);
-                    }
+                int maxId;
+                if (i < genMaxId.length) {
+                    maxId = genMaxId[i];
                 } else {
-                    prev = cursor;
+                    // Eden generation
+
+                    maxId = parent.currentGenId.get();
+                    if (maxId == genMaxId[i - 1]) {
+                        // This is the first thread to detect the new generation
+                        parent.currentGenId.incrementAndGet();
+                    }
                 }
-
-                cursor = next;
-
-            } while (cursor != null && !success);
-
-            this.prev = prev;
-            this.cursor = cursor;
-            return success;
-        }
-
-        void push(DefaultHandle<?> item) {
-            Thread currentThread = Thread.currentThread();
-            if (threadRef.get() == currentThread) {
-                // The current Thread is the thread that belongs to the Stack, we can try to push the object now.
-                pushNow(item);
-            } else {
-                // The current Thread is not the one that belongs to the Stack
-                // (or the Thread that belonged to the Stack was collected already), we need to signal that the push
-                // happens later.
-                pushLater(item, currentThread);
+                genMaxId[i - 1] = maxId;
             }
         }
 
-        private void pushNow(DefaultHandle<?> item) {
-            if ((item.recycleId | item.lastRecycledId) != 0) {
+        void push(DefaultHandle<T> node) {
+            if (node.next != null) {
                 throw new IllegalStateException("recycled already");
             }
-            item.recycleId = item.lastRecycledId = OWN_THREAD_ID;
-
-            int size = this.size;
-            if (size >= maxCapacity || dropHandle(item)) {
-                // Hit the maximum capacity or should drop - drop the possibly youngest object.
-                return;
+            int i = 0;
+            for (; i < genMaxId.length && genMaxId[i] < node.genId; i++) {
+                // find generation index
             }
-            if (size == elements.length) {
-                elements = Arrays.copyOf(elements, min(size << 1, maxCapacity));
-            }
-
-            elements[size] = item;
-            this.size = size + 1;
+            node.next = genHead[i];
+            genHead[i] = node.selfRef;
         }
 
-        private void pushLater(DefaultHandle<?> item, Thread thread) {
-            // we don't want to have a ref to the queue as the value in our weak map
-            // so we null it out; to ensure there are no races with restoring it later
-            // we impose a memory ordering here (no-op on x86)
-            Map<Stack<?>, WeakOrderQueue> delayedRecycled = DELAYED_RECYCLED.get();
-            WeakOrderQueue queue = delayedRecycled.get(this);
-            if (queue == null) {
-                if (delayedRecycled.size() >= maxDelayedQueues) {
-                    // Add a dummy queue so we know we should drop the object
-                    delayedRecycled.put(this, WeakOrderQueue.DUMMY);
-                    return;
-                }
-                // Check if we already reached the maximum number of delayed queues and if we can allocate at all.
-                if ((queue = WeakOrderQueue.allocate(this, thread)) == null) {
-                    // drop object
-                    return;
-                }
-                delayedRecycled.put(this, queue);
-            } else if (queue == WeakOrderQueue.DUMMY) {
-                // drop object
-                return;
+        T popOrCreate() {
+            DefaultHandle<T> handle = pop();
+            if (handle != null) {
+                return handle.value;
             }
-
-            queue.add(item);
-        }
-
-        boolean dropHandle(DefaultHandle<?> handle) {
-            if (!handle.hasBeenRecycled) {
-                if ((++handleRecycleCount & ratioMask) != 0) {
-                    // Drop the object.
-                    return true;
-                }
-                handle.hasBeenRecycled = true;
+            if ((allocationCount++ & 63) == 0) {
+                // Create recyclable objects at a low rate. If they are helpful, they will accumulate
+                handle = new DefaultHandle<T>(parent);
+                handle.value = parent.newObject(handle);
+                return handle.value;
             }
-            return false;
-        }
-
-        DefaultHandle<T> newHandle() {
-            return new DefaultHandle<T>(this);
+            return parent.newObject((Handle<T>) NOOP_HANDLE);
         }
     }
 }
