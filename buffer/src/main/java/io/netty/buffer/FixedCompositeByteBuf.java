@@ -39,7 +39,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     private final int capacity;
     private final ByteBufAllocator allocator;
     private final ByteOrder order;
-    private final Object[] buffers;
+    private final ByteBuf[] buffers;
     private final boolean direct;
 
     FixedCompositeByteBuf(ByteBufAllocator allocator, ByteBuf... buffers) {
@@ -52,8 +52,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
             direct = false;
         } else {
             ByteBuf b = buffers[0];
-            this.buffers = new Object[buffers.length];
-            this.buffers[0] = b;
+            this.buffers = buffers;
             boolean direct = true;
             int nioBufferCount = b.nioBufferCount();
             int capacity = b.readableBytes();
@@ -68,7 +67,6 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
                 if (!b.isDirect()) {
                     direct = false;
                 }
-                this.buffers[i] = b;
             }
             this.nioBufferCount = nioBufferCount;
             this.capacity = capacity;
@@ -232,20 +230,14 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
         int readable = 0;
         for (int i = 0 ; i < buffers.length; i++) {
             Component comp = null;
-            ByteBuf b;
-            Object obj = buffers[i];
-            boolean isBuffer;
-            if (obj instanceof ByteBuf) {
-                b = (ByteBuf) obj;
-                isBuffer = true;
-            } else {
-                comp = (Component) obj;
+            ByteBuf b = buffers[i];
+            if (b instanceof Component) {
+                comp = (Component) b;
                 b = comp.buf;
-                isBuffer = false;
             }
             readable += b.readableBytes();
             if (index < readable) {
-                if (isBuffer) {
+                if (comp == null) {
                     // Create a new component and store it in the array so it not create a new object
                     // on the next access.
                     comp = new Component(i, readable - b.readableBytes(), b);
@@ -261,11 +253,8 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
      * Return the {@link ByteBuf} stored at the given index of the array.
      */
     private ByteBuf buffer(int i) {
-        Object obj = buffers[i];
-        if (obj instanceof ByteBuf) {
-            return (ByteBuf) obj;
-        }
-        return ((Component) obj).buf;
+        ByteBuf b = buffers[i];
+        return b instanceof Component ? ((Component) b).buf : b;
     }
 
     @Override
@@ -684,17 +673,16 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
         return result + ", components=" + buffers.length + ')';
     }
 
-    private static final class Component {
+    private static final class Component extends WrappedByteBuf {
         private final int index;
         private final int offset;
-        private final ByteBuf buf;
         private final int endOffset;
 
         Component(int index, int offset, ByteBuf buf) {
+            super(buf);
             this.index = index;
             this.offset = offset;
             endOffset = offset + buf.readableBytes();
-            this.buf = buf;
         }
     }
 }
