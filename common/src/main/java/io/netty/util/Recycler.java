@@ -17,7 +17,6 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.ObjectCleaner;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -244,10 +243,9 @@ public abstract class Recycler<T> {
             Link next;
         }
 
-        // This act as a place holder for the head Link but also will be used by the ObjectCleaner
-        // to return space that was before reserved. Its important this does not hold any reference to
-        // either Stack or WeakOrderQueue.
-        static final class Head implements Runnable {
+        // This act as a place holder for the head Link but also will reclaim space once finalized.
+        // Its important this does not hold any reference to either Stack or WeakOrderQueue.
+        static final class Head {
             private final AtomicInteger availableSharedCapacity;
 
             Link link;
@@ -256,12 +254,21 @@ public abstract class Recycler<T> {
                 this.availableSharedCapacity = availableSharedCapacity;
             }
 
+            /// TODO: In the future when we move to Java9+ we should use java.lang.ref.Cleaner.
             @Override
-            public void run() {
-                Link head = link;
-                while (head != null) {
-                    reclaimSpace(LINK_CAPACITY);
-                    head = head.next;
+            protected void finalize() throws Throwable {
+                try {
+                    super.finalize();
+                } finally {
+                    Link head = link;
+                    link = null;
+                    while (head != null) {
+                        reclaimSpace(LINK_CAPACITY);
+                        Link next = head.next;
+                        // Unlink to help GC and guard against GC nepotism.
+                        head.next = null;
+                        head = next;
+                    }
                 }
             }
 
@@ -317,12 +324,6 @@ public abstract class Recycler<T> {
             // Done outside of the constructor to ensure WeakOrderQueue.this does not escape the constructor and so
             // may be accessed while its still constructed.
             stack.setHead(queue);
-
-            // We need to reclaim all space that was reserved by this WeakOrderQueue so we not run out of space in
-            // the stack. This is needed as we not have a good life-time control over the queue as it is used in a
-            // WeakHashMap which will drop it at any time.
-            final Head head = queue.head;
-            ObjectCleaner.register(queue, head);
 
             return queue;
         }
