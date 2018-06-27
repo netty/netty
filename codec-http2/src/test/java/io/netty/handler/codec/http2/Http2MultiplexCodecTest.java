@@ -16,6 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -35,12 +36,15 @@ import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
 import static io.netty.util.ReferenceCountUtil.release;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
@@ -283,10 +287,48 @@ public class Http2MultiplexCodecTest {
     }
 
     @Test
+    public void outboundStreamAfterGoawayFails() {
+        childChannelInitializer.handler = new LastInboundHandler();
+
+        Channel childChannel = newOutboundStream();
+        assertTrue(childChannel.isActive());
+        codec.connection().goAwayReceived(0, NO_ERROR.code(), Unpooled.EMPTY_BUFFER);
+
+        // Our stream should still be active since it hasn't actually been registered
+        assertTrue(childChannel.isActive());
+
+        DefaultHttp2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true);
+
+        final AtomicReference<Boolean> channelWasClosed = new AtomicReference<Boolean>(null);
+        ChannelPromise wrirtePromise = childChannel.newPromise();
+        wrirtePromise.addListeners(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                Channel channel = future.channel();
+                channelWasClosed.set(channel.isOpen() || channel.isActive() || channel.isWritable());
+            }
+        });
+
+        ChannelFuture future = childChannel.write(headersFrame, wrirtePromise);
+
+        future.awaitUninterruptibly();
+        Http2Exception.StreamException cause = (Http2Exception.StreamException) future.cause();
+
+        assertTrue(channelWasClosed.get());
+        assertNotNull(cause);
+        assertEquals(REFUSED_STREAM, cause.error());
+
+        parentChannel.runPendingTasks();
+        assertFalse(childChannel.isOpen());
+        assertFalse(childChannel.isActive());
+        assertNull(parentChannel.readOutbound());
+    }
+
+    @Test
     public void outboundStreamShouldWriteResetFrameOnClose_headersSent() {
         childChannelInitializer.handler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            public void channelActive(ChannelHandlerContext ctx) {
                 ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
                 ctx.fireChannelActive();
             }
@@ -585,7 +627,7 @@ public class Http2MultiplexCodecTest {
     }
 
     @Test
-    public void channelInactiveHappensAfterExceptionCaughtEvents() throws Exception {
+    public void channelInactiveHappensAfterExceptionCaughtEvents() {
         final AtomicInteger count = new AtomicInteger(0);
         final AtomicInteger exceptionCaught = new AtomicInteger(-1);
         final AtomicInteger channelInactive = new AtomicInteger(-1);

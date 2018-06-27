@@ -1096,6 +1096,17 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                                         + frame.name()));
                                 return;
                             }
+
+                            if (connection().goAwayReceived()) {
+                                // The session is draining so we fail the write with a synthesized RST_STREAM
+                                // exception that signals that the stream was unprocessed.
+                                ReferenceCountUtil.release(frame);
+                                Http2Exception cause = Http2Exception.streamError(-1, Http2Error.REFUSED_STREAM,
+                                        "Received GOAWAY before stream was initialized.");
+                                firstWriteFailed(cause, promise);
+                                return;
+                            }
+
                             firstFrameWritten = true;
                             ChannelFuture future = write0(frame);
                             if (future.isDone()) {
@@ -1145,10 +1156,16 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     writabilityChanged(Http2MultiplexCodec.this.isWritable(stream));
                     promise.setSuccess();
                 } else {
-                    promise.setFailure(wrapStreamClosedError(cause));
-                    // If the first write fails there is not much we can do, just close
-                    closeForcibly();
+                    firstWriteFailed(cause, promise);
                 }
+            }
+
+            private void firstWriteFailed(Throwable cause, ChannelPromise promise) {
+                // If the first write fails there is not much we can do. We shutdown first to change the state
+                // of the channel so that any continuations attached to the future will see that state when they
+                // are executed instead of it transitioning afterwards.
+                closeForcibly();
+                promise.setFailure(wrapStreamClosedError(cause));
             }
 
             private void writeComplete(ChannelFuture future, ChannelPromise promise) {
@@ -1157,8 +1174,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     promise.setSuccess();
                 } else {
                     Throwable error = wrapStreamClosedError(cause);
-                    promise.setFailure(error);
-
                     if (error instanceof ClosedChannelException) {
                         if (config.isAutoClose()) {
                             // Close channel if needed.
@@ -1167,6 +1182,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                             outboundClosed = true;
                         }
                     }
+                    promise.setFailure(error);
                 }
             }
 
