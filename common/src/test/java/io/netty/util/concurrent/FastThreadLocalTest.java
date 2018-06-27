@@ -26,7 +26,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class FastThreadLocalTest {
     @Before
@@ -80,7 +82,7 @@ public class FastThreadLocalTest {
 
     @Test
     public void testMultipleSetRemove() throws Exception {
-        final FastThreadLocal<String> threadLocal = new FastThreadLocal<String>();
+        final FastThreadLocal<String> threadLocal = new TestFastThreadLocal();
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -107,8 +109,8 @@ public class FastThreadLocalTest {
 
     @Test
     public void testMultipleSetRemove_multipleThreadLocal() throws Exception {
-        final FastThreadLocal<String> threadLocal = new FastThreadLocal<String>();
-        final FastThreadLocal<String> threadLocal2 = new FastThreadLocal<String>();
+        final FastThreadLocal<String> threadLocal = new TestFastThreadLocal();
+        final FastThreadLocal<String> threadLocal2 = new TestFastThreadLocal();
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -135,6 +137,20 @@ public class FastThreadLocalTest {
         thread2.join();
 
         assertEquals(4, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
+    }
+
+    @Test
+    public void testDetectOnRemoval_whenPresent() {
+        assertTrue(FastThreadLocal.hasOnRemoval(TestFastThreadLocal.class));
+    }
+
+    @Test
+    public void testDetectOnRemoval_whenAbsent() {
+        class ExtendingFastThreadLocal<T> extends FastThreadLocal<T> {
+        }
+
+        assertFalse(FastThreadLocal.hasOnRemoval(FastThreadLocal.class));
+        assertFalse(FastThreadLocal.hasOnRemoval(ExtendingFastThreadLocal.class));
     }
 
     @Test(timeout = 4000)

@@ -18,6 +18,8 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectCleaner;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -44,6 +46,7 @@ import java.util.Set;
  */
 public class FastThreadLocal<V> {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(FastThreadLocal.class);
     private static final int variablesToRemoveIndex = InternalThreadLocalMap.nextVariableIndex();
 
     /**
@@ -123,10 +126,29 @@ public class FastThreadLocal<V> {
         variablesToRemove.remove(variable);
     }
 
+    // visible for tests
+    static boolean hasOnRemoval(Class<? extends FastThreadLocal> origClass) {
+        for (Class<?> clazz = origClass; clazz != FastThreadLocal.class; clazz = clazz.getSuperclass()) {
+            try {
+                // Can't use getMethod since onRemoval is protected
+                clazz.getDeclaredMethod("onRemoval", Object.class);
+                return true;
+            } catch (NoSuchMethodException ignore) {
+                continue;
+            } catch (Throwable t) {
+                logger.info("Failed to determine if onRemoval is overridden", t);
+                return true;
+            }
+        }
+        return false;
+    }
+
     private final int index;
+    private final boolean hasOnRemoval;
 
     public FastThreadLocal() {
         index = InternalThreadLocalMap.nextVariableIndex();
+        hasOnRemoval = hasOnRemoval(getClass());
     }
 
     /**
@@ -147,7 +169,8 @@ public class FastThreadLocal<V> {
 
     private void registerCleaner(final InternalThreadLocalMap threadLocalMap) {
         Thread current = Thread.currentThread();
-        if (FastThreadLocalThread.willCleanupFastThreadLocals(current) || threadLocalMap.isCleanerFlagSet(index)) {
+        if (!hasOnRemoval || FastThreadLocalThread.willCleanupFastThreadLocals(current)
+                || threadLocalMap.isCleanerFlagSet(index)) {
             return;
         }
 
@@ -283,5 +306,6 @@ public class FastThreadLocal<V> {
     /**
      * Invoked when this thread local variable is removed by {@link #remove()}.
      */
+    // This method is referenced via reflection in hasOnRemoval()
     protected void onRemoval(@SuppressWarnings("UnusedParameters") V value) throws Exception { }
 }
