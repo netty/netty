@@ -62,6 +62,8 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private final boolean allowGrowing;
     private final EpollEventArray events;
     private final IovArray iovArray = new IovArray();
+    private final NativeDatagramPacketArray datagramPacketArray = new NativeDatagramPacketArray();
+
     private final SelectStrategy selectStrategy;
     private final IntSupplier selectNowSupplier = new IntSupplier() {
         @Override
@@ -141,9 +143,17 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     /**
      * Return a cleared {@link IovArray} that can be used for writes in this {@link EventLoop}.
      */
-    IovArray cleanArray() {
+    IovArray cleanIovArray() {
         iovArray.clear();
         return iovArray;
+    }
+
+    /**
+     * Return a cleared {@link NativeDatagramPacketArray} that can be used for writes in this {@link EventLoop}.
+     */
+    NativeDatagramPacketArray cleanDatagramPacketArray() {
+        datagramPacketArray.clear();
+        return datagramPacketArray;
     }
 
     @Override
@@ -449,6 +459,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         } finally {
             // release native memory
             iovArray.release();
+            datagramPacketArray.release();
             events.free();
         }
     }
