@@ -1145,9 +1145,9 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     writabilityChanged(Http2MultiplexCodec.this.isWritable(stream));
                     promise.setSuccess();
                 } else {
-                    promise.setFailure(wrapStreamClosedError(cause));
                     // If the first write fails there is not much we can do, just close
                     closeForcibly();
+                    promise.setFailure(wrapStreamClosedError(cause));
                 }
             }
 
@@ -1157,8 +1157,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     promise.setSuccess();
                 } else {
                     Throwable error = wrapStreamClosedError(cause);
-                    promise.setFailure(error);
-
                     if (error instanceof ClosedChannelException) {
                         if (config.isAutoClose()) {
                             // Close channel if needed.
@@ -1167,6 +1165,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                             outboundClosed = true;
                         }
                     }
+                    promise.setFailure(error);
                 }
             }
 
