@@ -33,9 +33,12 @@ import io.netty.util.AttributeKey;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.netty.util.ReferenceCountUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -464,6 +467,7 @@ public class Http2MultiplexCodecTest {
         childChannel.close(p).syncUninterruptibly();
 
         assertFalse(channelOpen.get());
+        assertFalse(channelActive.get());
         assertFalse(childChannel.isActive());
     }
 
@@ -488,6 +492,46 @@ public class Http2MultiplexCodecTest {
         childChannel.close().syncUninterruptibly();
 
         assertFalse(channelOpen.get());
+        assertFalse(channelActive.get());
+        assertFalse(childChannel.isActive());
+    }
+
+    @Test
+    public void channelClosedWhenWriteFutureFails() {
+        final Queue<ChannelPromise> writePromises = new ArrayDeque<ChannelPromise>();
+        writer = new Writer() {
+            @Override
+            void write(Object msg, ChannelPromise promise) {
+                ReferenceCountUtil.release(msg);
+                writePromises.offer(promise);
+            }
+        };
+
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
+        Http2StreamChannel childChannel = (Http2StreamChannel) inboundHandler.channel();
+
+        assertTrue(childChannel.isOpen());
+        assertTrue(childChannel.isActive());
+
+        final AtomicBoolean channelOpen = new AtomicBoolean(true);
+        final AtomicBoolean channelActive = new AtomicBoolean(true);
+
+        ChannelFuture f = childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+        assertFalse(f.isDone());
+        f.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                channelOpen.set(future.channel().isOpen());
+                channelActive.set(future.channel().isActive());
+            }
+        });
+
+        ChannelPromise first = writePromises.poll();
+        first.setFailure(new ClosedChannelException());
+        f.awaitUninterruptibly();
+
+        assertFalse(channelOpen.get());
+        assertFalse(channelActive.get());
         assertFalse(childChannel.isActive());
     }
 
