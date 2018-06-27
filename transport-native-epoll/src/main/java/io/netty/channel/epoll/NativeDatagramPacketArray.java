@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.IovArray;
-import io.netty.util.concurrent.FastThreadLocal;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -32,28 +31,11 @@ import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
  */
 final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessageProcessor {
 
-    private static final FastThreadLocal<NativeDatagramPacketArray> ARRAY =
-            new FastThreadLocal<NativeDatagramPacketArray>() {
-                @Override
-                protected NativeDatagramPacketArray initialValue() throws Exception {
-                    return new NativeDatagramPacketArray();
-                }
-
-                @Override
-                protected void onRemoval(NativeDatagramPacketArray value) throws Exception {
-                    NativeDatagramPacket[] packetsArray = value.packets;
-                    // Release all packets
-                    for (NativeDatagramPacket datagramPacket : packetsArray) {
-                        datagramPacket.release();
-                    }
-                }
-            };
-
     // Use UIO_MAX_IOV as this is the maximum number we can write with one sendmmsg(...) call.
     private final NativeDatagramPacket[] packets = new NativeDatagramPacket[UIO_MAX_IOV];
     private int count;
 
-    private NativeDatagramPacketArray() {
+    NativeDatagramPacketArray() {
         for (int i = 0; i < packets.length; i++) {
             packets[i] = new NativeDatagramPacket();
         }
@@ -83,7 +65,7 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
     }
 
     @Override
-    public boolean processMessage(Object msg) throws Exception {
+    public boolean processMessage(Object msg) {
         return msg instanceof DatagramPacket && add((DatagramPacket) msg);
     }
 
@@ -101,15 +83,15 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
         return packets;
     }
 
-    /**
-     * Returns a {@link NativeDatagramPacketArray} which is filled with the flushed messages of
-     * {@link ChannelOutboundBuffer}.
-     */
-    static NativeDatagramPacketArray getInstance(ChannelOutboundBuffer buffer) throws Exception {
-        NativeDatagramPacketArray array = ARRAY.get();
-        array.count = 0;
-        buffer.forEachFlushedMessage(array);
-        return array;
+    void clear() {
+        this.count = 0;
+    }
+
+    void release() {
+        // Release all packets
+        for (NativeDatagramPacket datagramPacket : packets) {
+            datagramPacket.release();
+        }
     }
 
     /**
