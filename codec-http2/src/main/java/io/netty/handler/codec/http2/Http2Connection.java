@@ -327,7 +327,7 @@ public interface Http2Connection {
     /**
      * Indicates that a {@code GOAWAY} was received from the remote endpoint and sets the last known stream.
      */
-    void goAwayReceived(int lastKnownStream, long errorCode, ByteBuf message);
+    void goAwayReceived(int lastKnownStream, long errorCode, ByteBuf message) throws Http2Exception;
 
     /**
      * Indicates whether or not a {@code GOAWAY} was sent to the remote endpoint.
@@ -335,7 +335,9 @@ public interface Http2Connection {
     boolean goAwaySent();
 
     /**
-     * Indicates that a {@code GOAWAY} was sent to the remote endpoint and sets the last known stream.
+     * Updates the local state of this {@link Http2Connection} as a result of a {@code GOAWAY} to send to the remote
+     * endpoint.
+     * @return {@code true} if the corresponding {@code GOAWAY} frame should be sent to the remote endpoint.
      */
-    void goAwaySent(int lastKnownStream, long errorCode, ByteBuf message);
+    boolean goAwaySent(int lastKnownStream, long errorCode, ByteBuf message) throws Http2Exception;
 }

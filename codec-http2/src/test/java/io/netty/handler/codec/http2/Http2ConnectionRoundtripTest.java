@@ -890,6 +890,84 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @Test
+    public void createStreamSynchronouslyAfterGoAwayReceivedShouldFailLocally() throws Exception {
+        bootstrapEnv(1, 1, 2, 1, 1);
+
+        final CountDownLatch clientGoAwayLatch = new CountDownLatch(1);
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                clientGoAwayLatch.countDown();
+                return null;
+            }
+        }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
+
+        // We want both sides to do graceful shutdown during the test.
+        setClientGracefulShutdownTime(10000);
+        setServerGracefulShutdownTime(10000);
+
+        final Http2Headers headers = dummyHeaders();
+        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<ChannelFuture>();
+        final CountDownLatch clientWriteAfterGoAwayLatch = new CountDownLatch(1);
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                ChannelFuture f = http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0,
+                        true, newPromise());
+                clientWriteAfterGoAwayFutureRef.set(f);
+                f.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        clientWriteAfterGoAwayLatch.countDown();
+                    }
+                });
+                http2Client.flush(ctx());
+                return null;
+            }
+        }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
+
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
+                        true, newPromise());
+                http2Client.flush(ctx());
+            }
+        });
+
+        assertTrue(serverSettingsAckLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+
+        // Server has received the headers, so the stream is open
+        assertTrue(requestLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+
+        runInChannel(serverChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writeGoAway(serverCtx(), 3, NO_ERROR.code(), EMPTY_BUFFER, serverNewPromise());
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        // Wait for the client's write operation to complete.
+        assertTrue(clientWriteAfterGoAwayLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+
+        ChannelFuture clientWriteAfterGoAwayFuture = clientWriteAfterGoAwayFutureRef.get();
+        assertNotNull(clientWriteAfterGoAwayFuture);
+        Throwable clientCause = clientWriteAfterGoAwayFuture.cause();
+        assertThat(clientCause, is(instanceOf(Http2Exception.StreamException.class)));
+        assertEquals(Http2Error.REFUSED_STREAM.code(), ((Http2Exception.StreamException) clientCause).error().code());
+
+        // Wait for the server to receive a GO_AWAY, but this is expected to timeout!
+        assertFalse(goAwayLatch.await(1, SECONDS));
+        verify(serverListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ByteBuf.class));
+
+        // Shutdown shouldn't wait for the server to close streams
+        setClientGracefulShutdownTime(0);
+        setServerGracefulShutdownTime(0);
+    }
+
+    @Test
     public void flowControlProperlyChunksLargeMessage() throws Exception {
         final Http2Headers headers = dummyHeaders();
 

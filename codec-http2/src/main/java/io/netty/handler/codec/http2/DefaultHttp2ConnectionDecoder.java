@@ -158,12 +158,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     void onGoAwayRead0(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
             throws Http2Exception {
-        if (connection.goAwayReceived() && connection.local().lastStreamKnownByPeer() < lastStreamId) {
-            throw connectionError(PROTOCOL_ERROR, "lastStreamId MUST NOT increase. Current value: %d new value: %d",
-                    connection.local().lastStreamKnownByPeer(), lastStreamId);
-        }
-        listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
         connection.goAwayReceived(lastStreamId, errorCode, debugData);
+        listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
     }
 
     void onUnknownFrame0(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
@@ -541,6 +537,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                                 ("Stream created after GOAWAY sent. Last known stream by peer " +
                                  connection.remote().lastStreamKnownByPeer()));
                 }
+                stream.close();
                 return true;
             }
             return false;
