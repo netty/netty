@@ -864,9 +864,9 @@ public class DefaultHttp2Connection implements Http2Connection {
         private void checkNewStreamAllowed(int streamId, State state) throws Http2Exception {
             assert state != IDLE;
             if (goAwayReceived() && streamId > localEndpoint.lastStreamKnownByPeer()) {
-                throw connectionError(PROTOCOL_ERROR, "Cannot create stream %d since this endpoint has received a " +
-                                                      "GOAWAY frame with last stream id %d.", streamId,
-                                                      localEndpoint.lastStreamKnownByPeer());
+                throw streamError(streamId, REFUSED_STREAM,
+                      "Cannot create stream %d since this endpoint has received a GOAWAY frame with last stream id %d.",
+                      streamId, localEndpoint.lastStreamKnownByPeer());
             }
             if (!isValidStreamId(streamId)) {
                 if (streamId < 0) {
