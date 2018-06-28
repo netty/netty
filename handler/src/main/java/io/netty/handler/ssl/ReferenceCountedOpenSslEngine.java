@@ -1783,10 +1783,20 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
 
             final String endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
-            final boolean endPointVerificationEnabled = endPointIdentificationAlgorithm != null &&
-                    !endPointIdentificationAlgorithm.isEmpty();
-            SSL.setHostNameValidation(ssl, DEFAULT_HOSTNAME_VALIDATION_FLAGS,
-                    endPointVerificationEnabled ? getPeerHost() : null);
+            final boolean endPointVerificationEnabled = isEndPointVerificationEnabled(endPointIdentificationAlgorithm);
+
+            final boolean wasEndPointVerificationEnabled =
+                    isEndPointVerificationEnabled(this.endPointIdentificationAlgorithm);
+
+            if (wasEndPointVerificationEnabled && !endPointVerificationEnabled) {
+                // Passing in null will disable hostname verification again so only do so if it was enabled before.
+                SSL.setHostNameValidation(ssl, DEFAULT_HOSTNAME_VALIDATION_FLAGS, null);
+            } else {
+                String host = endPointVerificationEnabled ? getPeerHost() : null;
+                if (host != null && !host.isEmpty()) {
+                    SSL.setHostNameValidation(ssl, DEFAULT_HOSTNAME_VALIDATION_FLAGS, host);
+                }
+            }
             // If the user asks for hostname verification we must ensure we verify the peer.
             // If the user disables hostname verification we leave it up to the user to change the mode manually.
             if (clientMode && endPointVerificationEnabled) {
@@ -1797,6 +1807,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             algorithmConstraints = sslParameters.getAlgorithmConstraints();
         }
         super.setSSLParameters(sslParameters);
+    }
+
+    private static boolean isEndPointVerificationEnabled(String endPointIdentificationAlgorithm) {
+        return endPointIdentificationAlgorithm != null && !endPointIdentificationAlgorithm.isEmpty();
     }
 
     private boolean isDestroyed() {
