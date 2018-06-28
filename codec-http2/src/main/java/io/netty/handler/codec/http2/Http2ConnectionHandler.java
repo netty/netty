@@ -701,7 +701,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         if (stream == null) {
-            resetUnknownStream(ctx, streamId, http2Ex.error().code(), ctx.newPromise());
+            if (!outbound || connection().local().mayHaveCreatedStream(streamId)) {
+                resetUnknownStream(ctx, streamId, http2Ex.error().code(), ctx.newPromise());
+            }
         } else {
             resetStream(ctx, stream, http2Ex.error().code(), ctx.newPromise());
         }
