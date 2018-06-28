@@ -537,6 +537,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                                 ("Stream created after GOAWAY sent. Last known stream by peer " +
                                  connection.remote().lastStreamKnownByPeer()));
                 }
+
+                // If we are ignoring frames for this stream it means that we no longer need to retain state for this
+                // stream and can close it, which should remove it from the active stream map.
                 stream.close();
                 return true;
             }

@@ -326,6 +326,13 @@ public interface Http2Connection {
 
     /**
      * Indicates that a {@code GOAWAY} was received from the remote endpoint and sets the last known stream.
+     * @param lastKnownStream The Last-Stream-ID in the
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.8">GOAWAY</a> frame.
+     * @param errorCode the Error Code in the
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.8">GOAWAY</a> frame.
+     * @param message The Additional Debug Data in the
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.8">GOAWAY</a> frame. Note that reference count ownership
+     * belongs to the caller (ownership is not transferred to this method).
      */
     void goAwayReceived(int lastKnownStream, long errorCode, ByteBuf message) throws Http2Exception;
 
@@ -337,6 +344,12 @@ public interface Http2Connection {
     /**
      * Updates the local state of this {@link Http2Connection} as a result of a {@code GOAWAY} to send to the remote
      * endpoint.
+     * @param lastKnownStream The Last-Stream-ID in the
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.8">GOAWAY</a> frame.
+     * @param errorCode the Error Code in the
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.8">GOAWAY</a> frame.
+     * <a href="https://tools.ietf.org/html/rfc7540#section-6.8">GOAWAY</a> frame. Note that reference count ownership
+     * belongs to the caller (ownership is not transferred to this method).
      * @return {@code true} if the corresponding {@code GOAWAY} frame should be sent to the remote endpoint.
      */
     boolean goAwaySent(int lastKnownStream, long errorCode, ByteBuf message) throws Http2Exception;

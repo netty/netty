@@ -25,7 +25,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.UnaryPromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -230,6 +229,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             throw connectionError(PROTOCOL_ERROR, "lastStreamId MUST NOT increase. Current value: %d new value: %d",
                     localEndpoint.lastStreamKnownByPeer(), lastKnownStream);
         }
+
         localEndpoint.lastStreamKnownByPeer(lastKnownStream);
         for (int i = 0; i < listeners.size(); ++i) {
             try {
@@ -239,15 +239,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
         }
 
-        forEachActiveStream(new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) {
-                if (stream.id() > lastKnownStream && localEndpoint.isValidStreamId(stream.id())) {
-                    stream.close();
-                }
-                return true;
-            }
-        });
+        closeStreamsGreaterThanLastKnownStreamId(lastKnownStream, localEndpoint);
     }
 
     @Override
@@ -279,16 +271,21 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
         }
 
+        closeStreamsGreaterThanLastKnownStreamId(lastKnownStream, remoteEndpoint);
+        return true;
+    }
+
+    private void closeStreamsGreaterThanLastKnownStreamId(final int lastKnownStream,
+                                                          final DefaultEndpoint<?> endpoint) throws Http2Exception {
         forEachActiveStream(new Http2StreamVisitor() {
             @Override
             public boolean visit(Http2Stream stream) {
-                if (stream.id() > lastKnownStream && remoteEndpoint.isValidStreamId(stream.id())) {
+                if (stream.id() > lastKnownStream && endpoint.isValidStreamId(stream.id())) {
                     stream.close();
                 }
                 return true;
             }
         });
-        return true;
     }
 
     /**
