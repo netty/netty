@@ -246,7 +246,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
             final ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
             try {
                 final Set<String> keyTypesSet = supportedClientKeyTypes(keyTypeBytes);
-                final String[] keyTypes = keyTypesSet.toArray(new String[keyTypesSet.size()]);
+                final String[] keyTypes = keyTypesSet.toArray(new String[0]);
                 final X500Principal[] issuers;
                 if (asn1DerEncodedPrincipals == null) {
                     issuers = null;

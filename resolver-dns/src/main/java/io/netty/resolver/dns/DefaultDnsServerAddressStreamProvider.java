@@ -142,7 +142,7 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
         }
 
         DEFAULT_NAME_SERVER_LIST = Collections.unmodifiableList(defaultNameServers);
-        DEFAULT_NAME_SERVER_ARRAY = defaultNameServers.toArray(new InetSocketAddress[defaultNameServers.size()]);
+        DEFAULT_NAME_SERVER_ARRAY = defaultNameServers.toArray(new InetSocketAddress[0]);
         DEFAULT_NAME_SERVERS = sequential(DEFAULT_NAME_SERVER_ARRAY);
     }
 

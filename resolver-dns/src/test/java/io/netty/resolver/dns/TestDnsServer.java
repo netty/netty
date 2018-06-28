@@ -67,7 +67,7 @@ class TestDnsServer extends DnsServer {
         BYTES.put("0:1:1:1:1:1:1:1", new byte[]{0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1});
         BYTES.put("1:1:1:1:1:1:1:1", new byte[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1});
 
-        IPV6_ADDRESSES = BYTES.keySet().toArray(new String[BYTES.size()]);
+        IPV6_ADDRESSES = BYTES.keySet().toArray(new String[0]);
     }
 
     private final RecordStore store;

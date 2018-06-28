@@ -438,7 +438,7 @@ public final class OpenSsl {
         libNames.add(staticLibName);
 
         NativeLibraryLoader.loadFirstAvailable(SSL.class.getClassLoader(),
-            libNames.toArray(new String[libNames.size()]));
+            libNames.toArray(new String[0]));
     }
 
     private static boolean initializeTcNative(String engine) throws Exception {

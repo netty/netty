@@ -75,7 +75,7 @@ public class ConstantPoolTest {
         set.add(d);
         set.add(a);
 
-        TestConstant[] array = set.toArray(new TestConstant[5]);
+        TestConstant[] array = set.toArray(new TestConstant[0]);
         assertThat(array.length, is(5));
 
         // Sort by name
