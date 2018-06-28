@@ -219,6 +219,16 @@ final class PoolThreadCache {
         }
     }
 
+    /// TODO: In the future when we move to Java9+ we should use java.lang.ref.Cleaner.
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            super.finalize();
+        } finally {
+            free();
+        }
+    }
+
     /**
      *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
      */

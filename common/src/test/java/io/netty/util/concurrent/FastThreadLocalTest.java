@@ -18,6 +18,7 @@ package io.netty.util.concurrent;
 
 import io.netty.util.internal.ObjectCleaner;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -96,13 +97,13 @@ public class FastThreadLocalTest {
         thread.start();
         thread.join();
 
-        assertEquals(1, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
+        assertEquals(0, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
 
         Thread thread2 = new Thread(runnable);
         thread2.start();
         thread2.join();
 
-        assertEquals(2, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
+        assertEquals(0, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
     }
 
     @Test
@@ -128,13 +129,13 @@ public class FastThreadLocalTest {
         thread.start();
         thread.join();
 
-        assertEquals(2, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
+        assertEquals(0, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
 
         Thread thread2 = new Thread(runnable);
         thread2.start();
         thread2.join();
 
-        assertEquals(4, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
+        assertEquals(0, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
     }
 
     @Test(timeout = 4000)
@@ -142,6 +143,7 @@ public class FastThreadLocalTest {
         testOnRemoveCalled(true, true);
     }
 
+    @Ignore("onRemoval(...) not called with non FastThreadLocal")
     @Test(timeout = 4000)
     public void testOnRemoveCalledForNonFastThreadLocalGet() throws Exception {
         testOnRemoveCalled(false, true);
@@ -152,6 +154,7 @@ public class FastThreadLocalTest {
         testOnRemoveCalled(true, false);
     }
 
+    @Ignore("onRemoval(...) not called with non FastThreadLocal")
     @Test(timeout = 4000)
     public void testOnRemoveCalledForNonFastThreadLocalSet() throws Exception {
         testOnRemoveCalled(false, false);
