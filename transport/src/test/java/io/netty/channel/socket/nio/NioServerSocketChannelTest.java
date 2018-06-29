@@ -22,9 +22,12 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketOption;
+import java.net.StandardSocketOptions;
+import java.nio.channels.NetworkChannel;
 import java.nio.channels.ServerSocketChannel;
 
-public class NioServerSocketChannelTest {
+public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServerSocketChannel> {
 
     @Test
     public void testCloseOnError() throws Exception {
@@ -40,5 +43,20 @@ public class NioServerSocketChannelTest {
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    @Override
+    protected NioServerSocketChannel newNioChannel() {
+        return new NioServerSocketChannel();
+    }
+
+    @Override
+    protected NetworkChannel jdkChannel(NioServerSocketChannel channel) {
+        return channel.javaChannel();
+    }
+
+    @Override
+    protected SocketOption<?> newInvalidOption() {
+        return StandardSocketOptions.IP_MULTICAST_IF;
     }
 }

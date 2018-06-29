@@ -13,24 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.nio;
+package io.netty.channel.socket.nio;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.net.SocketOption;
+import java.net.StandardSocketOptions;
+import java.nio.channels.NetworkChannel;
 
 
-public class NioDatagramChannelTest {
+public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramChannel> {
 
     /**
      * Test try to reproduce issue #1335
@@ -60,5 +63,20 @@ public class NioDatagramChannelTest {
             channelGroup.close().sync();
             group.shutdownGracefully().sync();
         }
+    }
+
+    @Override
+    protected NioDatagramChannel newNioChannel() {
+        return new NioDatagramChannel();
+    }
+
+    @Override
+    protected NetworkChannel jdkChannel(NioDatagramChannel channel) {
+        return channel.javaChannel();
+    }
+
+    @Override
+    protected SocketOption<?> newInvalidOption() {
+        return StandardSocketOptions.TCP_NODELAY;
     }
 }
