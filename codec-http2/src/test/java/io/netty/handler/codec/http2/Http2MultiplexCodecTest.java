@@ -309,6 +309,43 @@ public class Http2MultiplexCodecTest {
     }
 
     @Test
+    public void outboundStreamShouldNotWriteResetFrameOnClose_IfStreamDidntExist() {
+        writer = new Writer() {
+            private boolean headersWritten;
+            @Override
+            void write(Object msg, ChannelPromise promise) {
+                // We want to fail to write the first headers frame. This is what happens if the connection
+                // refuses to allocate a new stream due to having received a GOAWAY.
+                if (!headersWritten && msg instanceof Http2HeadersFrame) {
+                    headersWritten = true;
+                    Http2HeadersFrame headersFrame = (Http2HeadersFrame) msg;
+                    final TestableHttp2MultiplexCodec.Stream stream =
+                            (TestableHttp2MultiplexCodec.Stream) headersFrame.stream();
+                    stream.id = 1;
+                    promise.setFailure(new Exception("boom"));
+                } else {
+                    super.write(msg, promise);
+                }
+            }
+        };
+
+        childChannelInitializer.handler = new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
+                ctx.fireChannelActive();
+            }
+        };
+
+        Channel childChannel = newOutboundStream();
+        assertFalse(childChannel.isActive());
+
+        childChannel.close();
+        parentChannel.runPendingTasks();
+        assertTrue(parentChannel.outboundMessages().isEmpty());
+    }
+
+    @Test
     public void inboundRstStreamFireChannelInactive() {
         LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
         assertTrue(inboundHandler.isChannelActive());
@@ -745,7 +782,16 @@ public class Http2MultiplexCodecTest {
         assertNotNull(headersFrame);
         assertNotNull(headersFrame.stream());
         assertFalse(Http2CodecUtil.isStreamIdValid(headersFrame.stream().id()));
-        ((TestableHttp2MultiplexCodec.Stream) headersFrame.stream()).id = outboundStream.id();
+        TestableHttp2MultiplexCodec.Stream frameStream = (TestableHttp2MultiplexCodec.Stream) headersFrame.stream();
+        frameStream.id = outboundStream.id();
+        // Create the stream in the Http2Connection.
+        try {
+            Http2Stream stream = codec.connection().local().createStream(
+                    headersFrame.stream().id(), headersFrame.isEndStream());
+            frameStream.stream = stream;
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to create a stream", ex);
+        }
 
         // Now read it and complete the write promise.
         assertSame(headersFrame, parentChannel.readOutbound());

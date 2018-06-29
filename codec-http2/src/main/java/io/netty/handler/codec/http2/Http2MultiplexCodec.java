@@ -906,9 +906,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
                 final boolean wasActive = isActive();
 
-                // Only ever send a reset frame if the connection is still alive as otherwise it makes no sense at
-                // all anyway.
-                if (parent().isActive() && !streamClosedWithoutError && isStreamIdValid(stream().id())) {
+                // Only ever send a reset frame if the connection is still alive and if the stream may have existed
+                // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
+                if (parent().isActive() && !streamClosedWithoutError &&
+                        connection().streamMayHaveExisted(stream().id())) {
                     Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
                     write(resetFrame, unsafe().voidPromise());
                     flush();
