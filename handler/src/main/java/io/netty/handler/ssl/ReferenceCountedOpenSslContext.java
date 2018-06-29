@@ -265,7 +265,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             List<String> nextProtoList = apn.protocols();
                 /* Set next protocols for next protocol negotiation extension, if specified */
             if (!nextProtoList.isEmpty()) {
-                String[] appProtocols = nextProtoList.toArray(new String[nextProtoList.size()]);
+                String[] appProtocols = nextProtoList.toArray(new String[0]);
                 int selectorBehavior = opensslSelectorFailureBehavior(apn.selectorFailureBehavior());
 
                 switch (apn.protocol()) {

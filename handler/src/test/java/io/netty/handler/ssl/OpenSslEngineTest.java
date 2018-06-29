@@ -350,7 +350,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 srcsLen += dup.capacity();
             }
 
-            ByteBuffer[] srcs = srcList.toArray(new ByteBuffer[srcList.size()]);
+            ByteBuffer[] srcs = srcList.toArray(new ByteBuffer[0]);
             ByteBuffer dst = allocateBuffer(
                     unwrapEngine(clientEngine).maxEncryptedPacketLength() - 1);
 

@@ -160,10 +160,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         final Entry<ChannelOption<?>, Object>[] currentChildOptions;
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs;
         synchronized (childOptions) {
-            currentChildOptions = childOptions.entrySet().toArray(newOptionArray(childOptions.size()));
+            currentChildOptions = childOptions.entrySet().toArray(newOptionArray(0));
         }
         synchronized (childAttrs) {
-            currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(childAttrs.size()));
+            currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(0));
         }
 
         p.addLast(new ChannelInitializer<Channel>() {

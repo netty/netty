@@ -172,7 +172,7 @@ public class CaliperMeasure {
     }
 
     private static MeasurementSet measurementSet(final Map<Long, Measurement> map) {
-        final Measurement[] array = map.values().toArray(new Measurement[map.size()]);
+        final Measurement[] array = map.values().toArray(new Measurement[0]);
         return new MeasurementSet(array);
     }
 

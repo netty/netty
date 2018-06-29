@@ -71,7 +71,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
         }
 
         // Set the list of supported ALPN protocols on the engine.
-        Conscrypt.setApplicationProtocols(engine, protocols.toArray(new String[protocols.size()]));
+        Conscrypt.setApplicationProtocols(engine, protocols.toArray(new String[0]));
     }
 
     /**

@@ -187,7 +187,7 @@ public abstract class DnsServerAddresses {
             throw new IllegalArgumentException("empty addresses");
         }
 
-        return list.toArray(new InetSocketAddress[list.size()]);
+        return list.toArray(new InetSocketAddress[0]);
     }
 
     private static InetSocketAddress[] sanitize(InetSocketAddress[] addresses) {
@@ -210,7 +210,7 @@ public abstract class DnsServerAddresses {
             return defaultAddressArray();
         }
 
-        return list.toArray(new InetSocketAddress[list.size()]);
+        return list.toArray(new InetSocketAddress[0]);
     }
 
     /**

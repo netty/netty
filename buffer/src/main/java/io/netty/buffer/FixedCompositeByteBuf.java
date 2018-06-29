@@ -593,7 +593,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
                 s = buffer(++i);
             }
 
-            return array.toArray(new ByteBuffer[array.size()]);
+            return array.toArray(new ByteBuffer[0]);
         } finally {
             array.recycle();
         }

@@ -102,7 +102,7 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
     public void close() {
         final AddressResolver<T>[] rArray;
         synchronized (resolvers) {
-            rArray = (AddressResolver<T>[]) resolvers.values().toArray(new AddressResolver[resolvers.size()]);
+            rArray = (AddressResolver<T>[]) resolvers.values().toArray(new AddressResolver[0]);
             resolvers.clear();
         }
 

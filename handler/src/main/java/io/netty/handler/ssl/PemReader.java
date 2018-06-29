@@ -98,7 +98,7 @@ final class PemReader {
             throw new CertificateException("found no certificates in input stream");
         }
 
-        return certs.toArray(new ByteBuf[certs.size()]);
+        return certs.toArray(new ByteBuf[0]);
     }
 
     static ByteBuf readPrivateKey(File file) throws KeyException {
