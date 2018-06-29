@@ -33,7 +33,6 @@ import java.security.Provider;
 import java.security.UnrecoverableKeyException;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -157,7 +156,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
 
             OpenSslKeyMaterialProvider newProvider() {
                 return new OpenSslPopulatedKeyMaterialProvider(keyManager,
-                        password, aliases.iterator());
+                        password, aliases);
             }
 
             /**
@@ -168,16 +167,12 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                 private final Map<String, Object> materialMap;
 
                 OpenSslPopulatedKeyMaterialProvider(
-                        X509KeyManager keyManager, String password, Iterator<String> aliases) {
+                        X509KeyManager keyManager, String password, Iterable<String> aliases) {
                     super(keyManager, password);
-                    if (!aliases.hasNext()) {
-                        throw new IllegalArgumentException("aliases must be non-empty");
-                    }
                     materialMap = new HashMap<String, Object>();
                     boolean initComplete = false;
                     try {
-                        do {
-                            String alias = aliases.next();
+                        for (String alias: aliases) {
                             if (alias != null && !materialMap.containsKey(alias)) {
                                 try {
                                     materialMap.put(alias, super.chooseKeyMaterial(
@@ -188,12 +183,15 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                                     materialMap.put(alias, e);
                                 }
                             }
-                        } while (aliases.hasNext());
+                        }
                         initComplete = true;
                     } finally {
                         if (!initComplete) {
                             destroy();
                         }
+                    }
+                    if (materialMap.isEmpty()) {
+                        throw new IllegalArgumentException("aliases must be non-empty");
                     }
                 }
 
