@@ -1515,6 +1515,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             }
         }
         values.add(svalue.substring(start));
-        return values.toArray(new String[values.size()]);
+        return values.toArray(new String[0]);
     }
 }

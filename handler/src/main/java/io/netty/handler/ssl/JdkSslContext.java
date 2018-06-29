@@ -84,7 +84,7 @@ public class JdkSslContext extends SslContext {
                 "TLSv1.2", "TLSv1.1", "TLSv1");
 
         if (!protocols.isEmpty()) {
-            DEFAULT_PROTOCOLS = protocols.toArray(new String[protocols.size()]);
+            DEFAULT_PROTOCOLS = protocols.toArray(new String[0]);
         } else {
             DEFAULT_PROTOCOLS = engine.getEnabledProtocols();
         }

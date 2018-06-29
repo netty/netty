@@ -1286,7 +1286,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getSupportedCipherSuites() {
-        return OpenSsl.AVAILABLE_CIPHER_SUITES.toArray(new String[OpenSsl.AVAILABLE_CIPHER_SUITES.size()]);
+        return OpenSsl.AVAILABLE_CIPHER_SUITES.toArray(new String[0]);
     }
 
     @Override
@@ -1359,7 +1359,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getSupportedProtocols() {
-        return OpenSsl.SUPPORTED_PROTOCOLS_SET.toArray(new String[OpenSsl.SUPPORTED_PROTOCOLS_SET.size()]);
+        return OpenSsl.SUPPORTED_PROTOCOLS_SET.toArray(new String[0]);
     }
 
     @Override
@@ -1373,7 +1373,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (!isDestroyed()) {
                 opts = SSL.getOptions(ssl);
             } else {
-                return enabled.toArray(new String[1]);
+                return enabled.toArray(new String[0]);
             }
         }
         if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1, PROTOCOL_TLS_V1)) {
@@ -1391,7 +1391,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv3, PROTOCOL_SSL_V3)) {
             enabled.add(PROTOCOL_SSL_V3);
         }
-        return enabled.toArray(new String[enabled.size()]);
+        return enabled.toArray(new String[0]);
     }
 
     private static boolean isProtocolEnabled(int opts, int disableMask, String protocolString) {
@@ -1955,7 +1955,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (values == null || values.isEmpty()) {
                 return EmptyArrays.EMPTY_STRINGS;
             }
-            return values.keySet().toArray(new String[values.size()]);
+            return values.keySet().toArray(new String[0]);
         }
 
         private void notifyUnbound(Object value, String name) {

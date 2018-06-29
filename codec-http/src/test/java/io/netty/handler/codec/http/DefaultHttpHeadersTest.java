@@ -232,7 +232,7 @@ public class DefaultHttpHeadersTest {
                 .add(HttpHeaderNames.CONTENT_LENGTH, 10)
                 .names();
 
-        String[] namesArray = nettyHeaders.toArray(new String[nettyHeaders.size()]);
+        String[] namesArray = nettyHeaders.toArray(new String[0]);
         assertArrayEquals(namesArray, new String[] { HttpHeaderNames.CONTENT_LENGTH.toString() });
     }
 

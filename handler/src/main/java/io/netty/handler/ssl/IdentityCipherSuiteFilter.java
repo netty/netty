@@ -46,8 +46,8 @@ public final class IdentityCipherSuiteFilter implements CipherSuiteFilter {
             Set<String> supportedCiphers) {
         if (ciphers == null) {
             return defaultToDefaultCiphers ?
-                    defaultCiphers.toArray(new String[defaultCiphers.size()]) :
-                    supportedCiphers.toArray(new String[supportedCiphers.size()]);
+                    defaultCiphers.toArray(new String[0]) :
+                    supportedCiphers.toArray(new String[0]);
         } else {
             List<String> newCiphers = new ArrayList<String>(supportedCiphers.size());
             for (String c : ciphers) {
@@ -56,7 +56,7 @@ public final class IdentityCipherSuiteFilter implements CipherSuiteFilter {
                 }
                 newCiphers.add(c);
             }
-            return newCiphers.toArray(new String[newCiphers.size()]);
+            return newCiphers.toArray(new String[0]);
         }
     }
 }

@@ -53,7 +53,7 @@ public final class SupportedCipherSuiteFilter implements CipherSuiteFilter {
                 newCiphers.add(c);
             }
         }
-        return newCiphers.toArray(new String[newCiphers.size()]);
+        return newCiphers.toArray(new String[0]);
     }
 
 }

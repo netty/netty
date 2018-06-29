@@ -93,8 +93,7 @@ public abstract class AbstractMicrobenchmarkBase {
             }
         }
         if (jvmArgs.length != customArgs.size()) {
-            jvmArgs = new String[customArgs.size()];
-            customArgs.toArray(jvmArgs);
+            jvmArgs = customArgs.toArray(new String[0]);
         }
         return jvmArgs;
     }

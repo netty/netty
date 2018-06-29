@@ -391,7 +391,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         Collection<ByteBuf> col = (Collection<ByteBuf>) buffers;
-        return addComponents0(increaseIndex, cIndex, col.toArray(new ByteBuf[col.size()]), 0 , col.size());
+        return addComponents0(increaseIndex, cIndex, col.toArray(new ByteBuf[0]), 0 , col.size());
     }
 
     /**
@@ -1507,7 +1507,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             i ++;
         }
 
-        return buffers.toArray(new ByteBuffer[buffers.size()]);
+        return buffers.toArray(new ByteBuffer[0]);
     }
 
     /**

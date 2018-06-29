@@ -335,7 +335,7 @@ public final class DnsNameResolverBuilder {
             list.add(f);
         }
 
-        this.searchDomains = list.toArray(new String[list.size()]);
+        this.searchDomains = list.toArray(new String[0]);
         return this;
     }
 
