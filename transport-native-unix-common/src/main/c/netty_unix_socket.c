@@ -1010,21 +1010,32 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     dynamicMethods = NULL;
     char* nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress");
     jclass localDatagramSocketAddressClass = (*env)->FindClass(env, nettyClassName);
-    free(nettyClassName);
-    nettyClassName = NULL;
     if (localDatagramSocketAddressClass == NULL) {
+        free(nettyClassName);
+        nettyClassName = NULL;
         // pending exception...
         return JNI_ERR;
     }
     datagramSocketAddressClass = (jclass) (*env)->NewGlobalRef(env, localDatagramSocketAddressClass);
     if (datagramSocketAddressClass == NULL) {
+        free(nettyClassName);
+        nettyClassName = NULL;
         // out-of-memory!
         netty_unix_errors_throwOutOfMemoryError(env);
         return JNI_ERR;
     }
-    datagramSocketAddrMethodId = (*env)->GetMethodID(env, datagramSocketAddressClass, "<init>", "(Ljava/lang/String;IILio/netty/channel/unix/DatagramSocketAddress;)V");
+
+    // Respect shading...
+    char parameters[1024] = {0};
+    snprintf(parameters, sizeof(parameters), "(Ljava/lang/String;IIL%s;)V", nettyClassName);
+    free(nettyClassName);
+    nettyClassName = NULL;
+
+    datagramSocketAddrMethodId = (*env)->GetMethodID(env, datagramSocketAddressClass, "<init>", parameters);
     if (datagramSocketAddrMethodId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: DatagramSocketAddress.<init>(String, int, int, DatagramSocketAddress)");
+        char msg[1024] = {0};
+        snprintf(msg, sizeof(msg), "failed to get method ID: %s.<init>(String, int, int, %s)", nettyClassName, nettyClassName);
+        netty_unix_errors_throwRuntimeException(env, msg);
         return JNI_ERR;
     }
     jclass localInetSocketAddressClass = (*env)->FindClass(env, "java/net/InetSocketAddress");
