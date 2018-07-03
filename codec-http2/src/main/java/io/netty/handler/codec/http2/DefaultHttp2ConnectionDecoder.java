@@ -531,6 +531,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 throw streamError(streamId, STREAM_CLOSED, "Received %s frame for an unknown stream %d",
                                   frameName, streamId);
             } else if (stream.isResetSent() || streamCreatedAfterGoAwaySent(streamId)) {
+                // If we have sent a reset stream it is assumed the stream will be closed after the write completes.
+                // If we have not sent a reset, but the stream was created after a GoAway this is not supported by
+                // DefaultHttp2Connection and if a custom Http2Connection is used it is assumed the lifetime is managed
+                // elsewhere so we don't close the stream or otherwise modify the stream's state.
+
                 if (logger.isInfoEnabled()) {
                     logger.info("{} ignoring {} frame for stream {} {}", ctx.channel(), frameName,
                             stream.isResetSent() ? "RST_STREAM sent." :
@@ -538,9 +543,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                                  connection.remote().lastStreamKnownByPeer()));
                 }
 
-                // If we are ignoring frames for this stream it means that we no longer need to retain state for this
-                // stream and can close it, which should remove it from the active stream map.
-                stream.close();
                 return true;
             }
             return false;
