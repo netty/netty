@@ -47,8 +47,8 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -423,9 +423,27 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test(expected = Http2Exception.class)
-    public void goAwayReceivedShouldDisallowCreation() throws Http2Exception {
+    public void goAwayReceivedShouldDisallowLocalCreation() throws Http2Exception {
+        server.goAwayReceived(0, 1L, Unpooled.EMPTY_BUFFER);
+        server.local().createStream(3, true);
+    }
+
+    @Test
+    public void goAwayReceivedShouldAllowRemoteCreation() throws Http2Exception {
         server.goAwayReceived(0, 1L, Unpooled.EMPTY_BUFFER);
         server.remote().createStream(3, true);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void goAwaySentShouldDisallowRemoteCreation() throws Http2Exception {
+        server.goAwaySent(0, 1L, Unpooled.EMPTY_BUFFER);
+        server.remote().createStream(2, true);
+    }
+
+    @Test
+    public void goAwaySentShouldAllowLocalCreation() throws Http2Exception {
+        server.goAwaySent(0, 1L, Unpooled.EMPTY_BUFFER);
+        server.local().createStream(2, true);
     }
 
     @Test
