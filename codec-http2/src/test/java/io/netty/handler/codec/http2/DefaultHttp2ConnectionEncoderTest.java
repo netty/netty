@@ -770,7 +770,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void canWriteHeaderFrameAfterGoAwayReceived() {
+    public void canWriteHeaderFrameAfterGoAwayReceived() throws Http2Exception {
         writeAllFlowControlledFrames();
         goAwayReceived(STREAM_ID);
         ChannelPromise promise = newPromise();
@@ -803,11 +803,11 @@ public class DefaultHttp2ConnectionEncoderTest {
         return connection.stream(streamId);
     }
 
-    private void goAwayReceived(int lastStreamId) {
+    private void goAwayReceived(int lastStreamId) throws Http2Exception {
         connection.goAwayReceived(lastStreamId, 0, EMPTY_BUFFER);
     }
 
-    private void goAwaySent(int lastStreamId) {
+    private void goAwaySent(int lastStreamId) throws Http2Exception {
         connection.goAwaySent(lastStreamId, 0, EMPTY_BUFFER);
     }
 

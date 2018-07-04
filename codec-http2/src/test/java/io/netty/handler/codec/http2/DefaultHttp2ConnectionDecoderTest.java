@@ -675,13 +675,6 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test(expected = Http2Exception.class)
-    public void goawayIncreasedLastStreamIdShouldThrow() throws Exception {
-        when(local.lastStreamKnownByPeer()).thenReturn(1);
-        when(connection.goAwayReceived()).thenReturn(true);
-        decode().onGoAwayRead(ctx, 3, 2L, EMPTY_BUFFER);
-    }
-
-    @Test(expected = Http2Exception.class)
     public void rstStreamReadForUnknownStreamShouldThrow() throws Exception {
         when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
         when(connection.stream(STREAM_ID)).thenReturn(null);
