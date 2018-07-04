@@ -1028,16 +1028,20 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     // Respect shading...
     char parameters[1024] = {0};
     snprintf(parameters, sizeof(parameters), "(Ljava/lang/String;IIL%s;)V", nettyClassName);
-    free(nettyClassName);
-    nettyClassName = NULL;
 
     datagramSocketAddrMethodId = (*env)->GetMethodID(env, datagramSocketAddressClass, "<init>", parameters);
     if (datagramSocketAddrMethodId == NULL) {
         char msg[1024] = {0};
         snprintf(msg, sizeof(msg), "failed to get method ID: %s.<init>(String, int, int, %s)", nettyClassName, nettyClassName);
+        free(nettyClassName);
+        nettyClassName = NULL;
         netty_unix_errors_throwRuntimeException(env, msg);
         return JNI_ERR;
     }
+
+    free(nettyClassName);
+    nettyClassName = NULL;
+
     jclass localInetSocketAddressClass = (*env)->FindClass(env, "java/net/InetSocketAddress");
     if (localInetSocketAddressClass == NULL) {
         // pending exception...
