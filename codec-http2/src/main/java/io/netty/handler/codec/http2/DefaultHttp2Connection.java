@@ -715,7 +715,8 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public int incrementAndGetNextStreamId() {
-            return nextReservationStreamId >= 0 ? nextReservationStreamId += 2 : nextReservationStreamId;
+            return goAwayReceived() ? -1 :
+                   nextReservationStreamId >= 0 ? nextReservationStreamId += 2 : nextReservationStreamId;
         }
 
         private void incrementExpectedStreamId(int streamId) {
