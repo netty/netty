@@ -130,10 +130,8 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                                     KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()));
                         }
                         keyManagerFactory.init(ks, keyPasswordChars);
-                        keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
-                    } else {
-                        keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
                     }
+                    keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
 
                     result.keyMaterialManager = new OpenSslKeyMaterialManager(keyMaterialProvider);
                 }
