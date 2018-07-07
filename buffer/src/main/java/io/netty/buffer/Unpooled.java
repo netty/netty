@@ -882,7 +882,10 @@ public final class Unpooled {
     /**
      * Wrap the given {@link ByteBuf}s in an unmodifiable {@link ByteBuf}. Be aware the returned {@link ByteBuf} will
      * not try to slice the given {@link ByteBuf}s to reduce GC-Pressure.
+     *
+     * @deprecated Use {@link #wrappedUnmodifiableBuffer(ByteBuf...)}.
      */
+    @Deprecated
     public static ByteBuf unmodifiableBuffer(ByteBuf... buffers) {
         return wrappedUnmodifiableBuffer(true, buffers);
     }
@@ -891,7 +894,7 @@ public final class Unpooled {
      * Wrap the given {@link ByteBuf}s in an unmodifiable {@link ByteBuf}. Be aware the returned {@link ByteBuf} will
      * not try to slice the given {@link ByteBuf}s to reduce GC-Pressure.
      *
-     * The returned {@link ByteBuf} wraps the provided array directly, and so should not be subsequently modified.
+     * The returned {@link ByteBuf} may wrap the provided array directly, and so should not be subsequently modified.
      */
     public static ByteBuf wrappedUnmodifiableBuffer(ByteBuf... buffers) {
         return wrappedUnmodifiableBuffer(false, buffers);
