@@ -368,7 +368,7 @@ final class PlatformDependent0 {
     }
 
     static boolean isExplicitNoUnsafe() {
-        return EXPLICIT_NO_UNSAFE_CAUSE == null;
+        return EXPLICIT_NO_UNSAFE_CAUSE != null;
     }
 
     private static Throwable explicitNoUnsafeCause0() {
