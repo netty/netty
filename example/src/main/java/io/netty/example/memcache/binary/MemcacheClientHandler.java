@@ -69,6 +69,7 @@ public class MemcacheClientHandler extends ChannelDuplexHandler {
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         FullBinaryMemcacheResponse res = (FullBinaryMemcacheResponse) msg;
         System.out.println(res.content().toString(CharsetUtil.UTF_8));
+        res.release();
     }
 
     @Override
