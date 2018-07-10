@@ -823,6 +823,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * ensure that the same material is always returned for the same alias.
      */
     static OpenSslKeyMaterialProvider providerFor(KeyManagerFactory factory, String password) {
+        if (factory instanceof OpenSslX509KeyManagerFactory) {
+            return ((OpenSslX509KeyManagerFactory) factory).newProvider();
+        }
+
         X509KeyManager keyManager = chooseX509KeyManager(factory.getKeyManagers());
         if (factory instanceof OpenSslCachingX509KeyManagerFactory) {
             // The user explicit used OpenSslCachingX509KeyManagerFactory which signals us that its fine to cache.
