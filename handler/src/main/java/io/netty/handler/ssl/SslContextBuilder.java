@@ -122,7 +122,7 @@ public final class SslContextBuilder {
      * Creates a builder for new server-side {@link SslContext}.
      *
      * If you use {@link SslProvider#OPENSSL} or {@link SslProvider#OPENSSL_REFCNT} consider using
-     * {@link OpenSslCachingX509KeyManagerFactory}.
+     * {@link OpenSslX509KeyManagerFactory} or {@link OpenSslCachingX509KeyManagerFactory}.
      *
      * @param keyManagerFactory non-{@code null} factory for server's private key
      * @see #keyManager(KeyManagerFactory)
@@ -340,7 +340,7 @@ public final class SslContextBuilder {
      * you must use {@link #keyManager(File, File)} or {@link #keyManager(File, File, String)}.
      *
      * If you use {@link SslProvider#OPENSSL} or {@link SslProvider#OPENSSL_REFCNT} consider using
-     * {@link OpenSslCachingX509KeyManagerFactory}.
+     * {@link OpenSslX509KeyManagerFactory} or {@link OpenSslCachingX509KeyManagerFactory}.
      */
     public SslContextBuilder keyManager(KeyManagerFactory keyManagerFactory) {
         if (forServer) {

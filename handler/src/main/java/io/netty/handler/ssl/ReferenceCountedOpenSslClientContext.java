@@ -102,9 +102,16 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 } else {
                     // javadocs state that keyManagerFactory has precedent over keyCertChain
                     if (keyManagerFactory == null && keyCertChain != null) {
-                        keyMaterialProvider = new OpenSslCachingKeyMaterialProvider(
-                                chooseX509KeyManager(buildKeyManagerFactory(keyCertChain, key, keyPassword, null)
-                                        .getKeyManagers()), keyPassword);
+                        char[] keyPasswordChars = keyStorePassword(keyPassword);
+                        KeyStore ks = buildKeyStore(keyCertChain, key, keyPasswordChars);
+                        if (ks.aliases().hasMoreElements()) {
+                            keyManagerFactory = new OpenSslX509KeyManagerFactory();
+                        } else {
+                            keyManagerFactory = new OpenSslCachingX509KeyManagerFactory(
+                                    KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()));
+                        }
+                        keyManagerFactory.init(ks, keyPasswordChars);
+                        keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
                     } else if (keyManagerFactory != null) {
                         keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
                     }
