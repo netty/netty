@@ -198,11 +198,14 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                 @Override
                 OpenSslKeyMaterial chooseKeyMaterial(ByteBufAllocator allocator, String alias) throws Exception {
                     Object value = materialMap.get(alias);
+                    if (value == null) {
+                        // There is no keymaterial for the requested alias, return null
+                        return null;
+                    }
                     if (value instanceof OpenSslKeyMaterial) {
                         return ((OpenSslKeyMaterial) value).retain();
-                    } else {
-                        throw (Exception) value;
                     }
+                    throw (Exception) value;
                 }
 
                 @Override

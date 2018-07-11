@@ -20,7 +20,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.X509KeyManager;
 
 import java.security.KeyStore;
 
@@ -49,12 +48,9 @@ public class OpenSslKeyMaterialProviderTest {
         return kmf;
     }
 
-    protected OpenSslKeyMaterialProvider newMaterialProvider(X509KeyManager manager, String password) {
-        return new OpenSslKeyMaterialProvider(manager, password);
-    }
-
-    protected Class<? extends OpenSslKeyMaterialProvider> providerClass() {
-        return OpenSslKeyMaterialProvider.class;
+    protected OpenSslKeyMaterialProvider newMaterialProvider(KeyManagerFactory factory, String password) {
+        return new OpenSslKeyMaterialProvider(ReferenceCountedOpenSslContext.chooseX509KeyManager(
+                factory.getKeyManagers()), password);
     }
 
     protected void assertRelease(OpenSslKeyMaterial material) {
@@ -63,9 +59,7 @@ public class OpenSslKeyMaterialProviderTest {
 
     @Test
     public void testChooseKeyMaterial() throws Exception {
-        X509KeyManager manager = ReferenceCountedOpenSslContext.chooseX509KeyManager(
-                newKeyManagerFactory().getKeyManagers());
-        OpenSslKeyMaterialProvider provider = newMaterialProvider(manager, PASSWORD);
+        OpenSslKeyMaterialProvider provider = newMaterialProvider(newKeyManagerFactory(), PASSWORD);
         OpenSslKeyMaterial nonExistingMaterial = provider.chooseKeyMaterial(
                 UnpooledByteBufAllocator.DEFAULT, NON_EXISTING_ALIAS);
         assertNull(nonExistingMaterial);
@@ -76,14 +70,6 @@ public class OpenSslKeyMaterialProviderTest {
         assertNotEquals(0, material.privateKeyAddress());
         assertRelease(material);
 
-        provider.destroy();
-    }
-
-    @Test
-    public void testChooseTheCorrectProvider() throws Exception {
-        OpenSslKeyMaterialProvider provider = ReferenceCountedOpenSslContext.providerFor(
-                newKeyManagerFactory(), PASSWORD);
-        assertEquals(providerClass(), provider.getClass());
         provider.destroy();
     }
 }
