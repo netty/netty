@@ -550,7 +550,16 @@ final class PlatformDependent0 {
     }
 
     static void copyMemory(long srcAddr, long dstAddr, long length) {
-        //UNSAFE.copyMemory(srcAddr, dstAddr, length);
+        // Manual safe-point polling is only needed prior Java9:
+        // See https://bugs.openjdk.java.net/browse/JDK-8149596
+        if (javaVersion() <= 8) {
+            copyMemoryWithSafePointPolling(srcAddr, dstAddr, length);
+        } else {
+            UNSAFE.copyMemory(srcAddr, dstAddr, length);
+        }
+    }
+
+    private static void copyMemoryWithSafePointPolling(long srcAddr, long dstAddr, long length) {
         while (length > 0) {
             long size = Math.min(length, UNSAFE_COPY_THRESHOLD);
             UNSAFE.copyMemory(srcAddr, dstAddr, size);
@@ -561,7 +570,17 @@ final class PlatformDependent0 {
     }
 
     static void copyMemory(Object src, long srcOffset, Object dst, long dstOffset, long length) {
-        //UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, length);
+        // Manual safe-point polling is only needed prior Java9:
+        // See https://bugs.openjdk.java.net/browse/JDK-8149596
+        if (javaVersion() <= 8) {
+            copyMemoryWithSafePointPolling(src, srcOffset, dst, dstOffset, length);
+        } else {
+            UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, length);
+        }
+    }
+
+    private static void copyMemoryWithSafePointPolling(
+            Object src, long srcOffset, Object dst, long dstOffset, long length) {
         while (length > 0) {
             long size = Math.min(length, UNSAFE_COPY_THRESHOLD);
             UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, size);
