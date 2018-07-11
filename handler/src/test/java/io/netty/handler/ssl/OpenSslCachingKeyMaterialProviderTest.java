@@ -20,7 +20,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.X509KeyManager;
 
 import static org.junit.Assert.*;
 
@@ -32,8 +31,9 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
     }
 
     @Override
-    protected OpenSslKeyMaterialProvider newMaterialProvider(X509KeyManager manager, String password) {
-        return new OpenSslCachingKeyMaterialProvider(manager, password);
+    protected OpenSslKeyMaterialProvider newMaterialProvider(KeyManagerFactory factory, String password) {
+        return new OpenSslCachingKeyMaterialProvider(ReferenceCountedOpenSslContext.chooseX509KeyManager(
+                factory.getKeyManagers()), password);
     }
 
     @Override
@@ -41,16 +41,9 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
         Assert.assertFalse(material.release());
     }
 
-    @Override
-    protected Class<? extends OpenSslKeyMaterialProvider> providerClass() {
-        return OpenSslCachingKeyMaterialProvider.class;
-    }
-
     @Test
     public void testMaterialCached() throws Exception {
-        X509KeyManager manager = ReferenceCountedOpenSslContext.chooseX509KeyManager(
-                newKeyManagerFactory().getKeyManagers());
-        OpenSslKeyMaterialProvider provider = newMaterialProvider(manager, PASSWORD);
+        OpenSslKeyMaterialProvider provider = newMaterialProvider(newKeyManagerFactory(), PASSWORD);
 
         OpenSslKeyMaterial material = provider.chooseKeyMaterial(UnpooledByteBufAllocator.DEFAULT, EXISTING_ALIAS);
         assertNotNull(material);
