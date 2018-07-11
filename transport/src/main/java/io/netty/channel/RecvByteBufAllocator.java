@@ -96,7 +96,7 @@ public interface RecvByteBufAllocator {
         int attemptedBytesRead();
 
         /**
-         * Determine if the current read loop should should continue.
+         * Determine if the current read loop should continue.
          * @return {@code true} if the read loop should continue reading. {@code false} if the read loop is complete.
          */
         boolean continueReading();
