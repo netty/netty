@@ -273,6 +273,7 @@
     <module>testsuite-autobahn</module>
     <module>testsuite-http2</module>
     <module>testsuite-osgi</module>
+    <module>testsuite-shading</module>
     <module>microbench</module>
     <module>bom</module>
   </modules>
