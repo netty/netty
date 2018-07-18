@@ -229,7 +229,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         long totalDelay = delayNanos(System.nanoTime());
         int delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
         return Native.epollWait(epollFd, events, timerFd, delaySeconds,
-                (int) min(totalDelay - delaySeconds * 1000000000L, Integer.MAX_VALUE));
+                (int) min(totalDelay - delaySeconds * 1000000000L, 999999999L));
     }
 
     private int epollWaitNow() throws IOException {
