@@ -317,12 +317,12 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         }
     }
 
-    private boolean childChannelInReadPendingQueue(DefaultHttp2StreamChannel childChannel) {
+    private boolean isChildChannelInReadPendingQueue(DefaultHttp2StreamChannel childChannel) {
         return childChannel.previous != null || childChannel.next != null || head == childChannel;
     }
 
     final void tryAddChildChannelToReadPendingQueue(DefaultHttp2StreamChannel childChannel) {
-        if (!childChannelInReadPendingQueue(childChannel)) {
+        if (!isChildChannelInReadPendingQueue(childChannel)) {
             addChildChannelToReadPendingQueue(childChannel);
         }
     }
@@ -339,7 +339,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     }
 
     private void tryRemoveChildChannelFromReadPendingQueue(DefaultHttp2StreamChannel childChannel) {
-        if (childChannelInReadPendingQueue(childChannel)) {
+        if (isChildChannelInReadPendingQueue(childChannel)) {
             removeChildChannelFromReadPendingQueue(childChannel);
         }
     }
@@ -473,8 +473,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         /** {@code true} after the first HEADERS frame has been written **/
         private boolean firstFrameWritten;
 
-        // Holds the reference to the next DefaultHttp2StreamChannel that should be processed in
-        // channelReadComplete(...)
+        // Currently the child channel and parent channel are always on the same EventLoop thread. This allows us to
+        // extend the read loop of a child channel if the child channel drains its queued data during read, and the
+        // parent channel is still in its read loop. The next/previous links build a doubly linked list that the parent
+        // channel will iterate in its channelReadComplete to end the read cycle for each child channel in the list.
         DefaultHttp2StreamChannel next;
         DefaultHttp2StreamChannel previous;
 
@@ -1010,7 +1012,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                         // currently reading it is possile that more frames will be delivered to this child channel. In
                         // the case that this child channel still wants to read we delay the channelReadComplete on this
                         // child channel until the parent is done reading.
-                        assert !childChannelInReadPendingQueue(DefaultHttp2StreamChannel.this);
+                        assert !isChildChannelInReadPendingQueue(DefaultHttp2StreamChannel.this);
                         addChildChannelToReadPendingQueue(DefaultHttp2StreamChannel.this);
                     } else {
                         notifyReadComplete(allocHandle);
