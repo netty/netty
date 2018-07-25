@@ -16,6 +16,7 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
 import io.netty.util.internal.PlatformDependent;
@@ -27,6 +28,7 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.channels.DatagramChannel;
 import java.util.Enumeration;
+import java.util.Map;
 
 /**
  * The default {@link NioDatagramChannelConfig} implementation.
@@ -204,5 +206,30 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
                 throw new ChannelException(e);
             }
         }
+    }
+
+    @Override
+    public <T> boolean setOption(ChannelOption<T> option, T value) {
+        if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
+            return NioChannelOption.setOption(javaChannel, (NioChannelOption<T>) option, value);
+        }
+        return super.setOption(option, value);
+    }
+
+    @Override
+    public <T> T getOption(ChannelOption<T> option) {
+        if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
+            return NioChannelOption.getOption(javaChannel, (NioChannelOption<T>) option);
+        }
+        return super.getOption(option);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Map<ChannelOption<?>, Object> getOptions() {
+        if (PlatformDependent.javaVersion() >= 7) {
+            return getOptions(super.getOptions(), NioChannelOption.getOptions(javaChannel));
+        }
+        return super.getOptions();
     }
 }
