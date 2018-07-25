@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.nio;
+package io.netty.channel.socket.nio;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -30,9 +30,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -46,7 +45,10 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.SocketOption;
+import java.net.StandardSocketOptions;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.NetworkChannel;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -55,7 +57,7 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 
-public class NioSocketChannelTest {
+public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChannel> {
 
     /**
      * Reproduces the issue #1600
@@ -277,5 +279,20 @@ public class NioSocketChannelTest {
             }
             group.shutdownGracefully();
         }
+    }
+
+    @Override
+    protected NioSocketChannel newNioChannel() {
+        return new NioSocketChannel();
+    }
+
+    @Override
+    protected NetworkChannel jdkChannel(NioSocketChannel channel) {
+        return channel.javaChannel();
+    }
+
+    @Override
+    protected SocketOption<?> newInvalidOption() {
+        return StandardSocketOptions.IP_MULTICAST_IF;
     }
 }

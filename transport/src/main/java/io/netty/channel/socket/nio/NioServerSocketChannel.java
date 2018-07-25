@@ -17,6 +17,7 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.util.internal.SocketUtils;
 import io.netty.channel.nio.AbstractNioMessageChannel;
@@ -35,6 +36,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses
@@ -198,6 +200,35 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         @Override
         protected void autoReadCleared() {
             clearReadPending();
+        }
+
+        @Override
+        public <T> boolean setOption(ChannelOption<T> option, T value) {
+            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
+                return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);
+            }
+            return super.setOption(option, value);
+        }
+
+        @Override
+        public <T> T getOption(ChannelOption<T> option) {
+            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
+                return NioChannelOption.getOption(jdkChannel(), (NioChannelOption<T>) option);
+            }
+            return super.getOption(option);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public Map<ChannelOption<?>, Object> getOptions() {
+            if (PlatformDependent.javaVersion() >= 7) {
+                return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
+            }
+            return super.getOptions();
+        }
+
+        private ServerSocketChannel jdkChannel() {
+            return ((NioServerSocketChannel) channel).javaChannel();
         }
     }
 
