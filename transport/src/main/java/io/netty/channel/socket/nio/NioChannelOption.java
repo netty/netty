@@ -46,21 +46,23 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
 
     // Internal helper methods to remove code duplication between Nio*Channel implementations.
     static <T> boolean setOption(NetworkChannel channel, NioChannelOption<T> option, T value) {
+        if (!channel.supportedOptions().contains(option.option)) {
+            return false;
+        }
         try {
             channel.setOption(option.option, value);
             return true;
-        } catch (UnsupportedOperationException ignore) {
-            return false;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     static <T> T getOption(NetworkChannel channel, NioChannelOption<T> option) {
+        if (!channel.supportedOptions().contains(option.option)) {
+            return null;
+        }
         try {
             return channel.getOption(option.option);
-        } catch (UnsupportedOperationException ignore) {
-            return null;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
