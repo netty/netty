@@ -23,17 +23,18 @@ import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.security.Provider;
+import java.util.Arrays;
 import java.util.Collections;
 
 final class Java8SslTestUtils {
 
     private Java8SslTestUtils() { }
 
-    static void setSNIMatcher(SSLParameters parameters) {
+    static void setSNIMatcher(SSLParameters parameters, final byte[] match) {
         SNIMatcher matcher = new SNIMatcher(0) {
             @Override
             public boolean matches(SNIServerName sniServerName) {
-                return false;
+                return Arrays.equals(match, sniServerName.getEncoded());
             }
         };
         parameters.setSNIMatchers(Collections.singleton(matcher));
