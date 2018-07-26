@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
@@ -1817,7 +1818,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return destroyed != 0;
     }
 
-    final boolean checkSniHostnameMatch(String hostname) {
+    final boolean checkSniHostnameMatch(byte[] hostname) {
         return Java8SslUtils.checkSniHostnameMatch(matchers, hostname);
     }
 

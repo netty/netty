@@ -22,6 +22,8 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.SSL;
+import io.netty.util.CharsetUtil;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -986,8 +988,30 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine engine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
         try {
             SSLParameters parameters = new SSLParameters();
-            Java8SslTestUtils.setSNIMatcher(parameters);
+            Java8SslTestUtils.setSNIMatcher(parameters, EmptyArrays.EMPTY_BYTES);
             engine.setSSLParameters(parameters);
+        } finally {
+            cleanupServerSslEngine(engine);
+            ssc.delete();
+        }
+    }
+
+    @Test
+    public void testSNIMatchersWithSNINameWithUnderscore() throws Exception {
+        assumeTrue(PlatformDependent.javaVersion() >= 8);
+        byte[] name = "rb8hx3pww30y3tvw0mwy.v1_1".getBytes(CharsetUtil.UTF_8);
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+
+        SSLEngine engine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        try {
+            SSLParameters parameters = new SSLParameters();
+            Java8SslTestUtils.setSNIMatcher(parameters, name);
+            engine.setSSLParameters(parameters);
+            assertTrue(unwrapEngine(engine).checkSniHostnameMatch(name));
+            assertFalse(unwrapEngine(engine).checkSniHostnameMatch("other".getBytes(CharsetUtil.UTF_8)));
         } finally {
             cleanupServerSslEngine(engine);
             ssc.delete();
