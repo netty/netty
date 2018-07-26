@@ -349,12 +349,12 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         if (childChannel.next != null) {
             childChannel.next.previous = previous;
         } else {
-            tail = tail.previous;
+            tail = tail.previous; // If there is no next, this childChannel is the tail, so move the tail back.
         }
         if (previous != null) {
             previous.next = childChannel.next;
         } else {
-            head = head.next;
+            head = head.next; // If there is no previous, this childChannel is the head, so move the tail forward.
         }
         childChannel.next = childChannel.previous = null;
     }
@@ -758,8 +758,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             if (!isActive()) {
                 ReferenceCountUtil.release(frame);
             } else if (readInProgress) {
-                // If readInProgress there there cannot be anything in the queue, otherwise we would have drained it
-                // from the queue and processed it during the read cycle.
+                // If readInProgress there cannot be anything in the queue, otherwise we would have drained it from the
+                // queue and processed it during the read cycle.
                 assert inboundBuffer == null || inboundBuffer.isEmpty();
                 final Handle allocHandle = unsafe.recvBufAllocHandle();
                 unsafe.doRead0(frame, allocHandle);
