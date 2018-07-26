@@ -301,7 +301,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     @Override
     public V getNow() {
         Object result = this.result;
-        if (result instanceof CauseHolder || result == SUCCESS) {
+        if (result instanceof CauseHolder || result == SUCCESS || result == UNCANCELLABLE) {
             return null;
         }
         return (V) result;

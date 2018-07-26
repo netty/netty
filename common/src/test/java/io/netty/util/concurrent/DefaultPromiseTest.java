@@ -37,10 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.max;
 import static org.hamcrest.Matchers.lessThan;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 @SuppressWarnings("unchecked")
 public class DefaultPromiseTest {
@@ -256,6 +253,22 @@ public class DefaultPromiseTest {
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "SUCCESS"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
+    }
+
+    @Test
+    public void setUncancellableGetNow() {
+        final Promise<String> promise = new DefaultPromise<String>(ImmediateEventExecutor.INSTANCE);
+        assertNull(promise.getNow());
+        assertTrue(promise.setUncancellable());
+        assertNull(promise.getNow());
+        assertFalse(promise.isDone());
+        assertFalse(promise.isSuccess());
+
+        promise.setSuccess("success");
+
+        assertTrue(promise.isDone());
+        assertTrue(promise.isSuccess());
+        assertEquals("success", promise.getNow());
     }
 
     private static void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,
