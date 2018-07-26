@@ -69,7 +69,7 @@ final class Java8SslUtils {
     }
 
     @SuppressWarnings("unchecked")
-    static boolean checkSniHostnameMatch(Collection<?> matchers, String hostname) {
+    static boolean checkSniHostnameMatch(Collection<?> matchers, byte[] hostname) {
         if (matchers != null && !matchers.isEmpty()) {
             SNIHostName name = new SNIHostName(hostname);
             Iterator<SNIMatcher> matcherIt = (Iterator<SNIMatcher>) matchers.iterator();
