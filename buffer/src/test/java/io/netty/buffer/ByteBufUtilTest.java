@@ -239,6 +239,42 @@ public class ByteBufUtilTest {
     }
 
     @Test
+    public void testWriteUsAsciiComposite() {
+        String usAscii = "NettyRocks";
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
+        ByteBuf buf2 = Unpooled.compositeBuffer().addComponent(
+                Unpooled.buffer(8)).addComponent(Unpooled.buffer(24));
+        // write some byte so we start writing with an offset.
+        buf2.writeByte(1);
+        ByteBufUtil.writeAscii(buf2, usAscii);
+
+        // Skip the previously written byte.
+        assertEquals(buf, buf2.skipBytes(1));
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
+    public void testWriteUsAsciiCompositeWrapped() {
+        String usAscii = "NettyRocks";
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
+        ByteBuf buf2 = new WrappedCompositeByteBuf(Unpooled.compositeBuffer().addComponent(
+                Unpooled.buffer(8)).addComponent(Unpooled.buffer(24)));
+        // write some byte so we start writing with an offset.
+        buf2.writeByte(1);
+        ByteBufUtil.writeAscii(buf2, usAscii);
+
+        // Skip the previously written byte.
+        assertEquals(buf, buf2.skipBytes(1));
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
     public void testWriteUtf8() {
         String usAscii = "Some UTF-8 like äÄ∏ŒŒ";
         ByteBuf buf = Unpooled.buffer(16);
@@ -247,6 +283,42 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, usAscii);
 
         assertEquals(buf, buf2);
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
+    public void testWriteUtf8Composite() {
+        String utf8 = "Some UTF-8 like äÄ∏ŒŒ";
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = Unpooled.compositeBuffer().addComponent(
+                Unpooled.buffer(8)).addComponent(Unpooled.buffer(24));
+        // write some byte so we start writing with an offset.
+        buf2.writeByte(1);
+        ByteBufUtil.writeUtf8(buf2, utf8);
+
+        // Skip the previously written byte.
+        assertEquals(buf, buf2.skipBytes(1));
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
+    public void testWriteUtf8CompositeWrapped() {
+        String utf8 = "Some UTF-8 like äÄ∏ŒŒ";
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = new WrappedCompositeByteBuf(Unpooled.compositeBuffer().addComponent(
+                Unpooled.buffer(8)).addComponent(Unpooled.buffer(24)));
+        // write some byte so we start writing with an offset.
+        buf2.writeByte(1);
+        ByteBufUtil.writeUtf8(buf2, utf8);
+
+        // Skip the previously written byte.
+        assertEquals(buf, buf2.skipBytes(1));
 
         buf.release();
         buf2.release();
