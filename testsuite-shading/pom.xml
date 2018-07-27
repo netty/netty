@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.28.Final-SNAPSHOT</version>
+    <version>4.1.28.Final</version>
   </parent>
 
   <artifactId>netty-testsuite-shading</artifactId>
@@ -127,9 +127,8 @@
                       </fileset>
                     </unzip>
                     <move file="${classesShadedNativeDir}/lib${nativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeLib}" />
-                    <jar destfile="${project.build.directory}/${jarName}"
-                         basedir="${classesShadedDir}"/>
-                    <delete dir="${classesShadedDir}"/>
+                    <jar destfile="${project.build.directory}/${jarName}" basedir="${classesShadedDir}" />
+                    <delete dir="${classesShadedDir}" />
                   </target>
                 </configuration>
               </execution>
@@ -219,9 +218,8 @@
                       </fileset>
                     </unzip>
                     <move file="${classesShadedNativeDir}/lib${nativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeLib}" />
-                    <jar destfile="${project.build.directory}/${jarName}"
-                         basedir="${classesShadedDir}"/>
-                    <delete dir="${classesShadedDir}"/>
+                    <jar destfile="${project.build.directory}/${jarName}" basedir="${classesShadedDir}" />
+                    <delete dir="${classesShadedDir}" />
                   </target>
                 </configuration>
               </execution>
