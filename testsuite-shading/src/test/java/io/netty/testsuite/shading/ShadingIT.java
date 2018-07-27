@@ -23,14 +23,19 @@ import java.lang.reflect.Method;
 public class ShadingIT {
 
     @Test
-    public void testShadingNativeLibs() throws Exception {
-        String shadingPrefix = System.getProperty("shadingPrefix");
-        final Class<?> clazz = Class.forName(shadingPrefix + '.' + className());
-        Method method = clazz.getMethod("ensureAvailability");
-        method.invoke(null);
+    public void testShadingNativeTransport() throws Exception {
+        testShading0(PlatformDependent.isOsx() ? "io.netty.channel.kqueue.KQueue" : "io.netty.channel.epoll.Epoll");
     }
 
-    private static String className() {
-        return PlatformDependent.isOsx() ? "io.netty.channel.kqueue.KQueue" : "io.netty.channel.epoll.Epoll";
+    @Test
+    public void testShadingTcnative() throws Exception {
+        testShading0("io.netty.handler.ssl.OpenSsl");
+    }
+
+    private static void testShading0(String classname) throws Exception {
+        String shadingPrefix = System.getProperty("shadingPrefix");
+        final Class<?> clazz = Class.forName(shadingPrefix + '.' + classname);
+        Method method = clazz.getMethod("ensureAvailability");
+        method.invoke(null);
     }
 }
