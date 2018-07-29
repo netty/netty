@@ -61,8 +61,10 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<AbstractEpollChannel>(4096);
     private final boolean allowGrowing;
     private final EpollEventArray events;
-    private final IovArray iovArray = new IovArray();
-    private final NativeDatagramPacketArray datagramPacketArray = new NativeDatagramPacketArray();
+
+    // These are initialized on first use
+    private IovArray iovArray;
+    private NativeDatagramPacketArray datagramPacketArray;
 
     private final SelectStrategy selectStrategy;
     private final IntSupplier selectNowSupplier = new IntSupplier() {
@@ -144,7 +146,11 @@ final class EpollEventLoop extends SingleThreadEventLoop {
      * Return a cleared {@link IovArray} that can be used for writes in this {@link EventLoop}.
      */
     IovArray cleanIovArray() {
-        iovArray.clear();
+        if (iovArray == null) {
+            iovArray = new IovArray();
+        } else {
+            iovArray.clear();
+        }
         return iovArray;
     }
 
@@ -152,7 +158,11 @@ final class EpollEventLoop extends SingleThreadEventLoop {
      * Return a cleared {@link NativeDatagramPacketArray} that can be used for writes in this {@link EventLoop}.
      */
     NativeDatagramPacketArray cleanDatagramPacketArray() {
-        datagramPacketArray.clear();
+        if (datagramPacketArray == null) {
+            datagramPacketArray = new NativeDatagramPacketArray();
+        } else {
+            datagramPacketArray.clear();
+        }
         return datagramPacketArray;
     }
 
@@ -458,8 +468,14 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             }
         } finally {
             // release native memory
-            iovArray.release();
-            datagramPacketArray.release();
+            if (iovArray != null) {
+                iovArray.release();
+                iovArray = null;
+            }
+            if (datagramPacketArray != null) {
+                datagramPacketArray.release();
+                datagramPacketArray = null;
+            }
             events.free();
         }
     }

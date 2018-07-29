@@ -100,8 +100,8 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
     @SuppressWarnings("unused")
     static final class NativeDatagramPacket {
         // Each NativeDatagramPackets holds a IovArray which is used for gathering writes.
-        // This is ok as NativeDatagramPacketArray is always obtained via a FastThreadLocal and
-        // so the memory needed is quite small anyway.
+        // This is ok as NativeDatagramPacketArray is always obtained from an EpollEventLoop
+        // field so the memory needed is quite small anyway.
         private final IovArray array = new IovArray();
 
         // This is the actual struct iovec*
