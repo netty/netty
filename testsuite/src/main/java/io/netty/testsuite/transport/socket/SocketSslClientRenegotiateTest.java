@@ -162,7 +162,8 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         Future<Channel> clientHandshakeFuture = clientSslHandler.handshakeFuture();
         clientHandshakeFuture.sync();
 
-        String renegotiation = clientSslHandler.engine().getSupportedCipherSuites()[0];
+        String renegotiation = clientSslHandler.engine().getEnabledCipherSuites()[0];
+        // Use the first previous enabled ciphersuite and try to renegotiate.
         clientSslHandler.engine().setEnabledCipherSuites(new String[] { renegotiation });
         clientSslHandler.renegotiate().await();
         serverChannel.close().awaitUninterruptibly();
