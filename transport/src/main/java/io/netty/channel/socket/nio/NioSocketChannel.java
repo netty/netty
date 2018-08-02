@@ -462,10 +462,19 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     private final class NioSocketChannelConfig extends DefaultSocketChannelConfig {
+
+        private final SocketChannelOptionHelper socketChannelOptionHelper;
         private volatile int maxBytesPerGatheringWrite = Integer.MAX_VALUE;
+
         private NioSocketChannelConfig(NioSocketChannel channel, Socket javaSocket) {
             super(channel, javaSocket);
             calculateMaxBytesPerGatheringWrite();
+
+            if (PlatformDependent.javaVersion() >= 7) {
+                this.socketChannelOptionHelper = new NioChannelOptionHelper();
+            } else {
+                this.socketChannelOptionHelper = new DisabledOptionHelper();
+            }
         }
 
         @Override
@@ -482,16 +491,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
         @Override
         public <T> boolean setOption(ChannelOption<T> option, T value) {
-            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
-                return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);
+            if (socketChannelOptionHelper.isSupported(option)) {
+                return socketChannelOptionHelper.setOption(jdkChannel(), option, value);
             }
             return super.setOption(option, value);
         }
 
         @Override
         public <T> T getOption(ChannelOption<T> option) {
-            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
-                return NioChannelOption.getOption(jdkChannel(), (NioChannelOption<T>) option);
+            if (socketChannelOptionHelper.isSupported(option)) {
+                return socketChannelOptionHelper.getOption(jdkChannel(), option);
             }
             return super.getOption(option);
         }
@@ -499,8 +508,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         @SuppressWarnings("unchecked")
         @Override
         public Map<ChannelOption<?>, Object> getOptions() {
-            if (PlatformDependent.javaVersion() >= 7) {
-                return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
+            if (socketChannelOptionHelper.isSupported()) {
+                return getOptions(super.getOptions(), socketChannelOptionHelper.getOptions(jdkChannel()));
             }
             return super.getOptions();
         }
@@ -525,4 +534,82 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             return ((NioSocketChannel) channel).javaChannel();
         }
     }
+
+    private interface SocketChannelOptionHelper {
+
+        boolean isSupported();
+
+        boolean isSupported(ChannelOption option);
+
+        <T> boolean setOption(SocketChannel channel, ChannelOption<T> option, T value);
+
+        <T> T getOption(SocketChannel channel, ChannelOption<T> option);
+
+        ChannelOption[] getOptions(SocketChannel channel);
+    }
+
+    private final class DisabledOptionHelper implements SocketChannelOptionHelper {
+
+        @Override
+        public boolean isSupported() {
+            return false;
+        }
+
+        @Override
+        public boolean isSupported(ChannelOption option) {
+            return false;
+        }
+
+        @Override
+        public <T> boolean setOption(SocketChannel channel, ChannelOption<T> option, T value) {
+            throw new IllegalArgumentException("DisabledOptionHelper");
+        }
+
+        @Override
+        public <T> T getOption(SocketChannel channel, ChannelOption<T> option) {
+            throw new IllegalArgumentException("DisabledOptionHelper");
+        }
+
+        @Override
+        public ChannelOption[] getOptions(SocketChannel channel) {
+            throw new IllegalArgumentException("DisabledOptionHelper");
+        }
+    }
+
+    private final class NioChannelOptionHelper implements SocketChannelOptionHelper {
+
+        @Override
+        public boolean isSupported() {
+            return PlatformDependent.javaVersion() >= 7;
+        }
+
+        @Override
+        public boolean isSupported(ChannelOption option) {
+            return isSupported() && option instanceof NioChannelOption;
+        }
+
+        private void validate(ChannelOption option) {
+            if (!isSupported(option)) {
+                throw new IllegalArgumentException("Not supported ChannelOption");
+            }
+        }
+
+        @Override
+        public <T> boolean setOption(SocketChannel channel, ChannelOption<T> option, T value) {
+            validate(option);
+            return NioChannelOption.setOption(channel, (NioChannelOption<T>) option, value);
+        }
+
+        @Override
+        public <T> T getOption(SocketChannel channel, ChannelOption<T> option) {
+            validate(option);
+            return NioChannelOption.getOption(channel, (NioChannelOption<T>) option);
+        }
+
+        @Override
+        public ChannelOption[] getOptions(SocketChannel channel) {
+            return NioChannelOption.getOptions(channel);
+        }
+    }
+
 }
