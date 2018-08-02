@@ -486,7 +486,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
                 SSLContext.free(ctx);
                 ctx = 0;
-                sessionContext().destroy();
+
+                OpenSslSessionContext context = sessionContext();
+                if (context != null) {
+                    context.destroy();
+                }
             }
         } finally {
             writerLock.unlock();
