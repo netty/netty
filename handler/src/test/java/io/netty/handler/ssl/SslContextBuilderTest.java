@@ -24,6 +24,8 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import java.util.Collections;
 
 public class SslContextBuilderTest {
 
@@ -69,6 +71,30 @@ public class SslContextBuilderTest {
     public void testServerContextOpenssl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
         testServerContext(SslProvider.OPENSSL);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidCipherJdk() throws Exception {
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        testInvalidCipher(SslProvider.JDK);
+    }
+
+    @Test(expected = SSLException.class)
+    public void testInvalidCipherOpenSSL() throws Exception {
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        testInvalidCipher(SslProvider.OPENSSL);
+    }
+
+    private static void testInvalidCipher(SslProvider provider) throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SslContextBuilder builder = SslContextBuilder.forClient()
+                .sslProvider(provider)
+                .ciphers(Collections.singleton("SOME_INVALID_CIPHER"))
+                .keyManager(cert.certificate(),
+                        cert.privateKey())
+                .trustManager(cert.certificate());
+        SslContext context = builder.build();
+        context.newEngine(UnpooledByteBufAllocator.DEFAULT);
     }
 
     private static void testClientContextFromFile(SslProvider provider) throws Exception {
