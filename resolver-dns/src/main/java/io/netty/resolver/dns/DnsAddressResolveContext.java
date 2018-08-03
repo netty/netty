@@ -30,11 +30,14 @@ import io.netty.util.concurrent.Promise;
 final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
 
     private final DnsCache resolveCache;
+    private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
 
     DnsAddressResolveContext(DnsNameResolver parent, String hostname, DnsRecord[] additionals,
-                             DnsServerAddressStream nameServerAddrs, DnsCache resolveCache) {
+                             DnsServerAddressStream nameServerAddrs, DnsCache resolveCache,
+                             AuthoritativeDnsServerCache authoritativeDnsServerCache) {
         super(parent, hostname, DnsRecord.CLASS_IN, parent.resolveRecordTypes(), additionals, nameServerAddrs);
         this.resolveCache = resolveCache;
+        this.authoritativeDnsServerCache = authoritativeDnsServerCache;
     }
 
     @Override
@@ -42,7 +45,8 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
                                                       int dnsClass, DnsRecordType[] expectedTypes,
                                                       DnsRecord[] additionals,
                                                       DnsServerAddressStream nameServerAddrs) {
-        return new DnsAddressResolveContext(parent, hostname, additionals, nameServerAddrs, resolveCache);
+        return new DnsAddressResolveContext(parent, hostname, additionals, nameServerAddrs, resolveCache,
+                authoritativeDnsServerCache);
     }
 
     @Override
@@ -89,8 +93,19 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     @Override
     void doSearchDomainQuery(String hostname, Promise<List<InetAddress>> nextPromise) {
         // Query the cache for the hostname first and only do a query if we could not find it in the cache.
-        if (!parent.doResolveAllCached(hostname, additionals, nextPromise, resolveCache)) {
+        if (!DnsNameResolver.doResolveAllCached(
+                hostname, additionals, nextPromise, resolveCache, parent.resolvedInternetProtocolFamiliesUnsafe())) {
             super.doSearchDomainQuery(hostname, nextPromise);
         }
+    }
+
+    @Override
+    DnsCache resolveCache() {
+        return resolveCache;
+    }
+
+    @Override
+    AuthoritativeDnsServerCache authoritativeDnsServerCache() {
+        return authoritativeDnsServerCache;
     }
 }

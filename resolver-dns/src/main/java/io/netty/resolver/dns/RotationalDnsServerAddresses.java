@@ -17,6 +17,7 @@
 package io.netty.resolver.dns;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 final class RotationalDnsServerAddresses extends DefaultDnsServerAddresses {
@@ -27,7 +28,7 @@ final class RotationalDnsServerAddresses extends DefaultDnsServerAddresses {
     @SuppressWarnings("UnusedDeclaration")
     private volatile int startIdx;
 
-    RotationalDnsServerAddresses(InetSocketAddress[] addresses) {
+    RotationalDnsServerAddresses(List<InetSocketAddress> addresses) {
         super("rotational", addresses);
     }
 
@@ -36,7 +37,7 @@ final class RotationalDnsServerAddresses extends DefaultDnsServerAddresses {
         for (;;) {
             int curStartIdx = startIdx;
             int nextStartIdx = curStartIdx + 1;
-            if (nextStartIdx >= addresses.length) {
+            if (nextStartIdx >= addresses.size()) {
                 nextStartIdx = 0;
             }
             if (startIdxUpdater.compareAndSet(this, curStartIdx, nextStartIdx)) {
