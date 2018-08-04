@@ -219,7 +219,7 @@ public class DnsNameResolver extends InetNameResolver {
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
             final DnsCache resolveCache,
-            DnsCache authoritativeDnsServerCache,
+            final DnsCache authoritativeDnsServerCache,
             DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
             long queryTimeoutMillis,
             ResolvedAddressTypes resolvedAddressTypes,
@@ -306,8 +306,9 @@ public class DnsNameResolver extends InetNameResolver {
 
         ch.closeFuture().addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 resolveCache.clear();
+                authoritativeDnsServerCache.clear();
             }
         });
     }
