@@ -1469,8 +1469,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
         ByteBuffer[] buffers = nioBuffers(index, length);
 
-        if(buffers.length == 1)
-        {
+        if (buffers.length == 1) {
             return buffers[0].duplicate();
         }
         
