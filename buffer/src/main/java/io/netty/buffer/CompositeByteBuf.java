@@ -1467,9 +1467,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             }
         }
 
-        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
         ByteBuffer[] buffers = nioBuffers(index, length);
 
+        if (buffers.length == 1) {
+            return buffers[0].duplicate();
+        }
+
+        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
         for (ByteBuffer buf: buffers) {
             merged.put(buf);
         }
