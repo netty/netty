@@ -58,7 +58,9 @@ import org.apache.directory.server.dns.store.RecordStore;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -88,6 +90,7 @@ import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
 import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty.resolver.dns.DnsServerAddresses.sequential;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
@@ -297,6 +300,9 @@ public class DnsNameResolverTest {
 
     private static final TestDnsServer dnsServer = new TestDnsServer(DOMAINS_ALL);
     private static final EventLoopGroup group = new NioEventLoopGroup(1);
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
     private static DnsNameResolverBuilder newResolver(boolean decodeToUnicode) {
         return newResolver(decodeToUnicode, null);
@@ -1680,6 +1686,30 @@ public class DnsNameResolverTest {
             if (resolver != null) {
                 resolver.close();
             }
+        }
+    }
+
+    @Test
+    public void testSearchDomainQueryFailureForSingleAddressTypeCompletes() {
+        expectedException.expect(UnknownHostException.class);
+        testSearchDomainQueryFailureCompletes(ResolvedAddressTypes.IPV4_ONLY);
+    }
+
+    @Test
+    public void testSearchDomainQueryFailureForMultipleAddressTypeCompletes() {
+        expectedException.expect(UnknownHostException.class);
+        testSearchDomainQueryFailureCompletes(ResolvedAddressTypes.IPV4_PREFERRED);
+    }
+
+    private void testSearchDomainQueryFailureCompletes(ResolvedAddressTypes types) {
+        DnsNameResolver resolver = newResolver()
+                .resolvedAddressTypes(types)
+                .ndots(1)
+                .searchDomains(singletonList(".")).build();
+        try {
+            resolver.resolve("invalid.com").syncUninterruptibly();
+        } finally {
+            resolver.close();
         }
     }
 }
