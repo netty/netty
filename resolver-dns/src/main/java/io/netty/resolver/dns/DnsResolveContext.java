@@ -749,7 +749,7 @@ abstract class DnsResolveContext<T> {
 
         final DnsQuestion cnameQuestion;
         try {
-            cnameQuestion = newQuestion(cname, question.type());
+            cnameQuestion = new DefaultDnsQuestion(cname, question.type(), dnsClass);
         } catch (Throwable cause) {
             queryLifecycleObserver.queryFailed(cause);
             PlatformDependent.throwException(cause);
@@ -760,21 +760,18 @@ abstract class DnsResolveContext<T> {
 
     private boolean query(String hostname, DnsRecordType type, DnsServerAddressStream dnsServerAddressStream,
                           Promise<List<T>> promise) {
-        final DnsQuestion question = newQuestion(hostname, type);
-        if (question == null) {
+        final DnsQuestion question;
+        try {
+            question = new DefaultDnsQuestion(hostname, type, dnsClass);
+        } catch (Throwable cause) {
+            // Assume a single failure means that queries will succeed. If the hostname is invalid for one type
+            // there is no case where it is known to be valid for another type.
+            promise.tryFailure(new IllegalArgumentException("Unable to create DNS Question for: [" + hostname + ", " +
+                    type + "]", cause));
             return false;
         }
         query(dnsServerAddressStream, 0, question, promise, null);
         return true;
-    }
-
-    private DnsQuestion newQuestion(String hostname, DnsRecordType type) {
-        try {
-            return new DefaultDnsQuestion(hostname, type, dnsClass);
-        } catch (IllegalArgumentException e) {
-            // java.net.IDN.toASCII(...) may throw an IllegalArgumentException if it fails to parse the hostname
-            return null;
-        }
     }
 
     /**
