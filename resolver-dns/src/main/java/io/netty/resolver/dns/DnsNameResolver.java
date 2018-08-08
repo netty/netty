@@ -790,7 +790,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    private boolean doResolveAllCached(String hostname,
+    boolean doResolveAllCached(String hostname,
                                        DnsRecord[] additionals,
                                        Promise<List<InetAddress>> promise,
                                        DnsCache resolveCache) {

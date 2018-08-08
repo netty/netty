@@ -96,13 +96,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class DnsNameResolverTest {
 
@@ -1746,8 +1740,7 @@ public class DnsNameResolverTest {
                     String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
                 return null;
             }
-        })
-        .authoritativeDnsServerCache(new DnsCache() {
+        }).authoritativeDnsServerCache(new DnsCache() {
             @Override
             public void clear() {
                 authoritativeLatch.countDown();
@@ -1778,5 +1771,54 @@ public class DnsNameResolverTest {
         resolver.close();
         resolveLatch.await();
         authoritativeLatch.await();
+    }
+
+    @Test
+    public void testResolveACachedWithDot() {
+        final DnsCache cache = new DefaultDnsCache();
+        DnsNameResolver resolver = newResolver(ResolvedAddressTypes.IPV4_ONLY)
+                .resolveCache(cache).build();
+
+        try {
+            String domain = DOMAINS.iterator().next();
+            String domainWithDot = domain + '.';
+
+            resolver.resolve(domain).syncUninterruptibly();
+            List<? extends DnsCacheEntry> cached = cache.get(domain, null);
+            List<? extends DnsCacheEntry> cached2 = cache.get(domainWithDot, null);
+
+            assertEquals(1, cached.size());
+            assertSame(cached, cached2);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test
+    public void testResolveACachedWithDotSearchDomain() throws Exception {
+        final TestDnsCache cache = new TestDnsCache(new DefaultDnsCache());
+        TestDnsServer server = new TestDnsServer(Collections.singleton("test.netty.io"));
+        server.start();
+        DnsNameResolver resolver = newResolver(ResolvedAddressTypes.IPV4_ONLY)
+                .searchDomains(Collections.singletonList("netty.io"))
+                .nameServerProvider(new SingletonDnsServerAddressStreamProvider(server.localAddress()))
+                .resolveCache(cache).build();
+        try {
+            resolver.resolve("test").syncUninterruptibly();
+
+            assertNull(cache.cacheHits.get("test.netty.io"));
+
+            List<? extends DnsCacheEntry> cached = cache.cache.get("test.netty.io", null);
+            List<? extends DnsCacheEntry> cached2 = cache.cache.get("test.netty.io.", null);
+            assertEquals(1, cached.size());
+            assertSame(cached, cached2);
+
+            resolver.resolve("test").syncUninterruptibly();
+            List<? extends DnsCacheEntry> entries = cache.cacheHits.get("test.netty.io");
+            assertFalse(entries.isEmpty());
+        } finally {
+            resolver.close();
+            server.stop();
+        }
     }
 }

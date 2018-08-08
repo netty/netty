@@ -97,7 +97,7 @@ abstract class DnsResolveContext<T> {
     private final int dnsClass;
     private final DnsRecordType[] expectedTypes;
     private final int maxAllowedQueries;
-    private final DnsRecord[] additionals;
+    final DnsRecord[] additionals;
 
     private final Set<Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> queriesInProgress =
             Collections.newSetFromMap(
@@ -164,7 +164,8 @@ abstract class DnsResolveContext<T> {
             final String initialHostname = startWithoutSearchDomain ? hostname : hostname + '.' + searchDomains[0];
             final int initialSearchDomainIdx = startWithoutSearchDomain ? 0 : 1;
 
-            doSearchDomainQuery(initialHostname, new FutureListener<List<T>>() {
+            final Promise<List<T>> searchDomainPromise = parent.executor().newPromise();
+            searchDomainPromise.addListener(new FutureListener<List<T>>() {
                 private int searchDomainIdx = initialSearchDomainIdx;
                 @Override
                 public void operationComplete(Future<List<T>> future) {
@@ -175,7 +176,9 @@ abstract class DnsResolveContext<T> {
                         if (DnsNameResolver.isTransportOrTimeoutError(cause)) {
                             promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname));
                         } else if (searchDomainIdx < searchDomains.length) {
-                            doSearchDomainQuery(hostname + '.' + searchDomains[searchDomainIdx++], this);
+                            Promise<List<T>> newPromise = parent.executor().newPromise();
+                            newPromise.addListener(this);
+                            doSearchDomainQuery(hostname + '.' + searchDomains[searchDomainIdx++], newPromise);
                         } else if (!startWithoutSearchDomain) {
                             internalResolve(promise);
                         } else {
@@ -184,6 +187,7 @@ abstract class DnsResolveContext<T> {
                     }
                 }
             });
+            doSearchDomainQuery(initialHostname, searchDomainPromise);
         }
     }
 
@@ -213,12 +217,10 @@ abstract class DnsResolveContext<T> {
         }
     }
 
-    private void doSearchDomainQuery(String hostname, FutureListener<List<T>> listener) {
+    void doSearchDomainQuery(String hostname, Promise<List<T>> nextPromise) {
         DnsResolveContext<T> nextContext = newResolverContext(parent, hostname, dnsClass, expectedTypes,
                                                               additionals, nameServerAddrs);
-        Promise<List<T>> nextPromise = parent.executor().newPromise();
         nextContext.internalResolve(nextPromise);
-        nextPromise.addListener(listener);
     }
 
     private void internalResolve(Promise<List<T>> promise) {
