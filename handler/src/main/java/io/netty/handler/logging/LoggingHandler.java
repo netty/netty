@@ -29,7 +29,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 
 import static io.netty.buffer.ByteBufUtil.appendPrettyHexDump;
 import static io.netty.util.internal.StringUtil.NEWLINE;
@@ -43,7 +42,6 @@ import static io.netty.util.internal.StringUtil.NEWLINE;
 public class LoggingHandler extends ChannelDuplexHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
-    private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
     protected final InternalLogger logger;
     protected final InternalLogLevel internalLevel;
@@ -67,7 +65,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(LogLevel level) {
-        this(level, true, DEFAULT_CHARSET);
+        this(level, true, null);
     }
 
     /**
@@ -81,6 +79,9 @@ public class LoggingHandler extends ChannelDuplexHandler {
     public LoggingHandler(LogLevel level, boolean hexDump, Charset charset) {
         if (level == null) {
             throw new NullPointerException("level");
+        }
+        if (!hexDump && charset == null) {
+            throw new NullPointerException("charset");
         }
 
         logger = InternalLoggerFactory.getInstance(getClass());
@@ -107,7 +108,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(Class<?> clazz, LogLevel level) {
-        this(clazz, level, true, DEFAULT_CHARSET);
+        this(clazz, level, true, null);
     }
 
     /**
@@ -124,6 +125,9 @@ public class LoggingHandler extends ChannelDuplexHandler {
         }
         if (level == null) {
             throw new NullPointerException("level");
+        }
+        if (!hexDump && charset == null) {
+            throw new NullPointerException("charset");
         }
 
         logger = InternalLoggerFactory.getInstance(clazz);
@@ -150,7 +154,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(String name, LogLevel level) {
-        this(name, level, true, DEFAULT_CHARSET);
+        this(name, level, true, null);
     }
 
     /**
@@ -167,6 +171,9 @@ public class LoggingHandler extends ChannelDuplexHandler {
         }
         if (level == null) {
             throw new NullPointerException("level");
+        }
+        if (!hexDump && charset == null) {
+            throw new NullPointerException("charset");
         }
 
         logger = InternalLoggerFactory.getInstance(name);
