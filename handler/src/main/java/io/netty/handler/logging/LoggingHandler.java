@@ -28,6 +28,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import static io.netty.buffer.ByteBufUtil.appendPrettyHexDump;
 import static io.netty.util.internal.StringUtil.NEWLINE;
@@ -41,15 +43,18 @@ import static io.netty.util.internal.StringUtil.NEWLINE;
 public class LoggingHandler extends ChannelDuplexHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
+    private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
     protected final InternalLogger logger;
     protected final InternalLogLevel internalLevel;
 
     private final LogLevel level;
+    private final boolean hexDump;
+    private final Charset charset;
 
     /**
      * Creates a new instance whose logger name is the fully qualified class
-     * name of the instance with hex dump enabled.
+     * name of the instance using the default log level with hex dump enabled.
      */
     public LoggingHandler() {
         this(DEFAULT_LEVEL);
@@ -57,23 +62,37 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
     /**
      * Creates a new instance whose logger name is the fully qualified class
-     * name of the instance.
+     * name of the instance with hex dump enabled.
      *
      * @param level the log level
      */
     public LoggingHandler(LogLevel level) {
+        this(level, true, DEFAULT_CHARSET);
+    }
+
+    /**
+     * Creates a new instance whose logger name is the fully qualified class
+     * name of the instance.
+     *
+     * @param level the log level
+     * @param hexDump if hex dump is enabled
+     * @param charset the encoding used to decode the content, if hex dump is disabled
+     */
+    public LoggingHandler(LogLevel level, boolean hexDump, Charset charset) {
         if (level == null) {
             throw new NullPointerException("level");
         }
 
         logger = InternalLoggerFactory.getInstance(getClass());
         this.level = level;
+        this.hexDump = hexDump;
+        this.charset = charset;
         internalLevel = level.toInternalLevel();
     }
 
     /**
-     * Creates a new instance with the specified logger name and with hex dump
-     * enabled.
+     * Creates a new instance with the specified logger name using the default
+     * log level with hex dump enabled.
      *
      * @param clazz the class type to generate the logger for
      */
@@ -82,12 +101,24 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     /**
-     * Creates a new instance with the specified logger name.
+     * Creates a new instance with the specified logger name with hex dump enabled.
      *
      * @param clazz the class type to generate the logger for
      * @param level the log level
      */
     public LoggingHandler(Class<?> clazz, LogLevel level) {
+        this(clazz, level, true, DEFAULT_CHARSET);
+    }
+
+    /**
+     * Creates a new instance with the specified logger name.
+     *
+     * @param clazz the class type to generate the logger for
+     * @param level the log level
+     * @param hexDump if hex dump is enabled
+     * @param charset the encoding used to decode the content, if hex dump is disabled
+     */
+    public LoggingHandler(Class<?> clazz, LogLevel level, boolean hexDump, Charset charset) {
         if (clazz == null) {
             throw new NullPointerException("clazz");
         }
@@ -97,11 +128,14 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
         logger = InternalLoggerFactory.getInstance(clazz);
         this.level = level;
+        this.hexDump = hexDump;
+        this.charset = charset;
         internalLevel = level.toInternalLevel();
     }
 
     /**
-     * Creates a new instance with the specified logger name using the default log level.
+     * Creates a new instance with the specified logger name using the default log level
+     * with hex dump enabled.
      *
      * @param name the name of the class to use for the logger
      */
@@ -110,12 +144,24 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     /**
-     * Creates a new instance with the specified logger name.
+     * Creates a new instance with the specified logger name with hex dump enabled.
      *
      * @param name the name of the class to use for the logger
      * @param level the log level
      */
     public LoggingHandler(String name, LogLevel level) {
+        this(name, level, true, DEFAULT_CHARSET);
+    }
+
+    /**
+     * Creates a new instance with the specified logger name.
+     *
+     * @param name the name of the class to use for the logger
+     * @param level the log level
+     * @param hexDump if hex dump is enabled
+     * @param charset the encoding used to decode the content, if hex dump is disabled
+     */
+    public LoggingHandler(String name, LogLevel level, boolean hexDump, Charset charset) {
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -125,6 +171,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
         logger = InternalLoggerFactory.getInstance(name);
         this.level = level;
+        this.hexDump = hexDump;
+        this.charset = charset;
         internalLevel = level.toInternalLevel();
     }
 
@@ -287,9 +335,9 @@ public class LoggingHandler extends ChannelDuplexHandler {
      */
     protected String format(ChannelHandlerContext ctx, String eventName, Object arg) {
         if (arg instanceof ByteBuf) {
-            return formatByteBuf(ctx, eventName, (ByteBuf) arg);
+            return formatByteBuf(ctx, eventName, (ByteBuf) arg, hexDump, charset);
         } else if (arg instanceof ByteBufHolder) {
-            return formatByteBufHolder(ctx, eventName, (ByteBufHolder) arg);
+            return formatByteBufHolder(ctx, eventName, (ByteBufHolder) arg, hexDump, charset);
         } else {
             return formatSimple(ctx, eventName, arg);
         }
@@ -320,7 +368,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
     /**
      * Generates the default log message of the specified event whose argument is a {@link ByteBuf}.
      */
-    private static String formatByteBuf(ChannelHandlerContext ctx, String eventName, ByteBuf msg) {
+    private static String formatByteBuf(ChannelHandlerContext ctx, String eventName, ByteBuf msg, boolean hexDump,
+                                        Charset charset) {
         String chStr = ctx.channel().toString();
         int length = msg.readableBytes();
         if (length == 0) {
@@ -328,11 +377,17 @@ public class LoggingHandler extends ChannelDuplexHandler {
             buf.append(chStr).append(' ').append(eventName).append(": 0B");
             return buf.toString();
         } else {
-            int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
-            StringBuilder buf = new StringBuilder(chStr.length() + 1 + eventName.length() + 2 + 10 + 1 + 2 + rows * 80);
-
-            buf.append(chStr).append(' ').append(eventName).append(": ").append(length).append('B').append(NEWLINE);
-            appendPrettyHexDump(buf, msg);
+            StringBuilder buf;
+            if (hexDump) {
+                int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
+                buf = new StringBuilder(chStr.length() + 1 + eventName.length() + 2 + 10 + 1 + 2 + rows * 80);
+                buf.append(chStr).append(' ').append(eventName).append(": ").append(length).append('B').append(NEWLINE);
+                appendPrettyHexDump(buf, msg);
+            } else {
+                buf = new StringBuilder(chStr.length() + 1 + eventName.length() + 2 + 10 + 1 + 2 + length);
+                buf.append(chStr).append(' ').append(eventName).append(": ").append(length).append('B').append(NEWLINE);
+                buf.append(msg.toString(charset));
+            }
 
             return buf.toString();
         }
@@ -341,7 +396,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
     /**
      * Generates the default log message of the specified event whose argument is a {@link ByteBufHolder}.
      */
-    private static String formatByteBufHolder(ChannelHandlerContext ctx, String eventName, ByteBufHolder msg) {
+    private static String formatByteBufHolder(ChannelHandlerContext ctx, String eventName, ByteBufHolder msg,
+                                              boolean hexDump, Charset charset) {
         String chStr = ctx.channel().toString();
         String msgStr = msg.toString();
         ByteBuf content = msg.content();
@@ -351,13 +407,22 @@ public class LoggingHandler extends ChannelDuplexHandler {
             buf.append(chStr).append(' ').append(eventName).append(", ").append(msgStr).append(", 0B");
             return buf.toString();
         } else {
-            int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
-            StringBuilder buf = new StringBuilder(
-                    chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 2 + 10 + 1 + 2 + rows * 80);
-
-            buf.append(chStr).append(' ').append(eventName).append(": ")
-               .append(msgStr).append(", ").append(length).append('B').append(NEWLINE);
-            appendPrettyHexDump(buf, content);
+            StringBuilder buf;
+            if (hexDump) {
+                int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
+                buf = new StringBuilder(
+                        chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 2 + 10 + 1 + 2 + rows * 80);
+                buf.append(chStr).append(' ').append(eventName).append(": ")
+                   .append(msgStr).append(", ").append(length).append('B').append(NEWLINE);
+                appendPrettyHexDump(buf, content);
+            } else {
+                buf = new StringBuilder(
+                        chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 2 + 10 + 1 + 2 +
+                        length);
+                buf.append(chStr).append(' ').append(eventName).append(": ")
+                   .append(msgStr).append(", ").append(length).append('B').append(NEWLINE);
+                buf.append(content.toString(charset));
+            }
 
             return buf.toString();
         }
