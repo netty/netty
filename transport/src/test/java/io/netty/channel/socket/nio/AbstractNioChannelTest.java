@@ -66,4 +66,14 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             channel.unsafe().closeForcibly();
         }
     }
+
+    @Test
+    public void testGetOptions()  {
+        T channel = newNioChannel();
+        try {
+            channel.config().getOptions();
+        } finally {
+            channel.unsafe().closeForcibly();
+        }
+    }
 }
