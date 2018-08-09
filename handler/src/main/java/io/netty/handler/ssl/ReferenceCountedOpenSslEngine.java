@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.AbstractReferenceCounted;
-import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
@@ -40,6 +39,7 @@ import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -272,10 +272,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     setEnabledProtocols(context.protocols);
                 }
 
-                // Use SNI if peerHost was specified
+                // Use SNI if peerHost was specified and a valid hostname
                 // See https://github.com/netty/netty/issues/4746
-                if (clientMode && peerHost != null) {
+                if (clientMode && SslUtils.isValidHostNameForSNI(peerHost)) {
                     SSL.setTlsExtHostName(ssl, peerHost);
+                    sniHostNames = Collections.singletonList(peerHost);
                 }
 
                 if (enableOcsp) {

@@ -71,6 +71,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -834,6 +835,10 @@ public abstract class SSLEngineTest {
                 InetSocketAddress remoteAddress = (InetSocketAddress) serverChannel.localAddress();
                 SslHandler sslHandler = clientSslCtx.newHandler(ch.alloc(), expectedHost, 0);
                 SSLParameters parameters = sslHandler.engine().getSSLParameters();
+                if (SslUtils.isValidHostNameForSNI(expectedHost)) {
+                    assertEquals(1, parameters.getServerNames().size());
+                    assertEquals(new SNIHostName(expectedHost), parameters.getServerNames().get(0));
+                }
                 parameters.setEndpointIdentificationAlgorithm("HTTPS");
                 sslHandler.engine().setSSLParameters(parameters);
                 p.addLast(sslHandler);
