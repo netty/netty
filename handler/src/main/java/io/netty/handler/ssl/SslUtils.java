@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
+import io.netty.util.NetUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -347,6 +348,17 @@ final class SslUtils {
                 src.readableBytes(), true, Base64Dialect.STANDARD, allocator);
         src.readerIndex(src.writerIndex());
         return dst;
+    }
+
+    /**
+     * Validate that the given hostname can be used in SNI extension.
+     */
+    static boolean isValidHostNameForSNI(String hostname) {
+        return hostname != null &&
+               hostname.indexOf('.') > 0 &&
+               !hostname.endsWith(".") &&
+               !NetUtil.isValidIpV4Address(hostname) &&
+               !NetUtil.isValidIpV6Address(hostname);
     }
 
     private SslUtils() {
