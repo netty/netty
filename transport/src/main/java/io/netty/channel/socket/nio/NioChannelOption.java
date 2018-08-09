@@ -20,6 +20,9 @@ import io.netty.channel.ChannelOption;
 
 import java.io.IOException;
 import java.nio.channels.Channel;
+import java.nio.channels.ServerSocketChannel;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -55,6 +58,11 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         if (!channel.supportedOptions().contains(option.option)) {
             return false;
         }
+        if (channel instanceof ServerSocketChannel && option.option == java.net.StandardSocketOptions.IP_TOS) {
+            // Skip IP_TOS as a workaround for a JDK bug:
+            // See http://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
+            return false;
+        }
         try {
             channel.setOption(option.option, value);
             return true;
@@ -69,6 +77,11 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         if (!channel.supportedOptions().contains(option.option)) {
             return null;
         }
+        if (channel instanceof ServerSocketChannel && option.option == java.net.StandardSocketOptions.IP_TOS) {
+            // Skip IP_TOS as a workaround for a JDK bug:
+            // See http://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
+            return null;
+        }
         try {
             return channel.getOption(option.option);
         } catch (IOException e) {
@@ -80,12 +93,26 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
     static ChannelOption[] getOptions(Channel jdkChannel) {
         java.nio.channels.NetworkChannel channel = (java.nio.channels.NetworkChannel) jdkChannel;
         Set<java.net.SocketOption<?>> supportedOpts = channel.supportedOptions();
-        ChannelOption<?>[] extraOpts = new ChannelOption[supportedOpts.size()];
 
-        int i = 0;
-        for (java.net.SocketOption<?> opt : supportedOpts) {
-            extraOpts[i++] = new NioChannelOption(opt);
+        if (channel instanceof ServerSocketChannel) {
+            List<ChannelOption<?>> extraOpts = new ArrayList<ChannelOption<?>>(supportedOpts.size());
+            for (java.net.SocketOption<?> opt : supportedOpts) {
+                if (opt == java.net.StandardSocketOptions.IP_TOS) {
+                    // Skip IP_TOS as a workaround for a JDK bug:
+                    // See http://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
+                    continue;
+                }
+                extraOpts.add(new NioChannelOption(opt));
+            }
+            return extraOpts.toArray(new ChannelOption[0]);
+        } else {
+            ChannelOption<?>[] extraOpts = new ChannelOption[supportedOpts.size()];
+
+            int i = 0;
+            for (java.net.SocketOption<?> opt : supportedOpts) {
+                extraOpts[i++] = new NioChannelOption(opt);
+            }
+            return extraOpts;
         }
-        return extraOpts;
     }
 }

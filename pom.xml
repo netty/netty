@@ -703,6 +703,7 @@
             <ignore>java.net.StandardProtocolFamily</ignore>
             <ignore>java.nio.channels.spi.SelectorProvider</ignore>
             <ignore>java.net.SocketOption</ignore> 
+            <ignore>java.net.StandardSocketOptions</ignore> 
             <ignore>java.nio.channels.NetworkChannel</ignore>
 
             <!-- Self-signed certificate generation -->
