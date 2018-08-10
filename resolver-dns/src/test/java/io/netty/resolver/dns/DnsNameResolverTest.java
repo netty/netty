@@ -82,6 +82,7 @@ import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -1711,5 +1712,71 @@ public class DnsNameResolverTest {
         } finally {
             resolver.close();
         }
+    }
+
+    @Test(timeout = 2000L)
+    public void testCachesClearedOnClose() throws Exception {
+        final CountDownLatch resolveLatch = new CountDownLatch(1);
+        final CountDownLatch authoritativeLatch = new CountDownLatch(1);
+
+        DnsNameResolver resolver = newResolver().resolveCache(new DnsCache() {
+            @Override
+            public void clear() {
+                resolveLatch.countDown();
+            }
+
+            @Override
+            public boolean clear(String hostname) {
+                return false;
+            }
+
+            @Override
+            public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+                return null;
+            }
+
+            @Override
+            public DnsCacheEntry cache(
+                    String hostname, DnsRecord[] additionals, InetAddress address, long originalTtl, EventLoop loop) {
+                return null;
+            }
+
+            @Override
+            public DnsCacheEntry cache(
+                    String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
+                return null;
+            }
+        })
+        .authoritativeDnsServerCache(new DnsCache() {
+            @Override
+            public void clear() {
+                authoritativeLatch.countDown();
+            }
+
+            @Override
+            public boolean clear(String hostname) {
+                return false;
+            }
+
+            @Override
+            public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+                return null;
+            }
+
+            @Override
+            public DnsCacheEntry cache(
+                    String hostname, DnsRecord[] additionals, InetAddress address, long originalTtl, EventLoop loop) {
+                return null;
+            }
+
+            @Override
+            public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
+                return null;
+            }
+        }).build();
+
+        resolver.close();
+        resolveLatch.await();
+        authoritativeLatch.await();
     }
 }
