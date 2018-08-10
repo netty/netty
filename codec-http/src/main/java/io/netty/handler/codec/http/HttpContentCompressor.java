@@ -37,7 +37,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final int windowBits;
     private final int memLevel;
     private final int contentSizeThreshold;
-    private Set<String> types = null;
+    private Set<String> types;
     private ChannelHandlerContext ctx;
 
     /**
@@ -134,8 +134,8 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        body exceeds the threshold. The value should be a non negative
      *        number. {@code 0} will enable compression for all responses.
      * @param types
-     *        The response body is compressed when the content type of the 
-     *        response in types. {@code null} will enable compression for all 
+     *        The response body is compressed when the content type of the
+     *        response in types. {@code null} will enable compression for all
      *        responses.
      */
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel, int contentSizeThreshold,
@@ -173,7 +173,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
     @Override
     protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
-        
+
         if (this.types != null) {
             boolean shouldCompress = false;
             String contentType = headers.headers().get(HttpHeaderNames.CONTENT_TYPE);
@@ -187,9 +187,9 @@ public class HttpContentCompressor extends HttpContentEncoder {
                 if (!shouldCompress) {
                    return null;
                 }
-            }            
+            }
         }
-        
+
         if (this.contentSizeThreshold > 0) {
             if (headers instanceof HttpContent &&
                     ((HttpContent) headers).content().readableBytes() < contentSizeThreshold) {
