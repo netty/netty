@@ -20,6 +20,10 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpContent} in {@code gzip} or
  * {@code deflate} encoding while respecting the {@code "Accept-Encoding"} header.
@@ -33,6 +37,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final int windowBits;
     private final int memLevel;
     private final int contentSizeThreshold;
+    private Set<String> types = null;
     private ChannelHandlerContext ctx;
 
     /**
@@ -103,6 +108,38 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        number. {@code 0} will enable compression for all responses.
      */
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel, int contentSizeThreshold) {
+        this(compressionLevel, windowBits, memLevel, contentSizeThreshold, null);
+    }
+
+    /**
+     * Creates a new handler with the specified compression level, window size,
+     * and memory level..
+     *
+     * @param compressionLevel
+     *        {@code 1} yields the fastest compression and {@code 9} yields the
+     *        best compression.  {@code 0} means no compression.  The default
+     *        compression level is {@code 6}.
+     * @param windowBits
+     *        The base two logarithm of the size of the history buffer.  The
+     *        value should be in the range {@code 9} to {@code 15} inclusive.
+     *        Larger values result in better compression at the expense of
+     *        memory usage.  The default value is {@code 15}.
+     * @param memLevel
+     *        How much memory should be allocated for the internal compression
+     *        state.  {@code 1} uses minimum memory and {@code 9} uses maximum
+     *        memory.  Larger values result in better and faster compression
+     *        at the expense of memory usage.  The default value is {@code 8}
+     * @param contentSizeThreshold
+     *        The response body is compressed when the size of the response
+     *        body exceeds the threshold. The value should be a non negative
+     *        number. {@code 0} will enable compression for all responses.
+     * @param types
+     *        The response body is compressed when the content type of the 
+     *        response in types. {@code null} will enable compression for all 
+     *        responses.
+     */
+    public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel, int contentSizeThreshold,
+                                 String types) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel +
@@ -124,6 +161,9 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.windowBits = windowBits;
         this.memLevel = memLevel;
         this.contentSizeThreshold = contentSizeThreshold;
+        if (types != null) {
+            this.types = new HashSet<String>(Arrays.asList(types.split(" ")));
+        }
     }
 
     @Override
@@ -133,6 +173,23 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
     @Override
     protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
+        
+        if (this.types != null) {
+            boolean shouldCompress = false;
+            String contentType = headers.headers().get(HttpHeaderNames.CONTENT_TYPE);
+            if (contentType != null) {
+                for (String type : this.types) {
+                    if (contentType.startsWith(type)) {
+                        shouldCompress = true;
+                        break;
+                    }
+                }
+                if (!shouldCompress) {
+                   return null;
+                }
+            }            
+        }
+        
         if (this.contentSizeThreshold > 0) {
             if (headers instanceof HttpContent &&
                     ((HttpContent) headers).content().readableBytes() < contentSizeThreshold) {
