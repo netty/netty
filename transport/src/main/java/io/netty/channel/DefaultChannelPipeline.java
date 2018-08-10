@@ -87,7 +87,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      * Set to {@code true} once the {@link AbstractChannel} is registered.Once set to {@code true} the value will never
      * change.
      */
-    private boolean registered;
+    private volatile boolean registered;
 
     protected DefaultChannelPipeline(Channel channel) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
