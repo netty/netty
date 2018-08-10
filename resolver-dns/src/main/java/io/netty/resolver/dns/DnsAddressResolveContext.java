@@ -25,6 +25,7 @@ import java.util.List;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
+import io.netty.util.concurrent.Promise;
 
 final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
 
@@ -83,5 +84,13 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     @Override
     void cache(String hostname, DnsRecord[] additionals, UnknownHostException cause) {
         resolveCache.cache(hostname, additionals, cause, parent.ch.eventLoop());
+    }
+
+    @Override
+    void doSearchDomainQuery(String hostname, Promise<List<InetAddress>> nextPromise) {
+        // Query the cache for the hostname first and only do a query if we could not find it in the cache.
+        if (!parent.doResolveAllCached(hostname, additionals, nextPromise, resolveCache)) {
+            super.doSearchDomainQuery(hostname, nextPromise);
+        }
     }
 }

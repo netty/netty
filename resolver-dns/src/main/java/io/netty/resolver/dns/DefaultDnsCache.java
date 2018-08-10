@@ -19,6 +19,7 @@ import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
@@ -115,7 +116,7 @@ public class DefaultDnsCache implements DnsCache {
     @Override
     public boolean clear(String hostname) {
         checkNotNull(hostname, "hostname");
-        Entries entries = resolveCache.remove(hostname);
+        Entries entries = resolveCache.remove(appendDot(hostname));
         return entries != null && entries.clearAndCancel();
     }
 
@@ -130,7 +131,7 @@ public class DefaultDnsCache implements DnsCache {
             return Collections.<DnsCacheEntry>emptyList();
         }
 
-        Entries entries = resolveCache.get(hostname);
+        Entries entries = resolveCache.get(appendDot(hostname));
         return entries == null ? null : entries.get();
     }
 
@@ -144,7 +145,8 @@ public class DefaultDnsCache implements DnsCache {
         if (maxTtl == 0 || !emptyAdditionals(additionals)) {
             return e;
         }
-        cache0(e, Math.max(minTtl, Math.min(MAX_SUPPORTED_TTL_SECS, (int) Math.min(maxTtl, originalTtl))), loop);
+        cache0(appendDot(hostname), e,
+                Math.max(minTtl, Math.min(MAX_SUPPORTED_TTL_SECS, (int) Math.min(maxTtl, originalTtl))), loop);
         return e;
     }
 
@@ -159,25 +161,25 @@ public class DefaultDnsCache implements DnsCache {
             return e;
         }
 
-        cache0(e, Math.min(MAX_SUPPORTED_TTL_SECS, negativeTtl), loop);
+        cache0(appendDot(hostname), e, Math.min(MAX_SUPPORTED_TTL_SECS, negativeTtl), loop);
         return e;
     }
 
-    private void cache0(DefaultDnsCacheEntry e, int ttl, EventLoop loop) {
-        Entries entries = resolveCache.get(e.hostname());
+    private void cache0(String hostname, DefaultDnsCacheEntry e, int ttl, EventLoop loop) {
+        Entries entries = resolveCache.get(hostname);
         if (entries == null) {
             entries = new Entries(e);
-            Entries oldEntries = resolveCache.putIfAbsent(e.hostname(), entries);
+            Entries oldEntries = resolveCache.putIfAbsent(hostname, entries);
             if (oldEntries != null) {
                 entries = oldEntries;
             }
         }
         entries.add(e);
 
-        scheduleCacheExpiration(e, ttl, loop);
+        scheduleCacheExpiration(hostname, e, ttl, loop);
     }
 
-    private void scheduleCacheExpiration(final DefaultDnsCacheEntry e,
+    private void scheduleCacheExpiration(final String hostname, final DefaultDnsCacheEntry e,
                                          int ttl,
                                          EventLoop loop) {
         e.scheduleExpiration(loop, new Runnable() {
@@ -192,7 +194,7 @@ public class DefaultDnsCache implements DnsCache {
                         // completely fine to remove the entry even if the TTL is not reached yet.
                         //
                         // See https://github.com/netty/netty/issues/7329
-                        Entries entries = resolveCache.remove(e.hostname);
+                        Entries entries = resolveCache.remove(hostname);
                         if (entries != null) {
                             entries.clearAndCancel();
                         }
@@ -237,10 +239,6 @@ public class DefaultDnsCache implements DnsCache {
         @Override
         public Throwable cause() {
             return cause;
-        }
-
-        String hostname() {
-            return hostname;
         }
 
         void scheduleExpiration(EventLoop loop, Runnable task, long delay, TimeUnit unit) {
@@ -337,5 +335,9 @@ public class DefaultDnsCache implements DnsCache {
                 entryList.get(i).cancelExpiration();
             }
         }
+    }
+
+    private static String appendDot(String hostname) {
+        return StringUtil.endsWith(hostname, '.') ? hostname : hostname + '.';
     }
 }
