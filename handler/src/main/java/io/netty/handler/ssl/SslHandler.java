@@ -621,7 +621,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         return handshakePromise;
     }
 
-     /**
+    /**
      * Use {@link #closeOutbound()}
      */
     @Deprecated
@@ -648,7 +648,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     /**
-     * See {@link #closeOutbound()}
+     * Sends an SSL {@code close_notify} message to the specified channel and
+     * destroys the underlying {@link SSLEngine}. This will <strong>not</strong> close the underlying
+     * {@link Channel}. If you want to also close the {@link Channel} use {@link Channel#close()} or
+     * {@link ChannelHandlerContext#close()}
      */
     public ChannelFuture closeOutbound(final ChannelPromise promise) {
         final ChannelHandlerContext ctx = this.ctx;
