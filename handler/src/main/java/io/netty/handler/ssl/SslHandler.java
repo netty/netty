@@ -93,8 +93,8 @@ import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
  *
  * <h3>Closing the session</h3>
  * <p>
- * To close the SSL session, the {@link #close()} method should be
- * called to send the {@code close_notify} message to the remote peer.  One
+ * To close the SSL session, the {@link #closeOutbound()} method should be
+ * called to send the {@code close_notify} message to the remote peer. One
  * exception is when you close the {@link Channel} - {@link SslHandler}
  * intercepts the close request and send the {@code close_notify} message
  * before the channel closure automatically.  Once the SSL session is closed,
@@ -622,40 +622,62 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     /**
-     * Sends an SSL {@code close_notify} message to the specified channel and
-     * destroys the underlying {@link SSLEngine}.
-     *
-     * @deprecated use {@link Channel#close()} or {@link ChannelHandlerContext#close()}
+     * Use {@link #closeOutbound()}
      */
     @Deprecated
     public ChannelFuture close() {
-        return close(ctx.newPromise());
+        return closeOutbound();
     }
 
     /**
-     * See {@link #close()}
-     *
-     * @deprecated use {@link Channel#close()} or {@link ChannelHandlerContext#close()}
+     * Use {@link #closeOutbound(ChannelPromise)}
      */
     @Deprecated
-    public ChannelFuture close(final ChannelPromise promise) {
-        final ChannelHandlerContext ctx = this.ctx;
-        ctx.executor().execute(new Runnable() {
-            @Override
-            public void run() {
-                outboundClosed = true;
-                engine.closeOutbound();
-                try {
-                    flush(ctx, promise);
-                } catch (Exception e) {
-                    if (!promise.tryFailure(e)) {
-                        logger.warn("{} flush() raised a masked exception.", ctx.channel(), e);
-                    }
-                }
-            }
-        });
+    public ChannelFuture close(ChannelPromise promise) {
+        return closeOutbound(promise);
+    }
 
+    /**
+     * Sends an SSL {@code close_notify} message to the specified channel and
+     * destroys the underlying {@link SSLEngine}. This will <strong>not</strong> close the underlying
+     * {@link Channel}. If you want to also close the {@link Channel} use {@link Channel#close()} or
+     * {@link ChannelHandlerContext#close()}
+     */
+    public ChannelFuture closeOutbound() {
+        return closeOutbound(ctx.newPromise());
+    }
+
+    /**
+     * Sends an SSL {@code close_notify} message to the specified channel and
+     * destroys the underlying {@link SSLEngine}. This will <strong>not</strong> close the underlying
+     * {@link Channel}. If you want to also close the {@link Channel} use {@link Channel#close()} or
+     * {@link ChannelHandlerContext#close()}
+     */
+    public ChannelFuture closeOutbound(final ChannelPromise promise) {
+        final ChannelHandlerContext ctx = this.ctx;
+        if (ctx.executor().inEventLoop()) {
+            closeOutbound0(promise);
+        } else {
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    closeOutbound0(promise);
+                }
+            });
+        }
         return promise;
+    }
+
+    private void closeOutbound0(ChannelPromise promise) {
+        outboundClosed = true;
+        engine.closeOutbound();
+        try {
+            flush(ctx, promise);
+        } catch (Exception e) {
+            if (!promise.tryFailure(e)) {
+                logger.warn("{} flush() raised a masked exception.", ctx.channel(), e);
+            }
+        }
     }
 
     /**
