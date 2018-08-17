@@ -70,7 +70,9 @@ public final class OpenSslCertificateException extends CertificateException {
     }
 
     private static int checkErrorCode(int errorCode) {
-        if (!CertificateVerifier.isValid(errorCode)) {
+        // Call OpenSsl.isAvailable() to ensure we try to load the native lib as CertificateVerifier.isValid(...)
+        // will depend on it. If loading fails we will just skip the validation.
+        if (OpenSsl.isAvailable() && !CertificateVerifier.isValid(errorCode)) {
             throw new IllegalArgumentException("errorCode '" + errorCode +
                     "' invalid, see https://www.openssl.org/docs/man1.0.2/apps/verify.html.");
         }
