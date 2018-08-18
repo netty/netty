@@ -15,110 +15,38 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.internal.tcnative.SSL;
-import io.netty.util.AbstractReferenceCounted;
-import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.ResourceLeakDetector;
-import io.netty.util.ResourceLeakDetectorFactory;
-import io.netty.util.ResourceLeakTracker;
+import io.netty.util.ReferenceCounted;
 
 /**
  * Holds references to the native key-material that is used by OpenSSL.
  */
-final class OpenSslKeyMaterial extends AbstractReferenceCounted {
-
-    private static final ResourceLeakDetector<OpenSslKeyMaterial> leakDetector =
-            ResourceLeakDetectorFactory.instance().newResourceLeakDetector(OpenSslKeyMaterial.class);
-    private final ResourceLeakTracker<OpenSslKeyMaterial> leak;
-    private long chain;
-    private long privateKey;
-
-    OpenSslKeyMaterial(long chain, long privateKey) {
-        this.chain = chain;
-        this.privateKey = privateKey;
-        leak = leakDetector.track(this);
-    }
+interface OpenSslKeyMaterial extends ReferenceCounted {
 
     /**
      * Returns the pointer to the {@code STACK_OF(X509)} which holds the certificate chain.
      */
-    public long certificateChainAddress() {
-        if (refCnt() <= 0) {
-            throw new IllegalReferenceCountException();
-        }
-        return chain;
-    }
+    long certificateChainAddress();
 
     /**
      * Returns the pointer to the {@code EVP_PKEY}.
      */
-    public long privateKeyAddress() {
-        if (refCnt() <= 0) {
-            throw new IllegalReferenceCountException();
-        }
-        return privateKey;
-    }
+    long privateKeyAddress();
 
     @Override
-    protected void deallocate() {
-        SSL.freeX509Chain(chain);
-        chain = 0;
-        SSL.freePrivateKey(privateKey);
-        privateKey = 0;
-        if (leak != null) {
-            boolean closed = leak.close(this);
-            assert closed;
-        }
-    }
+    OpenSslKeyMaterial retain();
 
     @Override
-    public OpenSslKeyMaterial retain() {
-        if (leak != null) {
-            leak.record();
-        }
-        super.retain();
-        return this;
-    }
+    OpenSslKeyMaterial retain(int increment);
 
     @Override
-    public OpenSslKeyMaterial retain(int increment) {
-        if (leak != null) {
-            leak.record();
-        }
-        super.retain(increment);
-        return this;
-    }
+    OpenSslKeyMaterial touch();
 
     @Override
-    public OpenSslKeyMaterial touch() {
-        if (leak != null) {
-            leak.record();
-        }
-        super.touch();
-        return this;
-    }
+    OpenSslKeyMaterial touch(Object hint);
 
     @Override
-    public OpenSslKeyMaterial touch(Object hint) {
-        if (leak != null) {
-            leak.record(hint);
-        }
-        return this;
-    }
+    boolean release();
 
     @Override
-    public boolean release() {
-        if (leak != null) {
-            leak.record();
-        }
-        return super.release();
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        if (leak != null) {
-            leak.record();
-        }
-        return super.release(decrement);
-    }
+    boolean release(int decrement);
 }

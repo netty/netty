@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.internal.tcnative.SSL;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 
@@ -25,13 +26,25 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.X509KeyManager;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.InvalidAlgorithmParameterException;
+import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.KeyStoreSpi;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.Provider;
 import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.Collections;
+import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -108,9 +121,8 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
             }
 
             kmf.init(keyStore, chars);
-            providerFactory = new ProviderFactory(
-                    ReferenceCountedOpenSslContext.chooseX509KeyManager(kmf.getKeyManagers()),
-                    password(chars), Collections.list(keyStore.aliases()));
+            providerFactory = new ProviderFactory(ReferenceCountedOpenSslContext.chooseX509KeyManager(
+                    kmf.getKeyManagers()), password(chars), Collections.list(keyStore.aliases()));
         }
 
         private static String password(char[] password) {
@@ -216,6 +228,146 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                     materialMap.clear();
                 }
             }
+        }
+    }
+
+    /**
+     * Create a new initialized {@link OpenSslX509KeyManagerFactory} which loads its {@link PrivateKey} directly from
+     * an {@code OpenSSL engine} via the
+     * <a href="https://www.openssl.org/docs/man1.1.0/crypto/ENGINE_load_private_key.html">ENGINE_load_private_key</a>
+     * function.
+     */
+    public static OpenSslX509KeyManagerFactory newEngineBased(File certificateChain, String password)
+            throws CertificateException, IOException,
+                   KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        return newEngineBased(SslContext.toX509Certificates(certificateChain), password);
+    }
+
+    /**
+     * Create a new initialized {@link OpenSslX509KeyManagerFactory} which loads its {@link PrivateKey} directly from
+     * an {@code OpenSSL engine} via the
+     * <a href="https://www.openssl.org/docs/man1.1.0/crypto/ENGINE_load_private_key.html">ENGINE_load_private_key</a>
+     * function.
+     */
+    public static OpenSslX509KeyManagerFactory newEngineBased(X509Certificate[] certificateChain, String password)
+            throws CertificateException, IOException,
+                   KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        KeyStore store = new OpenSslEngineKeyStore(certificateChain.clone());
+        store.load(null, null);
+        OpenSslX509KeyManagerFactory factory = new OpenSslX509KeyManagerFactory();
+        factory.init(store, password == null ? null : password.toCharArray());
+        return factory;
+    }
+
+    private static final class OpenSslEngineKeyStore extends KeyStore {
+        private OpenSslEngineKeyStore(final X509Certificate[] certificateChain) {
+            super(new KeyStoreSpi() {
+
+                private final Date creationDate = new Date();
+
+                @Override
+                public Key engineGetKey(String alias, char[] password) throws UnrecoverableKeyException {
+                    if (engineContainsAlias(alias)) {
+                        try {
+                            return new OpenSslPrivateKey(SSL.loadPrivateKeyFromEngine(
+                                            alias, password == null ? null : new String(password)));
+                        } catch (Exception e) {
+                            UnrecoverableKeyException keyException =
+                                    new UnrecoverableKeyException("Unable to load key from engine");
+                            keyException.initCause(e);
+                            throw keyException;
+                        }
+                    }
+                    return null;
+                }
+
+                @Override
+                public Certificate[] engineGetCertificateChain(String alias) {
+                    return engineContainsAlias(alias)? certificateChain.clone() : null;
+                }
+
+                @Override
+                public Certificate engineGetCertificate(String alias) {
+                    return engineContainsAlias(alias)? certificateChain[0] : null;
+                }
+
+                @Override
+                public Date engineGetCreationDate(String alias) {
+                    return engineContainsAlias(alias)? creationDate : null;
+                }
+
+                @Override
+                public void engineSetKeyEntry(String alias, Key key, char[] password, Certificate[] chain)
+                        throws KeyStoreException {
+                    throw new KeyStoreException("Not supported");
+                }
+
+                @Override
+                public void engineSetKeyEntry(String alias, byte[] key, Certificate[] chain) throws KeyStoreException {
+                    throw new KeyStoreException("Not supported");
+                }
+
+                @Override
+                public void engineSetCertificateEntry(String alias, Certificate cert) throws KeyStoreException {
+                    throw new KeyStoreException("Not supported");
+                }
+
+                @Override
+                public void engineDeleteEntry(String alias) throws KeyStoreException {
+                    throw new KeyStoreException("Not supported");
+                }
+
+                @Override
+                public Enumeration<String> engineAliases() {
+                    return Collections.enumeration(Collections.singleton(SslContext.ALIAS));
+                }
+
+                @Override
+                public boolean engineContainsAlias(String alias) {
+                    return SslContext.ALIAS.equals(alias);
+                }
+
+                @Override
+                public int engineSize() {
+                    return 1;
+                }
+
+                @Override
+                public boolean engineIsKeyEntry(String alias) {
+                    return engineContainsAlias(alias);
+                }
+
+                @Override
+                public boolean engineIsCertificateEntry(String alias) {
+                    return engineContainsAlias(alias);
+                }
+
+                @Override
+                public String engineGetCertificateAlias(Certificate cert) {
+                    if (cert instanceof X509Certificate) {
+                        for (X509Certificate x509Certificate : certificateChain) {
+                            if (x509Certificate.equals(cert)) {
+                                return SslContext.ALIAS;
+                            }
+                        }
+                    }
+                    return null;
+                }
+
+                @Override
+                public void engineStore(OutputStream stream, char[] password) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public void engineLoad(InputStream stream, char[] password) {
+                    if (stream != null && password != null) {
+                        throw new UnsupportedOperationException();
+                    }
+                }
+            }, null, "native");
+
+            OpenSsl.ensureAvailability();
         }
     }
 }

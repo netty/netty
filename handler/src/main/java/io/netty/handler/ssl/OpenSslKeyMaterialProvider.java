@@ -62,10 +62,16 @@ class OpenSslKeyMaterialProvider {
         long pkey = 0;
         try {
             chainBio = toBIO(allocator, encoded.retain());
-            pkeyBio = toBIO(allocator, key);
             chain = SSL.parseX509Chain(chainBio);
-            pkey = key == null ? 0 : SSL.parsePrivateKey(pkeyBio, password);
-            OpenSslKeyMaterial keyMaterial = new OpenSslKeyMaterial(chain, pkey);
+
+            OpenSslKeyMaterial keyMaterial;
+            if (key instanceof OpenSslPrivateKey) {
+                keyMaterial = ((OpenSslPrivateKey) key).toKeyMaterial(chain);
+            } else {
+                pkeyBio = toBIO(allocator, key);
+                pkey = key == null ? 0 : SSL.parsePrivateKey(pkeyBio, password);
+                keyMaterial = new DefaultOpenSslKeyMaterial(chain, pkey);
+            }
 
             // See the chain and pkey to 0 so we will not release it as the ownership was
             // transferred to OpenSslKeyMaterial.
