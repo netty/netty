@@ -18,20 +18,15 @@ package io.netty.handler.ssl;
 import io.netty.internal.tcnative.CertificateVerifier;
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
 
 public class OpenSslCertificateExceptionTest {
 
-    @BeforeClass
-    public static void assumeOpenSsl() {
-        Assume.assumeTrue(OpenSsl.isAvailable());
-    }
-
     @Test
     public void testValidErrorCode() throws Exception {
+        Assume.assumeTrue(OpenSsl.isAvailable());
         Field[] fields = CertificateVerifier.class.getFields();
         for (Field field : fields) {
             if (field.isAccessible()) {
@@ -44,6 +39,13 @@ public class OpenSslCertificateExceptionTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testNonValidErrorCode() {
+        Assume.assumeTrue(OpenSsl.isAvailable());
         new OpenSslCertificateException(Integer.MIN_VALUE);
+    }
+
+    @Test
+    public void testCanBeInstancedWhenOpenSslIsNotAvailable() {
+        Assume.assumeFalse(OpenSsl.isAvailable());
+        new OpenSslCertificateException(0);
     }
 }
