@@ -53,7 +53,6 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -85,6 +84,8 @@ import java.util.List;
  * </pre>
  */
 public abstract class SslContext {
+    static final String ALIAS = "key";
+
     static final CertificateFactory X509_CERT_FACTORY;
     static {
         try {
@@ -1000,7 +1001,7 @@ public abstract class SslContext {
                    CertificateException, IOException {
         KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
         ks.load(null, null);
-        ks.setKeyEntry("key", key, keyPasswordChars, certChain);
+        ks.setKeyEntry(ALIAS, key, keyPasswordChars, certChain);
         return ks;
     }
 
