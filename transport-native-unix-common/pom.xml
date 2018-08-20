@@ -101,7 +101,7 @@
                       <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
                       <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
                       <env key="JNI_PLATFORM" value="${jni.platform}" />
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable" />
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
                       <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
                       <!-- support for __attribute__((weak_import)) by the linker was added in 10.2 so ensure we
@@ -172,7 +172,7 @@
                       <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
                       <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
                       <env key="JNI_PLATFORM" value="${jni.platform}" />
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable" />
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
                       <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
                     </exec>
@@ -242,7 +242,7 @@
                       <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
                       <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
                       <env key="JNI_PLATFORM" value="${jni.platform}" />
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable" />
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
                       <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
                     </exec>
@@ -312,7 +312,7 @@
                       <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
                       <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
                       <env key="JNI_PLATFORM" value="${jni.platform}" />
-                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable" />
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
                       <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
                     </exec>
