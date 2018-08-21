@@ -15,13 +15,18 @@
  */
 package io.netty.resolver;
 
+import io.netty.util.CharsetUtil;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -59,5 +64,42 @@ public class HostsFileParserTest {
         assertNotNull("uppercase host doesn't resolve", inet4Entries.get("host7"));
         assertEquals("192.168.0.5", inet4Entries.get("host7").getHostAddress());
         assertEquals("0:0:0:0:0:0:0:1", inet6Entries.get("host1").getHostAddress());
+    }
+
+    @Test
+    public void testParseUnicode() throws IOException {
+        final Charset unicodeCharset;
+        try {
+            unicodeCharset = Charset.forName("unicode");
+        } catch (UnsupportedCharsetException e) {
+            Assume.assumeNoException(e);
+            return;
+        }
+        testParseFile(HostsFileParser.parse(
+                new File(getClass().getResource("hosts-unicode").getFile()), unicodeCharset));
+    }
+
+    @Test
+    public void testParseMultipleCharsets() throws IOException {
+        final Charset unicodeCharset;
+        try {
+            unicodeCharset = Charset.forName("unicode");
+        } catch (UnsupportedCharsetException e) {
+            Assume.assumeNoException(e);
+            return;
+        }
+        testParseFile(HostsFileParser.parse(new File(getClass().getResource("hosts-unicode").getFile()),
+                                            CharsetUtil.UTF_8, CharsetUtil.ISO_8859_1, unicodeCharset));
+    }
+
+    private static void testParseFile(HostsFileEntries entries) throws IOException {
+        Map<String, Inet4Address> inet4Entries = entries.inet4Entries();
+        Map<String, Inet6Address> inet6Entries = entries.inet6Entries();
+
+        assertEquals("Expected 2 IPv4 entries", 2, inet4Entries.size());
+        assertEquals("Expected 1 IPv6 entries", 1, inet6Entries.size());
+        assertEquals("127.0.0.1", inet4Entries.get("localhost").getHostAddress());
+        assertEquals("255.255.255.255", inet4Entries.get("broadcasthost").getHostAddress());
+        assertEquals("0:0:0:0:0:0:0:1", inet6Entries.get("localhost").getHostAddress());
     }
 }
