@@ -247,17 +247,17 @@ public final class NativeLibraryLoader {
     }
 
     /**
-     * Try to patch shaded library to ensure it uses a unique id.
+     * Try to patch shaded library to ensure it uses a unique ID.
      */
     private static void patchShadedLibraryId(byte[] bytes, String originalName, String name) {
         // Our native libs always have the name as part of their id so we can search for it and replace it
-        // to make the id unique if shading is used.
+        // to make the ID unique if shading is used.
         byte[] nameBytes = originalName.getBytes(CharsetUtil.UTF_8);
         int idIdx = -1;
 
         // Be aware this is a really raw way of patching a dylib but it does all we need without implementing
         // a full mach-o parser and writer. Basically we just replace the the original bytes with some
-        // random bytes as part of the id regeneration. The important thing here is that we need to use the same
+        // random bytes as part of the ID regeneration. The important thing here is that we need to use the same
         // length to not corrupt the mach-o header.
         outerLoop: for (int i = 0; i < bytes.length && bytes.length - i >= nameBytes.length; i++) {
             int idx = i;
@@ -274,15 +274,19 @@ public final class NativeLibraryLoader {
         }
 
         if (idIdx == -1) {
-            logger.debug("Was not able to find the id of the shaded native library {}, can't adjust it.", name);
+            logger.debug("Was not able to find the ID of the shaded native library {}, can't adjust it.", name);
         } else {
-            // we found our id... now monkey-patch it!
-            logger.debug(
-                    "Found the id of the shaded native library {}, adjusting it to something unique.", name);
-
-            // We should only use bytes as replacement that are in our UNIQUE_ID_BYTES array.
+            // We found our ID... now monkey-patch it!
             for (int i = 0; i < nameBytes.length; i++) {
-                bytes[idIdx++] = UNIQUE_ID_BYTES[PlatformDependent.threadLocalRandom().nextInt(UNIQUE_ID_BYTES.length)];
+                // We should only use bytes as replacement that are in our UNIQUE_ID_BYTES array.
+                bytes[idIdx + i] = UNIQUE_ID_BYTES[PlatformDependent.threadLocalRandom()
+                                                                    .nextInt(UNIQUE_ID_BYTES.length)];
+            }
+
+            if (logger.isDebugEnabled()) {
+                logger.debug(
+                        "Found the ID of the shaded native library {}. Replacing ID part {} with {}",
+                        name, originalName, new String(bytes, idIdx, nameBytes.length, CharsetUtil.UTF_8));
             }
         }
     }
