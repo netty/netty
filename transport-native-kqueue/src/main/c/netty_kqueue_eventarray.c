@@ -24,7 +24,7 @@
 #include "netty_unix_jni.h"
 #include "netty_unix_util.h"
 
-jfieldID kqueueJniPtrFieldId = NULL;
+static jfieldID kqueueJniPtrFieldId = NULL;
 
 static void netty_kqueue_eventarray_evSet(JNIEnv* env, jclass clzz, jlong keventAddress, jobject channel, jint ident, jshort filter, jshort flags, jint fflags) {
     // Create a global pointer, cast it as a long, and retain it in java to re-use and free later.
