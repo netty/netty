@@ -50,6 +50,10 @@ public final class NativeLibraryLoader {
     private static final boolean DELETE_NATIVE_LIB_AFTER_LOADING;
     private static final boolean TRY_TO_PATCH_SHADED_ID;
 
+    // Just use a-Z and numbers as valid ID bytes.
+    private static final byte[] UNIQUE_ID_BYTES =
+            "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes(CharsetUtil.US_ASCII);
+
     static {
         String workdir = SystemPropertyUtil.get("io.netty.native.workdir");
         if (workdir != null) {
@@ -243,7 +247,7 @@ public final class NativeLibraryLoader {
     }
 
     /**
-     * Try to patch shaded library to ensure it uses an unique id.
+     * Try to patch shaded library to ensure it uses a unique id.
      */
     private static void patchShadedLibraryId(byte[] bytes, String originalName, String name) {
         // Our native libs always have the name as part of their id so we can search for it and replace it
@@ -276,8 +280,10 @@ public final class NativeLibraryLoader {
             logger.debug(
                     "Found the id of the shaded native library {}, adjusting it to something unique.", name);
 
-            PlatformDependent.threadLocalRandom().nextBytes(nameBytes);
-            System.arraycopy(nameBytes, 0, bytes, idIdx, nameBytes.length);
+            // We should only use bytes as replacement that are in our UNIQUE_ID_BYTES array.
+            for (int i = 0; i < nameBytes.length; i++) {
+                bytes[idIdx++] = UNIQUE_ID_BYTES[PlatformDependent.threadLocalRandom().nextInt(UNIQUE_ID_BYTES.length)];
+            }
         }
     }
 
