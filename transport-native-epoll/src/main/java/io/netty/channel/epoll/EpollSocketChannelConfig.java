@@ -62,7 +62,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
                 ALLOW_HALF_CLOSURE, EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_NOTSENT_LOWAT,
                 EpollChannelOption.TCP_KEEPCNT, EpollChannelOption.TCP_KEEPIDLE, EpollChannelOption.TCP_KEEPINTVL,
                 EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK, EpollChannelOption.IP_TRANSPARENT,
-                EpollChannelOption.TCP_FASTOPEN_CONNECT);
+                EpollChannelOption.TCP_FASTOPEN_CONNECT, EpollChannelOption.SO_BUSY_POLL);
     }
 
     @SuppressWarnings("unchecked")
@@ -119,6 +119,9 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         if (option == EpollChannelOption.TCP_FASTOPEN_CONNECT) {
             return (T) Boolean.valueOf(isTcpFastOpenConnect());
         }
+        if (option == EpollChannelOption.SO_BUSY_POLL) {
+            return (T) Integer.valueOf(getSoBusyPoll());
+        }
         return super.getOption(option);
     }
 
@@ -164,6 +167,8 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
             setTcpQuickAck((Boolean) value);
         } else if (option == EpollChannelOption.TCP_FASTOPEN_CONNECT) {
             setTcpFastOpenConnect((Boolean) value);
+        } else if (option == EpollChannelOption.SO_BUSY_POLL) {
+            setSoBusyPoll((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -240,6 +245,17 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     public boolean isTcpCork() {
         try {
             return channel.socket.isTcpCork();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * Get the {@code SO_BUSY_POLL} option on the socket. See {@code man 7 tcp} for more details.
+     */
+    public int getSoBusyPoll() {
+        try {
+            return channel.socket.getSoBusyPoll();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -374,6 +390,18 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     public EpollSocketChannelConfig setTcpCork(boolean tcpCork) {
         try {
             channel.socket.setTcpCork(tcpCork);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * Set the {@code SO_BUSY_POLL} option on the socket. See {@code man 7 tcp} for more details.
+     */
+    public EpollSocketChannelConfig setSoBusyPoll(int loopMicros) {
+        try {
+            channel.socket.setSoBusyPoll(loopMicros);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
