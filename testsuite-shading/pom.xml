@@ -34,6 +34,8 @@
     <classesShadedDir>${project.build.directory}/classes-shaded</classesShadedDir>
     <classesShadedNativeDir>${classesShadedDir}/META-INF/native</classesShadedNativeDir>
     <shadingPrefix>shaded</shadingPrefix>
+    <shadingPrefix2>shaded2</shadingPrefix2>
+
     <jarName>${project.artifactId}-${project.version}.jar</jarName>
     <shadedPackagePrefix>io.netty.</shadedPackagePrefix>
   </properties>
@@ -104,6 +106,7 @@
             <artifactId>maven-shade-plugin</artifactId>
             <executions>
               <execution>
+                <id>shade</id>
                 <phase>package</phase>
                 <goals>
                   <goal>shade</goal>
@@ -118,6 +121,26 @@
                     <relocation>
                       <pattern>${shadedPackagePrefix}</pattern>
                       <shadedPattern>${shadingPrefix}.${shadedPackagePrefix}</shadedPattern>
+                    </relocation>
+                  </relocations>
+                </configuration>
+              </execution>
+              <execution>
+                <id>shade-1</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <artifactSet>
+                    <includes>
+                      <include>${project.groupId}</include>
+                    </includes>
+                  </artifactSet>
+                  <relocations>
+                    <relocation>
+                      <pattern>${shadedPackagePrefix}</pattern>
+                      <shadedPattern>${shadingPrefix2}.${shadedPackagePrefix}</shadedPattern>
                     </relocation>
                   </relocations>
                 </configuration>
@@ -141,8 +164,36 @@
                         <include name="${jarName}" />
                       </fileset>
                     </unzip>
-                    <move file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
-                    <move file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
+                    <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
+                    <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
+                    <exec executable="install_name_tool" failonerror="true" dir="${project.build.directory}/" resolveexecutable="true">
+                      <arg value="-id" />
+                      <arg value="lib${shadingPrefix}_${nativeTransportLib}" />
+                      <arg value="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
+                    </exec>
+                    <!-- We need to adjust the ID used on MacOS so we are sure the correct lib is loaded later on -->
+                    <exec executable="install_name_tool" failonerror="true" dir="${project.build.directory}/" resolveexecutable="true">
+                      <arg value="-id" />
+                      <arg value="lib${shadingPrefix2}_${nativeTransportLib}" />
+                      <arg value="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
+                    </exec>
+                    <delete file="${classesShadedNativeDir}/lib${nativeTransportLib}" />
+
+                    <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
+                    <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
+                    <exec executable="install_name_tool" failonerror="true" dir="${project.build.directory}/" resolveexecutable="true">
+                      <arg value="-id" />
+                      <arg value="lib${shadingPrefix}_${nativeTcnativeLib}" />
+                      <arg value="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
+                    </exec>
+                    <!-- We need to adjust the ID used on MacOS so we are sure the correct lib is loaded later on -->
+                    <exec executable="install_name_tool" failonerror="true" dir="${project.build.directory}/" resolveexecutable="true">
+                      <arg value="-id" />
+                      <arg value="lib${shadingPrefix2}_${nativeTcnativeLib}" />
+                      <arg value="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
+                    </exec>
+                    <delete file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" />
+
                     <jar destfile="${project.build.directory}/${jarName}" basedir="${classesShadedDir}" />
                     <delete dir="${classesShadedDir}" />
                   </target>
@@ -156,6 +207,7 @@
             <configuration>
               <systemPropertyVariables>
                 <shadingPrefix>${shadingPrefix}</shadingPrefix>
+                <shadingPrefix2>${shadingPrefix2}</shadingPrefix2>
               </systemPropertyVariables>
             </configuration>
             <executions>
@@ -211,6 +263,7 @@
             <artifactId>maven-shade-plugin</artifactId>
             <executions>
               <execution>
+                <id>shade</id>
                 <phase>package</phase>
                 <goals>
                   <goal>shade</goal>
@@ -225,6 +278,26 @@
                     <relocation>
                       <pattern>${shadedPackagePrefix}</pattern>
                       <shadedPattern>${shadingPrefix}.${shadedPackagePrefix}</shadedPattern>
+                    </relocation>
+                  </relocations>
+                </configuration>
+              </execution>
+              <execution>
+                <id>shade-1</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <artifactSet>
+                    <includes>
+                      <include>${project.groupId}</include>
+                    </includes>
+                  </artifactSet>
+                  <relocations>
+                    <relocation>
+                      <pattern>${shadedPackagePrefix}</pattern>
+                      <shadedPattern>${shadingPrefix2}.${shadedPackagePrefix}</shadedPattern>
                     </relocation>
                   </relocations>
                 </configuration>
@@ -248,8 +321,14 @@
                         <include name="${jarName}" />
                       </fileset>
                     </unzip>
-                    <move file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
-                    <move file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
+                    <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
+                    <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
+                    <delete file="${classesShadedNativeDir}/lib${nativeTransportLib}" />
+
+                    <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
+                    <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
+                    <delete file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" />
+
                     <jar destfile="${project.build.directory}/${jarName}" basedir="${classesShadedDir}" />
                     <delete dir="${classesShadedDir}" />
                   </target>
@@ -263,6 +342,7 @@
             <configuration>
               <systemPropertyVariables>
                 <shadingPrefix>${shadingPrefix}</shadingPrefix>
+                <shadingPrefix2>${shadingPrefix2}</shadingPrefix2>
               </systemPropertyVariables>
             </configuration>
             <executions>

@@ -65,7 +65,7 @@
 #endif /* NOTE_DISCONNECTED */
 #endif /* __APPLE__ */
 
-clockid_t waitClockId = 0; // initialized by netty_unix_util_initialize_wait_clock
+static clockid_t waitClockId = 0; // initialized by netty_unix_util_initialize_wait_clock
 
 static jint netty_kqueue_native_kqueueCreate(JNIEnv* env, jclass clazz) {
     jint kq = kqueue();
@@ -318,8 +318,7 @@ static void netty_kqueue_native_JNI_OnUnLoad(JNIEnv* env) {
     netty_kqueue_eventarray_JNI_OnUnLoad(env);
 }
 
-// Invoked by the JVM when statically linked
-jint JNI_OnLoad_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
+static jint JNI_OnLoad_netty_transport_native_kqueue0(JavaVM* vm, void* reserved) {
     JNIEnv* env;
     if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
         return JNI_ERR;
@@ -351,14 +350,7 @@ jint JNI_OnLoad_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
     return ret;
 }
 
-#ifndef NETTY_BUILD_STATIC
-JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    return JNI_OnLoad_netty_transport_native_kqueue(vm, reserved);
-}
-#endif /* NETTY_BUILD_STATIC */
-
-// Invoked by the JVM when statically linked
-void JNI_OnUnload_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
+static void JNI_OnUnload_netty_transport_native_kqueue0(JavaVM* vm, void* reserved) {
     JNIEnv* env;
     if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
         // Something is wrong but nothing we can do about this :(
@@ -367,8 +359,25 @@ void JNI_OnUnload_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
     netty_kqueue_native_JNI_OnUnLoad(env);
 }
 
+// We build with -fvisibility=hidden so ensure we mark everything that needs to be visible with JNIEXPORT
+// http://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
+
+// Invoked by the JVM when statically linked
+JNIEXPORT jint JNI_OnLoad_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
+    return JNI_OnLoad_netty_transport_native_kqueue0(vm, reserved);
+}
+
+// Invoked by the JVM when statically linked
+JNIEXPORT void JNI_OnUnload_netty_transport_native_kqueue(JavaVM* vm, void* reserved) {
+    JNI_OnUnload_netty_transport_native_kqueue0(vm, reserved);
+}
+
 #ifndef NETTY_BUILD_STATIC
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+    return JNI_OnLoad_netty_transport_native_kqueue0(vm, reserved);
+}
+
 JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
-    return JNI_OnUnload_netty_transport_native_kqueue(vm, reserved);
+    return JNI_OnUnload_netty_transport_native_kqueue0(vm, reserved);
 }
 #endif /* NETTY_BUILD_STATIC */

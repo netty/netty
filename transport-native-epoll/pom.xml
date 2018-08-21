@@ -265,7 +265,7 @@
                   <value>${linux.sendmmsg.support}${glibc.sendmmsg.support}</value>
                   <!-- If glibc and linux kernel are both not sufficient...then define the CFLAGS -->
                   <regex>.*IO_NETTY_SENDMSSG_NOT_FOUND.*</regex>
-                  <replacement>CFLAGS=-O3 -DIO_NETTY_SENDMMSG_NOT_FOUND -Werror -fno-omit-frame-pointer -Wunused-variable -I${unix.common.include.unpacked.dir}</replacement>
+                  <replacement>CFLAGS=-O3 -DIO_NETTY_SENDMMSG_NOT_FOUND -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</replacement>
                   <failIfNoMatch>false</failIfNoMatch>
                 </configuration>
               </execution>
@@ -281,7 +281,7 @@
                   <value>${jni.compiler.args.cflags}</value>
                   <!-- If glibc and linux kernel are both not sufficient...then define the CFLAGS -->
                   <regex>^((?!CFLAGS=).)*$</regex>
-                  <replacement>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -I${unix.common.include.unpacked.dir}</replacement>
+                  <replacement>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</replacement>
                   <failIfNoMatch>false</failIfNoMatch>
                 </configuration>
               </execution>
