@@ -44,6 +44,7 @@ import io.netty.util.internal.ThrowableUtil;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -52,12 +53,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 import static io.netty.resolver.dns.DnsAddressDecoder.decodeAddress;
-import static io.netty.resolver.dns.DnsNameResolver.trySuccess;
 import static java.lang.Math.min;
-import static java.util.Collections.unmodifiableList;
 
 abstract class DnsResolveContext<T> {
 
@@ -125,6 +125,20 @@ abstract class DnsResolveContext<T> {
     }
 
     /**
+     * The {@link DnsCache} to use while resolving.
+     */
+    DnsCache resolveCache() {
+        return parent.resolveCache();
+    }
+
+    /**
+     * The {@link AuthoritativeDnsServerCache} to use while resolving.
+     */
+    AuthoritativeDnsServerCache authoritativeDnsServerCache() {
+        return parent.authoritativeDnsServerCache();
+    }
+
+    /**
      * Creates a new context with the given parameters.
      */
     abstract DnsResolveContext<T> newResolverContext(DnsNameResolver parent, String hostname,
@@ -158,7 +172,7 @@ abstract class DnsResolveContext<T> {
     void resolve(final Promise<List<T>> promise) {
         final String[] searchDomains = parent.searchDomains();
         if (searchDomains.length == 0 || parent.ndots() == 0 || StringUtil.endsWith(hostname, '.')) {
-            internalResolve(promise);
+            internalResolve(hostname, promise);
         } else {
             final boolean startWithoutSearchDomain = hasNDots();
             final String initialHostname = startWithoutSearchDomain ? hostname : hostname + '.' + searchDomains[0];
@@ -180,7 +194,7 @@ abstract class DnsResolveContext<T> {
                             newPromise.addListener(this);
                             doSearchDomainQuery(hostname + '.' + searchDomains[searchDomainIdx++], newPromise);
                         } else if (!startWithoutSearchDomain) {
-                            internalResolve(promise);
+                            internalResolve(hostname, promise);
                         } else {
                             promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname));
                         }
@@ -220,31 +234,19 @@ abstract class DnsResolveContext<T> {
     void doSearchDomainQuery(String hostname, Promise<List<T>> nextPromise) {
         DnsResolveContext<T> nextContext = newResolverContext(parent, hostname, dnsClass, expectedTypes,
                                                               additionals, nameServerAddrs);
-        nextContext.internalResolve(nextPromise);
+        nextContext.internalResolve(hostname, nextPromise);
     }
 
-    private void internalResolve(Promise<List<T>> promise) {
-        DnsServerAddressStream nameServerAddressStream = getNameServers(hostname);
+    private void internalResolve(String name, Promise<List<T>> promise) {
+        DnsServerAddressStream nameServerAddressStream = getNameServers(name);
 
         final int end = expectedTypes.length - 1;
         for (int i = 0; i < end; ++i) {
-            if (!query(hostname, expectedTypes[i], nameServerAddressStream.duplicate(), promise)) {
+            if (!query(name, expectedTypes[i], nameServerAddressStream.duplicate(), promise)) {
                 return;
             }
         }
-        query(hostname, expectedTypes[end], nameServerAddressStream, promise);
-    }
-
-    /**
-     * Add an authoritative nameserver to the cache if its not a root server.
-     */
-    private void addNameServerToCache(
-            AuthoritativeNameServer name, InetAddress resolved, long ttl) {
-        if (!name.isRootServer()) {
-            // Cache NS record if not for a root server as we should never cache for root servers.
-            parent.authoritativeDnsServerCache().cache(name.domainName(),
-                    additionals, resolved, ttl, parent.ch.eventLoop());
-        }
+        query(name, expectedTypes[end], nameServerAddressStream, promise);
     }
 
     /**
@@ -282,41 +284,12 @@ abstract class DnsResolveContext<T> {
             }
             idx = idx2;
 
-            List<? extends DnsCacheEntry> entries = parent.authoritativeDnsServerCache().get(hostname, additionals);
-            if (entries != null && !entries.isEmpty()) {
-                return DnsServerAddresses.sequential(new DnsCacheIterable(entries)).stream();
+            DnsServerAddressStream entries = authoritativeDnsServerCache().get(hostname);
+            if (entries != null) {
+                // The returned List may contain unresolved InetSocketAddress instances that will be
+                // resolved on the fly in query(....).
+                return entries;
             }
-        }
-    }
-
-    private final class DnsCacheIterable implements Iterable<InetSocketAddress> {
-        private final List<? extends DnsCacheEntry> entries;
-
-        DnsCacheIterable(List<? extends DnsCacheEntry> entries) {
-            this.entries = entries;
-        }
-
-        @Override
-        public Iterator<InetSocketAddress> iterator() {
-            return new Iterator<InetSocketAddress>() {
-                Iterator<? extends DnsCacheEntry> entryIterator = entries.iterator();
-
-                @Override
-                public boolean hasNext() {
-                    return entryIterator.hasNext();
-                }
-
-                @Override
-                public InetSocketAddress next() {
-                    InetAddress address = entryIterator.next().address();
-                    return new InetSocketAddress(address, parent.dnsRedirectPort(address));
-                }
-
-                @Override
-                public void remove() {
-                    entryIterator.remove();
-                }
-            };
         }
     }
 
@@ -340,7 +313,13 @@ abstract class DnsResolveContext<T> {
         }
 
         --allowedQueries;
+
         final InetSocketAddress nameServerAddr = nameServerAddrStream.next();
+        if (nameServerAddr.isUnresolved()) {
+            queryUnresolvedNameserver(nameServerAddr, nameServerAddrStream, nameServerAddrStreamIndex, question,
+                                      queryLifecycleObserver, promise, cause);
+            return;
+        }
         final ChannelPromise writePromise = parent.ch.newPromise();
         final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = parent.query0(
                 nameServerAddr, question, additionals, writePromise,
@@ -387,10 +366,77 @@ abstract class DnsResolveContext<T> {
         });
     }
 
+    private void queryUnresolvedNameserver(final InetSocketAddress nameServerAddr,
+                                           final DnsServerAddressStream nameServerAddrStream,
+                                           final int nameServerAddrStreamIndex,
+                                           final DnsQuestion question,
+                                           final DnsQueryLifecycleObserver queryLifecycleObserver,
+                                           final Promise<List<T>> promise,
+                                           final Throwable cause) {
+        final String nameServerName = PlatformDependent.javaVersion() >= 7 ?
+                nameServerAddr.getHostString() : nameServerAddr.getHostName();
+        assert nameServerName != null;
+
+        // Placeholder so we will not try to finish the original query yet.
+        final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> resolveFuture = parent.executor()
+                .newSucceededFuture(null);
+        queriesInProgress.add(resolveFuture);
+
+        Promise<List<InetAddress>> resolverPromise = parent.executor().newPromise();
+        resolverPromise.addListener(new FutureListener<List<InetAddress>>() {
+            @Override
+            public void operationComplete(final Future<List<InetAddress>> future) {
+                // Remove placeholder.
+                queriesInProgress.remove(resolveFuture);
+
+                if (future.isSuccess()) {
+                    List<InetAddress> resolvedAddresses = future.getNow();
+                    DnsServerAddressStream addressStream = new CombinedDnsServerAddressStream(
+                            nameServerAddr, resolvedAddresses, nameServerAddrStream);
+                    query(addressStream, nameServerAddrStreamIndex, question,
+                          queryLifecycleObserver, promise, cause);
+                } else {
+                    // Ignore the server and try the next one...
+                    query(nameServerAddrStream, nameServerAddrStreamIndex + 1,
+                          question, queryLifecycleObserver, promise, cause);
+                }
+            }
+        });
+        if (!DnsNameResolver.doResolveAllCached(nameServerName, additionals, resolverPromise, resolveCache(),
+                parent.resolvedInternetProtocolFamiliesUnsafe())) {
+            final AuthoritativeDnsServerCache authoritativeDnsServerCache = authoritativeDnsServerCache();
+            new DnsAddressResolveContext(parent, nameServerName, additionals,
+                                         parent.newNameServerAddressStream(nameServerName),
+                                         resolveCache(), new AuthoritativeDnsServerCache() {
+                @Override
+                public DnsServerAddressStream get(String hostname) {
+                    // To not risk falling into any loop, we will not use the cache while following redirects but only
+                    // on the initial query.
+                    return null;
+                }
+
+                @Override
+                public void cache(String hostname, InetSocketAddress address, long originalTtl, EventLoop loop) {
+                    authoritativeDnsServerCache.cache(hostname, address, originalTtl, loop);
+                }
+
+                @Override
+                public void clear() {
+                    authoritativeDnsServerCache.clear();
+                }
+
+                @Override
+                public boolean clear(String hostname) {
+                    return authoritativeDnsServerCache.clear(hostname);
+                }
+            }).resolve(resolverPromise);
+        }
+    }
+
     private void onResponse(final DnsServerAddressStream nameServerAddrStream, final int nameServerAddrStreamIndex,
-                    final DnsQuestion question, AddressedEnvelope<DnsResponse, InetSocketAddress> envelope,
-                    final DnsQueryLifecycleObserver queryLifecycleObserver,
-                    Promise<List<T>> promise) {
+                            final DnsQuestion question, AddressedEnvelope<DnsResponse, InetSocketAddress> envelope,
+                            final DnsQueryLifecycleObserver queryLifecycleObserver,
+                            Promise<List<T>> promise) {
         try {
             final DnsResponse res = envelope.content();
             final DnsResponseCode code = res.code();
@@ -440,11 +486,10 @@ abstract class DnsResolveContext<T> {
         // Check if we have answers, if not this may be an non authority NS and so redirects must be handled.
         if (res.count(DnsSection.ANSWER) == 0) {
             AuthoritativeNameServerList serverNames = extractAuthoritativeNameServers(question.name(), res);
-
             if (serverNames != null) {
-                List<InetSocketAddress> nameServers = new ArrayList<InetSocketAddress>(serverNames.size());
                 int additionalCount = res.count(DnsSection.ADDITIONAL);
 
+                AuthoritativeDnsServerCache authoritativeDnsServerCache = authoritativeDnsServerCache();
                 for (int i = 0; i < additionalCount; i++) {
                     final DnsRecord r = res.recordAt(DnsSection.ADDITIONAL, i);
 
@@ -453,32 +498,83 @@ abstract class DnsResolveContext<T> {
                         continue;
                     }
 
-                    final String recordName = r.name();
-                    final AuthoritativeNameServer authoritativeNameServer = serverNames.remove(recordName);
-
-                    if (authoritativeNameServer == null) {
-                        // Not a server we are interested in.
-                        continue;
-                    }
-
-                    InetAddress resolved = decodeAddress(r, recordName, parent.isDecodeIdn());
-                    if (resolved == null) {
-                        // Could not parse it, move to the next.
-                        continue;
-                    }
-
-                    nameServers.add(new InetSocketAddress(resolved, parent.dnsRedirectPort(resolved)));
-                    addNameServerToCache(authoritativeNameServer, resolved, r.timeToLive());
+                    // We may have multiple ADDITIONAL entries for the same nameserver name. For example one AAAA and
+                    // one A record.
+                    serverNames.handleWithAdditional(parent, r, authoritativeDnsServerCache);
                 }
 
-                if (!nameServers.isEmpty()) {
-                    query(parent.uncachedRedirectDnsServerStream(nameServers), 0, question,
-                          queryLifecycleObserver.queryRedirected(unmodifiableList(nameServers)), promise, null);
+                // Process all unresolved nameservers as well.
+                serverNames.handleWithoutAdditionals(parent, resolveCache(), authoritativeDnsServerCache);
+
+                List<InetSocketAddress> addresses = serverNames.addressList();
+
+                // Give the user the chance to sort or filter the used servers for the query.
+                DnsServerAddressStream serverStream = parent.newRedirectDnsServerStream(
+                        question.name(), addresses);
+
+                if (serverStream != null) {
+                    query(serverStream, 0, question,
+                          queryLifecycleObserver.queryRedirected(new DnsAddressStreamList(serverStream)),
+                          promise, null);
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private static final class DnsAddressStreamList extends AbstractList<InetSocketAddress> {
+
+        private final DnsServerAddressStream duplicate;
+        private List<InetSocketAddress> addresses;
+
+        DnsAddressStreamList(DnsServerAddressStream stream) {
+            duplicate = stream.duplicate();
+        }
+
+        @Override
+        public InetSocketAddress get(int index) {
+            if (addresses == null) {
+                DnsServerAddressStream stream = duplicate.duplicate();
+                addresses = new ArrayList<InetSocketAddress>(size());
+                for (int i = 0; i < stream.size(); i++) {
+                    addresses.add(stream.next());
+                }
+            }
+            return addresses.get(index);
+        }
+
+        @Override
+        public int size() {
+            return duplicate.size();
+        }
+
+        @Override
+        public Iterator<InetSocketAddress> iterator() {
+            return new Iterator<InetSocketAddress>() {
+                private final DnsServerAddressStream stream = duplicate.duplicate();
+                private int i;
+
+                @Override
+                public boolean hasNext() {
+                    return i < stream.size();
+                }
+
+                @Override
+                public InetSocketAddress next() {
+                    if (!hasNext()) {
+                        throw new NoSuchElementException();
+                    }
+                    i++;
+                    return stream.next();
+                }
+
+                @Override
+                public void remove() {
+                    throw new UnsupportedOperationException();
+                }
+            };
+        }
     }
 
     /**
@@ -495,7 +591,7 @@ abstract class DnsResolveContext<T> {
         for (int i = 0; i < authorityCount; i++) {
             serverNames.add(res.recordAt(DnsSection.AUTHORITY, i));
         }
-        return serverNames;
+        return serverNames.isEmpty() ? null : serverNames;
     }
 
     private void onExpectedResponse(
@@ -542,7 +638,7 @@ abstract class DnsResolveContext<T> {
                 }
             }
 
-            final T converted = convertRecord(r, hostname, additionals, parent.ch.eventLoop());
+            final T converted = convertRecord(r, hostname, additionals, parent.executor());
             if (converted == null) {
                 continue;
             }
@@ -630,11 +726,11 @@ abstract class DnsResolveContext<T> {
     }
 
     private void tryToFinishResolve(final DnsServerAddressStream nameServerAddrStream,
-                            final int nameServerAddrStreamIndex,
-                            final DnsQuestion question,
-                            final DnsQueryLifecycleObserver queryLifecycleObserver,
-                            final Promise<List<T>> promise,
-                            final Throwable cause) {
+                                    final int nameServerAddrStreamIndex,
+                                    final DnsQuestion question,
+                                    final DnsQueryLifecycleObserver queryLifecycleObserver,
+                                    final Promise<List<T>> promise,
+                                    final Throwable cause) {
 
         // There are no queries left to try.
         if (!queriesInProgress.isEmpty()) {
@@ -697,7 +793,7 @@ abstract class DnsResolveContext<T> {
 
         if (finalResult != null) {
             // Found at least one resolved record.
-            trySuccess(promise, filterResults(finalResult));
+            DnsNameResolver.trySuccess(promise, filterResults(finalResult));
             return;
         }
 
@@ -776,6 +872,48 @@ abstract class DnsResolveContext<T> {
         return true;
     }
 
+    private final class CombinedDnsServerAddressStream implements DnsServerAddressStream {
+        private final InetSocketAddress replaced;
+        private final DnsServerAddressStream originalStream;
+        private final List<InetAddress> resolvedAddresses;
+        private Iterator<InetAddress> resolved;
+
+        CombinedDnsServerAddressStream(InetSocketAddress replaced, List<InetAddress> resolvedAddresses,
+                                       DnsServerAddressStream originalStream) {
+            this.replaced = replaced;
+            this.resolvedAddresses = resolvedAddresses;
+            this.originalStream = originalStream;
+            resolved = resolvedAddresses.iterator();
+        }
+
+        @Override
+        public InetSocketAddress next() {
+            if (resolved.hasNext()) {
+                return nextResolved0();
+            }
+            InetSocketAddress address = originalStream.next();
+            if (address.equals(replaced)) {
+                resolved = resolvedAddresses.iterator();
+                return nextResolved0();
+            }
+            return address;
+        }
+
+        private InetSocketAddress nextResolved0() {
+            return parent.newRedirectServerAddress(resolved.next());
+        }
+
+        @Override
+        public int size() {
+            return originalStream.size() + resolvedAddresses.size() - 1;
+        }
+
+        @Override
+        public DnsServerAddressStream duplicate() {
+            return new CombinedDnsServerAddressStream(replaced, resolvedAddresses, originalStream.duplicate());
+        }
+    }
+
     /**
      * Holds the closed DNS Servers for a domain.
      */
@@ -785,7 +923,8 @@ abstract class DnsResolveContext<T> {
 
         // We not expect the linked-list to be very long so a double-linked-list is overkill.
         private AuthoritativeNameServer head;
-        private int count;
+
+        private int nameServerCount;
 
         AuthoritativeNameServerList(String questionName) {
             this.questionName = questionName.toLowerCase(Locale.US);
@@ -829,50 +968,164 @@ abstract class DnsResolveContext<T> {
             // We are only interested in preserving the nameservers which are the closest to our qName, so ensure
             // we drop servers that have a smaller dots count.
             if (head == null || head.dots < dots) {
-                count = 1;
-                head = new AuthoritativeNameServer(dots, recordName, domainName);
+                nameServerCount = 1;
+                head = new AuthoritativeNameServer(dots, r.timeToLive(), recordName, domainName);
             } else if (head.dots == dots) {
                 AuthoritativeNameServer serverName = head;
                 while (serverName.next != null) {
                     serverName = serverName.next;
                 }
-                serverName.next = new AuthoritativeNameServer(dots, recordName, domainName);
-                count++;
+                serverName.next = new AuthoritativeNameServer(dots, r.timeToLive(), recordName, domainName);
+                nameServerCount++;
             }
         }
 
-        // Just walk the linked-list and mark the entry as removed when matched, so next lookup will need to process
-        // one node less.
-        AuthoritativeNameServer remove(String nsName) {
+        void handleWithAdditional(
+                DnsNameResolver parent, DnsRecord r, AuthoritativeDnsServerCache authoritativeCache) {
+            // Just walk the linked-list and mark the entry as handled when matched.
             AuthoritativeNameServer serverName = head;
 
+            String nsName = r.name();
+            InetAddress resolved = decodeAddress(r, nsName, parent.isDecodeIdn());
+            if (resolved == null) {
+                // Could not parse the address, just ignore.
+                return;
+            }
+
             while (serverName != null) {
-                if (!serverName.removed && serverName.nsName.equalsIgnoreCase(nsName)) {
-                    serverName.removed = true;
-                    return serverName;
+                if (serverName.nsName.equalsIgnoreCase(nsName)) {
+                    if (serverName.address != null) {
+                        // We received multiple ADDITIONAL records for the same name.
+                        // Search for the last we insert before and then append a new one.
+                        while (serverName.next != null && serverName.next.isCopy) {
+                            serverName = serverName.next;
+                        }
+                        AuthoritativeNameServer server = new AuthoritativeNameServer(serverName);
+                        server.next = serverName.next;
+                        serverName.next = server;
+                        serverName = server;
+
+                        nameServerCount++;
+                    }
+                    // We should replace the TTL if needed with the one of the ADDITIONAL record so we use
+                    // the smallest for caching.
+                    serverName.update(parent.newRedirectServerAddress(resolved), r.timeToLive());
+
+                    // Cache the server now.
+                    cache(serverName, authoritativeCache, parent.executor());
+                    return;
                 }
                 serverName = serverName.next;
             }
-            return null;
         }
 
-        int size() {
-            return count;
+        // Now handle all AuthoritativeNameServer for which we had no ADDITIONAL record
+        void handleWithoutAdditionals(
+                DnsNameResolver parent, DnsCache cache, AuthoritativeDnsServerCache authoritativeCache) {
+            AuthoritativeNameServer serverName = head;
+
+            while (serverName != null) {
+                if (serverName.address == null) {
+                    // These will be resolved on the fly if needed.
+                    cacheUnresolved(serverName, authoritativeCache, parent.executor());
+
+                    // Try to resolve via cache as we had no ADDITIONAL entry for the server.
+
+                    List<? extends DnsCacheEntry> entries = cache.get(serverName.nsName, null);
+                    if (entries != null && !entries.isEmpty()) {
+                        InetAddress address = entries.get(0).address();
+
+                        // If address is null we have a resolution failure cached so just use an unresolved address.
+                        if (address != null) {
+                            serverName.update(parent.newRedirectServerAddress(address));
+
+                            for (int i = 1; i < entries.size(); i++) {
+                                address = entries.get(i).address();
+
+                                assert address != null :
+                                        "Cache returned a cached failure, should never return anything else";
+
+                                AuthoritativeNameServer server = new AuthoritativeNameServer(serverName);
+                                server.next = serverName.next;
+                                serverName.next = server;
+                                serverName = server;
+                                serverName.update(parent.newRedirectServerAddress(address));
+
+                                nameServerCount++;
+                            }
+                        }
+                    }
+                }
+                serverName = serverName.next;
+            }
+        }
+
+        private static void cacheUnresolved(
+                AuthoritativeNameServer server, AuthoritativeDnsServerCache authoritativeCache, EventLoop loop) {
+            // We still want to cached the unresolved address
+            server.address = InetSocketAddress.createUnresolved(
+                    server.nsName, DefaultDnsServerAddressStreamProvider.DNS_PORT);
+
+            // Cache the server now.
+            cache(server, authoritativeCache, loop);
+        }
+
+        private static void cache(AuthoritativeNameServer server, AuthoritativeDnsServerCache cache, EventLoop loop) {
+            // Cache NS record if not for a root server as we should never cache for root servers.
+            if (!server.isRootServer()) {
+                cache.cache(server.domainName, server.address, server.ttl, loop);
+            }
+        }
+
+        /**
+         * Returns {@code true} if empty, {@code false} otherwise.
+         */
+        boolean isEmpty() {
+            return nameServerCount == 0;
+        }
+
+        /**
+         * Creates a new {@link List} which holds the {@link InetSocketAddress}es.
+         */
+        List<InetSocketAddress> addressList() {
+            List<InetSocketAddress> addressList = new ArrayList<InetSocketAddress>(nameServerCount);
+
+            AuthoritativeNameServer server = head;
+            while (server != null) {
+                if (server.address != null) {
+                    addressList.add(server.address);
+                }
+                server = server.next;
+            }
+            return addressList;
         }
     }
 
-    static final class AuthoritativeNameServer {
-        final int dots;
+    private static final class AuthoritativeNameServer {
+        private final int dots;
+        private final String domainName;
+        final boolean isCopy;
         final String nsName;
-        final String domainName;
+
+        private long ttl;
+        private InetSocketAddress address;
 
         AuthoritativeNameServer next;
-        boolean removed;
 
-        AuthoritativeNameServer(int dots, String domainName, String nsName) {
+        AuthoritativeNameServer(int dots, long ttl, String domainName, String nsName) {
             this.dots = dots;
+            this.ttl = ttl;
             this.nsName = nsName;
             this.domainName = domainName;
+            isCopy = false;
+        }
+
+        AuthoritativeNameServer(AuthoritativeNameServer server) {
+            dots = server.dots;
+            ttl = server.ttl;
+            nsName = server.nsName;
+            domainName = server.domainName;
+            isCopy = true;
         }
 
         /**
@@ -883,10 +1136,16 @@ abstract class DnsResolveContext<T> {
         }
 
         /**
-         * The domain for which the {@link AuthoritativeNameServer} is responsible.
+         * Update the server with the given address and TTL if needed.
          */
-        String domainName() {
-            return domainName;
+        void update(InetSocketAddress address, long ttl) {
+            assert this.address == null || this.address.isUnresolved();
+            this.address = address;
+            this.ttl = min(ttl, ttl);
+        }
+
+        void update(InetSocketAddress address) {
+            update(address, Long.MAX_VALUE);
         }
     }
 }

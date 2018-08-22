@@ -19,11 +19,13 @@ package io.netty.resolver.dns;
 import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 final class ShuffledDnsServerAddressStream implements DnsServerAddressStream {
 
-    private final InetSocketAddress[] addresses;
+    private final List<InetSocketAddress> addresses;
     private int i;
 
     /**
@@ -31,34 +33,26 @@ final class ShuffledDnsServerAddressStream implements DnsServerAddressStream {
      * @param addresses The addresses are not cloned. It is assumed the caller has cloned this array or otherwise will
      *                  not modify the contents.
      */
-    ShuffledDnsServerAddressStream(InetSocketAddress[] addresses) {
+    ShuffledDnsServerAddressStream(List<InetSocketAddress> addresses) {
         this.addresses = addresses;
 
         shuffle();
     }
 
-    private ShuffledDnsServerAddressStream(InetSocketAddress[] addresses, int startIdx) {
+    private ShuffledDnsServerAddressStream(List<InetSocketAddress> addresses, int startIdx) {
         this.addresses = addresses;
         i = startIdx;
     }
 
     private void shuffle() {
-        final InetSocketAddress[] addresses = this.addresses;
-        final Random r = PlatformDependent.threadLocalRandom();
-
-        for (int i = addresses.length - 1; i >= 0; i --) {
-            InetSocketAddress tmp = addresses[i];
-            int j = r.nextInt(i + 1);
-            addresses[i] = addresses[j];
-            addresses[j] = tmp;
-        }
+        Collections.shuffle(addresses, PlatformDependent.threadLocalRandom());
     }
 
     @Override
     public InetSocketAddress next() {
         int i = this.i;
-        InetSocketAddress next = addresses[i];
-        if (++ i < addresses.length) {
+        InetSocketAddress next = addresses.get(i);
+        if (++ i < addresses.size()) {
             this.i = i;
         } else {
             this.i = 0;
@@ -69,7 +63,7 @@ final class ShuffledDnsServerAddressStream implements DnsServerAddressStream {
 
     @Override
     public int size() {
-        return addresses.length;
+        return addresses.size();
     }
 
     @Override

@@ -50,7 +50,6 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
     public static final DefaultDnsServerAddressStreamProvider INSTANCE = new DefaultDnsServerAddressStreamProvider();
 
     private static final List<InetSocketAddress> DEFAULT_NAME_SERVER_LIST;
-    private static final InetSocketAddress[] DEFAULT_NAME_SERVER_ARRAY;
     private static final DnsServerAddresses DEFAULT_NAME_SERVERS;
     static final int DNS_PORT = 53;
 
@@ -142,8 +141,7 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
         }
 
         DEFAULT_NAME_SERVER_LIST = Collections.unmodifiableList(defaultNameServers);
-        DEFAULT_NAME_SERVER_ARRAY = defaultNameServers.toArray(new InetSocketAddress[0]);
-        DEFAULT_NAME_SERVERS = sequential(DEFAULT_NAME_SERVER_ARRAY);
+        DEFAULT_NAME_SERVERS = sequential(DEFAULT_NAME_SERVER_LIST);
     }
 
     private DefaultDnsServerAddressStreamProvider() {
@@ -176,13 +174,5 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
      */
     public static DnsServerAddresses defaultAddresses() {
         return DEFAULT_NAME_SERVERS;
-    }
-
-    /**
-     * Get the array form of {@link #defaultAddressList()}.
-     * @return The array form of {@link #defaultAddressList()}.
-     */
-    static InetSocketAddress[] defaultAddressArray() {
-        return DEFAULT_NAME_SERVER_ARRAY.clone();
     }
 }

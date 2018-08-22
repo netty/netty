@@ -40,7 +40,7 @@ public final class DnsNameResolverBuilder {
     private EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private DnsCache resolveCache;
-    private DnsCache authoritativeDnsServerCache;
+    private AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private Integer minTtl;
     private Integer maxTtl;
     private Integer negativeTtl;
@@ -139,8 +139,21 @@ public final class DnsNameResolverBuilder {
      *
      * @param authoritativeDnsServerCache the authoritative NS servers cache
      * @return {@code this}
+     * @deprecated Use {@link #authoritativeDnsServerCache(AuthoritativeDnsServerCache)}
      */
+    @Deprecated
     public DnsNameResolverBuilder authoritativeDnsServerCache(DnsCache authoritativeDnsServerCache) {
+        this.authoritativeDnsServerCache = new AuthoritativeDnsServerCacheAdapter(authoritativeDnsServerCache);
+        return this;
+    }
+
+    /**
+     * Sets the cache for authoritative NS servers
+     *
+     * @param authoritativeDnsServerCache the authoritative NS servers cache
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder authoritativeDnsServerCache(AuthoritativeDnsServerCache authoritativeDnsServerCache) {
         this.authoritativeDnsServerCache = authoritativeDnsServerCache;
         return this;
     }
@@ -355,6 +368,14 @@ public final class DnsNameResolverBuilder {
         return new DefaultDnsCache(intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE), intValue(negativeTtl, 0));
     }
 
+    private AuthoritativeDnsServerCache newAuthoritativeDnsServerCache() {
+        return new DefaultAuthoritativeDnsServerCache(
+                intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE),
+                // Let us use the sane ordering as DnsNameResolver will be used when returning
+                // nameservers from the cache.
+                new NameServerComparator(DnsNameResolver.preferredAddressType(resolvedAddressTypes).addressType()));
+    }
+
     /**
      * Set if domain / host names should be decoded to unicode when received.
      * See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
@@ -386,8 +407,8 @@ public final class DnsNameResolverBuilder {
         }
 
         DnsCache resolveCache = this.resolveCache != null ? this.resolveCache : newCache();
-        DnsCache authoritativeDnsServerCache = this.authoritativeDnsServerCache != null ?
-                this.authoritativeDnsServerCache : newCache();
+        AuthoritativeDnsServerCache authoritativeDnsServerCache = this.authoritativeDnsServerCache != null ?
+                this.authoritativeDnsServerCache : newAuthoritativeDnsServerCache();
         return new DnsNameResolver(
                 eventLoop,
                 channelFactory,
