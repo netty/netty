@@ -26,6 +26,7 @@ import org.apache.directory.server.dns.messages.RecordClass;
 import org.apache.directory.server.dns.messages.RecordType;
 import org.apache.directory.server.dns.messages.ResourceRecord;
 import org.apache.directory.server.dns.messages.ResourceRecordImpl;
+import org.apache.directory.server.dns.messages.ResourceRecordModifier;
 import org.apache.directory.server.dns.protocol.DnsProtocolHandler;
 import org.apache.directory.server.dns.protocol.DnsUdpDecoder;
 import org.apache.directory.server.dns.protocol.DnsUdpEncoder;
@@ -109,6 +110,30 @@ class TestDnsServer extends DnsServer {
 
     protected DnsMessage filterMessage(DnsMessage message) {
         return message;
+    }
+
+    protected static ResourceRecord newARecord(String name, String ipAddress) {
+        return newAddressRecord(name, RecordType.A, ipAddress);
+    }
+
+    protected static ResourceRecord newNsRecord(String dnsname, String domainName) {
+        ResourceRecordModifier rm = new ResourceRecordModifier();
+        rm.setDnsClass(RecordClass.IN);
+        rm.setDnsName(dnsname);
+        rm.setDnsTtl(100);
+        rm.setDnsType(RecordType.NS);
+        rm.put(DnsAttribute.DOMAIN_NAME, domainName);
+        return rm.getEntry();
+    }
+
+    protected static ResourceRecord newAddressRecord(String name, RecordType type, String address) {
+        ResourceRecordModifier rm = new ResourceRecordModifier();
+        rm.setDnsClass(RecordClass.IN);
+        rm.setDnsName(name);
+        rm.setDnsTtl(100);
+        rm.setDnsType(type);
+        rm.put(DnsAttribute.IP_ADDRESS, address);
+        return rm.getEntry();
     }
 
     /**

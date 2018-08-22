@@ -17,16 +17,17 @@
 package io.netty.resolver.dns;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 abstract class DefaultDnsServerAddresses extends DnsServerAddresses {
 
-    protected final InetSocketAddress[] addresses;
+    protected final List<InetSocketAddress> addresses;
     private final String strVal;
 
-    DefaultDnsServerAddresses(String type, InetSocketAddress[] addresses) {
+    DefaultDnsServerAddresses(String type, List<InetSocketAddress> addresses) {
         this.addresses = addresses;
 
-        final StringBuilder buf = new StringBuilder(type.length() + 2 + addresses.length * 16);
+        final StringBuilder buf = new StringBuilder(type.length() + 2 + addresses.size() * 16);
         buf.append(type).append('(');
 
         for (InetSocketAddress a: addresses) {
