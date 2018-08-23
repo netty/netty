@@ -166,32 +166,10 @@
                     </unzip>
                     <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
                     <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
-                    <exec executable="install_name_tool" failonerror="true" dir="${project.build.directory}/" resolveexecutable="true">
-                      <arg value="-id" />
-                      <arg value="lib${shadingPrefix}_${nativeTransportLib}" />
-                      <arg value="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
-                    </exec>
-                    <!-- We need to adjust the ID used on MacOS so we are sure the correct lib is loaded later on -->
-                    <exec executable="install_name_tool" failonerror="true" dir="${project.build.directory}/" resolveexecutable="true">
-                      <arg value="-id" />
-                      <arg value="lib${shadingPrefix2}_${nativeTransportLib}" />
-                      <arg value="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
-                    </exec>
                     <delete file="${classesShadedNativeDir}/lib${nativeTransportLib}" />
 
                     <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
                     <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
-                    <exec executable="install_name_tool" failonerror="true" dir="${project.build.directory}/" resolveexecutable="true">
-                      <arg value="-id" />
-                      <arg value="lib${shadingPrefix}_${nativeTcnativeLib}" />
-                      <arg value="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
-                    </exec>
-                    <!-- We need to adjust the ID used on MacOS so we are sure the correct lib is loaded later on -->
-                    <exec executable="install_name_tool" failonerror="true" dir="${project.build.directory}/" resolveexecutable="true">
-                      <arg value="-id" />
-                      <arg value="lib${shadingPrefix2}_${nativeTcnativeLib}" />
-                      <arg value="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
-                    </exec>
                     <delete file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" />
 
                     <jar destfile="${project.build.directory}/${jarName}" basedir="${classesShadedDir}" />
