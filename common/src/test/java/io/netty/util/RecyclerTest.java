@@ -82,6 +82,35 @@ public class RecyclerTest {
     }
 
     @Test
+    public void testMultipleRecycleAtDifferentThread() {
+        Recycler<HandledObject> recycler = newRecycler(1024);
+        final HandledObject object = recycler.get();
+        final Thread thread1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                object.recycle();
+            }
+        });
+        thread1.start();
+        try {
+            thread1.join();
+        } catch (InterruptedException e) {
+        }
+
+        final Thread thread2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                object.recycle();
+            }
+        });
+        thread2.start();
+        try {
+            thread2.join();
+        } catch (InterruptedException e) {
+        }
+    }
+
+    @Test
     public void testRecycle() {
         Recycler<HandledObject> recycler = newRecycler(1024);
         HandledObject object = recycler.get();
