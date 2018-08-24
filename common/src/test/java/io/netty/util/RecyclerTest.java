@@ -100,7 +100,10 @@ public class RecyclerTest {
         final Thread thread2 = new Thread(new Runnable() {
             @Override
             public void run() {
-                object.recycle();
+                try {
+                    object.recycle();
+                } catch (IllegalStateException e) {
+                }
             }
         });
         thread2.start();
