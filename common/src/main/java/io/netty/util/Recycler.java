@@ -216,6 +216,11 @@ public abstract class Recycler<T> {
             if (object != value) {
                 throw new IllegalArgumentException("object does not belong to handle");
             }
+
+            if (this.lastRecycledId != this.recycleId) {
+                throw new IllegalStateException("recycled already");
+            }
+
             stack.push(this);
         }
     }
