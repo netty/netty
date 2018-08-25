@@ -121,7 +121,8 @@ public interface ChannelConfig {
     ChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     /**
-     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator}
+     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator} and
+     * {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}.
      * <p>
      * Returns the maximum number of messages to read per read loop.
      * a {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
@@ -131,7 +132,8 @@ public interface ChannelConfig {
     int getMaxMessagesPerRead();
 
     /**
-     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator}
+     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator} and
+     * {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead(int)}.
      * <p>
      * Sets the maximum number of messages to read per read loop.
      * If this value is greater than 1, an event loop might attempt to read multiple times to procure multiple messages.
