@@ -81,10 +81,11 @@ public class RecyclerTest {
         object.recycle();
     }
 
-    @Test
-    public void testMultipleRecycleAtDifferentThread() {
+    @Test(expected = IllegalStateException.class)
+    public void testMultipleRecycleAtDifferentThread() throws InterruptedException {
         Recycler<HandledObject> recycler = newRecycler(1024);
         final HandledObject object = recycler.get();
+        final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
         final Thread thread1 = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -92,10 +93,7 @@ public class RecyclerTest {
             }
         });
         thread1.start();
-        try {
-            thread1.join();
-        } catch (InterruptedException e) {
-        }
+        thread1.join();
 
         final Thread thread2 = new Thread(new Runnable() {
             @Override
@@ -103,13 +101,15 @@ public class RecyclerTest {
                 try {
                     object.recycle();
                 } catch (IllegalStateException e) {
+                    exceptionStore.set(e);
                 }
             }
         });
         thread2.start();
-        try {
-            thread2.join();
-        } catch (InterruptedException e) {
+        thread2.join();
+        IllegalStateException exception = exceptionStore.get();
+        if (exception != null) {
+            throw exception;
         }
     }
 
