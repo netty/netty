@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
 
@@ -26,7 +27,10 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandle {
+    private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
+            new PreferredDirectByteBufAllocator();
     private final RecvByteBufAllocator.ExtendedHandle delegate;
+
     private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = new UncheckedBooleanSupplier() {
         @Override
         public boolean get() {
@@ -38,7 +42,7 @@ final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.Extend
     private long numberBytesPending;
 
     KQueueRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
-        this.delegate = ObjectUtil.checkNotNull(handle, "handle");
+        delegate = ObjectUtil.checkNotNull(handle, "handle");
     }
 
     @Override
@@ -59,7 +63,10 @@ final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.Extend
 
     @Override
     public ByteBuf allocate(ByteBufAllocator alloc) {
-        return overrideGuess ? alloc.ioBuffer(guess0()) : delegate.allocate(alloc);
+        // We need to ensure we always allocate a direct ByteBuf as we can only use a direct buffer to read via JNI.
+        preferredDirectByteBufAllocator.updateAllocator(alloc);
+        return overrideGuess ? preferredDirectByteBufAllocator.ioBuffer(guess0()) :
+                delegate.allocate(preferredDirectByteBufAllocator);
     }
 
     @Override

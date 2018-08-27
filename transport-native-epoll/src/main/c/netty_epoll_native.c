@@ -38,6 +38,7 @@
 #include <time.h>
 
 #include "netty_epoll_linuxsocket.h"
+#include "netty_unix_buffer.h"
 #include "netty_unix_errors.h"
 #include "netty_unix_filedescriptor.h"
 #include "netty_unix_jni.h"
@@ -452,6 +453,9 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     if (netty_unix_socket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         return JNI_ERR;
     }
+    if (netty_unix_buffer_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
+        return JNI_ERR;
+    }
     if (netty_epoll_linuxsocket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         return JNI_ERR;
     }
@@ -501,6 +505,7 @@ static void netty_epoll_native_JNI_OnUnLoad(JNIEnv* env) {
     netty_unix_errors_JNI_OnUnLoad(env);
     netty_unix_filedescriptor_JNI_OnUnLoad(env);
     netty_unix_socket_JNI_OnUnLoad(env);
+    netty_unix_buffer_JNI_OnUnLoad(env);
     netty_epoll_linuxsocket_JNI_OnUnLoad(env);
 }
 
