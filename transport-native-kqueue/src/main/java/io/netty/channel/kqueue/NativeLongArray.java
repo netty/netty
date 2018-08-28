@@ -46,7 +46,7 @@ final class NativeLongArray {
     }
 
     void add(long value) {
-        checkSize();
+        reallocIfNeeded();
         if (PlatformDependent.hasUnsafe()) {
             PlatformDependent.putLong(memoryOffset(size), value);
         } else {
@@ -80,18 +80,22 @@ final class NativeLongArray {
         return memoryAddress + idx(index);
     }
 
-    private void checkSize() {
+    private void reallocIfNeeded() {
         if (size == capacity) {
-            realloc();
-        }
-    }
+            // Double the capacity while it is "sufficiently small", and otherwise increase by 50%.
+            int newLength = capacity <= 65536 ? capacity << 1 : capacity + capacity >> 1;
+            ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(newLength));
+            // Copy over the old content of the memory and reset the position as we always act on the buffer as if
+            // the position was never increased.
+            memory.position(0).limit(size);
+            buffer.put(memory);
+            buffer.position(0);
 
-    private void realloc() {
-        // Double the capacity while it is "sufficiently small", and otherwise increase by 50%.
-        int newLength = capacity <= 65536 ? capacity << 1 : capacity + capacity >> 1;
-        memory = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(newLength));
-        memoryAddress = Buffer.memoryAddress(memory);
-        capacity = newLength;
+            Buffer.free(memory);
+            memory = buffer;
+            memoryAddress = Buffer.memoryAddress(buffer);
+            capacity = newLength;
+        }
     }
 
     @Override

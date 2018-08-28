@@ -78,6 +78,7 @@ final class EpollEventArray {
     void increase() {
         // double the size
         length <<= 1;
+        // There is no need to preserve what was in the memory before.
         ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(length));
         Buffer.free(memory);
         memory = buffer;

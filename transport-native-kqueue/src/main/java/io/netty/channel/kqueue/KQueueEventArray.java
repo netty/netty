@@ -78,11 +78,11 @@ final class KQueueEventArray {
     }
 
     void evSet(AbstractKQueueChannel ch, short filter, short flags, int fflags) {
-        checkSize();
+        reallocIfNeeded();
         evSet(getKEventOffset(size++) + memoryAddress, ch, ch.socket.intValue(), filter, flags, fflags);
     }
 
-    private void checkSize() {
+    private void reallocIfNeeded() {
         if (size == capacity) {
             realloc(true);
         }
@@ -97,6 +97,12 @@ final class KQueueEventArray {
 
         try {
             ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(newLength));
+            // Copy over the old content of the memory and reset the position as we always act on the buffer as if
+            // the position was never increased.
+            memory.position(0).limit(size);
+            buffer.put(memory);
+            buffer.position(0);
+
             Buffer.free(memory);
             memory = buffer;
             memoryAddress = Buffer.memoryAddress(buffer);
