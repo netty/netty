@@ -17,7 +17,6 @@ package io.netty.util.internal.logging;
 
 import static org.junit.Assert.assertEquals;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
@@ -26,53 +25,28 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.message.Message;
+import org.apache.logging.log4j.spi.ExtendedLogger;
 import org.apache.logging.log4j.spi.ExtendedLoggerWrapper;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assume;
-import org.junit.Test;
 
 import io.netty.util.internal.ReflectionUtil;
 
-/**
- * {@linkplain Log4J2Logger} extends {@linkplain ExtendedLoggerWrapper} implements {@linkplain InternalLogger}.<br>
- * {@linkplain ExtendedLoggerWrapper} is Log4j2 wrapper class to support wrapped loggers,
- * so There is no need to test it's method.<br>
- * We only need to test the netty's {@linkplain InternalLogger} interface method.<br>
- * It's meaning that we only need to test the Override method in the {@linkplain Log4J2Logger}.
- */
 public class Log4J2LoggerTest extends AbstractInternalLoggerTest<Logger> {
 
     {
         mockLog = LogManager.getLogger(loggerName);
-        logger = new Log4J2Logger(mockLog) {
-            private static final long serialVersionUID = 1L;
+        logger = new Log4J2Logger(
+                new ExtendedLoggerWrapper((ExtendedLogger) mockLog, mockLog.getName(), mockLog.getMessageFactory()) {
+                    private static final long serialVersionUID = 1L;
 
-            @Override
-            public void logMessage(String fqcn, Level level, Marker marker, Message message, Throwable t) {
-                result.put("level", level.name());
-                result.put("t", t);
-                super.logMessage(fqcn, level, marker, message, t);
-            };
-        };
-    }
-
-    @Test
-    public void testEXCEPTION_MESSAGE() {
-        assertEquals(getFieldValue(AbstractInternalLogger.class, "EXCEPTION_MESSAGE"),
-                getFieldValue(Log4J2Logger.class, "EXCEPTION_MESSAGE"));
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> T getFieldValue(Class<?> clazz, String fieldName) {
-        try {
-            Field field = clazz.getDeclaredField(fieldName);
-            if (!field.isAccessible()) {
-                Assume.assumeThat(ReflectionUtil.trySetAccessible(field, true), CoreMatchers.nullValue());
-            }
-            return (T) field.get(AbstractInternalLogger.class);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(e);
-        }
+                    @Override
+                    public void logMessage(String fqcn, Level level, Marker marker, Message message, Throwable t) {
+                        result.put("level", level.name());
+                        result.put("t", t);
+                        super.logMessage(fqcn, level, marker, message, t);
+                    }
+                });
     }
 
     @Override
