@@ -45,12 +45,17 @@ final class CleanerJava6 implements Cleaner {
         Throwable error = null;
         final ByteBuffer direct = ByteBuffer.allocateDirect(1);
         try {
-            Object cleaner;
             Object mayBeCleanerField = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
                 public Object run() {
                     try {
-                        return direct.getClass().getDeclaredField("cleaner");
+                        Field cleanerField =  direct.getClass().getDeclaredField("cleaner");
+                        if (!PlatformDependent.hasUnsafe()) {
+                            // We need to make it accessible if we do not use Unsafe as we will access it via
+                            // reflection.
+                            cleanerField.setAccessible(true);
+                        }
+                        return cleanerField;
                     } catch (Throwable cause) {
                         return cause;
                     }
@@ -62,14 +67,15 @@ final class CleanerJava6 implements Cleaner {
 
             cleanerField = (Field) mayBeCleanerField;
 
-            // If we have sun.misc.Unsafe we will use it as its faster then using reflection and we do not need
-            // to open up access levels, otherwise let us try reflection as last resort.
+            final Object cleaner;
+
+            // If we have sun.misc.Unsafe we will use it as its faster then using reflection,
+            // otherwise let us try reflection as last resort.
             if (PlatformDependent.hasUnsafe()) {
                 fieldOffset = PlatformDependent0.objectFieldOffset(cleanerField);
                 cleaner = PlatformDependent0.getObject(direct, fieldOffset);
             } else {
                 fieldOffset = -1;
-                cleanerField.setAccessible(true);
                 cleaner = cleanerField.get(direct);
             }
             clean = cleaner.getClass().getDeclaredMethod("clean");
