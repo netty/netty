@@ -15,7 +15,10 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.PlatformDependent;
+
+import java.nio.ByteBuffer;
 
 /**
  * This is an internal datastructure which can be directly passed to epoll_wait to reduce the overhead.
@@ -41,6 +44,7 @@ final class EpollEventArray {
     // The offsiet of the data union in the epoll_event struct
     private static final int EPOLL_DATA_OFFSET = Native.offsetofEpollData();
 
+    private ByteBuffer memory;
     private long memoryAddress;
     private int length;
 
@@ -49,11 +53,8 @@ final class EpollEventArray {
             throw new IllegalArgumentException("length must be >= 1 but was " + length);
         }
         this.length = length;
-        memoryAddress = allocate(length);
-    }
-
-    private static long allocate(int length) {
-        return PlatformDependent.allocateMemory(length * EPOLL_EVENT_SIZE);
+        memory = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(length));
+        memoryAddress = Buffer.memoryAddress(memory);
     }
 
     /**
@@ -77,28 +78,43 @@ final class EpollEventArray {
     void increase() {
         // double the size
         length <<= 1;
-        free();
-        memoryAddress = allocate(length);
+        // There is no need to preserve what was in the memory before.
+        ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(length));
+        Buffer.free(memory);
+        memory = buffer;
+        memoryAddress = Buffer.memoryAddress(buffer);
     }
 
     /**
      * Free this {@link EpollEventArray}. Any usage after calling this method may segfault the JVM!
      */
     void free() {
-        PlatformDependent.freeMemory(memoryAddress);
+        Buffer.free(memory);
+        memoryAddress = 0;
     }
 
     /**
      * Return the events for the {@code epoll_event} on this index.
      */
     int events(int index) {
-        return PlatformDependent.getInt(memoryAddress + index * EPOLL_EVENT_SIZE);
+        return getInt(index, 0);
     }
 
     /**
      * Return the file descriptor for the {@code epoll_event} on this index.
      */
     int fd(int index) {
-        return PlatformDependent.getInt(memoryAddress + index * EPOLL_EVENT_SIZE + EPOLL_DATA_OFFSET);
+        return getInt(index, EPOLL_DATA_OFFSET);
+    }
+
+    private int getInt(int index, int offset) {
+        if (PlatformDependent.hasUnsafe()) {
+            return PlatformDependent.getInt(memoryAddress + index * EPOLL_EVENT_SIZE + offset);
+        }
+        return memory.getInt(index * EPOLL_EVENT_SIZE + offset);
+    }
+
+    private static int calculateBufferCapacity(int capacity) {
+        return capacity * EPOLL_EVENT_SIZE;
     }
 }

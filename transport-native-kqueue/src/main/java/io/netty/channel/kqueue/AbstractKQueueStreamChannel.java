@@ -33,7 +33,6 @@ import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -345,22 +344,13 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
         final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
-        if (PlatformDependent.hasUnsafe()) {
-            IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
-            array.maxBytes(maxBytesPerGatheringWrite);
-            in.forEachFlushedMessage(array);
+        IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
+        array.maxBytes(maxBytesPerGatheringWrite);
+        in.forEachFlushedMessage(array);
 
-            if (array.count() >= 1) {
-                // TODO: Handle the case where cnt == 1 specially.
-                return writeBytesMultiple(in, array);
-            }
-        } else {
-            ByteBuffer[] buffers = in.nioBuffers();
-            int cnt = in.nioBufferCount();
-            if (cnt >= 1) {
-                // TODO: Handle the case where cnt == 1 specially.
-                return writeBytesMultiple(in, buffers, cnt, in.nioBufferSize(), maxBytesPerGatheringWrite);
-            }
+        if (array.count() >= 1) {
+            // TODO: Handle the case where cnt == 1 specially.
+            return writeBytesMultiple(in, array);
         }
         // cnt == 0, which means the outbound buffer contained empty buffers only.
         in.removeBytes(0);

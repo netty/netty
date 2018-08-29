@@ -401,7 +401,7 @@ public class FixedCompositeByteBufTest {
         buf.release();
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testHasNoMemoryAddressWhenMultipleBuffers() {
         ByteBuf buf1 = directBuffer(10);
         if (!buf1.hasMemoryAddress()) {
@@ -415,6 +415,8 @@ public class FixedCompositeByteBufTest {
         try {
             buf.memoryAddress();
             fail();
+        } catch (UnsupportedOperationException expected) {
+            // expected
         } finally {
             buf.release();
         }

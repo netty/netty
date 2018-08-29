@@ -15,7 +15,10 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.PlatformDependent;
+
+import java.nio.ByteBuffer;
 
 /**
  * Represents an array of kevent structures, backed by offheap memory.
@@ -37,6 +40,7 @@ final class KQueueEventArray {
     private static final int KQUEUE_FLAGS_OFFSET = Native.offsetofKEventFlags();
     private static final int KQUEUE_DATA_OFFSET = Native.offsetofKeventData();
 
+    private ByteBuffer memory;
     private long memoryAddress;
     private int size;
     private int capacity;
@@ -45,7 +49,8 @@ final class KQueueEventArray {
         if (capacity < 1) {
             throw new IllegalArgumentException("capacity must be >= 1 but was " + capacity);
         }
-        memoryAddress = PlatformDependent.allocateMemory(capacity * KQUEUE_EVENT_SIZE);
+        memory = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(capacity));
+        memoryAddress = Buffer.memoryAddress(memory);
         this.capacity = capacity;
     }
 
@@ -73,11 +78,11 @@ final class KQueueEventArray {
     }
 
     void evSet(AbstractKQueueChannel ch, short filter, short flags, int fflags) {
-        checkSize();
-        evSet(getKEventOffset(size++), ch, ch.socket.intValue(), filter, flags, fflags);
+        reallocIfNeeded();
+        evSet(getKEventOffset(size++) + memoryAddress, ch, ch.socket.intValue(), filter, flags, fflags);
     }
 
-    private void checkSize() {
+    private void reallocIfNeeded() {
         if (size == capacity) {
             realloc(true);
         }
@@ -89,15 +94,25 @@ final class KQueueEventArray {
     void realloc(boolean throwIfFail) {
         // Double the capacity while it is "sufficiently small", and otherwise increase by 50%.
         int newLength = capacity <= 65536 ? capacity << 1 : capacity + capacity >> 1;
-        long newMemoryAddress = PlatformDependent.reallocateMemory(memoryAddress, newLength * KQUEUE_EVENT_SIZE);
-        if (newMemoryAddress != 0) {
-            memoryAddress = newMemoryAddress;
-            capacity = newLength;
-            return;
-        }
-        if (throwIfFail) {
-            throw new OutOfMemoryError("unable to allocate " + newLength + " new bytes! Existing capacity is: "
-                    + capacity);
+
+        try {
+            ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(newLength));
+            // Copy over the old content of the memory and reset the position as we always act on the buffer as if
+            // the position was never increased.
+            memory.position(0).limit(size);
+            buffer.put(memory);
+            buffer.position(0);
+
+            Buffer.free(memory);
+            memory = buffer;
+            memoryAddress = Buffer.memoryAddress(buffer);
+        } catch (OutOfMemoryError e) {
+            if (throwIfFail) {
+                OutOfMemoryError error = new OutOfMemoryError(
+                        "unable to allocate " + newLength + " new bytes! Existing capacity is: " + capacity);
+                error.initCause(e);
+                throw error;
+            }
         }
     }
 
@@ -105,36 +120,57 @@ final class KQueueEventArray {
      * Free this {@link KQueueEventArray}. Any usage after calling this method may segfault the JVM!
      */
     void free() {
-        PlatformDependent.freeMemory(memoryAddress);
+        Buffer.free(memory);
         memoryAddress = size = capacity = 0;
     }
 
-    long getKEventOffset(int index) {
-        return memoryAddress + index * KQUEUE_EVENT_SIZE;
+    private static int getKEventOffset(int index) {
+        return index * KQUEUE_EVENT_SIZE;
+    }
+
+    private long getKEventOffsetAddress(int index) {
+        return getKEventOffset(index) + memoryAddress;
+    }
+
+    private short getShort(int index, int offset) {
+        if (PlatformDependent.hasUnsafe()) {
+            return PlatformDependent.getShort(getKEventOffsetAddress(index) + offset);
+        }
+        return memory.getShort(getKEventOffset(index) + offset);
     }
 
     short flags(int index) {
-        return PlatformDependent.getShort(getKEventOffset(index) + KQUEUE_FLAGS_OFFSET);
+        return getShort(index, KQUEUE_FLAGS_OFFSET);
     }
 
     short filter(int index) {
-        return PlatformDependent.getShort(getKEventOffset(index) + KQUEUE_FILTER_OFFSET);
+        return getShort(index, KQUEUE_FILTER_OFFSET);
     }
 
     short fflags(int index) {
-        return PlatformDependent.getShort(getKEventOffset(index) + KQUEUE_FFLAGS_OFFSET);
+        return getShort(index, KQUEUE_FFLAGS_OFFSET);
     }
 
     int fd(int index) {
-        return PlatformDependent.getInt(getKEventOffset(index) + KQUEUE_IDENT_OFFSET);
+        if (PlatformDependent.hasUnsafe()) {
+            return PlatformDependent.getInt(getKEventOffsetAddress(index) + KQUEUE_IDENT_OFFSET);
+        }
+        return memory.getInt(getKEventOffset(index) + KQUEUE_IDENT_OFFSET);
     }
 
     long data(int index) {
-        return PlatformDependent.getLong(getKEventOffset(index) + KQUEUE_DATA_OFFSET);
+        if (PlatformDependent.hasUnsafe()) {
+            return PlatformDependent.getLong(getKEventOffsetAddress(index) + KQUEUE_DATA_OFFSET);
+        }
+        return memory.getLong(getKEventOffset(index) + KQUEUE_DATA_OFFSET);
     }
 
     AbstractKQueueChannel channel(int index) {
-        return getChannel(getKEventOffset(index));
+        return getChannel(getKEventOffsetAddress(index));
+    }
+
+    private static int calculateBufferCapacity(int capacity) {
+        return capacity * KQUEUE_EVENT_SIZE;
     }
 
     private static native void evSet(long keventAddress, AbstractKQueueChannel ch,
