@@ -513,22 +513,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
         final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
-        if (PlatformDependent.hasUnsafe()) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
-            array.maxBytes(maxBytesPerGatheringWrite);
-            in.forEachFlushedMessage(array);
+        IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
+        array.maxBytes(maxBytesPerGatheringWrite);
+        in.forEachFlushedMessage(array);
 
-            if (array.count() >= 1) {
-                // TODO: Handle the case where cnt == 1 specially.
-                return writeBytesMultiple(in, array);
-            }
-        } else {
-            ByteBuffer[] buffers = in.nioBuffers();
-            int cnt = in.nioBufferCount();
-            if (cnt >= 1) {
-                // TODO: Handle the case where cnt == 1 specially.
-                return writeBytesMultiple(in, buffers, cnt, in.nioBufferSize(), maxBytesPerGatheringWrite);
-            }
+        if (array.count() >= 1) {
+            // TODO: Handle the case where cnt == 1 specially.
+            return writeBytesMultiple(in, array);
         }
         // cnt == 0, which means the outbound buffer contained empty buffers only.
         in.removeBytes(0);

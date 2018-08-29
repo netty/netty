@@ -16,7 +16,6 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -48,15 +47,7 @@ public final class KQueue {
             }
         }
 
-        if (cause != null) {
-            UNAVAILABILITY_CAUSE = cause;
-        } else {
-            UNAVAILABILITY_CAUSE = PlatformDependent.hasUnsafe()
-                    ? null
-                    : new IllegalStateException(
-                            "sun.misc.Unsafe not available",
-                            PlatformDependent.getUnsafeUnavailabilityCause());
-        }
+        UNAVAILABILITY_CAUSE = cause;
     }
 
     /**

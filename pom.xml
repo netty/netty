@@ -136,7 +136,7 @@
     <profile>
       <id>noUnsafe</id>
       <properties>
-        <argLine.noUnsafe>-Dio.netty.noUnsafe</argLine.noUnsafe>
+        <argLine.noUnsafe>-Dio.netty.noUnsafe=true</argLine.noUnsafe>
       </properties>
     </profile>
     <profile>

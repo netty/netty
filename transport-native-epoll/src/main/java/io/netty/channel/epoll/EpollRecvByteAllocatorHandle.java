@@ -19,10 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
 
 class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandle {
+    private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
+            new PreferredDirectByteBufAllocator();
     private final RecvByteBufAllocator.ExtendedHandle delegate;
     private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = new UncheckedBooleanSupplier() {
         @Override
@@ -34,7 +37,7 @@ class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandl
     private boolean receivedRdHup;
 
     EpollRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
-        this.delegate = ObjectUtil.checkNotNull(handle, "handle");
+        delegate = ObjectUtil.checkNotNull(handle, "handle");
     }
 
     final void receivedRdHup() {
@@ -69,7 +72,9 @@ class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandl
 
     @Override
     public final ByteBuf allocate(ByteBufAllocator alloc) {
-        return delegate.allocate(alloc);
+        // We need to ensure we always allocate a direct ByteBuf as we can only use a direct buffer to read via JNI.
+        preferredDirectByteBufAllocator.updateAllocator(alloc);
+        return delegate.allocate(preferredDirectByteBufAllocator);
     }
 
     @Override
