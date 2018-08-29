@@ -269,48 +269,93 @@ static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(
 // JNI Method Registration Table End
 
 static jint netty_kqueue_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+    int limitsOnLoadCalled = 0;
+    int errorsOnLoadCalled = 0;
+    int filedescriptorOnLoadCalled = 0;
+    int socketOnLoadCalled = 0;
+    int bufferOnLoadCalled = 0;
+    int bsdsocketOnLoadCalled = 0;
+    int eventarrayOnLoadCalled = 0;
+
     // We must register the statically referenced methods first!
     if (netty_unix_util_register_natives(env,
             packagePrefix,
             "io/netty/channel/kqueue/KQueueStaticallyReferencedJniMethods",
             statically_referenced_fixed_method_table,
             statically_referenced_fixed_method_table_size) != 0) {
-        return JNI_ERR;
+        goto error;
     }
     // Register the methods which are not referenced by static member variables
     if (netty_unix_util_register_natives(env, packagePrefix, "io/netty/channel/kqueue/Native", fixed_method_table, fixed_method_table_size) != 0) {
-        return JNI_ERR;
+        goto error;
     }
     // Load all c modules that we depend upon
     if (netty_unix_limits_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    limitsOnLoadCalled = 1;
+
     if (netty_unix_errors_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    errorsOnLoadCalled = 1;
+
     if (netty_unix_filedescriptor_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    filedescriptorOnLoadCalled = 1;
+
     if (netty_unix_socket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    socketOnLoadCalled = 1;
+
     if (netty_unix_buffer_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    bufferOnLoadCalled = 1;
+
     if (netty_kqueue_bsdsocket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    bsdsocketOnLoadCalled = 1;
+
     if (netty_kqueue_eventarray_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    eventarrayOnLoadCalled = 1;
+
     // Initialize this module
 
     if (!netty_unix_util_initialize_wait_clock(&waitClockId)) {
-      fprintf(stderr, "FATAL: could not find a clock for clock_gettime!\n");
-      return JNI_ERR;
+        fprintf(stderr, "FATAL: could not find a clock for clock_gettime!\n");
+        goto error;
     }
 
     return NETTY_JNI_VERSION;
+error:
+   if (limitsOnLoadCalled == 1) {
+       netty_unix_limits_JNI_OnUnLoad(env);
+   }
+   if (errorsOnLoadCalled == 1) {
+       netty_unix_errors_JNI_OnUnLoad(env);
+   }
+   if (filedescriptorOnLoadCalled == 1) {
+       netty_unix_filedescriptor_JNI_OnUnLoad(env);
+   }
+   if (socketOnLoadCalled == 1) {
+       netty_unix_socket_JNI_OnUnLoad(env);
+   }
+   if (bufferOnLoadCalled == 1) {
+      netty_unix_buffer_JNI_OnUnLoad(env);
+   }
+   if (bsdsocketOnLoadCalled == 1) {
+       netty_kqueue_bsdsocket_JNI_OnUnLoad(env);
+   }
+   if (eventarrayOnLoadCalled == 1) {
+       netty_kqueue_eventarray_JNI_OnUnLoad(env);
+   }
+   return JNI_ERR;
 }
 
 static void netty_kqueue_native_JNI_OnUnLoad(JNIEnv* env) {
