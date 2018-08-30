@@ -856,21 +856,22 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * Log the error, shutdown the engine and throw an exception.
      */
     private SSLException shutdownWithError(String operations, int sslError) {
-        String err = SSL.getLastError();
-        return shutdownWithError(operations, sslError, err);
+        return shutdownWithError(operations, sslError, SSL.getLastErrorNumber());
     }
 
-    private SSLException shutdownWithError(String operation, int sslError, String err) {
+    private SSLException shutdownWithError(String operation, int sslError, int error) {
+        String errorString = SSL.getErrorString(error);
         if (logger.isDebugEnabled()) {
-            logger.debug("{} failed with {}: OpenSSL error: {}", operation, sslError, err);
+            logger.debug("{} failed with {}: OpenSSL error: {} {}",
+                         operation, sslError, error, errorString);
         }
 
         // There was an internal error -- shutdown
         shutdown();
         if (handshakeState == HandshakeState.FINISHED) {
-            return new SSLException(err);
+            return new SSLException(errorString);
         }
-        return new SSLHandshakeException(err);
+        return new SSLHandshakeException(errorString);
     }
 
     public final SSLEngineResult unwrap(
@@ -1120,7 +1121,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             SSL.clearError();
             return new SSLEngineResult(OK, NEED_WRAP, bytesConsumed, bytesProduced);
         }
-        throw shutdownWithError("SSL_read", error, SSL.getErrorString(stackError));
+        throw shutdownWithError("SSL_read", error, stackError);
     }
 
     private void closeAll() throws SSLException {
@@ -1269,7 +1270,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             int sslErr = SSL.getError(ssl, err);
             if (sslErr == SSL.SSL_ERROR_SYSCALL || sslErr == SSL.SSL_ERROR_SSL) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("SSL_shutdown failed: OpenSSL error: {}", SSL.getLastError());
+                    int error = SSL.getLastErrorNumber();
+                    logger.debug("SSL_shutdown failed: OpenSSL error: {} {}", error, SSL.getErrorString(error));
                 }
                 // There was an internal error -- shutdown
                 shutdown();
