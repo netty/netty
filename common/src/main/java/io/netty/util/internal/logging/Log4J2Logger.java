@@ -16,101 +16,228 @@
 package io.netty.util.internal.logging;
 
 
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.spi.ExtendedLogger;
-import org.apache.logging.log4j.spi.ExtendedLoggerWrapper;
 
-class Log4J2Logger extends ExtendedLoggerWrapper implements InternalLogger {
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
+final class Log4J2Logger extends AbstractInternalLogger {
     private static final long serialVersionUID = 5485418394879791397L;
+    private static final boolean VARARGS_ONLY;
 
-    /** {@linkplain AbstractInternalLogger#EXCEPTION_MESSAGE} */
-    private static final String EXCEPTION_MESSAGE = "Unexpected exception:";
+    static {
+        // Older Log4J2 versions have only log methods that takes the format + varargs so if
+        // this is the case we will need to wrap our values in an Object[].
+        // See https://github.com/netty/netty/issues/8217
+        VARARGS_ONLY = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+            @Override
+            public Boolean run() {
+                try {
+                    Logger.class.getMethod("debug", String.class, Object.class);
+                    return false;
+                } catch (NoSuchMethodException ignore) {
+                    return true;
+                } catch (SecurityException ignore) {
+                    return false;
+                }
+            }
+        });
+    }
+
+    private final Logger logger;
 
     Log4J2Logger(Logger logger) {
-        super((ExtendedLogger) logger, logger.getName(), logger.getMessageFactory());
+        super(logger.getName());
+        this.logger = logger;
     }
 
     @Override
-    public String name() {
-        return getName();
+    public boolean isTraceEnabled() {
+        return logger.isTraceEnabled();
     }
 
     @Override
-    public void trace(Throwable t) {
-        log(Level.TRACE, EXCEPTION_MESSAGE, t);
+    public void trace(String msg) {
+        logger.trace(msg);
     }
 
     @Override
-    public void debug(Throwable t) {
-        log(Level.DEBUG, EXCEPTION_MESSAGE, t);
-    }
-
-    @Override
-    public void info(Throwable t) {
-        log(Level.INFO, EXCEPTION_MESSAGE, t);
-    }
-
-    @Override
-    public void warn(Throwable t) {
-        log(Level.WARN, EXCEPTION_MESSAGE, t);
-    }
-
-    @Override
-    public void error(Throwable t) {
-        log(Level.ERROR, EXCEPTION_MESSAGE, t);
-    }
-
-    @Override
-    public boolean isEnabled(InternalLogLevel level) {
-        return isEnabled(toLevel(level));
-    }
-
-    @Override
-    public void log(InternalLogLevel level, String msg) {
-        log(toLevel(level), msg);
-    }
-
-    @Override
-    public void log(InternalLogLevel level, String format, Object arg) {
-        log(toLevel(level), format, arg);
-    }
-
-    @Override
-    public void log(InternalLogLevel level, String format, Object argA, Object argB) {
-        log(toLevel(level), format, argA, argB);
-    }
-
-    @Override
-    public void log(InternalLogLevel level, String format, Object... arguments) {
-        log(toLevel(level), format, arguments);
-    }
-
-    @Override
-    public void log(InternalLogLevel level, String msg, Throwable t) {
-        log(toLevel(level), msg, t);
-    }
-
-    @Override
-    public void log(InternalLogLevel level, Throwable t) {
-        log(toLevel(level), EXCEPTION_MESSAGE, t);
-    }
-
-    protected Level toLevel(InternalLogLevel level) {
-        switch (level) {
-            case INFO:
-                return Level.INFO;
-            case DEBUG:
-                return Level.DEBUG;
-            case WARN:
-                return Level.WARN;
-            case ERROR:
-                return Level.ERROR;
-            case TRACE:
-                return Level.TRACE;
-            default:
-                throw new Error();
+    public void trace(String format, Object arg) {
+        if (VARARGS_ONLY) {
+            logger.trace(format, new Object[] { arg });
+        } else {
+            logger.trace(format, arg);
         }
+    }
+
+    @Override
+    public void trace(String format, Object argA, Object argB) {
+        if (VARARGS_ONLY) {
+            logger.trace(format, new Object[] { argA, argB });
+        } else {
+            logger.trace(format, argA, argB);
+        }
+    }
+
+    @Override
+    public void trace(String format, Object... arguments) {
+        logger.trace(format, arguments);
+    }
+
+    @Override
+    public void trace(String msg, Throwable t) {
+        logger.trace(msg, t);
+    }
+
+    @Override
+    public boolean isDebugEnabled() {
+        return logger.isDebugEnabled();
+    }
+
+    @Override
+    public void debug(String msg) {
+        logger.debug(msg);
+    }
+
+    @Override
+    public void debug(String format, Object arg) {
+        if (VARARGS_ONLY) {
+            logger.debug(format, new Object[] { arg });
+        } else {
+            logger.debug(format, arg);
+        }
+    }
+
+    @Override
+    public void debug(String format, Object argA, Object argB) {
+        if (VARARGS_ONLY) {
+            logger.debug(format, new Object[] { argA, argB });
+        } else {
+            logger.debug(format, argA, argB);
+        }
+    }
+
+    @Override
+    public void debug(String format, Object... arguments) {
+        logger.debug(format, arguments);
+    }
+
+    @Override
+    public void debug(String msg, Throwable t) {
+        logger.debug(msg, t);
+    }
+
+    @Override
+    public boolean isInfoEnabled() {
+        return logger.isInfoEnabled();
+    }
+
+    @Override
+    public void info(String msg) {
+        logger.info(msg);
+    }
+
+    @Override
+    public void info(String format, Object arg) {
+        if (VARARGS_ONLY) {
+            logger.info(format, new Object[] { arg });
+        } else {
+            logger.info(format, arg);
+        }
+    }
+
+    @Override
+    public void info(String format, Object argA, Object argB) {
+        if (VARARGS_ONLY) {
+            logger.info(format, new Object[] { argA, argB });
+        } else {
+            logger.info(format, argA, argB);
+        }
+    }
+
+    @Override
+    public void info(String format, Object... arguments) {
+        logger.info(format, arguments);
+    }
+
+    @Override
+    public void info(String msg, Throwable t) {
+        logger.info(msg, t);
+    }
+
+    @Override
+    public boolean isWarnEnabled() {
+        return logger.isWarnEnabled();
+    }
+
+    @Override
+    public void warn(String msg) {
+        logger.warn(msg);
+    }
+
+    @Override
+    public void warn(String format, Object arg) {
+        if (VARARGS_ONLY) {
+            logger.warn(format, new Object[] { arg });
+        } else {
+            logger.warn(format, arg);
+        }
+    }
+
+    @Override
+    public void warn(String format, Object... arguments) {
+        logger.warn(format, arguments);
+    }
+
+    @Override
+    public void warn(String format, Object argA, Object argB) {
+        if (VARARGS_ONLY) {
+            logger.warn(format, new Object[] { argA, argB });
+        } else {
+            logger.warn(format, argA, argB);
+        }
+    }
+
+    @Override
+    public void warn(String msg, Throwable t) {
+        logger.warn(msg, t);
+    }
+
+    @Override
+    public boolean isErrorEnabled() {
+        return logger.isErrorEnabled();
+    }
+
+    @Override
+    public void error(String msg) {
+        logger.error(msg);
+    }
+
+    @Override
+    public void error(String format, Object arg) {
+        if (VARARGS_ONLY) {
+            logger.error(format, new Object[] { arg });
+        } else {
+            logger.error(format, arg);
+        }
+    }
+
+    @Override
+    public void error(String format, Object argA, Object argB) {
+        if (VARARGS_ONLY) {
+            logger.error(format, new Object[] { argA, argB });
+        } else {
+            logger.error(format, argA, argB);
+        }
+    }
+
+    @Override
+    public void error(String format, Object... arguments) {
+        logger.error(format, arguments);
+    }
+
+    @Override
+    public void error(String msg, Throwable t) {
+        logger.error(msg, t);
     }
 }
