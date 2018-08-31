@@ -18,16 +18,15 @@ package io.netty.handler.ssl;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
@@ -37,9 +36,10 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -50,6 +50,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 
 import static org.junit.Assert.assertTrue;
 
@@ -94,11 +97,30 @@ public class CipherSuiteCanaryTest {
         this.rfcCipherName = rfcCipherName;
     }
 
+    private static void assumeCipherAvailable(SslProvider provider, String cipher) throws NoSuchAlgorithmException {
+        boolean cipherSupported = false;
+        if (provider == SslProvider.JDK) {
+            SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+            for (String c: engine.getSupportedCipherSuites()) {
+               if (cipher.equals(c)) {
+                   cipherSupported = true;
+                   break;
+               }
+            }
+        } else {
+            cipherSupported = OpenSsl.isCipherSuiteAvailable(cipher);
+        }
+        Assume.assumeTrue("Unsupported cipher: " + cipher, cipherSupported);
+    }
+
     @Test
     public void testHandshake() throws Exception {
-        Assume.assumeTrue("Unsupported cipher: " + rfcCipherName, OpenSsl.isCipherSuiteAvailable(rfcCipherName));
+        // Check if the cipher is supported at all which may not be the case for various JDK versions and OpenSSL API
+        // implementations.
+        assumeCipherAvailable(serverSslProvider, rfcCipherName);
+        assumeCipherAvailable(clientSslProvider, rfcCipherName);
 
-        List<String> ciphers = Arrays.asList(rfcCipherName);
+        List<String> ciphers = Collections.singletonList(rfcCipherName);
 
         final SslContext sslServerContext = SslContextBuilder.forServer(CERT.certificate(), CERT.privateKey())
                 .sslProvider(serverSslProvider)
@@ -113,9 +135,6 @@ public class CipherSuiteCanaryTest {
                     .build();
 
             try {
-                final ByteBuf request = Unpooled.wrappedBuffer(new byte[] {'P', 'I', 'N', 'G'});
-                final ByteBuf response = Unpooled.wrappedBuffer(new byte[] {'P', 'O', 'N', 'G'});
-
                 final Promise<Object> serverPromise = GROUP.next().newPromise();
                 final Promise<Object> clientPromise = GROUP.next().newPromise();
 
@@ -125,7 +144,7 @@ public class CipherSuiteCanaryTest {
                         ChannelPipeline pipeline = ch.pipeline();
                         pipeline.addLast(sslServerContext.newHandler(ch.alloc()));
 
-                        pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                        pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
                             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                                 serverPromise.cancel(true);
@@ -133,11 +152,10 @@ public class CipherSuiteCanaryTest {
                             }
 
                             @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                if (serverPromise.trySuccess(msg)) {
-                                    ctx.writeAndFlush(response.slice());
+                            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                if (serverPromise.trySuccess(null)) {
+                                    ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'O', 'N', 'G'}));
                                 }
-
                                 ctx.close();
                             }
 
@@ -152,7 +170,7 @@ public class CipherSuiteCanaryTest {
                 };
 
                 LocalAddress address = new LocalAddress("test-" + serverSslProvider
-                        + "-" + clientSslProvider + "-" + rfcCipherName);
+                        + '-' + clientSslProvider + '-' + rfcCipherName);
 
                 Channel server = server(address, serverHandler);
                 try {
@@ -162,7 +180,7 @@ public class CipherSuiteCanaryTest {
                             ChannelPipeline pipeline = ch.pipeline();
                             pipeline.addLast(sslClientContext.newHandler(ch.alloc()));
 
-                            pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                            pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                                     clientPromise.cancel(true);
@@ -170,8 +188,8 @@ public class CipherSuiteCanaryTest {
                                 }
 
                                 @Override
-                                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                    clientPromise.trySuccess(msg);
+                                public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                    clientPromise.trySuccess(null);
                                     ctx.close();
                                 }
 
@@ -188,7 +206,8 @@ public class CipherSuiteCanaryTest {
 
                     Channel client = client(server, clientHandler);
                     try {
-                        client.writeAndFlush(request.slice());
+                        client.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'I', 'N', 'G'}))
+                              .syncUninterruptibly();
 
                         assertTrue("client timeout", clientPromise.await(5L, TimeUnit.SECONDS));
                         assertTrue("server timeout", serverPromise.await(5L, TimeUnit.SECONDS));
