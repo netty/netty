@@ -29,7 +29,7 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
 
     private static final long serialVersionUID = -6382972526573193470L;
 
-    private static final String EXCEPTION_MESSAGE = "Unexpected exception:";
+    static final String EXCEPTION_MESSAGE = "Unexpected exception:";
 
     private final String name;
 
