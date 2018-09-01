@@ -97,8 +97,8 @@ public class SelectedSelectionKeySetTest {
         SelectedSelectionKeySet set = new SelectedSelectionKeySet();
         assertTrue(set.add(mockKey));
         assertTrue(set.add(mockKey2));
-        assertTrue(set.contains(mockKey));
-        assertTrue(set.contains(mockKey2));
+        assertFalse(set.contains(mockKey));
+        assertFalse(set.contains(mockKey2));
         assertFalse(set.contains(mockKey3));
     }
 
@@ -106,12 +106,7 @@ public class SelectedSelectionKeySetTest {
     public void remove() {
         SelectedSelectionKeySet set = new SelectedSelectionKeySet();
         assertTrue(set.add(mockKey));
+        assertFalse(set.remove(mockKey));
         assertFalse(set.remove(mockKey2));
-        try {
-            set.remove(mockKey);
-            fail();
-        } catch (UnsupportedOperationException expected) {
-            // expected
-        }
     }
 }
