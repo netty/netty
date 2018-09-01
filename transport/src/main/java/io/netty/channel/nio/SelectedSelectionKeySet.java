@@ -76,6 +76,11 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
                 }
                 return keys[idx++];
             }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
         };
     }
 
