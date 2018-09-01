@@ -19,6 +19,7 @@ import java.nio.channels.SelectionKey;
 import java.util.AbstractSet;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
 
@@ -49,18 +50,23 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
     }
 
     @Override
-    public boolean remove(Object o) {
-        return false;
-    }
-
-    @Override
-    public boolean contains(Object o) {
-        return false;
-    }
-
-    @Override
     public Iterator<SelectionKey> iterator() {
-        throw new UnsupportedOperationException();
+        return new Iterator<SelectionKey>() {
+            private int idx;
+
+            @Override
+            public boolean hasNext() {
+                return idx < size;
+            }
+
+            @Override
+            public SelectionKey next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                return keys[idx++];
+            }
+        };
     }
 
     void reset() {
