@@ -24,7 +24,10 @@ import static org.junit.Assume.assumeTrue;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.security.PrivateKey;
 
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.Test;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -67,6 +70,26 @@ public class PemEncodedTest {
             assertRelease(pemKey);
             assertRelease(pemCert);
         }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testEncodedReturnsNull() throws Exception {
+        PemPrivateKey.toPEM(UnpooledByteBufAllocator.DEFAULT, true, new PrivateKey() {
+            @Override
+            public String getAlgorithm() {
+                return null;
+            }
+
+            @Override
+            public String getFormat() {
+                return null;
+            }
+
+            @Override
+            public byte[] getEncoded() {
+                return null;
+            }
+        });
     }
 
     private static void assertRelease(PemEncoded encoded) {
