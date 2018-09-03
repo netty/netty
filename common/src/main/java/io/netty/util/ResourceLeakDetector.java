@@ -46,8 +46,6 @@ public class ResourceLeakDetector<T> {
     private static final String PROP_TARGET_RECORDS = "io.netty.leakDetection.targetRecords";
     private static final int DEFAULT_TARGET_RECORDS = 4;
 
-    private static final int TARGET_RECORDS;
-
     /**
      * Represents the level of resource leak detection.
      */
@@ -91,6 +89,8 @@ public class ResourceLeakDetector<T> {
 
     private static Level level;
 
+    private static int targetRecords;
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
     static {
@@ -114,12 +114,12 @@ public class ResourceLeakDetector<T> {
         levelStr = SystemPropertyUtil.get(PROP_LEVEL, levelStr);
         Level level = Level.parseLevel(levelStr);
 
-        TARGET_RECORDS = SystemPropertyUtil.getInt(PROP_TARGET_RECORDS, DEFAULT_TARGET_RECORDS);
+        targetRecords = SystemPropertyUtil.getInt(PROP_TARGET_RECORDS, DEFAULT_TARGET_RECORDS);
 
         ResourceLeakDetector.level = level;
         if (logger.isDebugEnabled()) {
             logger.debug("-D{}: {}", PROP_LEVEL, level.name().toLowerCase());
-            logger.debug("-D{}: {}", PROP_TARGET_RECORDS, TARGET_RECORDS);
+            logger.debug("-D{}: {}", PROP_TARGET_RECORDS, targetRecords);
         }
     }
 
@@ -156,6 +156,20 @@ public class ResourceLeakDetector<T> {
      */
     public static Level getLevel() {
         return level;
+    }
+
+    /**
+     * Sets the resource leak detection target records.
+     */
+    public static void setTargetRecords(int targetRecords) {
+        ResourceLeakDetector.targetRecords = targetRecords;
+    }
+
+    /**
+     * Returns the current resource leak detection target records.
+     */
+    public static int getTargetRecords() {
+        return targetRecords;
     }
 
     /** the collection of active resources */
@@ -401,7 +415,7 @@ public class ResourceLeakDetector<T> {
          * In this particular implementation, there are also some advantages. A thread local random is used to decide
          * if something should be recorded. This means that if there is a deterministic access pattern, it is now
          * possible to see what other accesses occur, rather than always dropping them. Second, after
-         * {@link #TARGET_RECORDS} accesses, backoff occurs. This matches typical access patterns,
+         * {@link #targetRecords} accesses, backoff occurs. This matches typical access patterns,
          * where there are either a high number of accesses (i.e. a cached buffer), or low (an ephemeral buffer), but
          * not many in between.
          *
@@ -411,8 +425,9 @@ public class ResourceLeakDetector<T> {
          * thread won the race.
          */
         private void record0(Object hint) {
-            // Check TARGET_RECORDS > 0 here to avoid similar check before remove from and add to lastRecords
-            if (TARGET_RECORDS > 0) {
+            // Check targetRecords > 0 here to avoid similar check before remove from and add to lastRecords
+            int records = targetRecords;
+            if (records > 0) {
                 Record oldHead;
                 Record prevHead;
                 Record newHead;
@@ -423,8 +438,8 @@ public class ResourceLeakDetector<T> {
                         return;
                     }
                     final int numElements = oldHead.pos + 1;
-                    if (numElements >= TARGET_RECORDS) {
-                        final int backOffFactor = Math.min(numElements - TARGET_RECORDS, 30);
+                    if (numElements >= records) {
+                        final int backOffFactor = Math.min(numElements - records, 30);
                         if (dropped = PlatformDependent.threadLocalRandom().nextInt(1 << backOffFactor) != 0) {
                             prevHead = oldHead.next;
                         }
@@ -510,7 +525,7 @@ public class ResourceLeakDetector<T> {
                 buf.append(": ")
                    .append(dropped)
                    .append(" leak records were discarded because the leak record count is targeted to ")
-                   .append(TARGET_RECORDS)
+                   .append(targetRecords)
                    .append(". Use system property ")
                    .append(PROP_TARGET_RECORDS)
                    .append(" to increase the limit.")
