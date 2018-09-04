@@ -16,8 +16,10 @@
 package io.netty.util.internal.logging;
 
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.helpers.NOPLoggerFactory;
+import org.slf4j.spi.LocationAwareLogger;
 
 /**
  * Logger factory which creates a <a href="http://www.slf4j.org/">SLF4J</a>
@@ -44,6 +46,10 @@ public class Slf4JLoggerFactory extends InternalLoggerFactory {
 
     @Override
     public InternalLogger newInstance(String name) {
-        return new Slf4JLogger(LoggerFactory.getLogger(name));
+        Logger logger = LoggerFactory.getLogger(name);
+        if (LOGGER_LINE_NUMBER && logger instanceof LocationAwareLogger) {
+            return new LocationAwareSlf4JLogger((LocationAwareLogger) logger);
+        }
+        return new Slf4JLogger(logger);
     }
 }

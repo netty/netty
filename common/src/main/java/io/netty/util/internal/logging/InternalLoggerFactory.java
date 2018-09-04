@@ -16,6 +16,8 @@
 
 package io.netty.util.internal.logging;
 
+import io.netty.util.internal.SystemPropertyUtil;
+
 /**
  * Creates an {@link InternalLogger} or changes the default factory
  * implementation.  This factory allows you to choose what logging framework
@@ -34,6 +36,8 @@ package io.netty.util.internal.logging;
 public abstract class InternalLoggerFactory {
 
     private static volatile InternalLoggerFactory defaultFactory;
+    static final String LINE_NUMBER = "io.netty.loggerLineNumber";
+    static final boolean LOGGER_LINE_NUMBER;
 
     @SuppressWarnings("UnusedCatchParameter")
     private static InternalLoggerFactory newDefaultFactory(String name) {
@@ -56,6 +60,13 @@ public abstract class InternalLoggerFactory {
             }
         }
         return f;
+    }
+
+    static {
+        boolean lineNumber = SystemPropertyUtil.getBoolean(LINE_NUMBER, false);
+        LOGGER_LINE_NUMBER = lineNumber;
+        getDefaultFactory().newInstance(InternalLoggerFactory.class.getName())
+            .debug("-D{}: {}", LINE_NUMBER, lineNumber);
     }
 
     /**
