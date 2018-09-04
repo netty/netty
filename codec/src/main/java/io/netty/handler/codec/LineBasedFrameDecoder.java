@@ -137,6 +137,8 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
             } else {
                 discardedBytes += buffer.readableBytes();
                 buffer.readerIndex(buffer.writerIndex());
+                // We skip everything in the buffer, we need to set the offset to 0 again.
+                offset = 0;
             }
             return null;
         }
