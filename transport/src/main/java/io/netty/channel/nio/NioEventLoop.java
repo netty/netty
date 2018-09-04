@@ -43,7 +43,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -188,8 +187,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         });
 
         if (!(maybeSelectorImplClass instanceof Class) ||
-                // ensure the current selector implementation is what we can instrument.
-                !((Class<?>) maybeSelectorImplClass).isAssignableFrom(unwrappedSelector.getClass())) {
+            // ensure the current selector implementation is what we can instrument.
+            !((Class<?>) maybeSelectorImplClass).isAssignableFrom(unwrappedSelector.getClass())) {
             if (maybeSelectorImplClass instanceof Throwable) {
                 Throwable t = (Throwable) maybeSelectorImplClass;
                 logger.trace("failed to instrument a special java.util.Set into: {}", unwrappedSelector, t);
@@ -206,6 +205,23 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 try {
                     Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
                     Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
+
+                    if (PlatformDependent.javaVersion() >= 9 && PlatformDependent.hasUnsafe()) {
+                        // Let us try to use sun.misc.Unsafe to replace the SelectionKeySet.
+                        // This allows us to also do this in Java9+ without any extra flags.
+                        long selectedKeysFieldOffset = PlatformDependent.objectFieldOffset(selectedKeysField);
+                        long publicSelectedKeysFieldOffset =
+                                PlatformDependent.objectFieldOffset(publicSelectedKeysField);
+
+                        if (selectedKeysFieldOffset != -1 && publicSelectedKeysFieldOffset != -1) {
+                            PlatformDependent.putObject(
+                                    unwrappedSelector, selectedKeysFieldOffset, selectedKeySet);
+                            PlatformDependent.putObject(
+                                    unwrappedSelector, publicSelectedKeysFieldOffset, selectedKeySet);
+                            return null;
+                        }
+                        // We could not retrieve the offset, lets try reflection as last-resort.
+                    }
 
                     Throwable cause = ReflectionUtil.trySetAccessible(selectedKeysField, true);
                     if (cause != null) {
