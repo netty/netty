@@ -307,6 +307,11 @@ final class PlatformDependent0 {
                     @Override
                     public Object run() {
                         try {
+                            Field internalUnsafe = UNSAFE.getClass().getDeclaredField("theInternalUnsafe");
+                            long offset = UNSAFE.staticFieldOffset(internalUnsafe);
+                            Object base = UNSAFE.staticFieldBase(internalUnsafe);
+                            UNSAFE.getObject(base, offset);
+
                             // Java9 has jdk.internal.misc.Unsafe and not all methods are propagated to
                             // sun.misc.Unsafe
                             Class<?> internalUnsafeClass = getClassLoader(PlatformDependent0.class)
