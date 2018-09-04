@@ -35,105 +35,105 @@ import org.openjdk.jmh.annotations.TearDown;
 
 public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
 
-  private EpollEventLoopGroup group;
-  private Channel serverChan;
-  private Channel chan;
-  private ByteBuf abyte;
-  private ScheduledFuture<?> future;
+    private EpollEventLoopGroup group;
+    private Channel serverChan;
+    private Channel chan;
+    private ByteBuf abyte;
+    private ScheduledFuture<?> future;
 
-  @Setup
-  public void setup() throws Exception {
-    group = new EpollEventLoopGroup(1);
+    @Setup
+    public void setup() throws Exception {
+        group = new EpollEventLoopGroup(1);
 
-    // add an arbitrary timeout to make the timer reschedule
-    future = group.schedule(new Runnable() {
-      @Override
-      public void run() {
-        throw new AssertionError();
-      }
-    }, 5, TimeUnit.MINUTES);
-    serverChan = new ServerBootstrap()
-        .channel(EpollServerSocketChannel.class)
-        .group(group)
-        .childHandler(new ChannelInitializer<Channel>() {
-          @Override
-          protected void initChannel(Channel ch) {
-            ch.pipeline().addLast(new ChannelDuplexHandler() {
-              @Override
-              public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                if (msg instanceof ByteBuf) {
-                  ctx.writeAndFlush(msg, ctx.voidPromise());
-                  return;
-                } else {
-                  throw new AssertionError();
+        // add an arbitrary timeout to make the timer reschedule
+        future = group.schedule(new Runnable() {
+            @Override
+            public void run() {
+                throw new AssertionError();
+            }
+        }, 5, TimeUnit.MINUTES);
+        serverChan = new ServerBootstrap()
+            .channel(EpollServerSocketChannel.class)
+            .group(group)
+            .childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new ChannelDuplexHandler() {
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            if (msg instanceof ByteBuf) {
+                                ctx.writeAndFlush(msg, ctx.voidPromise());
+                            } else {
+                                throw new AssertionError();
+                            }
+                        }
+                    });
                 }
-              }
-            });
-          }
-        })
-        .bind(0)
-        .sync()
-        .channel();
+            })
+            .bind(0)
+            .sync()
+            .channel();
     chan = new Bootstrap()
         .channel(EpollSocketChannel.class)
         .handler(new ChannelInitializer<Channel>() {
-          @Override
-          protected void initChannel(Channel ch) {
-            ch.pipeline().addLast(new ChannelDuplexHandler() {
+            @Override
+            protected void initChannel(Channel ch) {
+                ch.pipeline().addLast(new ChannelDuplexHandler() {
 
-              ChannelPromise lastWritePromise;
+                private ChannelPromise lastWritePromise;
 
-              @Override
-              public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                if (msg instanceof ByteBuf) {
-                  ByteBuf buf = (ByteBuf) msg;
-                  try {
-                    if (buf.readableBytes() == 1) {
-                      lastWritePromise.trySuccess();
-                      lastWritePromise = null;
-                    } else {
-                      throw new AssertionError();
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        if (msg instanceof ByteBuf) {
+
+                            ByteBuf buf = (ByteBuf) msg;
+                            try {
+                                if (buf.readableBytes() == 1) {
+                                    lastWritePromise.trySuccess();
+                                    lastWritePromise = null;
+                                } else {
+                                    throw new AssertionError();
+                                }
+                            } finally {
+                                buf.release();
+                            }
+                        } else {
+                            throw new AssertionError();
+                        }
                     }
-                  } finally {
-                    buf.release();
-                  }
-                } else {
-                  throw new AssertionError();
-                }
-              }
 
-              @Override
-              public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-                  throws Exception {
-                if (lastWritePromise != null) {
-                  throw new IllegalStateException();
-                }
-                lastWritePromise = promise;
-                super.write(ctx, msg, ctx.voidPromise());
-              }
-            });
-          }
+                    @Override
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
+                            throws Exception {
+                        if (lastWritePromise != null) {
+                            throw new IllegalStateException();
+                        }
+                        lastWritePromise = promise;
+                        super.write(ctx, msg, ctx.voidPromise());
+                    }
+                });
+            }
         })
         .group(group)
         .connect(serverChan.localAddress())
         .sync()
         .channel();
 
-    abyte = chan.alloc().directBuffer(1);
-    abyte.writeByte('a');
-  }
+        abyte = chan.alloc().directBuffer(1);
+        abyte.writeByte('a');
+    }
 
-  @TearDown
-  public void tearDown() throws Exception {
-    chan.close().sync();
-    serverChan.close().sync();
-    future.cancel(true);
-    group.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
-    abyte.release();
-  }
+    @TearDown
+    public void tearDown() throws Exception {
+        chan.close().sync();
+        serverChan.close().sync();
+        future.cancel(true);
+        group.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
+        abyte.release();
+    }
 
-  @Benchmark
-  public Object pingPong() throws Exception {
-    return chan.pipeline().writeAndFlush(abyte.retainedSlice()).sync();
-  }
+    @Benchmark
+    public Object pingPong() throws Exception {
+        return chan.pipeline().writeAndFlush(abyte.retainedSlice()).sync();
+    }
 }
