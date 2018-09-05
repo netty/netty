@@ -40,7 +40,6 @@ final class PlatformDependent0 {
     private static final long BYTE_ARRAY_BASE_OFFSET;
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
-    private static final Method ALLOCATE_ARRAY_METHOD;
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
 
@@ -209,7 +208,6 @@ final class PlatformDependent0 {
             BYTE_ARRAY_BASE_OFFSET = -1;
             UNALIGNED = false;
             DIRECT_BUFFER_CONSTRUCTOR = null;
-            ALLOCATE_ARRAY_METHOD = null;
         } else {
             Constructor<?> directBufferConstructor;
             long address = -1;
@@ -301,69 +299,6 @@ final class PlatformDependent0 {
             }
 
             UNALIGNED = unaligned;
-
-            if (javaVersion() >= 9) {
-                Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                    @Override
-                    public Object run() {
-                        try {
-                            Field internalUnsafe = UNSAFE.getClass().getDeclaredField("theInternalUnsafe");
-                            long offset = UNSAFE.staticFieldOffset(internalUnsafe);
-                            Object base = UNSAFE.staticFieldBase(internalUnsafe);
-                            UNSAFE.getObject(base, offset);
-
-                            // Java9 has jdk.internal.misc.Unsafe and not all methods are propagated to
-                            // sun.misc.Unsafe
-                            Class<?> internalUnsafeClass = getClassLoader(PlatformDependent0.class)
-                                    .loadClass("jdk.internal.misc.Unsafe");
-                            Method method = internalUnsafeClass.getDeclaredMethod("getUnsafe");
-                            return method.invoke(null);
-                        } catch (Throwable e) {
-                            return e;
-                        }
-                    }
-                });
-                if (!(maybeException instanceof Throwable)) {
-                    internalUnsafe = maybeException;
-                    final Object finalInternalUnsafe = internalUnsafe;
-                    maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                        @Override
-                        public Object run() {
-                            try {
-                                return finalInternalUnsafe.getClass().getDeclaredMethod(
-                                        "allocateUninitializedArray", Class.class, int.class);
-                            } catch (NoSuchMethodException e) {
-                                return e;
-                            } catch (SecurityException e) {
-                                return e;
-                            }
-                        }
-                    });
-
-                    if (maybeException instanceof Method) {
-                        try {
-                            Method m = (Method) maybeException;
-                            byte[] bytes = (byte[]) m.invoke(finalInternalUnsafe, byte.class, 8);
-                            assert bytes.length == 8;
-                            allocateArrayMethod = m;
-                        } catch (IllegalAccessException e) {
-                            maybeException = e;
-                        } catch (InvocationTargetException e) {
-                            maybeException = e;
-                        }
-                    }
-                }
-
-                if (maybeException instanceof Throwable) {
-                    logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable",
-                            (Throwable) maybeException);
-                } else {
-                    logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): available");
-                }
-            } else {
-                logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable prior to Java9");
-            }
-            ALLOCATE_ARRAY_METHOD = allocateArrayMethod;
         }
 
         INTERNAL_UNSAFE = internalUnsafe;
@@ -436,20 +371,6 @@ final class PlatformDependent0 {
         // Just use 1 to make it safe to use in all cases:
         // See: http://pubs.opengroup.org/onlinepubs/009695399/functions/malloc.html
         return newDirectBuffer(UNSAFE.allocateMemory(Math.max(1, capacity)), capacity);
-    }
-
-    static boolean hasAllocateArrayMethod() {
-        return ALLOCATE_ARRAY_METHOD != null;
-    }
-
-    static byte[] allocateUninitializedArray(int size) {
-        try {
-            return (byte[]) ALLOCATE_ARRAY_METHOD.invoke(INTERNAL_UNSAFE, byte.class, size);
-        } catch (IllegalAccessException e) {
-            throw new Error(e);
-        } catch (InvocationTargetException e) {
-            throw new Error(e);
-        }
     }
 
     static ByteBuffer newDirectBuffer(long address, int capacity) {

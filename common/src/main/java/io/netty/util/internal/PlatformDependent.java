@@ -158,7 +158,7 @@ public final class PlatformDependent {
 
         int tryAllocateUninitializedArray =
                 SystemPropertyUtil.getInt("io.netty.uninitializedArrayAllocationThreshold", 1024);
-        UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD = javaVersion() >= 9 && PlatformDependent0.hasAllocateArrayMethod() ?
+        UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD = javaVersion() >= 9 && UnsafeInternal.isAvailable()?
                 tryAllocateUninitializedArray : -1;
         logger.debug("-Dio.netty.uninitializedArrayAllocationThreshold: {}", UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD);
 
@@ -201,7 +201,7 @@ public final class PlatformDependent {
 
     public static byte[] allocateUninitializedArray(int size) {
         return UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD < 0 || UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD > size ?
-                new byte[size] : PlatformDependent0.allocateUninitializedArray(size);
+                new byte[size] : UnsafeInternal.allocateUninitializedArray(size);
     }
 
     /**

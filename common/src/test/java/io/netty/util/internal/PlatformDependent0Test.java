@@ -91,10 +91,4 @@ public class PlatformDependent0Test {
         assertEquals(9, PlatformDependent0.majorVersion("1.9")); // early version of JDK 9 before Project Verona
         assertEquals(9, PlatformDependent0.majorVersion("9"));
     }
-
-    @Test
-    public void test() throws Throwable {
-        UnsafeInternal internal = UnsafeInternal.newInstance(PlatformDependent0.UNSAFE);
-        internal.allocateUninitializedArray(10);
-    }
 }
