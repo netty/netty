@@ -29,6 +29,7 @@ import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -565,6 +566,14 @@ public final class PlatformDependent {
 
     public static void putLong(byte[] data, int index, long value) {
         PlatformDependent0.putLong(data, index, value);
+    }
+
+    public static void putObject(Object o, long offset, Object x) {
+        PlatformDependent0.putObject(o, offset, x);
+    }
+
+    public static long objectFieldOffset(Field field) {
+        return PlatformDependent0.objectFieldOffset(field);
     }
 
     public static void copyMemory(long srcAddr, long dstAddr, long length) {
