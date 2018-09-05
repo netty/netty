@@ -60,7 +60,12 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
             return ((PemEncoded) key).retain();
         }
 
-        ByteBuf encoded = Unpooled.wrappedBuffer(key.getEncoded());
+        byte[] bytes = key.getEncoded();
+        if (bytes == null) {
+            throw new IllegalArgumentException(key.getClass().getName() + " does not support encoding");
+        }
+
+        ByteBuf encoded = Unpooled.wrappedBuffer(bytes);
         try {
             ByteBuf base64 = SslUtils.toBase64(allocator, encoded);
             try {
