@@ -62,7 +62,7 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
 
         byte[] bytes = key.getEncoded();
         if (bytes == null) {
-            throw new IllegalArgumentException(key + " does not support encoding");
+            throw new IllegalArgumentException(key.getClass().getName() + " does not support encoding");
         }
 
         ByteBuf encoded = Unpooled.wrappedBuffer(bytes);
