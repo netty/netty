@@ -568,6 +568,10 @@ final class PlatformDependent0 {
         UNSAFE.putLong(data, BYTE_ARRAY_BASE_OFFSET + index, value);
     }
 
+    static void putObject(Object o, long offset, Object x) {
+        UNSAFE.putObject(o, offset, x);
+    }
+
     static void copyMemory(long srcAddr, long dstAddr, long length) {
         // Manual safe-point polling is only needed prior Java9:
         // See https://bugs.openjdk.java.net/browse/JDK-8149596
