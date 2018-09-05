@@ -262,13 +262,32 @@ final class PlatformDependent0 {
             DIRECT_BUFFER_CONSTRUCTOR = directBufferConstructor;
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
             BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
-            boolean unaligned;
+            final boolean unaligned;
             Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
                 public Object run() {
                     try {
                         Class<?> bitsClass =
                                 Class.forName("java.nio.Bits", false, getSystemClassLoader());
+                        int version = javaVersion();
+                        if (version >= 9) {
+                            // Java9/10 use all lowercase and later versions all uppercase.
+                            String fieldName = version >= 11 ? "UNALIGNED" : "unaligned";
+                            // On Java9 and later we try to directly access the field as we can do this without
+                            // adjust the accessible levels.
+                            try {
+                                Field unalignedField = bitsClass.getDeclaredField(fieldName);
+                                if (unalignedField.getType() == boolean.class) {
+                                    long offset = UNSAFE.staticFieldOffset(unalignedField);
+                                    Object object = UNSAFE.staticFieldBase(unalignedField);
+                                    return UNSAFE.getBoolean(object, offset);
+                                }
+                                // There is something unexpected stored in the field,
+                                // let us fall-back and try to use a reflective method call as last resort.
+                            } catch (NoSuchFieldException ignore) {
+                                // We did not find the field we expected, move on.
+                            }
+                        }
                         Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
                         Throwable cause = ReflectionUtil.trySetAccessible(unalignedMethod, true);
                         if (cause != null) {
