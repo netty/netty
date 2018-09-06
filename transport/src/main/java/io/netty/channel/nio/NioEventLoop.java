@@ -404,6 +404,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 switch (selectStrategy.calculateStrategy(selectNowSupplier, hasTasks())) {
                     case SelectStrategy.CONTINUE:
                         continue;
+
+                    case SelectStrategy.BUSY_WAIT:
+                        // fall-through to SELECT since the busy-wait is not supported with NIO
+
                     case SelectStrategy.SELECT:
                         select(wakenUp.getAndSet(false));
 
