@@ -162,7 +162,7 @@ final class LocationAwareSlf4JLogger extends AbstractInternalLogger {
     @Override
     public void info(String msg, Throwable t) {
         if (isInfoEnabled()) {
-            log(INFO_INT, msg);
+            log(INFO_INT, msg, t);
         }
     }
 
@@ -202,7 +202,7 @@ final class LocationAwareSlf4JLogger extends AbstractInternalLogger {
     @Override
     public void warn(String msg, Throwable t) {
         if (isWarnEnabled()) {
-            log(WARN_INT, msg);
+            log(WARN_INT, msg, t);
         }
     }
 
