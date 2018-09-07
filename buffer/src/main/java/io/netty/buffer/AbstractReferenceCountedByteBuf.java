@@ -31,7 +31,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
 
-    private volatile int refCnt;
+    private volatile int refCnt = 1;
 
     static {
         long refCntFieldOffset = -1;
@@ -49,7 +49,6 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
     protected AbstractReferenceCountedByteBuf(int maxCapacity) {
         super(maxCapacity);
-        refCntUpdater.set(this, 1);
     }
 
     @Override
