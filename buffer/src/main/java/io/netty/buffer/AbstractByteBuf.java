@@ -1442,9 +1442,17 @@ public abstract class AbstractByteBuf extends ByteBuf {
      * if the buffer was released before.
      */
     protected final void ensureAccessible() {
-        if (checkAccessible && refCnt() == 0) {
+        if (checkAccessible && internalRefCnt() == 0) {
             throw new IllegalReferenceCountException(0);
         }
+    }
+
+    /**
+     * Returns the reference count that is used internally by {@link #ensureAccessible()} to try to guard
+     * against using the buffer after it was released (best-effort).
+     */
+    int internalRefCnt() {
+        return refCnt();
     }
 
     final void setIndex0(int readerIndex, int writerIndex) {
