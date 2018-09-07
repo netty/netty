@@ -67,8 +67,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     int readerIndex;
     int writerIndex;
-    private int markedReaderIndex;
-    private int markedWriterIndex;
+    // As we know that both needs to be positive we will pack these into one int to save up memory.
+    // Bitshifting / masking is really fast and these are not used too often anyway in the wild.
+    private int markers;
     private int maxCapacity;
 
     protected AbstractByteBuf(int maxCapacity) {
@@ -189,25 +190,25 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf markReaderIndex() {
-        markedReaderIndex = readerIndex;
+        markers = readerIndex << 16 | markers & 0xFFFF;
         return this;
     }
 
     @Override
     public ByteBuf resetReaderIndex() {
-        readerIndex(markedReaderIndex);
+        readerIndex(markers >>> 16);
         return this;
     }
 
     @Override
     public ByteBuf markWriterIndex() {
-        markedWriterIndex = writerIndex;
+        markers = markers >>> 16 << 16 | writerIndex & 0xFFFF;
         return this;
     }
 
     @Override
     public ByteBuf resetWriterIndex() {
-        writerIndex(markedWriterIndex);
+        writerIndex(markers & 0xFFFF);
         return this;
     }
 
@@ -253,19 +254,20 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     protected final void adjustMarkers(int decrement) {
-        int markedReaderIndex = this.markedReaderIndex;
+        int markedReaderIndex = markers >>> 16;
+        int markedWriterIndex = markers & 0xFFFF;
         if (markedReaderIndex <= decrement) {
-            this.markedReaderIndex = 0;
-            int markedWriterIndex = this.markedWriterIndex;
+            markedReaderIndex = 0;
             if (markedWriterIndex <= decrement) {
-                this.markedWriterIndex = 0;
+                markedWriterIndex = 0;
             } else {
-                this.markedWriterIndex = markedWriterIndex - decrement;
+                markedWriterIndex -=  decrement;
             }
         } else {
-            this.markedReaderIndex = markedReaderIndex - decrement;
+            markedReaderIndex -= decrement;
             markedWriterIndex -= decrement;
         }
+        markers = markedReaderIndex << 16 | markedWriterIndex & 0xFFFF;
     }
 
     @Override
@@ -1461,6 +1463,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     final void discardMarks() {
-        markedReaderIndex = markedWriterIndex = 0;
+        markers = 0;
     }
 }
