@@ -38,6 +38,7 @@ public final class EpollChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Integer> TCP_DEFER_ACCEPT =
             ChannelOption.valueOf(EpollChannelOption.class, "TCP_DEFER_ACCEPT");
     public static final ChannelOption<Boolean> TCP_QUICKACK = valueOf(EpollChannelOption.class, "TCP_QUICKACK");
+    public static final ChannelOption<Integer> SO_BUSY_POLL = valueOf(EpollChannelOption.class, "SO_BUSY_POLL");
 
     public static final ChannelOption<EpollMode> EPOLL_MODE =
             ChannelOption.valueOf(EpollChannelOption.class, "EPOLL_MODE");
