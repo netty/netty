@@ -50,6 +50,11 @@
 #define TCP_NOTSENT_LOWAT 25
 #endif
 
+// SO_BUSY_POLL is defined in linux 3.11. We define this here so older kernels can compile.
+#ifndef SO_BUSY_POLL
+#define SO_BUSY_POLL 46
+#endif
+
 static jclass peerCredentialsClass = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
 
@@ -109,6 +114,10 @@ static void netty_epoll_linuxsocket_setIpTransparent(JNIEnv* env, jclass clazz, 
 
 static void netty_epoll_linuxsocket_setIpRecvOrigDestAddr(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR, &optval, sizeof(optval));
+}
+
+static void netty_epoll_linuxsocket_setSoBusyPoll(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty_unix_socket_setOption(env, fd, SOL_SOCKET, SO_BUSY_POLL, &optval, sizeof(optval));
 }
 
 static void netty_epoll_linuxsocket_setTcpMd5Sig(JNIEnv* env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jbyteArray key) {
@@ -256,6 +265,14 @@ static jint netty_epoll_linuxsocket_isTcpCork(JNIEnv* env, jclass clazz, jint fd
     return optval;
 }
 
+static jint netty_epoll_linuxsocket_getSoBusyPoll(JNIEnv* env, jclass clazz, jint fd) {
+    int optval;
+    if (netty_unix_socket_getOption(env, fd, SOL_SOCKET, SO_BUSY_POLL, &optval, sizeof(optval)) == -1) {
+        return -1;
+    }
+    return optval;
+}
+
 static jint netty_epoll_linuxsocket_getTcpDeferAccept(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
     if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) == -1) {
@@ -341,10 +358,12 @@ static jlong netty_epoll_linuxsocket_sendFile(JNIEnv* env, jclass clazz, jint fd
 // JNI Method Registration Table Begin
 static const JNINativeMethod fixed_method_table[] = {
   { "setTcpCork", "(II)V", (void *) netty_epoll_linuxsocket_setTcpCork },
+  { "setSoBusyPoll", "(II)V", (void *) netty_epoll_linuxsocket_setSoBusyPoll },
   { "setTcpQuickAck", "(II)V", (void *) netty_epoll_linuxsocket_setTcpQuickAck },
   { "setTcpDeferAccept", "(II)V", (void *) netty_epoll_linuxsocket_setTcpDeferAccept },
   { "setTcpNotSentLowAt", "(II)V", (void *) netty_epoll_linuxsocket_setTcpNotSentLowAt },
   { "isTcpCork", "(I)I", (void *) netty_epoll_linuxsocket_isTcpCork },
+  { "getSoBusyPoll", "(I)I", (void *) netty_epoll_linuxsocket_getSoBusyPoll },
   { "getTcpDeferAccept", "(I)I", (void *) netty_epoll_linuxsocket_getTcpDeferAccept },
   { "getTcpNotSentLowAt", "(I)I", (void *) netty_epoll_linuxsocket_getTcpNotSentLowAt },
   { "isTcpQuickAck", "(I)I", (void *) netty_epoll_linuxsocket_isTcpQuickAck },
