@@ -45,8 +45,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
                     public SelectStrategy newSelectStrategy() {
                         return new SelectStrategy() {
                             @Override
-                            public int calculateStrategy(IntSupplier selectSupplier, boolean hasTasks)
-                                    throws Exception {
+                            public int calculateStrategy(IntSupplier selectSupplier, boolean hasTasks) {
                                 return SelectStrategy.BUSY_WAIT;
                             }
                         };
@@ -82,7 +81,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
         return list;
     }
 
-    private BootstrapFactory<ServerBootstrap> serverSocket() {
+    private static BootstrapFactory<ServerBootstrap> serverSocket() {
         return new BootstrapFactory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
@@ -91,7 +90,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
         };
     }
 
-    private BootstrapFactory<Bootstrap> clientSocket() {
+    private static BootstrapFactory<Bootstrap> clientSocket() {
         return new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
