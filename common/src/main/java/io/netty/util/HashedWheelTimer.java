@@ -561,14 +561,21 @@ public class HashedWheelTimer implements Timer {
                 //
                 // See https://github.com/netty/netty/issues/356
                 if (PlatformDependent.isWindows()) {
-                    sleepTimeNanos = TimeUnit.MILLISECONDS.toNanos(
-                            Math.max(1, TimeUnit.NANOSECONDS.toMillis(sleepTimeNanos) / 10 * 10));
-                }
-
-                LockSupport.parkNanos(sleepTimeNanos);
-                if (Thread.interrupted()) {
-                    if (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_SHUTDOWN) {
-                        return Long.MIN_VALUE;
+                    try {
+                        // Use Thread.sleep(...) on windows as resolution is better.
+                        // See https://github.com/netty/netty/pull/8282#discussion_r216756508
+                        Thread.sleep(Math.max(1, TimeUnit.NANOSECONDS.toMillis(sleepTimeNanos) / 10 * 10));
+                    } catch (InterruptedException e) {
+                        if (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_SHUTDOWN) {
+                            return Long.MIN_VALUE;
+                        }
+                    }
+                } else {
+                    LockSupport.parkNanos(sleepTimeNanos);
+                    if (Thread.interrupted()) {
+                        if (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_SHUTDOWN) {
+                            return Long.MIN_VALUE;
+                        }
                     }
                 }
             }
