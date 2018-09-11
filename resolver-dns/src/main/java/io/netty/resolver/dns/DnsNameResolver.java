@@ -152,7 +152,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static final DatagramDnsQueryEncoder ENCODER = new DatagramDnsQueryEncoder();
 
     final Future<Channel> channelFuture;
-    final DatagramChannel ch;
+    final Channel ch;
 
     // Comparator that ensures we will try first to use the nameservers that use our preferred address type.
     private final Comparator<InetSocketAddress> nameServerComparator;
@@ -356,7 +356,18 @@ public class DnsNameResolver extends InetNameResolver {
         });
 
         channelFuture = responseHandler.channelActivePromise;
-        ch = (DatagramChannel) b.register().channel();
+        ChannelFuture future = b.register();
+        Throwable cause = future.cause();
+        if (cause != null) {
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            throw new IllegalStateException("Unable to create / register Channel", cause);
+        }
+        ch = future.channel();
         ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
 
         ch.closeFuture().addListener(new ChannelFutureListener() {
