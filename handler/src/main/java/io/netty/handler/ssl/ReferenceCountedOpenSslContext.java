@@ -225,7 +225,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         boolean success = false;
         try {
             try {
-                ctx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, mode);
+                int opts = SSL.SSL_PROTOCOL_SSLV3 | SSL.SSL_PROTOCOL_TLSV1 |
+                           SSL.SSL_PROTOCOL_TLSV1_1 | SSL.SSL_PROTOCOL_TLSV1_2;
+                ctx = SSLContext.make(opts, mode);
             } catch (Exception e) {
                 throw new SSLException("failed to create an SSL_CTX", e);
             }
@@ -365,8 +367,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
         return new ReferenceCountedOpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode, true);
     }
-
-    abstract OpenSslKeyMaterialManager keyMaterialManager();
 
     /**
      * Returns a new server-side {@link SSLEngine} with the current configuration.

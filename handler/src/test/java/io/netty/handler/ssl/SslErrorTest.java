@@ -204,7 +204,7 @@ public class SslErrorTest {
                                                 verifyException(unwrappedCause, "expired", promise);
                                             } else if (reason == CertPathValidatorException.BasicReason.NOT_YET_VALID) {
                                                 // BoringSSL uses "expired" in this case while others use "bad"
-                                                if ("BoringSSL".equals(OpenSsl.versionString())) {
+                                                if (OpenSslTestUtils.isBoringSSL()) {
                                                     verifyException(unwrappedCause, "expired", promise);
                                                 } else {
                                                     verifyException(unwrappedCause, "bad", promise);
@@ -216,7 +216,7 @@ public class SslErrorTest {
                                             verifyException(unwrappedCause, "expired", promise);
                                         } else if (exception instanceof CertificateNotYetValidException) {
                                             // BoringSSL uses "expired" in this case while others use "bad"
-                                            if ("BoringSSL".equals(OpenSsl.versionString())) {
+                                            if (OpenSslTestUtils.isBoringSSL()) {
                                                 verifyException(unwrappedCause, "expired", promise);
                                             } else {
                                                 verifyException(unwrappedCause, "bad", promise);
