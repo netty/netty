@@ -561,7 +561,8 @@ public class HashedWheelTimer implements Timer {
                 //
                 // See https://github.com/netty/netty/issues/356
                 if (PlatformDependent.isWindows()) {
-                    sleepTimeNanos = sleepTimeNanos / 10 * 10;
+                    sleepTimeNanos = TimeUnit.MILLISECONDS.toNanos(
+                            Math.max(1, TimeUnit.NANOSECONDS.toMillis(sleepTimeNanos) / 10 * 10));
                 }
 
                 LockSupport.parkNanos(sleepTimeNanos);
