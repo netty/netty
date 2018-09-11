@@ -2270,4 +2270,20 @@ public class DnsNameResolverTest {
             server.stop();
         }
     }
+
+    @Test
+    public void testChannelFactoryException() {
+        final IllegalStateException exception = new IllegalStateException();
+        try {
+            newResolver().channelFactory(new ChannelFactory<DatagramChannel>() {
+                @Override
+                public DatagramChannel newChannel() {
+                    throw exception;
+                }
+            }).build();
+            fail();
+        } catch (Exception e) {
+            assertSame(exception, e);
+        }
+    }
 }
