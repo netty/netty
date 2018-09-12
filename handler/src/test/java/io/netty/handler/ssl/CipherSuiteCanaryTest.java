@@ -125,12 +125,16 @@ public class CipherSuiteCanaryTest {
         final SslContext sslServerContext = SslContextBuilder.forServer(CERT.certificate(), CERT.privateKey())
                 .sslProvider(serverSslProvider)
                 .ciphers(ciphers)
+                // As this is not a TLSv1.3 cipher we should ensure we talk something else.
+                .protocols(SslUtils.PROTOCOL_TLS_V1_2)
                 .build();
 
         try {
             final SslContext sslClientContext = SslContextBuilder.forClient()
                     .sslProvider(clientSslProvider)
                     .ciphers(ciphers)
+                    // As this is not a TLSv1.3 cipher we should ensure we talk something else.
+                    .protocols(SslUtils.PROTOCOL_TLS_V1_2)
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .build();
 

@@ -123,33 +123,6 @@ final class CipherSuiteConverter {
     }
 
     /**
-     * Converts the specified Java cipher suites to the colon-separated OpenSSL cipher suite specification.
-     */
-    static String toOpenSsl(Iterable<String> javaCipherSuites) {
-        final StringBuilder buf = new StringBuilder();
-        for (String c: javaCipherSuites) {
-            if (c == null) {
-                break;
-            }
-
-            String converted = toOpenSsl(c);
-            if (converted != null) {
-                c = converted;
-            }
-
-            buf.append(c);
-            buf.append(':');
-        }
-
-        if (buf.length() > 0) {
-            buf.setLength(buf.length() - 1);
-            return buf.toString();
-        } else {
-            return "";
-        }
-    }
-
-    /**
      * Converts the specified Java cipher suite to its corresponding OpenSSL cipher suite name.
      *
      * @return {@code null} if the conversion has failed
@@ -421,6 +394,48 @@ final class CipherSuiteConverter {
         //   * MD5
         //
         return hmacAlgo;
+    }
+
+    /**
+     * Convert the given ciphers if needed to OpenSSL format and append them to the correct {@link StringBuilder}
+     * depending on if its a TLSv1.3 cipher or not. If this methods returns without throwing an exception its
+     * guaranteed that at least one of the {@link StringBuilder}s contain some ciphers that can be used to configure
+     * OpenSSL.
+     */
+    static void convertToCipherStrings(
+            Iterable<String> cipherSuites, StringBuilder cipherBuilder, StringBuilder cipherTLSv13Builder) {
+        for (String c: cipherSuites) {
+            if (c == null) {
+                break;
+            }
+
+            String converted = toOpenSsl(c);
+            if (converted == null) {
+                converted = c;
+            }
+
+            if (!OpenSsl.isCipherSuiteAvailable(converted)) {
+                throw new IllegalArgumentException("unsupported cipher suite: " + c + '(' + converted + ')');
+            }
+
+            if (SslUtils.isTLSv13Cipher(converted)) {
+                cipherTLSv13Builder.append(converted);
+                cipherTLSv13Builder.append(':');
+            } else {
+                cipherBuilder.append(converted);
+                cipherBuilder.append(':');
+            }
+        }
+
+        if (cipherBuilder.length() == 0 && cipherTLSv13Builder.length() == 0) {
+            throw new IllegalArgumentException("empty cipher suites");
+        }
+        if (cipherBuilder.length() > 0) {
+            cipherBuilder.setLength(cipherBuilder.length() - 1);
+        }
+        if (cipherTLSv13Builder.length() > 0) {
+            cipherTLSv13Builder.setLength(cipherTLSv13Builder.length() - 1);
+        }
     }
 
     private CipherSuiteConverter() { }
