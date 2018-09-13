@@ -15,10 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
-import org.junit.Test;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -26,12 +22,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
+import org.junit.Test;
+
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
-import static org.hamcrest.Matchers.hasToString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -89,6 +87,22 @@ public class HttpUtilTest {
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, UPPER_CASE_NORMAL_CONTENT_TYPE);
         assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message));
         assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(UPPER_CASE_NORMAL_CONTENT_TYPE));
+    }
+
+    @Test
+    public void testGetCharsetIfNotLastParameter() {
+        String NORMAL_CONTENT_TYPE_WITH_PARAMETERS = "application/soap-xml; charset=utf-8; "
+            + "action=\"http://www.soap-service.by/foo/add\"";
+
+        HttpMessage message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+            "http://localhost:7788/foo");
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, NORMAL_CONTENT_TYPE_WITH_PARAMETERS);
+
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message));
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(NORMAL_CONTENT_TYPE_WITH_PARAMETERS));
+
+        assertEquals("utf-8", HttpUtil.getCharsetAsSequence(message));
+        assertEquals("utf-8", HttpUtil.getCharsetAsSequence(NORMAL_CONTENT_TYPE_WITH_PARAMETERS));
     }
 
     @Test
@@ -291,5 +305,16 @@ public class HttpUtilTest {
     public void testIpv4Unresolved()  {
         InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("10.0.0.1", 8080);
         assertEquals("10.0.0.1", HttpUtil.formatHostnameForHttp(socketAddress));
+    }
+
+    @Test
+    public void testKeepAliveIfConnectionHeaderAbsent() {
+        HttpMessage http11Message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+            "http:localhost/http_1_1");
+        assertTrue(HttpUtil.isKeepAlive(http11Message));
+
+        HttpMessage http10Message = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET,
+            "http:localhost/http_1_0");
+        assertFalse(HttpUtil.isKeepAlive(http10Message));
     }
 }
