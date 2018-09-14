@@ -24,6 +24,7 @@ import javax.net.ssl.SSLSessionContext;
 import javax.security.cert.X509Certificate;
 import java.security.Principal;
 import java.security.cert.Certificate;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -50,6 +51,13 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     // Use rawtypes an unchecked override to be able to also work on java7.
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public abstract List getRequestedServerNames();
+
+    // Do not mark as override so we can compile on java8.
+    public List<byte[]> getStatusResponses() {
+        // Just return an empty list for now until we support it as otherwise we will fail in java9
+        // because of their sun.security.ssl.X509TrustManagerImpl class.
+        return Collections.emptyList();
+    }
 
     @Override
     public void handshakeFinished() throws SSLException {
