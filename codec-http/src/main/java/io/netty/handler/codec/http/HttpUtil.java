@@ -15,17 +15,17 @@
  */
 package io.netty.handler.codec.http;
 
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
-
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.ArrayList;
-import java.nio.charset.Charset;
-import java.nio.charset.UnsupportedCharsetException;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * Utility methods useful in the HTTP context.
@@ -60,12 +60,13 @@ public final class HttpUtil {
     /**
      * Returns {@code true} if and only if the connection can remain open and
      * thus 'kept alive'.  This methods respects the value of the.
+     *
      * {@code "Connection"} header first and then the return value of
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
     public static boolean isKeepAlive(HttpMessage message) {
         CharSequence connection = message.headers().get(HttpHeaderNames.CONNECTION);
-        if (connection != null && HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(connection)) {
+        if (HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(connection)) {
             return false;
         }
 
@@ -193,6 +194,7 @@ public final class HttpUtil {
 
     /**
      * Get an {@code int} representation of {@link #getContentLength(HttpMessage, long)}.
+     *
      * @return the content length or {@code defaultValue} if this message does
      *         not have the {@code "Content-Length"} header or its value is not
      *         a number. Not to exceed the boundaries of integer.
@@ -313,6 +315,7 @@ public final class HttpUtil {
     /**
      * Set the {@link HttpHeaderNames#TRANSFER_ENCODING} to either include {@link HttpHeaderValues#CHUNKED} if
      * {@code chunked} is {@code true}, or remove {@link HttpHeaderValues#CHUNKED} if {@code chunked} is {@code false}.
+     *
      * @param m The message which contains the headers to modify.
      * @param chunked if {@code true} then include {@link HttpHeaderValues#CHUNKED} in the headers. otherwise remove
      * {@link HttpHeaderValues#CHUNKED} from the headers.
@@ -371,7 +374,7 @@ public final class HttpUtil {
     /**
      * Fetch charset from message's Content-Type header.
      *
-     * @param message entity to fetch Content-Type header from
+     * @param message        entity to fetch Content-Type header from
      * @param defaultCharset result to use in case of empty, incorrect or doesn't contain required part header value
      * @return the charset from message's Content-Type header or {@code defaultCharset}
      * if charset is not presented or unparsable
@@ -389,7 +392,7 @@ public final class HttpUtil {
      * Fetch charset from Content-Type header value.
      *
      * @param contentTypeValue Content-Type header value to parse
-     * @param defaultCharset result to use in case of empty, incorrect or doesn't contain required part header value
+     * @param defaultCharset   result to use in case of empty, incorrect or doesn't contain required part header value
      * @return the charset from message's Content-Type header or {@code defaultCharset}
      * if charset is not presented or unparsable
      */
@@ -459,13 +462,23 @@ public final class HttpUtil {
         if (contentTypeValue == null) {
             throw new NullPointerException("contentTypeValue");
         }
+
         int indexOfCharset = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, CHARSET_EQUALS, 0);
-        if (indexOfCharset != AsciiString.INDEX_NOT_FOUND) {
-            int indexOfEncoding = indexOfCharset + CHARSET_EQUALS.length();
-            if (indexOfEncoding < contentTypeValue.length()) {
-                return contentTypeValue.subSequence(indexOfEncoding, contentTypeValue.length());
-            }
+        if (indexOfCharset == AsciiString.INDEX_NOT_FOUND) {
+            return null;
         }
+
+        int indexOfEncoding = indexOfCharset + CHARSET_EQUALS.length();
+        if (indexOfEncoding < contentTypeValue.length()) {
+            CharSequence charsetCandidate = contentTypeValue.subSequence(indexOfEncoding, contentTypeValue.length());
+            int indexOfSemicolon = AsciiString.indexOfIgnoreCaseAscii(charsetCandidate, SEMICOLON, 0);
+            if (indexOfSemicolon == AsciiString.INDEX_NOT_FOUND) {
+                return charsetCandidate;
+            }
+
+            return charsetCandidate.subSequence(0, indexOfSemicolon);
+        }
+
         return null;
     }
 
@@ -517,6 +530,7 @@ public final class HttpUtil {
     /**
      * Formats the host string of an address so it can be used for computing an HTTP component
      * such as an URL or a Host header
+     *
      * @param addr the address
      * @return the formatted String
      */
@@ -526,7 +540,7 @@ public final class HttpUtil {
             if (!addr.isUnresolved()) {
                 hostString = NetUtil.toAddressString(addr.getAddress());
             }
-            return "[" + hostString + "]";
+            return '[' + hostString + ']';
         }
         return hostString;
     }
