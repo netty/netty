@@ -244,8 +244,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         OpenSsl.ensureAvailability();
         this.alloc = checkNotNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
-        session = new OpenSslSession(context.sessionContext());
         clientMode = context.isClient();
+        if (PlatformDependent.javaVersion() >= 7 && context.isClient()) {
+            session = new ExtendedOpenSslSession(new DefaultOpenSslSession(context.sessionContext())) {
+                @Override
+                public List getRequestedServerNames() {
+                    return Java8SslUtils.getSniHostNames(sniHostNames);
+                }
+            };
+        } else {
+            session = new DefaultOpenSslSession(context.sessionContext());
+        }
         engineMap = context.engineMap;
         localCerts = context.keyCertChain;
         keyMaterialManager = context.keyMaterialManager();
@@ -1839,7 +1848,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return Buffer.address(b);
     }
 
-    private final class OpenSslSession implements SSLSession {
+    private final class DefaultOpenSslSession implements OpenSslSession  {
         private final OpenSslSessionContext sessionContext;
 
         // These are guarded by synchronized(OpenSslEngine.this) as handshakeFinished() may be triggered by any
@@ -1855,8 +1864,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // lazy init for memory reasons
         private Map<String, Object> values;
 
-        OpenSslSession(OpenSslSessionContext sessionContext) {
+        DefaultOpenSslSession(OpenSslSessionContext sessionContext) {
             this.sessionContext = sessionContext;
+        }
+
+        private SSLSessionBindingEvent newSSLSessionBindingEvent(String name) {
+            return new SSLSessionBindingEvent(session, name);
         }
 
         @Override
@@ -1925,7 +1938,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
             Object old = values.put(name, value);
             if (value instanceof SSLSessionBindingListener) {
-                ((SSLSessionBindingListener) value).valueBound(new SSLSessionBindingEvent(this, name));
+                // Use newSSLSessionBindingEvent so we alway use the wrapper if needed.
+                ((SSLSessionBindingListener) value).valueBound(newSSLSessionBindingEvent(name));
             }
             notifyUnbound(old, name);
         }
@@ -1965,7 +1979,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         private void notifyUnbound(Object value, String name) {
             if (value instanceof SSLSessionBindingListener) {
-                ((SSLSessionBindingListener) value).valueUnbound(new SSLSessionBindingEvent(this, name));
+                // Use newSSLSessionBindingEvent so we alway use the wrapper if needed.
+                ((SSLSessionBindingListener) value).valueUnbound(newSSLSessionBindingEvent(name));
             }
         }
 
@@ -1973,7 +1988,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
          * Finish the handshake and so init everything in the {@link OpenSslSession} that should be accessible by
          * the user.
          */
-        void handshakeFinished() throws SSLException {
+        @Override
+        public void handshakeFinished() throws SSLException {
             synchronized (ReferenceCountedOpenSslEngine.this) {
                 if (!isDestroyed()) {
                     id = SSL.getSessionId(ssl);
@@ -2191,13 +2207,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return applicationBufferSize;
         }
 
-        /**
-         * Expand (or increase) the value returned by {@link #getApplicationBufferSize()} if necessary.
-         * <p>
-         * This is only called in a synchronized block, so no need to use atomic operations.
-         * @param packetLengthDataOnly The packet size which exceeds the current {@link #getApplicationBufferSize()}.
-         */
-        void tryExpandApplicationBufferSize(int packetLengthDataOnly) {
+        @Override
+        public void tryExpandApplicationBufferSize(int packetLengthDataOnly) {
             if (packetLengthDataOnly > MAX_PLAINTEXT_LENGTH && applicationBufferSize != MAX_RECORD_SIZE) {
                 applicationBufferSize = MAX_RECORD_SIZE;
             }

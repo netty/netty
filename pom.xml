@@ -721,6 +721,7 @@
 
             <!-- SSLSession implementation -->
             <ignore>javax.net.ssl.SSLEngine</ignore>
+            <ignore>javax.net.ssl.ExtendedSSLSession</ignore>
             <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>
             <ignore>javax.net.ssl.SSLParameters</ignore>
             <ignore>javax.net.ssl.SNIServerName</ignore>
