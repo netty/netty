@@ -91,7 +91,7 @@ public class SniClientTest {
         SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, false);
     }
 
-    private static void testSniClient(SslProvider sslClientProvider, SslProvider sslServerProvider) throws Exception {
+    private static void testSniClient(SslProvider sslServerProvider, SslProvider sslClientProvider) throws Exception {
         String sniHostName = "sni.netty.io";
         LocalAddress address = new LocalAddress("test");
         EventLoopGroup group = new DefaultEventLoopGroup(1);
@@ -100,13 +100,23 @@ public class SniClientTest {
         try {
             SelfSignedCertificate cert = new SelfSignedCertificate();
 
-            KeyManagerFactory kmf = PlatformDependent.javaVersion() >= 8 ?
-                    SniClientJava8TestUtil.newSniX509KeyManagerFactory(cert, sniHostName) :
-                    SslContext.buildKeyManagerFactory(
-                            new X509Certificate[] { cert.cert() }, cert.key(), null, null);
+            final SslContext sslServerContext;
+            if ((sslServerProvider == SslProvider.OPENSSL || sslServerProvider == SslProvider.OPENSSL_REFCNT)
+                && !OpenSsl.useKeyManagerFactory()) {
+                sslServerContext = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+                                                    .sslProvider(sslServerProvider)
+                                                    .build();
+            } else {
+                // The used OpenSSL version does support a KeyManagerFactory, so use it.
+                KeyManagerFactory kmf = PlatformDependent.javaVersion() >= 8 ?
+                        SniClientJava8TestUtil.newSniX509KeyManagerFactory(cert, sniHostName) :
+                        SslContext.buildKeyManagerFactory(
+                                new X509Certificate[] { cert.cert() }, cert.key(), null, null);
 
-            final SslContext sslServerContext = SslContextBuilder.forServer(kmf)
-                    .sslProvider(sslServerProvider).build();
+               sslServerContext = SslContextBuilder.forServer(kmf)
+                                                   .sslProvider(sslServerProvider)
+                                                   .build();
+            }
 
             final Promise<String> promise = group.next().newPromise();
             ServerBootstrap sb = new ServerBootstrap();
