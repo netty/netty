@@ -474,9 +474,9 @@ public final class HttpUtil {
             int indexOfSemicolon = AsciiString.indexOfIgnoreCaseAscii(charsetCandidate, SEMICOLON, 0);
             if (indexOfSemicolon == AsciiString.INDEX_NOT_FOUND) {
                 return charsetCandidate;
-            } else {
-                return charsetCandidate.subSequence(0, indexOfSemicolon);
             }
+
+            return charsetCandidate.subSequence(0, indexOfSemicolon);
         }
 
         return null;
