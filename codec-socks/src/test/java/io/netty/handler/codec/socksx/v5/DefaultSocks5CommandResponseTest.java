@@ -51,8 +51,7 @@ public class DefaultSocks5CommandResponseTest {
                 0x00, // success reply
                 0x00, // reserved
                 0x03, // address type domain
-                0x01, // length of domain
-                0x00, // domain value
+                0x00, // length of domain
                 0x00, // port value
                 0x00
         };

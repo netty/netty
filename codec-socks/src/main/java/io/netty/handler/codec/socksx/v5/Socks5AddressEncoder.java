@@ -44,7 +44,6 @@ public interface Socks5AddressEncoder {
                     out.writeByte(addrValue.length());
                     out.writeCharSequence(addrValue, CharsetUtil.US_ASCII);
                 } else {
-                    out.writeByte(1);
                     out.writeByte(0);
                 }
             } else if (typeVal == Socks5AddressType.IPv6.byteValue()) {
