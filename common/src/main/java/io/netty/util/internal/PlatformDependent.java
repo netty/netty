@@ -404,6 +404,10 @@ public final class PlatformDependent {
                 "sun.misc.Unsafe or java.nio.DirectByteBuffer.<init>(long, int) not available");
     }
 
+    public static Object getObject(Object object, long fieldOffset) {
+        return PlatformDependent0.getObject(object, fieldOffset);
+    }
+
     public static int getInt(Object object, long fieldOffset) {
         return PlatformDependent0.getInt(object, fieldOffset);
     }
