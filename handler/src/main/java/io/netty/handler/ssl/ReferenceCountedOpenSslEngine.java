@@ -251,6 +251,20 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 public List getRequestedServerNames() {
                     return Java8SslUtils.getSniHostNames(sniHostNames);
                 }
+
+                @Override
+                public List<byte[]> getStatusResponses() {
+                    byte[] ocspResponse = null;
+                    if (enableOcsp && clientMode) {
+                        synchronized (ReferenceCountedOpenSslEngine.this) {
+                            if (!isDestroyed()) {
+                                ocspResponse = SSL.getOcspResponse(ssl);
+                            }
+                        }
+                    }
+                    return ocspResponse == null ?
+                            Collections.<byte[]>emptyList() : Collections.singletonList(ocspResponse);
+                }
             };
         } else {
             session = new DefaultOpenSslSession(context.sessionContext());
