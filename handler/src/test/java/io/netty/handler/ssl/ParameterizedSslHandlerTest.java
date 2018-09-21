@@ -340,7 +340,7 @@ public class ParameterizedSslHandlerTest {
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     if (cause.getCause() instanceof SSLException) {
                                         // We received the alert and so produce an SSLException.
-                                        promise.setSuccess(null);
+                                        promise.trySuccess(null);
                                     }
                                 }
                             });
