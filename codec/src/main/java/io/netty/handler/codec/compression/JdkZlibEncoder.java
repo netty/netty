@@ -225,8 +225,18 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
 
         deflater.setInput(inAry, offset, len);
-        while (!deflater.needsInput()) {
+        for (;;) {
             deflate(out);
+            if (deflater.needsInput()) {
+                // Consumed everything
+                break;
+            } else {
+                if (!out.isWritable()) {
+                    // We did not consume everything but the buffer is not writable anymore. Increase the capacity to
+                    // make more room.
+                    out.ensureWritable(out.writerIndex());
+                }
+            }
         }
     }
 
