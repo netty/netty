@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 
 import static io.netty.util.internal.StringUtil.simpleClassName;
 
@@ -544,9 +545,9 @@ public class HashedWheelTimer implements Timer {
 
             for (;;) {
                 final long currentTime = System.nanoTime() - startTime;
-                long sleepTimeMs = (deadline - currentTime + 999999) / 1000000;
+                long sleepTimeNanos = deadline - currentTime + 999999;
 
-                if (sleepTimeMs <= 0) {
+                if (sleepTimeNanos <= 0) {
                     if (currentTime == Long.MIN_VALUE) {
                         return -Long.MAX_VALUE;
                     } else {
@@ -560,14 +561,21 @@ public class HashedWheelTimer implements Timer {
                 //
                 // See https://github.com/netty/netty/issues/356
                 if (PlatformDependent.isWindows()) {
-                    sleepTimeMs = sleepTimeMs / 10 * 10;
-                }
-
-                try {
-                    Thread.sleep(sleepTimeMs);
-                } catch (InterruptedException ignored) {
-                    if (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_SHUTDOWN) {
-                        return Long.MIN_VALUE;
+                    try {
+                        // Use Thread.sleep(...) on windows as resolution is better.
+                        // See https://github.com/netty/netty/pull/8282#discussion_r216756508
+                        Thread.sleep(Math.max(1, TimeUnit.NANOSECONDS.toMillis(sleepTimeNanos) / 10 * 10));
+                    } catch (InterruptedException e) {
+                        if (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_SHUTDOWN) {
+                            return Long.MIN_VALUE;
+                        }
+                    }
+                } else {
+                    LockSupport.parkNanos(sleepTimeNanos);
+                    if (Thread.interrupted()) {
+                        if (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_SHUTDOWN) {
+                            return Long.MIN_VALUE;
+                        }
                     }
                 }
             }
