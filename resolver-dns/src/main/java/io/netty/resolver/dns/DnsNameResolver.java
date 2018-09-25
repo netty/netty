@@ -414,8 +414,14 @@ public class DnsNameResolver extends InetNameResolver {
      */
     protected DnsServerAddressStream newRedirectDnsServerStream(
             @SuppressWarnings("unused") String hostname, List<InetSocketAddress> nameservers) {
-        Collections.sort(nameservers, nameServerComparator);
-        return new SequentialDnsServerAddressStream(nameservers, 0);
+        DnsServerAddressStream cached = authoritativeDnsServerCache().get(hostname);
+        if (cached == null || cached.size() == 0) {
+            // If there is not cache hit (which may be the case for example when a NoopAuthoritativeDnsServerCache
+            // is used we will just directly use the provided nameservers.
+            Collections.sort(nameservers, nameServerComparator);
+            return new SequentialDnsServerAddressStream(nameservers, 0);
+        }
+        return cached;
     }
 
     /**
