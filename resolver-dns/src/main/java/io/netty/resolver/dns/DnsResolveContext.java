@@ -702,22 +702,8 @@ abstract class DnsResolveContext<T> {
         Map<String, String> cnames = null;
         for (int i = 0; i < answerCount; i ++) {
             final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
-            final DnsRecordType type = r.type();
-            if (type != DnsRecordType.CNAME) {
-                continue;
-            }
 
-            String domainName;
-
-            if (r instanceof DnsCNameRecord) {
-                domainName = ((DnsCNameRecord) r).hostname();
-            } else if (r instanceof DnsRawRecord) {
-                final ByteBuf recordContent = ((ByteBufHolder) r).content();
-                domainName = decodeDomainName(recordContent);
-                if (domainName == null) {
-                    continue;
-                }
-            } else {
+            if (!(r instanceof DnsCNameRecord)) {
                 continue;
             }
 
@@ -725,7 +711,7 @@ abstract class DnsResolveContext<T> {
                 cnames = new HashMap<String, String>(min(8, answerCount));
             }
 
-            cnames.put(r.name().toLowerCase(Locale.US), domainName.toLowerCase(Locale.US));
+            cnames.put(r.name().toLowerCase(Locale.US), ((DnsCNameRecord) r).hostname().toLowerCase(Locale.US));
         }
 
         return cnames != null? cnames : Collections.<String, String>emptyMap();
