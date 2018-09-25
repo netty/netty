@@ -166,6 +166,7 @@ public class DnsNameResolver extends InetNameResolver {
      */
     private final DnsCache resolveCache;
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
+    private final CnameCache cnameCache;
 
     private final FastThreadLocal<DnsServerAddressStream> nameServerAddrStream =
             new FastThreadLocal<DnsServerAddressStream>() {
@@ -217,9 +218,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @param ndots the ndots value
      * @param decodeIdn {@code true} if domain / host names should be decoded to unicode when received.
      *                        See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
-     * @deprecated Use {@link DnsNameResolver(EventLoop, ChannelFactory, DnsCache, AuthoritativeDnsServerCache,
-     * DnsQueryLifecycleObserverFactory, long, ResolvedAddressTypes, boolean, int, boolean, int, boolean,
-     * HostsFileEntriesResolver, DnsServerAddressStreamProvider, String[], int, boolean)}
+     * @deprecated Use {@link DnsNameResolverBuilder}.
      */
     @Deprecated
     public DnsNameResolver(
@@ -271,11 +270,38 @@ public class DnsNameResolver extends InetNameResolver {
      * @param ndots the ndots value
      * @param decodeIdn {@code true} if domain / host names should be decoded to unicode when received.
      *                        See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
+     * @deprecated Use {@link DnsNameResolverBuilder}.
      */
+    @Deprecated
     public DnsNameResolver(
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
             final DnsCache resolveCache,
+            final AuthoritativeDnsServerCache authoritativeDnsServerCache,
+            DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
+            long queryTimeoutMillis,
+            ResolvedAddressTypes resolvedAddressTypes,
+            boolean recursionDesired,
+            int maxQueriesPerResolve,
+            boolean traceEnabled,
+            int maxPayloadSize,
+            boolean optResourceEnabled,
+            HostsFileEntriesResolver hostsFileEntriesResolver,
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+            String[] searchDomains,
+            int ndots,
+            boolean decodeIdn) {
+        this(eventLoop, channelFactory, resolveCache, NoopCnameCache.INSTANCE, authoritativeDnsServerCache,
+             dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
+             maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
+             dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn);
+    }
+
+    DnsNameResolver(
+            EventLoop eventLoop,
+            ChannelFactory<? extends DatagramChannel> channelFactory,
+            final DnsCache resolveCache,
+            final CnameCache cnameCache,
             final AuthoritativeDnsServerCache authoritativeDnsServerCache,
             DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
             long queryTimeoutMillis,
@@ -301,6 +327,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.dnsServerAddressStreamProvider =
                 checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
         this.resolveCache = checkNotNull(resolveCache, "resolveCache");
+        this.cnameCache = checkNotNull(cnameCache, "cnameCache");
         this.dnsQueryLifecycleObserverFactory = traceEnabled ?
                 dnsQueryLifecycleObserverFactory instanceof NoopDnsQueryLifecycleObserverFactory ?
                         new TraceDnsQueryLifeCycleObserverFactory() :
@@ -374,6 +401,7 @@ public class DnsNameResolver extends InetNameResolver {
             @Override
             public void operationComplete(ChannelFuture future) {
                 resolveCache.clear();
+                cnameCache.clear();
                 authoritativeDnsServerCache.clear();
             }
         });
@@ -423,6 +451,13 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public DnsCache resolveCache() {
         return resolveCache;
+    }
+
+    /**
+     * Returns the cname cache.
+     */
+    public CnameCache cnameCache() {
+        return cnameCache;
     }
 
     /**
