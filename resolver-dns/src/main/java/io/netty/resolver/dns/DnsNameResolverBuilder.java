@@ -53,6 +53,7 @@ public final class DnsNameResolverBuilder {
     private boolean optResourceEnabled = true;
     private HostsFileEntriesResolver hostsFileEntriesResolver = HostsFileEntriesResolver.DEFAULT;
     private DnsServerAddressStreamProvider dnsServerAddressStreamProvider = platformDefault();
+    private RedirectDnsServerAddressStreamProvider redirectDnsServerAddressStreamProvider;
     private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory =
             NoopDnsQueryLifecycleObserverFactory.INSTANCE;
     private String[] searchDomains;
@@ -325,6 +326,18 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
+     * Set the {@link RedirectDnsServerAddressStreamProvider} which is used to determine which DNS server is used for
+     * a hostname when follow redirects.
+     * @return {@code this}.
+     */
+    public DnsNameResolverBuilder redirectNameServerProvider(
+            RedirectDnsServerAddressStreamProvider redirectDnsServerAddressStreamProvider) {
+        this.redirectDnsServerAddressStreamProvider =
+                checkNotNull(redirectDnsServerAddressStreamProvider, "redirectDnsServerAddressStreamProvider");
+        return this;
+    }
+
+    /**
      * Set the list of search domains of the resolver.
      *
      * @param searchDomains the search domains
@@ -376,6 +389,11 @@ public final class DnsNameResolverBuilder {
                 new NameServerComparator(DnsNameResolver.preferredAddressType(resolvedAddressTypes).addressType()));
     }
 
+    private RedirectDnsServerAddressStreamProvider newRedirectDnsServerAddressStreamProvider() {
+        return new DefaultRedirectDnsServerAddressStreamProvider(
+                new NameServerComparator(DnsNameResolver.preferredAddressType(resolvedAddressTypes).addressType()));
+    }
+
     /**
      * Set if domain / host names should be decoded to unicode when received.
      * See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
@@ -409,6 +427,9 @@ public final class DnsNameResolverBuilder {
         DnsCache resolveCache = this.resolveCache != null ? this.resolveCache : newCache();
         AuthoritativeDnsServerCache authoritativeDnsServerCache = this.authoritativeDnsServerCache != null ?
                 this.authoritativeDnsServerCache : newAuthoritativeDnsServerCache();
+        RedirectDnsServerAddressStreamProvider redirectDnsServerAddressStreamProvider =
+                this.redirectDnsServerAddressStreamProvider != null ?
+                this.redirectDnsServerAddressStreamProvider : newRedirectDnsServerAddressStreamProvider();
         return new DnsNameResolver(
                 eventLoop,
                 channelFactory,
@@ -424,6 +445,7 @@ public final class DnsNameResolverBuilder {
                 optResourceEnabled,
                 hostsFileEntriesResolver,
                 dnsServerAddressStreamProvider,
+                redirectDnsServerAddressStreamProvider,
                 searchDomains,
                 ndots,
                 decodeIdn);
@@ -476,6 +498,9 @@ public final class DnsNameResolverBuilder {
 
         if (dnsServerAddressStreamProvider != null) {
             copiedBuilder.nameServerProvider(dnsServerAddressStreamProvider);
+        }
+        if (redirectDnsServerAddressStreamProvider != null) {
+            copiedBuilder.redirectNameServerProvider(redirectDnsServerAddressStreamProvider);
         }
 
         if (searchDomains != null) {

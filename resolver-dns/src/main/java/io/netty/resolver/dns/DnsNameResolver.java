@@ -67,7 +67,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -155,7 +154,8 @@ public class DnsNameResolver extends InetNameResolver {
     final Channel ch;
 
     // Comparator that ensures we will try first to use the nameservers that use our preferred address type.
-    private final Comparator<InetSocketAddress> nameServerComparator;
+    private final RedirectDnsServerAddressStreamProvider redirectStreamProvider;
+
     /**
      * Manages the {@link DnsQueryContext}s in progress and their query IDs.
      */
@@ -217,9 +217,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @param ndots the ndots value
      * @param decodeIdn {@code true} if domain / host names should be decoded to unicode when received.
      *                        See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
-     * @deprecated Use {@link DnsNameResolver(EventLoop, ChannelFactory, DnsCache, AuthoritativeDnsServerCache,
-     * DnsQueryLifecycleObserverFactory, long, ResolvedAddressTypes, boolean, int, boolean, int, boolean,
-     * HostsFileEntriesResolver, DnsServerAddressStreamProvider, String[], int, boolean)}
+     * @deprecated Use {@link DnsNameResolverBuilder}.
      */
     @Deprecated
     public DnsNameResolver(
@@ -271,7 +269,9 @@ public class DnsNameResolver extends InetNameResolver {
      * @param ndots the ndots value
      * @param decodeIdn {@code true} if domain / host names should be decoded to unicode when received.
      *                        See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
+     * @deprecated Use {@link DnsNameResolverBuilder}.
      */
+    @Deprecated
     public DnsNameResolver(
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
@@ -287,6 +287,33 @@ public class DnsNameResolver extends InetNameResolver {
             boolean optResourceEnabled,
             HostsFileEntriesResolver hostsFileEntriesResolver,
             DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+            String[] searchDomains,
+            int ndots,
+            boolean decodeIdn) {
+        this(eventLoop, channelFactory, resolveCache, authoritativeDnsServerCache, dnsQueryLifecycleObserverFactory,
+             queryTimeoutMillis, resolvedAddressTypes, recursionDesired, maxQueriesPerResolve, traceEnabled,
+             maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver, dnsServerAddressStreamProvider,
+             new DefaultRedirectDnsServerAddressStreamProvider(
+                     new NameServerComparator(preferredAddressType(resolvedAddressTypes).addressType())),
+             searchDomains, ndots, decodeIdn);
+    }
+
+    DnsNameResolver(
+            EventLoop eventLoop,
+            ChannelFactory<? extends DatagramChannel> channelFactory,
+            final DnsCache resolveCache,
+            final AuthoritativeDnsServerCache authoritativeDnsServerCache,
+            DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
+            long queryTimeoutMillis,
+            ResolvedAddressTypes resolvedAddressTypes,
+            boolean recursionDesired,
+            int maxQueriesPerResolve,
+            boolean traceEnabled,
+            int maxPayloadSize,
+            boolean optResourceEnabled,
+            HostsFileEntriesResolver hostsFileEntriesResolver,
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+            RedirectDnsServerAddressStreamProvider redirectStreamProvider,
             String[] searchDomains,
             int ndots,
             boolean decodeIdn) {
@@ -312,36 +339,36 @@ public class DnsNameResolver extends InetNameResolver {
         this.decodeIdn = decodeIdn;
 
         switch (this.resolvedAddressTypes) {
-            case IPV4_ONLY:
-                supportsAAAARecords = false;
-                supportsARecords = true;
-                resolveRecordTypes = IPV4_ONLY_RESOLVED_RECORD_TYPES;
-                resolvedInternetProtocolFamilies = IPV4_ONLY_RESOLVED_PROTOCOL_FAMILIES;
-                break;
-            case IPV4_PREFERRED:
-                supportsAAAARecords = true;
-                supportsARecords = true;
-                resolveRecordTypes = IPV4_PREFERRED_RESOLVED_RECORD_TYPES;
-                resolvedInternetProtocolFamilies = IPV4_PREFERRED_RESOLVED_PROTOCOL_FAMILIES;
-                break;
-            case IPV6_ONLY:
-                supportsAAAARecords = true;
-                supportsARecords = false;
-                resolveRecordTypes = IPV6_ONLY_RESOLVED_RECORD_TYPES;
-                resolvedInternetProtocolFamilies = IPV6_ONLY_RESOLVED_PROTOCOL_FAMILIES;
-                break;
-            case IPV6_PREFERRED:
-                supportsAAAARecords = true;
-                supportsARecords = true;
-                resolveRecordTypes = IPV6_PREFERRED_RESOLVED_RECORD_TYPES;
-                resolvedInternetProtocolFamilies = IPV6_PREFERRED_RESOLVED_PROTOCOL_FAMILIES;
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
+        case IPV4_ONLY:
+            supportsAAAARecords = false;
+            supportsARecords = true;
+            resolveRecordTypes = IPV4_ONLY_RESOLVED_RECORD_TYPES;
+            resolvedInternetProtocolFamilies = IPV4_ONLY_RESOLVED_PROTOCOL_FAMILIES;
+            break;
+        case IPV4_PREFERRED:
+            supportsAAAARecords = true;
+            supportsARecords = true;
+            resolveRecordTypes = IPV4_PREFERRED_RESOLVED_RECORD_TYPES;
+            resolvedInternetProtocolFamilies = IPV4_PREFERRED_RESOLVED_PROTOCOL_FAMILIES;
+            break;
+        case IPV6_ONLY:
+            supportsAAAARecords = true;
+            supportsARecords = false;
+            resolveRecordTypes = IPV6_ONLY_RESOLVED_RECORD_TYPES;
+            resolvedInternetProtocolFamilies = IPV6_ONLY_RESOLVED_PROTOCOL_FAMILIES;
+            break;
+        case IPV6_PREFERRED:
+            supportsAAAARecords = true;
+            supportsARecords = true;
+            resolveRecordTypes = IPV6_PREFERRED_RESOLVED_RECORD_TYPES;
+            resolvedInternetProtocolFamilies = IPV6_PREFERRED_RESOLVED_PROTOCOL_FAMILIES;
+            break;
+        default:
+            throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
         }
         preferredAddressType = preferredAddressType(resolvedAddressTypes);
         this.authoritativeDnsServerCache = checkNotNull(authoritativeDnsServerCache, "authoritativeDnsServerCache");
-        nameServerComparator = new NameServerComparator(preferredAddressType.addressType());
+        this.redirectStreamProvider = redirectStreamProvider;
 
         Bootstrap b = new Bootstrap();
         b.group(executor());
@@ -380,6 +407,9 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     static InternetProtocolFamily preferredAddressType(ResolvedAddressTypes resolvedAddressTypes) {
+        if (resolvedAddressTypes == null) {
+            resolvedAddressTypes = DEFAULT_RESOLVE_ADDRESS_TYPES;
+        }
         switch (resolvedAddressTypes) {
         case IPV4_ONLY:
         case IPV4_PREFERRED:
@@ -412,10 +442,8 @@ public class DnsNameResolver extends InetNameResolver {
      * @return A {@link DnsServerAddressStream} which will be used to follow the DNS redirect or {@code null} if
      *         none should be followed.
      */
-    protected DnsServerAddressStream newRedirectDnsServerStream(
-            @SuppressWarnings("unused") String hostname, List<InetSocketAddress> nameservers) {
-        Collections.sort(nameservers, nameServerComparator);
-        return new SequentialDnsServerAddressStream(nameservers, 0);
+    protected DnsServerAddressStream newRedirectDnsServerStream(String hostname, List<InetSocketAddress> nameservers) {
+        return redirectStreamProvider.nameServerAddressStream(hostname, nameservers);
     }
 
     /**
