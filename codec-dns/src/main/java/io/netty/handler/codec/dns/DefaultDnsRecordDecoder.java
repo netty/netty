@@ -154,6 +154,13 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
                     name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
         }
 
+        if (type == DnsRecordType.TXT) {
+            String text = in.retainedDuplicate().setIndex(offset, offset + length).toString(CharsetUtil.US_ASCII);
+
+            return new DefaultDnsTxtRecord(
+                    name, dnsClass, timeToLive, text);
+        }
+
         return new DefaultDnsRawRecord(
                 name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
     }

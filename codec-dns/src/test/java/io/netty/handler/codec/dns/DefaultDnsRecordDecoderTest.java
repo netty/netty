@@ -258,6 +258,72 @@ public class DefaultDnsRecordDecoderTest {
         }
     }
 
+    static String[][] TXT_TEST_CASES = new String[][]{
+        {
+            "printer=lpr5", "printer", "lpr5"
+        },
+        {
+            "favorite drink=orange juice", "favorite drink", "orange juice"
+        },
+        {
+            "equation=a=4", "equation", "a=4"
+        },
+        {
+            "a`=a=true", "a=a", "true"
+        },
+        {
+            "a\\`=a=false", "a\\=a", "false"
+        },
+        {
+            "`==\\=", "=", "\\="
+        },
+        {
+            "string=\"Cat\"", "string", "\"Cat\""
+        },
+        {
+            "string2=``abc``", "string2", "`abc`"
+        },
+        {
+            "novalue=", "novalue", ""
+        },
+        {
+            " a b=c d", "a b", "c d"
+        },
+        {
+            "abc` =123\t", "abc ", "123\t"
+        }
+    };
+
+    @Test
+    public void testDecodeDnsTxtRecord() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+
+        for (int i = 0; i < TXT_TEST_CASES.length; i++) {
+            String[] testCase = TXT_TEST_CASES[i];
+            String text = testCase[0];
+            String key = testCase[1];
+            String value = testCase[2];
+
+            ByteBuf buffer = Unpooled.buffer().writeBytes(text.getBytes());
+            int readerIndex = buffer.readerIndex();
+            int writerIndex = buffer.writerIndex();
+            try {
+                DnsTxtRecord record = (DnsTxtRecord) decoder.decodeRecord(
+                        "netty.io", DnsRecordType.TXT, DnsRecord.CLASS_IN, 60, buffer, 0, buffer.readableBytes());
+                assertEquals("netty.io.", record.name());
+                assertEquals(DnsRecord.CLASS_IN, record.dnsClass());
+                assertEquals(60, record.timeToLive());
+                assertEquals(DnsRecordType.TXT, record.type());
+                assertEquals(readerIndex, buffer.readerIndex());
+                assertEquals(writerIndex, buffer.writerIndex());
+                assertEquals(key, record.key());
+                assertEquals(value, record.value());
+            } finally {
+                buffer.release();
+            }
+        }
+    }
+
     @Test
     public void testDecodeMessageCompression() throws Exception {
         // See https://www.ietf.org/rfc/rfc1035 [4.1.4. Message compression]
