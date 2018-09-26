@@ -68,6 +68,26 @@
   </developers>
 
   <profiles>
+    <!-- JDK12 -->
+    <profile>
+      <id>java12</id>
+      <activation>
+        <jdk>12</jdk>
+      </activation>
+      <properties>
+        <!-- Not use alpn agent as Java11 supports alpn out of the box -->
+        <argLine.alpnAgent />
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
+        <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
+        <!-- 1.4.x does not work in Java10+ -->
+        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <!-- This is the minimum supported by Java12 -->
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+      </properties>
+    </profile>
+
     <!-- JDK11 -->
     <profile>
       <id>java11</id>
