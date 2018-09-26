@@ -125,7 +125,9 @@ public class DnsNameResolver extends InetNameResolver {
     static {
         String[] searchDomains;
         try {
-            List<String> list = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains();
+            List<String> list = PlatformDependent.isWindows()
+                    ? getSearchDomainsHack()
+                    : UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains();
             searchDomains = list.toArray(new String[0]);
         } catch (Exception ignore) {
             // Failed to get the system name search domain list.
@@ -140,6 +142,18 @@ public class DnsNameResolver extends InetNameResolver {
             ndots = UnixResolverDnsServerAddressStreamProvider.DEFAULT_NDOTS;
         }
         DEFAULT_NDOTS = ndots;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> getSearchDomainsHack() throws Exception {
+        // This code on Java 9+ yields a warning about illegal reflective access that will be denied in
+        // a future release. There doesn't seem to be a better way to get search domains for Windows yet.
+        Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
+        Method open = configClass.getMethod("open");
+        Method nameservers = configClass.getMethod("searchlist");
+        Object instance = open.invoke(null);
+
+        return (List<String>) nameservers.invoke(instance);
     }
 
     private static final DatagramDnsResponseDecoder DECODER = new DatagramDnsResponseDecoder();
