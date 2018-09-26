@@ -27,7 +27,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +53,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
     private static final String SORTLIST_ROW_LABEL = "sortlist";
     private static final String OPTIONS_ROW_LABEL = "options";
     private static final String DOMAIN_ROW_LABEL = "domain";
+    private static final String SEARCH_ROW_LABEL = "search";
     private static final String PORT_ROW_LABEL = "port";
     private static final String NDOTS_LABEL = "ndots:";
     static final int DEFAULT_NDOTS = 1;
@@ -283,5 +286,58 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
             }
         }
         return DEFAULT_NDOTS;
+    }
+
+    /**
+     * Parse a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and return the
+     * list of search domains found in it or an empty list if not found.
+     * @return List of search domains.
+     * @throws IOException If a failure occurs parsing the file.
+     */
+    static List<String> parseEtcResolverSearchDomains() throws IOException {
+        return parseEtcResolverSearchDomains(new File(ETC_RESOLV_CONF_FILE));
+    }
+
+    /**
+     * Parse a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and return the
+     * list of search domains found in it or an empty list if not found.
+     * @param etcResolvConf a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a>.
+     * @return List of search domains.
+     * @throws IOException If a failure occurs parsing the file.
+     */
+    static List<String> parseEtcResolverSearchDomains(File etcResolvConf) throws IOException {
+        String localDomain = null;
+        List<String> searchDomains = new ArrayList<String>();
+
+        FileReader fr = new FileReader(etcResolvConf);
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(fr);
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (localDomain == null && line.startsWith(DOMAIN_ROW_LABEL)) {
+                    int i = indexOfNonWhiteSpace(line, DOMAIN_ROW_LABEL.length());
+                    if (i >= 0) {
+                        localDomain = line.substring(i);
+                    }
+                } else if (line.startsWith(SEARCH_ROW_LABEL)) {
+                    int i = indexOfNonWhiteSpace(line, SEARCH_ROW_LABEL.length());
+                    if (i >= 0) {
+                        searchDomains.add(line.substring(i));
+                    }
+                }
+            }
+        } finally {
+            if (br == null) {
+                fr.close();
+            } else {
+                br.close();
+            }
+        }
+
+        // return what was on the 'domain' line only if there were no 'search' lines
+        return localDomain != null && searchDomains.isEmpty()
+                ? Collections.singletonList(localDomain)
+                : searchDomains;
     }
 }
