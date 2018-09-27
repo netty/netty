@@ -416,8 +416,8 @@ public class DnsNameResolver extends InetNameResolver {
             @SuppressWarnings("unused") String hostname, List<InetSocketAddress> nameservers) {
         DnsServerAddressStream cached = authoritativeDnsServerCache().get(hostname);
         if (cached == null || cached.size() == 0) {
-            // If there is not cache hit (which may be the case for example when a NoopAuthoritativeDnsServerCache
-            // is used we will just directly use the provided nameservers.
+            // If there is no cache hit (which may be the case for example when a NoopAuthoritativeDnsServerCache
+            // is used), we will just directly use the provided nameservers.
             Collections.sort(nameservers, nameServerComparator);
             return new SequentialDnsServerAddressStream(nameservers, 0);
         }
