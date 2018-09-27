@@ -82,11 +82,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.handler.codec.dns.DnsRecordType.A;
@@ -2284,6 +2286,121 @@ public class DnsNameResolverTest {
             fail();
         } catch (Exception e) {
             assertSame(exception, e);
+        }
+    }
+
+    @Test
+    public void testCNameCached() throws Exception {
+        final Map<String, String> cache = new ConcurrentHashMap<String, String>();
+        final AtomicInteger cnameQueries = new AtomicInteger();
+        final AtomicInteger aQueries = new AtomicInteger();
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if ("cname.netty.io".equals(question.getDomainName())) {
+                    aQueries.incrementAndGet();
+
+                    return Collections.<ResourceRecord>singleton(new TestDnsServer.TestResourceRecord(
+                            question.getDomainName(), RecordType.A,
+                            Collections.<String, Object>singletonMap(
+                                    DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.99")));
+                }
+                if ("x.netty.io".equals(question.getDomainName())) {
+                    cnameQueries.incrementAndGet();
+
+                    return Collections.<ResourceRecord>singleton(new TestDnsServer.TestResourceRecord(
+                            question.getDomainName(), RecordType.CNAME,
+                            Collections.<String, Object>singletonMap(
+                                    DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
+                }
+                if ("y.netty.io".equals(question.getDomainName())) {
+                    cnameQueries.incrementAndGet();
+
+                    return Collections.<ResourceRecord>singleton(new TestDnsServer.TestResourceRecord(
+                            question.getDomainName(), RecordType.CNAME,
+                            Collections.<String, Object>singletonMap(
+                                    DnsAttribute.DOMAIN_NAME.toLowerCase(), "x.netty.io")));
+                }
+                return Collections.emptySet();
+            }
+        });
+        dnsServer2.start();
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .recursionDesired(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                    .resolveCache(NoopDnsCache.INSTANCE)
+                    .cnameCache(new DnsCnameCache() {
+                        @Override
+                        public String get(String hostname) {
+                            assertTrue(hostname, hostname.endsWith("."));
+                            return cache.get(hostname);
+                        }
+
+                        @Override
+                        public void cache(String hostname, String cname, long originalTtl, EventLoop loop) {
+                            assertTrue(hostname, hostname.endsWith("."));
+                            cache.put(hostname, cname);
+                        }
+
+                        @Override
+                        public void clear() {
+                            // NOOP
+                        }
+
+                        @Override
+                        public boolean clear(String hostname) {
+                            return false;
+                        }
+                    });
+            resolver = builder.build();
+            List<InetAddress> resolvedAddresses =
+                    resolver.resolveAll("x.netty.io").syncUninterruptibly().getNow();
+            assertEquals(1, resolvedAddresses.size());
+            assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 99 })));
+
+            assertEquals("cname.netty.io.", cache.get("x.netty.io."));
+            assertEquals(1, cnameQueries.get());
+            assertEquals(1, aQueries.get());
+
+            resolvedAddresses =
+                    resolver.resolveAll("x.netty.io").syncUninterruptibly().getNow();
+            assertEquals(1, resolvedAddresses.size());
+            assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 99 })));
+
+            // Should not have queried for the CNAME again.
+            assertEquals(1, cnameQueries.get());
+            assertEquals(2, aQueries.get());
+
+            resolvedAddresses =
+                    resolver.resolveAll("y.netty.io").syncUninterruptibly().getNow();
+            assertEquals(1, resolvedAddresses.size());
+            assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 99 })));
+
+            assertEquals("x.netty.io.", cache.get("y.netty.io."));
+
+            // Will only query for one CNAME
+            assertEquals(2, cnameQueries.get());
+            assertEquals(3, aQueries.get());
+
+            resolvedAddresses =
+                    resolver.resolveAll("y.netty.io").syncUninterruptibly().getNow();
+            assertEquals(1, resolvedAddresses.size());
+            assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 99 })));
+
+            // Should not have queried for the CNAME again.
+            assertEquals(2, cnameQueries.get());
+            assertEquals(4, aQueries.get());
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
         }
     }
 }
