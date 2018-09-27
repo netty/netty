@@ -2335,7 +2335,7 @@ public class DnsNameResolverTest {
                     .maxQueriesPerResolve(16)
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
                     .resolveCache(NoopDnsCache.INSTANCE)
-                    .cnameCache(new CnameCache() {
+                    .cnameCache(new DnsCnameCache() {
                         @Override
                         public String get(String hostname) {
                             assertTrue(hostname, hostname.endsWith("."));

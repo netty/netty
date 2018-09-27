@@ -132,9 +132,9 @@ abstract class DnsResolveContext<T> {
     }
 
     /**
-     * The {@link CnameCache} that is used for resolving.
+     * The {@link DnsCnameCache} that is used for resolving.
      */
-    CnameCache cnameCache() {
+    DnsCnameCache cnameCache() {
         return parent.cnameCache();
     }
 
@@ -719,7 +719,7 @@ abstract class DnsResolveContext<T> {
         }
     }
 
-    private static Map<String, String> buildAliasMap(DnsResponse response, CnameCache cache, EventLoop loop) {
+    private static Map<String, String> buildAliasMap(DnsResponse response, DnsCnameCache cache, EventLoop loop) {
         final int answerCount = response.count(DnsSection.ANSWER);
         Map<String, String> cnames = null;
         for (int i = 0; i < answerCount; i ++) {

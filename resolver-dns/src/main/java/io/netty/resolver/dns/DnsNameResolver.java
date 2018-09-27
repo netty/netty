@@ -166,7 +166,7 @@ public class DnsNameResolver extends InetNameResolver {
      */
     private final DnsCache resolveCache;
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
-    private final CnameCache cnameCache;
+    private final DnsCnameCache cnameCache;
 
     private final FastThreadLocal<DnsServerAddressStream> nameServerAddrStream =
             new FastThreadLocal<DnsServerAddressStream>() {
@@ -291,7 +291,7 @@ public class DnsNameResolver extends InetNameResolver {
             String[] searchDomains,
             int ndots,
             boolean decodeIdn) {
-        this(eventLoop, channelFactory, resolveCache, NoopCnameCache.INSTANCE, authoritativeDnsServerCache,
+        this(eventLoop, channelFactory, resolveCache, NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache,
              dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
              maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
              dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn);
@@ -301,7 +301,7 @@ public class DnsNameResolver extends InetNameResolver {
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
             final DnsCache resolveCache,
-            final CnameCache cnameCache,
+            final DnsCnameCache cnameCache,
             final AuthoritativeDnsServerCache authoritativeDnsServerCache,
             DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
             long queryTimeoutMillis,
@@ -454,9 +454,9 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     /**
-     * Returns the cname cache.
+     * Returns the {@link DnsCnameCache}.
      */
-    public CnameCache cnameCache() {
+    DnsCnameCache cnameCache() {
         return cnameCache;
     }
 

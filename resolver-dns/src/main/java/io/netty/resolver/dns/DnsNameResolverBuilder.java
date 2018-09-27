@@ -40,7 +40,7 @@ public final class DnsNameResolverBuilder {
     private EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private DnsCache resolveCache;
-    private CnameCache cnameCache;
+    private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private Integer minTtl;
     private Integer maxTtl;
@@ -130,7 +130,7 @@ public final class DnsNameResolverBuilder {
      * @param cnameCache the cache used to cache {@code CNAME} mappings for a domain.
      * @return {@code this}
      */
-    public DnsNameResolverBuilder cnameCache(CnameCache cnameCache) {
+    public DnsNameResolverBuilder cnameCache(DnsCnameCache cnameCache) {
         this.cnameCache  = cnameCache;
         return this;
     }
@@ -388,8 +388,8 @@ public final class DnsNameResolverBuilder {
                 new NameServerComparator(DnsNameResolver.preferredAddressType(resolvedAddressTypes).addressType()));
     }
 
-    private CnameCache newCnameCache() {
-        return new DefaultCnameCache(
+    private DnsCnameCache newCnameCache() {
+        return new DefaultDnsCnameCache(
                 intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE));
     }
 
@@ -424,7 +424,7 @@ public final class DnsNameResolverBuilder {
         }
 
         DnsCache resolveCache = this.resolveCache != null ? this.resolveCache : newCache();
-        CnameCache cnameCache = this.cnameCache != null ? this.cnameCache : newCnameCache();
+        DnsCnameCache cnameCache = this.cnameCache != null ? this.cnameCache : newCnameCache();
         AuthoritativeDnsServerCache authoritativeDnsServerCache = this.authoritativeDnsServerCache != null ?
                 this.authoritativeDnsServerCache : newAuthoritativeDnsServerCache();
         return new DnsNameResolver(

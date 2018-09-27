@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
-public class DefaultCnameCacheTest {
+public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testExpire() throws Throwable {
@@ -33,7 +33,7 @@ public class DefaultCnameCacheTest {
 
         try {
             EventLoop loop = group.next();
-            final DefaultCnameCache cache = new DefaultCnameCache();
+            final DefaultDnsCnameCache cache = new DefaultDnsCnameCache();
             cache.cache("netty.io", "mapping.netty.io", 1, loop);
 
             Throwable error = loop.schedule(new Callable<Throwable>() {
@@ -67,7 +67,7 @@ public class DefaultCnameCacheTest {
 
         try {
             EventLoop loop = group.next();
-            final DefaultCnameCache cache = new DefaultCnameCache();
+            final DefaultDnsCnameCache cache = new DefaultDnsCnameCache();
             cache.cache("netty.io", "mapping.netty.io", TimeUnit.DAYS.toSeconds(days), loop);
             assertEquals("mapping.netty.io", cache.get("netty.io"));
         } finally {
@@ -81,7 +81,7 @@ public class DefaultCnameCacheTest {
 
         try {
             EventLoop loop = group.next();
-            final DefaultCnameCache cache = new DefaultCnameCache();
+            final DefaultDnsCnameCache cache = new DefaultDnsCnameCache();
             cache.cache("netty.io", "mapping1.netty.io", 10, loop);
             cache.cache("netty.io", "mapping2.netty.io", 10000, loop);
 
@@ -97,7 +97,7 @@ public class DefaultCnameCacheTest {
 
         try {
             EventLoop loop = group.next();
-            final DefaultCnameCache cache = new DefaultCnameCache();
+            final DefaultDnsCnameCache cache = new DefaultDnsCnameCache();
             cache.cache("netty.io", "mapping.netty.io", 10, loop);
             cache.cache("netty.io", "mapping.netty.io", 10000, loop);
 
@@ -113,7 +113,7 @@ public class DefaultCnameCacheTest {
 
         try {
             EventLoop loop = group.next();
-            final DefaultCnameCache cache = new DefaultCnameCache();
+            final DefaultDnsCnameCache cache = new DefaultDnsCnameCache();
             cache.cache("x.netty.io", "mapping.netty.io", 100000, loop);
             cache.cache("y.netty.io", "mapping.netty.io", 100000, loop);
 

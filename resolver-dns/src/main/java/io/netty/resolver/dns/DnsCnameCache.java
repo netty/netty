@@ -22,7 +22,7 @@ import io.netty.util.internal.UnstableApi;
  * A cache for {@code CNAME}s.
  */
 @UnstableApi
-public interface CnameCache {
+public interface DnsCnameCache {
 
     /**
      * Returns the cached cname for the given hostname.

@@ -19,11 +19,11 @@ import io.netty.channel.EventLoop;
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
-public final class NoopCnameCache implements CnameCache {
+public final class NoopDnsCnameCache implements DnsCnameCache {
 
-    public static final NoopCnameCache INSTANCE = new NoopCnameCache();
+    public static final NoopDnsCnameCache INSTANCE = new NoopDnsCnameCache();
 
-    private NoopCnameCache() { }
+    private NoopDnsCnameCache() { }
 
     @Override
     public String get(String hostname) {

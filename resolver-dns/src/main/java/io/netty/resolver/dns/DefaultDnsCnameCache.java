@@ -24,10 +24,10 @@ import java.util.List;
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
- * Default implementation of a {@link CnameCache}.
+ * Default implementation of a {@link DnsCnameCache}.
  */
 @UnstableApi
-public final class DefaultCnameCache implements CnameCache {
+public final class DefaultDnsCnameCache implements DnsCnameCache {
     private final int minTtl;
     private final int maxTtl;
 
@@ -47,7 +47,7 @@ public final class DefaultCnameCache implements CnameCache {
     /**
      * Create a cache that respects the TTL returned by the DNS server.
      */
-    public DefaultCnameCache() {
+    public DefaultDnsCnameCache() {
         this(0, Cache.MAX_SUPPORTED_TTL_SECS);
     }
 
@@ -57,7 +57,7 @@ public final class DefaultCnameCache implements CnameCache {
      * @param minTtl the minimum TTL
      * @param maxTtl the maximum TTL
      */
-    public DefaultCnameCache(int minTtl, int maxTtl) {
+    public DefaultDnsCnameCache(int minTtl, int maxTtl) {
         this.minTtl = Math.min(Cache.MAX_SUPPORTED_TTL_SECS, checkPositiveOrZero(minTtl, "minTtl"));
         this.maxTtl = Math.min(Cache.MAX_SUPPORTED_TTL_SECS, checkPositive(maxTtl, "maxTtl"));
         if (minTtl > maxTtl) {
