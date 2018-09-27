@@ -30,6 +30,7 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ThrowableUtil;
@@ -76,20 +77,25 @@ final class SniClientJava8TestUtil {
     static void testSniClient(SslProvider sslClientProvider, SslProvider sslServerProvider, final boolean match)
             throws Exception {
         final String sniHost = "sni.netty.io";
+        SelfSignedCertificate cert = new SelfSignedCertificate();
         LocalAddress address = new LocalAddress("test");
         EventLoopGroup group = new DefaultEventLoopGroup(1);
+        SslContext sslServerContext = null;
+        SslContext sslClientContext = null;
+
         Channel sc = null;
         Channel cc = null;
         try {
-            SelfSignedCertificate cert = new SelfSignedCertificate();
-            final SslContext sslServerContext = SslContextBuilder.forServer(cert.key(), cert.cert())
+            sslServerContext = SslContextBuilder.forServer(cert.key(), cert.cert())
                     .sslProvider(sslServerProvider).build();
             final Promise<Void> promise = group.next().newPromise();
             ServerBootstrap sb = new ServerBootstrap();
+
+            final SslContext finalContext = sslServerContext;
             sc = sb.group(group).channel(LocalServerChannel.class).childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    SslHandler handler = sslServerContext.newHandler(ch.alloc());
+                    SslHandler handler = finalContext.newHandler(ch.alloc());
                     SSLParameters parameters = handler.engine().getSSLParameters();
                     SNIMatcher matcher = new SNIMatcher(0) {
                         @Override
@@ -132,11 +138,11 @@ final class SniClientJava8TestUtil {
                 }
             }).bind(address).syncUninterruptibly().channel();
 
-            SslContext sslContext = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
+            sslClientContext = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .sslProvider(sslClientProvider).build();
 
             SslHandler sslHandler = new SslHandler(
-                    sslContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1));
+                    sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1));
             Bootstrap cb = new Bootstrap();
             cc = cb.group(group).channel(LocalChannel.class).handler(sslHandler)
                     .connect(address).syncUninterruptibly().channel();
@@ -150,6 +156,12 @@ final class SniClientJava8TestUtil {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
+
+            ReferenceCountUtil.release(sslServerContext);
+            ReferenceCountUtil.release(sslClientContext);
+
+            cert.delete();
+
             group.shutdownGracefully();
         }
     }
