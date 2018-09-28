@@ -208,6 +208,10 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                 switch (strategy) {
                     case SelectStrategy.CONTINUE:
                         continue;
+
+                    case SelectStrategy.BUSY_WAIT:
+                        // fall-through to SELECT since the busy-wait is not supported with kqueue
+
                     case SelectStrategy.SELECT:
                         strategy = kqueueWait(WAKEN_UP_UPDATER.getAndSet(this, 0) == 1);
 

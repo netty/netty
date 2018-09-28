@@ -257,6 +257,10 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         return Native.epollWait(epollFd, events, timerFd, 0, 0);
     }
 
+    private int epollBusyWait() throws IOException {
+        return Native.epollBusyWait(epollFd, events);
+    }
+
     @Override
     protected void run() {
         for (;;) {
@@ -265,6 +269,11 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 switch (strategy) {
                     case SelectStrategy.CONTINUE:
                         continue;
+
+                    case SelectStrategy.BUSY_WAIT:
+                        strategy = epollBusyWait();
+                        break;
+
                     case SelectStrategy.SELECT:
                         strategy = epollWait(WAKEN_UP_UPDATER.getAndSet(this, 0) == 1);
 
