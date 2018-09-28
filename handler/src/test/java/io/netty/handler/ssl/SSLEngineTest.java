@@ -46,6 +46,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -2421,6 +2422,12 @@ public abstract class SSLEngineTest {
 
     @Test
     public void testUsingX509TrustManagerVerifiesHostname() throws Exception {
+        SslProvider clientProvider = sslClientProvider();
+        if (clientProvider == SslProvider.OPENSSL || clientProvider == SslProvider.OPENSSL_REFCNT) {
+            // Need to check if we support hostname validation in the current used OpenSSL version before running
+            // the test.
+            Assume.assumeTrue(OpenSsl.supportsHostnameValidation());
+        }
         SelfSignedCertificate cert = new SelfSignedCertificate();
         clientSslCtx = SslContextBuilder
                 .forClient()
