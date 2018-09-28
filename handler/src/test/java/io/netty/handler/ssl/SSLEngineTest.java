@@ -35,6 +35,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -58,7 +59,9 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.Provider;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -71,6 +74,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -78,6 +82,10 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.TrustManagerFactorySpi;
+import javax.net.ssl.X509TrustManager;
 import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2;
@@ -2391,7 +2399,7 @@ public abstract class SSLEngineTest {
             Set<String> supported = new HashSet<String>(Arrays.asList(server.getSupportedProtocols()));
             if (supported.contains(protocol)) {
                 server.setEnabledProtocols(server.getSupportedProtocols());
-                Assert.assertEquals(supported, new HashSet<String>(Arrays.asList(server.getSupportedProtocols())));
+                assertEquals(supported, new HashSet<String>(Arrays.asList(server.getSupportedProtocols())));
 
                 for (String disabled : disabledProtocols) {
                     supported.remove(disabled);
@@ -2401,12 +2409,78 @@ public abstract class SSLEngineTest {
                     return;
                 }
                 server.setEnabledProtocols(supported.toArray(new String[0]));
-                Assert.assertEquals(supported, new HashSet<String>(Arrays.asList(server.getEnabledProtocols())));
+                assertEquals(supported, new HashSet<String>(Arrays.asList(server.getEnabledProtocols())));
                 server.setEnabledProtocols(server.getSupportedProtocols());
             }
         } finally {
             cleanupServerSslEngine(server);
             cleanupClientSslContext(ctx);
+            cert.delete();
+        }
+    }
+
+    @Test
+    public void testUsingX509TrustManagerVerifiesHostname() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .trustManager(new TrustManagerFactory(new TrustManagerFactorySpi() {
+                    @Override
+                    protected void engineInit(KeyStore keyStore) {
+                        // NOOP
+                    }
+                    @Override
+                    protected TrustManager[] engineGetTrustManagers() {
+                        // Provide a custom trust manager, this manager trust all certificates
+                        return new TrustManager[] {
+                                new X509TrustManager() {
+                                    @Override
+                                    public void checkClientTrusted(
+                                            java.security.cert.X509Certificate[] x509Certificates, String s) {
+                                        // NOOP
+                                    }
+
+                                    @Override
+                                    public void checkServerTrusted(
+                                            java.security.cert.X509Certificate[] x509Certificates, String s) {
+                                        // NOOP
+                                    }
+
+                                    @Override
+                                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                                        return EmptyArrays.EMPTY_X509_CERTIFICATES;
+                                    }
+                                }
+                        };
+                    }
+
+                    @Override
+                    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {
+                    }
+                }, null, TrustManagerFactory.getDefaultAlgorithm()) {
+                })
+                .sslProvider(sslClientProvider())
+                .build();
+
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT, "netty.io", 1234));
+        SSLParameters sslParameters = client.getSSLParameters();
+        sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+        client.setSSLParameters(sslParameters);
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        try {
+            handshake(client, server);
+            fail();
+        } catch (SSLException expected) {
+            // expected as the hostname not matches.
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
             cert.delete();
         }
     }
