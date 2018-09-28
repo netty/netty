@@ -622,7 +622,7 @@ public class DnsNameResolverTest {
                     buf.append(' ');
                     buf.append(r.preference());
                     buf.append(' ');
-                    buf.append(r.hostname());
+                    buf.append(r.exchange());
                 }
 
                 logger.info("{} has the following MX records:{}", hostname, buf);
@@ -994,7 +994,7 @@ public class DnsNameResolverTest {
                     buf.append(' ');
                     buf.append(mx.preference());
                     buf.append(' ');
-                    buf.append(mx.hostname());
+                    buf.append(mx.exchange());
 
                     ReferenceCountUtil.release(r);
                 }

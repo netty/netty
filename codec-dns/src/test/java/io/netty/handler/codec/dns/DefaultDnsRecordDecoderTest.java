@@ -154,7 +154,7 @@ public class DefaultDnsRecordDecoderTest {
             assertEquals(readerIndex, buffer.readerIndex());
             assertEquals(writerIndex, buffer.writerIndex());
             assertEquals(0, record.preference());
-            assertEquals("smtp.netty.io.", record.hostname());
+            assertEquals("smtp.netty.io.", record.exchange());
         } finally {
             buffer.release();
         }
@@ -176,7 +176,7 @@ public class DefaultDnsRecordDecoderTest {
             assertEquals(DnsRecordType.NS, record.type());
             assertEquals(readerIndex, buffer.readerIndex());
             assertEquals(writerIndex, buffer.writerIndex());
-            assertEquals("ns.netty.io.", record.hostname());
+            assertEquals("ns.netty.io.", record.domain());
         } finally {
             buffer.release();
         }

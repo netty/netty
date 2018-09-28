@@ -31,8 +31,8 @@ public interface DnsMxRecord extends DnsRecord {
     int preference();
 
     /**
-     * Returns the hostname this MX record resolves to.
+     * Returns the exchange hostname this MX record resolves to.
      */
-    String hostname();
+    String exchange();
 
 }

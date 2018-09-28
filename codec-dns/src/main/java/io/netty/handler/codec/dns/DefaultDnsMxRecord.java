@@ -28,7 +28,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 @UnstableApi
 public class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord {
     private final int preference;
-    private final String hostname;
+    private final String exchange;
 
     /**
      * Creates a new MX record.
@@ -44,19 +44,19 @@ public class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord
      *                     <li>{@link #CLASS_ANY}</li>
      *                 </ul>
      * @param timeToLive the TTL value of the record
-     * @param hostname the canonical or primary name this MX record resolves to.
+     * @param exchange the canonical or primary name this MX record resolves to.
      */
-    public DefaultDnsMxRecord(String name, int dnsClass, long timeToLive, int preference, String hostname) {
+    public DefaultDnsMxRecord(String name, int dnsClass, long timeToLive, int preference, String exchange) {
         super(name, DnsRecordType.MX, dnsClass, timeToLive);
         this.preference = preference;
-        this.hostname = IDN.toASCII(checkNotNull(hostname, "hostname"));
+        this.exchange = IDN.toASCII(checkNotNull(exchange, "exchange"));
     }
 
     @Override
     public int preference() { return preference; }
 
     @Override
-    public String hostname() { return hostname; }
+    public String exchange() { return exchange; }
 
     @Override
     public boolean equals(Object o) {
@@ -64,7 +64,7 @@ public class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord
         if (o == null || getClass() != o.getClass()) { return false; }
         if (!super.equals(o)) { return false; }
         DefaultDnsMxRecord that = (DefaultDnsMxRecord) o;
-        return preference == that.preference && hostname.equals(that.hostname);
+        return preference == that.preference && exchange.equals(that.exchange);
     }
 
     @Override
@@ -72,7 +72,7 @@ public class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord
         int hashCode = super.hashCode();
 
         hashCode = hashCode * 31 + preference;
-        hashCode = hashCode * 31 + hostname.hashCode();
+        hashCode = hashCode * 31 + exchange.hashCode();
 
         return hashCode;
     }
@@ -93,7 +93,7 @@ public class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord
         buf.append(' ')
                 .append(preference)
                 .append(' ')
-                .append(hostname);
+                .append(exchange);
 
         return buf.toString();
     }

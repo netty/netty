@@ -991,7 +991,7 @@ abstract class DnsResolveContext<T> {
             final String domainName;
 
             if (r instanceof DnsNsRecord) {
-                domainName = ((DnsNsRecord) r).hostname();
+                domainName = ((DnsNsRecord) r).domain();
             } else {
                 final ByteBuf recordContent = ((ByteBufHolder) r).content();
                 domainName = decodeDomainName(recordContent);

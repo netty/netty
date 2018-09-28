@@ -41,6 +41,11 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
     static final Pattern RE_TXT_KEY = Pattern.compile("`([`=\\s])");
     static final Pattern RE_TXT_VALUE = Pattern.compile("``");
 
+    static final int IPV4_ADDR_LEN = 4;
+    static final int IPV6_ADDR_LEN = 16;
+    static final int SHORT_LEN = 2;
+    static final int INT_LEN = 4;
+
     /**
      * Creates a new instance.
      */
@@ -101,13 +106,13 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             String name, DnsRecordType type, int dnsClass, long timeToLive,
             ByteBuf in, int offset, int length) throws Exception {
 
-        if (type == DnsRecordType.A) {
+        if (type == DnsRecordType.A && length == IPV4_ADDR_LEN) {
             byte[] buf = new byte[length];
             in.getBytes(offset, buf);
             return new DefaultDnsARecord(
                     name, dnsClass, timeToLive, (Inet4Address) InetAddress.getByAddress(buf));
         }
-        if (type == DnsRecordType.AAAA) {
+        if (type == DnsRecordType.AAAA && length == IPV6_ADDR_LEN) {
             byte[] buf = new byte[length];
             in.getBytes(offset, buf);
             return new DefaultDnsAAAARecord(
@@ -117,9 +122,9 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             return new DefaultDnsCNameRecord(
                     name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
         }
-        if (type == DnsRecordType.MX) {
+        if (type == DnsRecordType.MX && length >= SHORT_LEN) {
             ByteBuf buf = in.retainedDuplicate().setIndex(offset, offset + length);
-            int preference = buf.readShort();
+            int preference = buf.readUnsignedShort();
             String hostname = decodeName0(buf);
             return new DefaultDnsMxRecord(
                     name, dnsClass, timeToLive, preference, hostname);
@@ -128,25 +133,25 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             return new DefaultDnsNsRecord(
                     name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
         }
-        if (type == DnsRecordType.SOA) {
+        if (type == DnsRecordType.SOA && length >= INT_LEN * 5) {
             ByteBuf buf = in.retainedDuplicate().setIndex(offset, offset + length);
             String primaryNameServer = decodeName0(buf);
             String responsibleAuthorityMailbox = decodeName0(buf);
-            int serialNumber = buf.readInt();
-            int refreshInterval = buf.readInt();
-            int retryInterval = buf.readInt();
-            int expireLimit = buf.readInt();
-            int minimumTTL = buf.readInt();
+            int serialNumber = (int) buf.readUnsignedInt();
+            int refreshInterval = (int) buf.readUnsignedInt();
+            int retryInterval = (int) buf.readUnsignedInt();
+            int expireLimit = (int) buf.readUnsignedInt();
+            int minimumTTL = (int) buf.readUnsignedInt();
             return new DefaultDnsSoaRecord(
                     name, dnsClass, timeToLive,
                     primaryNameServer, responsibleAuthorityMailbox,
                     serialNumber, refreshInterval, retryInterval, expireLimit, minimumTTL);
         }
-        if (type == DnsRecordType.SRV) {
+        if (type == DnsRecordType.SRV && length >= SHORT_LEN * 3) {
             ByteBuf buf = in.retainedDuplicate().setIndex(offset, offset + length);
-            int priority = buf.readShort();
-            int weight = buf.readShort();
-            int port = buf.readShort();
+            int priority = buf.readUnsignedShort();
+            int weight = buf.readUnsignedShort();
+            int port = buf.readUnsignedShort();
             String target = decodeName0(buf);
             return new DefaultDnsSrvRecord(
                     name, dnsClass, timeToLive, priority, weight, port, target);

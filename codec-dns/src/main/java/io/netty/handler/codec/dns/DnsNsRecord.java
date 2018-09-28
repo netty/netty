@@ -25,7 +25,7 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public interface DnsNsRecord extends DnsRecord {
     /**
-     * Returns the hostname which should be authoritative for the specified class and domain.
+     * Returns the domain name which should be authoritative for the specified class and domain.
      */
-    String hostname();
+    String domain();
 }

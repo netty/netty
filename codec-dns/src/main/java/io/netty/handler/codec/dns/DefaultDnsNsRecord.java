@@ -20,13 +20,15 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.net.IDN;
+
 /**
  * Default {@link DnsNsRecord} implementation.
  */
 @UnstableApi
 public class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNsRecord {
 
-    private final String hostname;
+    private final String domain;
 
     /**
      * Creates a new NS record.
@@ -42,17 +44,17 @@ public class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNsRecord
      *                     <li>{@link #CLASS_ANY}</li>
      *                 </ul>
      * @param timeToLive the TTL value of the record
-     * @param hostname the hostname which should be authoritative for the specified class and domain.
+     * @param domain the domain name which should be authoritative for the specified class and domain.
      */
     public DefaultDnsNsRecord(
-            String name, int dnsClass, long timeToLive, String hostname) {
+            String name, int dnsClass, long timeToLive, String domain) {
         super(name, DnsRecordType.NS, dnsClass, timeToLive);
-        this.hostname = checkNotNull(hostname, "hostname");
+        this.domain = IDN.toASCII(checkNotNull(domain, "domain"));
     }
 
     @Override
-    public String hostname() {
-        return hostname;
+    public String domain() {
+        return domain;
     }
 
     @Override
@@ -61,14 +63,14 @@ public class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNsRecord
         if (o == null || getClass() != o.getClass()) { return false; }
         if (!super.equals(o)) { return false; }
         DefaultDnsNsRecord that = (DefaultDnsNsRecord) o;
-        return hostname.equals(that.hostname);
+        return domain.equals(that.domain);
     }
 
     @Override
     public int hashCode() {
         int hashCode = super.hashCode();
 
-        hashCode = hashCode * 31 + hostname.hashCode();
+        hashCode = hashCode * 31 + domain.hashCode();
 
         return hashCode;
     }
@@ -87,7 +89,7 @@ public class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNsRecord
                 .append(type().name());
 
         buf.append(' ')
-                .append(hostname);
+                .append(domain);
 
         return buf.toString();
     }

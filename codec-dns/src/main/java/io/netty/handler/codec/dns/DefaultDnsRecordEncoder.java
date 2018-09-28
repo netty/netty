@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -65,6 +66,8 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
             encodeSoaRecord((DnsSoaRecord) record, out);
         } else if (record instanceof DnsSrvRecord) {
             encodeSrvRecord((DnsSrvRecord) record, out);
+        } else if (record instanceof DnsTxtRecord) {
+            encodeTxtRecord((DnsTxtRecord) record, out);
         } else if (record instanceof DnsOptEcsRecord) {
             encodeOptEcsRecord((DnsOptEcsRecord) record, out);
         } else if (record instanceof DnsOptPseudoRecord) {
@@ -101,12 +104,12 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     private void encodeMxRecord(DnsMxRecord record, ByteBuf out) throws Exception {
         encodeRecord0(record, out);
         out.writeShort(record.preference());
-        encodeName(record.hostname(), out);
+        encodeName(record.exchange(), out);
     }
 
     private void encodeNsRecord(DnsNsRecord record, ByteBuf out) throws Exception {
         encodeRecord0(record, out);
-        encodeName(record.hostname(), out);
+        encodeName(record.domain(), out);
     }
 
     private void encodePtrRecord(DnsPtrRecord record, ByteBuf out) throws Exception {
@@ -131,6 +134,34 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         out.writeShort(record.weight());
         out.writeShort(record.port());
         encodeName(record.target(), out);
+    }
+
+    private void encodeTxtRecord(DnsTxtRecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+
+        String key = record.key().replaceAll("=", "`=");
+        String value = record.value();
+
+        if (key.length() > 1) {
+            if (Character.isWhitespace(key.charAt(0))) {
+                key = "`" + key;
+            }
+            char last = key.charAt(key.length() - 1);
+            if (Character.isWhitespace(last)) {
+                key = key.substring(0, key.length() - 1) + "`" + last;
+            }
+        }
+
+        if (value.startsWith("`")) {
+            value = "`" + value;
+        }
+        if (value.endsWith("`")) {
+            value += "`";
+        }
+
+        out.writeCharSequence(key, CharsetUtil.US_ASCII);
+        out.writeByte('=');
+        out.writeCharSequence(value, CharsetUtil.US_ASCII);
     }
 
     private void encodeOptPseudoRecord(DnsOptPseudoRecord record, ByteBuf out) throws Exception {
