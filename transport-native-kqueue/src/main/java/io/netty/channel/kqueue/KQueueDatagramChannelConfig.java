@@ -45,12 +45,10 @@ import static io.netty.channel.unix.UnixChannelOption.SO_REUSEPORT;
 @UnstableApi
 public final class KQueueDatagramChannelConfig extends KQueueChannelConfig implements DatagramChannelConfig {
     private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
-    private final KQueueDatagramChannel datagramChannel;
     private boolean activeOnOpen;
 
     KQueueDatagramChannelConfig(KQueueDatagramChannel channel) {
         super(channel);
-        this.datagramChannel = channel;
         setRecvByteBufAllocator(DEFAULT_RCVBUF_ALLOCATOR);
     }
 
@@ -153,7 +151,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
      */
     public boolean isReusePort() {
         try {
-            return datagramChannel.socket.isReusePort();
+            return ((KQueueDatagramChannel) channel).socket.isReusePort();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -168,7 +166,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
      */
     public KQueueDatagramChannelConfig setReusePort(boolean reusePort) {
         try {
-            datagramChannel.socket.setReusePort(reusePort);
+            ((KQueueDatagramChannel) channel).socket.setReusePort(reusePort);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -253,7 +251,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     @Override
     public int getSendBufferSize() {
         try {
-            return datagramChannel.socket.getSendBufferSize();
+            return ((KQueueDatagramChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -262,7 +260,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     @Override
     public KQueueDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
-            datagramChannel.socket.setSendBufferSize(sendBufferSize);
+            ((KQueueDatagramChannel) channel).socket.setSendBufferSize(sendBufferSize);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -272,7 +270,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     @Override
     public int getReceiveBufferSize() {
         try {
-            return datagramChannel.socket.getReceiveBufferSize();
+            return ((KQueueDatagramChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -281,7 +279,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     @Override
     public KQueueDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
-            datagramChannel.socket.setReceiveBufferSize(receiveBufferSize);
+            ((KQueueDatagramChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -291,7 +289,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     @Override
     public int getTrafficClass() {
         try {
-            return datagramChannel.socket.getTrafficClass();
+            return ((KQueueDatagramChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -300,7 +298,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     @Override
     public KQueueDatagramChannelConfig setTrafficClass(int trafficClass) {
         try {
-            datagramChannel.socket.setTrafficClass(trafficClass);
+            ((KQueueDatagramChannel) channel).socket.setTrafficClass(trafficClass);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -310,7 +308,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     @Override
     public boolean isReuseAddress() {
         try {
-            return datagramChannel.socket.isReuseAddress();
+            return ((KQueueDatagramChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -319,7 +317,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     @Override
     public KQueueDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
-            datagramChannel.socket.setReuseAddress(reuseAddress);
+            ((KQueueDatagramChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -329,7 +327,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     @Override
     public boolean isBroadcast() {
         try {
-            return datagramChannel.socket.isBroadcast();
+            return ((KQueueDatagramChannel) channel).socket.isBroadcast();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -338,7 +336,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     @Override
     public KQueueDatagramChannelConfig setBroadcast(boolean broadcast) {
         try {
-            datagramChannel.socket.setBroadcast(broadcast);
+            ((KQueueDatagramChannel) channel).socket.setBroadcast(broadcast);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);

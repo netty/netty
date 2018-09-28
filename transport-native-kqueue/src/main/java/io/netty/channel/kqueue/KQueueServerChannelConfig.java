@@ -34,12 +34,10 @@ import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 
 @UnstableApi
 public class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSocketChannelConfig {
-    protected final AbstractKQueueChannel channel;
     private volatile int backlog = NetUtil.SOMAXCONN;
 
     KQueueServerChannelConfig(AbstractKQueueChannel channel) {
         super(channel);
-        this.channel = channel;
     }
 
     @Override
@@ -81,7 +79,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
 
     public boolean isReuseAddress() {
         try {
-            return channel.socket.isReuseAddress();
+            return ((AbstractKQueueChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -89,7 +87,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
 
     public KQueueServerChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
-            channel.socket.setReuseAddress(reuseAddress);
+            ((AbstractKQueueChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -98,7 +96,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
 
     public int getReceiveBufferSize() {
         try {
-            return channel.socket.getReceiveBufferSize();
+            return ((AbstractKQueueChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -106,7 +104,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
 
     public KQueueServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
-            channel.socket.setReceiveBufferSize(receiveBufferSize);
+            ((AbstractKQueueChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
