@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,10 +16,15 @@
 package io.netty.handler.codec.dns;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
+/**
+ * Default {@link DnsSrvRecord} implementation.
+ */
 @UnstableApi
 public class DefaultDnsSrvRecord extends AbstractDnsRecord implements DnsSrvRecord {
     private final int priority;
@@ -49,9 +54,9 @@ public class DefaultDnsSrvRecord extends AbstractDnsRecord implements DnsSrvReco
     public DefaultDnsSrvRecord(
             String name, int dnsClass, long timeToLive, int priority, int weight, int port, String target) {
         super(name, DnsRecordType.SRV, dnsClass, timeToLive);
-        this.priority = priority;
-        this.weight = weight;
-        this.port = port;
+        this.priority = checkPositiveOrZero(priority, "priority");
+        this.weight = checkPositiveOrZero(weight, "weight");
+        this.port = checkPositive(port, "port");
         this.target = checkNotNull(target, "target");
     }
 
@@ -70,9 +75,33 @@ public class DefaultDnsSrvRecord extends AbstractDnsRecord implements DnsSrvReco
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) { return true; }
+        if (o == null || getClass() != o.getClass()) { return false;  }
+        if (!super.equals(o)) { return false;  }
+
+        DefaultDnsSrvRecord that = (DefaultDnsSrvRecord) o;
+
+        if (priority != that.priority) { return false;  }
+        if (weight != that.weight) { return false;  }
+        if (port != that.port) { return false;  }
+        return target.equals(that.target);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + priority;
+        result = 31 * result + weight;
+        result = 31 * result + port;
+        result = 31 * result + target.hashCode();
+        return result;
+    }
+
+    @Override
     public String toString() {
         final StringBuilder buf = new StringBuilder(64).append(StringUtil.simpleClassName(this)).append('(');
-        final DnsRecordType type = type();
+
         buf.append(name().isEmpty()? "<root>" : name())
                 .append(' ')
                 .append(timeToLive())
@@ -80,7 +109,7 @@ public class DefaultDnsSrvRecord extends AbstractDnsRecord implements DnsSrvReco
 
         DnsMessageUtil.appendRecordClass(buf, dnsClass())
                 .append(' ')
-                .append(type.name());
+                .append(type().name());
 
         buf.append(' ')
                 .append(priority)

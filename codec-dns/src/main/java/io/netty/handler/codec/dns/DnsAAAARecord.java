@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,6 +19,11 @@ import io.netty.util.internal.UnstableApi;
 
 import java.net.Inet6Address;
 
+/**
+ * An <a href="https://tools.ietf.org/html/rfc3596">AAAA</a> record.
+ * <p>
+ * A record type is defined to store a host's IPv6 address.
+ */
 @UnstableApi
 public interface DnsAAAARecord extends DnsRecord {
     /**

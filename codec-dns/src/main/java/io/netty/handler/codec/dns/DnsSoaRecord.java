@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,6 +17,13 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.UnstableApi;
 
+/**
+ * A <a href="https://tools.ietf.org/html/rfc1035#section-3.3.13">SOA</a> record.
+ * <p>
+ * A record type is defined to specifies authoritative information about a DNS zone,
+ * including the primary name server, the email of the domain administrator,
+ * the domain serial number, and several timers relating to refreshing the zone.
+ */
 @UnstableApi
 public interface DnsSoaRecord extends DnsRecord {
 

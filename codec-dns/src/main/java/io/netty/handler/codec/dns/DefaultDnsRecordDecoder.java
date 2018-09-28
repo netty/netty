@@ -23,6 +23,10 @@ import io.netty.util.internal.UnstableApi;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.util.Locale;
+import java.util.regex.Pattern;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The default {@link DnsRecordDecoder} implementation.
@@ -33,6 +37,9 @@ import java.net.InetAddress;
 public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
 
     static final String ROOT = ".";
+
+    static final Pattern RE_TXT_KEY = Pattern.compile("`([`=\\s])");
+    static final Pattern RE_TXT_VALUE = Pattern.compile("``");
 
     /**
      * Creates a new instance.
@@ -156,13 +163,50 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
 
         if (type == DnsRecordType.TXT) {
             String text = in.retainedDuplicate().setIndex(offset, offset + length).toString(CharsetUtil.US_ASCII);
+            String[] parts = decodeTxt(checkNotNull(text, "text"));
+            String key = checkNotNull(parts[0], "key");
+            String value = checkNotNull(parts[1], "value");
 
-            return new DefaultDnsTxtRecord(
-                    name, dnsClass, timeToLive, text);
+            return new DefaultDnsTxtRecord(name, dnsClass, timeToLive, key, value);
         }
 
         return new DefaultDnsRawRecord(
                 name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
+    }
+
+    static String[] decodeTxt(String s) {
+        String key = null, value = null;
+
+        int start = 0;
+        for (start = 0; start < s.length(); start++) {
+            if (!Character.isWhitespace(s.charAt(start))) {
+                break;
+            }
+        }
+
+        char prev = 0;
+        for (int i = start; i < s.length(); i++) {
+            char c = s.charAt(i);
+
+            if (c == '=' && prev != '`') {
+                key = s.substring(start, i);
+                value = s.substring(i + 1);
+
+                break;
+            }
+
+            prev = c;
+        }
+
+        if (key == null) {
+            key = "";
+            value = s;
+        }
+
+        key = RE_TXT_KEY.matcher(key).replaceAll("$1").toLowerCase(Locale.US);
+        value = RE_TXT_VALUE.matcher(value).replaceAll("`");
+
+        return new String[]{key, value};
     }
 
     /**

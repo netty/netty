@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,8 +18,13 @@ package io.netty.handler.codec.dns;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.net.IDN;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+/**
+ * Default {@link DnsMxRecord} implementation.
+ */
 @UnstableApi
 public class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord {
     private final int preference;
@@ -44,7 +49,7 @@ public class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord
     public DefaultDnsMxRecord(String name, int dnsClass, long timeToLive, int preference, String hostname) {
         super(name, DnsRecordType.MX, dnsClass, timeToLive);
         this.preference = preference;
-        this.hostname = checkNotNull(hostname, "hostname");
+        this.hostname = IDN.toASCII(checkNotNull(hostname, "hostname"));
     }
 
     @Override
@@ -54,9 +59,28 @@ public class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord
     public String hostname() { return hostname; }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) { return true; }
+        if (o == null || getClass() != o.getClass()) { return false; }
+        if (!super.equals(o)) { return false; }
+        DefaultDnsMxRecord that = (DefaultDnsMxRecord) o;
+        return preference == that.preference && hostname.equals(that.hostname);
+    }
+
+    @Override
+    public int hashCode() {
+        int hashCode = super.hashCode();
+
+        hashCode = hashCode * 31 + preference;
+        hashCode = hashCode * 31 + hostname.hashCode();
+
+        return hashCode;
+    }
+
+    @Override
     public String toString() {
         final StringBuilder buf = new StringBuilder(64).append(StringUtil.simpleClassName(this)).append('(');
-        final DnsRecordType type = type();
+
         buf.append(name().isEmpty()? "<root>" : name())
                 .append(' ')
                 .append(timeToLive())
@@ -64,7 +88,7 @@ public class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord
 
         DnsMessageUtil.appendRecordClass(buf, dnsClass())
                 .append(' ')
-                .append(type.name());
+                .append(type().name());
 
         buf.append(' ')
                 .append(preference)

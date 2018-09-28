@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,10 +16,16 @@
 package io.netty.handler.codec.dns;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.net.IDN;
+
+/**
+ * Default {@link DnsSoaRecord} implementation.
+ */
 @UnstableApi
 public class DefaultDnsSoaRecord extends AbstractDnsRecord implements DnsSoaRecord {
     private final String primaryNameServer;
@@ -57,13 +63,14 @@ public class DefaultDnsSoaRecord extends AbstractDnsRecord implements DnsSoaReco
             String primaryNameServer, String responsibleAuthorityMailbox,
             int serialNumber, int refreshInterval, int retryInterval, int expireLimit, int minimumTTL) {
         super(name, DnsRecordType.SOA, dnsClass, timeToLive);
-        this.primaryNameServer = checkNotNull(primaryNameServer, "primaryNameServer");
-        this.responsibleAuthorityMailbox = checkNotNull(responsibleAuthorityMailbox, "responsibleAuthorityMailbox");
-        this.serialNumber = serialNumber;
-        this.refreshInterval = refreshInterval;
-        this.retryInterval = retryInterval;
-        this.expireLimit = expireLimit;
-        this.minimumTTL = minimumTTL;
+        this.primaryNameServer = IDN.toASCII(checkNotNull(primaryNameServer, "primaryNameServer"));
+        this.responsibleAuthorityMailbox = IDN.toASCII(
+                checkNotNull(responsibleAuthorityMailbox, "responsibleAuthorityMailbox"));
+        this.serialNumber = checkPositiveOrZero(serialNumber, "serialNumber");
+        this.refreshInterval = checkPositiveOrZero(refreshInterval, "refreshInterval");
+        this.retryInterval = checkPositiveOrZero(retryInterval, "retryInterval");
+        this.expireLimit = checkPositiveOrZero(expireLimit, "expireLimit");
+        this.minimumTTL = checkPositiveOrZero(minimumTTL, "minimumTTL");
     }
 
     @Override
@@ -88,9 +95,39 @@ public class DefaultDnsSoaRecord extends AbstractDnsRecord implements DnsSoaReco
     public int minimumTTL() { return minimumTTL; }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) { return true; }
+        if (o == null || getClass() != o.getClass()) { return false;  }
+        if (!super.equals(o)) { return false;  }
+
+        DefaultDnsSoaRecord that = (DefaultDnsSoaRecord) o;
+
+        if (serialNumber != that.serialNumber) { return false;  }
+        if (refreshInterval != that.refreshInterval) { return false;  }
+        if (retryInterval != that.retryInterval) { return false;  }
+        if (expireLimit != that.expireLimit) { return false;  }
+        if (minimumTTL != that.minimumTTL) { return false;  }
+        if (!primaryNameServer.equals(that.primaryNameServer)) { return false;  }
+        return responsibleAuthorityMailbox.equals(that.responsibleAuthorityMailbox);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + primaryNameServer.hashCode();
+        result = 31 * result + responsibleAuthorityMailbox.hashCode();
+        result = 31 * result + serialNumber;
+        result = 31 * result + refreshInterval;
+        result = 31 * result + retryInterval;
+        result = 31 * result + expireLimit;
+        result = 31 * result + minimumTTL;
+        return result;
+    }
+
+    @Override
     public String toString() {
         final StringBuilder buf = new StringBuilder(64).append(StringUtil.simpleClassName(this)).append('(');
-        final DnsRecordType type = type();
+
         buf.append(name().isEmpty()? "<root>" : name())
                 .append(' ')
                 .append(timeToLive())
@@ -98,7 +135,7 @@ public class DefaultDnsSoaRecord extends AbstractDnsRecord implements DnsSoaReco
 
         DnsMessageUtil.appendRecordClass(buf, dnsClass())
                 .append(' ')
-                .append(type.name());
+                .append(type().name());
 
         buf.append(' ')
                 .append(primaryNameServer)

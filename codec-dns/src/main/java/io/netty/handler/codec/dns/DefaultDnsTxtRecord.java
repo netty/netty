@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,25 +15,22 @@
  */
 package io.netty.handler.codec.dns;
 
-import java.util.Locale;
-import java.util.regex.Pattern;
+import io.netty.util.internal.StringUtil;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+/**
+ * Default {@link DnsTxtRecord} implementation.
+ */
 public class DefaultDnsTxtRecord extends AbstractDnsRecord implements DnsTxtRecord {
-    private static final Pattern RE_KEY = Pattern.compile("`([`=\\s])");
-    private static final Pattern RE_VALUE = Pattern.compile("``");
-
     private final String key;
     private final String value;
 
-    public DefaultDnsTxtRecord(String name, int dnsClass, long timeToLive, String text) {
+    public DefaultDnsTxtRecord(String name, int dnsClass, long timeToLive, String key, String value) {
         super(name, DnsRecordType.TXT, dnsClass, timeToLive);
 
-        String[] parts = decodeTxt(checkNotNull(text, "text"));
-
-        this.key = parts[0];
-        this.value = parts[1];
+        this.key = checkNotNull(key, "key");
+        this.value = checkNotNull(value, "value");
     }
 
     @Override
@@ -46,38 +43,43 @@ public class DefaultDnsTxtRecord extends AbstractDnsRecord implements DnsTxtReco
         return this.value;
     }
 
-    static String[] decodeTxt(String s) {
-        String key = null, value = null;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) { return true; }
+        if (o == null || getClass() != o.getClass()) { return false; }
+        if (!super.equals(o)) { return false; }
+        DefaultDnsTxtRecord that = (DefaultDnsTxtRecord) o;
+        return key.equals(that.key) && value.equals(that.value);
+    }
 
-        int start = 0;
-        for (start = 0; start < s.length(); start++) {
-            if (!Character.isWhitespace(s.charAt(start))) {
-                break;
-            }
-        }
+    @Override
+    public int hashCode() {
+        int hashCode = super.hashCode();
 
-        char prev = 0;
-        for (int i = start; i < s.length(); i++) {
-            char c = s.charAt(i);
+        hashCode = hashCode * 31 + key.hashCode();
+        hashCode = hashCode * 31 + value.hashCode();
 
-            if (c == '=' && prev != '`') {
-                key = s.substring(start, i);
-                value = s.substring(i + 1);
+        return hashCode;
+    }
 
-                break;
-            }
+    @Override
+    public String toString() {
+        final StringBuilder buf = new StringBuilder(64).append(StringUtil.simpleClassName(this)).append('(');
 
-            prev = c;
-        }
+        buf.append(name().isEmpty()? "<root>" : name())
+                .append(' ')
+                .append(timeToLive())
+                .append(' ');
 
-        if (key == null) {
-            key = "";
-            value = s;
-        }
+        DnsMessageUtil.appendRecordClass(buf, dnsClass())
+                .append(' ')
+                .append(type().name());
 
-        key = RE_KEY.matcher(key).replaceAll("$1").toLowerCase(Locale.US);
-        value = RE_VALUE.matcher(value).replaceAll("`");
+        buf.append(' ')
+                .append(key)
+                .append(' ')
+                .append(value);
 
-        return new String[]{key, value};
+        return buf.toString();
     }
 }

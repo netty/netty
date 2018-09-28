@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,6 +17,12 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.UnstableApi;
 
+/**
+ * A <a href="https://tools.ietf.org/html/rfc1035#section-3.3.14">TXT</a> record.
+ * <p>
+ * A record type is defined to hold descriptive text.
+ * The semantics of the text depends on the domain where it is found.
+ */
 @UnstableApi
 public interface DnsTxtRecord extends DnsRecord {
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,6 +17,12 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.UnstableApi;
 
+/**
+ * A <a href="https://tools.ietf.org/html/rfc1035#section-3.3.1">CNAME</a> record.
+ * <p>
+ * A record type is defined to store <domain-name> which specifies the canonical or primary name for the owner.
+ * The owner name is an alias.
+ */
 @UnstableApi
 public interface DnsCNameRecord extends DnsRecord {
     /**

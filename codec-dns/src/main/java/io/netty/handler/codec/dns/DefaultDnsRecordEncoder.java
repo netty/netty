@@ -199,6 +199,13 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         out.writeBytes(content, content.readerIndex(), contentLen);
     }
 
+    /**
+     * Encode a domain name as a list of labels
+     *
+     * @param name The domain name to be encoded
+     * @param buf The bytes buffer
+     * @throws Exception Thrown, if the bytes buffer could not be written.
+     */
     public static void encodeName(String name, ByteBuf buf) throws Exception {
         if (ROOT.equals(name)) {
             // Root domain

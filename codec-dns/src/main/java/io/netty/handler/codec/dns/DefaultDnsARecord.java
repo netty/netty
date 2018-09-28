@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,6 +22,9 @@ import java.net.Inet4Address;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+/**
+ * Default {@link DnsARecord} implementation.
+ */
 @UnstableApi
 public class DefaultDnsARecord extends AbstractDnsRecord implements DnsARecord {
     private final Inet4Address address;
@@ -51,9 +54,27 @@ public class DefaultDnsARecord extends AbstractDnsRecord implements DnsARecord {
     public Inet4Address address() { return address; }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) { return true; }
+        if (o == null || getClass() != o.getClass()) { return false; }
+        if (!super.equals(o)) { return false; }
+        DefaultDnsARecord that = (DefaultDnsARecord) o;
+        return address.equals(that.address);
+    }
+
+    @Override
+    public int hashCode() {
+        int hashCode = super.hashCode();
+
+        hashCode = hashCode * 31 + address.hashCode();
+
+        return hashCode;
+    }
+
+    @Override
     public String toString() {
         final StringBuilder buf = new StringBuilder(64).append(StringUtil.simpleClassName(this)).append('(');
-        final DnsRecordType type = type();
+
         buf.append(name().isEmpty()? "<root>" : name())
                 .append(' ')
                 .append(timeToLive())
@@ -61,7 +82,7 @@ public class DefaultDnsARecord extends AbstractDnsRecord implements DnsARecord {
 
         DnsMessageUtil.appendRecordClass(buf, dnsClass())
                 .append(' ')
-                .append(type.name());
+                .append(type().name());
 
         buf.append(' ')
                 .append(address.getHostAddress());
