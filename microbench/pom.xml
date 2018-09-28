@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.30.Final-SNAPSHOT</version>
+    <version>4.1.31.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-microbench</artifactId>
@@ -34,7 +34,7 @@
     <jmh.version>1.21</jmh.version>
     <!-- This only be set when run on linux as on other platforms we just want to include the jar without native
          code -->
-    <epoll.classifier/>
+    <epoll.classifier />
   </properties>
 
   <profiles>

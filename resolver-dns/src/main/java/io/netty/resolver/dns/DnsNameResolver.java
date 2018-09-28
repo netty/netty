@@ -125,13 +125,9 @@ public class DnsNameResolver extends InetNameResolver {
     static {
         String[] searchDomains;
         try {
-            Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
-            Method open = configClass.getMethod("open");
-            Method nameservers = configClass.getMethod("searchlist");
-            Object instance = open.invoke(null);
-
-            @SuppressWarnings("unchecked")
-            List<String> list = (List<String>) nameservers.invoke(instance);
+            List<String> list = PlatformDependent.isWindows()
+                    ? getSearchDomainsHack()
+                    : UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains();
             searchDomains = list.toArray(new String[0]);
         } catch (Exception ignore) {
             // Failed to get the system name search domain list.
@@ -146,6 +142,18 @@ public class DnsNameResolver extends InetNameResolver {
             ndots = UnixResolverDnsServerAddressStreamProvider.DEFAULT_NDOTS;
         }
         DEFAULT_NDOTS = ndots;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> getSearchDomainsHack() throws Exception {
+        // This code on Java 9+ yields a warning about illegal reflective access that will be denied in
+        // a future release. There doesn't seem to be a better way to get search domains for Windows yet.
+        Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
+        Method open = configClass.getMethod("open");
+        Method nameservers = configClass.getMethod("searchlist");
+        Object instance = open.invoke(null);
+
+        return (List<String>) nameservers.invoke(instance);
     }
 
     private static final DatagramDnsResponseDecoder DECODER = new DatagramDnsResponseDecoder();
@@ -166,6 +174,7 @@ public class DnsNameResolver extends InetNameResolver {
      */
     private final DnsCache resolveCache;
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
+    private final DnsCnameCache cnameCache;
 
     private final FastThreadLocal<DnsServerAddressStream> nameServerAddrStream =
             new FastThreadLocal<DnsServerAddressStream>() {
@@ -217,9 +226,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @param ndots the ndots value
      * @param decodeIdn {@code true} if domain / host names should be decoded to unicode when received.
      *                        See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
-     * @deprecated Use {@link DnsNameResolver(EventLoop, ChannelFactory, DnsCache, AuthoritativeDnsServerCache,
-     * DnsQueryLifecycleObserverFactory, long, ResolvedAddressTypes, boolean, int, boolean, int, boolean,
-     * HostsFileEntriesResolver, DnsServerAddressStreamProvider, String[], int, boolean)}
+     * @deprecated Use {@link DnsNameResolverBuilder}.
      */
     @Deprecated
     public DnsNameResolver(
@@ -271,11 +278,38 @@ public class DnsNameResolver extends InetNameResolver {
      * @param ndots the ndots value
      * @param decodeIdn {@code true} if domain / host names should be decoded to unicode when received.
      *                        See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
+     * @deprecated Use {@link DnsNameResolverBuilder}.
      */
+    @Deprecated
     public DnsNameResolver(
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
             final DnsCache resolveCache,
+            final AuthoritativeDnsServerCache authoritativeDnsServerCache,
+            DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
+            long queryTimeoutMillis,
+            ResolvedAddressTypes resolvedAddressTypes,
+            boolean recursionDesired,
+            int maxQueriesPerResolve,
+            boolean traceEnabled,
+            int maxPayloadSize,
+            boolean optResourceEnabled,
+            HostsFileEntriesResolver hostsFileEntriesResolver,
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+            String[] searchDomains,
+            int ndots,
+            boolean decodeIdn) {
+        this(eventLoop, channelFactory, resolveCache, NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache,
+             dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
+             maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
+             dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn);
+    }
+
+    DnsNameResolver(
+            EventLoop eventLoop,
+            ChannelFactory<? extends DatagramChannel> channelFactory,
+            final DnsCache resolveCache,
+            final DnsCnameCache cnameCache,
             final AuthoritativeDnsServerCache authoritativeDnsServerCache,
             DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
             long queryTimeoutMillis,
@@ -301,6 +335,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.dnsServerAddressStreamProvider =
                 checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
         this.resolveCache = checkNotNull(resolveCache, "resolveCache");
+        this.cnameCache = checkNotNull(cnameCache, "cnameCache");
         this.dnsQueryLifecycleObserverFactory = traceEnabled ?
                 dnsQueryLifecycleObserverFactory instanceof NoopDnsQueryLifecycleObserverFactory ?
                         new TraceDnsQueryLifeCycleObserverFactory() :
@@ -374,6 +409,7 @@ public class DnsNameResolver extends InetNameResolver {
             @Override
             public void operationComplete(ChannelFuture future) {
                 resolveCache.clear();
+                cnameCache.clear();
                 authoritativeDnsServerCache.clear();
             }
         });
@@ -414,8 +450,14 @@ public class DnsNameResolver extends InetNameResolver {
      */
     protected DnsServerAddressStream newRedirectDnsServerStream(
             @SuppressWarnings("unused") String hostname, List<InetSocketAddress> nameservers) {
-        Collections.sort(nameservers, nameServerComparator);
-        return new SequentialDnsServerAddressStream(nameservers, 0);
+        DnsServerAddressStream cached = authoritativeDnsServerCache().get(hostname);
+        if (cached == null || cached.size() == 0) {
+            // If there is no cache hit (which may be the case for example when a NoopAuthoritativeDnsServerCache
+            // is used), we will just directly use the provided nameservers.
+            Collections.sort(nameservers, nameServerComparator);
+            return new SequentialDnsServerAddressStream(nameservers, 0);
+        }
+        return cached;
     }
 
     /**
@@ -423,6 +465,13 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public DnsCache resolveCache() {
         return resolveCache;
+    }
+
+    /**
+     * Returns the {@link DnsCnameCache}.
+     */
+    DnsCnameCache cnameCache() {
+        return cnameCache;
     }
 
     /**
