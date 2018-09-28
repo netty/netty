@@ -34,6 +34,7 @@ import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -65,6 +66,7 @@ import static org.mockito.Mockito.anyShort;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -705,6 +707,32 @@ public class DefaultHttp2ConnectionEncoderTest {
         assertEquals(HALF_CLOSED_REMOTE, stream.state());
         assertTrue(promise.isSuccess());
         verify(lifecycleManager).closeStreamLocal(eq(stream), eq(promise));
+    }
+
+    @Test
+    public void headersWriteShouldHalfCloseAfterOnError() throws Exception {
+        final ChannelPromise promise = newPromise();
+        final Throwable ex = new RuntimeException();
+        // Fake an encoding error, like HPACK's HeaderListSizeException
+        when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise)))
+            .thenAnswer(new Answer<ChannelFuture>() {
+                @Override
+                public ChannelFuture answer(InvocationOnMock invocation) {
+                    promise.setFailure(ex);
+                    return promise;
+                }
+            });
+
+        writeAllFlowControlledFrames();
+        createStream(STREAM_ID, false);
+        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);
+
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        InOrder inOrder = inOrder(lifecycleManager);
+        inOrder.verify(lifecycleManager).onError(eq(ctx), eq(true), eq(ex));
+        inOrder.verify(lifecycleManager).closeStreamLocal(eq(stream(STREAM_ID)), eq(promise));
     }
 
     @Test

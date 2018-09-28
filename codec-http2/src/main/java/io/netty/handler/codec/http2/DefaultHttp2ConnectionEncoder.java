@@ -190,17 +190,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // for this stream.
             Http2RemoteFlowController flowController = flowController();
             if (!endOfStream || !flowController.hasFlowControlled(stream)) {
+                // The behavior here should mirror that in FlowControlledHeaders
+
+                promise = promise.unvoid();
                 boolean isInformational = validateHeadersSentState(stream, headers, connection.isServer(), endOfStream);
-                if (endOfStream) {
-                    final Http2Stream finalStream = stream;
-                    final ChannelFutureListener closeStreamLocalListener = new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            lifecycleManager.closeStreamLocal(finalStream, future);
-                        }
-                    };
-                    promise = promise.unvoid().addListener(closeStreamLocalListener);
-                }
 
                 ChannelFuture future = frameWriter.writeHeaders(ctx, streamId, headers, streamDependency,
                                                                 weight, exclusive, padding, endOfStream, promise);
@@ -220,6 +213,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                     }
                 } else {
                     lifecycleManager.onError(ctx, true, failureCause);
+                }
+
+                if (endOfStream) {
+                    // Must handle calling onError before calling closeStreamLocal, otherwise the error handler will
+                    // incorrectly think the stream no longer exists and so may not send RST_STREAM or perform similar
+                    // appropriate action.
+                    lifecycleManager.closeStreamLocal(stream, future);
                 }
 
                 return future;
@@ -288,6 +288,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             // Reserve the promised stream.
             connection.local().reservePushStream(promisedStreamId, stream);
 
+            promise = promise.unvoid();
             ChannelFuture future = frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding,
                                                                 promise);
             // Writing headers may fail during the encode state if they violate HPACK limits.
@@ -468,7 +469,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         FlowControlledHeaders(Http2Stream stream, Http2Headers headers, int streamDependency, short weight,
                 boolean exclusive, int padding, boolean endOfStream, ChannelPromise promise) {
-            super(stream, padding, endOfStream, promise);
+            super(stream, padding, endOfStream, promise.unvoid());
             this.headers = headers;
             this.streamDependency = streamDependency;
             this.weight = weight;
@@ -491,9 +492,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         @Override
         public void write(ChannelHandlerContext ctx, int allowedBytes) {
             boolean isInformational = validateHeadersSentState(stream, headers, connection.isServer(), endOfStream);
-            if (promise.isVoid()) {
-                promise = ctx.newPromise();
-            }
+            // The code is currently requiring adding this listener before writing, in order to call onError() before
+            // closeStreamLocal().
             promise.addListener(this);
 
             ChannelFuture f = frameWriter.writeHeaders(ctx, stream.id(), headers, streamDependency, weight, exclusive,
