@@ -294,7 +294,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         try {
-            ch.register(selector, interestOps, task);
+            ch.register(unwrappedSelector, interestOps, task);
         } catch (Exception e) {
             throw new EventLoopException("failed to register a channel", e);
         }
