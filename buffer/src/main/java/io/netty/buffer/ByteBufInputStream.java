@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.StringUtil;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -240,18 +241,23 @@ public class ByteBufInputStream extends InputStream implements DataInput {
         return buffer.readInt();
     }
 
-    private final StringBuilder lineBuf = new StringBuilder();
+    private StringBuilder lineBuf;
 
     @Override
     public String readLine() throws IOException {
-        lineBuf.setLength(0);
+        if (lineBuf != null) {
+            lineBuf.setLength(0);
+        }
+
+        boolean anyChar = false;
 
         loop: while (true) {
             if (!buffer.isReadable()) {
-                return lineBuf.length() > 0 ? lineBuf.toString() : null;
+                return toStringIfAnyChar(lineBuf, anyChar);
             }
 
             int c = buffer.readUnsignedByte();
+            anyChar = true;
             switch (c) {
                 case '\n':
                     break loop;
@@ -263,11 +269,22 @@ public class ByteBufInputStream extends InputStream implements DataInput {
                     break loop;
 
                 default:
+                    if (lineBuf == null) {
+                        lineBuf = new StringBuilder();
+                    }
                     lineBuf.append((char) c);
             }
         }
 
-        return lineBuf.toString();
+        return lineBuf != null && lineBuf.length() > 0 ? lineBuf.toString() : StringUtil.EMPTY_STRING;
+    }
+
+    private static String toStringIfAnyChar(StringBuilder lineBuf, boolean anyChars) {
+        if (anyChars) {
+            return lineBuf != null && lineBuf.length() > 0 ? lineBuf.toString() : StringUtil.EMPTY_STRING;
+        } else {
+            return null;
+        }
     }
 
     @Override
