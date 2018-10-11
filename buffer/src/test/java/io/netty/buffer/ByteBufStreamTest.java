@@ -188,11 +188,13 @@ public class ByteBufStreamTest {
         String s = in.readLine();
         assertNull(s);
 
-        int charCount = 5; //total chars in the string below without new line characters
-        byte[] abc = "a\nb\r\nc\nd\ne".getBytes(utf8);
+        int charCount = 7; //total chars in the string below without new line characters
+        byte[] abc = "\na\n\nb\r\nc\nd\ne".getBytes(utf8);
         buf.writeBytes(abc);
         in.mark(charCount);
+        assertEquals("", in.readLine());
         assertEquals("a", in.readLine());
+        assertEquals("", in.readLine());
         assertEquals("b", in.readLine());
         assertEquals("c", in.readLine());
         assertEquals("d", in.readLine());
