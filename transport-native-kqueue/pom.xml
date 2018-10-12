@@ -80,10 +80,10 @@
                   <configureArgs>
                     <arg>${jni.compiler.args.ldflags}</arg>
                     <arg>${jni.compiler.args.cflags}</arg>
-                    <!-- support for __attribute__((weak_import)) by the linker was added in 10.2 so ensure we
+                    <!-- support for __attribute__((weak_import)) by the linker was added in 10.2 (but 10.6 is the minimum we can use on 10.14) so ensure we
                          explicitly set the target platform. Otherwise we may get fatal link errors due to weakly linked
                          methods which are not expected to be present on MacOS (e.g. accept4). -->
-                    <arg>MACOSX_DEPLOYMENT_TARGET=10.2</arg>
+                    <arg>MACOSX_DEPLOYMENT_TARGET=10.6</arg>
                   </configureArgs>
                 </configuration>
                 <goals>
