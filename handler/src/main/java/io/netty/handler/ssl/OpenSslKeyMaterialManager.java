@@ -83,7 +83,12 @@ final class OpenSslKeyMaterialManager {
     void setKeyMaterialClientSide(ReferenceCountedOpenSslEngine engine, String[] keyTypes,
                                   X500Principal[] issuer) throws SSLException {
         String alias = chooseClientAlias(engine, keyTypes, issuer);
-        setKeyMaterial(engine, alias);
+        // Only try to set the keymaterial if we have a match. This is also consistent with what OpenJDK does:
+        // http://hg.openjdk.java.net/jdk/jdk11/file/76072a077ee1/
+        // src/java.base/share/classes/sun/security/ssl/CertificateRequest.java#l362
+        if (alias != null) {
+            setKeyMaterial(engine, alias);
+        }
     }
 
     private void setKeyMaterial(ReferenceCountedOpenSslEngine engine, String alias) throws SSLException {
