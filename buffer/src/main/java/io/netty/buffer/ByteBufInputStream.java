@@ -245,19 +245,15 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public String readLine() throws IOException {
+        if (!buffer.isReadable()) {
+            return null;
+        }
         if (lineBuf != null) {
             lineBuf.setLength(0);
         }
 
-        boolean anyChar = false;
-
-        loop: while (true) {
-            if (!buffer.isReadable()) {
-                return toStringIfAnyChar(lineBuf, anyChar);
-            }
-
+        loop: do {
             int c = buffer.readUnsignedByte();
-            anyChar = true;
             switch (c) {
                 case '\n':
                     break loop;
@@ -274,17 +270,9 @@ public class ByteBufInputStream extends InputStream implements DataInput {
                     }
                     lineBuf.append((char) c);
             }
-        }
+        } while (buffer.isReadable());
 
         return lineBuf != null && lineBuf.length() > 0 ? lineBuf.toString() : StringUtil.EMPTY_STRING;
-    }
-
-    private static String toStringIfAnyChar(StringBuilder lineBuf, boolean anyChars) {
-        if (anyChars) {
-            return lineBuf != null && lineBuf.length() > 0 ? lineBuf.toString() : StringUtil.EMPTY_STRING;
-        } else {
-            return null;
-        }
     }
 
     @Override
