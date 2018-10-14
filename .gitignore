@@ -33,3 +33,7 @@ hs_err_pid*.log
 dependency-reduced-pom.xml
 
 */.unison.*
+
+# exclude mainframer files
+mainframer
+.mainframer
