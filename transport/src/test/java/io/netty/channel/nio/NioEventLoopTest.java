@@ -136,7 +136,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
-    @Test(timeout = 1000)
+    @Test(timeout = 3000)
     public void testSelectableChannel() throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         NioEventLoop loop = (NioEventLoop) group.next();
