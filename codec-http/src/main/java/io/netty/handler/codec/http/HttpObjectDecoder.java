@@ -26,6 +26,7 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.AppendableCharSequence;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -216,7 +217,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return;
             }
 
-            message = createMessage(initialLine);
+            try {
+                message = createMessage(initialLine);
+            } catch (IllegalArgumentException e) {
+                // Include the whole initial line to easier debug.
+                throw new IllegalArgumentException(
+                        "Unable to parse initial line: '" + Arrays.toString(initialLine) + '\'', e);
+            }
             currentState = State.READ_HEADER;
             // fall-through
         } catch (Exception e) {
