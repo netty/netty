@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
@@ -503,7 +504,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public CharSequence getCharSequence(int index, int length, Charset charset) {
-        // TODO: We could optimize this for UTF8 and US_ASCII
+        if (CharsetUtil.US_ASCII.equals(charset) || CharsetUtil.ISO_8859_1.equals(charset)) {
+            // ByteBufUtil.getBytes(...) will return a new copy which the AsciiString uses directly
+            return new AsciiString(ByteBufUtil.getBytes(this, index, length, true), false);
+        }
         return toString(index, length, charset);
     }
 
