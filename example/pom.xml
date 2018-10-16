@@ -87,7 +87,8 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
-      <classifier>${tcnative.classifier}</classifier>
+      <!--<classifier>${tcnative.classifier}</classifier>-->
+      <version>${tcnative.version}</version>
     </dependency>
     <dependency>
       <groupId>${conscrypt.groupId}</groupId>
