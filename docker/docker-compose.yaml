@@ -27,7 +27,7 @@ services:
 
   test-boringssl-static:
     <<: *common
-    command: /bin/bash -cl "./mvnw clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.artifactId=netty-tcnative-boringssl-static"
+    command: /bin/bash -cl "./mvnw clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.artifactId=netty-tcnative-boringssl-static -Dtcnative.classifier="
 
   shell:
     <<: *common
