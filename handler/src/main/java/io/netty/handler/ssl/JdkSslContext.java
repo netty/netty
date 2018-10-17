@@ -140,7 +140,10 @@ public class JdkSslContext extends SslContext {
      * @param sslContext the {@link SSLContext} to use.
      * @param isClient {@code true} if this context should create {@link SSLEngine}s for client-side usage.
      * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.
+     * @deprecated Use {@link #JdkSslContext(SSLContext, boolean, Iterable, CipherSuiteFilter,
+     * ApplicationProtocolConfig, ClientAuth, String[], boolean)}
      */
+    @Deprecated
     public JdkSslContext(SSLContext sslContext, boolean isClient,
                          ClientAuth clientAuth) {
         this(sslContext, isClient, null, IdentityCipherSuiteFilter.INSTANCE,
@@ -156,11 +159,44 @@ public class JdkSslContext extends SslContext {
      * @param cipherFilter the filter to use.
      * @param apn the {@link ApplicationProtocolConfig} to use.
      * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.
+     * @deprecated Use {@link #JdkSslContext(SSLContext, boolean, Iterable, CipherSuiteFilter,
+     * ApplicationProtocolConfig, ClientAuth, String[], boolean)}
      */
+    @Deprecated
     public JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers,
                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                          ClientAuth clientAuth) {
-        this(sslContext, isClient, ciphers, cipherFilter, toNegotiator(apn, !isClient), clientAuth, null, false);
+        this(sslContext, isClient, ciphers, cipherFilter, apn, clientAuth, null, false);
+    }
+
+    /**
+     * Creates a new {@link JdkSslContext} from a pre-configured {@link SSLContext}.
+     *
+     * @param sslContext the {@link SSLContext} to use.
+     * @param isClient {@code true} if this context should create {@link SSLEngine}s for client-side usage.
+     * @param ciphers the ciphers to use or {@code null} if the standard should be used.
+     * @param cipherFilter the filter to use.
+     * @param apn the {@link ApplicationProtocolConfig} to use.
+     * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.
+     * @param protocols the protocols to enable, or {@code null} to enable the default protocols.
+     * @param startTls {@code true} if the first write request shouldn't be encrypted
+     */
+    public JdkSslContext(SSLContext sslContext,
+                         boolean isClient,
+                         Iterable<String> ciphers,
+                         CipherSuiteFilter cipherFilter,
+                         ApplicationProtocolConfig apn,
+                         ClientAuth clientAuth,
+                         String[] protocols,
+                         boolean startTls) {
+        this(sslContext,
+                isClient,
+                ciphers,
+                cipherFilter,
+                toNegotiator(apn, !isClient),
+                clientAuth,
+                protocols == null ? null : protocols.clone(),
+                startTls);
     }
 
     @SuppressWarnings("deprecation")
