@@ -72,6 +72,7 @@ public abstract class Recycler<T> {
     };
 
     // These constants aren't actually used, but they are needed to maintain the previous API.
+    // TODO: Remove in next major Netty release.
     private static final int DEFAULT_INITIAL_MAX_CAPACITY_PER_THREAD = 4 * 1024;
     private static final int DEFAULT_MAX_CAPACITY_PER_THREAD;
     private static final int MAX_SHARED_CAPACITY_FACTOR;
