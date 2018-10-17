@@ -24,8 +24,11 @@ import io.netty.internal.tcnative.SSLContext;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -47,6 +50,12 @@ import javax.security.auth.x500.X500Principal;
 public final class ReferenceCountedOpenSslClientContext extends ReferenceCountedOpenSslContext {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslClientContext.class);
+    private static final Set<String> SUPPORTED_KEY_TYPES = Collections.unmodifiableSet(new LinkedHashSet<String>(
+            Arrays.asList(OpenSslKeyMaterialManager.KEY_TYPE_RSA,
+                          OpenSslKeyMaterialManager.KEY_TYPE_DH_RSA,
+                          OpenSslKeyMaterialManager.KEY_TYPE_EC,
+                          OpenSslKeyMaterialManager.KEY_TYPE_EC_RSA,
+                          OpenSslKeyMaterialManager.KEY_TYPE_EC_EC)));
     private final OpenSslSessionContext sessionContext;
 
     ReferenceCountedOpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -277,7 +286,8 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
          */
         private static Set<String> supportedClientKeyTypes(byte[] clientCertificateTypes) {
             if (clientCertificateTypes == null) {
-                return Collections.emptySet();
+                // Try all of the supported key types.
+                return SUPPORTED_KEY_TYPES;
             }
             Set<String> result = new HashSet<String>(clientCertificateTypes.length);
             for (byte keyTypeCode : clientCertificateTypes) {

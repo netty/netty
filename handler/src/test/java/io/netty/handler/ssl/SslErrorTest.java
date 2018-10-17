@@ -124,9 +124,10 @@ public class SslErrorTest {
         Assume.assumeTrue(OpenSsl.isAvailable());
 
         SelfSignedCertificate ssc = new SelfSignedCertificate();
-        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(serverProvider)
-                .trustManager(new SimpleTrustManagerFactory() {
+        final SslContext sslServerCtx = OpenSslTestUtils.configureProtocolForMutualAuth(
+                SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                                 .sslProvider(serverProvider)
+                                 .trustManager(new SimpleTrustManagerFactory() {
             @Override
             protected void engineInit(KeyStore keyStore) { }
             @Override
@@ -154,13 +155,13 @@ public class SslErrorTest {
                     }
                 } };
             }
-        }).clientAuth(ClientAuth.REQUIRE).build();
+        }).clientAuth(ClientAuth.REQUIRE), clientProvider, serverProvider).build();
 
-        final SslContext sslClientCtx = SslContextBuilder.forClient()
+        final SslContext sslClientCtx = OpenSslTestUtils.configureProtocolForMutualAuth(SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .keyManager(new File(getClass().getResource("test.crt").getFile()),
                         new File(getClass().getResource("test_unencrypted.pem").getFile()))
-                .sslProvider(clientProvider).build();
+                .sslProvider(clientProvider), clientProvider, serverProvider).build();
 
         Channel serverChannel = null;
         Channel clientChannel = null;

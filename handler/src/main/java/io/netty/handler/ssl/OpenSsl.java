@@ -31,6 +31,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import javax.net.ssl.SSLException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -48,6 +49,7 @@ import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V3;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_1;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_3;
 
 /**
  * Tells if <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
@@ -66,6 +68,12 @@ public final class OpenSsl {
     private static final boolean SUPPORTS_HOSTNAME_VALIDATION;
     private static final boolean USE_KEYMANAGER_FACTORY;
     private static final boolean SUPPORTS_OCSP;
+    private static final String TLSV13_CIPHERS = "TLS_AES_256_GCM_SHA384" + ':' +
+                                                 "TLS_CHACHA20_POLY1305_SHA256" + ':' +
+                                                 "TLS_AES_128_GCM_SHA256" + ':' +
+                                                 "TLS_AES_128_CCM_8_SHA256" + ':' +
+                                                 "TLS_AES_128_CCM_SHA256";
+    private static final boolean TLSV13_SUPPORTED;
 
     static final Set<String> SUPPORTED_PROTOCOLS_SET;
 
@@ -139,17 +147,30 @@ public final class OpenSsl {
             boolean supportsKeyManagerFactory = false;
             boolean useKeyManagerFactory = false;
             boolean supportsHostNameValidation = false;
+            boolean tlsv13Supported = false;
+
             try {
                 final long sslCtx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
                 long certBio = 0;
                 SelfSignedCertificate cert = null;
                 try {
-                    SSLContext.setCipherSuite(sslCtx, "ALL");
+                    if (PlatformDependent.javaVersion() >= 11) {
+                        try {
+                            SSLContext.setCipherSuite(sslCtx, TLSV13_CIPHERS, true);
+                            tlsv13Supported = true;
+                        } catch (Exception ignore) {
+                            tlsv13Supported = false;
+                        }
+                    }
+                    SSLContext.setCipherSuite(sslCtx, "ALL", false);
+
                     final long ssl = SSL.newSSL(sslCtx, true);
                     try {
                         for (String c: SSL.getCiphers(ssl)) {
                             // Filter out bad input.
-                            if (c == null || c.isEmpty() || availableOpenSslCipherSuites.contains(c)) {
+                            if (c == null || c.isEmpty() || availableOpenSslCipherSuites.contains(c) ||
+                                // Filter out TLSv1.3 ciphers if not supported.
+                                !tlsv13Supported && SslUtils.isTLSv13Cipher(c)) {
                                 continue;
                             }
                             availableOpenSslCipherSuites.add(c);
@@ -200,8 +221,13 @@ public final class OpenSsl {
                     AVAILABLE_OPENSSL_CIPHER_SUITES.size() * 2);
             for (String cipher: AVAILABLE_OPENSSL_CIPHER_SUITES) {
                 // Included converted but also openssl cipher name
-                availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "TLS"));
-                availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "SSL"));
+                if (!SslUtils.isTLSv13Cipher(cipher)) {
+                    availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "TLS"));
+                    availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "SSL"));
+                } else {
+                    // TLSv1.3 ciphers have the correct format.
+                    availableJavaCipherSuites.add(cipher);
+                }
             }
 
             addIfSupported(availableJavaCipherSuites, defaultCiphers, DEFAULT_CIPHER_SUITES);
@@ -239,6 +265,18 @@ public final class OpenSsl {
                 protocols.add(PROTOCOL_TLS_V1_2);
             }
 
+            // This is only supported by java11 and later.
+            if (tlsv13Supported && doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_3, SSL.SSL_OP_NO_TLSv1_3)
+                && PlatformDependent.javaVersion() >= 11) {
+                // We can only support TLS1.3 when using Java 11 or higher as otherwise it will fail to create the
+                // internal instance of an sun.security.ssl.ProtocolVersion as can not parse the version string :/
+                // See http://mail.openjdk.java.net/pipermail/security-dev/2018-September/018242.html
+                protocols.add(PROTOCOL_TLS_V1_3);
+                TLSV13_SUPPORTED = true;
+            } else {
+                TLSV13_SUPPORTED = false;
+            }
+
             SUPPORTED_PROTOCOLS_SET = Collections.unmodifiableSet(protocols);
             SUPPORTS_OCSP = doesSupportOcsp();
 
@@ -256,6 +294,7 @@ public final class OpenSsl {
             USE_KEYMANAGER_FACTORY = false;
             SUPPORTED_PROTOCOLS_SET = Collections.emptySet();
             SUPPORTS_OCSP = false;
+            TLSV13_SUPPORTED = false;
         }
     }
 
@@ -449,5 +488,9 @@ public final class OpenSsl {
         if (counted.refCnt() > 0) {
             ReferenceCountUtil.safeRelease(counted);
         }
+    }
+
+    static boolean isTlsv13Supported() {
+        return TLSV13_SUPPORTED;
     }
 }

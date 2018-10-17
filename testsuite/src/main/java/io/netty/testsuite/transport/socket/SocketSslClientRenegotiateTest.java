@@ -138,7 +138,8 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             public void initChannel(Channel sch) throws Exception {
                 serverChannel = sch;
                 serverSslHandler = serverCtx.newHandler(sch.alloc());
-
+                // As we test renegotiation we should use a protocol that support it.
+                serverSslHandler.engine().setEnabledProtocols(new String[] { "TLSv1.2" });
                 sch.pipeline().addLast("ssl", serverSslHandler);
                 sch.pipeline().addLast("handler", serverHandler);
             }
@@ -150,7 +151,8 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             public void initChannel(Channel sch) throws Exception {
                 clientChannel = sch;
                 clientSslHandler = clientCtx.newHandler(sch.alloc());
-
+                // As we test renegotiation we should use a protocol that support it.
+                clientSslHandler.engine().setEnabledProtocols(new String[] { "TLSv1.2" });
                 sch.pipeline().addLast("ssl", clientSslHandler);
                 sch.pipeline().addLast("handler", clientHandler);
             }
