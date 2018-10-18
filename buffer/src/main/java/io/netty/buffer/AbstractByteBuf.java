@@ -1289,7 +1289,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
-    private int forEachByteAsc0(int start, int end, ByteProcessor processor) throws Exception {
+    protected int forEachByteAsc0(int start, int end, ByteProcessor processor) throws Exception {
         for (; start < end; ++start) {
             if (!processor.process(_getByte(start))) {
                 return start;
@@ -1321,7 +1321,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
-    private int forEachByteDesc0(int rStart, final int rEnd, ByteProcessor processor) throws Exception {
+    protected int forEachByteDesc0(int rStart, final int rEnd, ByteProcessor processor) throws Exception {
         for (; rStart >= rEnd; --rStart) {
             if (!processor.process(_getByte(rStart))) {
                 return rStart;
