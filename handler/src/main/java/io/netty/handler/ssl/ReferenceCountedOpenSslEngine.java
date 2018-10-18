@@ -363,7 +363,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // setMode may impact the overhead.
                 calculateMaxWrapOverhead();
             } catch (Throwable cause) {
-                SSL.freeSSL(ssl);
+                // Call shutdown so we are sure we correctly release all native memory and also guard against the
+                // case when shutdown() will be called by the finalizer again. If we would call SSL.free(...) directly
+                // the finalizer may end up calling it again as we would miss to update the DESTROYED_UPDATER.
+                shutdown();
+
                 PlatformDependent.throwException(cause);
             }
         }
