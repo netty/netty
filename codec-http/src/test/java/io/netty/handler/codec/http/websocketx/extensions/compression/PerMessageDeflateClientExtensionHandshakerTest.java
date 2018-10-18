@@ -170,7 +170,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
                      "{\"info\":\"Welcome to the BitMEX Realtime API.\",\"version\"" +
                      ":\"2018-10-02T22:53:23.000Z\",\"timestamp\":\"2018-10-15T06:43:40.437Z\"," +
                      "\"docs\":\"https://www.bitmex.com/app/wsAPI\",\"limit\":{\"remaining\":39}}");
-        firstFrameDecompressed.release();
+        assertTrue(firstFrameDecompressed.release());
 
         assertNotNull(secondFrameDecompressed);
         assertNotNull(secondFrameDecompressed.content());
@@ -178,8 +178,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         assertEquals(secondFrameDecompressed.text(),
                      "{\"success\":true,\"subscribe\":\"orderBookL2:XBTUSD\"," +
                      "\"request\":{\"op\":\"subscribe\",\"args\":[\"orderBookL2:XBTUSD\"]}}");
-        secondFrameDecompressed.release();
+        assertTrue(secondFrameDecompressed.release());
 
-        decoderChannel.finish();
+        assertFalse(decoderChannel.finish());
     }
 }
