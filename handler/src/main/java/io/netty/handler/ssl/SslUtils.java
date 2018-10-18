@@ -97,10 +97,11 @@ final class SslUtils {
 
     static final String[] DEFAULT_CIPHER_SUITES;
     static final String[] DEFAULT_TLSV13_CIPHER_SUITES;
+    static final String[] TLSV13_CIPHER_SUITES = { "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384" };
 
     static {
         if (PlatformDependent.javaVersion() >= 11) {
-            DEFAULT_TLSV13_CIPHER_SUITES = new String[] { "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384" };
+            DEFAULT_TLSV13_CIPHER_SUITES = TLSV13_CIPHER_SUITES;
         } else {
             DEFAULT_TLSV13_CIPHER_SUITES = EmptyArrays.EMPTY_STRINGS;
         }

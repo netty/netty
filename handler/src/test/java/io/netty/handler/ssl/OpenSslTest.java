@@ -22,7 +22,9 @@ public class OpenSslTest {
 
     @Test
     public void testDefaultCiphers() {
-        Assert.assertTrue(
-                OpenSsl.DEFAULT_CIPHERS.size() <= SslUtils.DEFAULT_CIPHER_SUITES.length);
+        if (!OpenSsl.isTlsv13Supported()) {
+            Assert.assertTrue(
+                    OpenSsl.DEFAULT_CIPHERS.size() <= SslUtils.DEFAULT_CIPHER_SUITES.length);
+        }
     }
 }

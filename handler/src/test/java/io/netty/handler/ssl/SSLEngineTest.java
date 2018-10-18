@@ -1201,6 +1201,7 @@ public abstract class SSLEngineTest {
     @Test(timeout = 30000)
     public void clientInitiatedRenegotiationWithFatalAlertDoesNotInfiniteLoopServer()
             throws CertificateException, SSLException, InterruptedException, ExecutionException {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 11);
         final SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                                         .sslProvider(sslServerProvider())
