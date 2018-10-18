@@ -73,7 +73,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         for (BufferType type: BufferType.values()) {
             params.add(new Object[] { type, ProtocolCipherCombo.tlsv12()});
 
-            if (PlatformDependent.javaVersion() >= 11 && OpenSsl.isTlsv13Supported()) {
+            if (OpenSsl.isTlsv13Supported()) {
                 params.add(new Object[] { type, ProtocolCipherCombo.tlsv13() });
             }
         }

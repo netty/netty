@@ -233,7 +233,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
 
         ExtendedTrustManagerVerifyCallback(OpenSslEngineMap engineMap, X509ExtendedTrustManager manager) {
             super(engineMap);
-            this.manager = manager;
+            this.manager = OpenSslTlsv13X509ExtendedTrustManager.wrap(manager, true);
         }
 
         @Override

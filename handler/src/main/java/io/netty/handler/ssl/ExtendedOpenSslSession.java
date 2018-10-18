@@ -42,7 +42,6 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     private final OpenSslSession wrapped;
 
     ExtendedOpenSslSession(OpenSslSession wrapped) {
-        assert !(wrapped instanceof ExtendedSSLSession);
         this.wrapped = wrapped;
     }
 
@@ -153,7 +152,7 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     }
 
     @Override
-    public final String getProtocol() {
+    public String getProtocol() {
         return wrapped.getProtocol();
     }
 
