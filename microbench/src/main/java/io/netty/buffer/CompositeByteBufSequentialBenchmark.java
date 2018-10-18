@@ -19,7 +19,6 @@ import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.ByteProcessor;
 
 import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
@@ -33,11 +32,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@Fork(1)
-@Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 4, time = 1, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS)
 public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark {
-    
+
     public enum ByteBufType {
         SMALL_CHUNKS {
             @Override
@@ -78,17 +76,18 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
         buffer.release();
     }
 
+    private static final ByteProcessor TEST_PROCESSOR = new ByteProcessor() {
+        @Override
+        public boolean process(byte value) throws Exception {
+            return value == 'b'; // false
+        }
+    };
+
     @Benchmark
     public int forEachByte() {
         buffer.writerIndex(buffer.capacity()).readerIndex(0);
-        ByteProcessor processor = new ByteProcessor() {
-            @Override
-            public boolean process(byte value) throws Exception {
-                return value == 'b'; // false
-            }
-        };
-        buffer.forEachByte(processor);
-        return buffer.forEachByteDesc(processor);
+        buffer.forEachByte(TEST_PROCESSOR);
+        return buffer.forEachByteDesc(TEST_PROCESSOR);
     }
 
     @Benchmark
@@ -105,7 +104,7 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
         return 1;
     }
 
-    protected static ByteBuf newBufferSmallChunks(int length) {
+    private static ByteBuf newBufferSmallChunks(int length) {
 
         List<ByteBuf> buffers = new ArrayList<ByteBuf>();
         for (int i = 0; i < length + 45; i += 45) {
@@ -133,13 +132,10 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
         ByteBuf buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[0]));
 
         // Truncate to the requested capacity.
-        buffer.capacity(length);
-
-        buffer.writerIndex(0);
-        return buffer;
+        return buffer.capacity(length).writerIndex(0);
     }
 
-    protected static ByteBuf newBufferLargeChunks(int length) {
+    private static ByteBuf newBufferLargeChunks(int length) {
 
         List<ByteBuf> buffers = new ArrayList<ByteBuf>();
         for (int i = 0; i < length + 1536; i += 1536) {
@@ -151,9 +147,6 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
         ByteBuf buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[0]));
 
         // Truncate to the requested capacity.
-        buffer.capacity(length);
-
-        buffer.writerIndex(0);
-        return buffer;
+        return buffer.capacity(length).writerIndex(0);
     }
 }

@@ -1427,7 +1427,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     private Component findComponent(int offset) {
         Component la = lastAccessed;
         if (la != null && offset >= la.offset && offset < la.endOffset) {
-           return lastAccessed;
+           return la;
         }
         checkIndex(offset);
 
