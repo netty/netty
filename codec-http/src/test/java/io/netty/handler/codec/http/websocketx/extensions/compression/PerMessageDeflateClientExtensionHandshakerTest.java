@@ -128,10 +128,6 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
 
     @Test
     public void testDecoderNoClientContext() {
-        WebSocketClientExtension extension;
-        Map<String, String> parameters;
-
-        // initialize
         PerMessageDeflateClientExtensionHandshaker handshaker =
                 new PerMessageDeflateClientExtensionHandshaker(6, true, MAX_WINDOW_SIZE, true, false);
 
@@ -153,21 +149,20 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
                 -45, 24, 91, 91, 11, 0
         };
 
-        parameters = new HashMap<String, String>();
-        parameters.put(CLIENT_NO_CONTEXT, null);
+        Map<String, String> parameters =  Collections.singletonMap(CLIENT_NO_CONTEXT, null);
 
-        // execute
-        extension = handshaker.handshakeExtension(
+        WebSocketClientExtension extension = handshaker.handshakeExtension(
                 new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
         assertNotNull(extension);
 
         EmbeddedChannel decoderChannel = new EmbeddedChannel(extension.newExtensionDecoder());
-        decoderChannel.writeInbound(new TextWebSocketFrame(true, RSV1, Unpooled.copiedBuffer(firstPayload)));
+        assertTrue(
+                decoderChannel.writeInbound(new TextWebSocketFrame(true, RSV1, Unpooled.copiedBuffer(firstPayload))));
         TextWebSocketFrame firstFrameDecompressed = decoderChannel.readInbound();
-        decoderChannel.writeInbound(new TextWebSocketFrame(true, RSV1, Unpooled.copiedBuffer(secondPayload)));
+        assertTrue(
+                decoderChannel.writeInbound(new TextWebSocketFrame(true, RSV1, Unpooled.copiedBuffer(secondPayload))));
         TextWebSocketFrame secondFrameDecompressed = decoderChannel.readInbound();
 
-        // test
         assertNotNull(firstFrameDecompressed);
         assertNotNull(firstFrameDecompressed.content());
         assertTrue(firstFrameDecompressed instanceof TextWebSocketFrame);
@@ -175,6 +170,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
                      "{\"info\":\"Welcome to the BitMEX Realtime API.\",\"version\"" +
                      ":\"2018-10-02T22:53:23.000Z\",\"timestamp\":\"2018-10-15T06:43:40.437Z\"," +
                      "\"docs\":\"https://www.bitmex.com/app/wsAPI\",\"limit\":{\"remaining\":39}}");
+        firstFrameDecompressed.release();
 
         assertNotNull(secondFrameDecompressed);
         assertNotNull(secondFrameDecompressed.content());
@@ -182,5 +178,8 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         assertEquals(secondFrameDecompressed.text(),
                      "{\"success\":true,\"subscribe\":\"orderBookL2:XBTUSD\"," +
                      "\"request\":{\"op\":\"subscribe\",\"args\":[\"orderBookL2:XBTUSD\"]}}");
+        secondFrameDecompressed.release();
+
+        decoderChannel.finish();
     }
 }
