@@ -74,7 +74,7 @@ public class AbstractByteBufGetCharSequenceBenchmark extends AbstractMicrobenchm
     @Param({ "8", "64", "1024", "10240", "1073741824" })
     public int size;
 
-    @Param({ "US-ASCII" }) // , "UTF-8" })
+    @Param({ "US-ASCII", "ISO_8859_1" })
     public String charsetName;
 
     @Param
@@ -106,14 +106,12 @@ public class AbstractByteBufGetCharSequenceBenchmark extends AbstractMicrobenchm
 
     @Benchmark
     public int getCharSequence() {
-        CharSequence cs = buffer.getCharSequence(buffer.readerIndex(), size, charset);
-        return traverse(cs);
+        return traverse(buffer.getCharSequence(buffer.readerIndex(), size, charset));
     }
 
     @Benchmark
     public int getCharSequenceOld() {
-        CharSequence cs = buffer.toString(buffer.readerIndex(), size, charset);
-        return traverse(cs);
+        return traverse(buffer.toString(buffer.readerIndex(), size, charset));
     }
 
     private static int traverse(CharSequence cs) {
