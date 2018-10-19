@@ -182,7 +182,7 @@ final class SniClientJava8TestUtil {
             if (clientSide) {
                 Assert.assertEquals(0, extendedSSLSession.getPeerSupportedSignatureAlgorithms().length);
             } else {
-                if (session instanceof OpenSslSession && OpenSslTestUtils.isBoringSSL()) {
+                if (session instanceof OpenSslSession && OpenSsl.isBoringSSL()) {
                     // BoringSSL does not support SSL_get_sigalgs(...)
                     // https://boringssl.googlesource.com/boringssl/+/ba16a1e405c617f4179bd780ad15522fb25b0a65%5E%21/
                     Assert.assertEquals(0, extendedSSLSession.getPeerSupportedSignatureAlgorithms().length);

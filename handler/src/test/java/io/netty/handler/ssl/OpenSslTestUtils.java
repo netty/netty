@@ -24,8 +24,4 @@ final class OpenSslTestUtils {
     static void checkShouldUseKeyManagerFactory() {
         assumeTrue(OpenSsl.supportsKeyManagerFactory() && OpenSsl.useKeyManagerFactory());
     }
-
-    static boolean isBoringSSL() {
-        return "BoringSSL".equals(OpenSsl.versionString());
-    }
 }
