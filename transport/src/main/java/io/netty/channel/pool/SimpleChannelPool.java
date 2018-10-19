@@ -419,7 +419,8 @@ public class SimpleChannelPool implements ChannelPool {
                     channelsToClose.remove(channel);
                     if (channelsToClose.isEmpty()) {
                         // last channel was closed - can complete the result promise
-                        result.setSuccess(null);
+                        // it might already be completed by a concurrently executing listener so use trySuccess
+                        result.trySuccess(null);
                     }
                 }
             });
