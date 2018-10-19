@@ -349,39 +349,25 @@ public class FixedChannelPoolTest {
 
     @Test
     public void testCloseWithIdleChannels() throws Exception {
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
-        Bootstrap cb = new Bootstrap();
-        cb.remoteAddress(addr);
-        cb.group(group).channel(LocalChannel.class);
+        testCloseWithIdleChannels(false);
+    }
 
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group)
-          .channel(LocalServerChannel.class)
-          .childHandler(new ChannelInitializer<LocalChannel>() {
-              @Override
-              public void initChannel(LocalChannel ch) {
-                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
-              }
-          });
-
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
-
-        FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2);
-        Channel channel1 = pool.acquire().get();
-        Channel channel2 = pool.acquire().get();
-        pool.release(channel1).get();
-        pool.release(channel2).get();
-
-        pool.close();
-
-        assertTrue(channel1.closeFuture().isDone());
-        assertTrue(channel2.closeFuture().isDone());
-
-        sc.close().syncUninterruptibly();
+    @Test
+    public void testCloseWithIdleChannelsInEventLoop() throws Exception {
+        testCloseWithIdleChannels(true);
     }
 
     @Test
     public void testCloseWithOutstandingAcquireRequests() throws Exception {
+        testCloseWithOutstandingAcquireRequests(false);
+    }
+
+    @Test
+    public void testCloseWithOutstandingAcquireRequestsInEventLoop() throws Exception {
+        testCloseWithOutstandingAcquireRequests(true);
+    }
+
+    private void testCloseWithOutstandingAcquireRequests(boolean closeInEventLoop) throws Exception {
         LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
@@ -408,7 +394,7 @@ public class FixedChannelPoolTest {
         assertFalse(acquireRequest1.isDone());
         assertFalse(acquireRequest2.isDone());
 
-        pool.close();
+        closePool(pool, closeInEventLoop);
 
         assertTrue(acquireRequest1.isDone());
         assertThat(acquireRequest1.cause(), instanceOf(IllegalStateException.class));
@@ -416,6 +402,53 @@ public class FixedChannelPoolTest {
         assertThat(acquireRequest2.cause(), instanceOf(IllegalStateException.class));
 
         sc.close().syncUninterruptibly();
+    }
+
+    private void testCloseWithIdleChannels(boolean closeInEventLoop) throws Exception {
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(addr);
+        cb.group(group).channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelInitializer<LocalChannel>() {
+              @Override
+              public void initChannel(LocalChannel ch) {
+                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+              }
+          });
+
+        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2);
+        Channel channel1 = pool.acquire().get();
+        Channel channel2 = pool.acquire().get();
+        pool.release(channel1).get();
+        pool.release(channel2).get();
+
+        closePool(pool, closeInEventLoop);
+
+        assertTrue(channel1.closeFuture().isSuccess());
+        assertTrue(channel2.closeFuture().isSuccess());
+
+        sc.close().syncUninterruptibly();
+    }
+
+    private void closePool(final FixedChannelPool pool, final boolean inEventLoop) throws Exception {
+        if (inEventLoop) {
+            EventLoopGroup eventLoopGroup = pool.bootstrap().config().group();
+            Future<?> poolCloseFuture = eventLoopGroup.submit(new Runnable() {
+                @Override
+                public void run() {
+                    pool.close();
+                }
+            });
+            poolCloseFuture.get();
+        } else {
+            pool.close();
+        }
     }
 
     private static final class TestChannelPoolHandler extends AbstractChannelPoolHandler {

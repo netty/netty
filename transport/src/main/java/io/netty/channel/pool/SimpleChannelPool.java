@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -158,7 +159,7 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public final Future<Channel> acquire() {
-        return acquire(this.<Channel>newPromise());
+        return acquire(nextEventLoop().<Channel>newPromise());
     }
 
     @Override
@@ -392,13 +393,18 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public void close() {
-        closeIdleChannels().awaitUninterruptibly();
+        closeIdleChannels(nextEventLoop());
     }
 
-    Future<Void> closeIdleChannels() {
-        // promise completed when all idle channels are closed
-        final Promise<Void> result = newPromise();
+    void closeIdleChannels(EventExecutor executor) {
+        Promise<Void> result = executor.newPromise();
+        closeIdleChannels(result);
+        if (!executor.inEventLoop()) {
+            result.awaitUninterruptibly();
+        }
+    }
 
+    private void closeIdleChannels(final Promise<Void> result) {
         final Set<Channel> channelsToClose = Collections.newSetFromMap(new ConcurrentHashMap<Channel, Boolean>());
         for (;;) {
             Channel channel = pollChannel();
@@ -425,11 +431,9 @@ public class SimpleChannelPool implements ChannelPool {
                 }
             });
         }
-
-        return result;
     }
 
-    private <T> Promise<T> newPromise() {
-        return bootstrap.config().group().next().newPromise();
+    private EventLoop nextEventLoop() {
+        return bootstrap.config().group().next();
     }
 }

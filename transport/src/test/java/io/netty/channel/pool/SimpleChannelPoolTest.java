@@ -313,4 +313,56 @@ public class SimpleChannelPoolTest {
 
         group.shutdownGracefully();
     }
+
+    @Test
+    public void testCloseWithIdleChannels() throws Exception {
+        testCloseWithIdleChannelsInEventLoop(false);
+    }
+
+    @Test
+    public void testCloseWithIdleChannelsInEventLoop() throws Exception {
+        testCloseWithIdleChannelsInEventLoop(true);
+    }
+
+    private void testCloseWithIdleChannelsInEventLoop(boolean closeInEventLoop) throws Exception {
+        EventLoopGroup group = new DefaultEventLoopGroup();
+        LocalAddress address = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap().remoteAddress(address).group(group).channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelInitializer<LocalChannel>() {
+              @Override
+              public void initChannel(LocalChannel ch) {
+                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+              }
+          });
+
+        Channel sc = sb.bind(address).sync().channel();
+
+        final ChannelPool pool = new SimpleChannelPool(cb, new CountingChannelPoolHandler());
+
+        Channel channel1 = pool.acquire().get();
+        Channel channel2 = pool.acquire().get();
+        pool.release(channel1).get();
+        pool.release(channel2).get();
+
+        if (closeInEventLoop) {
+            group.submit(new Runnable() {
+                @Override
+                public void run() {
+                    pool.close();
+                }
+            }).get();
+        } else {
+            pool.close();
+        }
+
+        assertTrue(channel1.closeFuture().isSuccess());
+        assertTrue(channel2.closeFuture().isSuccess());
+
+        sc.close().get();
+        group.shutdownGracefully();
+    }
 }

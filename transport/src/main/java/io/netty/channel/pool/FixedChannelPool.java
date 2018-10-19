@@ -444,7 +444,6 @@ public class FixedChannelPool extends SimpleChannelPool {
     public void close() {
         if (executor.inEventLoop()) {
             failPendingAcquireOperations();
-            super.closeIdleChannels();
         } else {
             executor.submit(new Runnable() {
                 @Override
@@ -452,8 +451,8 @@ public class FixedChannelPool extends SimpleChannelPool {
                     failPendingAcquireOperations();
                 }
             }).awaitUninterruptibly();
-            super.closeIdleChannels().awaitUninterruptibly();
         }
+        super.closeIdleChannels(executor);
     }
 
     private void failPendingAcquireOperations() {
