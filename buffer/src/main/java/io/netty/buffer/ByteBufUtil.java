@@ -53,10 +53,10 @@ import static io.netty.util.internal.StringUtil.isSurrogate;
 public final class ByteBufUtil {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ByteBufUtil.class);
-    private static final FastThreadLocal<CharBuffer> CHAR_BUFFERS = new FastThreadLocal<CharBuffer>() {
+    private static final FastThreadLocal<byte[]> BYTE_ARRAYS = new FastThreadLocal<byte[]>() {
         @Override
-        protected CharBuffer initialValue() throws Exception {
-            return CharBuffer.allocate(1024);
+        protected byte[] initialValue() throws Exception {
+            return PlatformDependent.allocateUninitializedArray(1024);
         }
     };
 
@@ -756,52 +756,31 @@ public final class ByteBufUtil {
         }
     }
 
+    @SuppressWarnings("deprecation")
     static String decodeString(ByteBuf src, int readerIndex, int len, Charset charset) {
         if (len == 0) {
             return StringUtil.EMPTY_STRING;
         }
-        final CharsetDecoder decoder = CharsetUtil.decoder(charset);
-        final int maxLength = (int) ((double) len * decoder.maxCharsPerByte());
-        CharBuffer dst = CHAR_BUFFERS.get();
-        if (dst.length() < maxLength) {
-            dst = CharBuffer.allocate(maxLength);
-            if (maxLength <= MAX_CHAR_BUFFER_SIZE) {
-                CHAR_BUFFERS.set(dst);
-            }
-        } else {
-            dst.clear();
-        }
-        if (src.nioBufferCount() == 1) {
-            decodeString(decoder, src.nioBuffer(readerIndex, len), dst);
-        } else {
-            // We use a heap buffer as CharsetDecoder is most likely able to use a fast-path if src and dst buffers
-            // are both backed by a byte array.
-            ByteBuf buffer = src.alloc().heapBuffer(len);
-            try {
-                buffer.writeBytes(src, readerIndex, len);
-                // Use internalNioBuffer(...) to reduce object creation.
-                decodeString(decoder, buffer.internalNioBuffer(buffer.readerIndex(), len), dst);
-            } finally {
-                // Release the temporary buffer again.
-                buffer.release();
-            }
-        }
-        return dst.flip().toString();
-    }
+        final byte[] array;
+        final int offset;
 
-    private static void decodeString(CharsetDecoder decoder, ByteBuffer src, CharBuffer dst) {
-        try {
-            CoderResult cr = decoder.decode(src, dst, true);
-            if (!cr.isUnderflow()) {
-                cr.throwException();
+        if (src.hasArray()) {
+            array = src.array();
+            offset = src.arrayOffset() + readerIndex;
+        } else {
+            if (len <= 1024) {
+                array = BYTE_ARRAYS.get();
+            } else {
+                array = PlatformDependent.allocateUninitializedArray(len);
             }
-            cr = decoder.flush(dst);
-            if (!cr.isUnderflow()) {
-                cr.throwException();
-            }
-        } catch (CharacterCodingException x) {
-            throw new IllegalStateException(x);
+            offset = 0;
+            src.getBytes(readerIndex, array, 0, len);
         }
+        if (CharsetUtil.US_ASCII.equals(charset)) {
+            // Fast-path for US-ASCII which is used frequently.
+            return new String(array, 0, offset, len);
+        }
+        return new String(array, offset, len, charset);
     }
 
     /**
