@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
@@ -444,18 +443,22 @@ public class FixedChannelPool extends SimpleChannelPool {
     @Override
     public void close() {
         if (executor.inEventLoop()) {
-            close0();
+            failPendingAcquireOperations();
+            super.closeIdleChannels();
         } else {
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
-                    close0();
+                    failPendingAcquireOperations();
                 }
             }).awaitUninterruptibly();
+            super.closeIdleChannels().awaitUninterruptibly();
         }
     }
 
-    private void close0() {
+    private void failPendingAcquireOperations() {
+        assert executor.inEventLoop();
+
         if (!closed) {
             closed = true;
             for (;;) {
@@ -471,15 +474,6 @@ public class FixedChannelPool extends SimpleChannelPool {
             }
             acquiredChannelCount.set(0);
             pendingAcquireCount = 0;
-
-            // Ensure we dispatch this on another Thread as close0 will be called from the EventExecutor and we need
-            // to ensure we will not block in a EventExecutor.
-            GlobalEventExecutor.INSTANCE.execute(new Runnable() {
-                @Override
-                public void run() {
-                    FixedChannelPool.super.close();
-                }
-            });
         }
     }
 }

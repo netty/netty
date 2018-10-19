@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -27,9 +28,7 @@ import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
 import org.hamcrest.CoreMatchers;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -237,7 +236,9 @@ public class SimpleChannelPoolTest {
 
     @Test
     public void testBootstrap() {
-        final SimpleChannelPool pool = new SimpleChannelPool(new Bootstrap(), new CountingChannelPoolHandler());
+        final EventLoopGroup group = new DefaultEventLoopGroup();
+        final Bootstrap bootstrap = new Bootstrap().group(group);
+        final SimpleChannelPool pool = new SimpleChannelPool(bootstrap, new CountingChannelPoolHandler());
 
         try {
             // Checking for the actual bootstrap object doesn't make sense here, since the pool uses a copy with a
@@ -245,26 +246,32 @@ public class SimpleChannelPoolTest {
             assertNotNull(pool.bootstrap());
         } finally {
             pool.close();
+            group.shutdownGracefully();
         }
     }
 
     @Test
     public void testHandler() {
         final ChannelPoolHandler handler = new CountingChannelPoolHandler();
-        final SimpleChannelPool pool = new SimpleChannelPool(new Bootstrap(), handler);
+        final EventLoopGroup group = new DefaultEventLoopGroup();
+        final Bootstrap bootstrap = new Bootstrap().group(group);
+        final SimpleChannelPool pool = new SimpleChannelPool(bootstrap, handler);
 
         try {
             assertSame(handler, pool.handler());
         } finally {
             pool.close();
+            group.shutdownGracefully();
         }
     }
 
     @Test
     public void testHealthChecker() {
         final ChannelHealthChecker healthChecker = ChannelHealthChecker.ACTIVE;
+        final EventLoopGroup group = new DefaultEventLoopGroup();
+        final Bootstrap bootstrap = new Bootstrap().group(group);
         final SimpleChannelPool pool = new SimpleChannelPool(
-                new Bootstrap(),
+                bootstrap,
                 new CountingChannelPoolHandler(),
                 healthChecker);
 
@@ -272,13 +279,16 @@ public class SimpleChannelPoolTest {
             assertSame(healthChecker, pool.healthChecker());
         } finally {
             pool.close();
+            group.shutdownGracefully();
         }
     }
 
     @Test
     public void testReleaseHealthCheck() {
+        final EventLoopGroup group = new DefaultEventLoopGroup();
+        final Bootstrap bootstrap = new Bootstrap().group(group);
         final SimpleChannelPool healthCheckOnReleasePool = new SimpleChannelPool(
-                new Bootstrap(),
+                bootstrap,
                 new CountingChannelPoolHandler(),
                 ChannelHealthChecker.ACTIVE,
                 true);
@@ -290,7 +300,7 @@ public class SimpleChannelPoolTest {
         }
 
         final SimpleChannelPool noHealthCheckOnReleasePool = new SimpleChannelPool(
-                new Bootstrap(),
+                bootstrap,
                 new CountingChannelPoolHandler(),
                 ChannelHealthChecker.ACTIVE,
                 false);
@@ -300,5 +310,7 @@ public class SimpleChannelPoolTest {
         } finally {
             noHealthCheckOnReleasePool.close();
         }
+
+        group.shutdownGracefully();
     }
 }

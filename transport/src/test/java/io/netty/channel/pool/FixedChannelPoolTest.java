@@ -34,6 +34,7 @@ import org.junit.Test;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 public class FixedChannelPoolTest {
@@ -342,6 +343,77 @@ public class FixedChannelPoolTest {
         Channel channel = pool.acquire().syncUninterruptibly().getNow();
         channel.close().syncUninterruptibly();
         pool.release(channel).syncUninterruptibly();
+
+        sc.close().syncUninterruptibly();
+    }
+
+    @Test
+    public void testCloseWithIdleChannels() throws Exception {
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(addr);
+        cb.group(group).channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelInitializer<LocalChannel>() {
+              @Override
+              public void initChannel(LocalChannel ch) {
+                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+              }
+          });
+
+        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2);
+        Channel channel1 = pool.acquire().get();
+        Channel channel2 = pool.acquire().get();
+        pool.release(channel1).get();
+        pool.release(channel2).get();
+
+        pool.close();
+
+        assertTrue(channel1.closeFuture().isDone());
+        assertTrue(channel2.closeFuture().isDone());
+
+        sc.close().syncUninterruptibly();
+    }
+
+    @Test
+    public void testCloseWithOutstandingAcquireRequests() throws Exception {
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(addr);
+        cb.group(group).channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+          .channel(LocalServerChannel.class)
+          .childHandler(new ChannelInitializer<LocalChannel>() {
+              @Override
+              public void initChannel(LocalChannel ch) {
+                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+              }
+          });
+
+        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 1);
+        pool.acquire().get(); // acquire the only available channel
+
+        Future<Channel> acquireRequest1 = pool.acquire();
+        Future<Channel> acquireRequest2 = pool.acquire();
+
+        assertFalse(acquireRequest1.isDone());
+        assertFalse(acquireRequest2.isDone());
+
+        pool.close();
+
+        assertTrue(acquireRequest1.isDone());
+        assertThat(acquireRequest1.cause(), instanceOf(IllegalStateException.class));
+        assertTrue(acquireRequest2.isDone());
+        assertThat(acquireRequest2.cause(), instanceOf(IllegalStateException.class));
 
         sc.close().syncUninterruptibly();
     }

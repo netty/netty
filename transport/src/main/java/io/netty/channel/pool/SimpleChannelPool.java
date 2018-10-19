@@ -28,7 +28,10 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
 
+import java.util.Collections;
 import java.util.Deque;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -155,7 +158,7 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public final Future<Channel> acquire() {
-        return acquire(bootstrap.config().group().next().<Channel>newPromise());
+        return acquire(this.<Channel>newPromise());
     }
 
     @Override
@@ -389,13 +392,43 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public void close() {
+        closeIdleChannels().awaitUninterruptibly();
+    }
+
+    Future<Void> closeIdleChannels() {
+        // promise completed when all idle channels are closed
+        final Promise<Void> result = newPromise();
+
+        final Set<Channel> channelsToClose = Collections.newSetFromMap(new ConcurrentHashMap<Channel, Boolean>());
         for (;;) {
             Channel channel = pollChannel();
             if (channel == null) {
                 break;
             }
-            // Just ignore any errors that are reported back from close().
-            channel.close().awaitUninterruptibly();
+            channelsToClose.add(channel);
         }
+        if (channelsToClose.isEmpty()) {
+            // no idle channels in the pool - nothing to close
+            result.setSuccess(null);
+        }
+
+        for (final Channel channel : channelsToClose) {
+            channel.close().addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) {
+                    channelsToClose.remove(channel);
+                    if (channelsToClose.isEmpty()) {
+                        // last channel was closed - can complete the result promise
+                        result.setSuccess(null);
+                    }
+                }
+            });
+        }
+
+        return result;
+    }
+
+    private <T> Promise<T> newPromise() {
+        return bootstrap.config().group().next().newPromise();
     }
 }
