@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -1136,4 +1137,45 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         buffer.release();
         copy.release();
     }
+
+    @Test
+    public void testDecomposeMultiple() {
+        testDecompose(150, 500, 3);
+    }
+
+    @Test
+    public void testDecomposeOne() {
+        testDecompose(310, 50, 1);
+    }
+
+    @Test
+    public void testDecomposeNone() {
+        testDecompose(310, 0, 0);
+    }
+
+    private static void testDecompose(int offset, int length, int expectedListSize) {
+        byte[] bytes = new byte[1024];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ByteBuf buf = wrappedBuffer(bytes);
+
+        CompositeByteBuf composite = compositeBuffer();
+        composite.addComponents(true,
+                                buf.retainedSlice(100, 200),
+                                buf.retainedSlice(300, 400),
+                                buf.retainedSlice(700, 100));
+
+        ByteBuf slice = composite.slice(offset, length);
+        List<ByteBuf> bufferList = composite.decompose(offset, length);
+        assertEquals(expectedListSize, bufferList.size());
+        ByteBuf wrapped = wrappedBuffer(bufferList.toArray(new ByteBuf[0]));
+
+        assertEquals(slice, wrapped);
+        composite.release();
+        buf.release();
+
+        for (ByteBuf buffer: bufferList) {
+            assertEquals(0, buffer.refCnt());
+        }
+    }
+
 }
