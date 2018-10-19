@@ -526,39 +526,31 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         int componentId = toComponentIndex(offset);
-        List<ByteBuf> slice = new ArrayList<ByteBuf>(components.size());
-
+        int bytesToSlice = length;
         // The first component
         Component firstC = components.get(componentId);
-        ByteBuf first = firstC.buf.duplicate();
-        first.readerIndex(offset - firstC.offset);
+        int firstBufOffset = offset - firstC.offset;
 
-        ByteBuf buf = first;
-        int bytesToSlice = length;
-        do {
-            int readableBytes = buf.readableBytes();
-            if (bytesToSlice <= readableBytes) {
-                // Last component
-                buf.writerIndex(buf.readerIndex() + bytesToSlice);
-                slice.add(buf);
-                break;
-            } else {
-                // Not the last component
-                slice.add(buf);
-                bytesToSlice -= readableBytes;
-                componentId ++;
+        ByteBuf slice = firstC.buf.slice(firstBufOffset + firstC.buf.readerIndex(),
+                                         Math.min(firstC.length - firstBufOffset, bytesToSlice));
+        bytesToSlice -= slice.readableBytes();
 
-                // Fetch the next component.
-                buf = components.get(componentId).buf.duplicate();
-            }
-        } while (bytesToSlice > 0);
-
-        // Slice all components because only readable bytes are interesting.
-        for (int i = 0; i < slice.size(); i ++) {
-            slice.set(i, slice.get(i).slice());
+        if (bytesToSlice == 0) {
+            return Collections.singletonList(slice);
         }
 
-        return slice;
+        List<ByteBuf> sliceList = new ArrayList<ByteBuf>(components.size() - componentId);
+        sliceList.add(slice);
+
+        // Add all the slices until there is nothing more left and then return the List.
+        do {
+            Component component = components.get(++componentId);
+            slice = component.buf.slice(component.buf.readerIndex(), Math.min(component.length, bytesToSlice));
+            bytesToSlice -= slice.readableBytes();
+            sliceList.add(slice);
+        } while (bytesToSlice > 0);
+
+        return sliceList;
     }
 
     @Override
