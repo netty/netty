@@ -550,16 +550,14 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 continue; // empty
             }
             ByteBuf s = c.buf;
-            int localRStart = 1 + rStart - c.offset;
+            int localRStart = length + rEnd - c.offset;
             int localLength = Math.min(length, localRStart), localIndex = localRStart - localLength;
             // avoid additional checks in AbstractByteBuf case
-            int result = s instanceof AbstractByteBuf
-                    ? ((AbstractByteBuf) s).forEachByteDesc0(localRStart - 1, localIndex, processor)
-                    : s.forEachByteDesc(localIndex, localLength, processor);
+            int result = !(s instanceof AbstractByteBuf) ? s.forEachByteDesc(localIndex, localLength, processor)
+                    : ((AbstractByteBuf) s).forEachByteDesc0(localRStart - 1, localIndex, processor);
             if (result != -1) {
                 return c.offset + result;
             }
-            rStart -= localLength;
             length -= localLength;
         }
         return -1;
