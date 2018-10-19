@@ -36,7 +36,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -46,7 +45,6 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,9 +59,7 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.Provider;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -655,16 +651,12 @@ public abstract class SSLEngineTest {
     protected void mySetupMutualAuthServerInitSslHandler(SslHandler handler) {
     }
 
-    private SslContextBuilder configureProtocolForMutualAuth(SslContextBuilder ctx) {
-        return OpenSslTestUtils.configureProtocolForMutualAuth(ctx, sslClientProvider(), sslServerProvider());
-    }
-
     private void mySetupMutualAuth(KeyManagerFactory serverKMF, final File serverTrustManager,
                                    KeyManagerFactory clientKMF, File clientTrustManager,
                                    ClientAuth clientAuth, final boolean failureExpected,
                                    final boolean serverInitEngine)
             throws SSLException, InterruptedException {
-        serverSslCtx = configureProtocolForMutualAuth(
+        serverSslCtx =
                 SslContextBuilder.forServer(serverKMF)
                                  .protocols(protocols())
                                  .ciphers(ciphers())
@@ -674,9 +666,9 @@ public abstract class SSLEngineTest {
                                  .clientAuth(clientAuth)
                                  .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                                  .sessionCacheSize(0)
-                                 .sessionTimeout(0)).build();
+                                 .sessionTimeout(0).build();
 
-        clientSslCtx =  configureProtocolForMutualAuth(
+        clientSslCtx =
                 SslContextBuilder.forClient()
                                  .protocols(protocols())
                                  .ciphers(ciphers())
@@ -686,7 +678,7 @@ public abstract class SSLEngineTest {
                                  .keyManager(clientKMF)
                                  .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                                  .sessionCacheSize(0)
-                                 .sessionTimeout(0)).build();
+                                 .sessionTimeout(0).build();
 
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
@@ -941,7 +933,7 @@ public abstract class SSLEngineTest {
             File servertTrustCrtFile, File serverKeyFile, final File serverCrtFile, String serverKeyPassword,
             File clientTrustCrtFile, File clientKeyFile, File clientCrtFile, String clientKeyPassword)
             throws InterruptedException, SSLException {
-        serverSslCtx = configureProtocolForMutualAuth(
+        serverSslCtx =
                 SslContextBuilder.forServer(serverCrtFile, serverKeyFile, serverKeyPassword)
                                  .sslProvider(sslServerProvider())
                                  .sslContextProvider(serverSslContextProvider())
@@ -950,8 +942,8 @@ public abstract class SSLEngineTest {
                                  .trustManager(servertTrustCrtFile)
                                  .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                                  .sessionCacheSize(0)
-                                 .sessionTimeout(0)).build();
-        clientSslCtx = configureProtocolForMutualAuth(
+                                 .sessionTimeout(0).build();
+        clientSslCtx =
                 SslContextBuilder.forClient()
                                  .sslProvider(sslClientProvider())
                                  .sslContextProvider(clientSslContextProvider())
@@ -961,7 +953,7 @@ public abstract class SSLEngineTest {
                                  .keyManager(clientCrtFile, clientKeyFile, clientKeyPassword)
                                  .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                                  .sessionCacheSize(0)
-                                 .sessionTimeout(0)).build();
+                                 .sessionTimeout(0).build();
 
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
@@ -1611,7 +1603,7 @@ public abstract class SSLEngineTest {
 
     @Test(timeout = 30000)
     public void testMutualAuthSameCertChain() throws Exception {
-        serverSslCtx = configureProtocolForMutualAuth(
+        serverSslCtx =
                 SslContextBuilder.forServer(
                         new ByteArrayInputStream(X509_CERT_PEM.getBytes(CharsetUtil.UTF_8)),
                         new ByteArrayInputStream(PRIVATE_KEY_PEM.getBytes(CharsetUtil.UTF_8)))
@@ -1619,7 +1611,7 @@ public abstract class SSLEngineTest {
                                  .clientAuth(ClientAuth.REQUIRE).sslProvider(sslServerProvider())
                                  .sslContextProvider(serverSslContextProvider())
                                  .protocols(protocols())
-                                 .ciphers(ciphers())).build();
+                                 .ciphers(ciphers()).build();
 
         sb = new ServerBootstrap();
         sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
@@ -1670,14 +1662,14 @@ public abstract class SSLEngineTest {
             }
         }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
 
-        clientSslCtx = configureProtocolForMutualAuth(
+        clientSslCtx =
                 SslContextBuilder.forClient().keyManager(
                         new ByteArrayInputStream(CLIENT_X509_CERT_CHAIN_PEM.getBytes(CharsetUtil.UTF_8)),
                         new ByteArrayInputStream(CLIENT_PRIVATE_KEY_PEM.getBytes(CharsetUtil.UTF_8)))
                 .trustManager(new ByteArrayInputStream(X509_CERT_PEM.getBytes(CharsetUtil.UTF_8)))
                 .sslProvider(sslClientProvider())
                 .sslContextProvider(clientSslContextProvider())
-                .protocols(protocols()).ciphers(ciphers())).build();
+                .protocols(protocols()).ciphers(ciphers()).build();
         cb = new Bootstrap();
         cb.group(new NioEventLoopGroup());
         cb.channel(NioSocketChannel.class);
