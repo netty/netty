@@ -528,8 +528,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             int localStart = start - c.offset;
             int localLength = Math.min(length, c.endOffset - start);
             // avoid additional checks in AbstractByteBuf case
-            int result = !(s instanceof AbstractByteBuf) ? s.forEachByte(localStart, localLength, processor)
-                    : ((AbstractByteBuf) s).forEachByteAsc0(localStart, localStart + localLength, processor);
+            int result = s instanceof AbstractByteBuf
+                ? ((AbstractByteBuf) s).forEachByteAsc0(localStart, localStart + localLength, processor)
+                : s.forEachByte(localStart, localLength, processor);
             if (result != -1) {
                 return c.offset + result;
             }
@@ -553,8 +554,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             int localRStart = length + rEnd - c.offset;
             int localLength = Math.min(length, localRStart), localIndex = localRStart - localLength;
             // avoid additional checks in AbstractByteBuf case
-            int result = !(s instanceof AbstractByteBuf) ? s.forEachByteDesc(localIndex, localLength, processor)
-                    : ((AbstractByteBuf) s).forEachByteDesc0(localRStart - 1, localIndex, processor);
+            int result = s instanceof AbstractByteBuf
+                ? ((AbstractByteBuf) s).forEachByteDesc0(localRStart - 1, localIndex, processor)
+                : s.forEachByteDesc(localIndex, localLength, processor);
+
             if (result != -1) {
                 return c.offset + result;
             }
@@ -579,7 +582,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int firstBufOffset = offset - firstC.offset;
 
         ByteBuf slice = firstC.buf.slice(firstBufOffset + firstC.buf.readerIndex(),
-                                         Math.min(firstC.length - firstBufOffset, bytesToSlice));
+                                         Math.min(firstC.endOffset - offset, bytesToSlice));
         bytesToSlice -= slice.readableBytes();
 
         if (bytesToSlice == 0) {
@@ -592,7 +595,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Add all the slices until there is nothing more left and then return the List.
         do {
             Component component = components.get(++componentId);
-            slice = component.buf.slice(component.buf.readerIndex(), Math.min(component.length, bytesToSlice));
+            slice = component.buf.slice(component.buf.readerIndex(), Math.min(component.length(), bytesToSlice));
             bytesToSlice -= slice.readableBytes();
             sliceList.add(slice);
         } while (bytesToSlice > 0);
@@ -1581,8 +1584,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
         for (int i = cIndex; i < endCIndex; i ++) {
             Component c = components.get(i);
-            ByteBuf b = c.buf;
-            consolidated.writeBytes(b);
+            consolidated.writeBytes(c.buf);
             if (lastAccessed == c) {
                 lastAccessed = null;
             }
@@ -1701,9 +1703,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int endOffset;
 
         Component(ByteBuf buf) {
-            this.buf = buf;
-            this.endOffset = buf.readableBytes();
+            this(buf, 0);
         }
+
         Component(ByteBuf buf, int offset) {
             this.buf = buf;
             this.offset = offset;

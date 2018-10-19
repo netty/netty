@@ -52,19 +52,13 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
         abstract ByteBuf newBuffer(int length);
     }
 
-    @Param({ "8", "64", "1024", "10240", "102400", "1024000" }) //"1073741824" })
+    @Param({ "8", "64", "1024", "10240", "102400", "1024000" })
     public int size;
 
     @Param
     public ByteBufType bufferType;
 
     private ByteBuf buffer;
-
-    @Override
-    protected String[] jvmArgs() {
-        // Ensure we minimize the GC overhead by sizing the heap big enough.
-        return new String[] { "-Xmx8g", "-Xms8g", "-Xmn6g" };
-    }
 
     @Setup
     public void setup() {
@@ -92,7 +86,7 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
 
     @Benchmark
     public int sequentialWriteAndRead() {
-        buffer.readerIndex(0).writerIndex(0);
+        buffer.clear();
         for (int i = 0, l = buffer.writableBytes(); i < l; i++) {
             buffer.writeByte('a');
         }
@@ -106,26 +100,12 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
 
     private static ByteBuf newBufferSmallChunks(int length) {
 
-        List<ByteBuf> buffers = new ArrayList<ByteBuf>();
+        List<ByteBuf> buffers = new ArrayList<ByteBuf>(((length + 1) / 45) * 19);
         for (int i = 0; i < length + 45; i += 45) {
-            buffers.add(EMPTY_BUFFER);
-            buffers.add(wrappedBuffer(new byte[1]));
-            buffers.add(EMPTY_BUFFER);
-            buffers.add(wrappedBuffer(new byte[2]));
-            buffers.add(EMPTY_BUFFER);
-            buffers.add(wrappedBuffer(new byte[3]));
-            buffers.add(EMPTY_BUFFER);
-            buffers.add(wrappedBuffer(new byte[4]));
-            buffers.add(EMPTY_BUFFER);
-            buffers.add(wrappedBuffer(new byte[5]));
-            buffers.add(EMPTY_BUFFER);
-            buffers.add(wrappedBuffer(new byte[6]));
-            buffers.add(EMPTY_BUFFER);
-            buffers.add(wrappedBuffer(new byte[7]));
-            buffers.add(EMPTY_BUFFER);
-            buffers.add(wrappedBuffer(new byte[8]));
-            buffers.add(EMPTY_BUFFER);
-            buffers.add(wrappedBuffer(new byte[9]));
+            for (int j = 1; j <= 9; j++) {
+                buffers.add(EMPTY_BUFFER);
+                buffers.add(wrappedBuffer(new byte[j]));
+            }
             buffers.add(EMPTY_BUFFER);
         }
 
@@ -137,7 +117,7 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
 
     private static ByteBuf newBufferLargeChunks(int length) {
 
-        List<ByteBuf> buffers = new ArrayList<ByteBuf>();
+        List<ByteBuf> buffers = new ArrayList<ByteBuf>((length + 1) / 512);
         for (int i = 0; i < length + 1536; i += 1536) {
             buffers.add(wrappedBuffer(new byte[512]));
             buffers.add(EMPTY_BUFFER);
